@@ -281,6 +281,43 @@
 	--shadow-inner: inset 0 2px 4px 0 oklch(0.2 0.02 256 / 0.05);
 	--shadow-focus: 0 0 0 3px var(--color-brand-200);
 
+	/* ═══ LIQUID GLASS — translucent surface system per Blazor canon
+	 * (LeadKart.Web/wwwroot/css/leadkart.css "iOS-inspired design system
+	 * with liquid glass surfaces"). The combo of `backdrop-filter: blur()
+	 * saturate()` + a translucent background + a subtle inner top-border
+	 * highlight creates the Apple-flavoured frosted-glass feel.
+	 *
+	 * Surfaces use these in PAIRS — blur + saturate + opacity tuned per
+	 * elevation level. Cards stay SOLID (no glass) to preserve content
+	 * legibility — glass is for navigation chrome / overlays / popovers.
+	 *
+	 * Accessibility: prefers-reduced-transparency falls back to solid
+	 * surfaces (handled in utilities.css). ─────────────────────── */
+	--glass-blur-sm: 16px; /* tooltip */
+	--glass-blur-md: 20px; /* appbar / drawer / toast */
+	--glass-blur-lg: 24px; /* popover / dropdown */
+	--glass-blur-xl: 32px; /* customiser drawer */
+	--glass-blur-2xl: 40px; /* dialog */
+
+	--glass-saturate-sm: 1.3;
+	--glass-saturate-md: 1.4;
+	--glass-saturate-lg: 1.5;
+	--glass-saturate-xl: 1.6;
+	--glass-saturate-2xl: 1.8;
+
+	/* Background opacity — applied via color-mix(elevated, transparent).
+	 * Lower opacity = MORE blur shows through. */
+	--glass-opacity-strong: 88%; /* drawer */
+	--glass-opacity-base: 85%; /* appbar / customiser */
+	--glass-opacity-light: 82%; /* popover */
+	--glass-opacity-translucent: 72%; /* dialog */
+
+	/* Inner highlight — tiny white inset top-border simulates the
+	 * Apple "edge of glass" sheen. Stays subtle in light theme,
+	 * stronger in dark. */
+	--glass-highlight: rgb(255 255 255 / 0.15);
+	--glass-highlight-subtle: rgb(255 255 255 / 0.08);
+
 	/* ═══ MOTION — duration + easing tokens ═══════════════════════ */
 	--duration-instant: 0ms;
 	--duration-fast: 120ms;

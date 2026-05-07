@@ -8,7 +8,7 @@
 </script>
 
 <header
-	class="flex h-14 items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-4"
+	class="glass-appbar sticky top-0 z-(--z-sticky) flex h-14 items-center justify-between px-4"
 >
 	<div class="cluster">
 		<button

@@ -53,4 +53,92 @@
 		cursor: not-allowed;
 		pointer-events: none;
 	}
+
+	/* ═══ LIQUID GLASS surface utilities — iOS-flavoured frosted
+	 * surfaces per the Blazor canon. Compose with bg + border + shadow
+	 * tokens. Cards stay SOLID — glass is for nav chrome / overlays. */
+
+	.glass-appbar {
+		background: color-mix(in srgb, var(--color-bg-elevated) var(--glass-opacity-base), transparent);
+		backdrop-filter: blur(var(--glass-blur-md)) saturate(var(--glass-saturate-md));
+		-webkit-backdrop-filter: blur(var(--glass-blur-md)) saturate(var(--glass-saturate-md));
+		border-bottom: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+	}
+
+	.glass-drawer {
+		background: color-mix(
+			in srgb,
+			var(--color-bg-elevated) var(--glass-opacity-strong),
+			transparent
+		);
+		backdrop-filter: blur(var(--glass-blur-md)) saturate(var(--glass-saturate-md));
+		-webkit-backdrop-filter: blur(var(--glass-blur-md)) saturate(var(--glass-saturate-md));
+		border-right: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+	}
+
+	.glass-popover {
+		background: color-mix(
+			in srgb,
+			var(--color-bg-elevated) var(--glass-opacity-light),
+			transparent
+		);
+		backdrop-filter: blur(var(--glass-blur-lg)) saturate(var(--glass-saturate-lg));
+		-webkit-backdrop-filter: blur(var(--glass-blur-lg)) saturate(var(--glass-saturate-lg));
+		border: 1px solid color-mix(in srgb, var(--color-border) 35%, transparent);
+		border-top-color: var(--glass-highlight-subtle);
+		box-shadow:
+			inset 0 1px 0 var(--glass-highlight-subtle),
+			0 8px 32px -4px oklch(0 0 0 / 0.12),
+			0 0 0 1px oklch(1 0 0 / 0.04);
+	}
+
+	.glass-dialog {
+		background: color-mix(
+			in srgb,
+			var(--color-bg-elevated) var(--glass-opacity-translucent),
+			transparent
+		);
+		backdrop-filter: blur(var(--glass-blur-2xl)) saturate(var(--glass-saturate-2xl));
+		-webkit-backdrop-filter: blur(var(--glass-blur-2xl)) saturate(var(--glass-saturate-2xl));
+		border: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+		border-top-color: var(--glass-highlight);
+		box-shadow:
+			inset 0 1px 0 var(--glass-highlight),
+			inset 0 0 20px oklch(1 0 0 / 0.03),
+			0 24px 80px -12px oklch(0 0 0 / 0.15),
+			0 0 0 1px oklch(1 0 0 / 0.05);
+	}
+
+	.glass-toast {
+		backdrop-filter: blur(var(--glass-blur-md)) saturate(var(--glass-saturate-lg));
+		-webkit-backdrop-filter: blur(var(--glass-blur-md)) saturate(var(--glass-saturate-lg));
+		border: 1px solid color-mix(in srgb, var(--color-border) 30%, transparent);
+		border-top-color: var(--glass-highlight-subtle);
+		border-radius: var(--radius-sm);
+		box-shadow:
+			inset 0 1px 0 var(--glass-highlight-subtle),
+			0 8px 32px oklch(0 0 0 / 0.12);
+	}
+
+	.glass-tooltip {
+		backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate-sm));
+		-webkit-backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate-sm));
+	}
+
+	/* ═══ Reduced-transparency fallback — WCAG 2.2 §1.4.3 + Apple HIG.
+	 * Some users (vestibular sensitivity, low-end GPUs) opt out of
+	 * translucent surfaces via the OS setting. Glass surfaces fall
+	 * back to solid bg-elevated. ─────────────────────────────── */
+	@media (prefers-reduced-transparency) {
+		.glass-appbar,
+		.glass-drawer,
+		.glass-popover,
+		.glass-dialog,
+		.glass-toast,
+		.glass-tooltip {
+			backdrop-filter: none;
+			-webkit-backdrop-filter: none;
+			background: var(--color-bg-elevated);
+		}
+	}
 }
