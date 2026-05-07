@@ -1,0 +1,23 @@
+node_modules
+.svelte-kit
+build
+dist
+.DS_Store
+.env
+.env.*
+!.env.example
+.vercel
+.netlify
+.cloudflare
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea
+
+# Test artefacts
+test-results
+playwright-report
+playwright/.cache
+coverage

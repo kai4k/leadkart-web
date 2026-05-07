@@ -1,0 +1,27 @@
+{
+	"app": {
+		"name": "LeadKart",
+		"tagline": "Pharma SaaS — leads, orders, dispatch."
+	},
+	"auth": {
+		"signin": {
+			"title": "Sign in",
+			"subtitle": "Welcome back. Enter your credentials to continue.",
+			"email": "Email",
+			"password": "Password",
+			"submit": "Sign in",
+			"forgot": "Forgot your password?",
+			"signupPrompt": "Don't have an account?",
+			"signupCta": "Sign up"
+		},
+		"errors": {
+			"invalidCredentials": "Email or password is incorrect.",
+			"unexpected": "Something went wrong. Please try again."
+		}
+	},
+	"common": {
+		"loading": "Loading…",
+		"cancel": "Cancel",
+		"save": "Save"
+	}
+}
