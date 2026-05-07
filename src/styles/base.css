@@ -45,6 +45,156 @@
 	--shadow-focus: 0 0 0 3px var(--color-brand-700);
 }
 
+/* ═══ PRIMARY COLOUR PICKER — multi-hue theme switching
+ * Per Blazor LeadKart.Web.Client/Components/Layout/ThemeSettings.cs
+ * "PrimaryColors" array: 10 hue choices the user can pick. Activated
+ * by `<html data-primary="X">` attribute set by lib/stores/theme.svelte.ts.
+ *
+ * Each variant overrides the brand 11-stop scale to a different OKLCH
+ * hue while keeping lightness + chroma curves consistent. This way
+ * components consuming `var(--color-brand-{N})` automatically re-skin
+ * without per-component changes.
+ *
+ * Default (no data-primary attr OR data-primary="blue") = LeadKart
+ * canonical #265A8E from tokens.css. Other primaries map to the
+ * iOS-system palette per ThemeSettings.PrimaryColors[]:
+ *   green   #34C759   (hue ≈ 145)
+ *   indigo  #5856D6   (hue ≈ 285)
+ *   orange  #FF9500   (hue ≈ 60)
+ *   teal    #5AC8FA   (hue ≈ 220)
+ *   purple  #AF52DE   (hue ≈ 310)
+ *   pink    #FF2D55   (hue ≈ 0)
+ *   red     #FF3B30   (hue ≈ 25)
+ *   mint    #00C7BE   (hue ≈ 180)
+ *   cyan    #32ADE6   (hue ≈ 230)
+ * ───────────────────────────────────────────────────────────── */
+
+:root[data-primary='green'] {
+	--color-brand-50: oklch(0.97 0.03 145);
+	--color-brand-100: oklch(0.93 0.07 145);
+	--color-brand-200: oklch(0.87 0.11 145);
+	--color-brand-300: oklch(0.81 0.16 145);
+	--color-brand-400: oklch(0.78 0.17 145);
+	--color-brand-500: oklch(0.74 0.18 145);
+	--color-brand-600: oklch(0.62 0.17 145);
+	--color-brand-700: oklch(0.5 0.15 145);
+	--color-brand-800: oklch(0.4 0.12 145);
+	--color-brand-900: oklch(0.3 0.08 145);
+	--color-brand-950: oklch(0.2 0.05 145);
+}
+
+:root[data-primary='indigo'] {
+	--color-brand-50: oklch(0.97 0.03 285);
+	--color-brand-100: oklch(0.93 0.07 285);
+	--color-brand-200: oklch(0.86 0.12 285);
+	--color-brand-300: oklch(0.78 0.16 285);
+	--color-brand-400: oklch(0.7 0.18 285);
+	--color-brand-500: oklch(0.62 0.19 285);
+	--color-brand-600: oklch(0.55 0.2 285);
+	--color-brand-700: oklch(0.47 0.18 285);
+	--color-brand-800: oklch(0.38 0.15 285);
+	--color-brand-900: oklch(0.3 0.1 285);
+	--color-brand-950: oklch(0.2 0.07 285);
+}
+
+:root[data-primary='orange'] {
+	--color-brand-50: oklch(0.97 0.04 60);
+	--color-brand-100: oklch(0.93 0.1 60);
+	--color-brand-200: oklch(0.88 0.14 60);
+	--color-brand-300: oklch(0.83 0.16 60);
+	--color-brand-400: oklch(0.8 0.17 60);
+	--color-brand-500: oklch(0.78 0.18 60);
+	--color-brand-600: oklch(0.66 0.17 60);
+	--color-brand-700: oklch(0.55 0.15 55);
+	--color-brand-800: oklch(0.45 0.13 55);
+	--color-brand-900: oklch(0.35 0.1 55);
+	--color-brand-950: oklch(0.24 0.07 55);
+}
+
+:root[data-primary='teal'] {
+	--color-brand-50: oklch(0.97 0.02 220);
+	--color-brand-100: oklch(0.93 0.06 220);
+	--color-brand-200: oklch(0.86 0.1 220);
+	--color-brand-300: oklch(0.78 0.13 220);
+	--color-brand-400: oklch(0.78 0.13 220);
+	--color-brand-500: oklch(0.78 0.13 220);
+	--color-brand-600: oklch(0.66 0.13 220);
+	--color-brand-700: oklch(0.55 0.12 220);
+	--color-brand-800: oklch(0.44 0.1 220);
+	--color-brand-900: oklch(0.34 0.07 220);
+	--color-brand-950: oklch(0.22 0.05 220);
+}
+
+:root[data-primary='purple'] {
+	--color-brand-50: oklch(0.97 0.03 310);
+	--color-brand-100: oklch(0.93 0.08 310);
+	--color-brand-200: oklch(0.86 0.13 310);
+	--color-brand-300: oklch(0.78 0.16 310);
+	--color-brand-400: oklch(0.7 0.18 310);
+	--color-brand-500: oklch(0.65 0.2 310);
+	--color-brand-600: oklch(0.55 0.2 310);
+	--color-brand-700: oklch(0.47 0.18 310);
+	--color-brand-800: oklch(0.38 0.15 310);
+	--color-brand-900: oklch(0.3 0.1 310);
+	--color-brand-950: oklch(0.2 0.07 310);
+}
+
+:root[data-primary='pink'] {
+	--color-brand-50: oklch(0.97 0.03 0);
+	--color-brand-100: oklch(0.93 0.07 0);
+	--color-brand-200: oklch(0.87 0.11 0);
+	--color-brand-300: oklch(0.79 0.16 0);
+	--color-brand-400: oklch(0.72 0.2 0);
+	--color-brand-500: oklch(0.66 0.23 0);
+	--color-brand-600: oklch(0.56 0.21 0);
+	--color-brand-700: oklch(0.47 0.18 0);
+	--color-brand-800: oklch(0.39 0.15 0);
+	--color-brand-900: oklch(0.31 0.11 0);
+	--color-brand-950: oklch(0.22 0.08 0);
+}
+
+:root[data-primary='red'] {
+	--color-brand-50: oklch(0.97 0.02 25);
+	--color-brand-100: oklch(0.93 0.07 25);
+	--color-brand-200: oklch(0.87 0.13 25);
+	--color-brand-300: oklch(0.79 0.18 25);
+	--color-brand-400: oklch(0.72 0.21 25);
+	--color-brand-500: oklch(0.66 0.23 25);
+	--color-brand-600: oklch(0.56 0.21 25);
+	--color-brand-700: oklch(0.47 0.18 25);
+	--color-brand-800: oklch(0.39 0.15 25);
+	--color-brand-900: oklch(0.31 0.11 25);
+	--color-brand-950: oklch(0.22 0.08 25);
+}
+
+:root[data-primary='mint'] {
+	--color-brand-50: oklch(0.97 0.03 180);
+	--color-brand-100: oklch(0.93 0.07 180);
+	--color-brand-200: oklch(0.86 0.11 180);
+	--color-brand-300: oklch(0.78 0.13 180);
+	--color-brand-400: oklch(0.74 0.13 180);
+	--color-brand-500: oklch(0.7 0.13 180);
+	--color-brand-600: oklch(0.6 0.12 180);
+	--color-brand-700: oklch(0.5 0.1 180);
+	--color-brand-800: oklch(0.4 0.08 180);
+	--color-brand-900: oklch(0.3 0.06 180);
+	--color-brand-950: oklch(0.2 0.04 180);
+}
+
+:root[data-primary='cyan'] {
+	--color-brand-50: oklch(0.97 0.02 230);
+	--color-brand-100: oklch(0.93 0.06 230);
+	--color-brand-200: oklch(0.86 0.1 230);
+	--color-brand-300: oklch(0.78 0.13 230);
+	--color-brand-400: oklch(0.72 0.14 230);
+	--color-brand-500: oklch(0.7 0.14 230);
+	--color-brand-600: oklch(0.6 0.13 230);
+	--color-brand-700: oklch(0.5 0.11 230);
+	--color-brand-800: oklch(0.4 0.09 230);
+	--color-brand-900: oklch(0.3 0.07 230);
+	--color-brand-950: oklch(0.2 0.05 230);
+}
+
 /* ═══ DARK-MODE VARIANT — Tailwind 4 syntax
  * Lets utility classes like `dark:bg-bg-elevated` activate when
  * <html class="dark">. Without this, the `dark:` prefix is inert. */

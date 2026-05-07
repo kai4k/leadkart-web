@@ -61,15 +61,27 @@
 		<script>
 			(function () {
 				try {
+					var root = document.documentElement;
+					// 1. light/dark mode
 					var t = localStorage.getItem('leadkart-theme') || 'system';
 					var dark =
 						t === 'dark' ||
 						(t === 'system' &&
 							window.matchMedia &&
 							window.matchMedia('(prefers-color-scheme: dark)').matches);
-					if (dark) document.documentElement.classList.add('dark');
+					if (dark) root.classList.add('dark');
+					// 2. primary colour — apply data-primary BEFORE first paint
+					//    so the brand-coloured panel of the AuthShell renders in
+					//    the user's chosen primary, not the blue default.
+					var p = localStorage.getItem('leadkart-primary');
+					if (
+						p &&
+						['green', 'indigo', 'orange', 'teal', 'purple', 'pink', 'red', 'mint', 'cyan'].indexOf(p) >= 0
+					) {
+						root.setAttribute('data-primary', p);
+					}
 				} catch (e) {
-					/* private-mode: fall back to light */
+					/* private-mode: fall back to defaults */
 				}
 			})();
 		</script>

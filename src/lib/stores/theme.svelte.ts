@@ -1,39 +1,75 @@
 /**
- * Dark-mode store — Svelte 5 class-based reactive store.
+ * Theme store — Svelte 5 class-based reactive store managing light/
+ * dark/system mode + the multi-primary colour picker (10 hue
+ * choices ported from the Blazor LeadKart.Web theme customiser
+ * per ThemeSettings.cs `PrimaryColors` array).
  *
- * Industry canon: Svelte 5 stores live as class instances with `$state`
- * fields, NOT module-level `let foo = $state(...)` + function accessors.
- * The class pattern guarantees reactivity across module boundaries —
- * components reading `theme.effective` get re-rendered when `current`
- * mutates. The function-accessor pattern silently breaks reactivity
- * (Joy of Code "Stores in Svelte 5"; Svelte 5 official docs
- * "Universal reactivity"; Rich Harris Svelte Summit 2024 talk).
- *
- * The single shared instance is exported as `theme`. Components import
- * + use directly:
- *
- *   import { theme } from '$lib/stores/theme.svelte';
- *   <button onclick={() => theme.toggle()}>{theme.effective}</button>
+ * Industry canon: Svelte 5 stores live as class instances with
+ * `$state` fields, NOT module-level `let foo = $state(...)` +
+ * function accessors. Class pattern guarantees reactivity across
+ * module boundaries — components reading `theme.effective` get
+ * re-rendered when `current` mutates. (Joy of Code "Stores in
+ * Svelte 5"; Svelte 5 official docs "Universal reactivity"; Rich
+ * Harris Svelte Summit 2024 talk.)
  */
 
-type Theme = 'light' | 'dark' | 'system';
+type ThemeMode = 'light' | 'dark' | 'system';
+
+/**
+ * Primary colour identifiers — match the Blazor canon
+ * (LeadKart.Web.Client/Components/Layout/ThemeSettings.cs:226-235).
+ * `blue` is the default LeadKart brand; the rest are iOS-system
+ * accents users can pick via the customiser.
+ */
+export type PrimaryColor =
+	| 'blue'
+	| 'green'
+	| 'indigo'
+	| 'orange'
+	| 'teal'
+	| 'purple'
+	| 'pink'
+	| 'red'
+	| 'mint'
+	| 'cyan';
+
+export const PRIMARY_COLORS: ReadonlyArray<{ id: PrimaryColor; label: string; hex: string }> = [
+	{ id: 'blue', label: 'Blue', hex: '#265A8E' },
+	{ id: 'green', label: 'Green', hex: '#34C759' },
+	{ id: 'indigo', label: 'Indigo', hex: '#5856D6' },
+	{ id: 'orange', label: 'Orange', hex: '#FF9500' },
+	{ id: 'teal', label: 'Teal', hex: '#5AC8FA' },
+	{ id: 'purple', label: 'Purple', hex: '#AF52DE' },
+	{ id: 'pink', label: 'Pink', hex: '#FF2D55' },
+	{ id: 'red', label: 'Red', hex: '#FF3B30' },
+	{ id: 'mint', label: 'Mint', hex: '#00C7BE' },
+	{ id: 'cyan', label: 'Cyan', hex: '#32ADE6' }
+];
 
 const STORAGE_KEY = 'leadkart-theme';
+const PRIMARY_KEY = 'leadkart-primary';
 
 class ThemeStore {
-	current = $state<Theme>(this.readInitial());
+	current = $state<ThemeMode>(this.readInitialMode());
+	primary = $state<PrimaryColor>(this.readInitialPrimary());
 
-	private readInitial(): Theme {
+	private readInitialMode(): ThemeMode {
 		if (typeof window === 'undefined') return 'system';
-		const stored = window.localStorage.getItem(STORAGE_KEY) as Theme | null;
+		const stored = window.localStorage.getItem(STORAGE_KEY) as ThemeMode | null;
 		if (stored === 'light' || stored === 'dark' || stored === 'system') return stored;
 		return 'system';
 	}
 
+	private readInitialPrimary(): PrimaryColor {
+		if (typeof window === 'undefined') return 'blue';
+		const stored = window.localStorage.getItem(PRIMARY_KEY);
+		const valid = PRIMARY_COLORS.find((c) => c.id === stored);
+		return valid?.id ?? 'blue';
+	}
+
 	/**
-	 * Resolves 'system' to the OS-level preference. Reactive — `$derived`-
-	 * style getter; reading from a template / `$derived` expression in a
-	 * component triggers re-render when `current` changes.
+	 * Resolves 'system' to the OS-level preference. Reactive — a
+	 * `$derived` that reads this getter re-runs when `current` flips.
 	 */
 	get effective(): 'light' | 'dark' {
 		if (this.current === 'system') {
@@ -43,10 +79,10 @@ class ThemeStore {
 		return this.current;
 	}
 
-	/** Sets the theme + persists + reflects on <html>. */
-	set(next: Theme) {
+	/** Sets light/dark/system mode + persists + reflects on <html>. */
+	set(next: ThemeMode) {
 		this.current = next;
-		this.persist(next);
+		this.persist(STORAGE_KEY, next);
 		this.applyToDocument();
 	}
 
@@ -55,21 +91,36 @@ class ThemeStore {
 		this.set(this.effective === 'dark' ? 'light' : 'dark');
 	}
 
+	/** Picks a primary colour + persists + reflects via data attr. */
+	setPrimary(next: PrimaryColor) {
+		this.primary = next;
+		this.persist(PRIMARY_KEY, next);
+		this.applyToDocument();
+	}
+
 	/**
-	 * Reflects the effective theme as a class on <html>. Idempotent.
-	 * Called automatically by `set` + `toggle`; the root +layout calls
-	 * it inside `$effect` so external `current` mutations also flow.
+	 * Reflects the effective theme (`<html class="dark">`) AND the
+	 * primary colour (`<html data-primary="X">`) on the root element.
+	 * Idempotent. Called by `set` / `setPrimary` / `toggle`; the root
+	 * +layout calls it inside `$effect` so external state mutations
+	 * also propagate to the DOM.
 	 */
 	applyToDocument() {
 		if (typeof document === 'undefined') return;
 		const root = document.documentElement;
 		if (this.effective === 'dark') root.classList.add('dark');
 		else root.classList.remove('dark');
+		// Default primary (blue) doesn't need an attribute — base
+		// tokens.css already encodes the LeadKart brand. Other
+		// primaries set data-primary so the override CSS rules in
+		// base.css activate.
+		if (this.primary === 'blue') root.removeAttribute('data-primary');
+		else root.setAttribute('data-primary', this.primary);
 	}
 
-	private persist(value: Theme) {
+	private persist(key: string, value: string) {
 		if (typeof window === 'undefined') return;
-		window.localStorage.setItem(STORAGE_KEY, value);
+		window.localStorage.setItem(key, value);
 	}
 }
 
