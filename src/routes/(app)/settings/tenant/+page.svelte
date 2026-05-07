@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Alert, Card, Spinner } from '$ui';
 	import TenantProfileForm from '$features/tenant/components/TenantProfileForm.svelte';
+	import TenantStatutoryForm from '$features/tenant/components/TenantStatutoryForm.svelte';
 	import { tenant } from '$features/tenant/stores/tenant.svelte';
 	import { tenantDisplayName, tenantStatusBadge } from '$features/tenant/view-models';
 
@@ -76,6 +77,18 @@
 			</Card.Header>
 			<Card.Content>
 				<TenantProfileForm tenant={tenant.current} />
+			</Card.Content>
+		</Card.Root>
+
+		<Card.Root>
+			<Card.Header>
+				<Card.Title>Statutory IDs</Card.Title>
+				<Card.Description>
+					GSTIN, PAN, and drug licence number used on tax filings and regulatory submissions.
+				</Card.Description>
+			</Card.Header>
+			<Card.Content>
+				<TenantStatutoryForm tenant={tenant.current} />
 			</Card.Content>
 		</Card.Root>
 	{/if}
