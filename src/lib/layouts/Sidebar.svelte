@@ -1,44 +1,61 @@
 <script lang="ts">
-	import { LayoutDashboard, Users, ShoppingCart, Boxes, Truck, ListTodo, Bell } from 'lucide-svelte';
 	import { page } from '$app/state';
+	import { NAV } from '$lib/config/nav';
 
-	type NavItem = { href: string; label: string; icon: typeof LayoutDashboard };
+	let { onNavigate } = $props<{ onNavigate?: () => void }>();
 
-	const items: NavItem[] = [
-		{ href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-		{ href: '/leads', label: 'Leads', icon: Users },
-		{ href: '/orders', label: 'Orders', icon: ShoppingCart },
-		{ href: '/inventory', label: 'Inventory', icon: Boxes },
-		{ href: '/dispatch', label: 'Dispatch', icon: Truck },
-		{ href: '/tasks', label: 'Tasks', icon: ListTodo },
-		{ href: '/notifications', label: 'Notifications', icon: Bell }
-	];
-
+	/**
+	 * Active-state matcher — top-level routes use exact match; nested
+	 * use startsWith with a trailing-slash boundary so /leads doesn't
+	 * also light up for /leads-archive. Industry-standard pattern (Vercel
+	 * dashboard, Linear sidebar).
+	 */
 	function isActive(href: string): boolean {
-		return page.url.pathname.startsWith(href);
+		const path = page.url.pathname;
+		if (path === href) return true;
+		return path.startsWith(href + '/');
 	}
+
+	// TODO(v0.3): filter by session.principal.permissions[] against
+	// item.requires once the JWT permission claim is consumed.
+	const sections = NAV;
 </script>
 
 <nav
-	class="flex h-full w-60 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+	class="flex h-full w-60 flex-col border-r border-[var(--color-border)] bg-[var(--color-bg-elevated)]"
+	aria-label="Main navigation"
 >
-	<ul class="flex-1 space-y-1 p-3">
-		{#each items as item}
-			{@const Icon = item.icon}
-			<li>
-				<a
-					href={item.href}
-					class={[
-						'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-						isActive(item.href)
-							? 'bg-brand-50 text-brand-700 dark:bg-brand-700/20 dark:text-brand-100'
-							: 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-					]}
-				>
-					<Icon size={18} />
-					<span>{item.label}</span>
-				</a>
-			</li>
+	<div class="stack stack-relaxed flex-1 overflow-y-auto p-3">
+		{#each sections as section, i (section.title ?? i)}
+			{#if section.items.length > 0}
+				<div class="stack stack-tight">
+					{#if section.title}
+						<p class="px-3 pb-1 overline">{section.title}</p>
+					{/if}
+					<ul class="stack stack-tight">
+						{#each section.items as item (item.href)}
+							{@const Icon = item.icon}
+							{@const active = isActive(item.href)}
+							<li>
+								<a
+									href={item.href}
+									aria-current={active ? 'page' : undefined}
+									onclick={() => onNavigate?.()}
+									class={[
+										'body-sm flex items-center gap-3 rounded-md px-3 py-2 font-medium transition-colors',
+										active
+											? 'bg-[var(--color-brand-50)] text-[var(--color-brand-700)] dark:bg-[var(--color-brand-700)] dark:text-[var(--color-brand-100)]'
+											: 'text-[var(--color-fg)] hover:bg-[var(--color-bg-muted)]'
+									]}
+								>
+									<Icon size={18} aria-hidden="true" />
+									<span>{item.label}</span>
+								</a>
+							</li>
+						{/each}
+					</ul>
+				</div>
+			{/if}
 		{/each}
-	</ul>
+	</div>
 </nav>

@@ -1,0 +1,160 @@
+/* ─────────────────────────────────────────────────────────────────────
+ * TYPOGRAPHY UTILITY CLASSES — single source of truth
+ *
+ * Industry canon: typography decisions (display vs heading vs body vs
+ * caption) defined once as named classes; consumed everywhere via
+ * `<h1 class="display-1">` / `<p class="lead">` / `<span class="caption">`.
+ * NOT redeclared per component. NOT inline Tailwind class soup.
+ *
+ * Maps to type scale tokens declared in tokens.css.
+ *
+ * Pairing pattern (Tim Brown "Modular Scale" + Ellen Lupton "Thinking
+ * with Type" + Refactoring UI):
+ *   • Heading + body share font but vary in weight + tracking.
+ *   • Display sizes use tighter tracking + tighter leading.
+ *   • Body text gets relaxed leading for readability at long form.
+ *
+ * Naming follows Material 3 + Vercel design system convention:
+ *   display-1/2 (hero), h1-h6 (headings), body-lg/base/sm,
+ *   caption (labels), overline (eyebrow text).
+ * ───────────────────────────────────────────────────────────────────── */
+
+@layer components {
+	/* ═══ Display — hero / marketing landings ═══ */
+	.display-1 {
+		font-size: var(--text-5xl);
+		line-height: var(--text-5xl--line-height);
+		letter-spacing: var(--tracking-tight);
+		font-weight: var(--font-weight-bold);
+	}
+
+	.display-2 {
+		font-size: var(--text-4xl);
+		line-height: var(--text-4xl--line-height);
+		letter-spacing: var(--tracking-tight);
+		font-weight: var(--font-weight-bold);
+	}
+
+	/* ═══ Headings ═══ */
+	.h1 {
+		font-size: var(--text-3xl);
+		line-height: var(--text-3xl--line-height);
+		letter-spacing: var(--tracking-tight);
+		font-weight: var(--font-weight-semibold);
+	}
+
+	.h2 {
+		font-size: var(--text-2xl);
+		line-height: var(--text-2xl--line-height);
+		letter-spacing: var(--tracking-tight);
+		font-weight: var(--font-weight-semibold);
+	}
+
+	.h3 {
+		font-size: var(--text-xl);
+		line-height: var(--text-xl--line-height);
+		font-weight: var(--font-weight-semibold);
+	}
+
+	.h4 {
+		font-size: var(--text-lg);
+		line-height: var(--text-lg--line-height);
+		font-weight: var(--font-weight-semibold);
+	}
+
+	.h5 {
+		font-size: var(--text-base);
+		line-height: var(--text-base--line-height);
+		font-weight: var(--font-weight-semibold);
+	}
+
+	.h6 {
+		font-size: var(--text-sm);
+		line-height: var(--text-sm--line-height);
+		font-weight: var(--font-weight-semibold);
+		text-transform: uppercase;
+		letter-spacing: var(--tracking-wide);
+	}
+
+	/* ═══ Body — long-form prose ═══ */
+	.lead {
+		font-size: var(--text-lg);
+		line-height: var(--leading-relaxed);
+		color: var(--color-fg-muted);
+	}
+
+	.body-lg {
+		font-size: var(--text-lg);
+		line-height: var(--text-lg--line-height);
+	}
+
+	.body-base {
+		font-size: var(--text-base);
+		line-height: var(--text-base--line-height);
+	}
+
+	.body-sm {
+		font-size: var(--text-sm);
+		line-height: var(--text-sm--line-height);
+	}
+
+	/* ═══ Supporting — captions, eyebrows, labels ═══ */
+	.caption {
+		font-size: var(--text-xs);
+		line-height: var(--text-xs--line-height);
+		color: var(--color-fg-muted);
+	}
+
+	.overline {
+		font-size: var(--text-xs);
+		line-height: var(--leading-tight);
+		text-transform: uppercase;
+		letter-spacing: var(--tracking-wide);
+		font-weight: var(--font-weight-semibold);
+		color: var(--color-fg-subtle);
+	}
+
+	/* ═══ Code / monospace ═══ */
+	.code-inline {
+		font-family: var(--font-mono);
+		font-size: 0.9em;
+		padding: 0.125em 0.375em;
+		border-radius: var(--radius-sm);
+		background: var(--color-bg-muted);
+	}
+
+	.kbd {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25em;
+		font-family: var(--font-mono);
+		font-size: var(--text-xs);
+		padding: 0.125em 0.5em;
+		border: var(--border-thin) solid var(--color-border-strong);
+		border-radius: var(--radius-sm);
+		background: var(--color-bg-elevated);
+		box-shadow: var(--shadow-xs);
+		color: var(--color-fg);
+	}
+
+	/* ═══ Truncation helpers ═══ */
+	.truncate-1 {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.truncate-2 {
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+
+	.truncate-3 {
+		display: -webkit-box;
+		-webkit-line-clamp: 3;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+}

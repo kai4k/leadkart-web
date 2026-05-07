@@ -17,18 +17,18 @@ The Svelte SPA frontend for LeadKart's pharma SaaS. Targets the `leadkart-go` JS
 
 ## Where to find things
 
-| What | Where |
-|------|-------|
-| API client + error types | `src/lib/api/{client,errors}.ts` |
-| Auth feature (login, refresh, session store) | `src/lib/features/auth/` |
-| Layout shell (Topbar / Sidebar / Footer / AppShell / AuthShell) | `src/lib/layouts/` |
-| UI primitives (Button, Card, Input, …) | `src/lib/components/ui/` (TODO — to be populated as needs arise) |
-| Form fields | `src/lib/components/form/` (TODO) |
-| Global runes (theme, toast) | `src/lib/stores/*.svelte.ts` |
-| i18n setup + locales | `src/lib/i18n/` |
-| Tailwind utility (`cn`) | `src/lib/utils/cn.ts` |
-| Auth route group | `src/routes/(auth)/` |
-| Signed-in app group | `src/routes/(app)/` (auth-guarded by `+layout.ts`) |
+| What                                                            | Where                                                            |
+| --------------------------------------------------------------- | ---------------------------------------------------------------- |
+| API client + error types                                        | `src/lib/api/{client,errors}.ts`                                 |
+| Auth feature (login, refresh, session store)                    | `src/lib/features/auth/`                                         |
+| Layout shell (Topbar / Sidebar / Footer / AppShell / AuthShell) | `src/lib/layouts/`                                               |
+| UI primitives (Button, Card, Input, …)                          | `src/lib/components/ui/` (TODO — to be populated as needs arise) |
+| Form fields                                                     | `src/lib/components/form/` (TODO)                                |
+| Global runes (theme, toast)                                     | `src/lib/stores/*.svelte.ts`                                     |
+| i18n setup + locales                                            | `src/lib/i18n/`                                                  |
+| Tailwind utility (`cn`)                                         | `src/lib/utils/cn.ts`                                            |
+| Auth route group                                                | `src/routes/(auth)/`                                             |
+| Signed-in app group                                             | `src/routes/(app)/` (auth-guarded by `+layout.ts`)               |
 
 ## Stack versions (locked to latest stable Q1 2026)
 
@@ -58,17 +58,18 @@ The Svelte SPA frontend for LeadKart's pharma SaaS. Targets the `leadkart-go` JS
 Dev: vite proxies `/api/*` → `http://localhost:8080`. Production: set `PUBLIC_API_BASE_URL` build-time.
 
 Auth flow:
+
 1. POST /api/v1/auth/login → `{access_token, refresh_token, ...}`
 2. Token persisted to localStorage; injected on every authenticated request via `lib/features/auth/stores/session.svelte.ts` + `setTokenGetter` in `lib/api/client.ts`.
 3. (Future) 401 → silent refresh interceptor → retry original request.
 
 ## Roadmap
 
-| Version | Scope | Backend dep |
-|---|---|---|
-| v0.1 | Auth flow (signin / signup / forgot / reset / verify) + dashboard placeholder + AppShell | leadkart-go Identity (already shipped) |
-| v0.2 | Theme components — UI primitives populated from Domiex theme cherry-picks (Button, Card, Input, Modal, Drawer, Tabs, Tooltip, Badge, Alert, Toast, Pagination, Spinner) | — |
-| v0.3 | Tenant + User management screens | leadkart-go Identity (shipped) |
-| v0.4 | Platform module UI — marketplace + lead credits | leadkart-go Platform (planned) |
-| v0.5 | CRM UI — lead conversion, call logs, reminders, hierarchy-scoped lists | leadkart-go CRM (planned) |
-| ... | per-module UIs | per-module backend |
+| Version | Scope                                                                                                                                                                   | Backend dep                            |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| v0.1    | Auth flow (signin / signup / forgot / reset / verify) + dashboard placeholder + AppShell                                                                                | leadkart-go Identity (already shipped) |
+| v0.2    | Theme components — UI primitives populated from Domiex theme cherry-picks (Button, Card, Input, Modal, Drawer, Tabs, Tooltip, Badge, Alert, Toast, Pagination, Spinner) | —                                      |
+| v0.3    | Tenant + User management screens                                                                                                                                        | leadkart-go Identity (shipped)         |
+| v0.4    | Platform module UI — marketplace + lead credits                                                                                                                         | leadkart-go Platform (planned)         |
+| v0.5    | CRM UI — lead conversion, call logs, reminders, hierarchy-scoped lists                                                                                                  | leadkart-go CRM (planned)              |
+| ...     | per-module UIs                                                                                                                                                          | per-module backend                     |

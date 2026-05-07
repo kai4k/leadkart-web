@@ -1,0 +1,20 @@
+/* ─────────────────────────────────────────────────────────────────────
+ * STYLES BARREL — single import point for all global CSS.
+ *
+ * Order matters per CSS cascade + Tailwind 4 layers:
+ *   1. tokens         — @theme block declares design tokens
+ *   2. base           — element defaults, dark theme override, focus,
+ *                        reduced-motion, font features
+ *   3. typography     — utility classes (.h1-.h6, .body-*, .caption)
+ *   4. layout         — primitives (.stack, .cluster, .center, ...)
+ *   5. animations     — keyframes + .animate-* classes
+ *   6. utilities      — project-specific helpers
+ *
+ * src/app.css does ONE thing: @import 'tailwindcss' + this barrel.
+ * ───────────────────────────────────────────────────────────────────── */
+@import './tokens.css';
+@import './base.css';
+@import './typography.css';
+@import './layout.css';
+@import './animations.css';
+@import './utilities.css';

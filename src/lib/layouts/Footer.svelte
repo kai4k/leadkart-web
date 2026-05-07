@@ -3,7 +3,7 @@
 </script>
 
 <footer
-	class="border-t border-slate-200 bg-white px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
+	class="caption border-t border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-4 py-3"
 >
 	© {year} LeadKart · Pharma SaaS
 </footer>
