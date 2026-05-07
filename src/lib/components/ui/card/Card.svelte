@@ -18,7 +18,7 @@
 					lg: 'shadow-md'
 				}
 			},
-			defaultVariants: { padding: 'md', elevation: 'none' }
+			defaultVariants: { padding: 'none', elevation: 'none' }
 		}
 	);
 
@@ -36,7 +36,7 @@
 		};
 
 	let {
-		padding = 'md',
+		padding = 'none',
 		elevation = 'none',
 		class: className = '',
 		children,

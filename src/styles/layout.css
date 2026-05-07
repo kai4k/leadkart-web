@@ -9,15 +9,15 @@
  *   • stack    — vertical rhythm via gap
  *   • cluster  — horizontal flex-wrap with gap
  *   • center   — max-width container, centered
- *   • sidebar  — content + flexible sidebar (collapses on narrow)
- *   • switcher — multi-column → single via container-query-style threshold
  *   • cover    — vertical-fill with header / body / footer
+ *   • sr-only  — visually hidden but screen-reader accessible
+ *   • skip-link — keyboard accessibility (visible on focus)
  *
  * Use these BEFORE reaching for grid-cols-N or hand-rolled flex.
  * ───────────────────────────────────────────────────────────────────── */
 
 @layer components {
-	/* ─────── Stack — vertical flow with consistent gap ─────── */
+	/* ═══ Stack — vertical flow with consistent gap ═══ */
 	.stack {
 		display: flex;
 		flex-direction: column;
@@ -37,7 +37,7 @@
 		--stack-gap: var(--spacing-8);
 	}
 
-	/* ─────── Cluster — horizontal flex-wrap ─────── */
+	/* ═══ Cluster — horizontal flex-wrap ═══ */
 	.cluster {
 		display: flex;
 		flex-wrap: wrap;
@@ -45,7 +45,7 @@
 		gap: var(--cluster-gap, var(--spacing-3));
 	}
 
-	/* ─────── Center — max-width container ─────── */
+	/* ═══ Center — max-width container ═══ */
 	.center {
 		box-sizing: content-box;
 		max-width: var(--center-width, var(--container-lg));
@@ -53,7 +53,7 @@
 		padding-inline: var(--spacing-4);
 	}
 
-	/* ─────── Cover — top + center + bottom, fills viewport ─────── */
+	/* ═══ Cover — top + center + bottom, fills viewport ═══ */
 	.cover {
 		display: flex;
 		flex-direction: column;
@@ -64,7 +64,7 @@
 		margin-block: auto;
 	}
 
-	/* ─────── Visually hidden — screen-reader only ─────── */
+	/* ═══ Visually hidden — screen-reader only ═══ */
 	.sr-only {
 		position: absolute;
 		width: 1px;
@@ -77,7 +77,7 @@
 		border: 0;
 	}
 
-	/* ─────── Skip link — visible on focus only ─────── */
+	/* ═══ Skip link — visible on focus only (a11y mandatory) ═══ */
 	.skip-link {
 		position: absolute;
 		left: var(--spacing-3);

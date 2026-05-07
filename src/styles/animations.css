@@ -1,0 +1,175 @@
+/* ─────────────────────────────────────────────────────────────────────
+ * ANIMATIONS — project-owned keyframes + utility classes
+ *
+ * All component animations go through these named keyframes — NEVER
+ * inline @keyframes per component. Industry canon: motion design lives
+ * in one place so every drawer / modal / toast / tooltip uses the
+ * same timing curve + duration tokens.
+ *
+ * References:
+ *   - Material 3 motion patterns
+ *   - Apple Human Interface Guidelines (Animation)
+ *   - Stripe Sail motion documentation
+ *   - Framer Motion physics defaults
+ *
+ * prefers-reduced-motion handled globally in base.css; per-keyframe
+ * fallbacks not required.
+ * ───────────────────────────────────────────────────────────────────── */
+
+@keyframes fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes fade-out {
+	from {
+		opacity: 1;
+	}
+	to {
+		opacity: 0;
+	}
+}
+
+@keyframes slide-in-left {
+	from {
+		transform: translateX(-100%);
+	}
+	to {
+		transform: translateX(0);
+	}
+}
+
+@keyframes slide-out-left {
+	from {
+		transform: translateX(0);
+	}
+	to {
+		transform: translateX(-100%);
+	}
+}
+
+@keyframes slide-in-right {
+	from {
+		transform: translateX(100%);
+	}
+	to {
+		transform: translateX(0);
+	}
+}
+
+@keyframes slide-in-bottom {
+	from {
+		transform: translateY(100%);
+	}
+	to {
+		transform: translateY(0);
+	}
+}
+
+@keyframes slide-in-top {
+	from {
+		transform: translateY(-100%);
+	}
+	to {
+		transform: translateY(0);
+	}
+}
+
+@keyframes zoom-in {
+	from {
+		opacity: 0;
+		transform: scale(0.95);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@keyframes zoom-out {
+	from {
+		opacity: 1;
+		transform: scale(1);
+	}
+	to {
+		opacity: 0;
+		transform: scale(0.95);
+	}
+}
+
+@keyframes pulse-soft {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.7;
+	}
+}
+
+@keyframes shimmer {
+	0% {
+		background-position: -200% 0;
+	}
+	100% {
+		background-position: 200% 0;
+	}
+}
+
+@layer components {
+	.animate-fade-in {
+		animation: fade-in var(--duration-base) var(--ease-out);
+	}
+
+	.animate-fade-out {
+		animation: fade-out var(--duration-base) var(--ease-in);
+	}
+
+	.animate-slide-in-left {
+		animation: slide-in-left var(--duration-base) var(--ease-out);
+	}
+
+	.animate-slide-out-left {
+		animation: slide-out-left var(--duration-base) var(--ease-in);
+	}
+
+	.animate-slide-in-right {
+		animation: slide-in-right var(--duration-base) var(--ease-out);
+	}
+
+	.animate-slide-in-bottom {
+		animation: slide-in-bottom var(--duration-base) var(--ease-out);
+	}
+
+	.animate-slide-in-top {
+		animation: slide-in-top var(--duration-base) var(--ease-out);
+	}
+
+	.animate-zoom-in {
+		animation: zoom-in var(--duration-fast) var(--ease-out);
+	}
+
+	.animate-zoom-out {
+		animation: zoom-out var(--duration-fast) var(--ease-in);
+	}
+
+	.animate-pulse-soft {
+		animation: pulse-soft 2s var(--ease-in-out) infinite;
+	}
+
+	/* Shimmer for loading skeletons. Pair with bg-gradient-to-r. */
+	.animate-shimmer {
+		background: linear-gradient(
+			90deg,
+			var(--color-bg-muted) 0%,
+			var(--color-bg-subtle) 50%,
+			var(--color-bg-muted) 100%
+		);
+		background-size: 200% 100%;
+		animation: shimmer 2s var(--ease-linear) infinite;
+	}
+}

@@ -4,14 +4,42 @@
 		<meta charset="utf-8" />
 		<link rel="icon" href="%sveltekit.assets%/favicon.svg" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta name="theme-color" content="#0f172a" />
+		<meta name="color-scheme" content="light dark" />
 		<title>LeadKart</title>
+		<!--
+			Theme prime — runs SYNCHRONOUSLY before first paint to apply
+			the .dark class on <html> if the user has dark theme stored
+			or has system dark + 'system' preference. Without this,
+			users see a flash of light theme on every reload (FOUC).
+
+			Industry canon: every modern dashboard (Vercel, Linear,
+			GitHub, Stripe Dashboard) ships an inline blocking script
+			for theme priming. The cost is ~200 bytes ungzipped + ~1ms
+			execution; the win is no FOUC ever.
+
+			Tracks `localStorage['leadkart-theme']` written by
+			lib/stores/theme.svelte.ts. Failure-mode tolerant: try/catch
+			swallows errors so a private-mode browser (no localStorage)
+			falls back to light cleanly.
+		-->
+		<script>
+			(function () {
+				try {
+					var t = localStorage.getItem('leadkart-theme') || 'system';
+					var dark =
+						t === 'dark' ||
+						(t === 'system' &&
+							window.matchMedia &&
+							window.matchMedia('(prefers-color-scheme: dark)').matches);
+					if (dark) document.documentElement.classList.add('dark');
+				} catch (e) {
+					/* private-mode: fall back to light */
+				}
+			})();
+		</script>
 		%sveltekit.head%
 	</head>
-	<body
-		data-sveltekit-preload-data="hover"
-		class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100"
-	>
+	<body data-sveltekit-preload-data="hover">
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>

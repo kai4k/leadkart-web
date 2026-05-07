@@ -1,0 +1,56 @@
+/* ─────────────────────────────────────────────────────────────────────
+ * PROJECT UTILITIES — supplementary classes Tailwind doesn't ship
+ *
+ * Industry canon: project-specific helpers that aren't in Tailwind's
+ * default utility set + don't fit cleanly under typography/layout/
+ * animations belong here. Keep small — most one-off needs go inline
+ * via Tailwind utility classes.
+ * ───────────────────────────────────────────────────────────────────── */
+
+@layer utilities {
+	/* ═══ Container — max-width-centred, with padded inline gutters
+	 * `.container-page` for the main outer container of every route. */
+	.container-page {
+		width: 100%;
+		max-width: var(--container-2xl);
+		margin-inline: auto;
+		padding-inline: var(--space-fluid-md);
+	}
+
+	.container-narrow {
+		width: 100%;
+		max-width: var(--container-md);
+		margin-inline: auto;
+		padding-inline: var(--space-fluid-md);
+	}
+
+	/* ═══ Scroll shadows — for scrollable panels (data tables, drawers)
+	 * Visual cue that content extends. Used on overflow-y containers. */
+	.scroll-shadow {
+		background:
+			linear-gradient(var(--color-bg-elevated) 30%, transparent),
+			linear-gradient(transparent, var(--color-bg-elevated) 70%) 0 100%,
+			radial-gradient(50% 0, oklch(0.2 0.02 256 / 0.1), transparent),
+			radial-gradient(50% 100%, oklch(0.2 0.02 256 / 0.1), transparent) 0 100%;
+		background-repeat: no-repeat;
+		background-size:
+			100% 40px,
+			100% 40px,
+			100% 14px,
+			100% 14px;
+		background-attachment: local, local, scroll, scroll;
+	}
+
+	/* ═══ Tabular numerals — for ledger/figures alignment */
+	.tabular-nums {
+		font-variant-numeric: tabular-nums;
+		font-feature-settings: 'tnum';
+	}
+
+	/* ═══ Disabled state — applied to non-interactive ancestors */
+	.is-disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+		pointer-events: none;
+	}
+}

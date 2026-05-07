@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { LogOut, User } from 'lucide-svelte';
+	import { LogOut, User, Icon } from '$icons';
 	import { goto } from '$app/navigation';
 	import { session } from '$features/auth/stores/session.svelte';
 	import { logout } from '$features/auth/api';
@@ -81,7 +81,7 @@
 					goto('/profile');
 				}}
 			>
-				<User size={16} />
+				<Icon icon={User} size="sm" />
 				Profile
 			</button>
 			<button
@@ -89,7 +89,7 @@
 				class="body-sm flex w-full items-center gap-2 px-3 py-2 text-left text-[var(--color-danger-700)] hover:bg-[var(--color-danger-50)]"
 				onclick={handleSignOut}
 			>
-				<LogOut size={16} />
+				<Icon icon={LogOut} size="sm" />
 				Sign out
 			</button>
 		</div>

@@ -6,8 +6,7 @@
  * `<h1 class="display-1">` / `<p class="lead">` / `<span class="caption">`.
  * NOT redeclared per component. NOT inline Tailwind class soup.
  *
- * Maps to the type scale tokens declared in app.css (--text-*,
- * --leading-*, --tracking-*, --font-weight-*).
+ * Maps to type scale tokens declared in tokens.css.
  *
  * Pairing pattern (Tim Brown "Modular Scale" + Ellen Lupton "Thinking
  * with Type" + Refactoring UI):
@@ -21,63 +20,63 @@
  * ───────────────────────────────────────────────────────────────────── */
 
 @layer components {
-	/* ─────── Display — hero / marketing landings ─────── */
+	/* ═══ Display — hero / marketing landings ═══ */
 	.display-1 {
 		font-size: var(--text-5xl);
-		line-height: var(--leading-tight);
+		line-height: var(--text-5xl--line-height);
 		letter-spacing: var(--tracking-tight);
 		font-weight: var(--font-weight-bold);
 	}
 
 	.display-2 {
 		font-size: var(--text-4xl);
-		line-height: var(--leading-tight);
+		line-height: var(--text-4xl--line-height);
 		letter-spacing: var(--tracking-tight);
 		font-weight: var(--font-weight-bold);
 	}
 
-	/* ─────── Headings ─────── */
+	/* ═══ Headings ═══ */
 	.h1 {
 		font-size: var(--text-3xl);
-		line-height: var(--leading-tight);
+		line-height: var(--text-3xl--line-height);
 		letter-spacing: var(--tracking-tight);
 		font-weight: var(--font-weight-semibold);
 	}
 
 	.h2 {
 		font-size: var(--text-2xl);
-		line-height: var(--leading-tight);
+		line-height: var(--text-2xl--line-height);
 		letter-spacing: var(--tracking-tight);
 		font-weight: var(--font-weight-semibold);
 	}
 
 	.h3 {
 		font-size: var(--text-xl);
-		line-height: var(--leading-snug);
+		line-height: var(--text-xl--line-height);
 		font-weight: var(--font-weight-semibold);
 	}
 
 	.h4 {
 		font-size: var(--text-lg);
-		line-height: var(--leading-snug);
+		line-height: var(--text-lg--line-height);
 		font-weight: var(--font-weight-semibold);
 	}
 
 	.h5 {
 		font-size: var(--text-base);
-		line-height: var(--leading-snug);
+		line-height: var(--text-base--line-height);
 		font-weight: var(--font-weight-semibold);
 	}
 
 	.h6 {
 		font-size: var(--text-sm);
-		line-height: var(--leading-snug);
+		line-height: var(--text-sm--line-height);
 		font-weight: var(--font-weight-semibold);
 		text-transform: uppercase;
 		letter-spacing: var(--tracking-wide);
 	}
 
-	/* ─────── Body — long-form prose ─────── */
+	/* ═══ Body — long-form prose ═══ */
 	.lead {
 		font-size: var(--text-lg);
 		line-height: var(--leading-relaxed);
@@ -86,23 +85,23 @@
 
 	.body-lg {
 		font-size: var(--text-lg);
-		line-height: var(--leading-normal);
+		line-height: var(--text-lg--line-height);
 	}
 
 	.body-base {
 		font-size: var(--text-base);
-		line-height: var(--leading-normal);
+		line-height: var(--text-base--line-height);
 	}
 
 	.body-sm {
 		font-size: var(--text-sm);
-		line-height: var(--leading-normal);
+		line-height: var(--text-sm--line-height);
 	}
 
-	/* ─────── Supporting — captions, eyebrows, labels ─────── */
+	/* ═══ Supporting — captions, eyebrows, labels ═══ */
 	.caption {
 		font-size: var(--text-xs);
-		line-height: var(--leading-normal);
+		line-height: var(--text-xs--line-height);
 		color: var(--color-fg-muted);
 	}
 
@@ -115,7 +114,7 @@
 		color: var(--color-fg-subtle);
 	}
 
-	/* ─────── Code / monospace ─────── */
+	/* ═══ Code / monospace ═══ */
 	.code-inline {
 		font-family: var(--font-mono);
 		font-size: 0.9em;
@@ -124,7 +123,21 @@
 		background: var(--color-bg-muted);
 	}
 
-	/* ─────── Truncation helpers (industry-standard names) ─────── */
+	.kbd {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25em;
+		font-family: var(--font-mono);
+		font-size: var(--text-xs);
+		padding: 0.125em 0.5em;
+		border: var(--border-thin) solid var(--color-border-strong);
+		border-radius: var(--radius-sm);
+		background: var(--color-bg-elevated);
+		box-shadow: var(--shadow-xs);
+		color: var(--color-fg);
+	}
+
+	/* ═══ Truncation helpers ═══ */
 	.truncate-1 {
 		overflow: hidden;
 		text-overflow: ellipsis;

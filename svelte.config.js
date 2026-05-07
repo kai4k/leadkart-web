@@ -26,6 +26,8 @@ const config = {
 			$features: 'src/lib/features',
 			$layouts: 'src/lib/layouts',
 			$ui: 'src/lib/components/ui',
+			$form: 'src/lib/components/form',
+			$icons: 'src/lib/icons',
 			$api: 'src/lib/api'
 		}
 	}

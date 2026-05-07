@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Bell, Menu, Moon, Sun } from 'lucide-svelte';
+	import { Bell, Menu, Moon, Sun, Icon } from '$icons';
 	import { theme } from '$lib/stores/theme.svelte';
 	import UserMenu from './UserMenu.svelte';
 
@@ -15,7 +15,7 @@
 			aria-label="Toggle sidebar"
 			onclick={() => onToggleSidebar?.()}
 		>
-			<Menu size={20} />
+			<Icon icon={Menu} size="md" />
 		</button>
 		<span class="h4">LeadKart</span>
 	</div>
@@ -26,13 +26,13 @@
 			onclick={() => theme.toggle()}
 		>
 			{#if theme.effective === 'dark'}
-				<Sun size={20} />
+				<Icon icon={Sun} size="md" />
 			{:else}
-				<Moon size={20} />
+				<Icon icon={Moon} size="md" />
 			{/if}
 		</button>
 		<button class="rounded-md p-1.5 hover:bg-[var(--color-bg-muted)]" aria-label="Notifications">
-			<Bell size={20} />
+			<Icon icon={Bell} size="md" />
 		</button>
 		<UserMenu />
 	</div>
