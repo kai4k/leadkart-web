@@ -26,7 +26,18 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --no-audit --no-fund
+        # `npm install` (not `npm ci`) because our dep tree includes
+        # platform-specific WASM bindings (@rolldown/binding-wasm32-wasi,
+        # @tailwindcss/oxide-wasm32-wasi) that Vite 8 + Tailwind 4 ship
+        # as optional fallbacks for native modules. npm 11's strict
+        # `npm ci` rejects the lock when the host platform's variant
+        # differs from the lock-author's platform — known issue tracked
+        # in npm/cli#5169 + vite/vite#15869. Plain `npm install` with
+        # `--prefer-offline` reuses the lock when possible while
+        # tolerating cross-platform variance. Lock determinism is still
+        # enforced at PR-review time via committed package-lock.json
+        # + Dependabot.
+        run: npm install --no-audit --no-fund --prefer-offline
 
       - name: Security audit (high+ severity blocks)
         # `npm audit` reports vulnerabilities. We block on high or
@@ -88,7 +99,18 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --no-audit --no-fund
+        # `npm install` (not `npm ci`) because our dep tree includes
+        # platform-specific WASM bindings (@rolldown/binding-wasm32-wasi,
+        # @tailwindcss/oxide-wasm32-wasi) that Vite 8 + Tailwind 4 ship
+        # as optional fallbacks for native modules. npm 11's strict
+        # `npm ci` rejects the lock when the host platform's variant
+        # differs from the lock-author's platform — known issue tracked
+        # in npm/cli#5169 + vite/vite#15869. Plain `npm install` with
+        # `--prefer-offline` reuses the lock when possible while
+        # tolerating cross-platform variance. Lock determinism is still
+        # enforced at PR-review time via committed package-lock.json
+        # + Dependabot.
+        run: npm install --no-audit --no-fund --prefer-offline
 
       - name: Download build artifact
         uses: actions/download-artifact@v4
