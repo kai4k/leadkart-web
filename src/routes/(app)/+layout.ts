@@ -4,12 +4,13 @@
  * land back where they tried to go after login.
  */
 import { redirect } from '@sveltejs/kit';
-import { isAuthenticated } from '$lib/features/auth/stores/session.svelte';
+import { session } from '$lib/features/auth/stores/session.svelte';
+import type { LayoutLoad } from './$types';
 
-export function load({ url }) {
-	if (!isAuthenticated()) {
+export const load: LayoutLoad = ({ url }) => {
+	if (!session.isAuthenticated) {
 		const next = encodeURIComponent(url.pathname + url.search);
 		throw redirect(307, `/signin?next=${next}`);
 	}
 	return {};
-}
+};

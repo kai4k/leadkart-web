@@ -4,17 +4,17 @@ LeadKart SaaS web frontend — Svelte 5 + SvelteKit 2 + Tailwind 4 SPA targeting
 
 ## Stack
 
-| Concern | Choice |
-|---|---|
-| Framework | SvelteKit 2 (adapter-static for SPA, no SSR) |
-| Components | Svelte 5 (runes — `$state`, `$props`, `$derived`) |
-| Styling | Tailwind 4 (`@tailwindcss/vite` plugin, CSS-first `@theme`) |
-| Build | Vite 6 |
-| TypeScript | 5+ |
-| Icons | lucide-svelte |
-| i18n | svelte-i18n (en + hi seed) |
-| Testing | Vitest (unit) + Playwright (e2e) + @testing-library/svelte |
-| Linting | eslint v9 flat config + prettier 3 + prettier-plugin-svelte + prettier-plugin-tailwindcss |
+| Concern    | Choice                                                                                    |
+| ---------- | ----------------------------------------------------------------------------------------- |
+| Framework  | SvelteKit 2 (adapter-static for SPA, no SSR)                                              |
+| Components | Svelte 5 (runes — `$state`, `$props`, `$derived`)                                         |
+| Styling    | Tailwind 4 (`@tailwindcss/vite` plugin, CSS-first `@theme`)                               |
+| Build      | Vite 6                                                                                    |
+| TypeScript | 5+                                                                                        |
+| Icons      | lucide-svelte                                                                             |
+| i18n       | svelte-i18n (en + hi seed)                                                                |
+| Testing    | Vitest (unit) + Playwright (e2e) + @testing-library/svelte                                |
+| Linting    | eslint v9 flat config + prettier 3 + prettier-plugin-svelte + prettier-plugin-tailwindcss |
 
 ## Project layout (industry-canonical, feature-first)
 
@@ -63,12 +63,14 @@ Auth: bearer JWT in `Authorization` header. Token persisted to `localStorage` ke
 ## Deployment
 
 `adapter-static` produces a pure static bundle. Deploy targets:
+
 - Cloudflare Pages
 - Vercel (static)
 - S3 + CloudFront
 - Netlify
 
 Build:
+
 ```bash
 npm run build   # → ./build/
 ```

@@ -20,7 +20,16 @@ export default ts.config(
 		languageOptions: {
 			globals: { ...globals.browser, ...globals.node }
 		},
-		rules: { 'no-undef': 'off' }
+		rules: {
+			'no-undef': 'off',
+			// svelte/no-navigation-without-resolve fires on every goto()
+			// + href until typed routes (`resolve()`) wraps every nav.
+			// Disabled during scaffold; revisit once route surface stable.
+			'svelte/no-navigation-without-resolve': 'off',
+			// svelte/no-useless-mustaches conflicts with Tailwind class
+			// composition — re-enable once we lean fully on cn().
+			'svelte/no-useless-mustaches': 'off'
+		}
 	},
 	{
 		files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],

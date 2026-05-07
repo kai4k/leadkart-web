@@ -10,7 +10,7 @@
 		</p>
 		<a
 			href="/"
-			class="mt-6 inline-block rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+			class="bg-brand-600 hover:bg-brand-700 mt-6 inline-block rounded-md px-4 py-2 text-sm font-medium text-white"
 		>
 			Back to home
 		</a>

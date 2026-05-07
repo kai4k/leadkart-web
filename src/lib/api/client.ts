@@ -2,52 +2,69 @@
  * Cross-cutting fetch wrapper for the leadkart-go JSON API.
  *
  * Concerns owned here:
- *   - Base URL resolution (env override + dev-proxy fallback)
- *   - Authorization header injection (Bearer JWT from session store)
+ *   - Base URL resolution via SvelteKit `$env/static/public`
+ *   - Authorization header injection (Bearer JWT from auth hooks)
  *   - JSON encode/decode + content-type
  *   - Error normalisation → typed [ApiError]
- *   - 401 → session-clear + redirect to /signin (handled by callers
- *     via the typed error; client is HTTP-layer only)
+ *   - 401 → silent refresh + single retry (RFC 6749 OAuth 2.0 token
+ *     refresh — Auth0 / Okta / Stripe canon)
  *
- * Per-feature typed wrappers (login, getMe, listLeads, etc.) live in
+ * Per-feature typed wrappers (login, listLeads, etc.) live in
  * lib/features/<x>/api.ts and call into this client.
  */
 
-import { ApiError, type ApiErrorBody } from './errors';
+import { env } from '$env/dynamic/public';
+import { ApiError, isApiError, type ApiErrorBody } from './errors';
 
 /**
- * Base URL resolution order:
- *   1. PUBLIC_API_BASE_URL env var (deploy-time wiring)
- *   2. /api (dev — proxied to leadkart-go via vite.config.ts)
+ * Auth integration hooks — injected at runtime by the session store.
+ * Keeps this module decoupled from feature/auth (avoids circular
+ * dep + leaves the client testable with a fake hook set).
  */
+export interface AuthHooks {
+	/** Returns the current access token, or null if signed-out. */
+	getAccessToken: () => string | null;
+	/** Attempts to refresh the access token. Returns true on success. */
+	refreshTokens: () => Promise<boolean>;
+	/** Called when refresh fails — typically clears the session. */
+	onUnauthorized: () => void;
+}
+
+let hooks: AuthHooks = {
+	getAccessToken: () => null,
+	refreshTokens: async () => false,
+	onUnauthorized: () => {}
+};
+
+export function setAuthHooks(next: AuthHooks) {
+	hooks = next;
+}
+
 function resolveBaseUrl(): string {
-	const env = import.meta.env.PUBLIC_API_BASE_URL;
-	if (typeof env === 'string' && env.length > 0) return env.replace(/\/$/, '');
-	return '/api';
+	const envBase = env.PUBLIC_API_BASE_URL?.trim();
+	if (envBase && envBase.length > 0) return envBase.replace(/\/$/, '');
+	return '/api'; // dev — vite proxies to localhost:8080
 }
 
-/**
- * Token getter is injected at runtime so the client doesn't import
- * the session store directly (avoids circular dep + keeps client
- * testable with a fake getter).
- */
-let getToken: () => string | null = () => null;
-
-export function setTokenGetter(fn: () => string | null) {
-	getToken = fn;
-}
-
-export interface RequestOptions extends RequestInit {
+export interface RequestOptions extends Omit<RequestInit, 'body'> {
+	/** Serialised as JSON body if defined. */
 	json?: unknown;
-	auth?: boolean; // default true; set false for unauthenticated calls (login, signup)
+	/** Default true; set false for public endpoints (login, signup). */
+	auth?: boolean;
+	/** Internal flag — true on the post-refresh retry to prevent loops. */
+	_retried?: boolean;
 }
 
 /**
- * Issues a typed JSON request. Resolves to the parsed JSON body on
- * 2xx; rejects with [ApiError] on non-2xx or transport failures.
+ * Issues a typed JSON request.
+ *
+ * Resolves to the parsed JSON body on 2xx; rejects with [ApiError] on
+ * non-2xx or transport failures. On 401 with auth=true, attempts a
+ * silent refresh + ONE retry; if refresh fails, calls onUnauthorized
+ * (typically session.clear) and rejects with REFRESH_FAILED.
  */
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-	const { json, auth = true, headers, body, ...rest } = options;
+	const { json, auth = true, headers, _retried = false, ...rest } = options;
 	const url = resolveBaseUrl() + (path.startsWith('/') ? path : '/' + path);
 
 	const finalHeaders = new Headers(headers);
@@ -56,7 +73,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 	}
 	finalHeaders.set('Accept', 'application/json');
 	if (auth) {
-		const token = getToken();
+		const token = hooks.getAccessToken();
 		if (token) finalHeaders.set('Authorization', `Bearer ${token}`);
 	}
 
@@ -65,10 +82,22 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 		response = await fetch(url, {
 			...rest,
 			headers: finalHeaders,
-			body: json !== undefined ? JSON.stringify(json) : body
+			body: json !== undefined ? JSON.stringify(json) : undefined
 		});
-	} catch (err) {
-		throw ApiError.transport(err);
+	} catch (cause) {
+		throw ApiError.transport(cause);
+	}
+
+	// 401 path: try silent refresh once. Skip when auth=false (the
+	// login / refresh endpoints themselves), or when we've already
+	// retried (prevents infinite loops if refresh returns 401 too).
+	if (response.status === 401 && auth && !_retried) {
+		const refreshed = await hooks.refreshTokens();
+		if (refreshed) {
+			return request<T>(path, { ...options, _retried: true });
+		}
+		hooks.onUnauthorized();
+		throw ApiError.refreshFailed();
 	}
 
 	const text = await response.text();
@@ -84,7 +113,10 @@ function safeJsonParse(text: string): unknown {
 	try {
 		return JSON.parse(text);
 	} catch {
-		return text;
+		// Non-JSON 2xx body (e.g. 204 No Content edge or text/plain).
+		// Returning null is safer than the raw string — callers casting
+		// to a typed shape would silently break with the string fallback.
+		return null;
 	}
 }
 
@@ -100,3 +132,5 @@ export const api = {
 	delete: <T>(path: string, options?: RequestOptions) =>
 		request<T>(path, { ...options, method: 'DELETE' })
 };
+
+export { isApiError };

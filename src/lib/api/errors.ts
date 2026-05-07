@@ -1,9 +1,18 @@
 /**
- * Typed API error surface. Mirrors the leadkart-go problem-details
- * shape (`{ code, message, details }`) used by the Identity HTTP
- * layer. Callers pattern-match on `error.code` for known classes
- * (`auth.invalid_credentials`, `auth.stale_token`, `validation.*`,
- * etc.) and on `error.status` for HTTP-tier classification.
+ * Typed API error surface — discriminated union via `code` (the wire-
+ * stable string sentinel from leadkart-go's problem-details body).
+ *
+ * Industry canon (TanStack Query, Stripe SDK, shadcn-svelte error
+ * patterns): callers pattern-match on `error.code` for specific
+ * handling, on `error.status` for HTTP-tier classification. Method-
+ * shaped predicates (`isUnauthorized()` etc.) are 2010-Java style;
+ * 2026 TS is tagged-union pattern-matching.
+ *
+ *   if (err.code === 'auth.invalid_credentials') { ... }
+ *   if (err.status === 401) { ... }
+ *
+ * Shape mirrors RFC 7807 problem-details (used by leadkart-go's
+ * `ErrorResponse`): `{ code, message, details? }`.
  */
 
 export interface ApiErrorBody {
@@ -11,6 +20,19 @@ export interface ApiErrorBody {
 	message?: string;
 	details?: Record<string, unknown>;
 }
+
+/**
+ * Sentinel for transport-level failures (network down, fetch threw,
+ * DNS, etc.). Status 0 — never reaches the server.
+ */
+export const TRANSPORT_ERROR = 'transport';
+
+/**
+ * Sentinel for the silent-refresh path: the original request returned
+ * 401, the refresh attempt also failed; caller treats this as "user
+ * needs to re-authenticate" (typically a redirect to /signin).
+ */
+export const REFRESH_FAILED = 'auth.refresh_failed';
 
 export class ApiError extends Error {
 	readonly status: number;
@@ -33,18 +55,15 @@ export class ApiError extends Error {
 
 	static transport(cause: unknown): ApiError {
 		const msg = cause instanceof Error ? cause.message : String(cause);
-		return new ApiError(0, 'transport', msg);
+		return new ApiError(0, TRANSPORT_ERROR, msg);
 	}
 
-	isUnauthorized(): boolean {
-		return this.status === 401;
+	static refreshFailed(): ApiError {
+		return new ApiError(401, REFRESH_FAILED, 'session refresh failed');
 	}
+}
 
-	isForbidden(): boolean {
-		return this.status === 403;
-	}
-
-	isValidation(): boolean {
-		return this.status === 400 || this.status === 422;
-	}
+/** Type predicate so callers can narrow `unknown` errors safely. */
+export function isApiError(value: unknown): value is ApiError {
+	return value instanceof ApiError;
 }
