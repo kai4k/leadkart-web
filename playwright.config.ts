@@ -1,12 +1,14 @@
-import { defineConfig } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright config — runs e2e tests against the production build via
- * `npm run preview` (vite preview, port 4173).
+ * Playwright config — multi-browser e2e against the production build.
  *
- * baseURL MUST match webServer.port. `npm run build` is a prerequisite
- * (CI workflow runs it before this step; locally `npm run build`
- * before `npm run test:e2e`).
+ * Browsers: chromium / firefox / webkit (matrix in CI; locally
+ * `npm run test:e2e -- --project=chromium` for fast iteration).
+ *
+ * Server: `npm run preview` on port 4173. baseURL MUST match.
+ * `npm run build` is a prerequisite (CI handles via artifact
+ * download; locally run `npm run build` first).
  *
  * `reuseExistingServer: !process.env.CI` — locally a running preview
  * is reused for fast iteration; CI always starts fresh.
@@ -15,10 +17,21 @@ export default defineConfig({
 	testDir: './tests/e2e',
 	timeout: 30_000,
 	fullyParallel: true,
+	forbidOnly: !!process.env.CI,
+	retries: process.env.CI ? 2 : 0,
+	workers: process.env.CI ? 1 : undefined,
+	reporter: process.env.CI ? [['html', { open: 'never' }], ['list']] : 'list',
 	use: {
 		baseURL: 'http://localhost:4173',
-		trace: 'on-first-retry'
+		trace: 'on-first-retry',
+		screenshot: 'only-on-failure',
+		video: 'retain-on-failure'
 	},
+	projects: [
+		{ name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+		{ name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+		{ name: 'webkit', use: { ...devices['Desktop Safari'] } }
+	],
 	webServer: {
 		command: 'npm run preview',
 		port: 4173,

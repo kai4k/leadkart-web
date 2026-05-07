@@ -17,14 +17,37 @@
 		"lint": "prettier --check . && eslint .",
 		"test": "vitest run --passWithNoTests",
 		"test:watch": "vitest",
+		"test:coverage": "vitest run --passWithNoTests --coverage",
 		"test:e2e": "playwright test",
+		"size": "size-limit",
 		"prepare": "husky"
 	},
+	"size-limit": [
+		{
+			"name": "Total JS bundle (gzip)",
+			"path": "build/_app/immutable/**/*.js",
+			"limit": "350 KB",
+			"gzip": true
+		},
+		{
+			"name": "Total CSS bundle (gzip)",
+			"path": "build/_app/immutable/**/*.css",
+			"limit": "60 KB",
+			"gzip": true
+		},
+		{
+			"name": "Initial route entry (signin)",
+			"path": "build/_app/immutable/entry/**/*.js",
+			"limit": "60 KB",
+			"gzip": true
+		}
+	],
 	"devDependencies": {
 		"@axe-core/playwright": "^4.11.3",
 		"@eslint/compat": "^1.2.5",
 		"@eslint/js": "^9.18.0",
 		"@playwright/test": "^1.49.0",
+		"@size-limit/preset-app": "^12.1.0",
 		"@sveltejs/adapter-auto": "^4.0.0",
 		"@sveltejs/adapter-static": "^3.0.8",
 		"@sveltejs/kit": "^2.16.0",
@@ -33,6 +56,7 @@
 		"@testing-library/jest-dom": "^6.6.3",
 		"@testing-library/svelte": "^5.2.0",
 		"@types/node": "^22.10.0",
+		"@vitest/coverage-v8": "^2.1.9",
 		"eslint": "^9.18.0",
 		"eslint-config-prettier": "^10.0.1",
 		"eslint-plugin-svelte": "^3.0.0",
@@ -43,6 +67,7 @@
 		"prettier": "^3.4.2",
 		"prettier-plugin-svelte": "^3.5.1",
 		"prettier-plugin-tailwindcss": "^0.8.0",
+		"size-limit": "^12.1.0",
 		"svelte": "^5.0.0",
 		"svelte-check": "^4.0.0",
 		"tailwindcss": "^4.0.0",

@@ -4,8 +4,17 @@ on:
   push:
     branches: [main]
 
+# Concurrency: cancel in-flight runs on the same branch when a new
+# commit lands. Saves runner minutes + GitHub minutes quota.
+# Industry canon (every Linear/Vercel/Stripe public CI yaml).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # ─── Static analysis + unit tests + build ────────────────────────────
   build:
+    name: Build & static analysis
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -19,22 +28,114 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
+      - name: Security audit (high+ severity blocks)
+        # `npm audit` reports vulnerabilities. We block on high or
+        # critical findings — moderate/low are surfaced as warnings
+        # via Dependabot's PRs (see .github/dependabot.yml).
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: false
+
       - name: Lint (prettier + eslint)
         run: npm run lint
 
       - name: Type check (svelte-check + tsc)
         run: npm run check
 
-      - name: Unit tests (vitest)
-        run: npm run test
+      - name: Unit tests with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
 
       - name: Build
         run: npm run build
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+      - name: Bundle-size check
+        # size-limit fails the build if any tracked entry crosses
+        # the budget declared in package.json `size-limit:` block.
+        # Industry canon — Linear/Vercel/Stripe block PRs that bloat
+        # the bundle past the budget.
+        run: npx size-limit
 
-      - name: E2E tests (Playwright)
-        run: npm run test:e2e
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: build/
+          retention-days: 7
+
+  # ─── End-to-end + a11y across browsers ───────────────────────────────
+  e2e:
+    name: E2E (${{ matrix.browser }})
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web-build
+          path: build/
+
+      # Cache Playwright browsers across runs — saves ~30s per run.
+      # Cache key includes the @playwright/test version so a bump
+      # invalidates the cache automatically.
+      - name: Get Playwright version
+        id: pw-version
+        run: |
+          echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.version }}-${{ matrix.browser }}
+
+      - name: Install Playwright browser
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Install Playwright system deps
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps ${{ matrix.browser }}
+
+      - name: E2E tests
+        run: npx playwright test --project=${{ matrix.browser }} --reporter=html
         env:
           CI: 'true'
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.browser }}
+          path: playwright-report/
+          retention-days: 14
+
+      - name: Upload Playwright traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces-${{ matrix.browser }}
+          path: test-results/
+          retention-days: 14

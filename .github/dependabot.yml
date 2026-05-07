@@ -1,0 +1,100 @@
+# Dependabot — weekly grouped PRs for npm + GitHub Actions deps.
+#
+# Industry canon: every production repo has Dependabot or Renovate
+# wired. Keeps deps current on a predictable cadence; security
+# patches surface within 24h via Dependabot security alerts.
+#
+# Strategy: weekly run, grouped by ecosystem so a single PR upgrades
+# all minor/patch deps together (less PR noise). Major bumps still
+# get individual PRs (signal-rich, manual review).
+
+version: 2
+updates:
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+      timezone: 'Asia/Kolkata'
+    open-pull-requests-limit: 10
+    versioning-strategy: 'increase-if-necessary'
+    commit-message:
+      prefix: 'chore(deps)'
+      include: 'scope'
+    labels:
+      - 'dependencies'
+    groups:
+      svelte-stack:
+        patterns:
+          - 'svelte'
+          - 'svelte-*'
+          - '@sveltejs/*'
+          - 'vite'
+          - '@vitejs/*'
+          - 'tailwindcss'
+          - '@tailwindcss/*'
+        update-types:
+          - 'minor'
+          - 'patch'
+      tooling:
+        patterns:
+          - 'eslint'
+          - 'eslint-*'
+          - '@eslint/*'
+          - 'prettier'
+          - 'prettier-*'
+          - 'typescript'
+          - 'typescript-eslint'
+          - 'husky'
+          - 'lint-staged'
+        update-types:
+          - 'minor'
+          - 'patch'
+      testing:
+        patterns:
+          - 'vitest'
+          - '@vitest/*'
+          - '@testing-library/*'
+          - '@playwright/*'
+          - '@axe-core/*'
+          - 'jsdom'
+        update-types:
+          - 'minor'
+          - 'patch'
+      bundle-perf:
+        patterns:
+          - 'size-limit'
+          - '@size-limit/*'
+        update-types:
+          - 'minor'
+          - 'patch'
+      runtime:
+        patterns:
+          - 'lucide-svelte'
+          - 'svelte-i18n'
+          - 'sveltekit-superforms'
+          - 'zod'
+          - 'valibot'
+          - 'class-variance-authority'
+          - 'clsx'
+          - 'tailwind-merge'
+          - 'bits-ui'
+          - '@fontsource-variable/*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+      timezone: 'Asia/Kolkata'
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'chore(ci)'
+    labels:
+      - 'dependencies'
+      - 'ci'
