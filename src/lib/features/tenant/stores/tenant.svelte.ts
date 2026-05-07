@@ -59,31 +59,54 @@ export class TenantStore {
 	async updateProfile(body: UpdateTenantProfileRequest): Promise<void> {
 		const id = this.requireTenantId();
 		await updateTenantProfile(id, body);
-		await this.load();
+		await this.silentRefresh(id);
 	}
 
 	async updateStatutory(body: UpdateTenantStatutoryRequest): Promise<void> {
 		const id = this.requireTenantId();
 		await updateTenantStatutory(id, body);
-		await this.load();
+		await this.silentRefresh(id);
 	}
 
 	async updateAdminContact(body: UpdateTenantAdminContactRequest): Promise<void> {
 		const id = this.requireTenantId();
 		await updateTenantAdminContact(id, body);
-		await this.load();
+		await this.silentRefresh(id);
 	}
 
 	async updateSettings(body: UpdateTenantSettingsRequest): Promise<void> {
 		const id = this.requireTenantId();
 		await updateTenantSettings(id, body);
-		await this.load();
+		await this.silentRefresh(id);
 	}
 
 	async updateDisplayPreferences(body: UpdateTenantDisplayPreferencesRequest): Promise<void> {
 		const id = this.requireTenantId();
 		await updateTenantDisplayPreferences(id, body);
-		await this.load();
+		await this.silentRefresh(id);
+	}
+
+	/**
+	 * Post-mutation re-fetch that DOES NOT flap status through
+	 * 'loading'. The layout's loading branch unmounts children when
+	 * status === 'loading'; if a mutator triggered a normal load(),
+	 * the form's local "Saved!" flag would be lost when the layout
+	 * re-mounted. Silent refresh keeps status === 'ready' throughout
+	 * so the form stays mounted and its success state survives.
+	 *
+	 * Re-fetch failures here are swallowed: the mutation itself
+	 * succeeded (the PATCH returned 204), so the user's typed values
+	 * ARE the server's persisted values. A stale header is preferable
+	 * to a confusing "saved-but-also-error" state. The next explicit
+	 * load() will reconcile any drift.
+	 */
+	private async silentRefresh(id: string): Promise<void> {
+		try {
+			this.current = await getTenant(id);
+			this.status = 'ready';
+		} catch {
+			// see godoc above
+		}
 	}
 
 	reset() {

@@ -121,6 +121,20 @@ describe('TenantStore mutators', () => {
 		expect(mocked.getTenant).not.toHaveBeenCalled();
 	});
 
+	it('silentRefresh swallows GET failures so successful mutations still resolve', async () => {
+		// PATCH /profile succeeds, but the post-PATCH GET fails. The
+		// mutation itself was successful (server has the new value),
+		// so the mutator still resolves — only the form's "displayed"
+		// state may be stale until the next explicit load().
+		mocked.updateTenantProfile.mockResolvedValueOnce(undefined);
+		mocked.getTenant.mockRejectedValueOnce(new Error('transient 503'));
+
+		const store = new TenantStore();
+		await expect(
+			store.updateProfile({ legal_name: 'X', display_name: 'X' })
+		).resolves.toBeUndefined();
+	});
+
 	it('updateAdminContact, updateSettings, updateDisplayPreferences each PATCH+reload', async () => {
 		mocked.updateTenantAdminContact.mockResolvedValueOnce(undefined);
 		mocked.updateTenantSettings.mockResolvedValueOnce(undefined);
