@@ -133,6 +133,71 @@ All deps tracked at LATEST via Dependabot (see `.github/dependabot.yml` — week
 - `fetch()` in components or services — must go through gateway layer
 - Premature abstraction — Rule of Three gates extractions
 
+## Design implementation discipline
+
+Per Toptal "10 Front-End Design Principles" (Bryan Grezeszak) — craft
+discipline that complements the architecture rules above. The
+architecture is the substrate; these are the rules for HOW we
+translate visual designs into code without drift.
+
+**Source of truth for visual design:** Domiex Svelte theme
+(`d:\Development\Domiex-svelte-ts-admin\Svelte`). When cherry-picking
+or implementing a screen against the theme, the theme's pixels are
+the spec. We don't "improve" — we match.
+
+**Rules:**
+
+1. **Match the design, don't beat it.** When porting a Domiex theme
+   pattern, keep the original spacing / typography / colour
+   relationships. The cherry-pick discipline already exists ("strip
+   demo content, keep what's done right"); this extends it: when in
+   scope, MATCH pixel-for-pixel; when reshaping, justify in the PR.
+
+2. **Whitespace is multiples of the base spacing unit.** The `4px`
+   base of `--spacing-*` tokens means every gap, padding, margin
+   resolves to a token (or a fluid spacing token for cross-section
+   gaps). NEVER inline `12px`, `15px`, `padding: 0.625rem` — they
+   break rhythm. Audit grep target: `(padding|margin|gap):` in
+   `<style>` blocks with non-token values.
+
+3. **Less is more for placeholder + empty-state + filler.**
+   Dashboard widgets without data → a token-styled `<Card.Root>` with
+   `display-2` em-dash, no decorative gradient, no drop shadow.
+   Empty-state lists → simple icon + caption, not an illustrated
+   hero. The principle: fillers carry NO design intent; they
+   surrender to the surrounding design until real content arrives.
+
+4. **Pixel-perfect against the theme reference.** When implementing
+   a Domiex-derived component, open the theme's source `.svelte` in
+   parallel + match the spacing / weight / size tokens exactly.
+   When the theme uses an unusual value (e.g. `13px` for caption),
+   either map it to our nearest token (`--text-sm` if 14px) OR add a
+   new token. NEVER hand-pick a one-off pixel value.
+
+5. **Typography pairing is locked.** Inter Variable for everything
+   sans, JetBrains Mono Variable for code/data. Headings use
+   semibold/bold via `.h1`-`.h6` classes; body text via
+   `.body-{lg,base,sm}`; labels via `.caption` / `.overline`.
+   Mixing fonts mid-page (e.g. Helvetica for body, Inter for
+   headers) is banned.
+
+6. **Hierarchy via whitespace + tokenized colour.** Proximity
+   = relationship; whitespace = separation. Tokenized colour
+   conveys hierarchy: `text-fg` → primary, `text-fg-muted` →
+   secondary, `text-fg-subtle` → tertiary. NEVER use raw shades
+   (`text-slate-500`) for hierarchy — that breaks on theme switch.
+
+7. **Tunnel vision check before merge.** Before opening a PR, take a
+   screenshot of the changed UI in context (full route, both light
+   - dark, both desktop + mobile). Confirm the change doesn't
+     over-emphasize relative to surrounding design. If the new
+     component "looks great" in isolation but visually dominates the
+     route, scale it back.
+
+These map onto the architecture: tokens enforce 1-2-5-6 mechanically;
+primitives enforce 7 by limiting variant API; the e2e + a11y test
+gate catches contrast/spacing regressions automatically.
+
 ## Backend integration
 
 Dev: vite proxies `/api/*` → `http://localhost:8080`. Production: set `PUBLIC_API_BASE_URL` build-time.
