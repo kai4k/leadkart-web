@@ -40,8 +40,9 @@
 
 	const tabs: ReadonlyArray<{ href: string; label: string }> = [
 		{ href: '/settings/tenant/profile', label: 'Profile' },
-		{ href: '/settings/tenant/statutory', label: 'Statutory IDs' }
-		// Contact + Preferences land in commits 8 + 9.
+		{ href: '/settings/tenant/statutory', label: 'Statutory IDs' },
+		{ href: '/settings/tenant/contact', label: 'Contact' }
+		// Preferences lands in commit 9.
 	];
 
 	function isActive(href: string): boolean {
