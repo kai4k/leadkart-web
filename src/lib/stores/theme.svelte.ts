@@ -16,12 +16,21 @@
 type ThemeMode = 'light' | 'dark' | 'system';
 
 /**
- * Primary colour identifiers — match the Blazor canon
- * (LeadKart.Web.Client/Components/Layout/ThemeSettings.cs:226-235).
- * `blue` is the default LeadKart brand; the rest are iOS-system
- * accents users can pick via the customiser.
+ * Primary colour identifiers — extends the Blazor catalog with `'navy'`
+ * (the new LeadKart navy-violet brand, derived from the logo wordmark).
+ *
+ * `'navy'` is the DEFAULT — leaving the picker untouched yields the
+ * brand 11-stop scale baked into tokens.css (no `data-primary` attr).
+ *
+ * The other 10 entries are alt accents users can pick via the customiser
+ * (drawer UI deferred); each maps to a `:root[data-primary='X']` override
+ * block in styles/base.css that re-skins the brand 11-stop. Picker
+ * `'blue'` = the previous corporate blue (#265A8E) for users who want
+ * the old look back; `'green'` = iOS pure green (note: distinct from our
+ * --color-secondary-* logo green which always stays).
  */
 export type PrimaryColor =
+	| 'navy'
 	| 'blue'
 	| 'green'
 	| 'indigo'
@@ -34,7 +43,8 @@ export type PrimaryColor =
 	| 'cyan';
 
 export const PRIMARY_COLORS: ReadonlyArray<{ id: PrimaryColor; label: string; hex: string }> = [
-	{ id: 'blue', label: 'Blue', hex: '#265A8E' },
+	{ id: 'navy', label: 'Navy', hex: '#2D2F7E' }, // default — logo wordmark navy-violet
+	{ id: 'blue', label: 'Blue', hex: '#265A8E' }, // legacy corporate blue
 	{ id: 'green', label: 'Green', hex: '#34C759' },
 	{ id: 'indigo', label: 'Indigo', hex: '#5856D6' },
 	{ id: 'orange', label: 'Orange', hex: '#FF9500' },
@@ -61,10 +71,10 @@ class ThemeStore {
 	}
 
 	private readInitialPrimary(): PrimaryColor {
-		if (typeof window === 'undefined') return 'blue';
+		if (typeof window === 'undefined') return 'navy';
 		const stored = window.localStorage.getItem(PRIMARY_KEY);
 		const valid = PRIMARY_COLORS.find((c) => c.id === stored);
-		return valid?.id ?? 'blue';
+		return valid?.id ?? 'navy';
 	}
 
 	/**
@@ -110,11 +120,12 @@ class ThemeStore {
 		const root = document.documentElement;
 		if (this.effective === 'dark') root.classList.add('dark');
 		else root.classList.remove('dark');
-		// Default primary (blue) doesn't need an attribute — base
-		// tokens.css already encodes the LeadKart brand. Other
+		// Default primary ('navy') doesn't need an attribute — base
+		// tokens.css already encodes the navy-violet logo brand. Other
 		// primaries set data-primary so the override CSS rules in
-		// base.css activate.
-		if (this.primary === 'blue') root.removeAttribute('data-primary');
+		// base.css activate (re-skinning the brand 11-stop only;
+		// secondary/semantic palettes stay constant).
+		if (this.primary === 'navy') root.removeAttribute('data-primary');
 		else root.setAttribute('data-primary', this.primary);
 	}
 

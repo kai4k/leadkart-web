@@ -37,7 +37,7 @@
 			<Button variant="primary" onclick={() => location.reload()}>Try again</Button>
 			{#if isAuthError}
 				<a href="/signin">
-					<Button variant="secondary">Sign in</Button>
+					<Button variant="tonal">Sign in</Button>
 				</a>
 			{:else}
 				<a href="/dashboard">

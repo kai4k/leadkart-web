@@ -125,6 +125,72 @@
 		-webkit-backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate-sm));
 	}
 
+	/* ═══ INTERACTIVE — composable lift/press/glow primitives
+	 *
+	 * Apply to Buttons, Cards, list rows, anything pointer-interactable.
+	 * Hover lifts + scales 1.01 with spring easing; active snaps to 0.96
+	 * for tactile click feedback. Industry refs: Apple HIG tap targets,
+	 * Material 3 state-layer system, Stripe Dashboard hover treatment.
+	 *
+	 * GPU-accelerated via translate-z(0) + will-change hints (only on
+	 * hover-capable inputs to avoid layer churn on touch).
+	 * ───────────────────────────────────────────────────────────── */
+	.interactive {
+		transition:
+			transform var(--duration-base) var(--ease-spring-soft),
+			box-shadow var(--duration-base) var(--ease-out),
+			background-color var(--duration-base) var(--ease-out),
+			filter var(--duration-base) var(--ease-out);
+		will-change: auto;
+	}
+	@media (hover: hover) {
+		.interactive:hover {
+			transform: translateY(var(--motion-hover-lift)) scale(var(--motion-hover-scale));
+		}
+	}
+	.interactive:active {
+		transform: scale(var(--motion-press-scale));
+		transition-duration: var(--duration-fast);
+	}
+
+	/* ═══ Glass surfaces — hover saturate boost + ::after sheen sweep
+	 * Adds the "this surface reacts to me" feel without changing shape.
+	 * Composable on top of .glass-{appbar,drawer,popover,dialog,toast}. */
+	@media (hover: hover) {
+		.glass-appbar,
+		.glass-drawer,
+		.glass-popover,
+		.glass-dialog,
+		.glass-toast {
+			transition:
+				backdrop-filter var(--duration-slow) var(--ease-out),
+				-webkit-backdrop-filter var(--duration-slow) var(--ease-out),
+				border-color var(--duration-base) var(--ease-out);
+		}
+		.glass-popover:hover,
+		.glass-dialog:hover {
+			backdrop-filter: blur(var(--glass-blur-lg)) saturate(calc(var(--glass-saturate-lg) + 0.2));
+			-webkit-backdrop-filter: blur(var(--glass-blur-lg))
+				saturate(calc(var(--glass-saturate-lg) + 0.2));
+		}
+	}
+
+	/* ═══ Brand-tinted glow ring — for primary CTAs that should pull the
+	 * eye. Pair with .interactive on Button variant="primary" to get the
+	 * full Apple-CTA feel: lift + sheen + soft brand-coloured halo. */
+	.brand-halo {
+		box-shadow:
+			0 4px 14px -4px oklch(0.4 0.18 260 / 0.35),
+			0 2px 4px -2px oklch(0.4 0.18 260 / 0.18);
+	}
+	@media (hover: hover) {
+		.brand-halo:hover {
+			box-shadow:
+				0 8px 22px -4px oklch(0.5 0.19 260 / 0.45),
+				0 4px 8px -2px oklch(0.5 0.19 260 / 0.25);
+		}
+	}
+
 	/* ═══ Reduced-transparency fallback — WCAG 2.2 §1.4.3 + Apple HIG.
 	 * Some users (vestibular sensitivity, low-end GPUs) opt out of
 	 * translucent surfaces via the OS setting. Glass surfaces fall

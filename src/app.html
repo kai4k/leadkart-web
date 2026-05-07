@@ -40,7 +40,9 @@
 		/>
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="color-scheme" content="light dark" />
-		<meta name="theme-color" content="#265A8E" />
+		<!-- Mobile browser chrome — navy-violet logo brand. Overridden at
+		     runtime if the user picks an alt primary (theme.svelte.ts). -->
+		<meta name="theme-color" content="#2D2F7E" />
 		<title>LeadKart</title>
 		<!--
 			Theme prime — runs SYNCHRONOUSLY before first paint to apply
@@ -74,9 +76,23 @@
 					//    so the brand-coloured panel of the AuthShell renders in
 					//    the user's chosen primary, not the blue default.
 					var p = localStorage.getItem('leadkart-primary');
+					// 'navy' is the default brand — no attr (base tokens.css wins).
+					// 'blue' + the 9 iOS hues set data-primary so base.css overrides
+					// kick in before first paint, preventing flash-of-unbranded-content.
 					if (
 						p &&
-						['green', 'indigo', 'orange', 'teal', 'purple', 'pink', 'red', 'mint', 'cyan'].indexOf(p) >= 0
+						[
+							'blue',
+							'green',
+							'indigo',
+							'orange',
+							'teal',
+							'purple',
+							'pink',
+							'red',
+							'mint',
+							'cyan'
+						].indexOf(p) >= 0
 					) {
 						root.setAttribute('data-primary', p);
 					}
