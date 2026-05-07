@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Bell, Menu, Moon, Sun, Icon } from '$icons';
 	import { theme } from '$lib/stores/theme.svelte';
+	import { Logo } from '$ui';
 	import UserMenu from './UserMenu.svelte';
 
 	let { onToggleSidebar } = $props<{ onToggleSidebar?: () => void }>();
@@ -17,7 +18,9 @@
 		>
 			<Icon icon={Menu} size="md" />
 		</button>
-		<span class="h4">LeadKart</span>
+		<a href="/dashboard" class="flex items-center" aria-label="LeadKart home">
+			<Logo size="sm" />
+		</a>
 	</div>
 	<div class="cluster" style="--cluster-gap: var(--spacing-2);">
 		<button

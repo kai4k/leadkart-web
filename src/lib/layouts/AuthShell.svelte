@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Logo } from '$ui';
+
 	let { children } = $props();
 </script>
 
@@ -8,17 +10,18 @@
 	<header
 		class="flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-brand-600)] px-6 py-4 text-[var(--color-fg-on-brand)] lg:hidden"
 	>
-		<span class="h4">LeadKart</span>
+		<Logo size="sm" variant="dark-bg" />
 		<span class="caption text-[var(--color-brand-50)]">Pharma SaaS</span>
 	</header>
 
 	<!-- Brand panel — desktop only. <section>, not <aside>: this IS part
-	     of the primary layout, not tangential content. -->
+	     of the primary layout, not tangential content. Pinned to brand-600
+	     surface so the white-on-brand logo always reads correctly. -->
 	<section
 		aria-label="Brand"
 		class="hidden lg:flex lg:flex-col lg:justify-between lg:bg-[var(--color-brand-600)] lg:p-12 lg:text-[var(--color-fg-on-brand)]"
 	>
-		<div class="h2">LeadKart</div>
+		<Logo size="lg" variant="dark-bg" />
 		<div class="stack stack-snug">
 			<p class="display-2">Pharma SaaS, built for India.</p>
 			<p class="lead text-[var(--color-brand-50)]">
