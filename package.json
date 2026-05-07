@@ -10,7 +10,7 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
-		"preview": "vite preview",
+		"preview": "serve build -l 4173 -s --no-clipboard",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"format": "prettier --write .",
@@ -67,6 +67,7 @@
 		"prettier": "^3.4.2",
 		"prettier-plugin-svelte": "^3.5.1",
 		"prettier-plugin-tailwindcss": "^0.8.0",
+		"serve": "^14.2.6",
 		"size-limit": "^12.1.0",
 		"svelte": "^5.0.0",
 		"svelte-check": "^4.0.0",
