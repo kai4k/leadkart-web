@@ -7,6 +7,7 @@ import {
 	ListTodo,
 	Bell,
 	Settings,
+	ShieldCheck,
 	type Icon as LucideIcon
 } from 'lucide-svelte';
 
@@ -56,6 +57,14 @@ export const NAV: NavSection[] = [
 	},
 	{
 		title: 'Account',
-		items: [{ href: '/settings/tenant', label: 'Settings', icon: Settings, requires: null }]
+		items: [
+			{ href: '/settings/tenant', label: 'Tenant Settings', icon: Settings, requires: null },
+			{
+				href: '/settings/account/security',
+				label: 'Account & Security',
+				icon: ShieldCheck,
+				requires: null
+			}
+		]
 	}
 ];

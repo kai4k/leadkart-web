@@ -14,9 +14,77 @@
 			"signupPrompt": "Don't have an account?",
 			"signupCta": "Sign up"
 		},
+		"forgot": {
+			"title": "Forgot your password?",
+			"subtitle": "Enter the email associated with your account and we'll send you a reset link.",
+			"email": "Email",
+			"submit": "Send reset link",
+			"success": "If that account exists, we've sent a password reset link. Check your inbox.",
+			"error": "Couldn't send the reset email. Please try again.",
+			"backToSignin": "Back to sign in"
+		},
+		"reset": {
+			"title": "Reset your password",
+			"subtitle": "Choose a new password for your account.",
+			"newPassword": "New password",
+			"newPasswordHint": "At least 8 characters. Avoid passwords used elsewhere.",
+			"confirmPassword": "Confirm new password",
+			"submit": "Reset password",
+			"success": "Password reset. You can sign in now.",
+			"missingToken": "This reset link is missing its token. Request a new link.",
+			"invalidToken": "This reset link is invalid or has expired. Request a new link.",
+			"mismatch": "Passwords don't match.",
+			"requestNew": "Request a new link",
+			"genericError": "Couldn't reset the password. Please try again."
+		},
+		"confirmEmail": {
+			"title": "Confirm your email change",
+			"subtitle": "Click confirm to apply the new email address to your account. You'll need to sign in again with the new email.",
+			"confirmButton": "Confirm email change",
+			"loading": "Confirming…",
+			"success": "Email updated. Sign in with your new email to continue.",
+			"signin": "Sign in",
+			"missingToken": "This confirmation link is missing its token.",
+			"invalidToken": "This confirmation link is invalid or has expired.",
+			"requestNew": "Start over from Account & Security",
+			"genericError": "Couldn't confirm the email change. Please try again."
+		},
 		"errors": {
 			"invalidCredentials": "Email or password is incorrect.",
 			"unexpected": "Something went wrong. Please try again."
+		}
+	},
+	"account": {
+		"security": {
+			"title": "Account & Security",
+			"subtitle": "Manage your sign-in credentials. Changes take effect immediately and may sign you out of other devices.",
+			"changePassword": {
+				"title": "Change password",
+				"description": "Pick a strong password you don't use elsewhere. We'll keep you signed in on this device.",
+				"currentPassword": "Current password",
+				"newPassword": "New password",
+				"newPasswordHint": "At least 8 characters. Must differ from your current password.",
+				"confirmPassword": "Confirm new password",
+				"submit": "Update password",
+				"success": "Password updated.",
+				"errors": {
+					"incorrectCurrent": "That doesn't match your current password.",
+					"mismatch": "Passwords don't match.",
+					"generic": "Couldn't update your password. Please try again."
+				}
+			},
+			"changeEmail": {
+				"title": "Change email",
+				"description": "We'll send a confirmation link to the new address. Your current email keeps working until you click that link.",
+				"newEmail": "New email",
+				"newEmailHint": "Must not already be in use by another account.",
+				"submit": "Send confirmation link",
+				"success": "Confirmation link sent. Click the link in your inbox at the new address to complete the change.",
+				"errors": {
+					"alreadyTaken": "Another account already uses this email.",
+					"generic": "Couldn't send the confirmation link. Please try again."
+				}
+			}
 		}
 	},
 	"common": {
