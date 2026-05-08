@@ -48,6 +48,8 @@ updates:
           - 'typescript-eslint'
           - 'husky'
           - 'lint-staged'
+          - '@types/*'
+          - 'globals'
         update-types:
           - 'minor'
           - 'patch'
@@ -98,3 +100,13 @@ updates:
     labels:
       - 'dependencies'
       - 'ci'
+    # All minor/patch action bumps land in one PR. Action major bumps
+    # often carry breaking changes (input renames, runtime swaps), so
+    # they still get individual PRs for signal-rich review.
+    groups:
+      gh-actions:
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
