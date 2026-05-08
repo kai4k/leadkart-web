@@ -45,7 +45,22 @@
 	"account": {
 		"security": {
 			"title": "Account & Security",
-			"subtitle": "Manage your sign-in credentials. Changes take effect immediately and may sign you out of other devices."
+			"subtitle": "Manage your sign-in credentials. Changes take effect immediately and may sign you out of other devices.",
+			"changePassword": {
+				"title": "Change password",
+				"description": "Pick a strong password you don't use elsewhere. We'll keep you signed in on this device.",
+				"currentPassword": "Current password",
+				"newPassword": "New password",
+				"newPasswordHint": "At least 8 characters. Must differ from your current password.",
+				"confirmPassword": "Confirm new password",
+				"submit": "Update password",
+				"success": "Password updated.",
+				"errors": {
+					"incorrectCurrent": "That doesn't match your current password.",
+					"mismatch": "Passwords don't match.",
+					"generic": "Couldn't update your password. Please try again."
+				}
+			}
 		}
 	},
 	"common": {
