@@ -118,6 +118,39 @@ test.describe('A11y — WCAG 2.2 AA via axe-core', () => {
 		await expectNoSeriousOrCriticalViolations(page);
 	});
 
+	test('forgot-password page has no critical or serious violations', async ({ page }) => {
+		await page.goto('/forgot-password');
+		await expectNoSeriousOrCriticalViolations(page);
+	});
+
+	test('reset-password (with token, form rendered) has no critical or serious violations', async ({
+		page
+	}) => {
+		await page.goto('/reset-password?token=fake.reset.token');
+		await expectNoSeriousOrCriticalViolations(page);
+	});
+
+	test('reset-password (missing token, banner rendered) has no critical or serious violations', async ({
+		page
+	}) => {
+		await page.goto('/reset-password');
+		await expectNoSeriousOrCriticalViolations(page);
+	});
+
+	test('confirm-email-change (with token, button rendered) has no critical or serious violations', async ({
+		page
+	}) => {
+		await page.goto('/confirm-email-change?token=fake.email.token');
+		await expectNoSeriousOrCriticalViolations(page);
+	});
+
+	test('confirm-email-change (missing token, banner rendered) has no critical or serious violations', async ({
+		page
+	}) => {
+		await page.goto('/confirm-email-change');
+		await expectNoSeriousOrCriticalViolations(page);
+	});
+
 	/**
 	 * Design-system styleguide — the ground-truth a11y gate. Renders every
 	 * Button variant × size × state, every Card variant, every Alert variant,
@@ -172,6 +205,25 @@ test.describe('A11y — WCAG 2.2 AA via axe-core', () => {
 			await page.goto('/settings/tenant/preferences');
 			await expect(
 				page.getByRole('heading', { level: 3, name: 'Display preferences' })
+			).toBeVisible();
+			await expectNoSeriousOrCriticalViolations(page, 'main');
+		});
+	});
+
+	/**
+	 * Account & Security signed-in route. Same Sidebar-contrast scoping
+	 * rationale as the Tenant Settings sub-routes above.
+	 */
+	test.describe('Account & Security', () => {
+		test.beforeEach(async ({ page }) => {
+			await setupAuthedTenantMocks(page);
+			await signIn(page);
+		});
+
+		test('Security page', async ({ page }) => {
+			await page.goto('/settings/account/security');
+			await expect(
+				page.getByRole('heading', { level: 1, name: 'Account & Security' })
 			).toBeVisible();
 			await expectNoSeriousOrCriticalViolations(page, 'main');
 		});
