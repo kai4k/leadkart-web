@@ -295,6 +295,43 @@
 	--shadow-inner: inset 0 2px 4px 0 oklch(0.2 0.02 256 / 0.05);
 	--shadow-focus: 0 0 0 3px var(--color-brand-200);
 
+	/* ═══ COLOURED SHADOWS — brand/semantic-tinted halos for CTAs.
+	 *
+	 * Industry refs: Stripe Dashboard primary CTAs, Linear Cmd-K palette,
+	 * Refactoring UI ch.7 (coloured shadows for tactile feedback).
+	 *
+	 * These tokens centralise the OKLCH triplets that previously lived
+	 * inline in utilities.css/animations.css/Button.svelte arbitrary-value
+	 * classes. Drift-free: changing the brand hue at the top of the file
+	 * propagates to halo + glow + button shadow without grep-and-replace.
+	 *
+	 * The opacity-bearing oklch literals duplicate the brand-600/500 etc.
+	 * values intentionally — CSS can't var() inside oklch() arithmetic,
+	 * so the literal IS the canonical token here. Keep the comment chain
+	 * (`-600 lightness/chroma/hue` etc.) so future edits stay in sync.
+	 * ─────────────────────────────────────────────────────────────── */
+	--shadow-brand:
+		0 4px 14px -4px oklch(0.4 0.18 260 / 0.35),
+		/* brand-600 */ 0 2px 4px -2px oklch(0.4 0.18 260 / 0.18); /* brand-600 */
+	--shadow-brand-hover:
+		0 8px 22px -4px oklch(0.5 0.19 260 / 0.45),
+		/* brand-500 */ 0 4px 8px -2px oklch(0.5 0.19 260 / 0.25); /* brand-500 */
+
+	/* Secondary green CTA — uses secondary-700 shade for AA-safe halo
+	 * (the visible button text contrast is the tighter constraint; the
+	 * shadow just needs to read as "green-tinted" against the page bg). */
+	--shadow-secondary: 0 4px 14px -4px oklch(0.48 0.17 140 / 0.4); /* secondary-700 */
+
+	/* Danger red CTA — same shape as brand/secondary. */
+	--shadow-danger: 0 4px 14px -4px oklch(0.66 0.23 25 / 0.4); /* danger-500 */
+
+	/* Brand glow — pulsed halo for primary "next-step" CTAs. Two stops
+	 * for the @keyframes brand-glow animation. */
+	--brand-glow-rest: oklch(0.5 0.19 260 / 0.4); /* brand-500 */
+	--brand-glow-rest-shadow: oklch(0.5 0.19 260 / 0.25); /* brand-500 */
+	--brand-glow-peak-shadow: oklch(0.5 0.19 260 / 0.35); /* brand-500 */
+	--brand-glow-fade: oklch(0.5 0.19 260 / 0); /* brand-500 transparent */
+
 	/* ═══ LIQUID GLASS — translucent surface system per Blazor canon
 	 * (LeadKart.Web/wwwroot/css/leadkart.css "iOS-inspired design system
 	 * with liquid glass surfaces"). The combo of `backdrop-filter: blur()

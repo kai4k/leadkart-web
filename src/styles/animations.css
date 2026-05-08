@@ -198,13 +198,13 @@
 	0%,
 	100% {
 		box-shadow:
-			0 0 0 0 oklch(0.5 0.19 260 / 0.4),
-			0 4px 12px -2px oklch(0.5 0.19 260 / 0.25);
+			0 0 0 0 var(--brand-glow-rest),
+			0 4px 12px -2px var(--brand-glow-rest-shadow);
 	}
 	50% {
 		box-shadow:
-			0 0 0 8px oklch(0.5 0.19 260 / 0),
-			0 8px 20px -2px oklch(0.5 0.19 260 / 0.35);
+			0 0 0 8px var(--brand-glow-fade),
+			0 8px 20px -2px var(--brand-glow-peak-shadow);
 	}
 }
 

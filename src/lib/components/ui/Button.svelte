@@ -26,19 +26,17 @@
 				variant: {
 					// Primary — navy-violet brand gradient + brand-halo glow + sheen sweep.
 					// `relative overflow-hidden` enables the .glass-sheen ::after overlay.
-					primary: [
-						'relative overflow-hidden',
-						'bg-gradient-to-b from-[var(--color-brand-500)] to-[var(--color-brand-700)]',
-						'text-[var(--color-fg-on-brand)] hover:from-[var(--color-brand-400)] hover:to-[var(--color-brand-600)]',
-						'brand-halo glass-sheen'
-					].join(' '),
-					// Secondary — vibrant green from the logo icon. For "growth" CTAs
-					// (purchase lead, confirm conversion), distinct from primary brand.
-					secondary: [
-						'bg-gradient-to-b from-[var(--color-secondary-400)] to-[var(--color-secondary-600)]',
-						'text-white hover:from-[var(--color-secondary-500)] hover:to-[var(--color-secondary-700)]',
-						'shadow-[0_4px_14px_-4px_oklch(0.58_0.21_140_/_0.4)]'
-					].join(' '),
+					primary:
+						'relative overflow-hidden bg-gradient-to-b from-[var(--color-brand-500)] to-[var(--color-brand-700)] text-[var(--color-fg-on-brand)] hover:from-[var(--color-brand-400)] hover:to-[var(--color-brand-600)] brand-halo glass-sheen',
+					// Secondary — vibrant logo green for "growth" CTAs (purchase lead,
+					// confirm conversion). Gradient from-700 → to-900 with white text
+					// keeps WCAG 2.2 AA on both stops:
+					//   secondary-700 oklch(0.48) on white text ≈ 5.5:1 ✓
+					//   secondary-900 oklch(0.28) on white text ≈ 9.8:1 ✓
+					// Hover lifts to from-600 → to-800 (still AA-safe).
+					// Earlier from-400 → to-600 failed AA on the lighter stop (~2.8:1).
+					secondary:
+						'bg-gradient-to-b from-[var(--color-secondary-700)] to-[var(--color-secondary-900)] text-white hover:from-[var(--color-secondary-600)] hover:to-[var(--color-secondary-800)] shadow-[var(--shadow-secondary)]',
 					// Tonal — quiet neutral, secondary actions on a busy page.
 					tonal:
 						'bg-[var(--color-bg-muted)] text-[var(--color-fg)] hover:bg-[var(--color-bg-subtle)] border border-[var(--color-border)]',
@@ -46,21 +44,22 @@
 					ghost: 'text-[var(--color-fg)] hover:bg-[var(--color-bg-muted)]',
 					// Danger — system red, for destructive confirms.
 					danger:
-						'bg-gradient-to-b from-[var(--color-danger-500)] to-[var(--color-danger-700)] text-[var(--color-fg-on-brand)] hover:from-[var(--color-danger-400)] hover:to-[var(--color-danger-600)] shadow-[0_4px_14px_-4px_oklch(0.66_0.23_25_/_0.4)]',
+						'bg-gradient-to-b from-[var(--color-danger-500)] to-[var(--color-danger-700)] text-[var(--color-fg-on-brand)] hover:from-[var(--color-danger-400)] hover:to-[var(--color-danger-600)] shadow-[var(--shadow-danger)]',
 					// Glass — frosted iOS-style button on top of imagery / hero panels.
-					glass: [
-						'relative overflow-hidden',
-						'glass-popover glass-sheen',
-						'text-[var(--color-fg)] hover:text-[var(--color-brand-700)]'
-					].join(' '),
+					glass:
+						'relative overflow-hidden glass-popover glass-sheen text-[var(--color-fg)] hover:text-[var(--color-brand-700)]',
 					// Link — pure text, no transform on hover/press (overrides .interactive).
 					link: '!transform-none hover:!transform-none active:!transform-none text-[var(--color-brand-600)] underline-offset-4 hover:underline hover:text-[var(--color-brand-700)] p-0 h-auto'
 				},
+				// Touch targets — Apple HIG floor 44px for primary tap surfaces,
+				// Material 3 floor 48px. md=h-11 (44px) hits Apple; lg=h-12 (48px)
+				// hits Material. sm=h-9 (36px) is desktop-tight (toolbars + chips)
+				// and explicitly NOT recommended for primary mobile CTAs.
 				size: {
-					sm: 'h-8 px-3 body-sm',
-					md: 'h-10 px-4 body-sm',
-					lg: 'h-11 px-5 body-base',
-					icon: 'h-10 w-10 p-0'
+					sm: 'h-9 px-3 body-sm',
+					md: 'h-11 px-4 body-sm',
+					lg: 'h-12 px-5 body-base',
+					icon: 'h-11 w-11 p-0'
 				},
 				fullWidth: {
 					true: 'w-full',

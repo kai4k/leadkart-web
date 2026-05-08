@@ -141,15 +141,23 @@
 			box-shadow var(--duration-base) var(--ease-out),
 			background-color var(--duration-base) var(--ease-out),
 			filter var(--duration-base) var(--ease-out);
-		will-change: auto;
+		/* Force a compositor layer to prevent text antialiasing jitter
+		 * during sub-pixel transforms (1px lift + 1.01 scale). Without
+		 * this, browsers can rasterise text at the destination pixel
+		 * grid causing visible re-rendering on every hover frame.
+		 * Industry refs: Apple WebKit blog "Hardware acceleration
+		 * with translate3d", Chrome dev docs "Stick to compositor-
+		 * only properties", Stripe Sail "no font shimmer" rule. */
+		transform: translate3d(0, 0, 0);
+		backface-visibility: hidden;
 	}
 	@media (hover: hover) {
 		.interactive:hover {
-			transform: translateY(var(--motion-hover-lift)) scale(var(--motion-hover-scale));
+			transform: translate3d(0, var(--motion-hover-lift), 0) scale(var(--motion-hover-scale));
 		}
 	}
 	.interactive:active {
-		transform: scale(var(--motion-press-scale));
+		transform: translate3d(0, 0, 0) scale(var(--motion-press-scale));
 		transition-duration: var(--duration-fast);
 	}
 
@@ -177,17 +185,16 @@
 
 	/* ═══ Brand-tinted glow ring — for primary CTAs that should pull the
 	 * eye. Pair with .interactive on Button variant="primary" to get the
-	 * full Apple-CTA feel: lift + sheen + soft brand-coloured halo. */
+	 * full Apple-CTA feel: lift + sheen + soft brand-coloured halo.
+	 *
+	 * Shadow values live in tokens.css as --shadow-brand / --shadow-brand-hover
+	 * — keeps the OKLCH triplets in one place if the brand hue ever shifts. */
 	.brand-halo {
-		box-shadow:
-			0 4px 14px -4px oklch(0.4 0.18 260 / 0.35),
-			0 2px 4px -2px oklch(0.4 0.18 260 / 0.18);
+		box-shadow: var(--shadow-brand);
 	}
 	@media (hover: hover) {
 		.brand-halo:hover {
-			box-shadow:
-				0 8px 22px -4px oklch(0.5 0.19 260 / 0.45),
-				0 4px 8px -2px oklch(0.5 0.19 260 / 0.25);
+			box-shadow: var(--shadow-brand-hover);
 		}
 	}
 

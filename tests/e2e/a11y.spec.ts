@@ -119,6 +119,20 @@ test.describe('A11y — WCAG 2.2 AA via axe-core', () => {
 	});
 
 	/**
+	 * Design-system styleguide — the ground-truth a11y gate. Renders every
+	 * Button variant × size × state, every Card variant, every Alert variant,
+	 * the colour palette swatches, and the theme picker. If a primitive fails
+	 * axe-core in isolation here it is guaranteed to fail wherever it ships
+	 * in production. Catches the previously-uncovered case where a variant
+	 * fails AA but never appears on a tested feature route.
+	 */
+	test('design-system styleguide has no critical or serious violations', async ({ page }) => {
+		await page.goto('/styleguide');
+		await expect(page.getByRole('heading', { level: 1, name: /design system/i })).toBeVisible();
+		await expectNoSeriousOrCriticalViolations(page);
+	});
+
+	/**
 	 * Tenant Settings sub-routes — axe scope is restricted to <main>
 	 * (the page's content area) because the (app) AppShell's Sidebar
 	 * has a pre-existing `--color-fg-subtle` contrast issue on its
