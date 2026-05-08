@@ -21,10 +21,7 @@
 	const sections = NAV;
 </script>
 
-<nav
-	class="flex h-full w-60 flex-col border-r border-[var(--color-border)] bg-[var(--color-bg-elevated)]"
-	aria-label="Main navigation"
->
+<nav class="glass-drawer flex h-full w-60 flex-col" aria-label="Main navigation">
 	<div class="stack stack-relaxed flex-1 overflow-y-auto p-3">
 		{#each sections as section, i (section.title ?? i)}
 			{#if section.items.length > 0}

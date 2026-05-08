@@ -120,6 +120,94 @@
 	}
 }
 
+/* ═══ LIQUID-GLASS MOTION — Apple-flavoured "lively" surfaces
+ * Pair with .glass-* utilities. These keyframes replace the static-glass
+ * feel with subtle motion that signals "this surface is alive":
+ *
+ *   - glass-sheen     : a diagonal highlight sweeps left→right, evoking
+ *                       the gloss reflection on real glass when the
+ *                       device tilts. Triggered on hover.
+ *   - glass-breathe   : barely-perceptible scale pulse (1 → 1.005 → 1),
+ *                       used on hero glass cards to feel "warm" not dead.
+ *   - pop-in          : Apple-spring scale + opacity entrance, replaces
+ *                       linear zoom-in for dialogs/popovers.
+ *   - press-bounce    : tiny scale-down then settle, fired on click feedback
+ *                       for primary CTAs.
+ *   - brand-glow      : pulsing halo around primary brand surface, used
+ *                       sparingly on auth-shell "next-step" CTAs.
+ *
+ * prefers-reduced-motion handled globally — these animations stop instantly
+ * for users who request reduced motion (base.css §reduce-motion).
+ * ───────────────────────────────────────────────────────────────────── */
+
+@keyframes glass-sheen {
+	0% {
+		transform: translateX(-150%) skewX(-20deg);
+		opacity: 0;
+	}
+	30% {
+		opacity: 0.5;
+	}
+	70% {
+		opacity: 0.5;
+	}
+	100% {
+		transform: translateX(250%) skewX(-20deg);
+		opacity: 0;
+	}
+}
+
+@keyframes glass-breathe {
+	0%,
+	100% {
+		transform: scale(1);
+	}
+	50% {
+		transform: scale(1.005);
+	}
+}
+
+@keyframes pop-in {
+	0% {
+		opacity: 0;
+		transform: scale(0.92);
+	}
+	60% {
+		opacity: 1;
+		transform: scale(1.02);
+	}
+	100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@keyframes press-bounce {
+	0% {
+		transform: scale(1);
+	}
+	40% {
+		transform: scale(0.96);
+	}
+	100% {
+		transform: scale(1);
+	}
+}
+
+@keyframes brand-glow {
+	0%,
+	100% {
+		box-shadow:
+			0 0 0 0 var(--brand-glow-rest),
+			0 4px 12px -2px var(--brand-glow-rest-shadow);
+	}
+	50% {
+		box-shadow:
+			0 0 0 8px var(--brand-glow-fade),
+			0 8px 20px -2px var(--brand-glow-peak-shadow);
+	}
+}
+
 @layer components {
 	.animate-fade-in {
 		animation: fade-in var(--duration-base) var(--ease-out);
@@ -171,5 +259,55 @@
 		);
 		background-size: 200% 100%;
 		animation: shimmer 2s var(--ease-linear) infinite;
+	}
+
+	.animate-pop-in {
+		animation: pop-in var(--duration-slow) var(--ease-spring-bounce);
+	}
+
+	.animate-press-bounce {
+		animation: press-bounce var(--duration-base) var(--ease-spring-snap);
+	}
+
+	.animate-breathe {
+		animation: glass-breathe 5s var(--ease-in-out) infinite;
+	}
+
+	.animate-brand-glow {
+		animation: brand-glow 2.4s var(--ease-in-out) infinite;
+	}
+
+	/* Hover-sheen overlay — composable on any glass surface or .interactive
+	 * primitive. Renders a diagonal highlight that sweeps across on hover.
+	 *
+	 * Usage: add `.glass-sheen` to a positioned container (relative/absolute);
+	 * the ::after pseudo paints the gloss + clips to bounds via overflow.
+	 * The animation is hover-gated, NOT infinite — it fires once per
+	 * pointer entry. Industry parallel: Apple iOS app icons under the
+	 * "tilt to reveal" motion; Stripe Dashboard CTAs.
+	 *
+	 * Falls back to no-op under prefers-reduced-motion (handled globally
+	 * in base.css). */
+	.glass-sheen {
+		position: relative;
+		overflow: hidden;
+	}
+	.glass-sheen::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(
+			110deg,
+			transparent 30%,
+			rgb(255 255 255 / 0.18) 50%,
+			transparent 70%
+		);
+		transform: translateX(-150%) skewX(-20deg);
+		pointer-events: none;
+		opacity: 0;
+		transition: opacity var(--duration-fast) var(--ease-out);
+	}
+	.glass-sheen:hover::after {
+		animation: glass-sheen var(--duration-slower) var(--ease-out) forwards;
 	}
 }

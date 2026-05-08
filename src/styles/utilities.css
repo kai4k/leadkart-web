@@ -53,4 +53,165 @@
 		cursor: not-allowed;
 		pointer-events: none;
 	}
+
+	/* ═══ LIQUID GLASS surface utilities — iOS-flavoured frosted
+	 * surfaces per the Blazor canon. Compose with bg + border + shadow
+	 * tokens. Cards stay SOLID — glass is for nav chrome / overlays. */
+
+	.glass-appbar {
+		background: color-mix(in srgb, var(--color-bg-elevated) var(--glass-opacity-base), transparent);
+		backdrop-filter: blur(var(--glass-blur-md)) saturate(var(--glass-saturate-md));
+		-webkit-backdrop-filter: blur(var(--glass-blur-md)) saturate(var(--glass-saturate-md));
+		border-bottom: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+	}
+
+	.glass-drawer {
+		background: color-mix(
+			in srgb,
+			var(--color-bg-elevated) var(--glass-opacity-strong),
+			transparent
+		);
+		backdrop-filter: blur(var(--glass-blur-md)) saturate(var(--glass-saturate-md));
+		-webkit-backdrop-filter: blur(var(--glass-blur-md)) saturate(var(--glass-saturate-md));
+		border-right: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+	}
+
+	.glass-popover {
+		background: color-mix(
+			in srgb,
+			var(--color-bg-elevated) var(--glass-opacity-light),
+			transparent
+		);
+		backdrop-filter: blur(var(--glass-blur-lg)) saturate(var(--glass-saturate-lg));
+		-webkit-backdrop-filter: blur(var(--glass-blur-lg)) saturate(var(--glass-saturate-lg));
+		border: 1px solid color-mix(in srgb, var(--color-border) 35%, transparent);
+		border-top-color: var(--glass-highlight-subtle);
+		box-shadow:
+			inset 0 1px 0 var(--glass-highlight-subtle),
+			0 8px 32px -4px oklch(0 0 0 / 0.12),
+			0 0 0 1px oklch(1 0 0 / 0.04);
+	}
+
+	.glass-dialog {
+		background: color-mix(
+			in srgb,
+			var(--color-bg-elevated) var(--glass-opacity-translucent),
+			transparent
+		);
+		backdrop-filter: blur(var(--glass-blur-2xl)) saturate(var(--glass-saturate-2xl));
+		-webkit-backdrop-filter: blur(var(--glass-blur-2xl)) saturate(var(--glass-saturate-2xl));
+		border: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+		border-top-color: var(--glass-highlight);
+		box-shadow:
+			inset 0 1px 0 var(--glass-highlight),
+			inset 0 0 20px oklch(1 0 0 / 0.03),
+			0 24px 80px -12px oklch(0 0 0 / 0.15),
+			0 0 0 1px oklch(1 0 0 / 0.05);
+	}
+
+	.glass-toast {
+		backdrop-filter: blur(var(--glass-blur-md)) saturate(var(--glass-saturate-lg));
+		-webkit-backdrop-filter: blur(var(--glass-blur-md)) saturate(var(--glass-saturate-lg));
+		border: 1px solid color-mix(in srgb, var(--color-border) 30%, transparent);
+		border-top-color: var(--glass-highlight-subtle);
+		border-radius: var(--radius-sm);
+		box-shadow:
+			inset 0 1px 0 var(--glass-highlight-subtle),
+			0 8px 32px oklch(0 0 0 / 0.12);
+	}
+
+	.glass-tooltip {
+		backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate-sm));
+		-webkit-backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate-sm));
+	}
+
+	/* ═══ INTERACTIVE — composable lift/press/glow primitives
+	 *
+	 * Apply to Buttons, Cards, list rows, anything pointer-interactable.
+	 * Hover lifts + scales 1.01 with spring easing; active snaps to 0.96
+	 * for tactile click feedback. Industry refs: Apple HIG tap targets,
+	 * Material 3 state-layer system, Stripe Dashboard hover treatment.
+	 *
+	 * GPU-accelerated via translate-z(0) + will-change hints (only on
+	 * hover-capable inputs to avoid layer churn on touch).
+	 * ───────────────────────────────────────────────────────────── */
+	.interactive {
+		transition:
+			transform var(--duration-base) var(--ease-spring-soft),
+			box-shadow var(--duration-base) var(--ease-out),
+			background-color var(--duration-base) var(--ease-out),
+			filter var(--duration-base) var(--ease-out);
+		/* Force a compositor layer to prevent text antialiasing jitter
+		 * during sub-pixel transforms (1px lift + 1.01 scale). Without
+		 * this, browsers can rasterise text at the destination pixel
+		 * grid causing visible re-rendering on every hover frame.
+		 * Industry refs: Apple WebKit blog "Hardware acceleration
+		 * with translate3d", Chrome dev docs "Stick to compositor-
+		 * only properties", Stripe Sail "no font shimmer" rule. */
+		transform: translate3d(0, 0, 0);
+		backface-visibility: hidden;
+	}
+	@media (hover: hover) {
+		.interactive:hover {
+			transform: translate3d(0, var(--motion-hover-lift), 0) scale(var(--motion-hover-scale));
+		}
+	}
+	.interactive:active {
+		transform: translate3d(0, 0, 0) scale(var(--motion-press-scale));
+		transition-duration: var(--duration-fast);
+	}
+
+	/* ═══ Glass surfaces — hover saturate boost + ::after sheen sweep
+	 * Adds the "this surface reacts to me" feel without changing shape.
+	 * Composable on top of .glass-{appbar,drawer,popover,dialog,toast}. */
+	@media (hover: hover) {
+		.glass-appbar,
+		.glass-drawer,
+		.glass-popover,
+		.glass-dialog,
+		.glass-toast {
+			transition:
+				backdrop-filter var(--duration-slow) var(--ease-out),
+				-webkit-backdrop-filter var(--duration-slow) var(--ease-out),
+				border-color var(--duration-base) var(--ease-out);
+		}
+		.glass-popover:hover,
+		.glass-dialog:hover {
+			backdrop-filter: blur(var(--glass-blur-lg)) saturate(calc(var(--glass-saturate-lg) + 0.2));
+			-webkit-backdrop-filter: blur(var(--glass-blur-lg))
+				saturate(calc(var(--glass-saturate-lg) + 0.2));
+		}
+	}
+
+	/* ═══ Brand-tinted glow ring — for primary CTAs that should pull the
+	 * eye. Pair with .interactive on Button variant="primary" to get the
+	 * full Apple-CTA feel: lift + sheen + soft brand-coloured halo.
+	 *
+	 * Shadow values live in tokens.css as --shadow-brand / --shadow-brand-hover
+	 * — keeps the OKLCH triplets in one place if the brand hue ever shifts. */
+	.brand-halo {
+		box-shadow: var(--shadow-brand);
+	}
+	@media (hover: hover) {
+		.brand-halo:hover {
+			box-shadow: var(--shadow-brand-hover);
+		}
+	}
+
+	/* ═══ Reduced-transparency fallback — WCAG 2.2 §1.4.3 + Apple HIG.
+	 * Some users (vestibular sensitivity, low-end GPUs) opt out of
+	 * translucent surfaces via the OS setting. Glass surfaces fall
+	 * back to solid bg-elevated. ─────────────────────────────── */
+	@media (prefers-reduced-transparency) {
+		.glass-appbar,
+		.glass-drawer,
+		.glass-popover,
+		.glass-dialog,
+		.glass-toast,
+		.glass-tooltip {
+			backdrop-filter: none;
+			-webkit-backdrop-filter: none;
+			background: var(--color-bg-elevated);
+		}
+	}
 }

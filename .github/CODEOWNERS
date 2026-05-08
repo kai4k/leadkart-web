@@ -1,0 +1,41 @@
+# Code owners — auto-assigns reviewers on PRs touching matching paths.
+# Industry canon: every PR has at least ONE codeowner-assigned
+# reviewer; required-status-check enforces this on protected branches.
+#
+# Reference: docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner — fallback for any path not covered below.
+*                                      @kai4k
+
+# CI / build pipeline
+/.github/                              @kai4k
+/.husky/                               @kai4k
+/.lintstagedrc.json                    @kai4k
+/eslint.config.js                      @kai4k
+/playwright.config.ts                  @kai4k
+/svelte.config.js                      @kai4k
+/tsconfig.json                         @kai4k
+/vite.config.ts                        @kai4k
+/vitest.config.ts                      @kai4k
+
+# Design system — tokens, layout primitives, animations
+/src/styles/                           @kai4k
+
+# Cross-cutting infrastructure — API client, error types, hooks
+/src/lib/api/                          @kai4k
+/src/lib/stores/                       @kai4k
+/src/hooks.client.ts                   @kai4k
+
+# UI primitives + form layer
+/src/lib/components/                   @kai4k
+/src/lib/icons/                        @kai4k
+/src/lib/layouts/                      @kai4k
+
+# Auth feature (security-sensitive)
+/src/lib/features/auth/                @kai4k
+
+# Route-level config + entry points
+/src/routes/+layout.svelte             @kai4k
+/src/routes/+layout.ts                 @kai4k
+/src/app.html                          @kai4k
+/src/app.css                           @kai4k

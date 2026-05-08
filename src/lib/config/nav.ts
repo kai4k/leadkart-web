@@ -56,6 +56,6 @@ export const NAV: NavSection[] = [
 	},
 	{
 		title: 'Account',
-		items: [{ href: '/settings', label: 'Settings', icon: Settings, requires: null }]
+		items: [{ href: '/settings/tenant', label: 'Settings', icon: Settings, requires: null }]
 	}
 ];

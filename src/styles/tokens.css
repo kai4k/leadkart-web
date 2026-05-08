@@ -20,72 +20,122 @@
  * (Tailwind 4 default, Radix Colors v3 variant).
  * ───────────────────────────────────────────────────────────────────── */
 
-@import '@fontsource-variable/inter';
+/* Poppins — Blazor brand canon (LeadKart legacy theme used Poppins).
+ * Imports five weights covering body (400) / medium (500) / button +
+ * heading semibold (600) / heading bold (700) + light caption (300).
+ * Static (non-variable) font; ~32 KB gzipped per weight via fontsource. */
+@import '@fontsource/poppins/300.css';
+@import '@fontsource/poppins/400.css';
+@import '@fontsource/poppins/500.css';
+@import '@fontsource/poppins/600.css';
+@import '@fontsource/poppins/700.css';
 @import '@fontsource-variable/jetbrains-mono';
 
 @theme {
-	/* ═══ BRAND — full 11-stop scale (50→950) ════════════════════ */
-	--color-brand-50: oklch(0.97 0.02 256);
-	--color-brand-100: oklch(0.93 0.05 256);
-	--color-brand-200: oklch(0.86 0.09 256);
-	--color-brand-300: oklch(0.78 0.13 256);
-	--color-brand-400: oklch(0.7 0.16 256);
-	--color-brand-500: oklch(0.62 0.18 256);
-	--color-brand-600: oklch(0.55 0.2 256);
-	--color-brand-700: oklch(0.47 0.18 256);
-	--color-brand-800: oklch(0.38 0.14 256);
-	--color-brand-900: oklch(0.3 0.1 256);
-	--color-brand-950: oklch(0.2 0.07 256);
+	/* ═══ BRAND — navy-violet, derived from the LeadKart logo wordmark.
+	 * The logo is purple+green (NOT blue+red — the prior #265A8E was a
+	 * Blazor-side miscall). The wordmark renders as a glossy navy-violet
+	 * with violet highlights; the chemist-bag icon is vibrant green.
+	 *
+	 * User direction (2026-05-08): "bluish purple — navy blue, not purple
+	 * entirely". Hue 260 sits between pure blue (240) and indigo (285),
+	 * leaning navy. Anchored at brand-600 ≈ #2D2F7E (deep navy-violet).
+	 *
+	 * Full 11-stop OKLCH scale — perceptually uniform lightness stepping.
+	 * ──────────────────────────────────────────────────────────── */
+	--color-brand-50: oklch(0.97 0.02 260);
+	--color-brand-100: oklch(0.93 0.05 260);
+	--color-brand-200: oklch(0.86 0.09 260);
+	--color-brand-300: oklch(0.76 0.13 260);
+	--color-brand-400: oklch(0.62 0.17 260);
+	--color-brand-500: oklch(0.5 0.19 260); /* vibrant navy-violet */
+	--color-brand-600: oklch(0.4 0.18 260); /* ≈ #2D2F7E logo wordmark */
+	--color-brand-700: oklch(0.32 0.15 260);
+	--color-brand-800: oklch(0.25 0.12 260);
+	--color-brand-900: oklch(0.18 0.09 260);
+	--color-brand-950: oklch(0.12 0.06 260);
 	--color-brand: var(--color-brand-600);
 
-	/* ═══ SEMANTIC — success / warning / danger / info, full 11-stop ═══ */
+	/* ═══ SECONDARY — vibrant green from the LeadKart logo icon.
+	 * The chemist-bag/cart that hosts the LK monogram is rendered in a
+	 * saturated green (~#39C12C). This 11-stop scale anchors brand-coherent
+	 * green chips, success-flavoured CTAs, "growth" charts, and the
+	 * "buy lead" purchase path.
+	 *
+	 * Distinct from --color-success-* (iOS #34C759) — secondary is for
+	 * BRAND uses, success is for FEEDBACK (toasts, validation, status
+	 * badges). Chroma is higher than success to read as "logo green",
+	 * not "checkmark green". Hue 140 leans slightly cool, matching the
+	 * logo's blue-tinted green better than hue 145 (iOS pure green).
+	 * ──────────────────────────────────────────────────────────── */
+	--color-secondary-50: oklch(0.97 0.04 140);
+	--color-secondary-100: oklch(0.93 0.1 140);
+	--color-secondary-200: oklch(0.86 0.16 140);
+	--color-secondary-300: oklch(0.78 0.2 140);
+	--color-secondary-400: oklch(0.72 0.22 140);
+	--color-secondary-500: oklch(0.68 0.24 140); /* ≈ #39C12C logo green */
+	--color-secondary-600: oklch(0.58 0.21 140);
+	--color-secondary-700: oklch(0.48 0.17 140);
+	--color-secondary-800: oklch(0.38 0.13 140);
+	--color-secondary-900: oklch(0.28 0.09 140);
+	--color-secondary-950: oklch(0.18 0.06 140);
+	--color-secondary: var(--color-secondary-500);
+
+	/* ═══ SEMANTIC — iOS-canon values per Blazor ThemeBuilder.cs:
+	 *   Success = "#34C759"  iOS green
+	 *   Warning = "#FF9500"  iOS orange
+	 *   Error   = "#FF3B30"  iOS red (named "danger" here for consistency)
+	 *   Info    = "#76B1D3"  logo glass-highlight blue (overlaps brand-300
+	 *                         intentionally — the logo IS the info color)
+	 * Full 11-stop scales derived around each iOS pivot.
+	 * ──────────────────────────────────────────────────────────── */
 	--color-success-50: oklch(0.97 0.03 145);
 	--color-success-100: oklch(0.93 0.07 145);
 	--color-success-200: oklch(0.87 0.11 145);
-	--color-success-300: oklch(0.79 0.15 145);
-	--color-success-400: oklch(0.72 0.17 145);
-	--color-success-500: oklch(0.65 0.18 145);
-	--color-success-600: oklch(0.55 0.18 145);
-	--color-success-700: oklch(0.47 0.16 145);
-	--color-success-800: oklch(0.4 0.13 145);
+	--color-success-300: oklch(0.81 0.16 145);
+	--color-success-400: oklch(0.78 0.17 145);
+	--color-success-500: oklch(0.74 0.18 145); /* ≈ #34C759 iOS green */
+	--color-success-600: oklch(0.62 0.17 145);
+	--color-success-700: oklch(0.5 0.15 145);
+	--color-success-800: oklch(0.4 0.12 145);
 	--color-success-900: oklch(0.3 0.08 145);
 	--color-success-950: oklch(0.2 0.05 145);
 
-	--color-warning-50: oklch(0.97 0.04 80);
-	--color-warning-100: oklch(0.93 0.1 80);
-	--color-warning-200: oklch(0.88 0.14 80);
-	--color-warning-300: oklch(0.83 0.17 80);
-	--color-warning-400: oklch(0.8 0.18 80);
-	--color-warning-500: oklch(0.78 0.18 80);
-	--color-warning-600: oklch(0.7 0.18 75);
-	--color-warning-700: oklch(0.6 0.16 70);
-	--color-warning-800: oklch(0.5 0.14 70);
-	--color-warning-900: oklch(0.4 0.1 70);
-	--color-warning-950: oklch(0.27 0.07 70);
+	--color-warning-50: oklch(0.97 0.04 60);
+	--color-warning-100: oklch(0.93 0.1 60);
+	--color-warning-200: oklch(0.88 0.14 60);
+	--color-warning-300: oklch(0.83 0.16 60);
+	--color-warning-400: oklch(0.8 0.17 60);
+	--color-warning-500: oklch(0.78 0.18 60); /* ≈ #FF9500 iOS orange */
+	--color-warning-600: oklch(0.66 0.17 60);
+	--color-warning-700: oklch(0.55 0.15 55);
+	--color-warning-800: oklch(0.45 0.13 55);
+	--color-warning-900: oklch(0.35 0.1 55);
+	--color-warning-950: oklch(0.24 0.07 55);
 
 	--color-danger-50: oklch(0.97 0.02 25);
-	--color-danger-100: oklch(0.93 0.06 25);
-	--color-danger-200: oklch(0.87 0.1 25);
-	--color-danger-300: oklch(0.79 0.15 25);
-	--color-danger-400: oklch(0.71 0.19 25);
-	--color-danger-500: oklch(0.62 0.22 25);
-	--color-danger-600: oklch(0.55 0.22 25);
-	--color-danger-700: oklch(0.47 0.2 25);
-	--color-danger-800: oklch(0.4 0.17 25);
-	--color-danger-900: oklch(0.32 0.12 25);
+	--color-danger-100: oklch(0.93 0.07 25);
+	--color-danger-200: oklch(0.87 0.13 25);
+	--color-danger-300: oklch(0.79 0.18 25);
+	--color-danger-400: oklch(0.72 0.21 25);
+	--color-danger-500: oklch(0.66 0.23 25); /* ≈ #FF3B30 iOS red */
+	--color-danger-600: oklch(0.56 0.21 25);
+	--color-danger-700: oklch(0.47 0.18 25);
+	--color-danger-800: oklch(0.39 0.15 25);
+	--color-danger-900: oklch(0.31 0.11 25);
 	--color-danger-950: oklch(0.22 0.08 25);
 
-	--color-info-50: oklch(0.97 0.02 220);
-	--color-info-100: oklch(0.93 0.06 220);
-	--color-info-200: oklch(0.86 0.1 220);
-	--color-info-300: oklch(0.78 0.13 220);
-	--color-info-400: oklch(0.7 0.15 220);
-	--color-info-500: oklch(0.65 0.16 220);
-	--color-info-600: oklch(0.55 0.18 220);
-	--color-info-700: oklch(0.47 0.16 220);
-	--color-info-800: oklch(0.38 0.13 220);
-	--color-info-900: oklch(0.3 0.1 220);
-	--color-info-950: oklch(0.2 0.07 220);
+	--color-info-50: oklch(0.97 0.02 245);
+	--color-info-100: oklch(0.92 0.04 245);
+	--color-info-200: oklch(0.86 0.06 245);
+	--color-info-300: oklch(0.79 0.07 245);
+	--color-info-400: oklch(0.76 0.07 245);
+	--color-info-500: oklch(0.74 0.07 245); /* ≈ #76B1D3 logo highlight */
+	--color-info-600: oklch(0.62 0.08 245);
+	--color-info-700: oklch(0.5 0.08 245);
+	--color-info-800: oklch(0.4 0.07 245);
+	--color-info-900: oklch(0.3 0.06 245);
+	--color-info-950: oklch(0.2 0.04 245);
 
 	/* ═══ NEUTRAL — project-controlled gray, full 11-stop ════════
 	 * Independent of Tailwind's default `slate`/`zinc`/`gray` scales.
@@ -102,30 +152,40 @@
 	--color-gray-900: oklch(0.18 0.01 256);
 	--color-gray-950: oklch(0.12 0.01 256);
 
-	/* ═══ SURFACE / FOREGROUND — semantic, light-theme defaults
-	 * Dark theme overrides via :root.dark in base.css.
-	 * Tokens, not raw colors — components consume `bg-bg-elevated`,
-	 * `text-fg-muted`, etc. ───────────────────────────────────── */
-	--color-bg: oklch(0.99 0 0);
-	--color-bg-subtle: oklch(0.97 0 0);
-	--color-bg-muted: oklch(0.95 0 0);
-	--color-bg-elevated: oklch(1 0 0);
+	/* ═══ SURFACE / FOREGROUND — Blazor-aligned cool-grey palette
+	 * Per ThemeBuilder.cs PaletteLight values:
+	 *   Background = #F5F8FA  slightly cool app background
+	 *   Surface    = #FFFFFF  cards, modals, elevated containers
+	 *   TextPrimary = #0F172A  near-black with cool tint
+	 *   TextSecondary = #475569  slate-600
+	 *   TextDisabled = #94A3B8  slate-400
+	 *   Divider = #E2E8F0  slate-200
+	 *
+	 * Dark theme overrides via :root.dark in base.css. Tokens, not raw
+	 * colors — components consume `bg-bg-elevated`, `text-fg-muted`. */
+	--color-bg: oklch(0.97 0.005 245); /* ≈ #F5F8FA cool background */
+	--color-bg-subtle: oklch(0.95 0.005 245);
+	--color-bg-muted: oklch(0.93 0.008 245);
+	--color-bg-elevated: oklch(1 0 0); /* white surface */
 
-	--color-fg: oklch(0.2 0.02 256);
-	--color-fg-muted: oklch(0.45 0.02 256);
-	--color-fg-subtle: oklch(0.6 0.02 256);
+	--color-fg: oklch(0.18 0.02 250); /* ≈ #0F172A */
+	--color-fg-muted: oklch(0.42 0.02 250); /* ≈ #475569 */
+	--color-fg-subtle: oklch(0.65 0.02 250); /* ≈ #94A3B8 */
 	--color-fg-on-brand: oklch(1 0 0);
 
-	--color-border: oklch(0.9 0.01 256);
-	--color-border-strong: oklch(0.8 0.01 256);
+	--color-border: oklch(0.9 0.01 245); /* ≈ #E2E8F0 */
+	--color-border-strong: oklch(0.78 0.01 245);
 
-	--color-overlay: oklch(0.2 0.02 256 / 0.5);
-	--color-overlay-strong: oklch(0.2 0.02 256 / 0.7);
+	--color-overlay: oklch(0.18 0.02 250 / 0.5);
+	--color-overlay-strong: oklch(0.18 0.02 250 / 0.7);
 
-	/* ═══ TYPOGRAPHY — variable fonts loaded above. ══════════════
-	 * Inter Variable + JetBrains Mono Variable installed via
-	 * @fontsource-variable. Self-hosted, font-display:swap default. */
-	--font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+	/* ═══ TYPOGRAPHY — Poppins (LeadKart legacy from Blazor side)
+	 * + JetBrains Mono Variable for code/data.
+	 * Per ThemeBuilder.cs:67 the Blazor canon uses
+	 *   FontFamily = ["Poppins", "system-ui", "sans-serif"]
+	 * Keeping the same family on the Svelte side preserves brand
+	 * continuity for users + matches print/marketing assets. */
+	--font-sans: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
 	--font-mono:
 		'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'Cascadia Code', monospace;
 
@@ -209,14 +269,19 @@
 	--border-medium: 2px;
 	--border-thick: 4px;
 
-	/* ═══ RADIUS ═══════════════════════════════════════════════════ */
+	/* ═══ RADIUS — iOS-flavoured rounding per Blazor Layout canon
+	 * (LayoutProperties.DefaultBorderRadius = "16px" in ThemeBuilder.cs).
+	 * The default radius bumped from 6px → 16px gives every primitive
+	 * the LeadKart "soft pill" feel matching the Blazor Web app users
+	 * already know. ────────────────────────────────────────────── */
 	--radius-none: 0;
-	--radius-sm: 0.25rem;
-	--radius: 0.375rem;
-	--radius-md: 0.5rem;
-	--radius-lg: 0.75rem;
-	--radius-xl: 1rem;
-	--radius-2xl: 1.5rem;
+	--radius-xs: 0.25rem; /* 4px — used sparingly for tight chips */
+	--radius-sm: 0.5rem; /* 8px */
+	--radius: 1rem; /* 16px — DEFAULT, matches Blazor */
+	--radius-md: 1rem; /* alias of default for clarity at call sites */
+	--radius-lg: 1.25rem; /* 20px */
+	--radius-xl: 1.5rem; /* 24px */
+	--radius-2xl: 2rem; /* 32px — hero cards */
 	--radius-full: 9999px;
 
 	/* ═══ SHADOW — paired light/dark via opacity, not separate values ═══ */
@@ -230,7 +295,93 @@
 	--shadow-inner: inset 0 2px 4px 0 oklch(0.2 0.02 256 / 0.05);
 	--shadow-focus: 0 0 0 3px var(--color-brand-200);
 
-	/* ═══ MOTION — duration + easing tokens ═══════════════════════ */
+	/* ═══ COLOURED SHADOWS — brand/semantic-tinted halos for CTAs.
+	 *
+	 * Industry refs: Stripe Dashboard primary CTAs, Linear Cmd-K palette,
+	 * Refactoring UI ch.7 (coloured shadows for tactile feedback).
+	 *
+	 * These tokens centralise the OKLCH triplets that previously lived
+	 * inline in utilities.css/animations.css/Button.svelte arbitrary-value
+	 * classes. Drift-free: changing the brand hue at the top of the file
+	 * propagates to halo + glow + button shadow without grep-and-replace.
+	 *
+	 * The opacity-bearing oklch literals duplicate the brand-600/500 etc.
+	 * values intentionally — CSS can't var() inside oklch() arithmetic,
+	 * so the literal IS the canonical token here. Keep the comment chain
+	 * (`-600 lightness/chroma/hue` etc.) so future edits stay in sync.
+	 * ─────────────────────────────────────────────────────────────── */
+	--shadow-brand:
+		0 4px 14px -4px oklch(0.4 0.18 260 / 0.35),
+		/* brand-600 */ 0 2px 4px -2px oklch(0.4 0.18 260 / 0.18); /* brand-600 */
+	--shadow-brand-hover:
+		0 8px 22px -4px oklch(0.5 0.19 260 / 0.45),
+		/* brand-500 */ 0 4px 8px -2px oklch(0.5 0.19 260 / 0.25); /* brand-500 */
+
+	/* Secondary green CTA — uses secondary-700 shade for AA-safe halo
+	 * (the visible button text contrast is the tighter constraint; the
+	 * shadow just needs to read as "green-tinted" against the page bg). */
+	--shadow-secondary: 0 4px 14px -4px oklch(0.48 0.17 140 / 0.4); /* secondary-700 */
+
+	/* Danger red CTA — same shape as brand/secondary. */
+	--shadow-danger: 0 4px 14px -4px oklch(0.66 0.23 25 / 0.4); /* danger-500 */
+
+	/* Brand glow — pulsed halo for primary "next-step" CTAs. Two stops
+	 * for the @keyframes brand-glow animation. */
+	--brand-glow-rest: oklch(0.5 0.19 260 / 0.4); /* brand-500 */
+	--brand-glow-rest-shadow: oklch(0.5 0.19 260 / 0.25); /* brand-500 */
+	--brand-glow-peak-shadow: oklch(0.5 0.19 260 / 0.35); /* brand-500 */
+	--brand-glow-fade: oklch(0.5 0.19 260 / 0); /* brand-500 transparent */
+
+	/* ═══ LIQUID GLASS — translucent surface system per Blazor canon
+	 * (LeadKart.Web/wwwroot/css/leadkart.css "iOS-inspired design system
+	 * with liquid glass surfaces"). The combo of `backdrop-filter: blur()
+	 * saturate()` + a translucent background + a subtle inner top-border
+	 * highlight creates the Apple-flavoured frosted-glass feel.
+	 *
+	 * Surfaces use these in PAIRS — blur + saturate + opacity tuned per
+	 * elevation level. Cards stay SOLID (no glass) to preserve content
+	 * legibility — glass is for navigation chrome / overlays / popovers.
+	 *
+	 * Accessibility: prefers-reduced-transparency falls back to solid
+	 * surfaces (handled in utilities.css). ─────────────────────── */
+	--glass-blur-sm: 16px; /* tooltip */
+	--glass-blur-md: 20px; /* appbar / drawer / toast */
+	--glass-blur-lg: 24px; /* popover / dropdown */
+	--glass-blur-xl: 32px; /* customiser drawer */
+	--glass-blur-2xl: 40px; /* dialog */
+
+	--glass-saturate-sm: 1.3;
+	--glass-saturate-md: 1.4;
+	--glass-saturate-lg: 1.5;
+	--glass-saturate-xl: 1.6;
+	--glass-saturate-2xl: 1.8;
+
+	/* Background opacity — applied via color-mix(elevated, transparent).
+	 * Lower opacity = MORE blur shows through. */
+	--glass-opacity-strong: 88%; /* drawer */
+	--glass-opacity-base: 85%; /* appbar / customiser */
+	--glass-opacity-light: 82%; /* popover */
+	--glass-opacity-translucent: 72%; /* dialog */
+
+	/* Inner highlight — tiny white inset top-border simulates the
+	 * Apple "edge of glass" sheen. Stays subtle in light theme,
+	 * stronger in dark. */
+	--glass-highlight: rgb(255 255 255 / 0.15);
+	--glass-highlight-subtle: rgb(255 255 255 / 0.08);
+
+	/* ═══ MOTION — duration + easing tokens
+	 *
+	 * Industry refs:
+	 *   - Apple HIG "Animation"  apple.com/design/human-interface-guidelines/motion
+	 *   - Material 3 motion patterns (m3.material.io/styles/motion)
+	 *   - Framer Motion physics defaults (motion.dev)
+	 *   - Stripe Sail motion documentation
+	 *
+	 * Apple-flavoured spring curves matter for the "lively" feel: they
+	 * overshoot the target slightly before settling, simulating mass +
+	 * momentum (the iOS app-launch "pop", the Lock Screen widget bounce).
+	 * Linear/ease-out feel mechanical by comparison.
+	 * ───────────────────────────────────────────────────────────── */
 	--duration-instant: 0ms;
 	--duration-fast: 120ms;
 	--duration-base: 200ms;
@@ -243,6 +394,21 @@
 	--ease-in: cubic-bezier(0.7, 0, 0.84, 0);
 	--ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 	--ease-spring: cubic-bezier(0.5, 1.5, 0.5, 1);
+
+	/* Apple-flavoured spring curves — overshoot then settle.
+	 * `spring-soft`  — gentle bounce, fits cards + drawers.
+	 * `spring-bounce` — pronounced bounce, fits buttons + chips on press.
+	 * `spring-snap`  — fast, minimal overshoot, fits toggles + tabs. */
+	--ease-spring-soft: cubic-bezier(0.34, 1.56, 0.64, 1);
+	--ease-spring-bounce: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+	--ease-spring-snap: cubic-bezier(0.5, 1.25, 0.75, 1.25);
+
+	/* Interaction transform tokens — consumed by Button + Card + glass
+	 * surfaces. Press-scale 0.96 matches iOS button feedback; hover-lift
+	 * raises by 1px + scales 1.01 for the "magnetic" pull feel. */
+	--motion-press-scale: 0.96;
+	--motion-hover-scale: 1.01;
+	--motion-hover-lift: -1px;
 
 	/* ═══ ICON SIZES — replaces inline `size={N}` magic numbers ═══ */
 	--icon-xs: 14px;
