@@ -18,7 +18,11 @@ export default defineConfig({
 	timeout: 30_000,
 	fullyParallel: true,
 	forbidOnly: !!process.env.CI,
-	retries: process.env.CI ? 2 : 0,
+	// Single retry in CI catches genuinely flaky tests (timing windows,
+	// resource contention) without burning two re-runs on real bugs.
+	// 0 retries locally — if a test is flaky, fix the test, don't
+	// paper over it with re-runs.
+	retries: process.env.CI ? 1 : 0,
 	workers: process.env.CI ? 1 : undefined,
 	reporter: process.env.CI ? [['html', { open: 'never' }], ['list']] : 'list',
 	use: {

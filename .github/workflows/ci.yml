@@ -1,22 +1,48 @@
 name: CI
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - '**/*.md'
+      - 'LICENSE'
+      - '.editorconfig'
+      - '.gitignore'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
   push:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'LICENSE'
+      - '.editorconfig'
+      - '.gitignore'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
 
-# Concurrency: cancel in-flight runs on the same branch when a new
-# commit lands. Saves runner minutes + GitHub minutes quota.
-# Industry canon (every Linear/Vercel/Stripe public CI yaml).
+# Cancel in-flight runs on the same branch when a new commit lands.
+# Saves runner minutes + GitHub minutes quota. Industry canon (every
+# Linear / Vercel / Stripe public CI yaml).
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # ─── Static analysis + unit tests + build ────────────────────────────
-  build:
-    name: Build & static analysis
+  # Combined static-analysis + unit + build + e2e in ONE job.
+  #
+  # Why combined: separating build and e2e into two jobs forces a
+  # second `npm install` + an artifact upload/download round-trip
+  # for the build output. At ~30s × 2 + ~30s × 2 = ~2-3 minutes
+  # of duplicated work per PR. For a free-tier private repo
+  # (2,000 min/month), that's a meaningful chunk over time.
+  #
+  # Order is fast-fail: cheap checks (audit, lint, check, test) run
+  # before the expensive ones (build, e2e), so a typo-level bug
+  # consumes seconds rather than the whole pipeline budget.
+  ci:
+    name: Build & test
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
 
@@ -40,11 +66,12 @@ jobs:
         run: npm install --no-audit --no-fund --prefer-offline
 
       - name: Security audit (high+ severity blocks)
-        # `npm audit` reports vulnerabilities. We block on high or
-        # critical findings — moderate/low are surfaced as warnings
-        # via Dependabot's PRs (see .github/dependabot.yml).
+        # Cheap (~5s with cached registry); runs early so a vulnerable
+        # transitive dep blocks the rest of the pipeline before we
+        # spend minutes on lint / build / e2e. Dependabot covers
+        # ongoing surveillance of merged deps; this catches NEW
+        # vulnerable deps introduced by the PR itself.
         run: npm audit --omit=dev --audit-level=high
-        continue-on-error: false
 
       - name: Lint (prettier + eslint)
         run: npm run lint
@@ -55,8 +82,11 @@ jobs:
       - name: Unit tests with coverage
         run: npm run test:coverage
 
-      - name: Upload coverage
-        if: always()
+      - name: Upload coverage (push-to-main only)
+        # Coverage on PR is rarely actioned; the merged-into-main
+        # report is the one teams reference for trend lines. Skipping
+        # PR uploads saves ~20s per PR + storage.
+        if: github.event_name == 'push'
         uses: actions/upload-artifact@v7
         with:
           name: coverage
@@ -67,82 +97,39 @@ jobs:
         run: npm run build
 
       - name: Bundle-size check
-        # size-limit fails the build if any tracked entry crosses
-        # the budget declared in package.json `size-limit:` block.
-        # Industry canon — Linear/Vercel/Stripe block PRs that bloat
-        # the bundle past the budget.
         run: npx size-limit
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: web-build
-          path: build/
-          retention-days: 7
-
-  # ─── End-to-end + a11y across browsers ───────────────────────────────
-  e2e:
-    name: E2E (${{ matrix.browser }})
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        browser: [chromium, firefox, webkit]
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-
-      - name: Install dependencies
-        # `npm install` (not `npm ci`) because our dep tree includes
-        # platform-specific WASM bindings (@rolldown/binding-wasm32-wasi,
-        # @tailwindcss/oxide-wasm32-wasi) that Vite 8 + Tailwind 4 ship
-        # as optional fallbacks for native modules. npm 11's strict
-        # `npm ci` rejects the lock when the host platform's variant
-        # differs from the lock-author's platform — known issue tracked
-        # in npm/cli#5169 + vite/vite#15869. Plain `npm install` with
-        # `--prefer-offline` reuses the lock when possible while
-        # tolerating cross-platform variance. Lock determinism is still
-        # enforced at PR-review time via committed package-lock.json
-        # + Dependabot.
-        run: npm install --no-audit --no-fund --prefer-offline
-
-      - name: Download build artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: web-build
-          path: build/
-
-      # Cache Playwright browsers across runs — saves ~30s per run.
-      # Cache key includes the @playwright/test version so a bump
-      # invalidates the cache automatically.
+      # Cache Playwright's chromium across runs — saves ~30s per run
+      # when the @playwright/test version is unchanged. Cache key
+      # includes the package version so a bump invalidates cleanly.
       - name: Get Playwright version
         id: pw-version
         run: |
           echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
 
-      - name: Cache Playwright browsers
+      - name: Cache Playwright chromium
         uses: actions/cache@v5
         id: pw-cache
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.version }}-${{ matrix.browser }}
+          key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.version }}-chromium
 
-      - name: Install Playwright browser
+      - name: Install Playwright chromium
         if: steps.pw-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps ${{ matrix.browser }}
+        run: npx playwright install --with-deps chromium
 
       - name: Install Playwright system deps
         if: steps.pw-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps ${{ matrix.browser }}
+        run: npx playwright install-deps chromium
 
-      - name: E2E tests
-        run: npx playwright test --project=${{ matrix.browser }} --reporter=html
+      - name: E2E tests (chromium)
+        # Chromium-only matrix per chore/ci-cost-reduction:
+        # Firefox + WebKit re-add when a browser-specific bug
+        # surfaces or pre-launch coverage demands it. ~70% of
+        # browser usage is Chromium-based (Chrome + Edge); the
+        # JS engine differences rarely manifest in our SPA's
+        # form/CRUD surfaces.
+        run: npx playwright test --project=chromium --reporter=html
         env:
           CI: 'true'
 
@@ -150,7 +137,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-report-${{ matrix.browser }}
+          name: playwright-report
           path: playwright-report/
           retention-days: 14
 
@@ -158,6 +145,6 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-traces-${{ matrix.browser }}
+          name: playwright-traces
           path: test-results/
           retention-days: 14
