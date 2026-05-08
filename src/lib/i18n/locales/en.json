@@ -14,6 +14,15 @@
 			"signupPrompt": "Don't have an account?",
 			"signupCta": "Sign up"
 		},
+		"forgot": {
+			"title": "Forgot your password?",
+			"subtitle": "Enter the email associated with your account and we'll send you a reset link.",
+			"email": "Email",
+			"submit": "Send reset link",
+			"success": "If that account exists, we've sent a password reset link. Check your inbox.",
+			"error": "Couldn't send the reset email. Please try again.",
+			"backToSignin": "Back to sign in"
+		},
 		"errors": {
 			"invalidCredentials": "Email or password is incorrect.",
 			"unexpected": "Something went wrong. Please try again."
