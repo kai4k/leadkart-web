@@ -42,6 +42,12 @@
 			"unexpected": "Something went wrong. Please try again."
 		}
 	},
+	"account": {
+		"security": {
+			"title": "Account & Security",
+			"subtitle": "Manage your sign-in credentials. Changes take effect immediately and may sign you out of other devices."
+		}
+	},
 	"common": {
 		"loading": "Loading…",
 		"cancel": "Cancel",

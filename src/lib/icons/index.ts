@@ -43,6 +43,7 @@ export {
 	Plus,
 	Search,
 	Settings,
+	ShieldCheck,
 	ShoppingCart,
 	Sun,
 	Trash2,
