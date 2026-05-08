@@ -37,6 +37,18 @@
 			"requestNew": "Request a new link",
 			"genericError": "Couldn't reset the password. Please try again."
 		},
+		"confirmEmail": {
+			"title": "Confirm your email change",
+			"subtitle": "Click confirm to apply the new email address to your account. You'll need to sign in again with the new email.",
+			"confirmButton": "Confirm email change",
+			"loading": "Confirming…",
+			"success": "Email updated. Sign in with your new email to continue.",
+			"signin": "Sign in",
+			"missingToken": "This confirmation link is missing its token.",
+			"invalidToken": "This confirmation link is invalid or has expired.",
+			"requestNew": "Start over from Account & Security",
+			"genericError": "Couldn't confirm the email change. Please try again."
+		},
 		"errors": {
 			"invalidCredentials": "Email or password is incorrect.",
 			"unexpected": "Something went wrong. Please try again."
@@ -59,6 +71,18 @@
 					"incorrectCurrent": "That doesn't match your current password.",
 					"mismatch": "Passwords don't match.",
 					"generic": "Couldn't update your password. Please try again."
+				}
+			},
+			"changeEmail": {
+				"title": "Change email",
+				"description": "We'll send a confirmation link to the new address. Your current email keeps working until you click that link.",
+				"newEmail": "New email",
+				"newEmailHint": "Must not already be in use by another account.",
+				"submit": "Send confirmation link",
+				"success": "Confirmation link sent. Click the link in your inbox at the new address to complete the change.",
+				"errors": {
+					"alreadyTaken": "Another account already uses this email.",
+					"generic": "Couldn't send the confirmation link. Please try again."
 				}
 			}
 		}
