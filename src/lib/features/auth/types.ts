@@ -37,3 +37,20 @@ export interface SessionPrincipal {
 	refreshToken: string;
 	accessTokenExpiresAt: Date;
 }
+
+// Password reset (anonymous) — request emails a reset link; confirm
+// exchanges the token for a password update. Both 204 on success.
+export interface RequestPasswordResetRequest {
+	email: string;
+}
+
+export interface ResetPasswordRequest {
+	token: string;
+	new_password: string;
+}
+
+// Email-change confirmation (anonymous) — the token is the proof of
+// email ownership; no auth required.
+export interface ConfirmEmailChangeRequest {
+	token: string;
+}
