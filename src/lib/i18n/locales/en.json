@@ -52,6 +52,37 @@
 		"errors": {
 			"invalidCredentials": "Email or password is incorrect.",
 			"unexpected": "Something went wrong. Please try again."
+		},
+		"register": {
+			"title": "Create your workspace",
+			"subtitle": "Set up your company workspace. You'll be the first admin.",
+			"sectionCompany": "Company",
+			"sectionAdmin": "Admin account",
+			"slug": "Workspace slug",
+			"slugHint": "Lowercase letters, numbers, dashes. 3–50 characters. Used in URLs.",
+			"legalName": "Legal name",
+			"legalNameHint": "Your registered business name (as on PAN / GST).",
+			"displayName": "Display name",
+			"displayNameHint": "What we'll show in the app and emails.",
+			"adminFirstName": "First name",
+			"adminLastName": "Last name",
+			"adminEmail": "Work email",
+			"adminEmailHint": "Used to sign in. Must not already have an active workspace.",
+			"adminPassword": "Password",
+			"adminPasswordHint": "At least 12 characters. Avoid passwords used elsewhere.",
+			"submit": "Create workspace",
+			"submitting": "Creating workspace…",
+			"haveAccount": "Already have a workspace?",
+			"signin": "Sign in",
+			"successTitle": "Workspace created",
+			"successBody": "Sign in with your new admin email to continue.",
+			"errors": {
+				"slugTaken": "That workspace slug is already taken. Try another.",
+				"slugInvalid": "That slug isn't valid. Use lowercase letters, numbers, and dashes only.",
+				"emailInvalid": "That email address isn't valid.",
+				"emailHasActiveMembership": "That email already belongs to another workspace. Use a different email.",
+				"unexpected": "Couldn't create the workspace. Please try again."
+			}
 		}
 	},
 	"account": {

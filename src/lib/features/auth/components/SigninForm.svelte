@@ -24,7 +24,9 @@
 	 * is leaner without losing type-safety or accessibility.
 	 */
 
-	let email = $state('');
+	// `?email=` prefill from /register success → /signin redirect.
+	// Read once at mount; subsequent edits are user-driven.
+	let email = $state(page.url.searchParams.get('email') ?? '');
 	let password = $state('');
 	let loading = $state(false);
 	let formError = $state<string | null>(null);
@@ -113,6 +115,15 @@
 			>
 				{$_('auth.signin.forgot')}
 			</a>
+			<div>
+				<span class="body-sm text-[var(--color-fg-muted)]">{$_('auth.signin.signupPrompt')}</span>
+				<a
+					href="/register"
+					class="body-sm ml-1 text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]"
+				>
+					{$_('auth.signin.signupCta')}
+				</a>
+			</div>
 		</div>
 	</form>
 
