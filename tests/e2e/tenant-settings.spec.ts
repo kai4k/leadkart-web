@@ -1,4 +1,5 @@
 import { expect, test, type Route } from '@playwright/test';
+import { fakeLoginResponse, TEST_TENANT_ID } from './helpers/fake-jwt';
 
 /**
  * End-to-end happy path for the Tenant Settings feature.
@@ -20,7 +21,7 @@ import { expect, test, type Route } from '@playwright/test';
  * canonicalised values — same contract the real server provides.
  */
 
-const TENANT_ID = '00000000-0000-0000-0000-000000000001';
+const TENANT_ID = TEST_TENANT_ID;
 
 const BASE_TENANT = {
 	id: TENANT_ID,
@@ -52,14 +53,7 @@ test.describe('Tenant Settings — happy path', () => {
 			await route.fulfill({
 				status: 200,
 				contentType: 'application/json',
-				body: JSON.stringify({
-					access_token: 'fake-access-token',
-					refresh_token: 'fake-refresh-token',
-					access_token_expires_at: new Date(Date.now() + 3_600_000).toISOString(),
-					person_id: 'pid-1',
-					tenant_id: TENANT_ID,
-					membership_id: 'mid-1'
-				})
+				body: JSON.stringify(fakeLoginResponse())
 			});
 		});
 
