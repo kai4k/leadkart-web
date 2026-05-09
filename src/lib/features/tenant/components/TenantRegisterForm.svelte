@@ -2,7 +2,7 @@
 	import { _ } from 'svelte-i18n';
 	import { goto } from '$app/navigation';
 	import { isApiError } from '$api/client';
-	import { Alert, Button } from '$ui';
+	import { Alert, AuthCard, Button } from '$ui';
 	import { TextField, PasswordField } from '$form';
 	import { registerTenant } from '../api';
 	import { registerTenantSchema } from '../schemas';
@@ -15,8 +15,8 @@
 	 * sign in immediately.
 	 *
 	 * Pattern matches ForgotPasswordForm: bind:value + onsubmit, Zod
-	 * parse pre-submit, focused error region for screen readers, no
-	 * glass card (utility surface, not the marquee signin experience).
+	 * parse pre-submit, focused error region for screen readers,
+	 * AuthCard glass chrome shared with the rest of the auth surface.
 	 *
 	 * Server error mapping:
 	 *   400 invalid_slug                  → field-level slug error
@@ -109,9 +109,9 @@
 	}
 </script>
 
-<div class="stack stack-relaxed">
-	<div class="stack stack-tight">
-		<h1 class="h1">{$_('auth.register.title')}</h1>
+<AuthCard>
+	<div class="stack stack-tight text-center">
+		<h1 class="h1 text-[var(--color-brand-700)]">{$_('auth.register.title')}</h1>
 		<p class="body-sm text-[var(--color-fg-muted)]">{$_('auth.register.subtitle')}</p>
 	</div>
 
@@ -207,4 +207,4 @@
 			</a>
 		</div>
 	</form>
-</div>
+</AuthCard>

@@ -2,7 +2,7 @@
 	import { _ } from 'svelte-i18n';
 	import { confirmEmailChange } from '../api';
 	import { isApiError } from '$api/client';
-	import { Alert, Button } from '$ui';
+	import { Alert, AuthCard, Button } from '$ui';
 
 	/**
 	 * ConfirmEmailChangePanel — explicit-click confirmation of an email
@@ -67,9 +67,9 @@
 	}
 </script>
 
-<div class="stack stack-relaxed">
-	<div class="stack stack-tight">
-		<h1 class="h1">{$_('auth.confirmEmail.title')}</h1>
+<AuthCard>
+	<div class="stack stack-tight text-center">
+		<h1 class="h1 text-[var(--color-brand-700)]">{$_('auth.confirmEmail.title')}</h1>
 		<p class="body-sm text-[var(--color-fg-muted)]">{$_('auth.confirmEmail.subtitle')}</p>
 	</div>
 
@@ -115,4 +115,4 @@
 			</Button>
 		</div>
 	{/if}
-</div>
+</AuthCard>
