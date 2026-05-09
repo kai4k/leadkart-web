@@ -15,19 +15,25 @@ export const loginRequestSchema = z.object({
 	password: z.string().min(1, 'Password is required')
 });
 
+/**
+ * Wire shape of /v1/auth/login + /v1/auth/refresh. leadkart-go does
+ * NOT return person_id / tenant_id / membership_id in the body —
+ * those come from the JWT's custom claims (decoded via
+ * `lib/api/jwt.ts`). Schema mirrors LoginResponse in
+ * `internal/identity/ports/dto.go` exactly.
+ */
 export const loginResponseSchema = z.object({
 	access_token: z.string(),
 	refresh_token: z.string(),
 	access_token_expires_at: z.string(),
-	person_id: z.string(),
-	tenant_id: z.string(),
-	membership_id: z.string()
+	token_type: z.string()
 });
 
 export const refreshResponseSchema = z.object({
 	access_token: z.string(),
 	refresh_token: z.string(),
-	access_token_expires_at: z.string()
+	access_token_expires_at: z.string(),
+	token_type: z.string()
 });
 
 export type LoginRequestInput = z.input<typeof loginRequestSchema>;

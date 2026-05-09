@@ -2,7 +2,7 @@
 	import { _ } from 'svelte-i18n';
 	import { requestPasswordReset } from '../api';
 	import { requestPasswordResetSchema } from '../schemas';
-	import { Alert, Button } from '$ui';
+	import { Alert, AuthCard, Button } from '$ui';
 	import { TextField } from '$form';
 
 	/**
@@ -48,9 +48,9 @@
 	}
 </script>
 
-<div class="stack stack-relaxed">
-	<div class="stack stack-tight">
-		<h1 class="h1">{$_('auth.forgot.title')}</h1>
+<AuthCard>
+	<div class="stack stack-tight text-center">
+		<h1 class="h1 text-[var(--color-brand-700)]">{$_('auth.forgot.title')}</h1>
 		<p class="body-sm text-[var(--color-fg-muted)]">{$_('auth.forgot.subtitle')}</p>
 	</div>
 
@@ -95,4 +95,4 @@
 			</div>
 		</form>
 	{/if}
-</div>
+</AuthCard>

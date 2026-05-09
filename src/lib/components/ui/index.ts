@@ -7,6 +7,7 @@
  * exported as namespaces under their own subfolder index.
  */
 export { default as Alert } from './Alert.svelte';
+export { default as AuthCard } from './AuthCard.svelte';
 export { default as Button } from './Button.svelte';
 export { default as Logo } from './Logo.svelte';
 export { default as Spinner } from './Spinner.svelte';

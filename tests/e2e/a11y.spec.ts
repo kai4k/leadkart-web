@@ -1,5 +1,6 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { fakeLoginResponse, TEST_TENANT_ID } from './helpers/fake-jwt';
 
 /**
  * Accessibility tests via axe-core. Industry canon for a11y in CI:
@@ -16,7 +17,7 @@ import AxeBuilder from '@axe-core/playwright';
  * entry; the same Builder + filter pattern applies.
  */
 
-const TENANT_ID = '00000000-0000-0000-0000-000000000001';
+const TENANT_ID = TEST_TENANT_ID;
 
 const TENANT_FIXTURE = {
 	id: TENANT_ID,
@@ -63,14 +64,7 @@ async function setupAuthedTenantMocks(page: Page): Promise<void> {
 		await route.fulfill({
 			status: 200,
 			contentType: 'application/json',
-			body: JSON.stringify({
-				access_token: 'fake-access-token',
-				refresh_token: 'fake-refresh-token',
-				access_token_expires_at: new Date(Date.now() + 3_600_000).toISOString(),
-				person_id: 'pid-1',
-				tenant_id: TENANT_ID,
-				membership_id: 'mid-1'
-			})
+			body: JSON.stringify(fakeLoginResponse())
 		});
 	});
 	await page.route(`**/api/v1/tenants/${TENANT_ID}`, async (route: Route) => {

@@ -4,7 +4,7 @@
 	import { confirmPasswordReset } from '../api';
 	import { resetPasswordSchema } from '../schemas';
 	import { isApiError } from '$api/client';
-	import { Alert, Button } from '$ui';
+	import { Alert, AuthCard, Button } from '$ui';
 	import { PasswordField } from '$form';
 
 	/**
@@ -99,9 +99,9 @@
 	}
 </script>
 
-<div class="stack stack-relaxed">
-	<div class="stack stack-tight">
-		<h1 class="h1">{$_('auth.reset.title')}</h1>
+<AuthCard>
+	<div class="stack stack-tight text-center">
+		<h1 class="h1 text-[var(--color-brand-700)]">{$_('auth.reset.title')}</h1>
 		<p class="body-sm text-[var(--color-fg-muted)]">{$_('auth.reset.subtitle')}</p>
 	</div>
 
@@ -160,4 +160,4 @@
 			</div>
 		</form>
 	{/if}
-</div>
+</AuthCard>

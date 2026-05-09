@@ -15,7 +15,21 @@
  * `ErrorResponse`): `{ code, message, details? }`.
  */
 
+/**
+ * Wire-shape of leadkart-go's ErrorResponse — the canonical error
+ * envelope returned on every non-2xx (see
+ * `internal/identity/ports/dto.go`):
+ *
+ *   { "error": "<machine-parseable code>", "message": "<human-readable>" }
+ *
+ * `code` is accepted as a fallback for any future RFC 7807 / RFC 9457
+ * "problem-detail" backend that uses the standard field name. Either
+ * shape produces the same `ApiError.code` value after normalisation.
+ */
 export interface ApiErrorBody {
+	/** leadkart-go shape — preferred. */
+	error?: string;
+	/** RFC 7807 / RFC 9457 fallback. */
 	code?: string;
 	message?: string;
 	details?: Record<string, unknown>;
@@ -48,7 +62,10 @@ export class ApiError extends Error {
 	}
 
 	static fromResponse(response: Response, body: ApiErrorBody | null): ApiError {
-		const code = body?.code ?? `http.${response.status}`;
+		// leadkart-go uses `error` as the machine-parseable code field;
+		// `code` is the RFC 7807 fallback. Normalise both into ApiError.code
+		// so feature forms can pattern-match: `if (err.code === 'invalid_slug') {...}`.
+		const code = body?.error ?? body?.code ?? `http.${response.status}`;
 		const message = body?.message ?? response.statusText ?? 'request failed';
 		return new ApiError(response.status, code, message, body?.details);
 	}

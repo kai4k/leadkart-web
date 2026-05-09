@@ -12,6 +12,7 @@
  * Endpoints (verified against leadkart-go
  * `internal/identity/ports/http.go` AddRoutes):
  *
+ *   POST   /v1/tenants                                  → 201 RegisterTenantResponse  (anonymous)
  *   GET    /v1/tenants/{tenantId}                       → TenantDto
  *   PATCH  /v1/tenants/{tenantId}/profile               → 204
  *   PATCH  /v1/tenants/{tenantId}/statutory             → 204
@@ -20,11 +21,15 @@
  *   PATCH  /v1/tenants/{tenantId}/display-preferences   → 204
  *
  * Auth is handled by the cross-cutting client (`$api/client`) which
- * injects the bearer token + handles 401-silent-refresh.
+ * injects the bearer token + handles 401-silent-refresh. The register
+ * endpoint runs anonymous (`auth: false`) — there is no session to
+ * thread before the tenant exists.
  */
 import { api } from '$api/client';
-import { tenantSchema } from './schemas';
+import { registerTenantResponseSchema, tenantSchema } from './schemas';
 import type {
+	RegisterTenantRequest,
+	RegisterTenantResponse,
 	Tenant,
 	UpdateTenantAdminContactRequest,
 	UpdateTenantDisplayPreferencesRequest,
@@ -35,6 +40,22 @@ import type {
 
 function tenantPath(tenantId: string, suffix = ''): string {
 	return `/v1/tenants/${encodeURIComponent(tenantId)}${suffix}`;
+}
+
+/**
+ * Tenant onboarding — anonymous endpoint. Server returns 201 with the
+ * three new aggregate IDs. Errors caller should expect:
+ *
+ *   400 invalid_slug                  — slug failed server validation
+ *   400 invalid_email                 — email failed server validation
+ *   400 invalid_body                  — malformed JSON
+ *   409 email_has_active_membership   — admin email already owns an
+ *                                       active membership in another
+ *                                       tenant (must use a fresh email)
+ */
+export async function registerTenant(body: RegisterTenantRequest): Promise<RegisterTenantResponse> {
+	const raw = await api.post<unknown>('/v1/tenants', body, { auth: false });
+	return registerTenantResponseSchema.parse(raw);
 }
 
 export async function getTenant(tenantId: string): Promise<Tenant> {
