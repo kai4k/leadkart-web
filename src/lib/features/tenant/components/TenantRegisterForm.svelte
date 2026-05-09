@@ -149,7 +149,7 @@
 		<fieldset class="stack" disabled={saving}>
 			<legend class="h3">{$_('auth.register.sectionAdmin')}</legend>
 
-			<div class="grid grid-cols-1 gap-[var(--space-3)] sm:grid-cols-2">
+			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 				<TextField
 					label={$_('auth.register.adminFirstName')}
 					autocomplete="given-name"

@@ -47,7 +47,22 @@
 		await goto('/signin');
 	}
 
-	const initials = $derived(session.principal?.personId.slice(0, 2).toUpperCase() ?? '?');
+	/**
+	 * Initials from the email's local part — falls back to the first
+	 * letter of the local part if the email lacks separators (e.g.
+	 * "ravi@acme.test" → "R", "ravi.kumar@acme.test" → "RK"). Mirrors
+	 * the .NET LeadKart UserAvatar logic + Stripe / Linear / Vercel
+	 * canon for missing-display-name avatars.
+	 */
+	const initials = $derived.by(() => {
+		const email = session.principal?.email;
+		if (!email) return '?';
+		const local = email.split('@')[0] ?? '';
+		const parts = local.split(/[._-]+/).filter(Boolean);
+		if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+		if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+		return '?';
+	});
 </script>
 
 <div class="relative">
@@ -71,18 +86,18 @@
 		>
 			<div class="border-b border-[var(--color-border)] px-3 py-2">
 				<p class="caption">Signed in as</p>
-				<p class="body-sm truncate-1 font-medium">{session.principal?.personId}</p>
+				<p class="body-sm truncate-1 font-medium">{session.principal?.email ?? '—'}</p>
 			</div>
 			<button
 				role="menuitem"
 				class="body-sm flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-[var(--color-bg-muted)]"
 				onclick={() => {
 					open = false;
-					goto('/profile');
+					goto('/settings/account/security');
 				}}
 			>
 				<Icon icon={User} size="sm" />
-				Profile
+				Account & Security
 			</button>
 			<button
 				role="menuitem"
