@@ -51,7 +51,10 @@
 		loading = true;
 		try {
 			const resp = await login(parsed.data);
-			session.setFromLogin(resp);
+			// Email captured from the form input — server doesn't echo it
+			// in the LoginResponse body. UserMenu + audit-log surfaces
+			// reference it.
+			session.setFromLogin(resp, parsed.data.email);
 			const next = page.url.searchParams.get('next');
 			const target = next && next.startsWith('/') ? decodeURIComponent(next) : '/dashboard';
 			await goto(target);
