@@ -200,41 +200,42 @@
 </div>
 
 <style>
-	/* ── Form-side soft radial wash. Anchors a faint navy-violet glow
-	     bottom-left + a faint logo-green glow top-right so the glass card
-	     has actual texture to blur. WCAG: max alpha 8% — every text colour
-	     pair on the page still computes well above 4.5:1. ── */
-	.lk-auth-form-side {
-		/* White in light mode (bg-elevated → oklch 1 0 0), dark navy
-		   in dark mode (theme-aware via base.css). No radial wash —
-		   the AuthCard's own border + shadow handle visual separation
-		   from the page. Clean white "modal" surface per the brand
-		   direction. */
-		background: var(--color-bg-elevated);
-	}
+	/* ── AuthShell-wide THEME LOCK to light values.
+	     Both the brand panel AND the form-side stay in a fixed light
+	     presentation regardless of `<html class="dark">`. Industry canon:
+	     Stripe / Linear / Vercel auth pages don't follow OS theme —
+	     they're brand-identity surfaces, always in their canonical
+	     light treatment. The form-side is a white "modal" surface; the
+	     brand panel is a light-blue marketing surface. AuthCard +
+	     headings + links inside both panels inherit the locked tokens.
 
-	/* ── Brand panel — THEME-LOCKED to light values. The brand panel
-	     is a brand-identity surface (logo + hero + features), not a
-	     theme-responsive surface; it stays in a fixed light treatment
-	     regardless of user's OS theme preference. Industry canon:
-	     Stripe / Linear / Vercel auth pages all do this.
-
-	     The locked tokens here shadow base.css's :root.dark overrides
-	     within the .lk-auth-brand scope. Children (pills, floating
-	     cards, illustration glass) consuming `--color-bg-elevated`
-	     etc. get the light values even when <html class="dark"> is on.
-	     The brand-* and secondary-* tokens already don't flip, so
-	     hero text + accent glyphs work either way. ── */
-	.lk-auth-brand {
-		--color-bg-elevated: oklch(1 0 0);
-		--color-bg-subtle: oklch(0.97 0 0);
+	     Locked: surface (bg / bg-subtle / bg-elevated), foreground
+	     (fg / fg-muted / fg-subtle), borders, semantic brand-heading
+	     / brand-link aliases. The brand-* and secondary-* scales never
+	     flipped in the first place, so they're not relocked here. ── */
+	.lk-auth {
 		--color-bg: oklch(0.99 0 0);
+		--color-bg-subtle: oklch(0.97 0 0);
+		--color-bg-muted: oklch(0.95 0 0);
+		--color-bg-elevated: oklch(1 0 0);
 		--color-fg: oklch(0.2 0.02 256);
 		--color-fg-muted: oklch(0.45 0.02 256);
 		--color-fg-subtle: oklch(0.6 0.02 256);
 		--color-border: oklch(0.9 0.01 256);
 		--color-border-strong: oklch(0.8 0.01 256);
+		--color-brand-heading: var(--color-brand-700);
+		--color-brand-link: var(--color-brand-600);
+		--color-brand-link-hover: var(--color-brand-700);
+	}
 
+	.lk-auth-form-side {
+		/* Pure white in BOTH themes (the AuthShell scope locks
+		   bg-elevated to oklch 1 0 0). The AuthCard's border + shadow
+		   handle visual separation from this surface. */
+		background: var(--color-bg-elevated);
+	}
+
+	.lk-auth-brand {
 		padding: clamp(3rem, 6vw, 5rem) clamp(2rem, 4vw, 4rem);
 		/* "Light bluish touch only" — solid brand-50 (≈ oklch 0.97 0.02 260).
 		   The earlier 3-stop gradient with secondary-50 green-mix was too

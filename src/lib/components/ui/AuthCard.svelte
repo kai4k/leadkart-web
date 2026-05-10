@@ -70,16 +70,9 @@
 			lk-auth-card-border-glow 4s ease-in-out 1s infinite;
 	}
 
-	/* Dark-mode: bg-elevated (0.22) is too close to bg-subtle (0.20)
-	   for the card to read as elevated. Mix in a touch of foreground
-	   to lift the surface ~5% perceptually, plus a subtle brand-tinted
-	   glow as additional separation. */
-	:global(.dark) .lk-auth-card {
-		background: color-mix(in srgb, var(--color-bg-elevated) 90%, var(--color-fg));
-		box-shadow:
-			var(--shadow-lg),
-			0 0 0 1px color-mix(in srgb, var(--color-brand-500) 12%, transparent);
-	}
+	/* No dark-mode override needed — the AuthShell scope theme-locks
+	   all surface + foreground tokens to light, so the AuthCard
+	   renders identically in both OS themes. */
 
 	.lk-auth-card-flare {
 		position: absolute;
