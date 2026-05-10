@@ -53,7 +53,10 @@ test.describe('Tenant Settings — happy path', () => {
 			await route.fulfill({
 				status: 200,
 				contentType: 'application/json',
-				body: JSON.stringify(fakeLoginResponse())
+				// Sign in as a tenant admin — Tenant Settings sidebar link
+				// is gated on the `tenant.admin` permission claim after
+				// feat/role-aware-shell.
+				body: JSON.stringify(fakeLoginResponse({ permission: ['tenant.admin'] }))
 			});
 		});
 
@@ -92,11 +95,13 @@ test.describe('Tenant Settings — happy path', () => {
 		await page.getByRole('textbox', { name: 'Password' }).fill('correct-horse-battery-staple');
 		await page.getByRole('button', { name: 'Sign in' }).click();
 
-		// 2. Land on dashboard, then navigate to Settings via the
-		//    sidebar nav. Sidebar.svelte renders the entry as a link
-		//    with an accessible name "Settings".
+		// 2. Land on dashboard, then navigate to Tenant Settings via the
+		//    sidebar nav. Sidebar.svelte renders the entry under the
+		//    Administration section as "Tenant Settings" (the nav got
+		//    tier-split in feat/role-aware-shell — separate label from
+		//    the also-now-visible "Account & Security").
 		await expect(page).toHaveURL(/\/dashboard$/);
-		await page.getByRole('link', { name: 'Settings' }).click();
+		await page.getByRole('link', { name: 'Tenant Settings' }).click();
 
 		// 3. /settings/tenant redirects to /profile (default tab).
 		await expect(page).toHaveURL(/\/settings\/tenant\/profile$/);

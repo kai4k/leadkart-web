@@ -1,40 +1,38 @@
 <script lang="ts">
 	import { session } from '$features/auth/stores/session.svelte';
-	import { Alert, Card } from '$ui';
+	import { tierOf } from '$features/auth/tier';
+	import PlatformDashboard from '$features/dashboard/components/PlatformDashboard.svelte';
+	import TenantAdminDashboard from '$features/dashboard/components/TenantAdminDashboard.svelte';
+	import TenantUserDashboard from '$features/dashboard/components/TenantUserDashboard.svelte';
 
-	const principal = $derived(session.principal);
+	/**
+	 * /dashboard — router that branches into the appropriate dashboard
+	 * variant for the signed-in principal's tier.
+	 *
+	 *   platform-super, platform-staff → PlatformDashboard
+	 *   tenant-admin                   → TenantAdminDashboard
+	 *   tenant-user (and unknown,
+	 *     which shouldn't reach here   → TenantUserDashboard
+	 *     because (app)/+layout.ts
+	 *     gates on isAuthenticated)
+	 *
+	 * Each variant is a self-contained component under
+	 * `lib/features/dashboard/components/`. As Phase 2-5 modules ship,
+	 * tiles inside each variant wire to real endpoints; the router
+	 * itself does not change.
+	 */
 
-	const stats = [{ label: 'Open leads' }, { label: 'Pending orders' }, { label: 'Overdue tasks' }];
+	const tier = $derived(tierOf(session.principal));
 </script>
 
 <svelte:head>
 	<title>Dashboard · LeadKart</title>
 </svelte:head>
 
-<div class="stack stack-relaxed">
-	<header class="stack stack-tight">
-		<h1 class="h1">Dashboard</h1>
-		<p class="body-sm text-[var(--color-fg-muted)]">
-			Signed in as <code class="code-inline">{principal?.personId}</code>
-			under tenant <code class="code-inline">{principal?.tenantId}</code>.
-		</p>
-	</header>
-
-	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-		{#each stats as stat (stat.label)}
-			<Card.Root>
-				<Card.Header>
-					<Card.Description>{stat.label}</Card.Description>
-				</Card.Header>
-				<Card.Content>
-					<p class="display-2 tabular-nums">—</p>
-				</Card.Content>
-			</Card.Root>
-		{/each}
-	</div>
-
-	<Alert variant="warning" title="Placeholder">
-		Dashboard widgets land per module. v0.3 wires Platform stats; v0.4 wires CRM lead funnel; v0.5
-		wires Tasks; etc.
-	</Alert>
-</div>
+{#if tier === 'platform-super' || tier === 'platform-staff'}
+	<PlatformDashboard />
+{:else if tier === 'tenant-admin'}
+	<TenantAdminDashboard />
+{:else}
+	<TenantUserDashboard />
+{/if}

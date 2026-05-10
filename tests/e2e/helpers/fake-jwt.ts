@@ -51,15 +51,19 @@ export function fakeAccessToken(overrides: Record<string, unknown> = {}): string
  * Wire shape of leadkart-go's `POST /v1/auth/login` 200 response
  * (per `internal/identity/ports/dto.go` LoginResponse). The principal
  * lives in the JWT, not the body.
+ *
+ * Optional `claimOverrides` lets a test mint a tier-specific JWT
+ * (e.g. `{ is_platform: true }` for Platform-tier tests, or
+ * `{ permission: ['tenant.admin'] }` for tenant-admin tier).
  */
-export function fakeLoginResponse(): {
+export function fakeLoginResponse(claimOverrides: Record<string, unknown> = {}): {
 	access_token: string;
 	refresh_token: string;
 	access_token_expires_at: string;
 	token_type: string;
 } {
 	return {
-		access_token: fakeAccessToken(),
+		access_token: fakeAccessToken(claimOverrides),
 		refresh_token: 'fake-refresh-token',
 		access_token_expires_at: new Date(Date.now() + 3_600_000).toISOString(),
 		token_type: 'Bearer'
