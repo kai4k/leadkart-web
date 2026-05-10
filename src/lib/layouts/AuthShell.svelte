@@ -205,23 +205,12 @@
 	     has actual texture to blur. WCAG: max alpha 8% — every text colour
 	     pair on the page still computes well above 4.5:1. ── */
 	.lk-auth-form-side {
-		/* bg-subtle base (slightly darker than bg-elevated) so the
-		   white AuthCard pops as a distinct surface. Two radial washes
-		   add navy-blue + secondary-red ambience without overpowering
-		   the form chrome. WCAG: max alpha keeps every text colour
-		   pair on the card above 4.5:1. */
-		background:
-			radial-gradient(
-				ellipse 80% 60% at 0% 100%,
-				color-mix(in srgb, var(--color-brand-200) 55%, transparent) 0%,
-				transparent 60%
-			),
-			radial-gradient(
-				ellipse 60% 50% at 100% 0%,
-				color-mix(in srgb, var(--color-secondary-100) 55%, transparent) 0%,
-				transparent 65%
-			),
-			var(--color-bg-subtle);
+		/* White in light mode (bg-elevated → oklch 1 0 0), dark navy
+		   in dark mode (theme-aware via base.css). No radial wash —
+		   the AuthCard's own border + shadow handle visual separation
+		   from the page. Clean white "modal" surface per the brand
+		   direction. */
+		background: var(--color-bg-elevated);
 	}
 
 	/* ── Brand panel — THEME-LOCKED to light values. The brand panel
@@ -247,12 +236,12 @@
 		--color-border-strong: oklch(0.8 0.01 256);
 
 		padding: clamp(3rem, 6vw, 5rem) clamp(2rem, 4vw, 4rem);
-		background: linear-gradient(
-			160deg,
-			var(--color-brand-50),
-			color-mix(in srgb, var(--color-brand-100) 70%, var(--color-bg-elevated)),
-			color-mix(in srgb, var(--color-secondary-50) 50%, var(--color-brand-100))
-		);
+		/* "Light bluish touch only" — solid brand-50 (≈ oklch 0.97 0.02 260).
+		   The earlier 3-stop gradient with secondary-50 green-mix was too
+		   busy; brand identity comes from the logo + hero typography, not
+		   from a saturated panel bg. The green is preserved as accent only
+		   on feature / floating-card icon backdrops. */
+		background: var(--color-brand-50);
 		color: var(--color-brand-800);
 	}
 
@@ -510,8 +499,9 @@
 		backface-visibility: hidden;
 	}
 
-	/* ── Background radial glow — soft secondary (logo green) hint
-	     in the top-right corner, picking up the logo's accent. ── */
+	/* ── Background radial glow — very subtle brand-200 hint in the
+	     top-right corner. Adds depth to the otherwise flat brand-50
+	     bg without introducing a competing colour. ── */
 	.lk-auth-glow {
 		position: absolute;
 		top: -20%;
@@ -520,7 +510,7 @@
 		height: 80%;
 		background: radial-gradient(
 			circle,
-			color-mix(in srgb, var(--color-secondary-200) 35%, transparent) 0%,
+			color-mix(in srgb, var(--color-brand-200) 30%, transparent) 0%,
 			transparent 65%
 		);
 		border-radius: 50%;

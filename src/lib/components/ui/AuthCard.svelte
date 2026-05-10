@@ -54,13 +54,17 @@
 		overflow: hidden;
 		border-radius: 1.5rem;
 		padding: clamp(1.5rem, 4vw, 2.5rem);
-		/* Solid bg-elevated — opaque card lets the border + shadow do
-		   the visual containment. Border-strong gives a clear edge
-		   against the form-side bg; shadow stack uses theme-aware
-		   tokens so dark mode gets a heavier drop. */
+		/* Solid bg-elevated. With the form-side now also pure white
+		   (bg-elevated), the card needs its border + shadow to do ALL
+		   the visual containment — no bg-difference to lean on. Border
+		   uses border-strong; shadow stack adds a soft brand-tinted
+		   drop that pops on white without looking heavy. */
 		background: var(--color-bg-elevated);
 		border: 1px solid var(--color-border-strong);
-		box-shadow: var(--shadow-lg);
+		box-shadow:
+			0 1px 2px color-mix(in srgb, var(--color-brand-900) 5%, transparent),
+			0 8px 24px color-mix(in srgb, var(--color-brand-900) 10%, transparent),
+			0 20px 48px color-mix(in srgb, var(--color-brand-900) 8%, transparent);
 		animation:
 			lk-auth-card-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards,
 			lk-auth-card-border-glow 4s ease-in-out 1s infinite;
