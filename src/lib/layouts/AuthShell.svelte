@@ -110,10 +110,12 @@
 		aria-label="LeadKart"
 		class="lk-auth-brand relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-center"
 	>
-		<!-- Background illustration with radial mask + glass overlay -->
+		<!-- Background illustration — radial mask only. No white glass
+		     overlay (it was swallowing the image at any reasonable
+		     opacity). The brand-100 panel bg provides enough contrast
+		     against the hero typography on top. -->
 		<div class="lk-auth-illustration lk-parallax-medium" aria-hidden="true">
 			<img src="/images/auth/illustration.png" alt="" class="lk-auth-illustration-img" />
-			<div class="lk-auth-illustration-glass"></div>
 		</div>
 
 		<!-- Page-level logo — bare, no pill chrome. The brand panel bg is
@@ -214,6 +216,9 @@
 	     / brand-link aliases. The brand-* and secondary-* scales never
 	     flipped in the first place, so they're not relocked here. ── */
 	.lk-auth {
+		/* Surface + foreground tokens locked to light values (auth
+		   shell stays light in both OS themes — Stripe / Linear /
+		   Vercel canon). */
 		--color-bg: oklch(0.99 0 0);
 		--color-bg-subtle: oklch(0.97 0 0);
 		--color-bg-muted: oklch(0.95 0 0);
@@ -223,6 +228,19 @@
 		--color-fg-subtle: oklch(0.6 0.02 256);
 		--color-border: oklch(0.9 0.01 256);
 		--color-border-strong: oklch(0.8 0.01 256);
+
+		/* Brand stops 600 + 700 pinned to the EXACT colours per the
+		   LeadKart brand spec (user-supplied 2026-05-10):
+		      Sign In button bg  → #00348d ≈ oklch(0.34 0.21 268)
+		      Sign In heading    → #00297d ≈ oklch(0.30 0.20 270)
+		   These are deep indigo-navy, more saturated than the global
+		   brand-600/700 tokens (which are oklch hue 260 navy-violet).
+		   Scoped here so the auth shell renders the canonical brand
+		   colours without re-pivoting the entire token system. */
+		--color-brand-600: oklch(0.34 0.21 268); /* #00348d signin button */
+		--color-brand-700: oklch(0.3 0.2 270); /* #00297d signin text */
+		--color-brand-800: oklch(0.24 0.16 272); /* derived darker stop */
+
 		--color-brand-heading: var(--color-brand-700);
 		--color-brand-link: var(--color-brand-600);
 		--color-brand-link-hover: var(--color-brand-700);
@@ -237,12 +255,11 @@
 
 	.lk-auth-brand {
 		padding: clamp(3rem, 6vw, 5rem) clamp(2rem, 4vw, 4rem);
-		/* "Light bluish touch only" — solid brand-50 (≈ oklch 0.97 0.02 260).
-		   The earlier 3-stop gradient with secondary-50 green-mix was too
-		   busy; brand identity comes from the logo + hero typography, not
-		   from a saturated panel bg. The green is preserved as accent only
-		   on feature / floating-card icon backdrops. */
-		background: var(--color-brand-50);
+		/* brand-100 — a step more saturated than brand-50 so the bg
+		   reads as "soft indigo" rather than "near-white". The prior
+		   brand-50 was so close to white it was swallowing the
+		   illustration. The image now has a colored canvas to sit on. */
+		background: var(--color-brand-100);
 		color: var(--color-brand-800);
 	}
 
@@ -261,23 +278,25 @@
 		width: 100%;
 	}
 
-	/* ── Glass pill — hero text + tagline wrappers. Light-glass on the
-	     brand-50/100 gradient: bg-elevated at 60% mix with brand-100,
-	     brand-200 border, brand-900-tinted shadow. Reads as a soft
-	     elevated card, not a dark overlay. ── */
+	/* ── Glass pill — hero text + tagline wrappers. Much lower white
+	     mix (40% bg-elevated vs prior 70%) so the illustration shows
+	     through behind the text rather than being masked. Backdrop-
+	     filter blur still gives the "frosted glass over photograph"
+	     effect; the border + shadow keep the pill from disappearing
+	     into the wash. ── */
 	.lk-auth-pill {
 		display: block;
 		width: fit-content;
 		max-width: 100%;
 		padding: 1.25em 1.5em;
 		border-radius: 1.5rem;
-		background: color-mix(in srgb, var(--color-bg-elevated) 70%, transparent);
-		border: 1px solid color-mix(in srgb, var(--color-brand-200) 80%, transparent);
+		background: color-mix(in srgb, var(--color-bg-elevated) 40%, transparent);
+		border: 1px solid color-mix(in srgb, var(--color-brand-200) 60%, transparent);
 		backdrop-filter: blur(20px) saturate(1.2);
 		-webkit-backdrop-filter: blur(20px) saturate(1.2);
 		position: relative;
 		overflow: hidden;
-		box-shadow: 0 4px 16px color-mix(in srgb, var(--color-brand-900) 12%, transparent);
+		box-shadow: 0 4px 16px color-mix(in srgb, var(--color-brand-900) 10%, transparent);
 	}
 	.lk-auth-pill::before {
 		content: '';
@@ -310,8 +329,8 @@
 		gap: 0.75rem;
 		padding: 0.625rem 1rem;
 		border-radius: 0.875rem;
-		background: color-mix(in srgb, var(--color-bg-elevated) 65%, transparent);
-		border: 1px solid color-mix(in srgb, var(--color-brand-200) 75%, transparent);
+		background: color-mix(in srgb, var(--color-bg-elevated) 35%, transparent);
+		border: 1px solid color-mix(in srgb, var(--color-brand-200) 55%, transparent);
 		backdrop-filter: blur(16px) saturate(1.2);
 		-webkit-backdrop-filter: blur(16px) saturate(1.2);
 		position: relative;
@@ -323,7 +342,7 @@
 	@media (hover: hover) {
 		.lk-auth-feature:hover {
 			transform: translateX(0.25rem);
-			background: color-mix(in srgb, var(--color-bg-elevated) 80%, transparent);
+			background: color-mix(in srgb, var(--color-bg-elevated) 55%, transparent);
 		}
 	}
 	.lk-auth-feature::before {
@@ -367,22 +386,17 @@
 		height: 100%;
 		object-fit: cover;
 		object-position: center;
-		opacity: 0.14;
-		mask-image: radial-gradient(ellipse at center, black 40%, transparent 95%);
-		-webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 95%);
+		/* Bumped from 0.14 — the image was being swallowed by the
+		   white-tinted overlay + near-white bg. 0.5 lets it read
+		   clearly as a product illustration without overpowering
+		   the hero text on top. */
+		opacity: 0.5;
+		mask-image: radial-gradient(ellipse at center, black 50%, transparent 95%);
+		-webkit-mask-image: radial-gradient(ellipse at center, black 50%, transparent 95%);
 	}
-	.lk-auth-illustration-glass {
-		position: absolute;
-		inset: 0;
-		background: linear-gradient(
-			160deg,
-			color-mix(in srgb, var(--color-bg-elevated) 25%, transparent) 0%,
-			color-mix(in srgb, var(--color-bg-elevated) 8%, transparent) 50%,
-			color-mix(in srgb, var(--color-bg-elevated) 18%, transparent) 100%
-		);
-		backdrop-filter: blur(2px);
-		-webkit-backdrop-filter: blur(2px);
-	}
+	/* The white-glass overlay is gone — it was the main reason the
+	   illustration couldn't read. The brand-100 panel bg behind the
+	   image is enough to keep contrast against the hero typography. */
 
 	/* ── Floating glass cards — bobbing animation. Light-glass on the
 	     light brand panel: 70% bg-elevated mix with brand-100 border,
@@ -395,8 +409,8 @@
 		gap: 0.5rem;
 		padding: 0.5em 0.875em 0.5em 0.625em;
 		border-radius: 0.75rem;
-		background: color-mix(in srgb, var(--color-bg-elevated) 70%, transparent);
-		border: 1px solid color-mix(in srgb, var(--color-brand-200) 70%, transparent);
+		background: color-mix(in srgb, var(--color-bg-elevated) 40%, transparent);
+		border: 1px solid color-mix(in srgb, var(--color-brand-200) 50%, transparent);
 		backdrop-filter: blur(16px) saturate(1.3);
 		-webkit-backdrop-filter: blur(16px) saturate(1.3);
 		white-space: nowrap;
