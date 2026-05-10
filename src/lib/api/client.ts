@@ -13,7 +13,6 @@
  * lib/features/<x>/api.ts and call into this client.
  */
 
-import { env } from '$env/dynamic/public';
 import { ApiError, isApiError, type ApiErrorBody } from './errors';
 
 /**
@@ -41,9 +40,15 @@ export function setAuthHooks(next: AuthHooks) {
 }
 
 function resolveBaseUrl(): string {
-	const envBase = env.PUBLIC_API_BASE_URL?.trim();
-	if (envBase && envBase.length > 0) return envBase.replace(/\/$/, '');
-	return '/api'; // dev — vite proxies to localhost:8080
+	// Dev: vite proxies /api/* → http://localhost:8080 (see vite.config).
+	// Prod: when first deploy lands, switch this to a build-time inline
+	// (e.g. Vite `define` in vite.config: `__API_BASE_URL__` replaced at
+	// build time). Avoiding $env/* helpers — adapter-static + Vite has
+	// a hash-mismatch bug with $env/dynamic/public that crashes chunk
+	// init, and $env/static/public requires the var be declared at
+	// build time (which CI lacks). Hardcoded relative path is the
+	// simplest reliable primitive while there's no production deploy.
+	return '/api';
 }
 
 export interface RequestOptions extends Omit<RequestInit, 'body'> {

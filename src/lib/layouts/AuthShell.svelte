@@ -93,16 +93,15 @@
 </script>
 
 <div class="lk-auth grid min-h-dvh grid-cols-1 lg:grid-cols-2">
-	<!-- Mobile-only compact brand banner. White pill wraps the logo so
-	     the LeadKart-blue marks read clearly against the navy bar
-	     (color-on-color contrast on its own loses too much weight). -->
+	<!-- Mobile-only compact brand banner. Light brand-50 surface — the
+	     logo's natural backdrop. Wordmark + tagline both render in
+	     brand-700 (the wordmark navy itself), giving ~10:1 contrast
+	     vs the cream-violet bg. No pill chrome needed. -->
 	<header
-		class="flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-brand-700)] px-6 py-4 text-[var(--color-fg-on-brand)] lg:hidden"
+		class="flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-brand-50)] px-6 py-4 text-[var(--color-brand-700)] lg:hidden"
 	>
-		<span class="lk-auth-logo-pill lk-auth-logo-pill-mobile">
-			<Logo size="md" variant="light-bg" />
-		</span>
-		<span class="caption text-[var(--color-brand-50)]">Pharma SaaS</span>
+		<Logo size="md" />
+		<span class="caption font-medium text-[var(--color-brand-700)]">Pharma SaaS</span>
 	</header>
 
 	<!-- ═══ BRAND PANEL (desktop only) — animated hero ═══════════════════ -->
@@ -117,25 +116,22 @@
 			<div class="lk-auth-illustration-glass"></div>
 		</div>
 
-		<!-- Page-level logo — wrapped in a frosted-white pill at the top-
-		     left of the brand panel. Logo uses the light-bg variant (dark
-		     LeadKart marks) so the brand pops against the pill regardless
-		     of the navy gradient sitting beneath it. -->
+		<!-- Page-level logo — bare, no pill chrome. The brand panel bg is
+		     brand-50 (the logo's natural light backdrop), so the wordmark
+		     navy + LK mark green read directly without any containment. -->
 		<div class="lk-auth-page-logo">
-			<span class="lk-auth-logo-pill">
-				<Logo size="xl" variant="light-bg" />
-			</span>
+			<Logo size="xl" />
 		</div>
 
-		<!-- Brand text content (3 stacked glass pills) -->
+		<!-- Brand text content (3 stacked light-glass pills) -->
 		<div class="lk-auth-brand-content lk-parallax-slow">
 			<div class="lk-auth-pill lk-auth-pill-hero">
-				<p class="display-2 leading-[1.15]">
+				<p class="display-2 leading-[1.15] text-[var(--color-brand-700)]">
 					Pharma Lead<br />Management,<br />Simplified.
 				</p>
 			</div>
 			<div class="lk-auth-pill mb-8">
-				<p class="body-base text-[color-mix(in_srgb,white_88%,transparent)]">
+				<p class="body-base text-[var(--color-brand-800)]">
 					End-to-end CRM, orders, inventory &amp; dispatch — built for India's PCD pharma market.
 				</p>
 			</div>
@@ -145,19 +141,19 @@
 					<span class="lk-auth-feature-icon" aria-hidden="true">
 						<ShieldCheck size={16} />
 					</span>
-					<span class="body-sm">Enterprise-grade security</span>
+					<span class="body-sm text-[var(--color-brand-800)]">Enterprise-grade security</span>
 				</div>
 				<div class="lk-auth-feature">
 					<span class="lk-auth-feature-icon" aria-hidden="true">
 						<TrendingUp size={16} />
 					</span>
-					<span class="body-sm">Real-time lead tracking</span>
+					<span class="body-sm text-[var(--color-brand-800)]">Real-time lead tracking</span>
 				</div>
 				<div class="lk-auth-feature">
 					<span class="lk-auth-feature-icon" aria-hidden="true">
 						<Truck size={16} />
 					</span>
-					<span class="body-sm">Order-to-dispatch pipeline</span>
+					<span class="body-sm text-[var(--color-brand-800)]">Order-to-dispatch pipeline</span>
 				</div>
 			</div>
 		</div>
@@ -188,7 +184,9 @@
 		<div class="lk-auth-glow lk-parallax-reverse" aria-hidden="true"></div>
 
 		<!-- Footer copyright -->
-		<div class="lk-auth-footer caption text-[var(--color-brand-50)]">© LeadKart 2026</div>
+		<div class="lk-auth-footer caption text-[var(--color-brand-700)] opacity-70">
+			© LeadKart 2026
+		</div>
 	</section>
 
 	<!-- ═══ FORM PANEL — full-width on mobile, half on desktop.
@@ -226,17 +224,21 @@
 			var(--color-bg-subtle);
 	}
 
-	/* ── Brand panel base — diagonal navy-violet gradient under the
-	     illustration, matches the Blazor MudPalette gradient. ── */
+	/* ── Brand panel base — LIGHT diagonal gradient anchored on the
+	     brand-50 / brand-100 stops so the LeadKart logo (which is
+	     designed for a light backdrop — navy-purple wordmark + green
+	     accent) reads at its natural fidelity. Secondary-50 tint at
+	     the lower-right surfaces the logo's green into the surrounding
+	     wash. NO dark gradient, NO logo-pill chrome required. ── */
 	.lk-auth-brand {
 		padding: clamp(3rem, 6vw, 5rem) clamp(2rem, 4vw, 4rem);
 		background: linear-gradient(
 			160deg,
-			color-mix(in srgb, var(--color-brand-700) 92%, black),
-			var(--color-brand-700),
-			color-mix(in srgb, var(--color-brand-900) 85%, black)
+			var(--color-brand-50),
+			color-mix(in srgb, var(--color-brand-100) 70%, var(--color-bg-elevated)),
+			color-mix(in srgb, var(--color-secondary-50) 50%, var(--color-brand-100))
 		);
-		color: white;
+		color: var(--color-brand-800);
 	}
 
 	.lk-auth-page-logo {
@@ -244,38 +246,6 @@
 		top: 1.75rem;
 		left: 2rem;
 		z-index: 6;
-	}
-
-	/* ── Frosted-white pill wrapping the logo. White-on-glass so the
-	     LeadKart dark marks pop against the navy hero panel + the
-	     LeadKart blue header bar on mobile. Shared between both
-	     surfaces; mobile gets tighter padding via `-mobile`. ── */
-	.lk-auth-logo-pill {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		padding: 0.875rem 1.25rem;
-		border-radius: 1rem;
-		background: rgb(255 255 255 / 0.95);
-		border: 1px solid rgb(255 255 255 / 0.6);
-		backdrop-filter: blur(12px) saturate(1.2);
-		-webkit-backdrop-filter: blur(12px) saturate(1.2);
-		box-shadow:
-			0 4px 20px rgb(0 0 0 / 0.18),
-			inset 0 1px 0 rgb(255 255 255 / 0.9);
-	}
-	.lk-auth-logo-pill-mobile {
-		padding: 0.5rem 0.875rem;
-		border-radius: 0.75rem;
-		box-shadow: 0 2px 10px rgb(0 0 0 / 0.18);
-	}
-
-	@media (prefers-reduced-transparency) {
-		.lk-auth-logo-pill {
-			background: rgb(255 255 255);
-			backdrop-filter: none;
-			-webkit-backdrop-filter: none;
-		}
 	}
 
 	/* ── Brand content stack ── */
@@ -286,20 +256,23 @@
 		width: 100%;
 	}
 
-	/* ── Glass pill — hero text + tagline wrappers ── */
+	/* ── Glass pill — hero text + tagline wrappers. Light-glass on the
+	     brand-50/100 gradient: bg-elevated at 60% mix with brand-100,
+	     brand-200 border, brand-900-tinted shadow. Reads as a soft
+	     elevated card, not a dark overlay. ── */
 	.lk-auth-pill {
 		display: block;
 		width: fit-content;
 		max-width: 100%;
 		padding: 1.25em 1.5em;
 		border-radius: 1.5rem;
-		background: linear-gradient(135deg, rgb(0 0 0 / 0.35) 0%, rgb(0 0 0 / 0.2) 100%);
-		border: 1px solid rgb(255 255 255 / 0.18);
+		background: color-mix(in srgb, var(--color-bg-elevated) 70%, transparent);
+		border: 1px solid color-mix(in srgb, var(--color-brand-200) 80%, transparent);
 		backdrop-filter: blur(20px) saturate(1.2);
 		-webkit-backdrop-filter: blur(20px) saturate(1.2);
 		position: relative;
 		overflow: hidden;
-		box-shadow: 0 4px 16px rgb(0 0 0 / 0.15);
+		box-shadow: 0 4px 16px color-mix(in srgb, var(--color-brand-900) 12%, transparent);
 	}
 	.lk-auth-pill::before {
 		content: '';
@@ -308,7 +281,11 @@
 		left: 0;
 		right: 0;
 		height: 50%;
-		background: linear-gradient(180deg, rgb(255 255 255 / 0.12) 0%, transparent 100%);
+		background: linear-gradient(
+			180deg,
+			color-mix(in srgb, var(--color-bg-elevated) 50%, transparent) 0%,
+			transparent 100%
+		);
 		border-radius: 1.5rem 1.5rem 0 0;
 		pointer-events: none;
 	}
@@ -316,7 +293,7 @@
 		margin-bottom: clamp(2.5rem, 6vh, 4.5rem);
 	}
 
-	/* ── Feature pills row ── */
+	/* ── Feature pills row — same light-glass treatment, tighter. ── */
 	.lk-auth-features {
 		display: flex;
 		flex-direction: column;
@@ -328,8 +305,8 @@
 		gap: 0.75rem;
 		padding: 0.625rem 1rem;
 		border-radius: 0.875rem;
-		background: linear-gradient(135deg, rgb(0 0 0 / 0.3) 0%, rgb(0 0 0 / 0.15) 100%);
-		border: 1px solid rgb(255 255 255 / 0.15);
+		background: color-mix(in srgb, var(--color-bg-elevated) 65%, transparent);
+		border: 1px solid color-mix(in srgb, var(--color-brand-200) 75%, transparent);
 		backdrop-filter: blur(16px) saturate(1.2);
 		-webkit-backdrop-filter: blur(16px) saturate(1.2);
 		position: relative;
@@ -341,7 +318,7 @@
 	@media (hover: hover) {
 		.lk-auth-feature:hover {
 			transform: translateX(0.25rem);
-			background: linear-gradient(135deg, rgb(0 0 0 / 0.38) 0%, rgb(0 0 0 / 0.2) 100%);
+			background: color-mix(in srgb, var(--color-bg-elevated) 80%, transparent);
 		}
 	}
 	.lk-auth-feature::before {
@@ -351,7 +328,11 @@
 		left: 0;
 		right: 0;
 		height: 50%;
-		background: linear-gradient(180deg, rgb(255 255 255 / 0.1) 0%, transparent 100%);
+		background: linear-gradient(
+			180deg,
+			color-mix(in srgb, var(--color-bg-elevated) 40%, transparent) 0%,
+			transparent 100%
+		);
 		border-radius: 0.875rem 0.875rem 0 0;
 		pointer-events: none;
 	}
@@ -362,7 +343,8 @@
 		width: 2rem;
 		height: 2rem;
 		border-radius: 0.5rem;
-		background: rgb(255 255 255 / 0.15);
+		background: color-mix(in srgb, var(--color-secondary-100) 80%, transparent);
+		color: var(--color-secondary-700);
 		flex-shrink: 0;
 	}
 
@@ -380,7 +362,7 @@
 		height: 100%;
 		object-fit: cover;
 		object-position: center;
-		opacity: 0.32;
+		opacity: 0.14;
 		mask-image: radial-gradient(ellipse at center, black 40%, transparent 95%);
 		-webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 95%);
 	}
@@ -389,15 +371,18 @@
 		inset: 0;
 		background: linear-gradient(
 			160deg,
-			rgb(0 0 0 / 0.35) 0%,
-			rgb(0 0 0 / 0.15) 50%,
-			rgb(0 0 0 / 0.25) 100%
+			color-mix(in srgb, var(--color-bg-elevated) 25%, transparent) 0%,
+			color-mix(in srgb, var(--color-bg-elevated) 8%, transparent) 50%,
+			color-mix(in srgb, var(--color-bg-elevated) 18%, transparent) 100%
 		);
 		backdrop-filter: blur(2px);
 		-webkit-backdrop-filter: blur(2px);
 	}
 
-	/* ── Floating glass cards — bobbing animation ── */
+	/* ── Floating glass cards — bobbing animation. Light-glass on the
+	     light brand panel: 70% bg-elevated mix with brand-100 border,
+	     brand-700 typography, secondary-100 icon backdrop for the
+	     green accent. ── */
 	.lk-auth-float {
 		position: absolute;
 		display: flex;
@@ -405,18 +390,18 @@
 		gap: 0.5rem;
 		padding: 0.5em 0.875em 0.5em 0.625em;
 		border-radius: 0.75rem;
-		background: linear-gradient(135deg, rgb(255 255 255 / 0.18) 0%, rgb(255 255 255 / 0.06) 100%);
-		border: 1px solid rgb(255 255 255 / 0.2);
+		background: color-mix(in srgb, var(--color-bg-elevated) 70%, transparent);
+		border: 1px solid color-mix(in srgb, var(--color-brand-200) 70%, transparent);
 		backdrop-filter: blur(16px) saturate(1.3);
 		-webkit-backdrop-filter: blur(16px) saturate(1.3);
 		white-space: nowrap;
 		z-index: 5;
 		pointer-events: none;
 		box-shadow:
-			0 4px 16px rgb(0 0 0 / 0.15),
-			inset 0 1px 0 rgb(255 255 255 / 0.15);
+			0 4px 16px color-mix(in srgb, var(--color-brand-900) 10%, transparent),
+			inset 0 1px 0 color-mix(in srgb, var(--color-bg-elevated) 60%, transparent);
 		overflow: hidden;
-		color: white;
+		color: var(--color-brand-700);
 	}
 	.lk-auth-float::before {
 		content: '';
@@ -425,7 +410,11 @@
 		left: 0;
 		right: 0;
 		height: 50%;
-		background: linear-gradient(180deg, rgb(255 255 255 / 0.15) 0%, transparent 100%);
+		background: linear-gradient(
+			180deg,
+			color-mix(in srgb, var(--color-bg-elevated) 35%, transparent) 0%,
+			transparent 100%
+		);
 		border-radius: 0.75rem 0.75rem 0 0;
 		pointer-events: none;
 	}
@@ -436,7 +425,8 @@
 		width: 1.625rem;
 		height: 1.625rem;
 		border-radius: 0.4375rem;
-		background: rgb(255 255 255 / 0.2);
+		background: color-mix(in srgb, var(--color-secondary-100) 70%, transparent);
+		color: var(--color-secondary-700);
 		flex-shrink: 0;
 	}
 
@@ -505,14 +495,19 @@
 		backface-visibility: hidden;
 	}
 
-	/* ── Background radial glow ── */
+	/* ── Background radial glow — soft secondary (logo green) hint
+	     in the top-right corner, picking up the logo's accent. ── */
 	.lk-auth-glow {
 		position: absolute;
 		top: -20%;
 		right: -30%;
 		width: 80%;
 		height: 80%;
-		background: radial-gradient(circle, rgb(255 255 255 / 0.1) 0%, transparent 65%);
+		background: radial-gradient(
+			circle,
+			color-mix(in srgb, var(--color-secondary-200) 35%, transparent) 0%,
+			transparent 65%
+		);
 		border-radius: 50%;
 		filter: blur(60px);
 		pointer-events: none;
