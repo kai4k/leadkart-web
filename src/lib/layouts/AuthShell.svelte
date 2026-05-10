@@ -182,8 +182,10 @@
 			<span class="caption">Lead Tracking</span>
 		</div>
 
-		<!-- Background radial glow (top-right corner) -->
-		<div class="lk-auth-glow lk-parallax-reverse" aria-hidden="true"></div>
+		<!-- Background radial glows are now baked into the brand-panel
+		     bg as layered conic washes (purple top-right, green bottom-
+		     left). The separate floating glow blob was competing with
+		     them — removed. -->
 
 		<!-- Footer copyright -->
 		<div class="lk-auth-footer caption text-[var(--color-brand-700)] opacity-70">
@@ -241,6 +243,13 @@
 		--color-brand-700: oklch(0.3 0.2 270); /* #00297d signin text */
 		--color-brand-800: oklch(0.24 0.16 272); /* derived darker stop */
 
+		/* Brand-panel accent washes — derived from the logo's purple
+		   highlights (#a05dce ≈ oklch 0.59 0.18 305) and green glow
+		   (#0ef709 ≈ oklch 0.86 0.30 142). Lightened + low-chroma so
+		   they read as ambient corner tints, not flat blocks. */
+		--color-auth-accent-purple: oklch(0.78 0.12 305);
+		--color-auth-accent-green: oklch(0.85 0.13 142);
+
 		--color-brand-heading: var(--color-brand-700);
 		--color-brand-link: var(--color-brand-600);
 		--color-brand-link-hover: var(--color-brand-700);
@@ -255,11 +264,26 @@
 
 	.lk-auth-brand {
 		padding: clamp(3rem, 6vw, 5rem) clamp(2rem, 4vw, 4rem);
-		/* brand-100 — a step more saturated than brand-50 so the bg
-		   reads as "soft indigo" rather than "near-white". The prior
-		   brand-50 was so close to white it was swallowing the
-		   illustration. The image now has a colored canvas to sit on. */
-		background: var(--color-brand-100);
+		/* Layered radial washes over the indigo brand-100 base:
+		     - Top-right corner: soft purple from the logo's #a05dce
+		       glass highlight, tinting the upper portion lavender.
+		     - Bottom-left corner: soft green from the logo's #0ef709
+		       inner-K glow, tinting the lower-left wash.
+		     - Base: var(--color-brand-100) indigo.
+		   Each wash kept at ~25% alpha so they read as ambience, not
+		   competing planes. */
+		background:
+			radial-gradient(
+				ellipse 75% 60% at 100% 0%,
+				color-mix(in srgb, var(--color-auth-accent-purple) 35%, transparent) 0%,
+				transparent 55%
+			),
+			radial-gradient(
+				ellipse 70% 55% at 0% 100%,
+				color-mix(in srgb, var(--color-auth-accent-green) 30%, transparent) 0%,
+				transparent 60%
+			),
+			var(--color-brand-100);
 		color: var(--color-brand-800);
 	}
 
@@ -512,25 +536,6 @@
 		transform: translate(calc(var(--mouse-x, 0) * -1.25rem), calc(var(--mouse-y, 0) * -1.25rem));
 		will-change: transform;
 		backface-visibility: hidden;
-	}
-
-	/* ── Background radial glow — very subtle brand-200 hint in the
-	     top-right corner. Adds depth to the otherwise flat brand-50
-	     bg without introducing a competing colour. ── */
-	.lk-auth-glow {
-		position: absolute;
-		top: -20%;
-		right: -30%;
-		width: 80%;
-		height: 80%;
-		background: radial-gradient(
-			circle,
-			color-mix(in srgb, var(--color-brand-200) 30%, transparent) 0%,
-			transparent 65%
-		);
-		border-radius: 50%;
-		filter: blur(60px);
-		pointer-events: none;
 	}
 
 	.lk-auth-footer {
