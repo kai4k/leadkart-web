@@ -2,12 +2,13 @@
 	import { _ } from 'svelte-i18n';
 	import { Card } from '$ui';
 	import ChangePasswordForm from '$features/auth/components/ChangePasswordForm.svelte';
-	import RequestEmailChangeForm from '$features/auth/components/RequestEmailChangeForm.svelte';
 
 	/**
-	 * /settings/account/security — Account & Security page. Two Cards:
-	 * Change password + Change email. The change-email flow completes
-	 * via the anonymous /confirm-email-change?token=… route.
+	 * /settings/account/security — Account & Security page. Surface
+	 * intentionally limited to Change Password: per the LeadKart auth
+	 * model, self-service email change is disabled (email changes
+	 * happen via admin tooling only — TenantOwner / TenantAdmin /
+	 * SuperAdmin update users' emails on their behalf).
 	 */
 </script>
 
@@ -28,16 +29,6 @@
 		</Card.Header>
 		<Card.Content>
 			<ChangePasswordForm />
-		</Card.Content>
-	</Card.Root>
-
-	<Card.Root>
-		<Card.Header>
-			<Card.Title>{$_('account.security.changeEmail.title')}</Card.Title>
-			<Card.Description>{$_('account.security.changeEmail.description')}</Card.Description>
-		</Card.Header>
-		<Card.Content>
-			<RequestEmailChangeForm />
 		</Card.Content>
 	</Card.Root>
 </div>

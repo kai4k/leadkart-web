@@ -17,7 +17,7 @@
 	 * once 5 auth pages wanted the same treatment — Rule of Three).
 	 */
 
-	// `?email=` prefill from /register success → /signin redirect.
+	// `?email=` prefill from an admin-initiated invite redirect.
 	// Read once at mount; subsequent edits are user-driven.
 	let email = $state(page.url.searchParams.get('email') ?? '');
 	let password = $state('');
@@ -97,24 +97,6 @@
 		<Button type="submit" {loading} fullWidth size="lg">
 			{loading ? $_('common.loading') : $_('auth.signin.submit')}
 		</Button>
-
-		<div class="stack stack-tight text-center">
-			<a
-				href="/forgot-password"
-				class="body-sm text-[var(--color-brand-link)] hover:text-[var(--color-brand-link-hover)]"
-			>
-				{$_('auth.signin.forgot')}
-			</a>
-			<div>
-				<span class="body-sm text-[var(--color-fg-muted)]">{$_('auth.signin.signupPrompt')}</span>
-				<a
-					href="/register"
-					class="body-sm ml-1 text-[var(--color-brand-link)] hover:text-[var(--color-brand-link-hover)]"
-				>
-					{$_('auth.signin.signupCta')}
-				</a>
-			</div>
-		</div>
 	</form>
 
 	<!-- Security trust badge — "256-bit SSL encrypted" microcopy with shield -->

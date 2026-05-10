@@ -7,18 +7,28 @@
  * to callers — boundary validation per industry canon (Stripe SDK,
  * tRPC, TanStack Query). Schema mismatch surfaces here, not deep in
  * the call stack.
+ *
+ * Surface intentionally minimal: only the authenticated-user flows
+ * (login, silent refresh, logout, change-password) are wired. Per
+ * the LeadKart auth model:
+ *
+ *   - Self-serve registration is DISABLED. SuperAdmin creates tenants;
+ *     TenantOwner / TenantAdmin / SuperAdmin create users within
+ *     tenants. No `/register` route exists.
+ *   - Forgot-password email-link flow is DISABLED. Users who forget
+ *     their password ask their admin to reset it (admin-tier endpoint
+ *     to be added later). The only self-service password update is
+ *     `changePassword` (requires current password).
+ *   - Self-service email change is DISABLED. Email changes happen via
+ *     admin tooling only (admin-tier endpoint to be added later).
+ *
+ * Backend endpoints `request-password-reset`, `reset-password`,
+ * `request-email-change`, `confirm-email-change` still exist on
+ * leadkart-go but are not exposed in this SPA.
  */
 import { api } from '$api/client';
 import { loginResponseSchema, refreshResponseSchema } from './schemas';
-import type {
-	ConfirmEmailChangeRequest,
-	LoginRequest,
-	LoginResponse,
-	RefreshRequest,
-	RefreshResponse,
-	RequestPasswordResetRequest,
-	ResetPasswordRequest
-} from './types';
+import type { LoginRequest, LoginResponse, RefreshRequest, RefreshResponse } from './types';
 
 export async function login(body: LoginRequest): Promise<LoginResponse> {
 	const raw = await api.post<unknown>('/v1/auth/login', body, { auth: false });
@@ -32,26 +42,6 @@ export async function refresh(body: RefreshRequest): Promise<RefreshResponse> {
 
 export function logout(refreshToken: string): Promise<void> {
 	return api.post<void>('/v1/auth/logout', { refresh_token: refreshToken });
-}
-
-/**
- * Anonymous endpoint. Always resolves on a 2xx (the server returns 204
- * regardless of whether the email is registered, per Auth0 / Okta
- * enumeration-safety canon).
- */
-export function requestPasswordReset(body: RequestPasswordResetRequest): Promise<void> {
-	return api.post<void>('/v1/auth/request-password-reset', body, { auth: false });
-}
-
-/**
- * Anonymous endpoint. Server validates the token + applies the new
- * password. Errors:
- *   400 reset_token_invalid          — bad / expired / already-used token
- *   422 password_breached            — present in HIBP-style breach DB
- *   422 password_same_as_current     — must differ from the current one
- */
-export function confirmPasswordReset(body: ResetPasswordRequest): Promise<void> {
-	return api.post<void>('/v1/auth/reset-password', body, { auth: false });
 }
 
 /**
@@ -69,24 +59,4 @@ export function changePassword(body: {
 	new_password: string;
 }): Promise<void> {
 	return api.post<void>('/v1/auth/change-password', body);
-}
-
-/**
- * Authenticated. Server emails the confirmation link to the NEW
- * address; the recipient confirms via confirmEmailChange (anonymous).
- *   400 invalid_email
- *   400 email_change_rejected         — domain rule rejected
- *   409 email_already_taken
- */
-export function requestEmailChange(body: { new_email: string }): Promise<void> {
-	return api.post<void>('/v1/auth/request-email-change', body);
-}
-
-/**
- * Anonymous. The token IS the proof of email ownership — works with
- * or without an active session.
- *   400 email_change_token_invalid    — bad / expired / already-used
- */
-export function confirmEmailChange(body: ConfirmEmailChangeRequest): Promise<void> {
-	return api.post<void>('/v1/auth/confirm-email-change', body, { auth: false });
 }
