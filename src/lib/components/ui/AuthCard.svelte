@@ -3,9 +3,10 @@
 	import { cn } from '$lib/utils/cn';
 
 	/**
-	 * AuthCard — frosted-glass surface for any auth-shell form
-	 * (signin / register / forgot / reset / confirm-email-change).
-	 * Ports the Blazor `lk-login-card` chrome per
+	 * AuthCard — frosted-glass surface for any auth-shell form. Today
+	 * that's only /signin (self-service auth flows are disabled per
+	 * the LeadKart auth model). Ports the Blazor `lk-login-card`
+	 * chrome per
 	 * LeadKart.Web.Client/Components/Pages/Auth/Login.razor.css.
 	 *
 	 * Surface details:

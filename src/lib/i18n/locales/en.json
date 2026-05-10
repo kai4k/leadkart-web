@@ -9,80 +9,11 @@
 			"subtitle": "Welcome back. Enter your credentials to continue.",
 			"email": "Email",
 			"password": "Password",
-			"submit": "Sign in",
-			"forgot": "Forgot your password?",
-			"signupPrompt": "Don't have an account?",
-			"signupCta": "Sign up"
-		},
-		"forgot": {
-			"title": "Forgot your password?",
-			"subtitle": "Enter the email associated with your account and we'll send you a reset link.",
-			"email": "Email",
-			"submit": "Send reset link",
-			"success": "If that account exists, we've sent a password reset link. Check your inbox.",
-			"error": "Couldn't send the reset email. Please try again.",
-			"backToSignin": "Back to sign in"
-		},
-		"reset": {
-			"title": "Reset your password",
-			"subtitle": "Choose a new password for your account.",
-			"newPassword": "New password",
-			"newPasswordHint": "At least 8 characters. Avoid passwords used elsewhere.",
-			"confirmPassword": "Confirm new password",
-			"submit": "Reset password",
-			"success": "Password reset. You can sign in now.",
-			"missingToken": "This reset link is missing its token. Request a new link.",
-			"invalidToken": "This reset link is invalid or has expired. Request a new link.",
-			"mismatch": "Passwords don't match.",
-			"requestNew": "Request a new link",
-			"genericError": "Couldn't reset the password. Please try again."
-		},
-		"confirmEmail": {
-			"title": "Confirm your email change",
-			"subtitle": "Click confirm to apply the new email address to your account. You'll need to sign in again with the new email.",
-			"confirmButton": "Confirm email change",
-			"loading": "Confirming…",
-			"success": "Email updated. Sign in with your new email to continue.",
-			"signin": "Sign in",
-			"missingToken": "This confirmation link is missing its token.",
-			"invalidToken": "This confirmation link is invalid or has expired.",
-			"requestNew": "Start over from Account & Security",
-			"genericError": "Couldn't confirm the email change. Please try again."
+			"submit": "Sign in"
 		},
 		"errors": {
 			"invalidCredentials": "Email or password is incorrect.",
 			"unexpected": "Something went wrong. Please try again."
-		},
-		"register": {
-			"title": "Create your workspace",
-			"subtitle": "Set up your company workspace. You'll be the first admin.",
-			"sectionCompany": "Company",
-			"sectionAdmin": "Admin account",
-			"slug": "Workspace slug",
-			"slugHint": "Lowercase letters, numbers, dashes. 3–50 characters. Used in URLs.",
-			"legalName": "Legal name",
-			"legalNameHint": "Your registered business name (as on PAN / GST).",
-			"displayName": "Display name",
-			"displayNameHint": "What we'll show in the app and emails.",
-			"adminFirstName": "First name",
-			"adminLastName": "Last name",
-			"adminEmail": "Work email",
-			"adminEmailHint": "Used to sign in. Must not already have an active workspace.",
-			"adminPassword": "Password",
-			"adminPasswordHint": "At least 12 characters. Avoid passwords used elsewhere.",
-			"submit": "Create workspace",
-			"submitting": "Creating workspace…",
-			"haveAccount": "Already have a workspace?",
-			"signin": "Sign in",
-			"successTitle": "Workspace created",
-			"successBody": "Sign in with your new admin email to continue.",
-			"errors": {
-				"slugTaken": "That workspace slug is already taken. Try another.",
-				"slugInvalid": "That slug isn't valid. Use lowercase letters, numbers, and dashes only.",
-				"emailInvalid": "That email address isn't valid.",
-				"emailHasActiveMembership": "That email already belongs to another workspace. Use a different email.",
-				"unexpected": "Couldn't create the workspace. Please try again."
-			}
 		}
 	},
 	"account": {
@@ -102,18 +33,6 @@
 					"incorrectCurrent": "That doesn't match your current password.",
 					"mismatch": "Passwords don't match.",
 					"generic": "Couldn't update your password. Please try again."
-				}
-			},
-			"changeEmail": {
-				"title": "Change email",
-				"description": "We'll send a confirmation link to the new address. Your current email keeps working until you click that link.",
-				"newEmail": "New email",
-				"newEmailHint": "Must not already be in use by another account.",
-				"submit": "Send confirmation link",
-				"success": "Confirmation link sent. Click the link in your inbox at the new address to complete the change.",
-				"errors": {
-					"alreadyTaken": "Another account already uses this email.",
-					"generic": "Couldn't send the confirmation link. Please try again."
 				}
 			}
 		}

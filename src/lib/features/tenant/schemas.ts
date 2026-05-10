@@ -84,62 +84,6 @@ export const updateTenantDisplayPreferencesSchema = z.object({
 	currency: z.string()
 });
 
-/**
- * Tenant onboarding (POST /v1/tenants).
- *
- * Slug rules mirror leadkart-go `internal/common/slug/slug.go`: 3-50
- * chars, lowercase alphanumeric + dashes, no leading/trailing dash,
- * no consecutive dashes. The server re-validates; this is the
- * fast-feedback layer.
- *
- * Password rules are intentionally loose at the schema layer: the
- * server enforces the per-tenant policy at boot (PasswordPolicy
- * defaults from migration 20260507000005). 12-char min is the OWASP
- * 2025 floor — anything shorter the server will reject anyway.
- */
-const slugPattern = /^[a-z0-9](?:[a-z0-9-]{1,48}[a-z0-9])?$/;
-const noConsecutiveDashes = /^(?!.*--)/;
-
-export const registerTenantSchema = z.object({
-	slug: z
-		.string()
-		.min(3, 'Slug must be at least 3 characters')
-		.max(50, 'Slug must be 50 characters or fewer')
-		.regex(slugPattern, 'Lowercase letters, numbers, and dashes only')
-		.regex(noConsecutiveDashes, 'Slug cannot contain consecutive dashes'),
-	legal_name: z
-		.string()
-		.min(1, 'Legal name is required')
-		.max(200, 'Legal name must be 200 characters or fewer'),
-	display_name: z
-		.string()
-		.min(1, 'Display name is required')
-		.max(100, 'Display name must be 100 characters or fewer'),
-	admin_email: z
-		.string()
-		.min(1, 'Email is required')
-		.email('Invalid email format')
-		.max(254, 'Email is too long'),
-	admin_password: z
-		.string()
-		.min(12, 'Password must be at least 12 characters')
-		.max(256, 'Password is too long'),
-	admin_first_name: z
-		.string()
-		.min(1, 'First name is required')
-		.max(100, 'First name must be 100 characters or fewer'),
-	admin_last_name: z
-		.string()
-		.min(1, 'Last name is required')
-		.max(100, 'Last name must be 100 characters or fewer')
-});
-
-export const registerTenantResponseSchema = z.object({
-	tenant_id: z.string(),
-	person_id: z.string(),
-	membership_id: z.string()
-});
-
 export type TenantValidated = z.output<typeof tenantSchema>;
 export type UpdateTenantProfileInput = z.input<typeof updateTenantProfileSchema>;
 export type UpdateTenantStatutoryInput = z.input<typeof updateTenantStatutorySchema>;
@@ -148,6 +92,3 @@ export type UpdateTenantSettingsInput = z.input<typeof updateTenantSettingsSchem
 export type UpdateTenantDisplayPreferencesInput = z.input<
 	typeof updateTenantDisplayPreferencesSchema
 >;
-export type RegisterTenantInput = z.input<typeof registerTenantSchema>;
-export type RegisterTenantValidated = z.output<typeof registerTenantSchema>;
-export type RegisterTenantResponseValidated = z.output<typeof registerTenantResponseSchema>;

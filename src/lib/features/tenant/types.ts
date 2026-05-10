@@ -80,27 +80,3 @@ export interface UpdateTenantDisplayPreferencesRequest {
 	date_format: string;
 	currency: string;
 }
-
-/**
- * POST /v1/tenants — anonymous tenant onboarding. Creates the tenant
- * row + the first admin Person + the first Membership in one
- * transaction (Identity domain `RegisterTenantCommand`).
- *
- * Wire shape mirrors `RegisterTenantRequest` in
- * leadkart-go/internal/identity/ports/dto.go.
- */
-export interface RegisterTenantRequest {
-	slug: string;
-	legal_name: string;
-	display_name: string;
-	admin_email: string;
-	admin_password: string;
-	admin_first_name: string;
-	admin_last_name: string;
-}
-
-export interface RegisterTenantResponse {
-	tenant_id: string;
-	person_id: string;
-	membership_id: string;
-}

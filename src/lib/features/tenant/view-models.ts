@@ -19,9 +19,9 @@ import type { AdminAddress, Tenant } from './types';
 
 /**
  * Page-header / topbar title for a tenant. Prefers the friendly
- * display_name; falls back to legal_name when display is empty (the
- * RegisterTenant flow accepts equal values; legal_name is required so
- * the fallback is always non-empty).
+ * display_name; falls back to legal_name when display is empty.
+ * legal_name is always non-empty on the server side, so the fallback
+ * is guaranteed to produce a value.
  */
 export function tenantDisplayName(tenant: Tenant): string {
 	const display = tenant.display_name?.trim();
