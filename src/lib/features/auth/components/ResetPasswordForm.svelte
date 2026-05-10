@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { _ } from 'svelte-i18n';
 	import { goto } from '$app/navigation';
 	import { confirmPasswordReset } from '../api';
@@ -8,28 +8,28 @@
 	import { PasswordField } from '$form';
 
 	/**
-	 * ResetPasswordForm — completes the recovery flow with the token
+	 * ResetPasswordForm â€” completes the recovery flow with the token
 	 * the user clicked from their email. Surfaces three distinct error
 	 * shapes:
 	 *
-	 *   400 reset_token_invalid          → top banner + "Request new"
+	 *   400 reset_token_invalid          â†’ top banner + "Request new"
 	 *                                       link to /forgot-password.
 	 *                                       The form is unrecoverable
-	 *                                       in this state — token is
+	 *                                       in this state â€” token is
 	 *                                       single-use + time-bounded.
 	 *
-	 *   422 password_breached  /         → field-level error on the
+	 *   422 password_breached  /         â†’ field-level error on the
 	 *   422 password_same_as_current        new-password input. Server
 	 *                                       message text is human-
 	 *                                       readable; surface verbatim.
 	 *
-	 *   missing token in URL             → same banner as 400 (token
+	 *   missing token in URL             â†’ same banner as 400 (token
 	 *                                       absent + token invalid are
 	 *                                       indistinguishable to the
-	 *                                       user — neither path is
+	 *                                       user â€” neither path is
 	 *                                       fixable from this screen).
 	 *
-	 * Confirm-new-password is enforced client-side only — the server
+	 * Confirm-new-password is enforced client-side only â€” the server
 	 * doesn't know about it. Mismatch surfaces as a field error on the
 	 * confirm input.
 	 */
@@ -101,7 +101,7 @@
 
 <AuthCard>
 	<div class="stack stack-tight text-center">
-		<h1 class="h1 text-[var(--color-brand-700)]">{$_('auth.reset.title')}</h1>
+		<h1 class="h1 text-[var(--color-brand-heading)]">{$_('auth.reset.title')}</h1>
 		<p class="body-sm text-[var(--color-fg-muted)]">{$_('auth.reset.subtitle')}</p>
 	</div>
 
@@ -110,7 +110,7 @@
 			<Alert variant="danger">{$_('auth.reset.missingToken')}</Alert>
 			<a
 				href="/forgot-password"
-				class="body-sm text-center text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]"
+				class="body-sm text-center text-[var(--color-brand-link)] hover:text-[var(--color-brand-link-hover)]"
 			>
 				{$_('auth.reset.requestNew')}
 			</a>
@@ -139,7 +139,7 @@
 					<Alert variant="danger">{bannerError}</Alert>
 					<a
 						href="/forgot-password"
-						class="body-sm text-center text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]"
+						class="body-sm text-center text-[var(--color-brand-link)] hover:text-[var(--color-brand-link-hover)]"
 					>
 						{$_('auth.reset.requestNew')}
 					</a>
@@ -153,7 +153,7 @@
 			<div class="text-center">
 				<a
 					href="/signin"
-					class="body-sm text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]"
+					class="body-sm text-[var(--color-brand-link)] hover:text-[var(--color-brand-link-hover)]"
 				>
 					{$_('auth.forgot.backToSignin')}
 				</a>

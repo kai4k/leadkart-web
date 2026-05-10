@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { _ } from 'svelte-i18n';
 	import { requestPasswordReset } from '../api';
 	import { requestPasswordResetSchema } from '../schemas';
@@ -6,7 +6,7 @@
 	import { TextField } from '$form';
 
 	/**
-	 * ForgotPasswordForm — emails a reset link via the leadkart-go
+	 * ForgotPasswordForm â€” emails a reset link via the leadkart-go
 	 * anonymous endpoint. The server ALWAYS returns 204 regardless of
 	 * whether the email is registered (Auth0 / Okta enumeration-safety
 	 * canon); the UI mirrors that property by showing the same neutral
@@ -50,7 +50,7 @@
 
 <AuthCard>
 	<div class="stack stack-tight text-center">
-		<h1 class="h1 text-[var(--color-brand-700)]">{$_('auth.forgot.title')}</h1>
+		<h1 class="h1 text-[var(--color-brand-heading)]">{$_('auth.forgot.title')}</h1>
 		<p class="body-sm text-[var(--color-fg-muted)]">{$_('auth.forgot.subtitle')}</p>
 	</div>
 
@@ -59,7 +59,7 @@
 		<div class="text-center">
 			<a
 				href="/signin"
-				class="body-sm text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]"
+				class="body-sm text-[var(--color-brand-link)] hover:text-[var(--color-brand-link-hover)]"
 			>
 				{$_('auth.forgot.backToSignin')}
 			</a>
@@ -88,7 +88,7 @@
 			<div class="text-center">
 				<a
 					href="/signin"
-					class="body-sm text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]"
+					class="body-sm text-[var(--color-brand-link)] hover:text-[var(--color-brand-link-hover)]"
 				>
 					{$_('auth.forgot.backToSignin')}
 				</a>

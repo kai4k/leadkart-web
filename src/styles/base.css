@@ -33,6 +33,12 @@
 	--color-border: oklch(0.3 0.02 256);
 	--color-border-strong: oklch(0.4 0.02 256);
 
+	/* Semantic brand-text aliases flip to lighter brand stops so navy
+	   typography reads against the dark surfaces. */
+	--color-brand-heading: var(--color-brand-300);
+	--color-brand-link: var(--color-brand-400);
+	--color-brand-link-hover: var(--color-brand-300);
+
 	--color-overlay: oklch(0.05 0.01 256 / 0.7);
 	--color-overlay-strong: oklch(0.05 0.01 256 / 0.85);
 

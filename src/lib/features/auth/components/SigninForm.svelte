@@ -67,7 +67,7 @@
 
 <AuthCard>
 	<div class="stack stack-tight text-center">
-		<h1 class="h1 text-[var(--color-brand-700)]">{$_('auth.signin.title')}</h1>
+		<h1 class="h1 text-[var(--color-brand-heading)]">{$_('auth.signin.title')}</h1>
 		<p class="body-sm text-[var(--color-fg-muted)]">{$_('auth.signin.subtitle')}</p>
 	</div>
 
@@ -101,7 +101,7 @@
 		<div class="stack stack-tight text-center">
 			<a
 				href="/forgot-password"
-				class="body-sm text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]"
+				class="body-sm text-[var(--color-brand-link)] hover:text-[var(--color-brand-link-hover)]"
 			>
 				{$_('auth.signin.forgot')}
 			</a>
@@ -109,7 +109,7 @@
 				<span class="body-sm text-[var(--color-fg-muted)]">{$_('auth.signin.signupPrompt')}</span>
 				<a
 					href="/register"
-					class="body-sm ml-1 text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]"
+					class="body-sm ml-1 text-[var(--color-brand-link)] hover:text-[var(--color-brand-link-hover)]"
 				>
 					{$_('auth.signin.signupCta')}
 				</a>

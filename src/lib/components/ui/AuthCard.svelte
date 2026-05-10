@@ -54,18 +54,25 @@
 		overflow: hidden;
 		border-radius: 1.5rem;
 		padding: clamp(1.5rem, 4vw, 2.5rem);
-		background: color-mix(in srgb, var(--color-bg-elevated) 78%, transparent);
-		backdrop-filter: blur(40px) saturate(1.4);
-		-webkit-backdrop-filter: blur(40px) saturate(1.4);
-		border: 1px solid rgb(255 255 255 / 0.5);
+		/* Solid bg-elevated. With the form-side now also pure white
+		   (bg-elevated), the card needs its border + shadow to do ALL
+		   the visual containment — no bg-difference to lean on. Border
+		   uses border-strong; shadow stack adds a soft brand-tinted
+		   drop that pops on white without looking heavy. */
+		background: var(--color-bg-elevated);
+		border: 1px solid var(--color-border-strong);
 		box-shadow:
-			inset 0 0 0 1px rgb(255 255 255 / 0.3),
-			0 8px 40px rgb(0 0 0 / 0.08),
-			0 2px 8px rgb(0 0 0 / 0.04);
+			0 1px 2px color-mix(in srgb, var(--color-brand-900) 5%, transparent),
+			0 8px 24px color-mix(in srgb, var(--color-brand-900) 10%, transparent),
+			0 20px 48px color-mix(in srgb, var(--color-brand-900) 8%, transparent);
 		animation:
 			lk-auth-card-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards,
 			lk-auth-card-border-glow 4s ease-in-out 1s infinite;
 	}
+
+	/* No dark-mode override needed — the AuthShell scope theme-locks
+	   all surface + foreground tokens to light, so the AuthCard
+	   renders identically in both OS themes. */
 
 	.lk-auth-card-flare {
 		position: absolute;
@@ -105,10 +112,10 @@
 	@keyframes lk-auth-card-border-glow {
 		0%,
 		100% {
-			border-color: rgb(255 255 255 / 0.3);
+			border-color: var(--color-border);
 		}
 		50% {
-			border-color: color-mix(in srgb, var(--color-brand-500) 30%, rgb(255 255 255 / 0.6));
+			border-color: color-mix(in srgb, var(--color-brand-400) 45%, var(--color-border));
 		}
 	}
 
