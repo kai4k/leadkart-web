@@ -27,6 +27,7 @@ export {
 	ArrowRight,
 	Bell,
 	Boxes,
+	Building2,
 	CheckCircle2,
 	ChevronDown,
 	ChevronLeft,
@@ -49,6 +50,7 @@ export {
 	Trash2,
 	Truck,
 	User,
+	UserCheck,
 	Users,
 	X,
 	XCircle

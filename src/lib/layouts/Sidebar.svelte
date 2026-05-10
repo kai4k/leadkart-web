@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { NAV } from '$lib/config/nav';
+	import { navForTier } from '$lib/config/nav';
+	import { hasPermission, tierOf } from '$features/auth/tier';
+	import { session } from '$features/auth/stores/session.svelte';
 
 	let { onNavigate } = $props<{ onNavigate?: () => void }>();
 
@@ -16,9 +18,32 @@
 		return path.startsWith(href + '/');
 	}
 
-	// TODO(v0.3): filter by session.principal.permissions[] against
-	// item.requires once the JWT permission claim is consumed.
-	const sections = NAV;
+	/**
+	 * Tier-scoped nav catalogue + per-item permission filter.
+	 *
+	 *   1. tier (platform-super / platform-staff / tenant-admin /
+	 *      tenant-user) picks the catalogue from nav.ts.
+	 *   2. Each item's `requires` permission is checked against the
+	 *      principal's JWT claims via `hasPermission`; SuperUser
+	 *      short-circuits everything.
+	 *   3. Sections with no items left after filtering disappear
+	 *      from the rendered tree.
+	 *
+	 * Re-derives reactively on signin / refresh — `session.principal`
+	 * is a $state-backed reactive ref.
+	 */
+	const sections = $derived.by(() => {
+		const principal = session.principal;
+		const catalogue = navForTier(tierOf(principal));
+		return catalogue
+			.map((section) => ({
+				...section,
+				items: section.items.filter(
+					(item) => item.requires === null || hasPermission(principal, item.requires)
+				)
+			}))
+			.filter((section) => section.items.length > 0);
+	});
 </script>
 
 <nav class="glass-drawer flex h-full w-60 flex-col" aria-label="Main navigation">
