@@ -54,14 +54,21 @@
 		overflow: hidden;
 		border-radius: 1.5rem;
 		padding: clamp(1.5rem, 4vw, 2.5rem);
-		background: color-mix(in srgb, var(--color-bg-elevated) 78%, transparent);
-		backdrop-filter: blur(40px) saturate(1.4);
-		-webkit-backdrop-filter: blur(40px) saturate(1.4);
-		border: 1px solid rgb(255 255 255 / 0.5);
+		/* Solid bg-elevated — the prior 78% transparent treatment was
+		   designed for the dark brand-panel side; on the light form-
+		   side it produced a card that blended into the page. Going
+		   opaque lets the border + shadow do the visual containment. */
+		background: var(--color-bg-elevated);
+		/* border-strong (darker than border) gives the card a clear
+		   edge against the off-white form-side bg. Brand-tinted shadow
+		   stack adds depth; inset highlight keeps the glass feel at
+		   the top edge. */
+		border: 1px solid var(--color-border-strong);
 		box-shadow:
-			inset 0 0 0 1px rgb(255 255 255 / 0.3),
-			0 8px 40px rgb(0 0 0 / 0.08),
-			0 2px 8px rgb(0 0 0 / 0.04);
+			inset 0 1px 0 rgb(255 255 255 / 0.8),
+			0 1px 3px color-mix(in srgb, var(--color-brand-900) 4%, transparent),
+			0 12px 32px color-mix(in srgb, var(--color-brand-900) 10%, transparent),
+			0 24px 64px color-mix(in srgb, var(--color-brand-900) 6%, transparent);
 		animation:
 			lk-auth-card-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards,
 			lk-auth-card-border-glow 4s ease-in-out 1s infinite;
@@ -105,10 +112,10 @@
 	@keyframes lk-auth-card-border-glow {
 		0%,
 		100% {
-			border-color: rgb(255 255 255 / 0.3);
+			border-color: var(--color-border);
 		}
 		50% {
-			border-color: color-mix(in srgb, var(--color-brand-500) 30%, rgb(255 255 255 / 0.6));
+			border-color: color-mix(in srgb, var(--color-brand-400) 45%, var(--color-border));
 		}
 	}
 

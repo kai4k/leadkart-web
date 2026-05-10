@@ -93,11 +93,15 @@
 </script>
 
 <div class="lk-auth grid min-h-dvh grid-cols-1 lg:grid-cols-2">
-	<!-- Mobile-only compact brand banner -->
+	<!-- Mobile-only compact brand banner. White pill wraps the logo so
+	     the LeadKart-blue marks read clearly against the navy bar
+	     (color-on-color contrast on its own loses too much weight). -->
 	<header
 		class="flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-brand-700)] px-6 py-4 text-[var(--color-fg-on-brand)] lg:hidden"
 	>
-		<Logo size="sm" variant="dark-bg" />
+		<span class="lk-auth-logo-pill lk-auth-logo-pill-mobile">
+			<Logo size="md" variant="light-bg" />
+		</span>
 		<span class="caption text-[var(--color-brand-50)]">Pharma SaaS</span>
 	</header>
 
@@ -113,9 +117,14 @@
 			<div class="lk-auth-illustration-glass"></div>
 		</div>
 
-		<!-- Page-level logo (top-left, above brand content) -->
+		<!-- Page-level logo — wrapped in a frosted-white pill at the top-
+		     left of the brand panel. Logo uses the light-bg variant (dark
+		     LeadKart marks) so the brand pops against the pill regardless
+		     of the navy gradient sitting beneath it. -->
 		<div class="lk-auth-page-logo">
-			<Logo size="md" variant="dark-bg" />
+			<span class="lk-auth-logo-pill">
+				<Logo size="xl" variant="light-bg" />
+			</span>
 		</div>
 
 		<!-- Brand text content (3 stacked glass pills) -->
@@ -198,18 +207,23 @@
 	     has actual texture to blur. WCAG: max alpha 8% — every text colour
 	     pair on the page still computes well above 4.5:1. ── */
 	.lk-auth-form-side {
+		/* bg-subtle base (slightly darker than bg-elevated) so the
+		   white AuthCard pops as a distinct surface. Two radial washes
+		   add navy-blue + secondary-red ambience without overpowering
+		   the form chrome. WCAG: max alpha keeps every text colour
+		   pair on the card above 4.5:1. */
 		background:
 			radial-gradient(
 				ellipse 80% 60% at 0% 100%,
-				color-mix(in srgb, var(--color-brand-200) 30%, transparent) 0%,
+				color-mix(in srgb, var(--color-brand-200) 55%, transparent) 0%,
 				transparent 60%
 			),
 			radial-gradient(
 				ellipse 60% 50% at 100% 0%,
-				color-mix(in srgb, var(--color-secondary-100) 35%, transparent) 0%,
+				color-mix(in srgb, var(--color-secondary-100) 55%, transparent) 0%,
 				transparent 65%
 			),
-			var(--color-bg);
+			var(--color-bg-subtle);
 	}
 
 	/* ── Brand panel base — diagonal navy-violet gradient under the
@@ -230,7 +244,38 @@
 		top: 1.75rem;
 		left: 2rem;
 		z-index: 6;
-		filter: drop-shadow(0 0.125rem 0.5rem rgb(0 0 0 / 0.15));
+	}
+
+	/* ── Frosted-white pill wrapping the logo. White-on-glass so the
+	     LeadKart dark marks pop against the navy hero panel + the
+	     LeadKart blue header bar on mobile. Shared between both
+	     surfaces; mobile gets tighter padding via `-mobile`. ── */
+	.lk-auth-logo-pill {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.875rem 1.25rem;
+		border-radius: 1rem;
+		background: rgb(255 255 255 / 0.95);
+		border: 1px solid rgb(255 255 255 / 0.6);
+		backdrop-filter: blur(12px) saturate(1.2);
+		-webkit-backdrop-filter: blur(12px) saturate(1.2);
+		box-shadow:
+			0 4px 20px rgb(0 0 0 / 0.18),
+			inset 0 1px 0 rgb(255 255 255 / 0.9);
+	}
+	.lk-auth-logo-pill-mobile {
+		padding: 0.5rem 0.875rem;
+		border-radius: 0.75rem;
+		box-shadow: 0 2px 10px rgb(0 0 0 / 0.18);
+	}
+
+	@media (prefers-reduced-transparency) {
+		.lk-auth-logo-pill {
+			background: rgb(255 255 255);
+			backdrop-filter: none;
+			-webkit-backdrop-filter: none;
+		}
 	}
 
 	/* ── Brand content stack ── */
