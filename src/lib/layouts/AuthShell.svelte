@@ -224,13 +224,28 @@
 			var(--color-bg-subtle);
 	}
 
-	/* ── Brand panel base — LIGHT diagonal gradient anchored on the
-	     brand-50 / brand-100 stops so the LeadKart logo (which is
-	     designed for a light backdrop — navy-purple wordmark + green
-	     accent) reads at its natural fidelity. Secondary-50 tint at
-	     the lower-right surfaces the logo's green into the surrounding
-	     wash. NO dark gradient, NO logo-pill chrome required. ── */
+	/* ── Brand panel — THEME-LOCKED to light values. The brand panel
+	     is a brand-identity surface (logo + hero + features), not a
+	     theme-responsive surface; it stays in a fixed light treatment
+	     regardless of user's OS theme preference. Industry canon:
+	     Stripe / Linear / Vercel auth pages all do this.
+
+	     The locked tokens here shadow base.css's :root.dark overrides
+	     within the .lk-auth-brand scope. Children (pills, floating
+	     cards, illustration glass) consuming `--color-bg-elevated`
+	     etc. get the light values even when <html class="dark"> is on.
+	     The brand-* and secondary-* tokens already don't flip, so
+	     hero text + accent glyphs work either way. ── */
 	.lk-auth-brand {
+		--color-bg-elevated: oklch(1 0 0);
+		--color-bg-subtle: oklch(0.97 0 0);
+		--color-bg: oklch(0.99 0 0);
+		--color-fg: oklch(0.2 0.02 256);
+		--color-fg-muted: oklch(0.45 0.02 256);
+		--color-fg-subtle: oklch(0.6 0.02 256);
+		--color-border: oklch(0.9 0.01 256);
+		--color-border-strong: oklch(0.8 0.01 256);
+
 		padding: clamp(3rem, 6vw, 5rem) clamp(2rem, 4vw, 4rem);
 		background: linear-gradient(
 			160deg,

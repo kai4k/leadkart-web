@@ -54,24 +54,27 @@
 		overflow: hidden;
 		border-radius: 1.5rem;
 		padding: clamp(1.5rem, 4vw, 2.5rem);
-		/* Solid bg-elevated — the prior 78% transparent treatment was
-		   designed for the dark brand-panel side; on the light form-
-		   side it produced a card that blended into the page. Going
-		   opaque lets the border + shadow do the visual containment. */
+		/* Solid bg-elevated — opaque card lets the border + shadow do
+		   the visual containment. Border-strong gives a clear edge
+		   against the form-side bg; shadow stack uses theme-aware
+		   tokens so dark mode gets a heavier drop. */
 		background: var(--color-bg-elevated);
-		/* border-strong (darker than border) gives the card a clear
-		   edge against the off-white form-side bg. Brand-tinted shadow
-		   stack adds depth; inset highlight keeps the glass feel at
-		   the top edge. */
 		border: 1px solid var(--color-border-strong);
-		box-shadow:
-			inset 0 1px 0 rgb(255 255 255 / 0.8),
-			0 1px 3px color-mix(in srgb, var(--color-brand-900) 4%, transparent),
-			0 12px 32px color-mix(in srgb, var(--color-brand-900) 10%, transparent),
-			0 24px 64px color-mix(in srgb, var(--color-brand-900) 6%, transparent);
+		box-shadow: var(--shadow-lg);
 		animation:
 			lk-auth-card-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards,
 			lk-auth-card-border-glow 4s ease-in-out 1s infinite;
+	}
+
+	/* Dark-mode: bg-elevated (0.22) is too close to bg-subtle (0.20)
+	   for the card to read as elevated. Mix in a touch of foreground
+	   to lift the surface ~5% perceptually, plus a subtle brand-tinted
+	   glow as additional separation. */
+	:global(.dark) .lk-auth-card {
+		background: color-mix(in srgb, var(--color-bg-elevated) 90%, var(--color-fg));
+		box-shadow:
+			var(--shadow-lg),
+			0 0 0 1px color-mix(in srgb, var(--color-brand-500) 12%, transparent);
 	}
 
 	.lk-auth-card-flare {

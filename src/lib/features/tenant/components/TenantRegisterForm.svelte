@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { _ } from 'svelte-i18n';
 	import { goto } from '$app/navigation';
 	import { isApiError } from '$api/client';
@@ -8,7 +8,7 @@
 	import { registerTenantSchema } from '../schemas';
 
 	/**
-	 * TenantRegisterForm — anonymous tenant onboarding. Creates the
+	 * TenantRegisterForm â€” anonymous tenant onboarding. Creates the
 	 * tenant + first admin Person + first Membership in one server-side
 	 * transaction (RegisterTenantCommand). On success, redirects to
 	 * /signin with the admin email pre-filled so the new admin can
@@ -19,10 +19,10 @@
 	 * AuthCard glass chrome shared with the rest of the auth surface.
 	 *
 	 * Server error mapping:
-	 *   400 invalid_slug                  → field-level slug error
-	 *   400 invalid_email                 → field-level email error
-	 *   409 email_has_active_membership   → field-level email error
-	 *   anything else                     → form-level generic
+	 *   400 invalid_slug                  â†’ field-level slug error
+	 *   400 invalid_email                 â†’ field-level email error
+	 *   409 email_has_active_membership   â†’ field-level email error
+	 *   anything else                     â†’ form-level generic
 	 */
 
 	let slug = $state('');
@@ -111,7 +111,7 @@
 
 <AuthCard>
 	<div class="stack stack-tight text-center">
-		<h1 class="h1 text-[var(--color-brand-700)]">{$_('auth.register.title')}</h1>
+		<h1 class="h1 text-[var(--color-brand-heading)]">{$_('auth.register.title')}</h1>
 		<p class="body-sm text-[var(--color-fg-muted)]">{$_('auth.register.subtitle')}</p>
 	</div>
 
@@ -201,7 +201,7 @@
 			<span class="body-sm text-[var(--color-fg-muted)]">{$_('auth.register.haveAccount')}</span>
 			<a
 				href="/signin"
-				class="body-sm ml-1 text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]"
+				class="body-sm ml-1 text-[var(--color-brand-link)] hover:text-[var(--color-brand-link-hover)]"
 			>
 				{$_('auth.register.signin')}
 			</a>

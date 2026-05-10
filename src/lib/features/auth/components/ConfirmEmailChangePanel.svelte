@@ -1,13 +1,13 @@
-<script lang="ts">
+﻿<script lang="ts">
 	import { _ } from 'svelte-i18n';
 	import { confirmEmailChange } from '../api';
 	import { isApiError } from '$api/client';
 	import { Alert, AuthCard, Button } from '$ui';
 
 	/**
-	 * ConfirmEmailChangePanel — explicit-click confirmation of an email
+	 * ConfirmEmailChangePanel â€” explicit-click confirmation of an email
 	 * change. The user clicked the link in the new-address email and
-	 * landed on /confirm-email-change?token=… ; this panel shows a
+	 * landed on /confirm-email-change?token=â€¦ ; this panel shows a
 	 * "Confirm" button that triggers the API call.
 	 *
 	 * Why explicit-click and not auto-confirm: email clients sometimes
@@ -15,17 +15,17 @@
 	 * burn the single-use token before the human even sees the page.
 	 * Industry canon (Auth0, Stripe, Linear, Vercel email-confirm
 	 * flows) all require an explicit user action on the confirmation
-	 * page itself — the link gets the user there; the click confirms.
+	 * page itself â€” the link gets the user there; the click confirms.
 	 *
 	 * State machine:
 	 *
-	 *   no token in URL          → missing-token Alert + "Start over"
+	 *   no token in URL          â†’ missing-token Alert + "Start over"
 	 *                              link to /settings/account/security
-	 *   token present, idle      → "Confirm" button visible
-	 *   token present, loading   → button shows loading state
-	 *   success                  → success Alert + Sign in link
-	 *   400 token_invalid        → invalid-token Alert + "Start over"
-	 *   network / other          → generic Alert + retry button
+	 *   token present, idle      â†’ "Confirm" button visible
+	 *   token present, loading   â†’ button shows loading state
+	 *   success                  â†’ success Alert + Sign in link
+	 *   400 token_invalid        â†’ invalid-token Alert + "Start over"
+	 *   network / other          â†’ generic Alert + retry button
 	 */
 
 	type ViewState = 'idle' | 'loading' | 'success' | 'errorInvalidToken' | 'errorGeneric';
@@ -69,7 +69,7 @@
 
 <AuthCard>
 	<div class="stack stack-tight text-center">
-		<h1 class="h1 text-[var(--color-brand-700)]">{$_('auth.confirmEmail.title')}</h1>
+		<h1 class="h1 text-[var(--color-brand-heading)]">{$_('auth.confirmEmail.title')}</h1>
 		<p class="body-sm text-[var(--color-fg-muted)]">{$_('auth.confirmEmail.subtitle')}</p>
 	</div>
 
@@ -87,7 +87,7 @@
 			<div class="text-center">
 				<a
 					href="/signin"
-					class="body-sm text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]"
+					class="body-sm text-[var(--color-brand-link)] hover:text-[var(--color-brand-link-hover)]"
 				>
 					{$_('auth.confirmEmail.signin')}
 				</a>
@@ -101,7 +101,7 @@
 			<div class="text-center">
 				<a
 					href="/settings/account/security"
-					class="body-sm text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)]"
+					class="body-sm text-[var(--color-brand-link)] hover:text-[var(--color-brand-link-hover)]"
 				>
 					{$_('auth.confirmEmail.requestNew')}
 				</a>
