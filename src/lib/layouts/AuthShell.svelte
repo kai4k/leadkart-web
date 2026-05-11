@@ -66,7 +66,7 @@
 		// Colour weighted toward neutrals so the logo accents read as
 		// deliberate moments, not visual noise.
 		const palette = ['neutral', 'neutral', 'neutral', 'purple', 'blue', 'green'];
-		const all = Array.from({ length: 120 }, () => {
+		const all = Array.from({ length: 180 }, () => {
 			const d = rand();
 			return {
 				x: rand() * 100,
@@ -163,12 +163,8 @@
 
 	<!-- ── Desktop split layout ── -->
 	<div class="lk-auth-layout">
-		<!-- Brand panel (desktop only) -->
+		<!-- Brand panel (desktop only) — no logo; the modal carries it. -->
 		<section class="lk-auth-brand" aria-label="LeadKart">
-			<div class="lk-auth-brand-logo">
-				<Logo size="lg" />
-			</div>
-
 			<!-- Decorative marketing — aria-hidden so screen-reader users
 			     land on the form (the task), not on a feature pitch. -->
 			<div class="lk-auth-brand-content" aria-hidden="true">
@@ -293,7 +289,10 @@
 		}
 	}
 
-	/* ─── Brand panel — hidden on mobile (banner takes its place). ─── */
+	/* ─── Brand panel — hidden on mobile (banner takes its place).
+	     Content is vertically centred to match the form modal's
+	     vertical centring on the right half; footer is pinned absolute
+	     to the bottom-left corner. ─── */
 	.lk-auth-brand {
 		display: none;
 	}
@@ -301,15 +300,10 @@
 		.lk-auth-brand {
 			display: flex;
 			flex-direction: column;
-			justify-content: space-between;
+			justify-content: center;
 			padding: clamp(2.5rem, 5vw, 4rem);
 			position: relative;
 		}
-	}
-
-	.lk-auth-brand-logo {
-		position: relative;
-		z-index: 4;
 	}
 
 	.lk-auth-brand-content {
@@ -318,14 +312,15 @@
 		inline-size: 100%;
 		max-inline-size: clamp(20rem, 32vw, 36rem);
 		margin-inline: auto;
-		margin-block: clamp(2rem, 6vh, 4rem) auto;
 		display: flex;
 		flex-direction: column;
 		gap: 1.5rem;
 	}
 
 	.lk-auth-brand-footer {
-		position: relative;
+		position: absolute;
+		inset-block-end: clamp(2.5rem, 5vw, 4rem);
+		inset-inline-start: clamp(2.5rem, 5vw, 4rem);
 		z-index: 4;
 		color: var(--color-fg-subtle);
 	}
@@ -348,8 +343,10 @@
 	}
 
 	/* ─── Soft logo-palette washes behind the brand content stack —
-	     gives the Liquid Glass pills colour to refract through. Without
-	     these, the glass on white is invisible. ─── */
+	     gives the Liquid Glass pills colour to refract through. Two
+	     washes only (blue right-side, green bottom-left) — the purple
+	     wash that previously sat behind the hero pill was competing
+	     with the hero text for attention, so it's been removed. ─── */
 	.lk-auth-content-washes {
 		position: absolute;
 		inset: -10% -15%;
@@ -357,18 +354,13 @@
 		pointer-events: none;
 		background:
 			radial-gradient(
-				ellipse 55% 50% at 15% 10%,
-				color-mix(in srgb, var(--color-logo-purple) 38%, transparent) 0%,
-				transparent 70%
-			),
-			radial-gradient(
-				ellipse 50% 55% at 90% 45%,
+				ellipse 50% 55% at 90% 50%,
 				color-mix(in srgb, var(--color-brand-600) 32%, transparent) 0%,
 				transparent 75%
 			),
 			radial-gradient(
-				ellipse 55% 45% at 30% 100%,
-				color-mix(in srgb, var(--color-logo-green-on-light) 28%, transparent) 0%,
+				ellipse 55% 45% at 20% 100%,
+				color-mix(in srgb, var(--color-logo-green-on-light) 26%, transparent) 0%,
 				transparent 70%
 			);
 		filter: blur(36px);
@@ -493,16 +485,16 @@
 		block-size: 2px;
 		border-radius: 9999px;
 		transform: rotate(var(--rot));
-		opacity: 0.5;
-		animation: lk-particle-drift 6s ease-in-out infinite;
+		opacity: 0.65;
+		animation: lk-particle-drift 5s ease-in-out infinite;
 		animation-delay: var(--delay);
 	}
 	.lk-particles--far .lk-particle {
-		opacity: 0.32;
+		opacity: 0.42;
 		transform: rotate(var(--rot)) scale(0.75);
 	}
 	.lk-particles--near .lk-particle {
-		opacity: 0.7;
+		opacity: 0.85;
 		block-size: 2.5px;
 	}
 
@@ -525,7 +517,7 @@
 			translate: 0 0;
 		}
 		50% {
-			translate: 0 -3px;
+			translate: 0 -6px;
 		}
 	}
 

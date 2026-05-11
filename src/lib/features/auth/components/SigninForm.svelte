@@ -7,7 +7,7 @@
 	import { loginRequestSchema } from '../schemas';
 	import { session } from '../stores/session.svelte';
 	import { isApiError } from '$api/client';
-	import { Alert, AuthCard, Button } from '$lib/components/ui';
+	import { Alert, AuthCard, Button, Logo } from '$lib/components/ui';
 	import { TextField, PasswordField } from '$lib/components/form';
 
 	/**
@@ -66,9 +66,12 @@
 </script>
 
 <AuthCard>
-	<div class="stack stack-tight text-center">
-		<h1 class="h1 text-[var(--color-brand-heading)]">{$_('auth.signin.title')}</h1>
-		<p class="body-sm text-[var(--color-fg-muted)]">{$_('auth.signin.subtitle')}</p>
+	<div class="flex flex-col items-center gap-6">
+		<Logo size="xl" />
+		<div class="stack stack-tight text-center">
+			<h1 class="h1 text-[var(--color-brand-heading)]">{$_('auth.signin.title')}</h1>
+			<p class="body-sm text-[var(--color-fg-muted)]">{$_('auth.signin.subtitle')}</p>
+		</div>
 	</div>
 
 	<form class="stack" onsubmit={onSubmit} novalidate>
