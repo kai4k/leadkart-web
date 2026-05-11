@@ -143,34 +143,39 @@
 			{/each}
 		</div>
 
-		<!-- Logo top-left -->
-		<header class="lk-auth-brand-header">
-			<Logo size="xl" />
-		</header>
-
-		<!-- Hero text block — the design that worked. -->
+		<!-- Hero text block — Liquid Glass pills decorating each
+		     content unit. Subtle radial colour washes behind give the
+		     backdrop-filter something to refract (glass on plain white
+		     would be invisible). -->
 		<div class="lk-auth-brand-content">
-			<h2 class="display-2 mb-6 leading-[1.05] tracking-tight text-[var(--color-fg)]">
-				Pharma lead management,<br />simplified.
-			</h2>
-			<p class="body-base mb-10 max-w-md text-[var(--color-fg-muted)]">
-				End-to-end CRM, orders, inventory &amp; dispatch — built for India's PCD pharma market.
-			</p>
+			<div class="lk-auth-content-washes" aria-hidden="true"></div>
+
+			<div class="lk-glass lk-glass--hero">
+				<h2 class="display-2 leading-[1.05] tracking-tight text-[var(--color-fg)]">
+					Pharma lead management,<br />simplified.
+				</h2>
+			</div>
+
+			<div class="lk-glass lk-glass--tagline">
+				<p class="body-base text-[var(--color-fg-muted)]">
+					End-to-end CRM, orders, inventory &amp; dispatch — built for India's PCD pharma market.
+				</p>
+			</div>
 
 			<ul class="lk-auth-features">
-				<li class="lk-auth-feature">
+				<li class="lk-glass lk-glass--feature lk-glass--purple">
 					<span class="lk-auth-feature-icon lk-auth-feature-icon--purple" aria-hidden="true">
 						<ShieldCheck size={18} />
 					</span>
 					<span class="body-base text-[var(--color-fg)]">Enterprise-grade security</span>
 				</li>
-				<li class="lk-auth-feature">
+				<li class="lk-glass lk-glass--feature lk-glass--green">
 					<span class="lk-auth-feature-icon lk-auth-feature-icon--green" aria-hidden="true">
 						<TrendingUp size={18} />
 					</span>
 					<span class="body-base text-[var(--color-fg)]">Real-time lead tracking</span>
 				</li>
-				<li class="lk-auth-feature">
+				<li class="lk-glass lk-glass--feature lk-glass--blue">
 					<span class="lk-auth-feature-icon lk-auth-feature-icon--blue" aria-hidden="true">
 						<Truck size={18} />
 					</span>
@@ -182,9 +187,10 @@
 		<footer class="lk-auth-brand-footer caption">© LeadKart 2026</footer>
 	</section>
 
-	<!-- ═══ FORM PANEL ═══════════════════════════════════════════════ -->
+	<!-- ═══ FORM PANEL — logo above the auth card ═══════════════════ -->
 	<main class="lk-auth-form-side flex flex-col items-center justify-center p-6 lg:p-12">
-		<div class="w-full max-w-md">
+		<div class="flex w-full max-w-md flex-col items-center gap-8">
+			<Logo size="lg" />
 			{@render children()}
 		</div>
 	</main>
@@ -240,6 +246,36 @@
 		width: 100%;
 		align-self: center;
 		margin: auto 0;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	/* ── Soft colour washes behind the content stack — gives the
+	     Liquid Glass pills something colourful to refract through.
+	     On pure white the backdrop-filter would be invisible. ── */
+	.lk-auth-content-washes {
+		position: absolute;
+		inset: -8% -12%;
+		z-index: -1;
+		pointer-events: none;
+		background:
+			radial-gradient(
+				ellipse 60% 50% at 20% 15%,
+				color-mix(in srgb, var(--color-logo-purple) 22%, transparent) 0%,
+				transparent 70%
+			),
+			radial-gradient(
+				ellipse 50% 55% at 85% 45%,
+				color-mix(in srgb, var(--color-brand-600) 18%, transparent) 0%,
+				transparent 75%
+			),
+			radial-gradient(
+				ellipse 55% 45% at 30% 95%,
+				color-mix(in srgb, var(--color-logo-green) 16%, transparent) 0%,
+				transparent 70%
+			);
+		filter: blur(28px);
 	}
 
 	.lk-auth-brand-footer {
@@ -251,6 +287,88 @@
 		color: var(--color-fg-subtle);
 	}
 
+	/* ──────────────────────────────────────────────────────────────
+	   Liquid Glass — iOS 26 / iPhone 17 design language ported to web.
+	   Translucent white fill + heavy backdrop-blur with saturation
+	   boost (the saturate(180%) is what makes the glass feel "lively"
+	   not flat), inset top-edge highlight to simulate refraction,
+	   soft drop shadow for floating depth. Generous border-radius.
+	   Variants tint the fill toward a logo accent for the feature
+	   rows. ────────────────────────────────────────────────────── */
+	.lk-glass {
+		position: relative;
+		background: color-mix(in srgb, var(--color-bg-elevated) 55%, transparent);
+		backdrop-filter: blur(24px) saturate(180%);
+		-webkit-backdrop-filter: blur(24px) saturate(180%);
+		border: 1px solid color-mix(in srgb, var(--color-bg-elevated) 50%, transparent);
+		box-shadow:
+			inset 0 1px 0 0 color-mix(in srgb, white 75%, transparent),
+			inset 0 0 0 1px color-mix(in srgb, white 12%, transparent),
+			0 1px 2px color-mix(in srgb, black 6%, transparent),
+			0 8px 32px color-mix(in srgb, black 8%, transparent);
+		overflow: hidden;
+	}
+
+	/* Refraction sheen — a soft top-edge highlight that sells the
+	   "real glass" illusion. Sits above the content but below text. */
+	.lk-glass::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+		background: linear-gradient(
+			180deg,
+			color-mix(in srgb, white 32%, transparent) 0%,
+			transparent 25%,
+			transparent 75%,
+			color-mix(in srgb, white 8%, transparent) 100%
+		);
+		pointer-events: none;
+		mix-blend-mode: overlay;
+	}
+
+	/* Pill shapes — different radii for different content shapes. */
+	.lk-glass--hero {
+		padding: 1.5rem 1.75rem;
+		border-radius: 1.5rem;
+	}
+	.lk-glass--tagline {
+		padding: 1rem 1.25rem;
+		border-radius: 1.25rem;
+	}
+	.lk-glass--feature {
+		display: flex;
+		align-items: center;
+		gap: 0.875rem;
+		padding: 0.625rem 1rem 0.625rem 0.625rem;
+		border-radius: 9999px;
+	}
+
+	/* Coloured tint variants — used on the feature-row pills so each
+	   reads as the category colour at a glance. Tint sits over the
+	   base white-mix, giving a subtle hue without sacrificing legibility. */
+	.lk-glass--purple {
+		background: color-mix(
+			in srgb,
+			var(--color-logo-purple) 10%,
+			color-mix(in srgb, var(--color-bg-elevated) 55%, transparent)
+		);
+	}
+	.lk-glass--green {
+		background: color-mix(
+			in srgb,
+			var(--color-logo-green) 10%,
+			color-mix(in srgb, var(--color-bg-elevated) 55%, transparent)
+		);
+	}
+	.lk-glass--blue {
+		background: color-mix(
+			in srgb,
+			var(--color-brand-600) 10%,
+			color-mix(in srgb, var(--color-bg-elevated) 55%, transparent)
+		);
+	}
+
 	/* ── Feature rows — icon chip + label, colour-coded by category.
 	     Logo-derived accents: purple (security), green (growth/leads),
 	     blue (logistics/dispatch). ── */
@@ -260,7 +378,7 @@
 		margin: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 0.875rem;
+		gap: 0.625rem;
 	}
 	.lk-auth-feature {
 		display: flex;
