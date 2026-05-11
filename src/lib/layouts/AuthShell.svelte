@@ -72,14 +72,16 @@
 			return {
 				x: rand() * 100,
 				y: rand() * 100,
-				length: 4 + rand() * 8,
+				length: 8 + rand() * 10,
 				rotation: rand() * 360,
 				colour: palette[Math.floor(rand() * palette.length)],
 				delay: rand() * 2,
 				depth: d < 0.4 ? 'far' : d < 0.7 ? 'mid' : 'near',
-				// ~15% of particles are "tracers" — larger oriented streaks
-				// that catch the eye and break up the uniform-dash field.
-				kind: k < 0.15 ? 'tracer' : 'dash'
+				// Pharma-themed particle mix:
+				//   70% pill   — short capsule (standard pharma pill)
+				//   15% tracer — long capsule, eye-catching streak
+				//   15% cross  — medical plus sign (mask-shaped)
+				kind: k < 0.15 ? 'cross' : k < 0.3 ? 'tracer' : 'pill'
 			};
 		});
 		return {
@@ -594,43 +596,71 @@
 		transform: translate(calc(var(--mouse-x, 0) * 1.6rem), calc(var(--mouse-y, 0) * 1.6rem));
 	}
 
+	/* ─── Pharma-themed particle shapes ─────────────────────────────
+	     Base = capsule pill (rounded-rect, tall enough to read as a
+	     pill rather than a dash). Variants:
+	       .lk-particle--pill   → default capsule (taller than the old
+	                              dashes — actually reads as pharma)
+	       .lk-particle--tracer → longer + thicker capsule (long pill)
+	       .lk-particle--cross  → medical plus sign via SVG mask
+	   ─────────────────────────────────────────────────────────── */
 	.lk-particle {
 		position: absolute;
 		left: var(--x);
 		top: var(--y);
 		inline-size: var(--len);
-		block-size: 2px;
+		block-size: 4px;
 		border-radius: 9999px;
 		transform: rotate(var(--rot));
-		opacity: 0.65;
+		opacity: 0.7;
 		animation: lk-particle-drift 5s ease-in-out infinite;
 		animation-delay: var(--delay);
 	}
 	.lk-particles--far .lk-particle {
-		opacity: 0.42;
-		transform: rotate(var(--rot)) scale(0.75);
+		opacity: 0.45;
+		block-size: 3px;
+		transform: rotate(var(--rot)) scale(0.85);
 	}
 	.lk-particles--near .lk-particle {
-		opacity: 0.85;
-		block-size: 2.5px;
+		opacity: 0.9;
+		block-size: 5px;
 	}
 
-	/* Tracer variant — ~15% of the field. Larger oriented streaks that
-	   read as faster-moving particles catching the eye. Same drift
-	   animation, ramped size + opacity for visibility. */
+	/* Tracer = long pill — eye-catching streak. */
 	.lk-particle--tracer {
-		inline-size: calc(var(--len) * 2.2);
-		block-size: 3px;
+		inline-size: calc(var(--len) * 2);
+		block-size: 5px;
 	}
 	.lk-particles--far .lk-particle--tracer {
-		opacity: 0.6;
-	}
-	.lk-particles--mid .lk-particle--tracer {
-		opacity: 0.85;
+		opacity: 0.65;
+		block-size: 4px;
 	}
 	.lk-particles--near .lk-particle--tracer {
 		opacity: 1;
-		block-size: 3.5px;
+		block-size: 6px;
+	}
+
+	/* Medical plus / cross — inline SVG mask. Uses currentColor flow
+	   via the .lk-particle--{colour} class's background; mask just
+	   shapes it. */
+	.lk-particle--cross {
+		inline-size: 10px;
+		block-size: 10px;
+		border-radius: 0;
+		mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M4 0h2v4h4v2H6v4H4V6H0V4h4z'/%3E%3C/svg%3E");
+		-webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M4 0h2v4h4v2H6v4H4V6H0V4h4z'/%3E%3C/svg%3E");
+		mask-size: contain;
+		-webkit-mask-size: contain;
+		mask-repeat: no-repeat;
+		-webkit-mask-repeat: no-repeat;
+	}
+	.lk-particles--far .lk-particle--cross {
+		inline-size: 8px;
+		block-size: 8px;
+	}
+	.lk-particles--near .lk-particle--cross {
+		inline-size: 12px;
+		block-size: 12px;
 	}
 
 	.lk-particle--neutral {

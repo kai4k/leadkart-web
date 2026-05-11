@@ -8,7 +8,8 @@
 				sm: 'h-8 w-auto',
 				md: 'h-10 w-auto',
 				lg: 'h-14 w-auto',
-				xl: 'h-20 w-auto'
+				xl: 'h-20 w-auto',
+				'2xl': 'h-28 w-auto'
 			}
 		},
 		defaultVariants: { size: 'md' }
