@@ -410,24 +410,29 @@
 		height: 100%;
 		object-fit: cover;
 		object-position: center;
-		/* Purple wash painted behind the image content, scoped to the
-		   image's own box. Subject to the same radial mask + 0.5
-		   opacity as the image — at the centre the image reads
-		   "tinted purple" instead of "tinted near-white" (which is
-		   what the brand-100 panel base behind the image was
-		   producing). At the masked edges the wash fades out with
-		   the image, so the corner radial washes on the panel bg
-		   still read normally. Pulled from the logo's #a05dce glass
-		   highlight via the existing --color-auth-accent-purple
-		   token. */
-		background: var(--color-auth-accent-purple);
 		opacity: 0.5;
 		mask-image: radial-gradient(ellipse at center, black 50%, transparent 95%);
 		-webkit-mask-image: radial-gradient(ellipse at center, black 50%, transparent 95%);
 	}
-	/* The white-glass overlay is gone — it was the main reason the
-	   illustration couldn't read. The brand-100 panel bg behind the
-	   image is enough to keep contrast against the hero typography. */
+	/* Hue-shift tint overlay layered ABOVE the image (sibling pseudo
+	   on the container, not bg on the img — the latter sits behind
+	   the image's opaque pixels and never shows). `mix-blend-mode:
+	   color` keeps the image's luminance (the man, laptop, glow
+	   labels stay readable) while replacing hue + saturation with
+	   the logo-derived purple. Same radial mask so the tint fades
+	   at the corners with the image itself, leaving the panel's
+	   green corner wash intact. */
+	.lk-auth-illustration::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: var(--color-auth-accent-purple);
+		mix-blend-mode: color;
+		opacity: 0.85;
+		mask-image: radial-gradient(ellipse at center, black 50%, transparent 95%);
+		-webkit-mask-image: radial-gradient(ellipse at center, black 50%, transparent 95%);
+		pointer-events: none;
+	}
 
 	/* ── Floating glass cards — bobbing animation. Light-glass on the
 	     light brand panel: 70% bg-elevated mix with brand-100 border,
