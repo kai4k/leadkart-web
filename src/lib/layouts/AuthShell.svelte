@@ -49,15 +49,21 @@
 
 	let { children } = $props();
 	let canvas: HTMLElement | undefined = $state();
-	let parallaxActive = $state(false);
 
 	/**
-	 * Pre-bucketed pharma-themed particle field. Deterministic seeded
-	 * PRNG keeps SSR pre-render byte-identical to client hydration.
+	 * Concentric-ring particle layout. 4 rings of pharma shapes spaced
+	 * evenly around (50%, 50%) with small angular + radial jitter for
+	 * organic feel. Inner rings = "near" depth (largest/brightest);
+	 * outer rings = "far" (smallest/faintest). Particle rotation is
+	 * tangent-to-the-ring so capsules visually follow the circle's
+	 * curve.
+	 *
+	 * Deterministic seeded PRNG → SSR pre-render byte-identical to
+	 * client hydration.
 	 *
 	 * Each particle carries two colour tokens (--c1 / --c2) so pills +
-	 * tracers can render as two-tone capsules (classic pharma look) via
-	 * a gradient with a centre seam. Crosses use --c1 only.
+	 * tracers render as two-tone capsules; tablets + crosses use --c1
+	 * only.
 	 */
 	const { FAR, MID, NEAR } = (() => {
 		let seed = 7919;
@@ -65,10 +71,6 @@
 			seed = (seed * 9301 + 49297) % 233280;
 			return seed / 233280;
 		};
-		// Two-tone pairs — each capsule reads as a distinct pharma pill.
-		// Variety includes saturated branded pairings + subdued
-		// gray-paired pairings to mimic the colour range of an actual
-		// pharma drawer.
 		const pillPairs: Array<[string, string]> = [
 			['--color-logo-purple', '--color-brand-600'],
 			['--color-brand-600', '--color-logo-green-on-light'],
@@ -77,44 +79,58 @@
 			['--color-fg-muted', '--color-brand-600'],
 			['--color-logo-green-on-light', '--color-fg']
 		];
-		const crossColours = [
+		const singleColours = [
 			'--color-logo-purple',
 			'--color-brand-600',
 			'--color-logo-green-on-light',
 			'--color-fg'
 		];
 
-		const all = Array.from({ length: 220 }, () => {
-			const d = rand();
-			const k = rand();
-			// Pharma mix:
-			//   55% pill   — two-tone capsule
-			//   15% tracer — long two-tone capsule (eye-catching streak)
-			//   15% tablet — round single-tone disc with score line
-			//   15% cross  — medical plus sign (mask-shaped)
-			const kind = k < 0.15 ? 'cross' : k < 0.3 ? 'tablet' : k < 0.45 ? 'tracer' : 'pill';
-			let c1: string;
-			let c2: string;
-			if (kind === 'cross' || kind === 'tablet') {
-				c1 = crossColours[Math.floor(rand() * crossColours.length)];
-				c2 = c1;
-			} else {
-				const pair = pillPairs[Math.floor(rand() * pillPairs.length)];
-				c1 = pair[0];
-				c2 = pair[1];
-			}
-			return {
-				x: rand() * 100,
-				y: rand() * 100,
-				length: 9 + rand() * 11,
-				rotation: rand() * 360,
-				delay: rand() * 2,
-				depth: d < 0.4 ? 'far' : d < 0.7 ? 'mid' : 'near',
-				kind,
-				c1,
-				c2
-			};
-		});
+		const rings: Array<{ radius: number; count: number; depth: 'near' | 'mid' | 'far' }> = [
+			{ radius: 18, count: 14, depth: 'near' },
+			{ radius: 30, count: 20, depth: 'mid' },
+			{ radius: 42, count: 26, depth: 'mid' },
+			{ radius: 54, count: 22, depth: 'far' }
+		];
+		// Total: 14 + 20 + 26 + 22 = 82 particles (down from 220).
+
+		const all = rings.flatMap((ring) =>
+			Array.from({ length: ring.count }, (_, i) => {
+				const baseAngle = (i / ring.count) * Math.PI * 2;
+				const angle = baseAngle + (rand() - 0.5) * 0.15;
+				const r = ring.radius + (rand() - 0.5) * 2.5;
+				const x = 50 + r * Math.cos(angle);
+				const y = 50 + r * Math.sin(angle);
+				// Tangent rotation (+ 90° because pills are horizontal by
+				// default) so capsules visually trace the ring's curve.
+				const rotation = (angle * 180) / Math.PI + 90 + (rand() - 0.5) * 25;
+
+				const k = rand();
+				const kind = k < 0.15 ? 'cross' : k < 0.3 ? 'tablet' : k < 0.45 ? 'tracer' : 'pill';
+				let c1: string;
+				let c2: string;
+				if (kind === 'cross' || kind === 'tablet') {
+					c1 = singleColours[Math.floor(rand() * singleColours.length)];
+					c2 = c1;
+				} else {
+					const pair = pillPairs[Math.floor(rand() * pillPairs.length)];
+					c1 = pair[0];
+					c2 = pair[1];
+				}
+
+				return {
+					x,
+					y,
+					length: 9 + rand() * 11,
+					rotation,
+					delay: rand() * 2,
+					depth: ring.depth,
+					kind,
+					c1,
+					c2
+				};
+			})
+		);
 		return {
 			FAR: all.filter((p) => p.depth === 'far'),
 			MID: all.filter((p) => p.depth === 'mid'),
@@ -122,40 +138,62 @@
 		};
 	})();
 
+	/**
+	 * Disperse-on-mouse-move interaction. Each particle within a
+	 * percent-of-viewport threshold of the cursor gets pushed radially
+	 * outward via `--push-x` / `--push-y` CSS vars (consumed by the
+	 * particle's transform). Smooth return via CSS transition when
+	 * the cursor moves away.
+	 */
 	onMount(() => {
 		if (!canvas) return;
 
 		const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 		if (reducedMotion.matches) return;
 
+		const particleEls = canvas.querySelectorAll<HTMLElement>('.lk-particle');
 		let raf = 0;
-		let pendingX = 0;
-		let pendingY = 0;
+		let mx = -1000;
+		let my = -1000;
+		const THRESHOLD = 14; // percent of viewport — disperse radius
+		const MAX_PUSH = 3; // vw — strongest push at distance 0
 
 		function onMove(e: MouseEvent) {
 			if (!canvas) return;
-			parallaxActive = true;
 			const rect = canvas.getBoundingClientRect();
-			pendingX = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
-			pendingY = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+			mx = ((e.clientX - rect.left) / rect.width) * 100;
+			my = ((e.clientY - rect.top) / rect.height) * 100;
 			if (!raf) raf = requestAnimationFrame(commit);
 		}
 
 		function commit() {
 			raf = 0;
-			canvas?.style.setProperty('--mouse-x', String(pendingX));
-			canvas?.style.setProperty('--mouse-y', String(pendingY));
-			// Percent-based vars for positioning the bloom spotlight via
-			// `radial-gradient(... at var(--mouse-x-pct) var(--mouse-y-pct))`.
-			// --mouse-x / -y are normalised to [-1, 1]; remap to [0%, 100%].
-			canvas?.style.setProperty('--mouse-x-pct', `${(pendingX + 1) * 50}%`);
-			canvas?.style.setProperty('--mouse-y-pct', `${(pendingY + 1) * 50}%`);
+			const tSq = THRESHOLD * THRESHOLD;
+			for (let i = 0; i < particleEls.length; i++) {
+				const el = particleEls[i];
+				const px = parseFloat(el.style.getPropertyValue('--x'));
+				const py = parseFloat(el.style.getPropertyValue('--y'));
+				const dx = px - mx;
+				const dy = py - my;
+				const distSq = dx * dx + dy * dy;
+				if (distSq < tSq) {
+					const dist = Math.sqrt(distSq);
+					const safe = Math.max(0.5, dist);
+					const strength = (1 - dist / THRESHOLD) * MAX_PUSH;
+					el.style.setProperty('--push-x', `${((dx / safe) * strength).toFixed(2)}vw`);
+					el.style.setProperty('--push-y', `${((dy / safe) * strength).toFixed(2)}vw`);
+				} else if (el.style.getPropertyValue('--push-x') !== '0vw') {
+					el.style.setProperty('--push-x', '0vw');
+					el.style.setProperty('--push-y', '0vw');
+				}
+			}
 		}
 
 		function onLeave() {
-			pendingX = 0;
-			pendingY = 0;
-			parallaxActive = false;
+			// Park the cursor far off-canvas so every particle exits the
+			// threshold and resets to base position via the transition.
+			mx = -1000;
+			my = -1000;
 			if (!raf) raf = requestAnimationFrame(commit);
 		}
 
@@ -170,7 +208,7 @@
 	});
 </script>
 
-<div bind:this={canvas} class="lk-auth" class:lk-parallax-active={parallaxActive}>
+<div bind:this={canvas} class="lk-auth">
 	<!-- ── Ambient colour blobs — soft, heavily blurred, slow drift.
 	     Logo-palette tints. Sits behind the particle canvas to give
 	     subtle depth + colour movement across the whole viewport. ── -->
@@ -206,11 +244,6 @@
 			></span>
 		{/each}
 	</div>
-
-	<!-- ── Bloom spotlight — radial colour wash that follows the mouse.
-	     Replaces the prior parallax-drift treatment. Fades in when the
-	     mouse is over the canvas, fades out on leave. ── -->
-	<div class="lk-auth-bloom" aria-hidden="true"></div>
 
 	<!-- ── Mobile-only compact brand banner ── -->
 	<header class="lk-auth-mobile-banner">
@@ -325,7 +358,7 @@
 	/* ─── Mobile-only brand banner. ─── */
 	.lk-auth-mobile-banner {
 		position: relative;
-		z-index: 5;
+		z-index: 4;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
@@ -345,12 +378,12 @@
 		}
 	}
 
-	/* ─── Two-column layout grid (single col on mobile). z-index 6 keeps
+	/* ─── Two-column layout grid (single col on mobile). z-index 5 keeps
 	     content above the entire decoration stack: blobs (0) + particles
-	     (1-3) + bloom spotlight (4) + mobile banner (5). ─── */
+	     (1-3) + mobile banner (4). ─── */
 	.lk-auth-layout {
 		position: relative;
-		z-index: 6;
+		z-index: 5;
 		display: grid;
 		grid-template-columns: 1fr;
 		min-block-size: 100dvh;
@@ -647,18 +680,22 @@
 		position: absolute;
 		left: var(--x);
 		top: var(--y);
+		--scale: 1;
+		--push-x: 0vw;
+		--push-y: 0vw;
 		inline-size: var(--len);
 		block-size: 5px;
 		border-radius: 9999px;
-		transform: rotate(var(--rot));
+		transform: rotate(var(--rot)) translate(var(--push-x), var(--push-y)) scale(var(--scale));
+		transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
 		opacity: 0.85;
 		animation: lk-particle-drift 5s ease-in-out infinite;
 		animation-delay: var(--delay);
 	}
 	.lk-particles--far .lk-particle {
+		--scale: 0.85;
 		opacity: 0.6;
 		block-size: 4px;
-		transform: rotate(var(--rot)) scale(0.85);
 	}
 	.lk-particles--near .lk-particle {
 		opacity: 1;
@@ -772,31 +809,6 @@
 			transparent 60%
 		);
 		pointer-events: none;
-	}
-
-	/* ─── Bloom spotlight — radial logo-palette wash that follows the
-	     mouse. Replaces the prior parallax-drift treatment with a
-	     calmer, more elegant interaction: a soft colour halo
-	     illuminates the area around the cursor. Sits between particles
-	     (z 1-3) and content (z 6) — tints the canvas + particles in
-	     the cursor's vicinity but doesn't touch the modal. ─── */
-	.lk-auth-bloom {
-		position: absolute;
-		inset: 0;
-		z-index: 4;
-		pointer-events: none;
-		background: radial-gradient(
-			circle 14rem at var(--mouse-x-pct, 50%) var(--mouse-y-pct, 50%),
-			color-mix(in srgb, var(--color-logo-purple) 24%, transparent) 0%,
-			color-mix(in srgb, var(--color-brand-600) 16%, transparent) 30%,
-			color-mix(in srgb, var(--color-logo-green-on-light) 10%, transparent) 50%,
-			transparent 65%
-		);
-		opacity: 0;
-		transition: opacity 0.45s ease;
-	}
-	.lk-parallax-active .lk-auth-bloom {
-		opacity: 1;
 	}
 
 	@keyframes lk-particle-drift {
