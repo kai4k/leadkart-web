@@ -3,9 +3,11 @@
 	import Topbar from './Topbar.svelte';
 	import Sidebar from './Sidebar.svelte';
 	import Footer from './Footer.svelte';
+	import SettingsModal from './SettingsModal.svelte';
 
 	let { children } = $props();
 	let sidebarOpen = $state(false);
+	let settingsOpen = $state(false);
 	let drawerEl: HTMLElement | undefined = $state();
 	let triggerEl: HTMLElement | null = null;
 
@@ -64,7 +66,10 @@
 </script>
 
 <div class="flex h-dvh flex-col">
-	<Topbar onToggleSidebar={() => (sidebarOpen = !sidebarOpen)} />
+	<Topbar
+		onToggleSidebar={() => (sidebarOpen = !sidebarOpen)}
+		onOpenSettings={() => (settingsOpen = true)}
+	/>
 	<div class="flex min-h-0 flex-1">
 		<!-- Desktop sidebar — always visible. -->
 		<aside class="hidden lg:block">
@@ -97,12 +102,14 @@
 			class="min-w-0 flex-1 overflow-y-auto bg-[var(--color-bg)]"
 			tabindex="-1"
 		>
-			<div class="center py-6" style="--center-width: var(--container-2xl);">
+			<div class="center py-6" style="--center-width: var(--lk-content-max-width);">
 				{@render children()}
 			</div>
 		</main>
 	</div>
 	<Footer />
+
+	<SettingsModal bind:open={settingsOpen} />
 </div>
 
 <style>

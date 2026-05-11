@@ -183,6 +183,32 @@
 	--color-brand-950: oklch(0.2 0.05 230);
 }
 
+/* ═══ LAYOUT CUSTOMISER — sidebar size + content width
+ * Activated by `<html data-sidebar-size="X">` / `data-content-width="Y"`
+ * set by lib/stores/theme.svelte.ts. Components consume these CSS
+ * vars instead of hard-coded widths, so a single user-side picker
+ * change re-skins the whole shell.
+ *
+ * Defaults (no attr) match the legacy hard-coded values; alt values
+ * activate the alternate layout.
+ * ───────────────────────────────────────────────────────────── */
+:root {
+	--lk-sidebar-width: 15rem; /* default = 240px (was Tailwind `w-60`) */
+	--lk-sidebar-label-display: inline;
+	--lk-sidebar-section-title-display: block;
+	--lk-content-max-width: var(--container-2xl); /* default = 96rem */
+}
+
+:root[data-sidebar-size='compact'] {
+	--lk-sidebar-width: 4.5rem; /* 72px — icon-only column */
+	--lk-sidebar-label-display: none;
+	--lk-sidebar-section-title-display: none;
+}
+
+:root[data-content-width='fluid'] {
+	--lk-content-max-width: none;
+}
+
 @layer base {
 	html {
 		font-family: var(--font-sans);

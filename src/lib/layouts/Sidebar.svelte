@@ -46,13 +46,17 @@
 	});
 </script>
 
-<nav class="glass-drawer flex h-full w-60 flex-col" aria-label="Main navigation">
+<nav
+	class="lk-sidebar glass-drawer flex h-full flex-col"
+	aria-label="Main navigation"
+	style="width: var(--lk-sidebar-width);"
+>
 	<div class="stack stack-relaxed flex-1 overflow-y-auto p-3">
 		{#each sections as section, i (section.title ?? i)}
 			{#if section.items.length > 0}
 				<div class="stack stack-tight">
 					{#if section.title}
-						<p class="px-3 pb-1 overline">{section.title}</p>
+						<p class="lk-sidebar-section-title px-3 pb-1 overline">{section.title}</p>
 					{/if}
 					<ul class="stack stack-tight">
 						{#each section.items as item (item.href)}
@@ -62,7 +66,9 @@
 								<a
 									href={item.href}
 									aria-current={active ? 'page' : undefined}
+									aria-label={item.label}
 									onclick={() => onNavigate?.()}
+									title={item.label}
 									class={[
 										'body-sm flex items-center gap-3 rounded-md px-3 py-2 font-medium transition-colors',
 										active
@@ -71,7 +77,7 @@
 									]}
 								>
 									<Icon size={18} aria-hidden="true" />
-									<span>{item.label}</span>
+									<span class="lk-sidebar-label">{item.label}</span>
 								</a>
 							</li>
 						{/each}
@@ -81,3 +87,12 @@
 		{/each}
 	</div>
 </nav>
+
+<style>
+	.lk-sidebar-section-title {
+		display: var(--lk-sidebar-section-title-display);
+	}
+	.lk-sidebar-label {
+		display: var(--lk-sidebar-label-display);
+	}
+</style>
