@@ -1,41 +1,36 @@
 <script lang="ts">
 	/**
-	 * AuthShell — two-column auth layout, image-hero brand panel.
+	 * AuthShell — two-column auth layout, Antigravity / Gemini style.
 	 *
-	 * Left column (desktop only) — split 50/50:
-	 *   Top half  → image canvas with mouse-driven parallax:
-	 *               · Logo top-left
-	 *               · Product illustration (radial-masked, oversized for parallax overhang)
-	 *               · 4 floating product-stat cards (bob + parallax)
-	 *               · Logo-palette ambient washes: purple top-right,
-	 *                 green bottom-left, blue centre
-	 *   Bottom half → solid brand-800 navy text block:
-	 *               · Hero typography
-	 *               · Tagline
-	 *               · Feature list (icon chip + label, no chrome)
-	 *               · Footer copyright
+	 * Left column (desktop only) — single-intent hero canvas:
+	 *   - Deep brand-900 / near-black background
+	 *   - One animated mesh-gradient orb (logo palette: purple / green
+	 *     / blue radial stops, slow rotation + counter-rotation)
+	 *   - Concentric orbit rings (subtle, ambient)
+	 *   - Minimal text: logo top-left, one-line hero bottom-left,
+	 *     footer at the bottom edge
+	 *   - Mouse-driven drift on the orb (subtle follow, smooth easing)
 	 *
-	 * Right column → form panel slot.
+	 * No illustration. No feature list. No floating product cards. No
+	 * pills. The hero IS the orb — one visual idea, executed cleanly.
+	 *
+	 * Right column → form panel slot (white card on bg-elevated).
 	 * Mobile (< lg) → compact brand banner + form panel only.
 	 *
 	 * Industry refs:
-	 *   - Vercel / Linear / Resend / Cal.com / Framer marketing-page
-	 *     auth surfaces: animated illustration hero + mouse parallax +
-	 *     floating product-stat cards. The 2025-26 SaaS canon.
-	 *   - Apple HIG "Animation" (parallax driven by cursor input)
-	 *   - Material 3 hero parallax patterns
+	 *   - Google Antigravity (antigravity.google) — single mesh-orb hero
+	 *     on deep navy, minimal text overlay, custom scroll
+	 *   - Gemini product surfaces — mesh-gradient sphere as primary
+	 *     identity element
+	 *   - Vercel / Linear marketing — single visual intent per surface
 	 *
 	 * Accessibility:
-	 *   - prefers-reduced-motion gates ALL parallax + bob animations
-	 *   - Floats are aria-hidden (decorative product chrome)
-	 *   - Illustration aria-hidden + alt="" — hero typography below
-	 *     carries the brand message
-	 *   - prefers-reduced-transparency falls back to solid surfaces
-	 *     (utilities.css fallback)
+	 *   - prefers-reduced-motion gates the orb rotation + parallax
+	 *   - Orb is aria-hidden (decorative)
+	 *   - All hero meaning carried by the text + logo, not the orb
 	 */
 	import { onMount } from 'svelte';
 	import { Logo } from '$ui';
-	import { ShieldCheck, TrendingUp, Truck, ShoppingCart, Package, LineChart } from 'lucide-svelte';
 
 	let { children } = $props();
 
@@ -91,90 +86,34 @@
 		<span class="caption font-medium text-[var(--color-brand-700)]">Pharma SaaS</span>
 	</header>
 
-	<!-- ═══ BRAND PANEL (desktop only) ════════════════════════════════ -->
+	<!-- ═══ BRAND PANEL (desktop only) — Antigravity-style hero ═══════ -->
 	<section
 		bind:this={brandPanel}
 		aria-label="LeadKart"
-		class="lk-auth-brand relative hidden overflow-hidden lg:flex lg:flex-col"
+		class="lk-auth-brand relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between"
 	>
-		<!-- ── TOP: image canvas with parallax + floats ── -->
-		<div class="lk-auth-brand-image">
-			<!-- Layered logo-palette washes (purple top-right, green
-			     bottom-left, blue centre) — sit BELOW the illustration
-			     and provide the colour DNA when the image fades at its
-			     radial-mask edges. -->
-			<div class="lk-auth-washes" aria-hidden="true"></div>
+		<!-- Logo top-left -->
+		<header class="lk-auth-brand-header">
+			<Logo size="xl" />
+		</header>
 
-			<div class="lk-auth-illustration lk-parallax-medium" aria-hidden="true">
-				<img src="/images/auth/illustration.png" alt="" class="lk-auth-illustration-img" />
-			</div>
-
-			<div class="lk-auth-page-logo lk-parallax-slow">
-				<Logo size="xl" />
-			</div>
-
-			<!-- Floating product-stat cards. Flat-design (mostly opaque
-			     white surface, subtle shadow, colour-coded icon chip) —
-			     the modern Vercel / Linear / Resend treatment, NOT
-			     translucent glass-pill chrome. -->
-			<div class="lk-auth-float lk-auth-float-1 lk-parallax-fast" aria-hidden="true">
-				<span class="lk-auth-float-icon lk-auth-float-icon--purple">
-					<ShieldCheck size={14} />
-				</span>
-				<span class="lk-auth-float-label">Secure Login</span>
-			</div>
-			<div class="lk-auth-float lk-auth-float-2 lk-parallax-reverse" aria-hidden="true">
-				<span class="lk-auth-float-icon lk-auth-float-icon--blue">
-					<LineChart size={14} />
-				</span>
-				<span class="lk-auth-float-label">Live Reports</span>
-			</div>
-			<div class="lk-auth-float lk-auth-float-3 lk-parallax-medium" aria-hidden="true">
-				<span class="lk-auth-float-icon lk-auth-float-icon--green">
-					<ShoppingCart size={14} />
-				</span>
-				<span class="lk-auth-float-label">Lead Purchase</span>
-			</div>
-			<div class="lk-auth-float lk-auth-float-4 lk-parallax-fast" aria-hidden="true">
-				<span class="lk-auth-float-icon lk-auth-float-icon--blue">
-					<Package size={14} />
-				</span>
-				<span class="lk-auth-float-label">Inventory</span>
+		<!-- Mesh-gradient orb hero. Three concentric layers compose
+		     the visual: outer orbit ring → mid orbit ring → mesh
+		     orb itself. All decorative (aria-hidden). -->
+		<div class="lk-auth-orb-stage lk-orb-drift" aria-hidden="true">
+			<div class="lk-auth-orb-ring lk-auth-orb-ring--outer"></div>
+			<div class="lk-auth-orb-ring lk-auth-orb-ring--inner"></div>
+			<div class="lk-auth-orb">
+				<div class="lk-auth-orb-mesh"></div>
+				<div class="lk-auth-orb-highlight"></div>
 			</div>
 		</div>
 
-		<!-- ── BOTTOM: solid navy text block ── -->
-		<div class="lk-auth-brand-text">
-			<div class="lk-auth-brand-content lk-parallax-slow">
-				<h2 class="display-2 mb-6 leading-[1.1] text-white">
-					Pharma lead management,<br />simplified.
-				</h2>
-				<p class="body-base mb-10 max-w-md text-white/75">
-					End-to-end CRM, orders, inventory &amp; dispatch — built for India's PCD pharma market.
-				</p>
-
-				<ul class="lk-auth-features">
-					<li class="lk-auth-feature">
-						<span class="lk-auth-feature-icon" aria-hidden="true">
-							<ShieldCheck size={18} />
-						</span>
-						<span class="body-base text-white/85">Enterprise-grade security</span>
-					</li>
-					<li class="lk-auth-feature">
-						<span class="lk-auth-feature-icon" aria-hidden="true">
-							<TrendingUp size={18} />
-						</span>
-						<span class="body-base text-white/85">Real-time lead tracking</span>
-					</li>
-					<li class="lk-auth-feature">
-						<span class="lk-auth-feature-icon" aria-hidden="true">
-							<Truck size={18} />
-						</span>
-						<span class="body-base text-white/85">Order-to-dispatch pipeline</span>
-					</li>
-				</ul>
-			</div>
-
+		<!-- Hero text bottom-left, footer below. One sentence, nothing else. -->
+		<div class="lk-auth-brand-foot">
+			<h2 class="lk-auth-hero text-white">
+				Pharma lead management,<br />simplified.
+			</h2>
 			<div class="lk-auth-brand-footer caption">© LeadKart 2026</div>
 		</div>
 	</section>
@@ -188,7 +127,7 @@
 </div>
 
 <style>
-	/* ── AuthShell-wide THEME LOCK to light values. ── */
+	/* ── AuthShell-wide THEME LOCK to light values (form side). ── */
 	.lk-auth {
 		--color-bg: oklch(0.99 0 0);
 		--color-bg-subtle: oklch(0.97 0 0);
@@ -200,19 +139,12 @@
 		--color-border: oklch(0.9 0.01 256);
 		--color-border-strong: oklch(0.8 0.01 256);
 
-		/* Brand stops pinned to the LeadKart logo + signin spec
-		   (user-supplied colours):
-		      Logo blue (deep)       → #3146a5 ≈ oklch(0.41 0.20 269)
-		      Sign-in button         → #1140b6 ≈ oklch(0.43 0.19 264)
-		      Sign-in heading        → #00297d ≈ oklch(0.30 0.20 270)
-		      Logo wordmark navy     → #47356b ≈ oklch(0.33 0.10 296) */
+		/* Brand stops — pinned to LeadKart logo + signin spec. */
 		--color-brand-600: oklch(0.43 0.19 264); /* #1140b6 signin button */
 		--color-brand-700: oklch(0.3 0.2 270); /* #00297d signin text */
-		--color-brand-800: oklch(0.24 0.16 272); /* brand-panel surface */
+		--color-brand-800: oklch(0.24 0.16 272); /* mid brand-panel surface */
 
-		/* Logo-palette accents — used in image-canvas washes + float
-		   card colour-coding. All three live in the same ~290° hue
-		   sweep that anchors LeadKart's identity. */
+		/* Logo accents — the orb mesh stops. */
 		--color-logo-purple: oklch(0.62 0.18 305); /* #a05dce highlight */
 		--color-logo-green: oklch(0.78 0.22 142); /* #0ef709 inner-K glow */
 		--color-logo-blue: oklch(0.41 0.2 269); /* #3146a5 wordmark blue */
@@ -226,268 +158,242 @@
 		background: var(--color-bg-elevated);
 	}
 
-	/* ── Brand panel: 50/50 image-canvas + text-block split. ── */
+	/* ── Brand panel: near-black canvas, vignette wash from centre.
+	     Single intent: hero the orb. ── */
 	.lk-auth-brand {
-		background: var(--color-brand-900);
+		padding: clamp(2.5rem, 5vw, 4rem);
+		background:
+			radial-gradient(
+				ellipse 80% 60% at 50% 50%,
+				color-mix(in srgb, var(--color-logo-blue) 18%, transparent) 0%,
+				transparent 70%
+			),
+			oklch(0.12 0.04 270);
 		color: var(--color-bg-elevated);
 	}
 
-	.lk-auth-brand-image {
+	.lk-auth-brand-header {
 		position: relative;
-		flex: 1 1 0;
-		min-height: 0;
-		overflow: hidden;
-		background: var(--color-brand-900);
+		z-index: 4;
 	}
 
-	.lk-auth-brand-text {
+	.lk-auth-brand-foot {
 		position: relative;
-		flex: 1 1 0;
-		min-height: 0;
+		z-index: 4;
 		display: flex;
 		flex-direction: column;
-		justify-content: center;
-		padding: clamp(2.5rem, 5vw, 4rem) clamp(2.5rem, 5vw, 4.5rem);
-		background: var(--color-brand-800);
+		gap: clamp(1.5rem, 3vh, 2.25rem);
 	}
 
-	/* ── Logo-palette washes — layered radials in the image canvas.
-	     Each wash is a logo accent at low intensity (25-35%) over the
-	     brand-900 base, giving the canvas its colour DNA before the
-	     illustration paints on top. ── */
-	.lk-auth-washes {
-		position: absolute;
-		inset: 0;
-		z-index: 0;
-		background:
-			radial-gradient(
-				ellipse 70% 55% at 100% 0%,
-				color-mix(in srgb, var(--color-logo-purple) 32%, transparent) 0%,
-				transparent 60%
-			),
-			radial-gradient(
-				ellipse 60% 50% at 0% 100%,
-				color-mix(in srgb, var(--color-logo-green) 22%, transparent) 0%,
-				transparent 65%
-			),
-			radial-gradient(
-				ellipse 80% 60% at 50% 50%,
-				color-mix(in srgb, var(--color-logo-blue) 25%, transparent) 0%,
-				transparent 75%
-			);
-		pointer-events: none;
-	}
-
-	.lk-auth-page-logo {
-		position: absolute;
-		top: 1.75rem;
-		left: 2rem;
-		z-index: 6;
-	}
-
-	/* ── Brand text content stack (bottom block) ── */
-	.lk-auth-brand-content {
-		flex: 1 1 auto;
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		max-width: 32.5rem;
-		width: 100%;
+	.lk-auth-hero {
+		font-size: clamp(2rem, 3.4vw, 3rem);
+		line-height: 1.05;
+		font-weight: 700;
+		letter-spacing: -0.02em;
+		max-width: 28rem;
 	}
 
 	.lk-auth-brand-footer {
-		flex-shrink: 0;
-		opacity: 0.55;
+		opacity: 0.45;
 		color: var(--color-bg-elevated);
 	}
 	.lk-auth-brand-footer.caption {
 		color: var(--color-bg-elevated);
 	}
 
-	/* ── Feature rows (bottom block) — no chrome, just icon + label ── */
-	.lk-auth-features {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 0.875rem;
-	}
-	.lk-auth-feature {
-		display: flex;
-		align-items: center;
-		gap: 0.875rem;
-	}
-	.lk-auth-feature-icon {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 2.25rem;
-		height: 2.25rem;
-		border-radius: 0.5rem;
-		background: color-mix(in srgb, var(--color-logo-green) 22%, transparent);
-		color: color-mix(in srgb, var(--color-logo-green) 70%, white);
-		flex-shrink: 0;
-	}
-
-	/* ── Illustration — oversized -4rem on all sides so parallax (up
-	     to ±3rem at the medium layer) never exposes the canvas edges. ── */
-	.lk-auth-illustration {
+	/* ── Mesh-gradient orb stage ────────────────────────────────────
+	     Centred absolutely behind the foreground text. The stage gets
+	     the cursor drift (translate); inside it the orb + rings
+	     counter-rotate at different speeds for an organic flow.
+	     ─────────────────────────────────────────────────────────── */
+	.lk-auth-orb-stage {
 		position: absolute;
-		inset: -4rem;
+		top: 50%;
+		left: 50%;
+		width: min(46vh, 38vw);
+		aspect-ratio: 1 / 1;
+		transform: translate(-50%, -50%);
 		z-index: 1;
 		pointer-events: none;
-		overflow: hidden;
 	}
-	.lk-auth-illustration-img {
-		display: block;
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		object-position: center;
-		/* No mix-blend-mode tint, no heavy opacity reduction.
-		   The illustration reads naturally; the radial mask softens
-		   its edges into the colour washes; an inset bottom shadow
-		   gives it depth without recolouring. */
-		opacity: 0.78;
-		mask-image: radial-gradient(ellipse 75% 70% at center, black 45%, transparent 92%);
-		-webkit-mask-image: radial-gradient(ellipse 75% 70% at center, black 45%, transparent 92%);
+
+	/* Mouse-driven drift on the orb stage. Smooth easing back to centre
+	   on leave (the parallax handler resets vars to 0). */
+	.lk-orb-drift {
+		transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+		transform: translate(
+			calc(-50% + var(--mouse-x, 0) * 1.25rem),
+			calc(-50% + var(--mouse-y, 0) * 1.25rem)
+		);
+		will-change: transform;
 	}
-	/* Bottom-fade overlay — drops the image into the canvas without
-	   competing with the washes; gives a sense of depth + recession. */
-	.lk-auth-illustration::after {
-		content: '';
+
+	/* The orb itself — radial mesh of logo accents, soft blurred. */
+	.lk-auth-orb {
+		position: absolute;
+		inset: 12%;
+		border-radius: 50%;
+		background:
+			radial-gradient(
+				circle at 28% 28%,
+				color-mix(in srgb, var(--color-logo-purple) 90%, transparent) 0%,
+				transparent 50%
+			),
+			radial-gradient(
+				circle at 72% 32%,
+				color-mix(in srgb, var(--color-logo-blue) 85%, transparent) 0%,
+				transparent 55%
+			),
+			radial-gradient(
+				circle at 50% 78%,
+				color-mix(in srgb, var(--color-logo-green) 70%, transparent) 0%,
+				transparent 55%
+			),
+			radial-gradient(
+				circle at center,
+				color-mix(in srgb, var(--color-brand-600) 80%, transparent) 0%,
+				color-mix(in srgb, var(--color-brand-700) 90%, transparent) 70%
+			);
+		filter: blur(28px) saturate(1.15);
+		animation: lk-orb-spin 32s linear infinite;
+	}
+
+	/* Specular highlight on top of the orb — gives the impression of
+	   a glossy sphere with a top-left light source. */
+	.lk-auth-orb-highlight {
 		position: absolute;
 		inset: 0;
-		background: linear-gradient(
-			180deg,
-			transparent 0%,
-			transparent 55%,
-			color-mix(in srgb, var(--color-brand-900) 35%, transparent) 100%
+		border-radius: 50%;
+		background: radial-gradient(
+			ellipse 60% 50% at 30% 22%,
+			color-mix(in srgb, var(--color-bg-elevated) 22%, transparent) 0%,
+			transparent 55%
 		);
+		filter: blur(4px);
+		mix-blend-mode: screen;
 		pointer-events: none;
 	}
 
-	/* ── Floating product-stat cards — flat white-surface design.
-	     Modern SaaS hero canon (Vercel / Linear / Resend): mostly-
-	     opaque white card, subtle shadow, colour-coded icon chip. ── */
-	.lk-auth-float {
+	/* Inner mesh layer rotating opposite direction at a different
+	   period — creates non-repeating colour flow at the surface. */
+	.lk-auth-orb-mesh {
 		position: absolute;
-		display: flex;
-		align-items: center;
-		gap: 0.625rem;
-		padding: 0.5rem 0.875rem 0.5rem 0.625rem;
-		border-radius: 0.75rem;
-		background: color-mix(in srgb, var(--color-bg-elevated) 92%, transparent);
-		border: 1px solid color-mix(in srgb, var(--color-bg-elevated) 60%, transparent);
-		backdrop-filter: blur(8px);
-		-webkit-backdrop-filter: blur(8px);
-		white-space: nowrap;
-		z-index: 5;
+		inset: 0;
+		border-radius: 50%;
+		background:
+			radial-gradient(
+				circle at 70% 70%,
+				color-mix(in srgb, var(--color-logo-purple) 55%, transparent) 0%,
+				transparent 40%
+			),
+			radial-gradient(
+				circle at 30% 80%,
+				color-mix(in srgb, var(--color-logo-blue) 60%, transparent) 0%,
+				transparent 45%
+			),
+			radial-gradient(
+				circle at 80% 30%,
+				color-mix(in srgb, var(--color-logo-green) 45%, transparent) 0%,
+				transparent 40%
+			);
+		filter: blur(36px);
+		mix-blend-mode: screen;
+		animation: lk-orb-spin-rev 24s linear infinite;
+	}
+
+	/* Orbit rings — concentric thin circles around the orb, slowly
+	   counter-rotating. Drawn with conic-gradient + radial mask so
+	   they look like fine lines, not solid discs. */
+	.lk-auth-orb-ring {
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		border-radius: 50%;
+		transform: translate(-50%, -50%);
 		pointer-events: none;
-		box-shadow:
-			0 8px 24px color-mix(in srgb, var(--color-brand-900) 35%, transparent),
-			0 2px 4px color-mix(in srgb, var(--color-brand-900) 20%, transparent);
-		color: var(--color-brand-700);
+		border: 1px solid color-mix(in srgb, var(--color-bg-elevated) 8%, transparent);
+		background: conic-gradient(
+			from 0deg,
+			color-mix(in srgb, var(--color-logo-purple) 12%, transparent) 0deg,
+			transparent 90deg,
+			color-mix(in srgb, var(--color-logo-blue) 10%, transparent) 180deg,
+			transparent 270deg,
+			color-mix(in srgb, var(--color-logo-purple) 12%, transparent) 360deg
+		);
+		mask-image: radial-gradient(circle, transparent 49.5%, black 50%, black 50.5%, transparent 51%);
+		-webkit-mask-image: radial-gradient(
+			circle,
+			transparent 49.5%,
+			black 50%,
+			black 50.5%,
+			transparent 51%
+		);
 	}
-	.lk-auth-float-label {
-		font-size: var(--text-xs);
-		font-weight: 600;
-		letter-spacing: 0.01em;
+	.lk-auth-orb-ring--outer {
+		width: 132%;
+		height: 132%;
+		animation: lk-orb-spin 60s linear infinite reverse;
 	}
-	.lk-auth-float-icon {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 1.625rem;
-		height: 1.625rem;
-		border-radius: 0.4375rem;
-		flex-shrink: 0;
-	}
-	.lk-auth-float-icon--purple {
-		background: color-mix(in srgb, var(--color-logo-purple) 18%, white);
-		color: color-mix(in srgb, var(--color-logo-purple) 75%, black);
-	}
-	.lk-auth-float-icon--green {
-		background: color-mix(in srgb, var(--color-logo-green) 18%, white);
-		color: color-mix(in srgb, var(--color-logo-green) 60%, black);
-	}
-	.lk-auth-float-icon--blue {
-		background: color-mix(in srgb, var(--color-brand-600) 15%, white);
-		color: var(--color-brand-600);
+	.lk-auth-orb-ring--inner {
+		width: 112%;
+		height: 112%;
+		animation: lk-orb-spin 40s linear infinite;
 	}
 
-	/* Float positions relative to the image canvas. */
-	.lk-auth-float-1 {
-		top: 14%;
-		right: 12%;
-		animation: lk-float-bob 6s ease-in-out infinite;
-	}
-	.lk-auth-float-2 {
-		top: 58%;
-		right: 6%;
-		animation: lk-float-bob 7s ease-in-out 1s infinite;
-	}
-	.lk-auth-float-3 {
-		top: 32%;
-		left: 8%;
-		animation: lk-float-bob 8s ease-in-out 2s infinite;
-	}
-	.lk-auth-float-4 {
-		bottom: 14%;
-		left: 24%;
-		animation: lk-float-bob 6.5s ease-in-out 0.5s infinite;
-	}
-
-	@keyframes lk-float-bob {
-		0%,
-		100% {
-			translate: 0 0;
+	@keyframes lk-orb-spin {
+		from {
+			transform: rotate(0deg);
 		}
-		50% {
-			translate: 0 -0.5rem;
+		to {
+			transform: rotate(360deg);
+		}
+	}
+	@keyframes lk-orb-spin-rev {
+		from {
+			transform: rotate(0deg);
+		}
+		to {
+			transform: rotate(-360deg);
 		}
 	}
 
-	/* ── Mouse-driven parallax layers. ── */
-	.lk-parallax-slow {
-		transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-		transform: translate(calc(var(--mouse-x, 0) * 0.5rem), calc(var(--mouse-y, 0) * 0.5rem));
-		will-change: transform;
-		backface-visibility: hidden;
+	/* Note: the orb-stage's own transform (mouse drift) wraps these
+	   children, so each child's rotate animation composes correctly
+	   inside the translated parent. */
+	.lk-auth-orb-ring--outer,
+	.lk-auth-orb-ring--inner {
+		/* Rings are positioned via translate(-50%, -50%) on the
+		   ::before/element transform; rotate animation overrides on
+		   keyframe execution. To preserve centring, animate via the
+		   `rotate` property (not transform) so the translate stays. */
+		animation-name: lk-orb-ring-rotate;
 	}
-	.lk-parallax-medium {
-		transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-		transform: translate(calc(var(--mouse-x, 0) * 1.5rem), calc(var(--mouse-y, 0) * 1.5rem));
-		will-change: transform;
-		backface-visibility: hidden;
+	.lk-auth-orb-ring--outer {
+		animation: lk-orb-ring-rotate 60s linear infinite reverse;
 	}
-	.lk-parallax-fast {
-		transition: transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-		transform: translate(calc(var(--mouse-x, 0) * 2.5rem), calc(var(--mouse-y, 0) * 2.5rem));
-		will-change: transform;
-		backface-visibility: hidden;
-	}
-	.lk-parallax-reverse {
-		transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-		transform: translate(calc(var(--mouse-x, 0) * -1.25rem), calc(var(--mouse-y, 0) * -1.25rem));
-		will-change: transform;
-		backface-visibility: hidden;
+	.lk-auth-orb-ring--inner {
+		animation: lk-orb-ring-rotate 40s linear infinite;
 	}
 
-	/* ── Reduced motion: kill bobbing + parallax. ── */
+	@keyframes lk-orb-ring-rotate {
+		from {
+			rotate: 0deg;
+		}
+		to {
+			rotate: 360deg;
+		}
+	}
+
+	/* ── Reduced motion: kill rotation + drift. ── */
 	@media (prefers-reduced-motion: reduce) {
-		.lk-auth-float-1,
-		.lk-auth-float-2,
-		.lk-auth-float-3,
-		.lk-auth-float-4 {
+		.lk-auth-orb,
+		.lk-auth-orb-mesh,
+		.lk-auth-orb-ring--outer,
+		.lk-auth-orb-ring--inner {
 			animation: none;
 		}
-		.lk-parallax-slow,
-		.lk-parallax-medium,
-		.lk-parallax-fast,
-		.lk-parallax-reverse {
-			transform: none;
+		.lk-orb-drift {
+			transform: translate(-50%, -50%);
 		}
 	}
 </style>
