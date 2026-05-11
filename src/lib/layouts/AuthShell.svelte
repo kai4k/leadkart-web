@@ -301,25 +301,28 @@
 		width: 100%;
 	}
 
-	/* ── Glass pill — hero text + tagline wrappers. Brand-600 tinted
-	     glass (the signin button's blue, #1140b6) so the pills + button
-	     read as the same colour family. White text reads cleanly on the
-	     mid-saturation blue at 50% mix; backdrop-filter blur + white
-	     top-sheen keep the frosted-glass feel; the border uses a faint
-	     white mix to outline the pill against the image. ── */
+	/* ── Glass pill — hero text + tagline wrappers. Heavily transparent
+	     brand-600 (#1140b6) tint at 20% mix lets the purple-tinted
+	     illustration read through; the backdrop-filter blur + a faint
+	     white border + top sheen keep the pill from disappearing. A
+	     subtle text-shadow on the white text guarantees legibility
+	     regardless of the image content behind. ── */
 	.lk-auth-pill {
 		display: block;
 		width: fit-content;
 		max-width: 100%;
 		padding: 1.25em 1.5em;
 		border-radius: 1.5rem;
-		background: color-mix(in srgb, var(--color-brand-600) 50%, transparent);
-		border: 1px solid color-mix(in srgb, var(--color-bg-elevated) 22%, transparent);
+		background: color-mix(in srgb, var(--color-brand-600) 20%, transparent);
+		border: 1px solid color-mix(in srgb, var(--color-bg-elevated) 25%, transparent);
 		backdrop-filter: blur(20px) saturate(1.2);
 		-webkit-backdrop-filter: blur(20px) saturate(1.2);
 		position: relative;
 		overflow: hidden;
-		box-shadow: 0 4px 16px color-mix(in srgb, var(--color-brand-900) 25%, transparent);
+		box-shadow: 0 4px 16px color-mix(in srgb, var(--color-brand-900) 18%, transparent);
+	}
+	.lk-auth-pill p {
+		text-shadow: 0 1px 2px color-mix(in srgb, var(--color-brand-900) 35%, transparent);
 	}
 	.lk-auth-pill::before {
 		content: '';
@@ -352,8 +355,8 @@
 		gap: 0.75rem;
 		padding: 0.625rem 1rem;
 		border-radius: 0.875rem;
-		background: color-mix(in srgb, var(--color-brand-600) 45%, transparent);
-		border: 1px solid color-mix(in srgb, var(--color-bg-elevated) 18%, transparent);
+		background: color-mix(in srgb, var(--color-brand-600) 18%, transparent);
+		border: 1px solid color-mix(in srgb, var(--color-bg-elevated) 20%, transparent);
 		backdrop-filter: blur(16px) saturate(1.2);
 		-webkit-backdrop-filter: blur(16px) saturate(1.2);
 		position: relative;
@@ -362,10 +365,13 @@
 			transform 0.2s ease,
 			background 0.2s ease;
 	}
+	.lk-auth-feature span:last-child {
+		text-shadow: 0 1px 2px color-mix(in srgb, var(--color-brand-900) 30%, transparent);
+	}
 	@media (hover: hover) {
 		.lk-auth-feature:hover {
 			transform: translateX(0.25rem);
-			background: color-mix(in srgb, var(--color-brand-600) 62%, transparent);
+			background: color-mix(in srgb, var(--color-brand-600) 32%, transparent);
 		}
 	}
 	.lk-auth-feature::before {
@@ -438,10 +444,12 @@
 		pointer-events: none;
 	}
 
-	/* ── Floating glass cards — brand-600 (#1140b6) tinted glass over
-	     the purple illustration. White caption text reads on the
-	     mid-saturation blue; secondary-100 icon chip preserves the
-	     green accent. ── */
+	/* ── Floating glass cards — heavily transparent brand-600 tint
+	     (matches the pills + features) so the illustration shows
+	     through. White caption text with text-shadow for legibility;
+	     secondary-100 icon chip preserves the green accent. The
+	     global `.caption` rule sets color: fg-muted, so we override
+	     it here to inherit the parent's white. ── */
 	.lk-auth-float {
 		position: absolute;
 		display: flex;
@@ -449,8 +457,8 @@
 		gap: 0.5rem;
 		padding: 0.5em 0.875em 0.5em 0.625em;
 		border-radius: 0.75rem;
-		background: color-mix(in srgb, var(--color-brand-600) 55%, transparent);
-		border: 1px solid color-mix(in srgb, var(--color-bg-elevated) 18%, transparent);
+		background: color-mix(in srgb, var(--color-brand-600) 22%, transparent);
+		border: 1px solid color-mix(in srgb, var(--color-bg-elevated) 22%, transparent);
 		backdrop-filter: blur(16px) saturate(1.3);
 		-webkit-backdrop-filter: blur(16px) saturate(1.3);
 		white-space: nowrap;
@@ -487,6 +495,17 @@
 		background: color-mix(in srgb, var(--color-secondary-100) 70%, transparent);
 		color: var(--color-secondary-700);
 		flex-shrink: 0;
+	}
+
+	/* Force-override the global `.caption { color: var(--color-fg-muted) }`
+	   rule (typography.css §caption) inside the brand panel. Same
+	   specificity (0,1,0) as the global, but later in cascade order
+	   within the scoped .lk-auth subtree. Affects the float-card
+	   captions + the footer copyright. */
+	.lk-auth-float .caption,
+	.lk-auth-footer.caption {
+		color: var(--color-bg-elevated);
+		text-shadow: 0 1px 2px color-mix(in srgb, var(--color-brand-900) 30%, transparent);
 	}
 
 	.lk-auth-float-1 {
