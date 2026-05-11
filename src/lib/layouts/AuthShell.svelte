@@ -250,11 +250,19 @@
 		--color-brand-link: var(--color-brand-600);
 		--color-brand-link-hover: var(--color-brand-700);
 
+		/* Auth canvas — softened off-white with a sliver of brand tint
+		   so the surface doesn't read as harsh pure white. Modal card
+		   (AuthCard, uses --color-bg-elevated) stays pure oklch(1 0 0),
+		   so the modal visually lifts off the canvas. Three-step
+		   surface hierarchy: canvas (dulled) → mobile-banner (brand-50)
+		   → modal (pure white). */
+		--color-auth-canvas: oklch(0.98 0.005 270);
+
 		/* ─── Root container layout ─── */
 		position: relative;
 		min-block-size: 100dvh;
 		overflow: hidden;
-		background: var(--color-bg-elevated);
+		background: var(--color-auth-canvas);
 		color: var(--color-fg);
 	}
 
