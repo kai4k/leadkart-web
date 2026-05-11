@@ -410,10 +410,17 @@
 		height: 100%;
 		object-fit: cover;
 		object-position: center;
-		/* Bumped from 0.14 — the image was being swallowed by the
-		   white-tinted overlay + near-white bg. 0.5 lets it read
-		   clearly as a product illustration without overpowering
-		   the hero text on top. */
+		/* Purple wash painted behind the image content, scoped to the
+		   image's own box. Subject to the same radial mask + 0.5
+		   opacity as the image — at the centre the image reads
+		   "tinted purple" instead of "tinted near-white" (which is
+		   what the brand-100 panel base behind the image was
+		   producing). At the masked edges the wash fades out with
+		   the image, so the corner radial washes on the panel bg
+		   still read normally. Pulled from the logo's #a05dce glass
+		   highlight via the existing --color-auth-accent-purple
+		   token. */
+		background: var(--color-auth-accent-purple);
 		opacity: 0.5;
 		mask-image: radial-gradient(ellipse at center, black 50%, transparent 95%);
 		-webkit-mask-image: radial-gradient(ellipse at center, black 50%, transparent 95%);
