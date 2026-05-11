@@ -4,8 +4,8 @@
 
 <div class="flex min-h-screen items-center justify-center p-6">
 	<div class="max-w-md text-center">
-		<h1 class="text-6xl font-bold text-slate-900 dark:text-slate-100">{page.status}</h1>
-		<p class="mt-4 text-lg text-slate-600 dark:text-slate-400">
+		<h1 class="text-6xl font-bold text-slate-900">{page.status}</h1>
+		<p class="mt-4 text-lg text-slate-600">
 			{page.error?.message ?? 'Something went wrong.'}
 		</p>
 		<a

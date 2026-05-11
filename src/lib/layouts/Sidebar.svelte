@@ -66,7 +66,7 @@
 									class={[
 										'body-sm flex items-center gap-3 rounded-md px-3 py-2 font-medium transition-colors',
 										active
-											? 'bg-[var(--color-brand-50)] text-[var(--color-brand-700)] dark:bg-[var(--color-brand-700)] dark:text-[var(--color-brand-100)]'
+											? 'bg-[var(--color-brand-50)] text-[var(--color-brand-700)]'
 											: 'text-[var(--color-fg)] hover:bg-[var(--color-bg-muted)]'
 									]}
 								>

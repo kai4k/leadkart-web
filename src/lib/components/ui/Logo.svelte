@@ -19,58 +19,18 @@
 </script>
 
 <script lang="ts">
-	import { theme } from '$lib/stores/theme.svelte';
 	import { cn } from '$lib/utils/cn';
 
 	type Props = LogoVariants & {
-		/**
-		 * Force light or dark variant regardless of active theme.
-		 * Useful for pinning the logo against a known background
-		 * (e.g. white logo on the brand-coloured AuthShell panel
-		 * regardless of OS dark-mode preference).
-		 */
-		variant?: 'auto' | 'light-bg' | 'dark-bg';
 		class?: string;
 		alt?: string;
 	};
 
-	let { size = 'md', variant = 'auto', class: className = '', alt = 'LeadKart' }: Props = $props();
+	let { size = 'md', class: className = '', alt = 'LeadKart' }: Props = $props();
 
-	/**
-	 * Pick the right asset:
-	 *   light-bg → dark logo (LeadKart_Logo_Light_Theme.png — drawn for
-	 *               light backgrounds, so the marks are dark).
-	 *   dark-bg  → light logo (LeadKart_Logo_Dark_Theme.png — drawn for
-	 *               dark backgrounds, so the marks are light).
-	 *   auto     → follows the global theme rune.
-	 */
-	const src = $derived(
-		variant === 'light-bg'
-			? '/images/logo/LeadKart_Logo_Light_Theme.png'
-			: variant === 'dark-bg'
-				? '/images/logo/LeadKart_Logo_Dark_Theme.png'
-				: theme.effective === 'dark'
-					? '/images/logo/LeadKart_Logo_Dark_Theme.png'
-					: '/images/logo/LeadKart_Logo_Light_Theme.png'
-	);
-
-	/**
-	 * Retina srcset — browsers pick the right density. The 256px asset
-	 * is the highest-res reasonable for in-app header use; 1024 is for
-	 * marketing / hero placements.
-	 */
-	const srcset = $derived(
-		theme.effective === 'dark' || variant === 'dark-bg'
-			? '/images/logo/LeadKart_Logo_Dark_Theme.png 1x'
-			: '/images/logo/LeadKart_Logo_Light_Theme.png 1x'
-	);
+	// App is light-only as of 2026-05-12. The dark-theme PNG is retained
+	// on disk in case dark mode is reintroduced, but is not selected here.
+	const src = '/images/logo/LeadKart_Logo_Light_Theme.png';
 </script>
 
-<img
-	{src}
-	{srcset}
-	{alt}
-	class={cn(logoVariants({ size }), className)}
-	loading="eager"
-	decoding="async"
-/>
+<img {src} {alt} class={cn(logoVariants({ size }), className)} loading="eager" decoding="async" />

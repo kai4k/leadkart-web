@@ -3,53 +3,18 @@
  *
  * Tailwind 4's preflight (auto-included via @import 'tailwindcss')
  * covers most resets. This file adds LeadKart-specific defaults
- * + the dark theme override + accessibility globals.
+ * + the customiser overrides (primary colour + layout style) +
+ * accessibility globals.
+ *
+ * Dark mode removed 2026-05-12 — LeadKart is intentionally light-only
+ * (pharma B2B canon). The customiser exposes colour + layout-style
+ * options via data-attributes on <html> instead.
  *
  * Industry refs: Andy Bell "Modern CSS Reset", Josh Comeau "CSS Reset"
  * (joshwcomeau.com/css/custom-css-reset/), Tailwind Preflight,
  * WCAG 2.2 §2.3.3 (Animation from Interactions) + §2.4.7 (Focus
  * Visible).
  * ───────────────────────────────────────────────────────────────────── */
-
-/* ═══ DARK THEME OVERRIDE
- * Activated by <html class="dark"> via lib/stores/theme.svelte.ts +
- * the FOUC-prevention inline script in app.html (runs synchronously
- * before first paint).
- *
- * Surface + foreground tokens flip; brand + semantic stay constant
- * (picking light/dark variants at component level is simpler than
- * maintaining 11×2 dark equivalents that 95% of UIs never use).
- * ───────────────────────────────────────────────────────────────── */
-:root.dark {
-	--color-bg: oklch(0.16 0.02 256);
-	--color-bg-subtle: oklch(0.2 0.02 256);
-	--color-bg-muted: oklch(0.24 0.02 256);
-	--color-bg-elevated: oklch(0.22 0.02 256);
-
-	--color-fg: oklch(0.96 0.01 256);
-	--color-fg-muted: oklch(0.7 0.02 256);
-	--color-fg-subtle: oklch(0.55 0.02 256);
-
-	--color-border: oklch(0.3 0.02 256);
-	--color-border-strong: oklch(0.4 0.02 256);
-
-	/* Semantic brand-text aliases flip to lighter brand stops so navy
-	   typography reads against the dark surfaces. */
-	--color-brand-heading: var(--color-brand-300);
-	--color-brand-link: var(--color-brand-400);
-	--color-brand-link-hover: var(--color-brand-300);
-
-	--color-overlay: oklch(0.05 0.01 256 / 0.7);
-	--color-overlay-strong: oklch(0.05 0.01 256 / 0.85);
-
-	--shadow-xs: 0 1px 2px 0 oklch(0 0 0 / 0.3);
-	--shadow-sm: 0 1px 3px 0 oklch(0 0 0 / 0.4), 0 1px 2px -1px oklch(0 0 0 / 0.4);
-	--shadow: 0 4px 6px -1px oklch(0 0 0 / 0.4), 0 2px 4px -2px oklch(0 0 0 / 0.4);
-	--shadow-md: 0 10px 15px -3px oklch(0 0 0 / 0.5), 0 4px 6px -4px oklch(0 0 0 / 0.5);
-	--shadow-lg: 0 20px 25px -5px oklch(0 0 0 / 0.6), 0 8px 10px -6px oklch(0 0 0 / 0.6);
-	--shadow-xl: 0 25px 50px -12px oklch(0 0 0 / 0.7);
-	--shadow-focus: 0 0 0 3px var(--color-brand-700);
-}
 
 /* ═══ PRIMARY COLOUR PICKER — multi-hue theme switching
  * Activated by `<html data-primary="X">` attribute set by
@@ -217,11 +182,6 @@
 	--color-brand-900: oklch(0.3 0.07 230);
 	--color-brand-950: oklch(0.2 0.05 230);
 }
-
-/* ═══ DARK-MODE VARIANT — Tailwind 4 syntax
- * Lets utility classes like `dark:bg-bg-elevated` activate when
- * <html class="dark">. Without this, the `dark:` prefix is inert. */
-@variant dark (&:where(.dark, .dark *));
 
 @layer base {
 	html {

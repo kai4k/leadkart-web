@@ -101,10 +101,7 @@
 	{/if}
 
 	{#if error}
-		<p
-			id={errorId}
-			class="body-sm text-[var(--color-danger-700)] dark:text-[var(--color-danger-50)]"
-		>
+		<p id={errorId} class="body-sm text-[var(--color-danger-700)]">
 			{error}
 		</p>
 	{/if}

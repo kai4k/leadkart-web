@@ -1,10 +1,12 @@
 <script lang="ts">
-	import { Bell, Menu, Moon, Sun, Icon } from '$icons';
-	import { theme } from '$lib/stores/theme.svelte';
+	import { Bell, Menu, Settings, Icon } from '$icons';
 	import { Logo } from '$ui';
 	import UserMenu from './UserMenu.svelte';
 
-	let { onToggleSidebar } = $props<{ onToggleSidebar?: () => void }>();
+	let { onToggleSidebar, onOpenSettings } = $props<{
+		onToggleSidebar?: () => void;
+		onOpenSettings?: () => void;
+	}>();
 </script>
 
 <header
@@ -25,14 +27,10 @@
 	<div class="cluster" style="--cluster-gap: var(--spacing-2);">
 		<button
 			class="rounded-md p-1.5 hover:bg-[var(--color-bg-muted)]"
-			aria-label={theme.effective === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-			onclick={() => theme.toggle()}
+			aria-label="Open theme + layout settings"
+			onclick={() => onOpenSettings?.()}
 		>
-			{#if theme.effective === 'dark'}
-				<Icon icon={Sun} size="md" />
-			{:else}
-				<Icon icon={Moon} size="md" />
-			{/if}
+			<Icon icon={Settings} size="md" />
 		</button>
 		<button class="rounded-md p-1.5 hover:bg-[var(--color-bg-muted)]" aria-label="Notifications">
 			<Icon icon={Bell} size="md" />

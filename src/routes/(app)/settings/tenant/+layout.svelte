@@ -64,13 +64,12 @@
 					class={cn(
 						'caption inline-flex items-center rounded-full px-2 py-0.5 font-medium',
 						badge.variant === 'success' &&
-							'bg-[var(--color-success-50)] text-[var(--color-success-900)] dark:bg-[var(--color-success-900)] dark:text-[var(--color-success-50)]',
+							'bg-[var(--color-success-50)] text-[var(--color-success-900)]',
 						badge.variant === 'warning' &&
-							'bg-[var(--color-warning-50)] text-[var(--color-warning-900)] dark:bg-[var(--color-warning-900)] dark:text-[var(--color-warning-50)]',
+							'bg-[var(--color-warning-50)] text-[var(--color-warning-900)]',
 						badge.variant === 'danger' &&
-							'bg-[var(--color-danger-50)] text-[var(--color-danger-900)] dark:bg-[var(--color-danger-900)] dark:text-[var(--color-danger-50)]',
-						badge.variant === 'info' &&
-							'bg-[var(--color-info-50)] text-[var(--color-info-900)] dark:bg-[var(--color-info-900)] dark:text-[var(--color-info-50)]'
+							'bg-[var(--color-danger-50)] text-[var(--color-danger-900)]',
+						badge.variant === 'info' && 'bg-[var(--color-info-50)] text-[var(--color-info-900)]'
 					)}
 				>
 					{badge.label}
@@ -97,7 +96,7 @@
 							'focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
 							'focus-visible:ring-[var(--color-brand-500)]',
 							active
-								? 'border-[var(--color-brand-600)] text-[var(--color-brand-700)] dark:text-[var(--color-brand-300)]'
+								? 'border-[var(--color-brand-600)] text-[var(--color-brand-700)]'
 								: 'border-transparent text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]'
 						)}
 					>

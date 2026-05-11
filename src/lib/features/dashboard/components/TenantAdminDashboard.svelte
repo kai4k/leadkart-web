@@ -40,7 +40,7 @@
 		<div class="cluster">
 			<h1 class="h1">Tenant Dashboard</h1>
 			<span
-				class="caption inline-flex items-center rounded-full bg-[var(--color-brand-50)] px-2 py-0.5 font-medium text-[var(--color-brand-700)] dark:bg-[var(--color-brand-900)] dark:text-[var(--color-brand-100)]"
+				class="caption inline-flex items-center rounded-full bg-[var(--color-brand-50)] px-2 py-0.5 font-medium text-[var(--color-brand-700)]"
 			>
 				Admin
 			</span>
