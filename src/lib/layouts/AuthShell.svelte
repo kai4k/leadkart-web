@@ -1,40 +1,65 @@
 <script lang="ts">
 	/**
-	 * AuthShell — two-column auth layout, Antigravity / Gemini style.
+	 * AuthShell — two-column auth layout, Antigravity-style brand panel.
 	 *
-	 * Left column (desktop only) — single-intent hero canvas:
-	 *   - Deep brand-900 / near-black background
-	 *   - One animated mesh-gradient orb (logo palette: purple / green
-	 *     / blue radial stops, slow rotation + counter-rotation)
-	 *   - Concentric orbit rings (subtle, ambient)
-	 *   - Minimal text: logo top-left, one-line hero bottom-left,
-	 *     footer at the bottom edge
-	 *   - Mouse-driven drift on the orb (subtle follow, smooth easing)
+	 * Left column (desktop only) — light-canvas hero:
+	 *   - bg-elevated (white) surface
+	 *   - Particle field across the canvas (small oriented dashes in
+	 *     logo accent colours — purple / green / blue / neutral) with
+	 *     subtle drift animation + mouse-driven parallax
+	 *   - Logo top-left (renders natively on the light surface — no
+	 *     contrast issues vs the previous navy treatment)
+	 *   - Hero block centred vertically: display-2 headline + tagline
+	 *     + 3 feature rows (icon chip + label, no chrome)
+	 *   - Footer copyright bottom-left
 	 *
-	 * No illustration. No feature list. No floating product cards. No
-	 * pills. The hero IS the orb — one visual idea, executed cleanly.
-	 *
-	 * Right column → form panel slot (white card on bg-elevated).
+	 * Right column → form panel slot (existing white-card design).
 	 * Mobile (< lg) → compact brand banner + form panel only.
 	 *
 	 * Industry refs:
-	 *   - Google Antigravity (antigravity.google) — single mesh-orb hero
-	 *     on deep navy, minimal text overlay, custom scroll
-	 *   - Gemini product surfaces — mesh-gradient sphere as primary
-	 *     identity element
-	 *   - Vercel / Linear marketing — single visual intent per surface
+	 *   - Google Antigravity homepage — light bg + particle field +
+	 *     minimal text. The 2026 Google product-marketing canon.
+	 *   - Vercel / Linear marketing — minimal hero, decorative motion
+	 *     subordinate to typography
 	 *
 	 * Accessibility:
-	 *   - prefers-reduced-motion gates the orb rotation + parallax
-	 *   - Orb is aria-hidden (decorative)
-	 *   - All hero meaning carried by the text + logo, not the orb
+	 *   - prefers-reduced-motion gates particle drift + parallax
+	 *   - Particle field is aria-hidden (decorative)
+	 *   - All hero meaning carried by typography
 	 */
 	import { onMount } from 'svelte';
 	import { Logo } from '$ui';
+	import { ShieldCheck, TrendingUp, Truck } from 'lucide-svelte';
 
 	let { children } = $props();
-
 	let brandPanel: HTMLElement | undefined = $state();
+
+	/**
+	 * Pre-computed particle field. Deterministic seeded PRNG so SSR
+	 * pre-render matches client hydration exactly (no flicker, no
+	 * hydration mismatch warnings). 90 particles spread across the
+	 * canvas.
+	 */
+	const PARTICLES = (() => {
+		let seed = 1337;
+		const rand = () => {
+			seed = (seed * 9301 + 49297) % 233280;
+			return seed / 233280;
+		};
+		// Colour weighting: more neutrals than brand accents, so the
+		// brand colours read as deliberate accent moments, not visual
+		// noise. Weighted via repetition in this array.
+		const palette = ['neutral', 'neutral', 'neutral', 'purple', 'blue', 'green'];
+		return Array.from({ length: 90 }, () => ({
+			x: rand() * 100,
+			y: rand() * 100,
+			length: 4 + rand() * 8,
+			rotation: rand() * 360,
+			colour: palette[Math.floor(rand() * palette.length)],
+			delay: rand() * 8,
+			depth: rand() < 0.4 ? 'far' : rand() < 0.7 ? 'mid' : 'near'
+		}));
+	})();
 
 	onMount(() => {
 		if (!brandPanel) return;
@@ -86,36 +111,75 @@
 		<span class="caption font-medium text-[var(--color-brand-700)]">Pharma SaaS</span>
 	</header>
 
-	<!-- ═══ BRAND PANEL (desktop only) — Antigravity-style hero ═══════ -->
+	<!-- ═══ BRAND PANEL (desktop only) ════════════════════════════════ -->
 	<section
 		bind:this={brandPanel}
 		aria-label="LeadKart"
-		class="lk-auth-brand relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between"
+		class="lk-auth-brand relative hidden overflow-hidden lg:flex lg:flex-col"
 	>
+		<!-- Particle field — three depth layers driven by parallax. -->
+		<div class="lk-auth-particles lk-particles--far" aria-hidden="true">
+			{#each PARTICLES.filter((p) => p.depth === 'far') as p (p.x + '-' + p.y)}
+				<span
+					class="lk-particle lk-particle--{p.colour}"
+					style="--x:{p.x}%;--y:{p.y}%;--len:{p.length}px;--rot:{p.rotation}deg;--delay:{p.delay}s"
+				></span>
+			{/each}
+		</div>
+		<div class="lk-auth-particles lk-particles--mid" aria-hidden="true">
+			{#each PARTICLES.filter((p) => p.depth === 'mid') as p (p.x + '-' + p.y)}
+				<span
+					class="lk-particle lk-particle--{p.colour}"
+					style="--x:{p.x}%;--y:{p.y}%;--len:{p.length}px;--rot:{p.rotation}deg;--delay:{p.delay}s"
+				></span>
+			{/each}
+		</div>
+		<div class="lk-auth-particles lk-particles--near" aria-hidden="true">
+			{#each PARTICLES.filter((p) => p.depth === 'near') as p (p.x + '-' + p.y)}
+				<span
+					class="lk-particle lk-particle--{p.colour}"
+					style="--x:{p.x}%;--y:{p.y}%;--len:{p.length}px;--rot:{p.rotation}deg;--delay:{p.delay}s"
+				></span>
+			{/each}
+		</div>
+
 		<!-- Logo top-left -->
 		<header class="lk-auth-brand-header">
 			<Logo size="xl" />
 		</header>
 
-		<!-- Mesh-gradient orb hero. Three concentric layers compose
-		     the visual: outer orbit ring → mid orbit ring → mesh
-		     orb itself. All decorative (aria-hidden). -->
-		<div class="lk-auth-orb-stage lk-orb-drift" aria-hidden="true">
-			<div class="lk-auth-orb-ring lk-auth-orb-ring--outer"></div>
-			<div class="lk-auth-orb-ring lk-auth-orb-ring--inner"></div>
-			<div class="lk-auth-orb">
-				<div class="lk-auth-orb-mesh"></div>
-				<div class="lk-auth-orb-highlight"></div>
-			</div>
-		</div>
-
-		<!-- Hero text bottom-left, footer below. One sentence, nothing else. -->
-		<div class="lk-auth-brand-foot">
-			<h2 class="lk-auth-hero text-white">
+		<!-- Hero text block — the design that worked. -->
+		<div class="lk-auth-brand-content">
+			<h2 class="display-2 mb-6 leading-[1.05] tracking-tight text-[var(--color-fg)]">
 				Pharma lead management,<br />simplified.
 			</h2>
-			<div class="lk-auth-brand-footer caption">© LeadKart 2026</div>
+			<p class="body-base mb-10 max-w-md text-[var(--color-fg-muted)]">
+				End-to-end CRM, orders, inventory &amp; dispatch — built for India's PCD pharma market.
+			</p>
+
+			<ul class="lk-auth-features">
+				<li class="lk-auth-feature">
+					<span class="lk-auth-feature-icon lk-auth-feature-icon--purple" aria-hidden="true">
+						<ShieldCheck size={18} />
+					</span>
+					<span class="body-base text-[var(--color-fg)]">Enterprise-grade security</span>
+				</li>
+				<li class="lk-auth-feature">
+					<span class="lk-auth-feature-icon lk-auth-feature-icon--green" aria-hidden="true">
+						<TrendingUp size={18} />
+					</span>
+					<span class="body-base text-[var(--color-fg)]">Real-time lead tracking</span>
+				</li>
+				<li class="lk-auth-feature">
+					<span class="lk-auth-feature-icon lk-auth-feature-icon--blue" aria-hidden="true">
+						<Truck size={18} />
+					</span>
+					<span class="body-base text-[var(--color-fg)]">Order-to-dispatch pipeline</span>
+				</li>
+			</ul>
 		</div>
+
+		<footer class="lk-auth-brand-footer caption">© LeadKart 2026</footer>
 	</section>
 
 	<!-- ═══ FORM PANEL ═══════════════════════════════════════════════ -->
@@ -127,7 +191,7 @@
 </div>
 
 <style>
-	/* ── AuthShell-wide THEME LOCK to light values (form side). ── */
+	/* ── AuthShell-wide THEME LOCK to light values. ── */
 	.lk-auth {
 		--color-bg: oklch(0.99 0 0);
 		--color-bg-subtle: oklch(0.97 0 0);
@@ -139,15 +203,13 @@
 		--color-border: oklch(0.9 0.01 256);
 		--color-border-strong: oklch(0.8 0.01 256);
 
-		/* Brand stops — pinned to LeadKart logo + signin spec. */
 		--color-brand-600: oklch(0.43 0.19 264); /* #1140b6 signin button */
 		--color-brand-700: oklch(0.3 0.2 270); /* #00297d signin text */
-		--color-brand-800: oklch(0.24 0.16 272); /* mid brand-panel surface */
+		--color-brand-800: oklch(0.24 0.16 272); /* deep stop */
 
-		/* Logo accents — the orb mesh stops. */
-		--color-logo-purple: oklch(0.62 0.18 305); /* #a05dce highlight */
-		--color-logo-green: oklch(0.78 0.22 142); /* #0ef709 inner-K glow */
-		--color-logo-blue: oklch(0.41 0.2 269); /* #3146a5 wordmark blue */
+		--color-logo-purple: oklch(0.58 0.18 305); /* #a05dce */
+		--color-logo-green: oklch(0.65 0.21 142); /* #0ef709 (toned down for legibility on white) */
+		--color-logo-blue: oklch(0.41 0.2 269); /* #3146a5 */
 
 		--color-brand-heading: var(--color-brand-700);
 		--color-brand-link: var(--color-brand-600);
@@ -158,18 +220,12 @@
 		background: var(--color-bg-elevated);
 	}
 
-	/* ── Brand panel: near-black canvas, vignette wash from centre.
-	     Single intent: hero the orb. ── */
+	/* ── Brand panel: light surface, particle field decoration. ── */
 	.lk-auth-brand {
+		background: var(--color-bg-elevated);
+		color: var(--color-fg);
 		padding: clamp(2.5rem, 5vw, 4rem);
-		background:
-			radial-gradient(
-				ellipse 80% 60% at 50% 50%,
-				color-mix(in srgb, var(--color-logo-blue) 18%, transparent) 0%,
-				transparent 70%
-			),
-			oklch(0.12 0.04 270);
-		color: var(--color-bg-elevated);
+		justify-content: space-between;
 	}
 
 	.lk-auth-brand-header {
@@ -177,223 +233,141 @@
 		z-index: 4;
 	}
 
-	.lk-auth-brand-foot {
+	.lk-auth-brand-content {
 		position: relative;
 		z-index: 4;
-		display: flex;
-		flex-direction: column;
-		gap: clamp(1.5rem, 3vh, 2.25rem);
-	}
-
-	.lk-auth-hero {
-		font-size: clamp(2rem, 3.4vw, 3rem);
-		line-height: 1.05;
-		font-weight: 700;
-		letter-spacing: -0.02em;
-		max-width: 28rem;
+		max-width: 30rem;
+		width: 100%;
+		align-self: center;
+		margin: auto 0;
 	}
 
 	.lk-auth-brand-footer {
-		opacity: 0.45;
-		color: var(--color-bg-elevated);
+		position: relative;
+		z-index: 4;
+		color: var(--color-fg-subtle);
 	}
 	.lk-auth-brand-footer.caption {
-		color: var(--color-bg-elevated);
+		color: var(--color-fg-subtle);
 	}
 
-	/* ── Mesh-gradient orb stage ────────────────────────────────────
-	     Centred absolutely behind the foreground text. The stage gets
-	     the cursor drift (translate); inside it the orb + rings
-	     counter-rotate at different speeds for an organic flow.
-	     ─────────────────────────────────────────────────────────── */
-	.lk-auth-orb-stage {
+	/* ── Feature rows — icon chip + label, colour-coded by category.
+	     Logo-derived accents: purple (security), green (growth/leads),
+	     blue (logistics/dispatch). ── */
+	.lk-auth-features {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.875rem;
+	}
+	.lk-auth-feature {
+		display: flex;
+		align-items: center;
+		gap: 0.875rem;
+	}
+	.lk-auth-feature-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.25rem;
+		height: 2.25rem;
+		border-radius: 0.5rem;
+		flex-shrink: 0;
+	}
+	.lk-auth-feature-icon--purple {
+		background: color-mix(in srgb, var(--color-logo-purple) 14%, white);
+		color: var(--color-logo-purple);
+	}
+	.lk-auth-feature-icon--green {
+		background: color-mix(in srgb, var(--color-logo-green) 14%, white);
+		color: color-mix(in srgb, var(--color-logo-green) 88%, black);
+	}
+	.lk-auth-feature-icon--blue {
+		background: color-mix(in srgb, var(--color-brand-600) 12%, white);
+		color: var(--color-brand-600);
+	}
+
+	/* ── Particle field — three depth layers each get a different
+	     parallax response amount, giving the field perceived depth
+	     under mouse motion (Antigravity hero canon). ── */
+	.lk-auth-particles {
 		position: absolute;
-		top: 50%;
-		left: 50%;
-		width: min(46vh, 38vw);
-		aspect-ratio: 1 / 1;
-		transform: translate(-50%, -50%);
-		z-index: 1;
+		inset: 0;
 		pointer-events: none;
-	}
-
-	/* Mouse-driven drift on the orb stage. Smooth easing back to centre
-	   on leave (the parallax handler resets vars to 0). */
-	.lk-orb-drift {
-		transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-		transform: translate(
-			calc(-50% + var(--mouse-x, 0) * 1.25rem),
-			calc(-50% + var(--mouse-y, 0) * 1.25rem)
-		);
 		will-change: transform;
+		transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+	}
+	.lk-particles--far {
+		z-index: 0;
+		transform: translate(calc(var(--mouse-x, 0) * 0.35rem), calc(var(--mouse-y, 0) * 0.35rem));
+	}
+	.lk-particles--mid {
+		z-index: 1;
+		transform: translate(calc(var(--mouse-x, 0) * 0.85rem), calc(var(--mouse-y, 0) * 0.85rem));
+	}
+	.lk-particles--near {
+		z-index: 2;
+		transform: translate(calc(var(--mouse-x, 0) * 1.6rem), calc(var(--mouse-y, 0) * 1.6rem));
 	}
 
-	/* The orb itself — radial mesh of logo accents, soft blurred. */
-	.lk-auth-orb {
+	.lk-particle {
 		position: absolute;
-		inset: 12%;
-		border-radius: 50%;
-		background:
-			radial-gradient(
-				circle at 28% 28%,
-				color-mix(in srgb, var(--color-logo-purple) 90%, transparent) 0%,
-				transparent 50%
-			),
-			radial-gradient(
-				circle at 72% 32%,
-				color-mix(in srgb, var(--color-logo-blue) 85%, transparent) 0%,
-				transparent 55%
-			),
-			radial-gradient(
-				circle at 50% 78%,
-				color-mix(in srgb, var(--color-logo-green) 70%, transparent) 0%,
-				transparent 55%
-			),
-			radial-gradient(
-				circle at center,
-				color-mix(in srgb, var(--color-brand-600) 80%, transparent) 0%,
-				color-mix(in srgb, var(--color-brand-700) 90%, transparent) 70%
-			);
-		filter: blur(28px) saturate(1.15);
-		animation: lk-orb-spin 32s linear infinite;
+		left: var(--x);
+		top: var(--y);
+		width: var(--len);
+		height: 2px;
+		border-radius: 9999px;
+		transform: rotate(var(--rot));
+		opacity: 0.5;
+		animation: lk-particle-drift 6s ease-in-out infinite;
+		animation-delay: var(--delay);
 	}
 
-	/* Specular highlight on top of the orb — gives the impression of
-	   a glossy sphere with a top-left light source. */
-	.lk-auth-orb-highlight {
-		position: absolute;
-		inset: 0;
-		border-radius: 50%;
-		background: radial-gradient(
-			ellipse 60% 50% at 30% 22%,
-			color-mix(in srgb, var(--color-bg-elevated) 22%, transparent) 0%,
-			transparent 55%
-		);
-		filter: blur(4px);
-		mix-blend-mode: screen;
-		pointer-events: none;
+	/* Depth tweaks — near particles are slightly larger + more opaque
+	   than far ones, reinforcing the parallax layering. */
+	.lk-particles--far .lk-particle {
+		opacity: 0.35;
+		transform: rotate(var(--rot)) scale(0.75);
+	}
+	.lk-particles--near .lk-particle {
+		opacity: 0.7;
+		height: 2.5px;
 	}
 
-	/* Inner mesh layer rotating opposite direction at a different
-	   period — creates non-repeating colour flow at the surface. */
-	.lk-auth-orb-mesh {
-		position: absolute;
-		inset: 0;
-		border-radius: 50%;
-		background:
-			radial-gradient(
-				circle at 70% 70%,
-				color-mix(in srgb, var(--color-logo-purple) 55%, transparent) 0%,
-				transparent 40%
-			),
-			radial-gradient(
-				circle at 30% 80%,
-				color-mix(in srgb, var(--color-logo-blue) 60%, transparent) 0%,
-				transparent 45%
-			),
-			radial-gradient(
-				circle at 80% 30%,
-				color-mix(in srgb, var(--color-logo-green) 45%, transparent) 0%,
-				transparent 40%
-			);
-		filter: blur(36px);
-		mix-blend-mode: screen;
-		animation: lk-orb-spin-rev 24s linear infinite;
+	.lk-particle--neutral {
+		background: color-mix(in srgb, var(--color-fg) 35%, transparent);
+	}
+	.lk-particle--purple {
+		background: var(--color-logo-purple);
+	}
+	.lk-particle--blue {
+		background: var(--color-logo-blue);
+	}
+	.lk-particle--green {
+		background: color-mix(in srgb, var(--color-logo-green) 90%, black);
 	}
 
-	/* Orbit rings — concentric thin circles around the orb, slowly
-	   counter-rotating. Drawn with conic-gradient + radial mask so
-	   they look like fine lines, not solid discs. */
-	.lk-auth-orb-ring {
-		position: absolute;
-		left: 50%;
-		top: 50%;
-		border-radius: 50%;
-		transform: translate(-50%, -50%);
-		pointer-events: none;
-		border: 1px solid color-mix(in srgb, var(--color-bg-elevated) 8%, transparent);
-		background: conic-gradient(
-			from 0deg,
-			color-mix(in srgb, var(--color-logo-purple) 12%, transparent) 0deg,
-			transparent 90deg,
-			color-mix(in srgb, var(--color-logo-blue) 10%, transparent) 180deg,
-			transparent 270deg,
-			color-mix(in srgb, var(--color-logo-purple) 12%, transparent) 360deg
-		);
-		mask-image: radial-gradient(circle, transparent 49.5%, black 50%, black 50.5%, transparent 51%);
-		-webkit-mask-image: radial-gradient(
-			circle,
-			transparent 49.5%,
-			black 50%,
-			black 50.5%,
-			transparent 51%
-		);
-	}
-	.lk-auth-orb-ring--outer {
-		width: 132%;
-		height: 132%;
-		animation: lk-orb-spin 60s linear infinite reverse;
-	}
-	.lk-auth-orb-ring--inner {
-		width: 112%;
-		height: 112%;
-		animation: lk-orb-spin 40s linear infinite;
-	}
-
-	@keyframes lk-orb-spin {
-		from {
-			transform: rotate(0deg);
+	@keyframes lk-particle-drift {
+		0%,
+		100% {
+			translate: 0 0;
 		}
-		to {
-			transform: rotate(360deg);
-		}
-	}
-	@keyframes lk-orb-spin-rev {
-		from {
-			transform: rotate(0deg);
-		}
-		to {
-			transform: rotate(-360deg);
+		50% {
+			translate: 0 -3px;
 		}
 	}
 
-	/* Note: the orb-stage's own transform (mouse drift) wraps these
-	   children, so each child's rotate animation composes correctly
-	   inside the translated parent. */
-	.lk-auth-orb-ring--outer,
-	.lk-auth-orb-ring--inner {
-		/* Rings are positioned via translate(-50%, -50%) on the
-		   ::before/element transform; rotate animation overrides on
-		   keyframe execution. To preserve centring, animate via the
-		   `rotate` property (not transform) so the translate stays. */
-		animation-name: lk-orb-ring-rotate;
-	}
-	.lk-auth-orb-ring--outer {
-		animation: lk-orb-ring-rotate 60s linear infinite reverse;
-	}
-	.lk-auth-orb-ring--inner {
-		animation: lk-orb-ring-rotate 40s linear infinite;
-	}
-
-	@keyframes lk-orb-ring-rotate {
-		from {
-			rotate: 0deg;
-		}
-		to {
-			rotate: 360deg;
-		}
-	}
-
-	/* ── Reduced motion: kill rotation + drift. ── */
+	/* ── Reduced motion ── */
 	@media (prefers-reduced-motion: reduce) {
-		.lk-auth-orb,
-		.lk-auth-orb-mesh,
-		.lk-auth-orb-ring--outer,
-		.lk-auth-orb-ring--inner {
+		.lk-particle {
 			animation: none;
 		}
-		.lk-orb-drift {
-			transform: translate(-50%, -50%);
+		.lk-particles--far,
+		.lk-particles--mid,
+		.lk-particles--near {
+			transform: none;
 		}
 	}
 </style>
