@@ -79,7 +79,10 @@
 			['--color-fg-muted', '--color-brand-600'],
 			['--color-logo-green-on-light', '--color-fg']
 		];
-		const singleColours = [
+		// Tablet palette — branded single-tone discs (purple / blue /
+		// green / dark). Crosses don't use this palette; they're always
+		// medical-red so the medical-plus shape reads canonically.
+		const tabletColours = [
 			'--color-logo-purple',
 			'--color-brand-600',
 			'--color-logo-green-on-light',
@@ -109,8 +112,11 @@
 				const kind = k < 0.15 ? 'cross' : k < 0.3 ? 'tablet' : k < 0.45 ? 'tracer' : 'pill';
 				let c1: string;
 				let c2: string;
-				if (kind === 'cross' || kind === 'tablet') {
-					c1 = singleColours[Math.floor(rand() * singleColours.length)];
+				if (kind === 'cross') {
+					c1 = '--color-medical-red';
+					c2 = c1;
+				} else if (kind === 'tablet') {
+					c1 = tabletColours[Math.floor(rand() * tabletColours.length)];
 					c2 = c1;
 				} else {
 					const pair = pillPairs[Math.floor(rand() * pillPairs.length)];
@@ -121,7 +127,7 @@
 				return {
 					x,
 					y,
-					length: 9 + rand() * 11,
+					length: 6 + rand() * 8,
 					rotation,
 					delay: rand() * 2,
 					depth: ring.depth,
@@ -342,6 +348,10 @@
 		--color-logo-purple: oklch(0.58 0.18 305); /* #a05dce LK mark highlight */
 		--color-logo-blue: oklch(0.41 0.2 269); /* #3146a5 LK mark base = brand-600 */
 		--color-logo-green-on-light: oklch(0.55 0.21 142);
+		/* Medical-cross red — iconic pharma signal colour. Used only on
+		   the cross-shaped particles so the medical-plus reads as a
+		   canonical red cross, not just another branded shape. */
+		--color-medical-red: oklch(0.58 0.22 27);
 
 		--color-brand-heading: var(--color-brand-700);
 		--color-brand-link: var(--color-brand-600);
@@ -684,7 +694,7 @@
 		--push-x: 0vw;
 		--push-y: 0vw;
 		inline-size: var(--len);
-		block-size: 5px;
+		block-size: 3.5px;
 		border-radius: 9999px;
 		transform: rotate(var(--rot)) translate(var(--push-x), var(--push-y)) scale(var(--scale));
 		transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
@@ -695,11 +705,11 @@
 	.lk-particles--far .lk-particle {
 		--scale: 0.85;
 		opacity: 0.6;
-		block-size: 4px;
+		block-size: 2.5px;
 	}
 	.lk-particles--near .lk-particle {
 		opacity: 1;
-		block-size: 6px;
+		block-size: 4.5px;
 	}
 
 	/* Capsule pill — two-tone with a centre seam, like an actual
@@ -739,20 +749,20 @@
 	/* Tracer = long capsule — eye-catching streak. */
 	.lk-particle--tracer {
 		inline-size: calc(var(--len) * 2);
-		block-size: 6px;
+		block-size: 4.5px;
 	}
 	.lk-particles--far .lk-particle--tracer {
-		block-size: 5px;
+		block-size: 3.5px;
 	}
 	.lk-particles--near .lk-particle--tracer {
-		block-size: 7px;
+		block-size: 5.5px;
 	}
 
 	/* Medical plus / cross — single-colour, mask-shaped. The bg colour
 	   comes from --c1 (set inline); the SVG mask cuts it to a +. */
 	.lk-particle--cross {
-		inline-size: 11px;
-		block-size: 11px;
+		inline-size: 9px;
+		block-size: 9px;
 		border-radius: 0;
 		background: var(--c1);
 		mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M4 0h2v4h4v2H6v4H4V6H0V4h4z'/%3E%3C/svg%3E");
@@ -763,30 +773,30 @@
 		-webkit-mask-repeat: no-repeat;
 	}
 	.lk-particles--far .lk-particle--cross {
-		inline-size: 9px;
-		block-size: 9px;
+		inline-size: 7px;
+		block-size: 7px;
 	}
 	.lk-particles--near .lk-particle--cross {
-		inline-size: 13px;
-		block-size: 13px;
+		inline-size: 11px;
+		block-size: 11px;
 	}
 
 	/* Tablet = round disc with a centre score line — the classic
 	   pressed-tablet shape. Single-coloured from --c1, with a score
 	   ::before line and a gloss ::after dome highlight. */
 	.lk-particle--tablet {
-		inline-size: 10px;
-		block-size: 10px;
+		inline-size: 8px;
+		block-size: 8px;
 		border-radius: 50%;
 		background: var(--c1);
 	}
 	.lk-particles--far .lk-particle--tablet {
-		inline-size: 8px;
-		block-size: 8px;
+		inline-size: 6px;
+		block-size: 6px;
 	}
 	.lk-particles--near .lk-particle--tablet {
-		inline-size: 12px;
-		block-size: 12px;
+		inline-size: 10px;
+		block-size: 10px;
 	}
 	.lk-particle--tablet::before {
 		content: '';
