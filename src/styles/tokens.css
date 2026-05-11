@@ -152,21 +152,28 @@
 	--color-gray-900: oklch(0.18 0.01 256);
 	--color-gray-950: oklch(0.12 0.01 256);
 
-	/* ═══ SURFACE / FOREGROUND — Blazor-aligned cool-grey palette
-	 * Per ThemeBuilder.cs PaletteLight values:
-	 *   Background = #F5F8FA  slightly cool app background
-	 *   Surface    = #FFFFFF  cards, modals, elevated containers
-	 *   TextPrimary = #0F172A  near-black with cool tint
-	 *   TextSecondary = #475569  slate-600
-	 *   TextDisabled = #94A3B8  slate-400
-	 *   Divider = #E2E8F0  slate-200
+	/* ═══ SURFACE / FOREGROUND — soft off-white with faint brand tint.
+	 * Industry canon for low-fatigue B2B surfaces uses 95-97% lightness,
+	 * never pure white:
+	 *   Stripe Dashboard   #f6f9fc  (96% L, cool blue tint)
+	 *   GitHub             #f6f8fa  (96% L, cool blue tint)
+	 *   iOS Tertiary Sys.  #f2f2f7  (95% L, cool gray)
+	 * LeadKart matches this with a faint brand-violet (hue 268) tint
+	 * that ties the canvas to the rest of the brand-coloured palette.
 	 *
-	 * Dark theme overrides via :root.dark in base.css. Tokens, not raw
-	 * colors — components consume `bg-bg-elevated`, `text-fg-muted`. */
-	--color-bg: oklch(0.97 0.005 245); /* ≈ #F5F8FA cool background */
-	--color-bg-subtle: oklch(0.95 0.005 245);
-	--color-bg-muted: oklch(0.93 0.008 245);
-	--color-bg-elevated: oklch(1 0 0); /* white surface */
+	 *   --color-bg          ≈ #f3f4f8 (96% L, brand-violet)  page canvas
+	 *   --color-bg-elevated  = #ffffff (100% L)              cards / modals
+	 * The canvas / elevated gap is what gives cards their lift-off-the-
+	 * page feel — modals + cards pop because they're brighter than the
+	 * surface they sit on.
+	 *
+	 * Light-only since 2026-05-12 (dark mode removed; pharma B2B canon).
+	 * Tokens not raw colors — components consume `bg-bg-elevated`,
+	 * `text-fg-muted`. */
+	--color-bg: oklch(0.96 0.008 268); /* soft off-white, brand-tinted */
+	--color-bg-subtle: oklch(0.93 0.008 268);
+	--color-bg-muted: oklch(0.9 0.008 268);
+	--color-bg-elevated: oklch(1 0 0); /* pure white — cards lift here */
 
 	--color-fg: oklch(0.18 0.02 250); /* ≈ #0F172A */
 	--color-fg-muted: oklch(0.42 0.02 250); /* ≈ #475569 */
@@ -176,11 +183,9 @@
 	--color-border: oklch(0.9 0.01 245); /* ≈ #E2E8F0 */
 	--color-border-strong: oklch(0.78 0.01 245);
 
-	/* ═══ SEMANTIC BRAND-TEXT — auto-flip per theme.
-	 * Forms / headings / links use these in place of raw brand-700/600
-	 * so the dark navy reads against a light bg in light mode AND the
-	 * lighter brand-300/400 reads against a dark bg in dark mode. Dark
-	 * overrides live in base.css :root.dark. ─────────────────── */
+	/* ═══ SEMANTIC BRAND-TEXT — used in place of raw brand-700/600
+	 * Forms / headings / links read these aliases so a brand re-skin
+	 * via the customiser flows through. ─────────────────── */
 	--color-brand-heading: var(--color-brand-700);
 	--color-brand-link: var(--color-brand-600);
 	--color-brand-link-hover: var(--color-brand-700);

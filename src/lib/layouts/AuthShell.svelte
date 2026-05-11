@@ -295,31 +295,11 @@
 	     rather than mint new ones, so modal + pills + canvas all inherit
 	     the standard surface hierarchy without one-off names. ─── */
 	.lk-auth {
-		/* Canvas (--color-bg) — soft off-white with a faint brand-blue
-		   tint. Industry canon for low-fatigue B2B surfaces uses 95-97%
-		   lightness, not pure 100%:
-		      Stripe Dashboard   #f6f9fc  (96% L, cool blue tint)
-		      GitHub             #f6f8fa  (96% L, cool blue tint)
-		      iOS Tertiary System #f2f2f7 (95% L, cool gray)
-		      Vercel             #fafafa  (98% L, true gray)
-		   Pure white (oklch 1 0 0) at full screen brightness creates
-		   glare on prolonged reading; 4 percentage points off white is
-		   the standard remedy. Brand-violet hue (268) keeps it tonally
-		   tied to the rest of the surface palette without reading as
-		   "tinted".
-		   Modal + pills (--color-bg-elevated) stay pure white so they
-		   lift visibly off the canvas. */
-		--color-bg: oklch(0.96 0.008 268);
-		--color-bg-subtle: oklch(0.93 0.008 268);
-		--color-bg-muted: oklch(0.9 0.008 268);
-		--color-bg-elevated: oklch(1 0 0);
-		--color-fg: oklch(0.2 0.02 256);
-		--color-fg-muted: oklch(0.45 0.02 256);
-		--color-fg-subtle: oklch(0.6 0.02 256);
-		--color-border: oklch(0.9 0.01 256);
-		--color-border-strong: oklch(0.8 0.01 256);
+		/* Surface + foreground tokens inherit from the global token
+		   layer (tokens.css), which now defines the soft brand-tinted
+		   off-white canvas globally. No per-shell override needed.
 
-		/* Brand stops are derived DIRECTLY from the LeadKart logo asset
+		   Brand stops are derived DIRECTLY from the LeadKart logo asset
 		   so the entire page reads as one colour family with the
 		   wordmark — text matches wordmark, button matches the logo
 		   "LK" mark, no orphan blues. */
