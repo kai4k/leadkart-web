@@ -230,14 +230,20 @@
 		--color-border: oklch(0.9 0.01 256);
 		--color-border-strong: oklch(0.8 0.01 256);
 
-		--color-brand-600: oklch(0.43 0.19 264); /* #1140b6 signin button */
-		--color-brand-700: oklch(0.3 0.2 270); /* #00297d signin text */
-		--color-brand-800: oklch(0.24 0.16 272); /* deep stop */
+		/* Brand stops are derived DIRECTLY from the LeadKart logo asset
+		   so the entire page reads as one colour family with the
+		   wordmark — text matches wordmark, button matches the logo
+		   "LK" mark, no orphan blues. */
+		--color-brand-600: oklch(0.41 0.2 269); /* #3146a5 logo mark blue → button + links */
+		--color-brand-700: oklch(
+			0.33 0.1 296
+		); /* #47356b logo wordmark dark → headings + body emphasis */
+		--color-brand-800: oklch(0.27 0.09 296); /* derived darker wordmark stop */
 
-		/* Logo palette — true colours, with explicit on-light derivatives
+		/* Logo palette — true asset colours, with on-light derivatives
 		   where raw chroma fails AA contrast against white. */
-		--color-logo-purple: oklch(0.58 0.18 305); /* #a05dce */
-		--color-logo-blue: oklch(0.41 0.2 269); /* #3146a5 */
+		--color-logo-purple: oklch(0.58 0.18 305); /* #a05dce LK mark highlight */
+		--color-logo-blue: oklch(0.41 0.2 269); /* #3146a5 LK mark base = brand-600 */
 		--color-logo-green-on-light: oklch(0.55 0.21 142);
 
 		--color-brand-heading: var(--color-brand-700);
