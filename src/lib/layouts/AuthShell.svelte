@@ -230,14 +230,15 @@
 		--color-border-strong: oklch(0.8 0.01 256);
 
 		/* Brand stops 600 + 700 pinned to the EXACT colours per the
-		   LeadKart brand spec (user-supplied 2026-05-10):
-		      Sign In button bg  → #00348d ≈ oklch(0.34 0.21 268)
-		      Sign In heading    → #00297d ≈ oklch(0.30 0.20 270)
-		   These are deep indigo-navy, more saturated than the global
-		   brand-600/700 tokens (which are oklch hue 260 navy-violet).
+		   LeadKart brand spec (user-supplied 2026-05-10 + revised
+		   2026-05-11 for the button stop):
+		      Sign In button bg + pill tint → #1140b6 ≈ oklch(0.43 0.19 264)
+		      Sign In heading               → #00297d ≈ oklch(0.30 0.20 270)
 		   Scoped here so the auth shell renders the canonical brand
-		   colours without re-pivoting the entire token system. */
-		--color-brand-600: oklch(0.34 0.21 268); /* #00348d signin button */
+		   colours without re-pivoting the entire token system. The
+		   brand-panel glass pills tint via this same token to stay
+		   DRY with the form-side button. */
+		--color-brand-600: oklch(0.43 0.19 264); /* #1140b6 signin button + pill tint */
 		--color-brand-700: oklch(0.3 0.2 270); /* #00297d signin text */
 		--color-brand-800: oklch(0.24 0.16 272); /* derived darker stop */
 
@@ -300,19 +301,19 @@
 		width: 100%;
 	}
 
-	/* ── Glass pill — hero text + tagline wrappers. Dark-glass treatment
-	     (brand-900 mix) so the white text reads with strong contrast
-	     over the purple-tinted illustration. Backdrop-filter blur +
-	     white top-sheen still give the frosted-glass feel; the border
-	     uses a faint white mix to outline the pill against the busy
-	     image. ── */
+	/* ── Glass pill — hero text + tagline wrappers. Brand-600 tinted
+	     glass (the signin button's blue, #1140b6) so the pills + button
+	     read as the same colour family. White text reads cleanly on the
+	     mid-saturation blue at 50% mix; backdrop-filter blur + white
+	     top-sheen keep the frosted-glass feel; the border uses a faint
+	     white mix to outline the pill against the image. ── */
 	.lk-auth-pill {
 		display: block;
 		width: fit-content;
 		max-width: 100%;
 		padding: 1.25em 1.5em;
 		border-radius: 1.5rem;
-		background: color-mix(in srgb, var(--color-brand-900) 38%, transparent);
+		background: color-mix(in srgb, var(--color-brand-600) 50%, transparent);
 		border: 1px solid color-mix(in srgb, var(--color-bg-elevated) 22%, transparent);
 		backdrop-filter: blur(20px) saturate(1.2);
 		-webkit-backdrop-filter: blur(20px) saturate(1.2);
@@ -351,7 +352,7 @@
 		gap: 0.75rem;
 		padding: 0.625rem 1rem;
 		border-radius: 0.875rem;
-		background: color-mix(in srgb, var(--color-brand-900) 32%, transparent);
+		background: color-mix(in srgb, var(--color-brand-600) 45%, transparent);
 		border: 1px solid color-mix(in srgb, var(--color-bg-elevated) 18%, transparent);
 		backdrop-filter: blur(16px) saturate(1.2);
 		-webkit-backdrop-filter: blur(16px) saturate(1.2);
@@ -364,7 +365,7 @@
 	@media (hover: hover) {
 		.lk-auth-feature:hover {
 			transform: translateX(0.25rem);
-			background: color-mix(in srgb, var(--color-brand-900) 48%, transparent);
+			background: color-mix(in srgb, var(--color-brand-600) 62%, transparent);
 		}
 	}
 	.lk-auth-feature::before {
@@ -437,10 +438,10 @@
 		pointer-events: none;
 	}
 
-	/* ── Floating glass cards — dark-glass over the purple-tinted
-	     illustration. White caption text with secondary-200 icon
-	     backdrop (the lighter green accent reads correctly on the
-	     dark pill). ── */
+	/* ── Floating glass cards — brand-600 (#1140b6) tinted glass over
+	     the purple illustration. White caption text reads on the
+	     mid-saturation blue; secondary-100 icon chip preserves the
+	     green accent. ── */
 	.lk-auth-float {
 		position: absolute;
 		display: flex;
@@ -448,7 +449,7 @@
 		gap: 0.5rem;
 		padding: 0.5em 0.875em 0.5em 0.625em;
 		border-radius: 0.75rem;
-		background: color-mix(in srgb, var(--color-brand-900) 40%, transparent);
+		background: color-mix(in srgb, var(--color-brand-600) 55%, transparent);
 		border: 1px solid color-mix(in srgb, var(--color-bg-elevated) 18%, transparent);
 		backdrop-filter: blur(16px) saturate(1.3);
 		-webkit-backdrop-filter: blur(16px) saturate(1.3);
