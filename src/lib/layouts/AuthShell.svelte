@@ -52,10 +52,12 @@
 	let parallaxActive = $state(false);
 
 	/**
-	 * Pre-bucketed particle field. Deterministic seeded PRNG keeps SSR
-	 * pre-render byte-identical to client hydration. 120 particles for
-	 * full-viewport coverage; bucketed by depth in script (one filter
-	 * pass) instead of per-render in the template.
+	 * Pre-bucketed pharma-themed particle field. Deterministic seeded
+	 * PRNG keeps SSR pre-render byte-identical to client hydration.
+	 *
+	 * Each particle carries two colour tokens (--c1 / --c2) so pills +
+	 * tracers can render as two-tone capsules (classic pharma look) via
+	 * a gradient with a centre seam. Crosses use --c1 only.
 	 */
 	const { FAR, MID, NEAR } = (() => {
 		let seed = 7919;
@@ -63,25 +65,49 @@
 			seed = (seed * 9301 + 49297) % 233280;
 			return seed / 233280;
 		};
-		// Colour weighted toward neutrals so the logo accents read as
-		// deliberate moments, not visual noise.
-		const palette = ['neutral', 'neutral', 'neutral', 'purple', 'blue', 'green'];
+		// Two-tone pairs — each capsule reads as a distinct pharma pill.
+		// Variety includes saturated branded pairings + subdued
+		// gray-paired pairings to mimic the colour range of an actual
+		// pharma drawer.
+		const pillPairs: Array<[string, string]> = [
+			['--color-logo-purple', '--color-brand-600'],
+			['--color-brand-600', '--color-logo-green-on-light'],
+			['--color-logo-purple', '--color-logo-green-on-light'],
+			['--color-fg', '--color-logo-purple'],
+			['--color-fg-muted', '--color-brand-600'],
+			['--color-logo-green-on-light', '--color-fg']
+		];
+		const crossColours = [
+			'--color-logo-purple',
+			'--color-brand-600',
+			'--color-logo-green-on-light',
+			'--color-fg'
+		];
+
 		const all = Array.from({ length: 220 }, () => {
 			const d = rand();
 			const k = rand();
+			const kind = k < 0.15 ? 'cross' : k < 0.3 ? 'tracer' : 'pill';
+			let c1: string;
+			let c2: string;
+			if (kind === 'cross') {
+				c1 = crossColours[Math.floor(rand() * crossColours.length)];
+				c2 = c1;
+			} else {
+				const pair = pillPairs[Math.floor(rand() * pillPairs.length)];
+				c1 = pair[0];
+				c2 = pair[1];
+			}
 			return {
 				x: rand() * 100,
 				y: rand() * 100,
-				length: 8 + rand() * 10,
+				length: 9 + rand() * 11,
 				rotation: rand() * 360,
-				colour: palette[Math.floor(rand() * palette.length)],
 				delay: rand() * 2,
 				depth: d < 0.4 ? 'far' : d < 0.7 ? 'mid' : 'near',
-				// Pharma-themed particle mix:
-				//   70% pill   — short capsule (standard pharma pill)
-				//   15% tracer — long capsule, eye-catching streak
-				//   15% cross  — medical plus sign (mask-shaped)
-				kind: k < 0.15 ? 'cross' : k < 0.3 ? 'tracer' : 'pill'
+				kind,
+				c1,
+				c2
 			};
 		});
 		return {
@@ -149,24 +175,24 @@
 	<div class="lk-particles lk-particles--far" aria-hidden="true">
 		{#each FAR as p (p.x + '-' + p.y)}
 			<span
-				class="lk-particle lk-particle--{p.colour} lk-particle--{p.kind}"
-				style="--x:{p.x}%;--y:{p.y}%;--len:{p.length}px;--rot:{p.rotation}deg;--delay:{p.delay}s"
+				class="lk-particle lk-particle--{p.kind}"
+				style="--x:{p.x}%;--y:{p.y}%;--len:{p.length}px;--rot:{p.rotation}deg;--delay:{p.delay}s;--c1:var({p.c1});--c2:var({p.c2});"
 			></span>
 		{/each}
 	</div>
 	<div class="lk-particles lk-particles--mid" aria-hidden="true">
 		{#each MID as p (p.x + '-' + p.y)}
 			<span
-				class="lk-particle lk-particle--{p.colour} lk-particle--{p.kind}"
-				style="--x:{p.x}%;--y:{p.y}%;--len:{p.length}px;--rot:{p.rotation}deg;--delay:{p.delay}s"
+				class="lk-particle lk-particle--{p.kind}"
+				style="--x:{p.x}%;--y:{p.y}%;--len:{p.length}px;--rot:{p.rotation}deg;--delay:{p.delay}s;--c1:var({p.c1});--c2:var({p.c2});"
 			></span>
 		{/each}
 	</div>
 	<div class="lk-particles lk-particles--near" aria-hidden="true">
 		{#each NEAR as p (p.x + '-' + p.y)}
 			<span
-				class="lk-particle lk-particle--{p.colour} lk-particle--{p.kind}"
-				style="--x:{p.x}%;--y:{p.y}%;--len:{p.length}px;--rot:{p.rotation}deg;--delay:{p.delay}s"
+				class="lk-particle lk-particle--{p.kind}"
+				style="--x:{p.x}%;--y:{p.y}%;--len:{p.length}px;--rot:{p.rotation}deg;--delay:{p.delay}s;--c1:var({p.c1});--c2:var({p.c2});"
 			></span>
 		{/each}
 	</div>
@@ -597,56 +623,90 @@
 	}
 
 	/* ─── Pharma-themed particle shapes ─────────────────────────────
-	     Base = capsule pill (rounded-rect, tall enough to read as a
-	     pill rather than a dash). Variants:
-	       .lk-particle--pill   → default capsule (taller than the old
-	                              dashes — actually reads as pharma)
-	       .lk-particle--tracer → longer + thicker capsule (long pill)
-	       .lk-particle--cross  → medical plus sign via SVG mask
+	     Each particle carries --c1 / --c2 inline (set by the template
+	     from the deterministic PRNG output).
+	       .lk-particle--pill   → two-tone capsule with centre seam +
+	                              top gloss highlight (3D pharma look)
+	       .lk-particle--tracer → longer two-tone capsule with same
+	                              treatment
+	       .lk-particle--cross  → medical plus sign via SVG mask,
+	                              single-coloured from --c1
 	   ─────────────────────────────────────────────────────────── */
 	.lk-particle {
 		position: absolute;
 		left: var(--x);
 		top: var(--y);
 		inline-size: var(--len);
-		block-size: 4px;
+		block-size: 5px;
 		border-radius: 9999px;
 		transform: rotate(var(--rot));
-		opacity: 0.7;
+		opacity: 0.85;
 		animation: lk-particle-drift 5s ease-in-out infinite;
 		animation-delay: var(--delay);
 	}
 	.lk-particles--far .lk-particle {
-		opacity: 0.45;
-		block-size: 3px;
+		opacity: 0.6;
+		block-size: 4px;
 		transform: rotate(var(--rot)) scale(0.85);
 	}
 	.lk-particles--near .lk-particle {
-		opacity: 0.9;
-		block-size: 5px;
-	}
-
-	/* Tracer = long pill — eye-catching streak. */
-	.lk-particle--tracer {
-		inline-size: calc(var(--len) * 2);
-		block-size: 5px;
-	}
-	.lk-particles--far .lk-particle--tracer {
-		opacity: 0.65;
-		block-size: 4px;
-	}
-	.lk-particles--near .lk-particle--tracer {
 		opacity: 1;
 		block-size: 6px;
 	}
 
-	/* Medical plus / cross — inline SVG mask. Uses currentColor flow
-	   via the .lk-particle--{colour} class's background; mask just
-	   shapes it. */
+	/* Capsule pill — two-tone with a centre seam, like an actual
+	   gelatin capsule. Two halves of different brand colours separated
+	   by a thin dark seam (color-mixed from --color-fg). */
+	.lk-particle--pill,
+	.lk-particle--tracer {
+		background: linear-gradient(
+			90deg,
+			var(--c1) 0%,
+			var(--c1) 49%,
+			color-mix(in srgb, var(--color-fg) 35%, transparent) 49.5%,
+			color-mix(in srgb, var(--color-fg) 35%, transparent) 50.5%,
+			var(--c2) 51%,
+			var(--c2) 100%
+		);
+	}
+
+	/* Gloss highlight — a curved top sheen that sells the 3D capsule
+	   illusion. Pseudo-element inset 0 over the pill, gradient of
+	   bg-elevated fading to transparent. */
+	.lk-particle--pill::after,
+	.lk-particle--tracer::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+		background: linear-gradient(
+			180deg,
+			color-mix(in srgb, var(--color-bg-elevated) 50%, transparent) 0%,
+			color-mix(in srgb, var(--color-bg-elevated) 15%, transparent) 35%,
+			transparent 65%
+		);
+		pointer-events: none;
+	}
+
+	/* Tracer = long capsule — eye-catching streak. */
+	.lk-particle--tracer {
+		inline-size: calc(var(--len) * 2);
+		block-size: 6px;
+	}
+	.lk-particles--far .lk-particle--tracer {
+		block-size: 5px;
+	}
+	.lk-particles--near .lk-particle--tracer {
+		block-size: 7px;
+	}
+
+	/* Medical plus / cross — single-colour, mask-shaped. The bg colour
+	   comes from --c1 (set inline); the SVG mask cuts it to a +. */
 	.lk-particle--cross {
-		inline-size: 10px;
-		block-size: 10px;
+		inline-size: 11px;
+		block-size: 11px;
 		border-radius: 0;
+		background: var(--c1);
 		mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M4 0h2v4h4v2H6v4H4V6H0V4h4z'/%3E%3C/svg%3E");
 		-webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M4 0h2v4h4v2H6v4H4V6H0V4h4z'/%3E%3C/svg%3E");
 		mask-size: contain;
@@ -655,25 +715,12 @@
 		-webkit-mask-repeat: no-repeat;
 	}
 	.lk-particles--far .lk-particle--cross {
-		inline-size: 8px;
-		block-size: 8px;
+		inline-size: 9px;
+		block-size: 9px;
 	}
 	.lk-particles--near .lk-particle--cross {
-		inline-size: 12px;
-		block-size: 12px;
-	}
-
-	.lk-particle--neutral {
-		background: color-mix(in srgb, var(--color-fg) 32%, transparent);
-	}
-	.lk-particle--purple {
-		background: var(--color-logo-purple);
-	}
-	.lk-particle--blue {
-		background: var(--color-logo-blue);
-	}
-	.lk-particle--green {
-		background: var(--color-logo-green-on-light);
+		inline-size: 13px;
+		block-size: 13px;
 	}
 
 	@keyframes lk-particle-drift {
