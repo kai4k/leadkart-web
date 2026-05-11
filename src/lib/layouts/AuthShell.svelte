@@ -125,15 +125,15 @@
 			<Logo size="xl" />
 		</div>
 
-		<!-- Brand text content (3 stacked light-glass pills) -->
+		<!-- Brand text content (3 stacked dark-glass pills, white text) -->
 		<div class="lk-auth-brand-content lk-parallax-slow">
 			<div class="lk-auth-pill lk-auth-pill-hero">
-				<p class="display-2 leading-[1.15] text-[var(--color-brand-700)]">
+				<p class="display-2 leading-[1.15] text-white">
 					Pharma Lead<br />Management,<br />Simplified.
 				</p>
 			</div>
 			<div class="lk-auth-pill mb-8">
-				<p class="body-base text-[var(--color-brand-800)]">
+				<p class="body-base text-white/90">
 					End-to-end CRM, orders, inventory &amp; dispatch — built for India's PCD pharma market.
 				</p>
 			</div>
@@ -143,19 +143,19 @@
 					<span class="lk-auth-feature-icon" aria-hidden="true">
 						<ShieldCheck size={16} />
 					</span>
-					<span class="body-sm text-[var(--color-brand-800)]">Enterprise-grade security</span>
+					<span class="body-sm text-white/90">Enterprise-grade security</span>
 				</div>
 				<div class="lk-auth-feature">
 					<span class="lk-auth-feature-icon" aria-hidden="true">
 						<TrendingUp size={16} />
 					</span>
-					<span class="body-sm text-[var(--color-brand-800)]">Real-time lead tracking</span>
+					<span class="body-sm text-white/90">Real-time lead tracking</span>
 				</div>
 				<div class="lk-auth-feature">
 					<span class="lk-auth-feature-icon" aria-hidden="true">
 						<Truck size={16} />
 					</span>
-					<span class="body-sm text-[var(--color-brand-800)]">Order-to-dispatch pipeline</span>
+					<span class="body-sm text-white/90">Order-to-dispatch pipeline</span>
 				</div>
 			</div>
 		</div>
@@ -188,9 +188,7 @@
 		     them — removed. -->
 
 		<!-- Footer copyright -->
-		<div class="lk-auth-footer caption text-[var(--color-brand-700)] opacity-70">
-			© LeadKart 2026
-		</div>
+		<div class="lk-auth-footer caption text-white opacity-70">© LeadKart 2026</div>
 	</section>
 
 	<!-- ═══ FORM PANEL — full-width on mobile, half on desktop.
@@ -302,25 +300,25 @@
 		width: 100%;
 	}
 
-	/* ── Glass pill — hero text + tagline wrappers. Much lower white
-	     mix (40% bg-elevated vs prior 70%) so the illustration shows
-	     through behind the text rather than being masked. Backdrop-
-	     filter blur still gives the "frosted glass over photograph"
-	     effect; the border + shadow keep the pill from disappearing
-	     into the wash. ── */
+	/* ── Glass pill — hero text + tagline wrappers. Dark-glass treatment
+	     (brand-900 mix) so the white text reads with strong contrast
+	     over the purple-tinted illustration. Backdrop-filter blur +
+	     white top-sheen still give the frosted-glass feel; the border
+	     uses a faint white mix to outline the pill against the busy
+	     image. ── */
 	.lk-auth-pill {
 		display: block;
 		width: fit-content;
 		max-width: 100%;
 		padding: 1.25em 1.5em;
 		border-radius: 1.5rem;
-		background: color-mix(in srgb, var(--color-bg-elevated) 40%, transparent);
-		border: 1px solid color-mix(in srgb, var(--color-brand-200) 60%, transparent);
+		background: color-mix(in srgb, var(--color-brand-900) 38%, transparent);
+		border: 1px solid color-mix(in srgb, var(--color-bg-elevated) 22%, transparent);
 		backdrop-filter: blur(20px) saturate(1.2);
 		-webkit-backdrop-filter: blur(20px) saturate(1.2);
 		position: relative;
 		overflow: hidden;
-		box-shadow: 0 4px 16px color-mix(in srgb, var(--color-brand-900) 10%, transparent);
+		box-shadow: 0 4px 16px color-mix(in srgb, var(--color-brand-900) 25%, transparent);
 	}
 	.lk-auth-pill::before {
 		content: '';
@@ -331,7 +329,7 @@
 		height: 50%;
 		background: linear-gradient(
 			180deg,
-			color-mix(in srgb, var(--color-bg-elevated) 50%, transparent) 0%,
+			color-mix(in srgb, var(--color-bg-elevated) 18%, transparent) 0%,
 			transparent 100%
 		);
 		border-radius: 1.5rem 1.5rem 0 0;
@@ -353,8 +351,8 @@
 		gap: 0.75rem;
 		padding: 0.625rem 1rem;
 		border-radius: 0.875rem;
-		background: color-mix(in srgb, var(--color-bg-elevated) 35%, transparent);
-		border: 1px solid color-mix(in srgb, var(--color-brand-200) 55%, transparent);
+		background: color-mix(in srgb, var(--color-brand-900) 32%, transparent);
+		border: 1px solid color-mix(in srgb, var(--color-bg-elevated) 18%, transparent);
 		backdrop-filter: blur(16px) saturate(1.2);
 		-webkit-backdrop-filter: blur(16px) saturate(1.2);
 		position: relative;
@@ -366,7 +364,7 @@
 	@media (hover: hover) {
 		.lk-auth-feature:hover {
 			transform: translateX(0.25rem);
-			background: color-mix(in srgb, var(--color-bg-elevated) 55%, transparent);
+			background: color-mix(in srgb, var(--color-brand-900) 48%, transparent);
 		}
 	}
 	.lk-auth-feature::before {
@@ -378,7 +376,7 @@
 		height: 50%;
 		background: linear-gradient(
 			180deg,
-			color-mix(in srgb, var(--color-bg-elevated) 40%, transparent) 0%,
+			color-mix(in srgb, var(--color-bg-elevated) 15%, transparent) 0%,
 			transparent 100%
 		);
 		border-radius: 0.875rem 0.875rem 0 0;
@@ -396,10 +394,15 @@
 		flex-shrink: 0;
 	}
 
-	/* ── Illustration — full-bleed bg with radial mask + tinted glass ── */
+	/* ── Illustration — full-bleed bg with radial mask + tinted glass.
+	     Oversized 4rem in every direction (`inset: -4rem`) so the
+	     parallax translate (up to ±3rem at the medium layer) never
+	     exposes the panel edges. The brand panel itself has
+	     `overflow: hidden` from its Tailwind class, so the overhang is
+	     clipped — it just provides slack for the parallax to consume. */
 	.lk-auth-illustration {
 		position: absolute;
-		inset: 0;
+		inset: -4rem;
 		z-index: 1;
 		pointer-events: none;
 		overflow: hidden;
@@ -434,10 +437,10 @@
 		pointer-events: none;
 	}
 
-	/* ── Floating glass cards — bobbing animation. Light-glass on the
-	     light brand panel: 70% bg-elevated mix with brand-100 border,
-	     brand-700 typography, secondary-100 icon backdrop for the
-	     green accent. ── */
+	/* ── Floating glass cards — dark-glass over the purple-tinted
+	     illustration. White caption text with secondary-200 icon
+	     backdrop (the lighter green accent reads correctly on the
+	     dark pill). ── */
 	.lk-auth-float {
 		position: absolute;
 		display: flex;
@@ -445,18 +448,18 @@
 		gap: 0.5rem;
 		padding: 0.5em 0.875em 0.5em 0.625em;
 		border-radius: 0.75rem;
-		background: color-mix(in srgb, var(--color-bg-elevated) 40%, transparent);
-		border: 1px solid color-mix(in srgb, var(--color-brand-200) 50%, transparent);
+		background: color-mix(in srgb, var(--color-brand-900) 40%, transparent);
+		border: 1px solid color-mix(in srgb, var(--color-bg-elevated) 18%, transparent);
 		backdrop-filter: blur(16px) saturate(1.3);
 		-webkit-backdrop-filter: blur(16px) saturate(1.3);
 		white-space: nowrap;
 		z-index: 5;
 		pointer-events: none;
 		box-shadow:
-			0 4px 16px color-mix(in srgb, var(--color-brand-900) 10%, transparent),
-			inset 0 1px 0 color-mix(in srgb, var(--color-bg-elevated) 60%, transparent);
+			0 4px 16px color-mix(in srgb, var(--color-brand-900) 25%, transparent),
+			inset 0 1px 0 color-mix(in srgb, var(--color-bg-elevated) 22%, transparent);
 		overflow: hidden;
-		color: var(--color-brand-700);
+		color: var(--color-bg-elevated);
 	}
 	.lk-auth-float::before {
 		content: '';
@@ -467,7 +470,7 @@
 		height: 50%;
 		background: linear-gradient(
 			180deg,
-			color-mix(in srgb, var(--color-bg-elevated) 35%, transparent) 0%,
+			color-mix(in srgb, var(--color-bg-elevated) 14%, transparent) 0%,
 			transparent 100%
 		);
 		border-radius: 0.75rem 0.75rem 0 0;
