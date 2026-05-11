@@ -51,19 +51,17 @@
 	let canvas: HTMLElement | undefined = $state();
 
 	/**
-	 * Concentric-ring particle layout. 4 rings of pharma shapes spaced
-	 * evenly around (50%, 50%) with small angular + radial jitter for
-	 * organic feel. Inner rings = "near" depth (largest/brightest);
-	 * outer rings = "far" (smallest/faintest). Particle rotation is
-	 * tangent-to-the-ring so capsules visually follow the circle's
-	 * curve.
+	 * Scattered pharma-particle field. Random x / y across the viewport,
+	 * random rotation, depth distributed roughly 40% far / 30% mid /
+	 * 30% near (smaller, fainter particles dominate the bg).
 	 *
 	 * Deterministic seeded PRNG → SSR pre-render byte-identical to
 	 * client hydration.
 	 *
 	 * Each particle carries two colour tokens (--c1 / --c2) so pills +
 	 * tracers render as two-tone capsules; tablets + crosses use --c1
-	 * only.
+	 * only. Crosses are always medical red (signal colour); tablets
+	 * pick from the branded single-tone palette.
 	 */
 	const { FAR, MID, NEAR } = (() => {
 		let seed = 7919;
@@ -79,9 +77,6 @@
 			['--color-fg-muted', '--color-brand-600'],
 			['--color-logo-green-on-light', '--color-fg']
 		];
-		// Tablet palette — branded single-tone discs (purple / blue /
-		// green / dark). Crosses don't use this palette; they're always
-		// medical-red so the medical-plus shape reads canonically.
 		const tabletColours = [
 			'--color-logo-purple',
 			'--color-brand-600',
@@ -89,54 +84,35 @@
 			'--color-fg'
 		];
 
-		const rings: Array<{ radius: number; count: number; depth: 'near' | 'mid' | 'far' }> = [
-			{ radius: 18, count: 14, depth: 'near' },
-			{ radius: 30, count: 20, depth: 'mid' },
-			{ radius: 42, count: 26, depth: 'mid' },
-			{ radius: 54, count: 22, depth: 'far' }
-		];
-		// Total: 14 + 20 + 26 + 22 = 82 particles (down from 220).
-
-		const all = rings.flatMap((ring) =>
-			Array.from({ length: ring.count }, (_, i) => {
-				const baseAngle = (i / ring.count) * Math.PI * 2;
-				const angle = baseAngle + (rand() - 0.5) * 0.15;
-				const r = ring.radius + (rand() - 0.5) * 2.5;
-				const x = 50 + r * Math.cos(angle);
-				const y = 50 + r * Math.sin(angle);
-				// Tangent rotation (+ 90° because pills are horizontal by
-				// default) so capsules visually trace the ring's curve.
-				const rotation = (angle * 180) / Math.PI + 90 + (rand() - 0.5) * 25;
-
-				const k = rand();
-				const kind = k < 0.15 ? 'cross' : k < 0.3 ? 'tablet' : k < 0.45 ? 'tracer' : 'pill';
-				let c1: string;
-				let c2: string;
-				if (kind === 'cross') {
-					c1 = '--color-medical-red';
-					c2 = c1;
-				} else if (kind === 'tablet') {
-					c1 = tabletColours[Math.floor(rand() * tabletColours.length)];
-					c2 = c1;
-				} else {
-					const pair = pillPairs[Math.floor(rand() * pillPairs.length)];
-					c1 = pair[0];
-					c2 = pair[1];
-				}
-
-				return {
-					x,
-					y,
-					length: 6 + rand() * 8,
-					rotation,
-					delay: rand() * 2,
-					depth: ring.depth,
-					kind,
-					c1,
-					c2
-				};
-			})
-		);
+		const all = Array.from({ length: 90 }, () => {
+			const d = rand();
+			const k = rand();
+			const kind = k < 0.15 ? 'cross' : k < 0.3 ? 'tablet' : k < 0.45 ? 'tracer' : 'pill';
+			let c1: string;
+			let c2: string;
+			if (kind === 'cross') {
+				c1 = '--color-medical-red';
+				c2 = c1;
+			} else if (kind === 'tablet') {
+				c1 = tabletColours[Math.floor(rand() * tabletColours.length)];
+				c2 = c1;
+			} else {
+				const pair = pillPairs[Math.floor(rand() * pillPairs.length)];
+				c1 = pair[0];
+				c2 = pair[1];
+			}
+			return {
+				x: rand() * 100,
+				y: rand() * 100,
+				length: 6 + rand() * 8,
+				rotation: rand() * 360,
+				delay: rand() * 2,
+				depth: d < 0.4 ? 'far' : d < 0.7 ? 'mid' : 'near',
+				kind,
+				c1,
+				c2
+			};
+		});
 		return {
 			FAR: all.filter((p) => p.depth === 'far'),
 			MID: all.filter((p) => p.depth === 'mid'),
