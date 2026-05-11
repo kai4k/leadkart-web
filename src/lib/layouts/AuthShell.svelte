@@ -218,11 +218,18 @@
 
 <style>
 	/* ─── Theme tokens — locked to light values regardless of OS theme.
-	     Auth shells are brand-identity surfaces; they stay canonical. ─── */
+	     Auth shells are brand-identity surfaces; they stay canonical.
+	     We override existing semantic tokens (--color-bg / -bg-elevated)
+	     rather than mint new ones, so modal + pills + canvas all inherit
+	     the standard surface hierarchy without one-off names. ─── */
 	.lk-auth {
-		--color-bg: oklch(0.99 0 0);
-		--color-bg-subtle: oklch(0.97 0 0);
-		--color-bg-muted: oklch(0.95 0 0);
+		/* Canvas (--color-bg) — dulled off-white with a sliver of brand
+		   tint. Modal + pills (--color-bg-elevated, pure white) lift off
+		   it. Same semantic the global system uses, scoped tighter for
+		   the auth aesthetic. */
+		--color-bg: oklch(0.98 0.005 270);
+		--color-bg-subtle: oklch(0.96 0.005 270);
+		--color-bg-muted: oklch(0.94 0.005 270);
 		--color-bg-elevated: oklch(1 0 0);
 		--color-fg: oklch(0.2 0.02 256);
 		--color-fg-muted: oklch(0.45 0.02 256);
@@ -250,19 +257,11 @@
 		--color-brand-link: var(--color-brand-600);
 		--color-brand-link-hover: var(--color-brand-700);
 
-		/* Auth canvas — softened off-white with a sliver of brand tint
-		   so the surface doesn't read as harsh pure white. Modal card
-		   (AuthCard, uses --color-bg-elevated) stays pure oklch(1 0 0),
-		   so the modal visually lifts off the canvas. Three-step
-		   surface hierarchy: canvas (dulled) → mobile-banner (brand-50)
-		   → modal (pure white). */
-		--color-auth-canvas: oklch(0.98 0.005 270);
-
 		/* ─── Root container layout ─── */
 		position: relative;
 		min-block-size: 100dvh;
 		overflow: hidden;
-		background: var(--color-auth-canvas);
+		background: var(--color-bg);
 		color: var(--color-fg);
 	}
 
