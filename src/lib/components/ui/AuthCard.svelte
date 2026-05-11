@@ -83,13 +83,16 @@
 		height: 50%;
 		background: linear-gradient(
 			180deg,
-			rgb(255 255 255 / 0.5) 0%,
-			rgb(255 255 255 / 0.15) 30%,
+			color-mix(in srgb, var(--color-bg-elevated) 50%, transparent) 0%,
+			color-mix(in srgb, var(--color-bg-elevated) 15%, transparent) 30%,
 			transparent 100%
 		);
 		border-radius: 1.5rem 1.5rem 0 0;
 		pointer-events: none;
 		z-index: 0;
+		/* `black` here is mask intensity, not a colour — CSS masks take
+		   any opaque colour and only use the alpha channel. Keeping as
+		   `black` is canonical for masks (most readable intent). */
 		mask-image: linear-gradient(180deg, black 0%, transparent 70%);
 		-webkit-mask-image: linear-gradient(180deg, black 0%, transparent 70%);
 	}

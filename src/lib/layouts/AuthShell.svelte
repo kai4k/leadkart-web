@@ -66,8 +66,9 @@
 		// Colour weighted toward neutrals so the logo accents read as
 		// deliberate moments, not visual noise.
 		const palette = ['neutral', 'neutral', 'neutral', 'purple', 'blue', 'green'];
-		const all = Array.from({ length: 180 }, () => {
+		const all = Array.from({ length: 220 }, () => {
 			const d = rand();
+			const k = rand();
 			return {
 				x: rand() * 100,
 				y: rand() * 100,
@@ -75,7 +76,10 @@
 				rotation: rand() * 360,
 				colour: palette[Math.floor(rand() * palette.length)],
 				delay: rand() * 2,
-				depth: d < 0.4 ? 'far' : d < 0.7 ? 'mid' : 'near'
+				depth: d < 0.4 ? 'far' : d < 0.7 ? 'mid' : 'near',
+				// ~15% of particles are "tracers" — larger oriented streaks
+				// that catch the eye and break up the uniform-dash field.
+				kind: k < 0.15 ? 'tracer' : 'dash'
 			};
 		});
 		return {
@@ -129,11 +133,21 @@
 </script>
 
 <div bind:this={canvas} class="lk-auth" class:lk-parallax-active={parallaxActive}>
+	<!-- ── Ambient colour blobs — soft, heavily blurred, slow drift.
+	     Logo-palette tints. Sits behind the particle canvas to give
+	     subtle depth + colour movement across the whole viewport. ── -->
+	<div class="lk-auth-blobs" aria-hidden="true">
+		<span class="lk-blob lk-blob--purple"></span>
+		<span class="lk-blob lk-blob--blue"></span>
+		<span class="lk-blob lk-blob--green"></span>
+		<span class="lk-blob lk-blob--purple-sm"></span>
+	</div>
+
 	<!-- ── Viewport-wide particle canvas (decorative, aria-hidden) ── -->
 	<div class="lk-particles lk-particles--far" aria-hidden="true">
 		{#each FAR as p (p.x + '-' + p.y)}
 			<span
-				class="lk-particle lk-particle--{p.colour}"
+				class="lk-particle lk-particle--{p.colour} lk-particle--{p.kind}"
 				style="--x:{p.x}%;--y:{p.y}%;--len:{p.length}px;--rot:{p.rotation}deg;--delay:{p.delay}s"
 			></span>
 		{/each}
@@ -141,7 +155,7 @@
 	<div class="lk-particles lk-particles--mid" aria-hidden="true">
 		{#each MID as p (p.x + '-' + p.y)}
 			<span
-				class="lk-particle lk-particle--{p.colour}"
+				class="lk-particle lk-particle--{p.colour} lk-particle--{p.kind}"
 				style="--x:{p.x}%;--y:{p.y}%;--len:{p.length}px;--rot:{p.rotation}deg;--delay:{p.delay}s"
 			></span>
 		{/each}
@@ -149,7 +163,7 @@
 	<div class="lk-particles lk-particles--near" aria-hidden="true">
 		{#each NEAR as p (p.x + '-' + p.y)}
 			<span
-				class="lk-particle lk-particle--{p.colour}"
+				class="lk-particle lk-particle--{p.colour} lk-particle--{p.kind}"
 				style="--x:{p.x}%;--y:{p.y}%;--len:{p.length}px;--rot:{p.rotation}deg;--delay:{p.delay}s"
 			></span>
 		{/each}
@@ -268,7 +282,7 @@
 	/* ─── Mobile-only brand banner. ─── */
 	.lk-auth-mobile-banner {
 		position: relative;
-		z-index: 3;
+		z-index: 4;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
@@ -288,10 +302,12 @@
 		}
 	}
 
-	/* ─── Two-column layout grid (single col on mobile). ─── */
+	/* ─── Two-column layout grid (single col on mobile). z-index 5 keeps
+	     content above the entire decoration stack: blobs (0) + far / mid /
+	     near particles (1 / 2 / 3) + mobile banner (4). ─── */
 	.lk-auth-layout {
 		position: relative;
-		z-index: 2;
+		z-index: 5;
 		display: grid;
 		grid-template-columns: 1fr;
 		min-block-size: 100dvh;
@@ -465,6 +481,94 @@
 		color: var(--color-brand-600);
 	}
 
+	/* ─── Ambient colour blobs — soft, heavily blurred, slow drift.
+	     Four blobs in logo-palette colours floating slowly across the
+	     canvas. Sits at z-index 0 (deepest decoration), behind particles.
+	     Each blob has its own non-synchronised drift period so the
+	     overall motion never repeats visibly. ─── */
+	.lk-auth-blobs {
+		position: absolute;
+		inset: 0;
+		z-index: 0;
+		pointer-events: none;
+		overflow: hidden;
+	}
+	.lk-blob {
+		position: absolute;
+		border-radius: 50%;
+		filter: blur(80px);
+		will-change: transform;
+	}
+	.lk-blob--purple {
+		inline-size: 28rem;
+		block-size: 28rem;
+		top: -10%;
+		left: -8%;
+		background: color-mix(in srgb, var(--color-logo-purple) 55%, transparent);
+		animation: lk-blob-drift-a 30s ease-in-out infinite;
+	}
+	.lk-blob--blue {
+		inline-size: 32rem;
+		block-size: 32rem;
+		top: 20%;
+		right: -14%;
+		background: color-mix(in srgb, var(--color-brand-600) 45%, transparent);
+		animation: lk-blob-drift-b 36s ease-in-out infinite;
+	}
+	.lk-blob--green {
+		inline-size: 26rem;
+		block-size: 26rem;
+		bottom: -10%;
+		left: 18%;
+		background: color-mix(in srgb, var(--color-logo-green-on-light) 40%, transparent);
+		animation: lk-blob-drift-c 32s ease-in-out infinite;
+	}
+	.lk-blob--purple-sm {
+		inline-size: 18rem;
+		block-size: 18rem;
+		top: 45%;
+		left: 40%;
+		background: color-mix(in srgb, var(--color-logo-purple) 32%, transparent);
+		animation: lk-blob-drift-d 28s ease-in-out infinite;
+	}
+
+	@keyframes lk-blob-drift-a {
+		0%,
+		100% {
+			translate: 0 0;
+		}
+		50% {
+			translate: 5rem 4rem;
+		}
+	}
+	@keyframes lk-blob-drift-b {
+		0%,
+		100% {
+			translate: 0 0;
+		}
+		50% {
+			translate: -5rem 6rem;
+		}
+	}
+	@keyframes lk-blob-drift-c {
+		0%,
+		100% {
+			translate: 0 0;
+		}
+		50% {
+			translate: 5rem -4rem;
+		}
+	}
+	@keyframes lk-blob-drift-d {
+		0%,
+		100% {
+			translate: 0 0;
+		}
+		50% {
+			translate: 4rem -5rem;
+		}
+	}
+
 	/* ─── Particle canvas — three depth layers spanning the entire root.
 	     Each layer responds to mouse parallax at a different amplitude;
 	     near layer leads, far layer trails. ─── */
@@ -478,15 +582,15 @@
 		will-change: transform;
 	}
 	.lk-particles--far {
-		z-index: 0;
+		z-index: 1;
 		transform: translate(calc(var(--mouse-x, 0) * 0.35rem), calc(var(--mouse-y, 0) * 0.35rem));
 	}
 	.lk-particles--mid {
-		z-index: 1;
+		z-index: 2;
 		transform: translate(calc(var(--mouse-x, 0) * 0.85rem), calc(var(--mouse-y, 0) * 0.85rem));
 	}
 	.lk-particles--near {
-		z-index: 1;
+		z-index: 3;
 		transform: translate(calc(var(--mouse-x, 0) * 1.6rem), calc(var(--mouse-y, 0) * 1.6rem));
 	}
 
@@ -509,6 +613,24 @@
 	.lk-particles--near .lk-particle {
 		opacity: 0.85;
 		block-size: 2.5px;
+	}
+
+	/* Tracer variant — ~15% of the field. Larger oriented streaks that
+	   read as faster-moving particles catching the eye. Same drift
+	   animation, ramped size + opacity for visibility. */
+	.lk-particle--tracer {
+		inline-size: calc(var(--len) * 2.2);
+		block-size: 3px;
+	}
+	.lk-particles--far .lk-particle--tracer {
+		opacity: 0.6;
+	}
+	.lk-particles--mid .lk-particle--tracer {
+		opacity: 0.85;
+	}
+	.lk-particles--near .lk-particle--tracer {
+		opacity: 1;
+		block-size: 3.5px;
 	}
 
 	.lk-particle--neutral {
@@ -536,7 +658,8 @@
 
 	/* ─── Motion-reduced fallback ─── */
 	@media (prefers-reduced-motion: reduce) {
-		.lk-particle {
+		.lk-particle,
+		.lk-blob {
 			animation: none;
 		}
 		.lk-particles {
