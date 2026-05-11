@@ -84,13 +84,24 @@
 
 <style>
 	.lk-sidebar {
-		width: var(--lk-sidebar-width);
+		position: fixed;
+		inset-block-start: var(--lk-topbar-height);
+		inset-inline-start: 0;
+		block-size: calc(100dvh - var(--lk-topbar-height));
+		inline-size: var(--lk-sidebar-width);
 		background: var(--lk-sidebar-bg);
 		color: var(--lk-sidebar-fg);
 		border-inline-end: 1px solid var(--lk-sidebar-border);
 		transition:
-			width 0.2s ease-out,
+			inline-size 0.2s ease-out,
 			background 0.2s ease-out;
+		z-index: var(--z-sticky);
+	}
+	/* Inside the mobile drawer, anchor at top (no Topbar offset). */
+	:global([role='dialog']) .lk-sidebar {
+		position: relative;
+		inset-block-start: 0;
+		block-size: 100%;
 	}
 	.lk-sidebar-section-title {
 		display: var(--lk-sidebar-section-title-display);

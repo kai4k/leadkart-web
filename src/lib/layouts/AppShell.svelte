@@ -13,8 +13,6 @@
 
 	function close() {
 		sidebarOpen = false;
-		// Return focus to whatever invoked the drawer (canon: WAI-ARIA
-		// dialog / menu / drawer pattern requires focus restore).
 		triggerEl?.focus();
 	}
 
@@ -25,7 +23,6 @@
 			close();
 			return;
 		}
-		// Focus trap — Tab cycles within the drawer.
 		if (e.key === 'Tab' && drawerEl) {
 			const focusables = drawerEl.querySelectorAll<HTMLElement>(
 				'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
@@ -47,7 +44,6 @@
 		if (sidebarOpen) {
 			triggerEl = document.activeElement as HTMLElement | null;
 			document.body.style.overflow = 'hidden';
-			// Focus the first focusable inside the drawer once mounted.
 			queueMicrotask(() => {
 				const first = drawerEl?.querySelector<HTMLElement>(
 					'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
@@ -65,63 +61,100 @@
 	});
 </script>
 
-<div class="lk-app-shell flex h-dvh flex-col">
+<!--
+  Domiex-style fixed-layout shell:
+    Topbar      — position: fixed, top, full-width, h-topbar
+    Sidebar     — position: fixed, top-offset by topbar height, full-height column
+    page-wrapper — padding-top: topbar height, padding-inline-start: sidebar width
+                   contains the routed page content + Footer at the bottom
+  Mobile (< lg):
+    Sidebar hidden; opens as a drawer over content; page-wrapper drops the left padding.
+-->
+<div class="lk-app">
+	<!-- ── Fixed top bar ── -->
 	<Topbar
 		onToggleSidebar={() => (sidebarOpen = !sidebarOpen)}
 		onOpenSettings={() => (settingsOpen = true)}
 	/>
-	<div class="flex min-h-0 flex-1">
-		<!-- Desktop sidebar — always visible. -->
-		<aside class="hidden lg:block">
-			<Sidebar onNavigate={close} />
-		</aside>
 
-		<!-- Mobile sidebar — drawer with focus trap + Escape + scroll lock. -->
-		{#if sidebarOpen}
-			<button
-				type="button"
-				class="fixed inset-0 bg-[var(--color-overlay)] backdrop-blur-sm transition-opacity lg:hidden"
-				style="z-index: var(--z-overlay);"
-				aria-label="Close sidebar"
-				onclick={close}
-			></button>
-			<div
-				bind:this={drawerEl}
-				role="dialog"
-				aria-modal="true"
-				aria-label="Main navigation"
-				class="fixed inset-y-0 left-0 lg:hidden"
-				style="z-index: var(--z-modal); animation: slide-in {`var(--duration-base) var(--ease-out)`};"
-			>
-				<Sidebar onNavigate={close} />
-			</div>
-		{/if}
+	<!-- ── Desktop fixed sidebar ── -->
+	<aside class="lk-sidebar-mount hidden lg:block" aria-label="Primary navigation">
+		<Sidebar onNavigate={close} />
+	</aside>
 
-		<main
-			id="main-content"
-			class="min-w-0 flex-1 overflow-y-auto bg-[var(--color-bg)]"
-			tabindex="-1"
+	<!-- ── Mobile drawer (slide-in over content) ── -->
+	{#if sidebarOpen}
+		<button
+			type="button"
+			class="fixed inset-0 bg-[var(--color-overlay)] backdrop-blur-sm lg:hidden"
+			style="z-index: var(--z-overlay);"
+			aria-label="Close sidebar"
+			onclick={close}
+		></button>
+		<div
+			bind:this={drawerEl}
+			role="dialog"
+			aria-modal="true"
+			aria-label="Primary navigation"
+			class="fixed inset-y-0 lg:hidden"
+			style="z-index: var(--z-modal); inset-inline-start: 0; animation: slide-in {`var(--duration-base) var(--ease-out)`};"
 		>
-			<div class="center py-6" style="--center-width: var(--lk-content-max-width);">
-				{@render children()}
-			</div>
-		</main>
-	</div>
-	<Footer />
+			<Sidebar onNavigate={close} />
+		</div>
+	{/if}
+
+	<!-- ── Page wrapper — offset by fixed Topbar + Sidebar.
+	     Hosts the routed page + Footer. Single scrolling element. ── -->
+	<main id="main-content" class="lk-page-wrapper" tabindex="-1">
+		<div class="lk-page-inner">
+			{@render children()}
+		</div>
+		<Footer />
+	</main>
 
 	<SettingsModal bind:open={settingsOpen} />
 </div>
 
 <style>
-	/* ── Shell wrapper — consumes the layout-mode CSS vars set on
-	     <html data-layout="..."> to support Boxed / Semibox modes.
-	     Default mode = no outer treatment (vars are 0 / transparent). ── */
-	.lk-app-shell {
+	/* ─── Root shell — outer wrapper consumes layout-mode vars
+	     (boxed / semibox add outer padding + radius). ─── */
+	.lk-app {
 		padding: var(--lk-shell-padding);
 		background: var(--lk-shell-bg);
+		min-height: 100dvh;
 	}
-	.lk-app-shell > * {
-		border-radius: var(--lk-shell-radius);
+
+	/* ─── Page wrapper — fixed-offset from Topbar (top) + Sidebar (start).
+	     padding-top equals Topbar height so content sits below the bar.
+	     padding-inline-start equals sidebar width on desktop; 0 on mobile. ─── */
+	.lk-page-wrapper {
+		min-height: 100dvh;
+		padding-top: var(--lk-topbar-height);
+		padding-inline-start: 0;
+		background: var(--color-bg);
+		display: flex;
+		flex-direction: column;
+		transition: padding-inline-start 0.2s ease-out;
+	}
+	@media (min-width: 64rem) {
+		.lk-page-wrapper {
+			padding-inline-start: var(--lk-sidebar-width);
+		}
+	}
+	/* Horizontal layout — sidebar hidden, no inline-start offset. */
+	:global(:root[data-layout='horizontal']) .lk-page-wrapper {
+		padding-inline-start: 0;
+	}
+	:global(:root[data-layout='horizontal']) .lk-sidebar-mount {
+		display: none;
+	}
+
+	.lk-page-inner {
+		flex: 1;
+		width: 100%;
+		max-inline-size: var(--lk-content-max-width);
+		margin-inline: auto;
+		padding: clamp(1rem, 2.5vw, 1.75rem);
 	}
 
 	@keyframes slide-in {
@@ -132,7 +165,6 @@
 			transform: translateX(0);
 		}
 	}
-
 	@media (prefers-reduced-motion: reduce) {
 		[role='dialog'] {
 			animation: none !important;
