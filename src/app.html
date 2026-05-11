@@ -70,9 +70,14 @@
 					var root = document.documentElement;
 					root.classList.remove('dark');
 
-					var p = localStorage.getItem('leadkart-primary');
-					if (
-						p &&
+					function applyIfValid(key, attr, valid) {
+						var v = localStorage.getItem(key);
+						if (v && valid.indexOf(v) >= 0) root.setAttribute(attr, v);
+					}
+
+					applyIfValid(
+						'leadkart-primary',
+						'data-primary',
 						[
 							'blue',
 							'green',
@@ -84,16 +89,23 @@
 							'red',
 							'mint',
 							'cyan'
-						].indexOf(p) >= 0
-					) {
-						root.setAttribute('data-primary', p);
-					}
+						]
+					);
+					applyIfValid(
+						'leadkart-layout-mode',
+						'data-layout',
+						['horizontal', 'modern', 'boxed', 'semibox']
+					);
+					applyIfValid('leadkart-sidebar-size', 'data-sidebar-size', ['medium', 'small']);
+					applyIfValid(
+						'leadkart-sidebar-color',
+						'data-sidebar-colors',
+						['dark', 'brand', 'purple', 'sky']
+					);
+					applyIfValid('leadkart-content-width', 'data-content-width', ['fluid']);
 
-					var s = localStorage.getItem('leadkart-sidebar-size');
-					if (s === 'compact') root.setAttribute('data-sidebar-size', s);
-
-					var w = localStorage.getItem('leadkart-content-width');
-					if (w === 'fluid') root.setAttribute('data-content-width', w);
+					var dir = localStorage.getItem('leadkart-layout-dir');
+					root.setAttribute('dir', dir === 'rtl' ? 'rtl' : 'ltr');
 				} catch (e) {
 					/* private-mode: fall back to defaults */
 				}

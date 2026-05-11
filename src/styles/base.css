@@ -183,30 +183,107 @@
 	--color-brand-950: oklch(0.2 0.05 230);
 }
 
-/* ═══ LAYOUT CUSTOMISER — sidebar size + content width
- * Activated by `<html data-sidebar-size="X">` / `data-content-width="Y"`
- * set by lib/stores/theme.svelte.ts. Components consume these CSS
- * vars instead of hard-coded widths, so a single user-side picker
- * change re-skins the whole shell.
+/* ═══ LAYOUT CUSTOMISER — layout mode + sidebar size + sidebar colour
+ *                         + content width + direction
+ * Activated by data-attributes set on <html> by lib/stores/theme.svelte.ts.
+ * Components consume these CSS vars instead of hard-coded values, so a
+ * single user-side picker change re-skins the whole shell.
  *
- * Defaults (no attr) match the legacy hard-coded values; alt values
- * activate the alternate layout.
+ * Defaults (no attr / 'default' value) match base behaviour; alt values
+ * activate the alternate layout. Modelled on Domiex's data-layout,
+ * data-sidebar, data-sidebar-colors attribute system.
  * ───────────────────────────────────────────────────────────── */
 :root {
-	--lk-sidebar-width: 15rem; /* default = 240px (was Tailwind `w-60`) */
+	/* Sidebar size — width + visibility of label/title */
+	--lk-sidebar-width: 15rem; /* default — 240px (Domiex `w-sidebar`) */
 	--lk-sidebar-label-display: inline;
 	--lk-sidebar-section-title-display: block;
+
+	/* Sidebar colour — surface + foreground tokens. Default `light` =
+	   bg-elevated (white) over fg (near-black). */
+	--lk-sidebar-bg: var(--color-bg-elevated);
+	--lk-sidebar-fg: var(--color-fg);
+	--lk-sidebar-fg-muted: var(--color-fg-muted);
+	--lk-sidebar-active-bg: var(--color-brand-50);
+	--lk-sidebar-active-fg: var(--color-brand-700);
+	--lk-sidebar-hover-bg: var(--color-bg-muted);
+	--lk-sidebar-border: var(--color-border);
+
+	/* Content width */
 	--lk-content-max-width: var(--container-2xl); /* default = 96rem */
+
+	/* Layout mode — outer wrapper padding + radius (used by AppShell
+	   root in 'boxed' / 'semibox'). Default = no outer treatment. */
+	--lk-shell-padding: 0;
+	--lk-shell-radius: 0;
+	--lk-shell-bg: transparent;
 }
 
-:root[data-sidebar-size='compact'] {
-	--lk-sidebar-width: 4.5rem; /* 72px — icon-only column */
+/* ── Sidebar size variants ─────────────────────────────────── */
+:root[data-sidebar-size='medium'] {
+	--lk-sidebar-width: 10rem; /* 160px — labels stack under icons */
+}
+:root[data-sidebar-size='small'] {
+	--lk-sidebar-width: 4.6875rem; /* 75px — icon-only column */
 	--lk-sidebar-label-display: none;
 	--lk-sidebar-section-title-display: none;
 }
 
+/* ── Sidebar colour variants ──────────────────────────────────
+   Each variant re-skins the bg / fg / hover / active token set so
+   Sidebar.svelte doesn't need to know which variant is active. ── */
+:root[data-sidebar-colors='dark'] {
+	--lk-sidebar-bg: oklch(0.25 0.02 256);
+	--lk-sidebar-fg: oklch(0.92 0.01 256);
+	--lk-sidebar-fg-muted: oklch(0.7 0.01 256);
+	--lk-sidebar-active-bg: oklch(0.35 0.05 260);
+	--lk-sidebar-active-fg: oklch(0.98 0 0);
+	--lk-sidebar-hover-bg: oklch(0.32 0.02 256);
+	--lk-sidebar-border: oklch(0.32 0.02 256);
+}
+:root[data-sidebar-colors='brand'] {
+	--lk-sidebar-bg: var(--color-brand-800);
+	--lk-sidebar-fg: var(--color-brand-100);
+	--lk-sidebar-fg-muted: var(--color-brand-300);
+	--lk-sidebar-active-bg: var(--color-brand-600);
+	--lk-sidebar-active-fg: oklch(1 0 0);
+	--lk-sidebar-hover-bg: var(--color-brand-700);
+	--lk-sidebar-border: var(--color-brand-700);
+}
+:root[data-sidebar-colors='purple'] {
+	--lk-sidebar-bg: oklch(0.32 0.12 305);
+	--lk-sidebar-fg: oklch(0.92 0.04 305);
+	--lk-sidebar-fg-muted: oklch(0.72 0.08 305);
+	--lk-sidebar-active-bg: oklch(0.45 0.18 305);
+	--lk-sidebar-active-fg: oklch(1 0 0);
+	--lk-sidebar-hover-bg: oklch(0.38 0.14 305);
+	--lk-sidebar-border: oklch(0.38 0.14 305);
+}
+:root[data-sidebar-colors='sky'] {
+	--lk-sidebar-bg: oklch(0.42 0.1 230);
+	--lk-sidebar-fg: oklch(0.93 0.03 230);
+	--lk-sidebar-fg-muted: oklch(0.75 0.06 230);
+	--lk-sidebar-active-bg: oklch(0.55 0.15 230);
+	--lk-sidebar-active-fg: oklch(1 0 0);
+	--lk-sidebar-hover-bg: oklch(0.48 0.12 230);
+	--lk-sidebar-border: oklch(0.48 0.12 230);
+}
+
+/* ── Content width ───────────────────────────────────────────── */
 :root[data-content-width='fluid'] {
 	--lk-content-max-width: none;
+}
+
+/* ── Layout mode — Boxed + Semibox add outer margin + radius ── */
+:root[data-layout='boxed'] {
+	--lk-shell-padding: 1rem;
+	--lk-shell-radius: 0.75rem;
+	--lk-shell-bg: var(--color-bg-elevated);
+}
+:root[data-layout='semibox'] {
+	--lk-shell-padding: 1rem;
+	--lk-shell-radius: 0.75rem;
+	--lk-shell-bg: transparent;
 }
 
 @layer base {

@@ -65,7 +65,7 @@
 	});
 </script>
 
-<div class="flex h-dvh flex-col">
+<div class="lk-app-shell flex h-dvh flex-col">
 	<Topbar
 		onToggleSidebar={() => (sidebarOpen = !sidebarOpen)}
 		onOpenSettings={() => (settingsOpen = true)}
@@ -113,6 +113,17 @@
 </div>
 
 <style>
+	/* ── Shell wrapper — consumes the layout-mode CSS vars set on
+	     <html data-layout="..."> to support Boxed / Semibox modes.
+	     Default mode = no outer treatment (vars are 0 / transparent). ── */
+	.lk-app-shell {
+		padding: var(--lk-shell-padding);
+		background: var(--lk-shell-bg);
+	}
+	.lk-app-shell > * {
+		border-radius: var(--lk-shell-radius);
+	}
+
 	@keyframes slide-in {
 		from {
 			transform: translateX(-100%);

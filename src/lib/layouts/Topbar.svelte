@@ -21,7 +21,7 @@
 			<Icon icon={Menu} size="md" />
 		</button>
 		<a href="/dashboard" class="flex items-center" aria-label="LeadKart home">
-			<Logo size="sm" />
+			<Logo size="lg" />
 		</a>
 	</div>
 	<div class="cluster" style="--cluster-gap: var(--spacing-2);">

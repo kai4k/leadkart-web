@@ -46,11 +46,7 @@
 	});
 </script>
 
-<nav
-	class="lk-sidebar glass-drawer flex h-full flex-col"
-	aria-label="Main navigation"
-	style="width: var(--lk-sidebar-width);"
->
+<nav class="lk-sidebar flex h-full flex-col" aria-label="Main navigation">
 	<div class="stack stack-relaxed flex-1 overflow-y-auto p-3">
 		{#each sections as section, i (section.title ?? i)}
 			{#if section.items.length > 0}
@@ -70,10 +66,8 @@
 									onclick={() => onNavigate?.()}
 									title={item.label}
 									class={[
-										'body-sm flex items-center gap-3 rounded-md px-3 py-2 font-medium transition-colors',
-										active
-											? 'bg-[var(--color-brand-50)] text-[var(--color-brand-700)]'
-											: 'text-[var(--color-fg)] hover:bg-[var(--color-bg-muted)]'
+										'lk-sidebar-link body-sm flex items-center gap-3 rounded-md px-3 py-2 font-medium transition-colors',
+										active && 'lk-sidebar-link--active'
 									]}
 								>
 									<Icon size={18} aria-hidden="true" />
@@ -89,10 +83,30 @@
 </nav>
 
 <style>
+	.lk-sidebar {
+		width: var(--lk-sidebar-width);
+		background: var(--lk-sidebar-bg);
+		color: var(--lk-sidebar-fg);
+		border-inline-end: 1px solid var(--lk-sidebar-border);
+		transition:
+			width 0.2s ease-out,
+			background 0.2s ease-out;
+	}
 	.lk-sidebar-section-title {
 		display: var(--lk-sidebar-section-title-display);
+		color: var(--lk-sidebar-fg-muted);
 	}
 	.lk-sidebar-label {
 		display: var(--lk-sidebar-label-display);
+	}
+	.lk-sidebar-link {
+		color: var(--lk-sidebar-fg);
+	}
+	.lk-sidebar-link:hover {
+		background: var(--lk-sidebar-hover-bg);
+	}
+	.lk-sidebar-link--active {
+		background: var(--lk-sidebar-active-bg);
+		color: var(--lk-sidebar-active-fg);
 	}
 </style>

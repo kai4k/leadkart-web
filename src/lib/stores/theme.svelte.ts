@@ -1,23 +1,24 @@
 /**
- * Theme store — Svelte 5 class-based reactive store managing the
- * customiser state:
- *   - primary       (one of 11 brand-stop choices)
- *   - sidebarSize   ('default' | 'compact')
- *   - contentWidth  ('default' | 'fluid')
+ * Theme store — Svelte 5 class-based reactive store managing the full
+ * customiser state (modelled on Domiex SettingsModal, sans dark mode):
  *
- * Dark mode removed 2026-05-12. LeadKart's auth + (app) surfaces are
- * intentionally light-only — pharma B2B canon, no light/dark toggle.
- * The customiser exposes colour + layout-style options instead.
+ *   - primary       (one of 11 brand-stop choices)
+ *   - layoutMode    ('default' | 'horizontal' | 'modern' | 'boxed' | 'semibox')
+ *   - sidebarSize   ('default' | 'medium' | 'small')
+ *   - sidebarColor  ('light' | 'dark' | 'brand' | 'purple' | 'sky')
+ *   - contentWidth  ('default' | 'fluid')
+ *   - layoutDir     ('ltr' | 'rtl')
+ *
+ * Dark mode removed 2026-05-12. All state is applied to `<html>` via
+ * data attributes (data-primary, data-layout, data-sidebar-size,
+ * data-sidebar-colors, data-content-width) + `dir` attribute. The CSS
+ * in base.css consumes these. Default values use no attribute so base
+ * tokens / layout rules win without override noise.
  *
  * Industry canon: Svelte 5 stores are class instances with `$state`
  * fields, NOT module-level `let foo = $state(...)` + function
  * accessors. Class pattern guarantees reactivity across module
  * boundaries.
- *
- * All state is applied to `<html>` via data attributes
- * (`data-primary`, `data-sidebar-size`, `data-content-width`) that
- * the CSS in base.css consumes. Default values use no attribute so
- * the base tokens / layout rules win without override noise.
  */
 
 export type PrimaryColor =
@@ -33,8 +34,11 @@ export type PrimaryColor =
 	| 'mint'
 	| 'cyan';
 
-export type SidebarSize = 'default' | 'compact';
+export type LayoutMode = 'default' | 'horizontal' | 'modern' | 'boxed' | 'semibox';
+export type SidebarSize = 'default' | 'medium' | 'small';
+export type SidebarColor = 'light' | 'dark' | 'brand' | 'purple' | 'sky';
 export type ContentWidth = 'default' | 'fluid';
+export type LayoutDir = 'ltr' | 'rtl';
 
 export const PRIMARY_COLORS: ReadonlyArray<{ id: PrimaryColor; label: string; hex: string }> = [
 	{ id: 'navy', label: 'Navy', hex: '#2D2F7E' }, // default — logo wordmark navy-violet
@@ -50,9 +54,26 @@ export const PRIMARY_COLORS: ReadonlyArray<{ id: PrimaryColor; label: string; he
 	{ id: 'cyan', label: 'Cyan', hex: '#32ADE6' }
 ];
 
+export const LAYOUT_MODES: ReadonlyArray<{ id: LayoutMode; label: string }> = [
+	{ id: 'default', label: 'Default' },
+	{ id: 'horizontal', label: 'Horizontal' },
+	{ id: 'modern', label: 'Modern' },
+	{ id: 'boxed', label: 'Boxed' },
+	{ id: 'semibox', label: 'Semibox' }
+];
+
 export const SIDEBAR_SIZES: ReadonlyArray<{ id: SidebarSize; label: string }> = [
 	{ id: 'default', label: 'Default' },
-	{ id: 'compact', label: 'Compact' }
+	{ id: 'medium', label: 'Medium' },
+	{ id: 'small', label: 'Small' }
+];
+
+export const SIDEBAR_COLORS: ReadonlyArray<{ id: SidebarColor; label: string; swatch: string }> = [
+	{ id: 'light', label: 'Light', swatch: 'oklch(0.97 0.005 245)' },
+	{ id: 'dark', label: 'Dark', swatch: 'oklch(0.25 0.02 256)' },
+	{ id: 'brand', label: 'Brand', swatch: 'var(--color-brand-700)' },
+	{ id: 'purple', label: 'Purple', swatch: 'oklch(0.32 0.12 305)' },
+	{ id: 'sky', label: 'Sky', swatch: 'oklch(0.42 0.1 230)' }
 ];
 
 export const CONTENT_WIDTHS: ReadonlyArray<{ id: ContentWidth; label: string }> = [
@@ -60,19 +81,38 @@ export const CONTENT_WIDTHS: ReadonlyArray<{ id: ContentWidth; label: string }> 
 	{ id: 'fluid', label: 'Fluid' }
 ];
 
-const PRIMARY_KEY = 'leadkart-primary';
-const SIDEBAR_SIZE_KEY = 'leadkart-sidebar-size';
-const CONTENT_WIDTH_KEY = 'leadkart-content-width';
+export const LAYOUT_DIRS: ReadonlyArray<{ id: LayoutDir; label: string }> = [
+	{ id: 'ltr', label: 'LTR' },
+	{ id: 'rtl', label: 'RTL' }
+];
+
+const STORAGE_KEYS = {
+	primary: 'leadkart-primary',
+	layoutMode: 'leadkart-layout-mode',
+	sidebarSize: 'leadkart-sidebar-size',
+	sidebarColor: 'leadkart-sidebar-color',
+	contentWidth: 'leadkart-content-width',
+	layoutDir: 'leadkart-layout-dir'
+} as const;
 
 class ThemeStore {
 	primary = $state<PrimaryColor>(
-		this.readInitial<PrimaryColor>(PRIMARY_KEY, 'navy', PRIMARY_COLORS)
+		this.readInitial<PrimaryColor>(STORAGE_KEYS.primary, 'navy', PRIMARY_COLORS)
+	);
+	layoutMode = $state<LayoutMode>(
+		this.readInitial<LayoutMode>(STORAGE_KEYS.layoutMode, 'default', LAYOUT_MODES)
 	);
 	sidebarSize = $state<SidebarSize>(
-		this.readInitial<SidebarSize>(SIDEBAR_SIZE_KEY, 'default', SIDEBAR_SIZES)
+		this.readInitial<SidebarSize>(STORAGE_KEYS.sidebarSize, 'default', SIDEBAR_SIZES)
+	);
+	sidebarColor = $state<SidebarColor>(
+		this.readInitial<SidebarColor>(STORAGE_KEYS.sidebarColor, 'light', SIDEBAR_COLORS)
 	);
 	contentWidth = $state<ContentWidth>(
-		this.readInitial<ContentWidth>(CONTENT_WIDTH_KEY, 'default', CONTENT_WIDTHS)
+		this.readInitial<ContentWidth>(STORAGE_KEYS.contentWidth, 'default', CONTENT_WIDTHS)
+	);
+	layoutDir = $state<LayoutDir>(
+		this.readInitial<LayoutDir>(STORAGE_KEYS.layoutDir, 'ltr', LAYOUT_DIRS)
 	);
 
 	private readInitial<T extends string>(
@@ -88,50 +128,71 @@ class ThemeStore {
 
 	setPrimary(next: PrimaryColor) {
 		this.primary = next;
-		this.persist(PRIMARY_KEY, next);
+		this.persist(STORAGE_KEYS.primary, next);
 		this.applyToDocument();
 	}
-
+	setLayoutMode(next: LayoutMode) {
+		this.layoutMode = next;
+		this.persist(STORAGE_KEYS.layoutMode, next);
+		this.applyToDocument();
+	}
 	setSidebarSize(next: SidebarSize) {
 		this.sidebarSize = next;
-		this.persist(SIDEBAR_SIZE_KEY, next);
+		this.persist(STORAGE_KEYS.sidebarSize, next);
 		this.applyToDocument();
 	}
-
+	setSidebarColor(next: SidebarColor) {
+		this.sidebarColor = next;
+		this.persist(STORAGE_KEYS.sidebarColor, next);
+		this.applyToDocument();
+	}
 	setContentWidth(next: ContentWidth) {
 		this.contentWidth = next;
-		this.persist(CONTENT_WIDTH_KEY, next);
+		this.persist(STORAGE_KEYS.contentWidth, next);
+		this.applyToDocument();
+	}
+	setLayoutDir(next: LayoutDir) {
+		this.layoutDir = next;
+		this.persist(STORAGE_KEYS.layoutDir, next);
 		this.applyToDocument();
 	}
 
-	/** Resets all customiser settings to default. */
 	reset() {
 		this.setPrimary('navy');
+		this.setLayoutMode('default');
 		this.setSidebarSize('default');
+		this.setSidebarColor('light');
 		this.setContentWidth('default');
+		this.setLayoutDir('ltr');
 	}
 
 	/**
-	 * Reflects customiser state on the root <html> via data attributes.
-	 * Idempotent. Default values use no attribute so base tokens win
-	 * without override noise. Called by setters + the root +layout's
-	 * `$effect`.
+	 * Reflects all customiser state on <html> via data attributes
+	 * + dir attribute. Idempotent. Default values use no attribute so
+	 * base tokens win without override noise. Called by every setter
+	 * + the root +layout's `$effect`.
 	 */
 	applyToDocument() {
 		if (typeof document === 'undefined') return;
 		const root = document.documentElement;
 		// Strip the legacy `.dark` class if persisted from the prior
-		// theme system — keeps existing user sessions clean post-upgrade.
+		// theme system — keeps existing user sessions clean.
 		root.classList.remove('dark');
 
-		if (this.primary === 'navy') root.removeAttribute('data-primary');
-		else root.setAttribute('data-primary', this.primary);
+		this.setAttr(root, 'data-primary', this.primary, 'navy');
+		this.setAttr(root, 'data-layout', this.layoutMode, 'default');
+		this.setAttr(root, 'data-sidebar-size', this.sidebarSize, 'default');
+		this.setAttr(root, 'data-sidebar-colors', this.sidebarColor, 'light');
+		this.setAttr(root, 'data-content-width', this.contentWidth, 'default');
 
-		if (this.sidebarSize === 'default') root.removeAttribute('data-sidebar-size');
-		else root.setAttribute('data-sidebar-size', this.sidebarSize);
+		// `dir` is a native HTML attribute (not data-*); set even on
+		// default ltr for explicitness (some browsers default to auto).
+		root.setAttribute('dir', this.layoutDir);
+	}
 
-		if (this.contentWidth === 'default') root.removeAttribute('data-content-width');
-		else root.setAttribute('data-content-width', this.contentWidth);
+	private setAttr(el: Element, name: string, value: string, defaultValue: string) {
+		if (value === defaultValue) el.removeAttribute(name);
+		else el.setAttribute(name, value);
 	}
 
 	private persist(key: string, value: string) {

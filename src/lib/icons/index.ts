@@ -42,6 +42,7 @@ export {
 	Menu,
 	Moon,
 	Plus,
+	RotateCcw,
 	Search,
 	Settings,
 	ShieldCheck,
