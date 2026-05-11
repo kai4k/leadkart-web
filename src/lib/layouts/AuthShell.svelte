@@ -87,10 +87,15 @@
 		const all = Array.from({ length: 220 }, () => {
 			const d = rand();
 			const k = rand();
-			const kind = k < 0.15 ? 'cross' : k < 0.3 ? 'tracer' : 'pill';
+			// Pharma mix:
+			//   55% pill   — two-tone capsule
+			//   15% tracer — long two-tone capsule (eye-catching streak)
+			//   15% tablet — round single-tone disc with score line
+			//   15% cross  — medical plus sign (mask-shaped)
+			const kind = k < 0.15 ? 'cross' : k < 0.3 ? 'tablet' : k < 0.45 ? 'tracer' : 'pill';
 			let c1: string;
 			let c2: string;
-			if (kind === 'cross') {
+			if (kind === 'cross' || kind === 'tablet') {
 				c1 = crossColours[Math.floor(rand() * crossColours.length)];
 				c2 = c1;
 			} else {
@@ -140,6 +145,11 @@
 			raf = 0;
 			canvas?.style.setProperty('--mouse-x', String(pendingX));
 			canvas?.style.setProperty('--mouse-y', String(pendingY));
+			// Percent-based vars for positioning the bloom spotlight via
+			// `radial-gradient(... at var(--mouse-x-pct) var(--mouse-y-pct))`.
+			// --mouse-x / -y are normalised to [-1, 1]; remap to [0%, 100%].
+			canvas?.style.setProperty('--mouse-x-pct', `${(pendingX + 1) * 50}%`);
+			canvas?.style.setProperty('--mouse-y-pct', `${(pendingY + 1) * 50}%`);
 		}
 
 		function onLeave() {
@@ -196,6 +206,11 @@
 			></span>
 		{/each}
 	</div>
+
+	<!-- ── Bloom spotlight — radial colour wash that follows the mouse.
+	     Replaces the prior parallax-drift treatment. Fades in when the
+	     mouse is over the canvas, fades out on leave. ── -->
+	<div class="lk-auth-bloom" aria-hidden="true"></div>
 
 	<!-- ── Mobile-only compact brand banner ── -->
 	<header class="lk-auth-mobile-banner">
@@ -310,7 +325,7 @@
 	/* ─── Mobile-only brand banner. ─── */
 	.lk-auth-mobile-banner {
 		position: relative;
-		z-index: 4;
+		z-index: 5;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
@@ -330,12 +345,12 @@
 		}
 	}
 
-	/* ─── Two-column layout grid (single col on mobile). z-index 5 keeps
-	     content above the entire decoration stack: blobs (0) + far / mid /
-	     near particles (1 / 2 / 3) + mobile banner (4). ─── */
+	/* ─── Two-column layout grid (single col on mobile). z-index 6 keeps
+	     content above the entire decoration stack: blobs (0) + particles
+	     (1-3) + bloom spotlight (4) + mobile banner (5). ─── */
 	.lk-auth-layout {
 		position: relative;
-		z-index: 5;
+		z-index: 6;
 		display: grid;
 		grid-template-columns: 1fr;
 		min-block-size: 100dvh;
@@ -604,22 +619,18 @@
 		position: absolute;
 		inset: 0;
 		pointer-events: none;
-		transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 	}
-	.lk-parallax-active .lk-particles {
-		will-change: transform;
-	}
+	/* Depth layers — z-index only (parallax translate replaced by the
+	   bloom spotlight). Particles remain static besides their ambient
+	   drift animation. */
 	.lk-particles--far {
 		z-index: 1;
-		transform: translate(calc(var(--mouse-x, 0) * 0.35rem), calc(var(--mouse-y, 0) * 0.35rem));
 	}
 	.lk-particles--mid {
 		z-index: 2;
-		transform: translate(calc(var(--mouse-x, 0) * 0.85rem), calc(var(--mouse-y, 0) * 0.85rem));
 	}
 	.lk-particles--near {
 		z-index: 3;
-		transform: translate(calc(var(--mouse-x, 0) * 1.6rem), calc(var(--mouse-y, 0) * 1.6rem));
 	}
 
 	/* ─── Pharma-themed particle shapes ─────────────────────────────
@@ -721,6 +732,71 @@
 	.lk-particles--near .lk-particle--cross {
 		inline-size: 13px;
 		block-size: 13px;
+	}
+
+	/* Tablet = round disc with a centre score line — the classic
+	   pressed-tablet shape. Single-coloured from --c1, with a score
+	   ::before line and a gloss ::after dome highlight. */
+	.lk-particle--tablet {
+		inline-size: 10px;
+		block-size: 10px;
+		border-radius: 50%;
+		background: var(--c1);
+	}
+	.lk-particles--far .lk-particle--tablet {
+		inline-size: 8px;
+		block-size: 8px;
+	}
+	.lk-particles--near .lk-particle--tablet {
+		inline-size: 12px;
+		block-size: 12px;
+	}
+	.lk-particle--tablet::before {
+		content: '';
+		position: absolute;
+		inset-block-start: 50%;
+		inset-inline: 22%;
+		block-size: 1px;
+		background: color-mix(in srgb, var(--color-fg) 40%, transparent);
+		transform: translateY(-50%);
+	}
+	.lk-particle--tablet::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: 50%;
+		background: linear-gradient(
+			180deg,
+			color-mix(in srgb, var(--color-bg-elevated) 50%, transparent) 0%,
+			color-mix(in srgb, var(--color-bg-elevated) 15%, transparent) 35%,
+			transparent 60%
+		);
+		pointer-events: none;
+	}
+
+	/* ─── Bloom spotlight — radial logo-palette wash that follows the
+	     mouse. Replaces the prior parallax-drift treatment with a
+	     calmer, more elegant interaction: a soft colour halo
+	     illuminates the area around the cursor. Sits between particles
+	     (z 1-3) and content (z 6) — tints the canvas + particles in
+	     the cursor's vicinity but doesn't touch the modal. ─── */
+	.lk-auth-bloom {
+		position: absolute;
+		inset: 0;
+		z-index: 4;
+		pointer-events: none;
+		background: radial-gradient(
+			circle 14rem at var(--mouse-x-pct, 50%) var(--mouse-y-pct, 50%),
+			color-mix(in srgb, var(--color-logo-purple) 24%, transparent) 0%,
+			color-mix(in srgb, var(--color-brand-600) 16%, transparent) 30%,
+			color-mix(in srgb, var(--color-logo-green-on-light) 10%, transparent) 50%,
+			transparent 65%
+		);
+		opacity: 0;
+		transition: opacity 0.45s ease;
+	}
+	.lk-parallax-active .lk-auth-bloom {
+		opacity: 1;
 	}
 
 	@keyframes lk-particle-drift {
