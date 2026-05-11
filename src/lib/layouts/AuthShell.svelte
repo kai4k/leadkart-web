@@ -151,7 +151,7 @@
 			<div class="lk-auth-content-washes" aria-hidden="true"></div>
 
 			<div class="lk-glass lk-glass--hero">
-				<h2 class="display-2 leading-[1.05] tracking-tight text-[var(--color-fg)]">
+				<h2 class="display-2 leading-[1.05] tracking-tight text-[var(--color-brand-700)]">
 					Pharma lead management,<br />simplified.
 				</h2>
 			</div>
@@ -187,10 +187,9 @@
 		<footer class="lk-auth-brand-footer caption">© LeadKart 2026</footer>
 	</section>
 
-	<!-- ═══ FORM PANEL — logo above the auth card ═══════════════════ -->
+	<!-- ═══ FORM PANEL — logo lives inside the AuthCard (SigninForm) ═══ -->
 	<main class="lk-auth-form-side flex flex-col items-center justify-center p-6 lg:p-12">
-		<div class="flex w-full max-w-md flex-col items-center gap-8">
-			<Logo size="lg" />
+		<div class="w-full max-w-md">
 			{@render children()}
 		</div>
 	</main>
@@ -245,10 +244,13 @@
 		max-width: 30rem;
 		width: 100%;
 		align-self: center;
-		margin: auto 0;
+		/* Shift the content stack toward upper third instead of dead-
+		   centred — modern split-screen auth pages (Stripe / Linear /
+		   Vercel) all position hero copy above visual centre. */
+		margin: clamp(3rem, 8vh, 6rem) 0 auto 0;
 		display: flex;
 		flex-direction: column;
-		gap: 1rem;
+		gap: 1.5rem;
 	}
 
 	/* ── Soft colour washes behind the content stack — gives the
@@ -375,10 +377,13 @@
 	.lk-auth-features {
 		list-style: none;
 		padding: 0;
-		margin: 0;
+		/* A bit of extra space above the feature group to separate it
+		   from the tagline pill — the tagline is the headline's
+		   continuation, the features are a distinct content unit. */
+		margin: 0.75rem 0 0 0;
 		display: flex;
 		flex-direction: column;
-		gap: 0.625rem;
+		gap: 0.875rem;
 	}
 	.lk-auth-feature {
 		display: flex;
