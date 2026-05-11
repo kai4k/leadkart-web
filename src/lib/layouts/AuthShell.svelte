@@ -295,13 +295,23 @@
 	     rather than mint new ones, so modal + pills + canvas all inherit
 	     the standard surface hierarchy without one-off names. ─── */
 	.lk-auth {
-		/* Canvas (--color-bg) — dulled off-white with a sliver of brand
-		   tint. Modal + pills (--color-bg-elevated, pure white) lift off
-		   it. Same semantic the global system uses, scoped tighter for
-		   the auth aesthetic. */
-		--color-bg: oklch(0.98 0.005 270);
-		--color-bg-subtle: oklch(0.96 0.005 270);
-		--color-bg-muted: oklch(0.94 0.005 270);
+		/* Canvas (--color-bg) — soft off-white with a faint brand-blue
+		   tint. Industry canon for low-fatigue B2B surfaces uses 95-97%
+		   lightness, not pure 100%:
+		      Stripe Dashboard   #f6f9fc  (96% L, cool blue tint)
+		      GitHub             #f6f8fa  (96% L, cool blue tint)
+		      iOS Tertiary System #f2f2f7 (95% L, cool gray)
+		      Vercel             #fafafa  (98% L, true gray)
+		   Pure white (oklch 1 0 0) at full screen brightness creates
+		   glare on prolonged reading; 4 percentage points off white is
+		   the standard remedy. Brand-violet hue (268) keeps it tonally
+		   tied to the rest of the surface palette without reading as
+		   "tinted".
+		   Modal + pills (--color-bg-elevated) stay pure white so they
+		   lift visibly off the canvas. */
+		--color-bg: oklch(0.96 0.008 268);
+		--color-bg-subtle: oklch(0.93 0.008 268);
+		--color-bg-muted: oklch(0.9 0.008 268);
 		--color-bg-elevated: oklch(1 0 0);
 		--color-fg: oklch(0.2 0.02 256);
 		--color-fg-muted: oklch(0.45 0.02 256);
