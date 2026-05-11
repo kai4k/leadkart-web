@@ -27,6 +27,8 @@
 	 */
 	import { Logo } from '$ui';
 	import { ShieldCheck, TrendingUp, Truck } from 'lucide-svelte';
+
+	let { children } = $props();
 </script>
 
 <div class="lk-auth grid min-h-dvh grid-cols-1 lg:grid-cols-2">
