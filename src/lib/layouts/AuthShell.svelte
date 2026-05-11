@@ -104,91 +104,82 @@
 		<span class="caption font-medium text-[var(--color-brand-700)]">Pharma SaaS</span>
 	</header>
 
-	<!-- ═══ BRAND PANEL (desktop only) — animated hero ═══════════════════ -->
+	<!-- ═══ BRAND PANEL (desktop only) — split 50/50: image on top,
+	     solid-navy text block on bottom. Industry canon for product
+	     auth pages (Linear / Notion): image stays purely decorative,
+	     text lives on an intentional solid surface with strong
+	     contrast — no glass-pill chrome competing with photographic
+	     content. ═══════════════════════════════════════════════════ -->
 	<section
 		bind:this={brandPanel}
 		aria-label="LeadKart"
-		class="lk-auth-brand relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-center"
+		class="lk-auth-brand relative hidden overflow-hidden lg:flex lg:flex-col"
 	>
-		<!-- Background illustration — radial mask only. No white glass
-		     overlay (it was swallowing the image at any reasonable
-		     opacity). The brand-100 panel bg provides enough contrast
-		     against the hero typography on top. -->
-		<div class="lk-auth-illustration lk-parallax-medium" aria-hidden="true">
-			<img src="/images/auth/illustration.png" alt="" class="lk-auth-illustration-img" />
-		</div>
-
-		<!-- Page-level logo — bare, no pill chrome. The brand panel bg is
-		     brand-50 (the logo's natural light backdrop), so the wordmark
-		     navy + LK mark green read directly without any containment. -->
-		<div class="lk-auth-page-logo">
-			<Logo size="xl" />
-		</div>
-
-		<!-- Brand text content (3 stacked dark-glass pills, white text) -->
-		<div class="lk-auth-brand-content lk-parallax-slow">
-			<div class="lk-auth-pill lk-auth-pill-hero">
-				<p class="display-2 leading-[1.15] text-white">
-					Pharma Lead<br />Management,<br />Simplified.
-				</p>
+		<!-- ── TOP HALF: image canvas ── -->
+		<div class="lk-auth-brand-image">
+			<div class="lk-auth-illustration lk-parallax-medium" aria-hidden="true">
+				<img src="/images/auth/illustration.png" alt="" class="lk-auth-illustration-img" />
 			</div>
-			<div class="lk-auth-pill mb-8">
-				<p class="body-base text-white/90">
+
+			<!-- Page-level logo — bare, top-left of the image area. -->
+			<div class="lk-auth-page-logo">
+				<Logo size="xl" />
+			</div>
+
+			<!-- Floating product-themed glass cards — staggered bob animation,
+			     constrained to the image canvas now. -->
+			<div class="lk-auth-float lk-auth-float-1 lk-parallax-fast" aria-hidden="true">
+				<span class="lk-auth-float-icon"><ShieldCheck size={14} /></span>
+				<span class="caption">Secure Login</span>
+			</div>
+			<div class="lk-auth-float lk-auth-float-2 lk-parallax-reverse" aria-hidden="true">
+				<span class="lk-auth-float-icon"><LineChart size={14} /></span>
+				<span class="caption">Live Reports</span>
+			</div>
+			<div class="lk-auth-float lk-auth-float-3 lk-parallax-medium" aria-hidden="true">
+				<span class="lk-auth-float-icon"><ShoppingCart size={14} /></span>
+				<span class="caption">Lead Purchase</span>
+			</div>
+			<div class="lk-auth-float lk-auth-float-4 lk-parallax-fast" aria-hidden="true">
+				<span class="lk-auth-float-icon"><Package size={14} /></span>
+				<span class="caption">Inventory</span>
+			</div>
+		</div>
+
+		<!-- ── BOTTOM HALF: solid navy text block ── -->
+		<div class="lk-auth-brand-text">
+			<div class="lk-auth-brand-content lk-parallax-slow">
+				<h2 class="display-2 mb-6 leading-[1.1] text-white">
+					Pharma Lead<br />Management, Simplified.
+				</h2>
+				<p class="body-base mb-8 max-w-lg text-white/80">
 					End-to-end CRM, orders, inventory &amp; dispatch — built for India's PCD pharma market.
 				</p>
+
+				<div class="lk-auth-features">
+					<div class="lk-auth-feature">
+						<span class="lk-auth-feature-icon" aria-hidden="true">
+							<ShieldCheck size={18} />
+						</span>
+						<span class="body-base text-white/90">Enterprise-grade security</span>
+					</div>
+					<div class="lk-auth-feature">
+						<span class="lk-auth-feature-icon" aria-hidden="true">
+							<TrendingUp size={18} />
+						</span>
+						<span class="body-base text-white/90">Real-time lead tracking</span>
+					</div>
+					<div class="lk-auth-feature">
+						<span class="lk-auth-feature-icon" aria-hidden="true">
+							<Truck size={18} />
+						</span>
+						<span class="body-base text-white/90">Order-to-dispatch pipeline</span>
+					</div>
+				</div>
 			</div>
 
-			<div class="lk-auth-features">
-				<div class="lk-auth-feature">
-					<span class="lk-auth-feature-icon" aria-hidden="true">
-						<ShieldCheck size={16} />
-					</span>
-					<span class="body-sm text-white/90">Enterprise-grade security</span>
-				</div>
-				<div class="lk-auth-feature">
-					<span class="lk-auth-feature-icon" aria-hidden="true">
-						<TrendingUp size={16} />
-					</span>
-					<span class="body-sm text-white/90">Real-time lead tracking</span>
-				</div>
-				<div class="lk-auth-feature">
-					<span class="lk-auth-feature-icon" aria-hidden="true">
-						<Truck size={16} />
-					</span>
-					<span class="body-sm text-white/90">Order-to-dispatch pipeline</span>
-				</div>
-			</div>
+			<div class="lk-auth-footer caption">© LeadKart 2026</div>
 		</div>
-
-		<!-- Floating product-themed glass cards — staggered bob animation. -->
-		<div class="lk-auth-float lk-auth-float-1 lk-parallax-fast" aria-hidden="true">
-			<span class="lk-auth-float-icon"><ShieldCheck size={14} /></span>
-			<span class="caption">Secure Login</span>
-		</div>
-		<div class="lk-auth-float lk-auth-float-2 lk-parallax-reverse" aria-hidden="true">
-			<span class="lk-auth-float-icon"><LineChart size={14} /></span>
-			<span class="caption">Live Reports</span>
-		</div>
-		<div class="lk-auth-float lk-auth-float-3 lk-parallax-medium" aria-hidden="true">
-			<span class="lk-auth-float-icon"><ShoppingCart size={14} /></span>
-			<span class="caption">Lead Purchase</span>
-		</div>
-		<div class="lk-auth-float lk-auth-float-4 lk-parallax-fast" aria-hidden="true">
-			<span class="lk-auth-float-icon"><Package size={14} /></span>
-			<span class="caption">Inventory</span>
-		</div>
-		<div class="lk-auth-float lk-auth-float-5 lk-parallax-reverse" aria-hidden="true">
-			<span class="lk-auth-float-icon"><TrendingUp size={14} /></span>
-			<span class="caption">Lead Tracking</span>
-		</div>
-
-		<!-- Background radial glows are now baked into the brand-panel
-		     bg as layered conic washes (purple top-right, green bottom-
-		     left). The separate floating glow blob was competing with
-		     them — removed. -->
-
-		<!-- Footer copyright -->
-		<div class="lk-auth-footer caption text-white opacity-70">© LeadKart 2026</div>
 	</section>
 
 	<!-- ═══ FORM PANEL — full-width on mobile, half on desktop.
@@ -262,28 +253,38 @@
 	}
 
 	.lk-auth-brand {
-		padding: clamp(3rem, 6vw, 5rem) clamp(2rem, 4vw, 4rem);
-		/* Layered radial washes over the indigo brand-100 base:
-		     - Top-right corner: soft purple from the logo's #a05dce
-		       glass highlight, tinting the upper portion lavender.
-		     - Bottom-left corner: soft green from the logo's #0ef709
-		       inner-K glow, tinting the lower-left wash.
-		     - Base: var(--color-brand-100) indigo.
-		   Each wash kept at ~25% alpha so they read as ambience, not
-		   competing planes. */
-		background:
-			radial-gradient(
-				ellipse 75% 60% at 100% 0%,
-				color-mix(in srgb, var(--color-auth-accent-purple) 35%, transparent) 0%,
-				transparent 55%
-			),
-			radial-gradient(
-				ellipse 70% 55% at 0% 100%,
-				color-mix(in srgb, var(--color-auth-accent-green) 30%, transparent) 0%,
-				transparent 60%
-			),
-			var(--color-brand-100);
-		color: var(--color-brand-800);
+		/* Outer panel has no padding now — the two child sections
+		   (.lk-auth-brand-image, .lk-auth-brand-text) own their own
+		   padding + bg. Fallback brand-900 covers any sub-pixel gaps
+		   between the two halves. */
+		background: var(--color-brand-900);
+		color: var(--color-bg-elevated);
+	}
+
+	/* ── Top half: image canvas. Brand-100 base under the purple-tinted
+	     illustration. flex: 1 makes it split the panel 50/50 with the
+	     text block below. ── */
+	.lk-auth-brand-image {
+		position: relative;
+		flex: 1 1 0;
+		min-height: 0;
+		overflow: hidden;
+		background: var(--color-brand-100);
+	}
+
+	/* ── Bottom half: solid navy text block. Dedicated surface for the
+	     hero typography — image stays out, no glass pills, no compromise
+	     on contrast. Industry canon: Linear / Notion / Stripe split-
+	     screen auth pages all keep text on intentional solid surfaces. ── */
+	.lk-auth-brand-text {
+		position: relative;
+		flex: 1 1 0;
+		min-height: 0;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		padding: clamp(2.5rem, 5vw, 4rem) clamp(2.5rem, 5vw, 4.5rem);
+		background: var(--color-brand-800);
 	}
 
 	.lk-auth-page-logo {
@@ -293,7 +294,7 @@
 		z-index: 6;
 	}
 
-	/* ── Brand content stack ── */
+	/* ── Brand content stack — lives inside the text block. ── */
 	.lk-auth-brand-content {
 		position: relative;
 		z-index: 4;
@@ -301,103 +302,28 @@
 		width: 100%;
 	}
 
-	/* ── Glass pill — hero text + tagline wrappers. Heavily transparent
-	     brand-600 (#1140b6) tint at 20% mix lets the purple-tinted
-	     illustration read through; the backdrop-filter blur + a faint
-	     white border + top sheen keep the pill from disappearing. A
-	     subtle text-shadow on the white text guarantees legibility
-	     regardless of the image content behind. ── */
-	.lk-auth-pill {
-		display: block;
-		width: fit-content;
-		max-width: 100%;
-		padding: 1.25em 1.5em;
-		border-radius: 1.5rem;
-		background: color-mix(in srgb, var(--color-brand-600) 20%, transparent);
-		border: 1px solid color-mix(in srgb, var(--color-bg-elevated) 25%, transparent);
-		backdrop-filter: blur(20px) saturate(1.2);
-		-webkit-backdrop-filter: blur(20px) saturate(1.2);
-		position: relative;
-		overflow: hidden;
-		box-shadow: 0 4px 16px color-mix(in srgb, var(--color-brand-900) 18%, transparent);
-	}
-	.lk-auth-pill p {
-		text-shadow: 0 1px 2px color-mix(in srgb, var(--color-brand-900) 35%, transparent);
-	}
-	.lk-auth-pill::before {
-		content: '';
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		height: 50%;
-		background: linear-gradient(
-			180deg,
-			color-mix(in srgb, var(--color-bg-elevated) 18%, transparent) 0%,
-			transparent 100%
-		);
-		border-radius: 1.5rem 1.5rem 0 0;
-		pointer-events: none;
-	}
-	.lk-auth-pill-hero {
-		margin-bottom: clamp(2.5rem, 6vh, 4.5rem);
-	}
-
-	/* ── Feature pills row — same light-glass treatment, tighter. ── */
+	/* ── Feature rows — no glass chrome. Just a clean icon chip + label
+	     on the solid navy. White label, green icon chip preserved for
+	     brand accent. ── */
 	.lk-auth-features {
 		display: flex;
 		flex-direction: column;
-		gap: 0.625rem;
+		gap: 0.875rem;
 	}
 	.lk-auth-feature {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
-		padding: 0.625rem 1rem;
-		border-radius: 0.875rem;
-		background: color-mix(in srgb, var(--color-brand-600) 18%, transparent);
-		border: 1px solid color-mix(in srgb, var(--color-bg-elevated) 20%, transparent);
-		backdrop-filter: blur(16px) saturate(1.2);
-		-webkit-backdrop-filter: blur(16px) saturate(1.2);
-		position: relative;
-		overflow: hidden;
-		transition:
-			transform 0.2s ease,
-			background 0.2s ease;
-	}
-	.lk-auth-feature span:last-child {
-		text-shadow: 0 1px 2px color-mix(in srgb, var(--color-brand-900) 30%, transparent);
-	}
-	@media (hover: hover) {
-		.lk-auth-feature:hover {
-			transform: translateX(0.25rem);
-			background: color-mix(in srgb, var(--color-brand-600) 32%, transparent);
-		}
-	}
-	.lk-auth-feature::before {
-		content: '';
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		height: 50%;
-		background: linear-gradient(
-			180deg,
-			color-mix(in srgb, var(--color-bg-elevated) 15%, transparent) 0%,
-			transparent 100%
-		);
-		border-radius: 0.875rem 0.875rem 0 0;
-		pointer-events: none;
+		gap: 0.875rem;
 	}
 	.lk-auth-feature-icon {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		width: 2rem;
-		height: 2rem;
+		width: 2.25rem;
+		height: 2.25rem;
 		border-radius: 0.5rem;
-		background: color-mix(in srgb, var(--color-secondary-100) 80%, transparent);
-		color: var(--color-secondary-700);
+		background: color-mix(in srgb, var(--color-secondary-500) 22%, transparent);
+		color: var(--color-secondary-200);
 		flex-shrink: 0;
 	}
 
@@ -508,30 +434,28 @@
 		text-shadow: 0 1px 2px color-mix(in srgb, var(--color-brand-900) 30%, transparent);
 	}
 
+	/* Float-card positions — relative to the image canvas section
+	   (not the full brand panel as before). Percentages re-tuned to
+	   spread the four cards across the smaller area. */
 	.lk-auth-float-1 {
-		top: 12%;
-		right: 10%;
+		top: 14%;
+		right: 12%;
 		animation: lk-float-bob 6s ease-in-out infinite;
 	}
 	.lk-auth-float-2 {
-		top: 35%;
-		right: 3%;
+		top: 56%;
+		right: 5%;
 		animation: lk-float-bob 7s ease-in-out 1s infinite;
 	}
 	.lk-auth-float-3 {
-		bottom: 38%;
-		right: 6%;
+		top: 30%;
+		left: 8%;
 		animation: lk-float-bob 8s ease-in-out 2s infinite;
 	}
 	.lk-auth-float-4 {
-		bottom: 18%;
-		right: 18%;
+		bottom: 12%;
+		left: 22%;
 		animation: lk-float-bob 6.5s ease-in-out 0.5s infinite;
-	}
-	.lk-auth-float-5 {
-		bottom: 8%;
-		left: 15%;
-		animation: lk-float-bob 7.5s ease-in-out 3s infinite;
 	}
 
 	@keyframes lk-float-bob {
@@ -573,13 +497,13 @@
 		backface-visibility: hidden;
 	}
 
+	/* Footer copyright — sits at the bottom of the text block,
+	   right-aligned for visual balance against the left-aligned
+	   hero text. Inherits white from .lk-auth-brand-text. */
 	.lk-auth-footer {
-		position: absolute;
-		bottom: 1.5rem;
-		left: 50%;
-		transform: translateX(-50%);
-		z-index: 4;
-		opacity: 0.7;
+		margin-top: clamp(2rem, 4vh, 3rem);
+		opacity: 0.55;
+		color: var(--color-bg-elevated);
 	}
 
 	/* ── Reduced motion: kill bobbing + parallax. The parallax effect-hook
@@ -589,8 +513,7 @@
 		.lk-auth-float-1,
 		.lk-auth-float-2,
 		.lk-auth-float-3,
-		.lk-auth-float-4,
-		.lk-auth-float-5 {
+		.lk-auth-float-4 {
 			animation: none;
 		}
 		.lk-parallax-slow,
