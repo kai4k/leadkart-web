@@ -103,6 +103,11 @@
 						['dark', 'brand', 'purple', 'sky']
 					);
 					applyIfValid('leadkart-content-width', 'data-content-width', ['fluid']);
+					applyIfValid(
+						'leadkart-nav-type',
+						'data-nav-type',
+						['floating', 'boxed', 'pattern']
+					);
 
 					var dir = localStorage.getItem('leadkart-layout-dir');
 					root.setAttribute('dir', dir === 'rtl' ? 'rtl' : 'ltr');

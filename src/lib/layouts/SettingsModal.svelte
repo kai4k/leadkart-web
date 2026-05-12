@@ -9,12 +9,14 @@
 		SIDEBAR_COLORS,
 		CONTENT_WIDTHS,
 		LAYOUT_DIRS,
+		NAV_TYPES,
 		type PrimaryColor,
 		type LayoutMode,
 		type SidebarSize,
 		type SidebarColor,
 		type ContentWidth,
-		type LayoutDir
+		type LayoutDir,
+		type NavType
 	} from '$lib/stores/theme.svelte';
 
 	/**
@@ -141,6 +143,30 @@
 					{/each}
 				</div>
 			</section>
+
+			<!-- ── Navigation type — visible only in modern layout (mirrors
+			     Domiex which only surfaces the nav-type axis when modern is
+			     active; in other layouts the modern-specific styling never
+			     applies so showing the picker would be confusing). ── -->
+			{#if theme.layoutMode === 'modern'}
+				<section class="stack stack-tight">
+					<h3 class="h6">Navigation type</h3>
+					<div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+						{#each NAV_TYPES as opt (opt.id)}
+							{@const selected = theme.navType === opt.id}
+							<button
+								type="button"
+								class={['lk-pref-card', selected && 'lk-pref-card--selected']}
+								aria-pressed={selected}
+								onclick={() => theme.setNavType(opt.id as NavType)}
+							>
+								<span class={`lk-nav-preview lk-nav-preview--${opt.id}`} aria-hidden="true"></span>
+								<span class="caption font-medium">{opt.label}</span>
+							</button>
+						{/each}
+					</div>
+				</section>
+			{/if}
 
 			<!-- ── Sidebar size ── -->
 			<section class="stack stack-tight">
@@ -413,6 +439,60 @@
 		inset: calc(25% + 0.4rem) 0.2rem 0.2rem calc(20% + 0.4rem);
 		background: var(--color-bg-elevated);
 		opacity: 1;
+	}
+
+	/* ── Nav-type previews (modern-layout only) ── */
+	.lk-nav-preview {
+		display: block;
+		height: 2rem;
+		border-radius: 0.25rem;
+		background: var(--color-bg-muted);
+		position: relative;
+	}
+	.lk-nav-preview--default {
+		background: linear-gradient(
+			to right,
+			var(--color-fg-muted) 0 18%,
+			var(--color-bg-elevated) 18% 100%
+		);
+	}
+	.lk-nav-preview--floating {
+		background: var(--color-bg-elevated);
+		box-shadow: inset 0 0 0 1px var(--color-border);
+	}
+	.lk-nav-preview--floating::before {
+		content: '';
+		position: absolute;
+		inset: 0.25rem auto 0.25rem 0.25rem;
+		width: 16%;
+		background: var(--color-fg-muted);
+		border-radius: 0.125rem;
+	}
+	.lk-nav-preview--boxed {
+		background: var(--color-bg-subtle);
+		padding: 0.2rem;
+	}
+	.lk-nav-preview--boxed::before {
+		content: '';
+		position: absolute;
+		inset: 0.2rem auto 0.2rem 0.2rem;
+		width: 18%;
+		background: var(--color-fg-muted);
+		border-radius: 0.125rem;
+	}
+	.lk-nav-preview--pattern {
+		background: repeating-linear-gradient(
+			45deg,
+			var(--color-brand-200) 0 4px,
+			var(--color-brand-100) 4px 8px
+		);
+	}
+	.lk-nav-preview--pattern::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		left: 18%;
+		background: var(--color-bg-elevated);
 	}
 
 	/* ── Sidebar-size previews ── */

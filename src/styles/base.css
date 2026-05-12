@@ -202,11 +202,25 @@
 	--lk-topbar-height: clamp(3.75rem, 4vw + 1.5rem, 5rem);
 
 	/* Sidebar size — width fluid in the 'default' tier, fixed widths
-	   for the alt sizes (icon-only / labels-stacked have stricter
-	   width requirements). Label / section-title visibility unchanged. */
+	   for the alt sizes (medium = icon-stacked-above-label cards,
+	   small = icon-only column). Label / section-title visibility
+	   + per-link flex direction + icon size all flip per size so the
+	   nav items render correctly without per-component branching. */
 	--lk-sidebar-width: clamp(13rem, 16vw, 16rem); /* default — fluid */
 	--lk-sidebar-label-display: inline;
 	--lk-sidebar-section-title-display: block;
+	--lk-sidebar-link-direction: row;
+	--lk-sidebar-link-align: flex-start;
+	--lk-sidebar-link-text-align: start;
+	--lk-sidebar-link-gap: 0.75rem;
+	--lk-sidebar-link-padding: 0.5rem 0.75rem;
+	--lk-sidebar-icon-size: 18px;
+	--lk-sidebar-label-size: var(--text-sm);
+
+	/* Horizontal nav strip — only rendered when layoutMode=horizontal.
+	   Height stays 0 elsewhere so the page-wrapper top-offset math
+	   stays correct via a single expression. */
+	--lk-horizontal-nav-height: 0px;
 
 	/* Topbar brand cluster column width — matches sidebar width in
 	   the 'default' layout so the logo column aligns with the sidebar
@@ -249,14 +263,28 @@
 	}
 }
 
-/* ── Sidebar size variants ─────────────────────────────────── */
+/* ── Sidebar size variants ───────────────────────────────────
+   medium = icon stacked above label (Domiex's "medium" card style).
+   small  = icon-only column, labels hidden + section titles hidden.
+   Modern layout (handled below) inherits the 'small' visual via the
+   same vars. */
 :root[data-sidebar-size='medium'] {
-	--lk-sidebar-width: 10rem; /* 160px — labels stack under icons */
+	--lk-sidebar-width: 13.75rem; /* 220px — matches Domiex medium */
+	--lk-sidebar-link-direction: column;
+	--lk-sidebar-link-align: center;
+	--lk-sidebar-link-text-align: center;
+	--lk-sidebar-link-gap: 0.375rem;
+	--lk-sidebar-link-padding: 0.625rem 0.5rem;
+	--lk-sidebar-icon-size: 22px;
+	--lk-sidebar-label-size: var(--text-xs);
 }
 :root[data-sidebar-size='small'] {
 	--lk-sidebar-width: 4.6875rem; /* 75px — icon-only column */
 	--lk-sidebar-label-display: none;
 	--lk-sidebar-section-title-display: none;
+	--lk-sidebar-link-align: center;
+	--lk-sidebar-link-padding: 0.625rem 0.5rem;
+	--lk-sidebar-icon-size: 20px;
 }
 
 /* ── Sidebar colour variants ──────────────────────────────────
@@ -337,10 +365,46 @@
 	:root[data-layout='horizontal'] {
 		--lk-topbar-brand-col: auto;
 		--lk-topbar-brand-border: 0;
+		/* Horizontal-nav strip slots in below the topbar at ~3rem high.
+		   page-wrapper picks this up via padding-block-start. */
+		--lk-horizontal-nav-height: 3rem;
 	}
+	/* Modern layout — force the sidebar into the icon-only visual
+	   regardless of the user's data-sidebar-size pick, mirroring
+	   Domiex (modern locks the sidebar small + reveals nav-type). */
 	:root[data-layout='modern'] {
 		--lk-topbar-brand-col: auto;
 		--lk-topbar-brand-border: 0;
+		--lk-sidebar-width: 4.6875rem;
+		--lk-sidebar-label-display: none;
+		--lk-sidebar-section-title-display: none;
+		--lk-sidebar-link-align: center;
+		--lk-sidebar-link-padding: 0.625rem 0.5rem;
+		--lk-sidebar-icon-size: 20px;
+	}
+	/* ── Modern × nav-type combinations ──────────────────────────
+	   Only active when both data-layout='modern' AND data-nav-type
+	   are set. Each variant re-skins the sidebar token set so the
+	   Sidebar component renders differently without conditional
+	   markup. Mirrors Domiex's data-layout='modern' × data-nav-type
+	   combination matrix. */
+	:root[data-layout='modern'][data-nav-type='floating'] {
+		--lk-sidebar-bg: var(--color-bg-elevated);
+		--lk-sidebar-border: transparent;
+		--lk-shell-shadow: 0 6px 16px oklch(0 0 0 / 0.08);
+	}
+	:root[data-layout='modern'][data-nav-type='boxed'] {
+		--lk-sidebar-bg: var(--color-bg-subtle);
+		--lk-sidebar-border: var(--color-border);
+	}
+	:root[data-layout='modern'][data-nav-type='pattern'] {
+		--lk-sidebar-bg: var(--color-brand-700);
+		--lk-sidebar-fg: var(--color-brand-50);
+		--lk-sidebar-fg-muted: var(--color-brand-200);
+		--lk-sidebar-active-bg: var(--color-brand-900);
+		--lk-sidebar-active-fg: var(--color-brand-50);
+		--lk-sidebar-hover-bg: var(--color-brand-800);
+		--lk-sidebar-border: var(--color-brand-800);
 	}
 }
 

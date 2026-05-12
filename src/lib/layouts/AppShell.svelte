@@ -2,8 +2,10 @@
 	import { onMount } from 'svelte';
 	import Topbar from './Topbar.svelte';
 	import Sidebar from './Sidebar.svelte';
+	import HorizontalNav from './HorizontalNav.svelte';
 	import Footer from './Footer.svelte';
 	import SettingsModal from './SettingsModal.svelte';
+	import { theme } from '$lib/stores/theme.svelte';
 
 	let { children } = $props();
 	let sidebarOpen = $state(false);
@@ -77,10 +79,20 @@
 		onOpenSettings={() => (settingsOpen = true)}
 	/>
 
-	<!-- ── Desktop fixed sidebar ── -->
+	<!-- ── Desktop fixed sidebar (vertical) ── -->
 	<aside class="lk-sidebar-mount hidden lg:block" aria-label="Primary navigation">
 		<Sidebar onNavigate={close} />
 	</aside>
+
+	<!-- ── Horizontal nav strip — only when layoutMode='horizontal'.
+	     Mirrors Domiex: sidebar transforms into a horizontal menu row
+	     beneath the topbar. The mobile drawer below still uses the
+	     vertical Sidebar for narrow screens. ── -->
+	{#if theme.layoutMode === 'horizontal'}
+		<div class="lk-hnav-mount hidden lg:block">
+			<HorizontalNav />
+		</div>
+	{/if}
 
 	<!-- ── Mobile drawer (slide-in over content) ── -->
 	{#if sidebarOpen}
@@ -136,7 +148,9 @@
 	     Sidebar width PLUS the gap on lg+; 0 on mobile.  ─── */
 	.lk-page-wrapper {
 		min-height: 100dvh;
-		padding-block-start: calc(var(--lk-topbar-height) + var(--lk-shell-gap));
+		padding-block-start: calc(
+			var(--lk-topbar-height) + var(--lk-shell-gap) + var(--lk-horizontal-nav-height)
+		);
 		padding-block-end: var(--lk-shell-gap);
 		padding-inline-start: var(--lk-shell-gap);
 		padding-inline-end: var(--lk-shell-gap);

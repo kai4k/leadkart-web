@@ -39,6 +39,9 @@ export type SidebarSize = 'default' | 'medium' | 'small';
 export type SidebarColor = 'light' | 'dark' | 'brand' | 'purple' | 'sky';
 export type ContentWidth = 'default' | 'fluid';
 export type LayoutDir = 'ltr' | 'rtl';
+/** Navigation type — applies only when layoutMode='modern'. Mirrors
+ *  Domiex's data-nav-type axis (default / floating / boxed / pattern). */
+export type NavType = 'default' | 'floating' | 'boxed' | 'pattern';
 
 export const PRIMARY_COLORS: ReadonlyArray<{ id: PrimaryColor; label: string; hex: string }> = [
 	{ id: 'navy', label: 'Navy', hex: '#2D2F7E' }, // default — logo wordmark navy-violet
@@ -86,13 +89,21 @@ export const LAYOUT_DIRS: ReadonlyArray<{ id: LayoutDir; label: string }> = [
 	{ id: 'rtl', label: 'RTL' }
 ];
 
+export const NAV_TYPES: ReadonlyArray<{ id: NavType; label: string }> = [
+	{ id: 'default', label: 'Default' },
+	{ id: 'floating', label: 'Floating' },
+	{ id: 'boxed', label: 'Boxed' },
+	{ id: 'pattern', label: 'Pattern' }
+];
+
 const STORAGE_KEYS = {
 	primary: 'leadkart-primary',
 	layoutMode: 'leadkart-layout-mode',
 	sidebarSize: 'leadkart-sidebar-size',
 	sidebarColor: 'leadkart-sidebar-color',
 	contentWidth: 'leadkart-content-width',
-	layoutDir: 'leadkart-layout-dir'
+	layoutDir: 'leadkart-layout-dir',
+	navType: 'leadkart-nav-type'
 } as const;
 
 class ThemeStore {
@@ -114,6 +125,7 @@ class ThemeStore {
 	layoutDir = $state<LayoutDir>(
 		this.readInitial<LayoutDir>(STORAGE_KEYS.layoutDir, 'ltr', LAYOUT_DIRS)
 	);
+	navType = $state<NavType>(this.readInitial<NavType>(STORAGE_KEYS.navType, 'default', NAV_TYPES));
 
 	private readInitial<T extends string>(
 		key: string,
@@ -156,6 +168,11 @@ class ThemeStore {
 		this.persist(STORAGE_KEYS.layoutDir, next);
 		this.applyToDocument();
 	}
+	setNavType(next: NavType) {
+		this.navType = next;
+		this.persist(STORAGE_KEYS.navType, next);
+		this.applyToDocument();
+	}
 
 	reset() {
 		this.setPrimary('navy');
@@ -164,6 +181,7 @@ class ThemeStore {
 		this.setSidebarColor('light');
 		this.setContentWidth('default');
 		this.setLayoutDir('ltr');
+		this.setNavType('default');
 	}
 
 	/**
@@ -184,6 +202,9 @@ class ThemeStore {
 		this.setAttr(root, 'data-sidebar-size', this.sidebarSize, 'default');
 		this.setAttr(root, 'data-sidebar-colors', this.sidebarColor, 'light');
 		this.setAttr(root, 'data-content-width', this.contentWidth, 'default');
+		// nav-type only meaningful for layoutMode='modern' but harmless
+		// to set always — CSS for it is gated on data-layout='modern'.
+		this.setAttr(root, 'data-nav-type', this.navType, 'default');
 
 		// `dir` is a native HTML attribute (not data-*); set even on
 		// default ltr for explicitness (some browsers default to auto).

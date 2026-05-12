@@ -66,11 +66,11 @@
 									onclick={() => onNavigate?.()}
 									title={item.label}
 									class={[
-										'lk-sidebar-link body-sm flex items-center gap-3 rounded-md px-3 py-2 font-medium transition-colors',
+										'lk-sidebar-link rounded-md font-medium transition-colors',
 										active && 'lk-sidebar-link--active'
 									]}
 								>
-									<Icon size={18} aria-hidden="true" />
+									<Icon aria-hidden="true" />
 									<span class="lk-sidebar-label">{item.label}</span>
 								</a>
 							</li>
@@ -117,9 +117,28 @@
 	}
 	.lk-sidebar-label {
 		display: var(--lk-sidebar-label-display);
+		font-size: var(--lk-sidebar-label-size);
+		line-height: 1.2;
 	}
 	.lk-sidebar-link {
+		display: flex;
+		flex-direction: var(--lk-sidebar-link-direction);
+		align-items: var(--lk-sidebar-link-align);
+		justify-content: var(--lk-sidebar-link-align);
+		text-align: var(--lk-sidebar-link-text-align);
+		gap: var(--lk-sidebar-link-gap);
+		padding: var(--lk-sidebar-link-padding);
 		color: var(--lk-sidebar-fg);
+		transition:
+			background 0.15s,
+			color 0.15s,
+			padding 0.2s ease-out,
+			gap 0.2s ease-out;
+	}
+	.lk-sidebar-link :global(svg) {
+		width: var(--lk-sidebar-icon-size);
+		height: var(--lk-sidebar-icon-size);
+		flex-shrink: 0;
 	}
 	.lk-sidebar-link:hover {
 		background: var(--lk-sidebar-hover-bg);
