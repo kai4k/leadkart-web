@@ -194,12 +194,17 @@
  * data-sidebar, data-sidebar-colors attribute system.
  * ───────────────────────────────────────────────────────────── */
 :root {
-	/* Topbar height — Domiex's `--spacing-topbar` (75px). All fixed
-	   layout offsets reference this. */
-	--lk-topbar-height: 4.6875rem;
+	/* Topbar height — fluid scaling. clamp() lets it grow from ~60px
+	   on small laptops to ~80px on wide desktops, while staying within
+	   the 3.75rem–5rem range so the layout never feels squished or
+	   wasteful. Domiex's reference is 4.6875rem (75px) — that sits
+	   in the middle of this range. */
+	--lk-topbar-height: clamp(3.75rem, 4vw + 1.5rem, 5rem);
 
-	/* Sidebar size — width + visibility of label/title */
-	--lk-sidebar-width: 15rem; /* default — 240px (Domiex `w-sidebar`) */
+	/* Sidebar size — width fluid in the 'default' tier, fixed widths
+	   for the alt sizes (icon-only / labels-stacked have stricter
+	   width requirements). Label / section-title visibility unchanged. */
+	--lk-sidebar-width: clamp(13rem, 16vw, 16rem); /* default — fluid */
 	--lk-sidebar-label-display: inline;
 	--lk-sidebar-section-title-display: block;
 
