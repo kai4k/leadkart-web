@@ -85,23 +85,31 @@
 <style>
 	.lk-sidebar {
 		position: fixed;
-		inset-block-start: var(--lk-topbar-height);
-		inset-inline-start: 0;
-		block-size: calc(100dvh - var(--lk-topbar-height));
+		inset-block-start: calc(var(--lk-topbar-height) + var(--lk-shell-gap));
+		inset-inline-start: var(--lk-shell-gap);
+		block-size: calc(100dvh - var(--lk-topbar-height) - var(--lk-shell-gap) * 2);
 		inline-size: var(--lk-sidebar-width);
 		background: var(--lk-sidebar-bg);
 		color: var(--lk-sidebar-fg);
 		border-inline-end: 1px solid var(--lk-sidebar-border);
+		border-end-start-radius: var(--lk-shell-radius);
+		box-shadow: var(--lk-shell-shadow);
 		transition:
 			inline-size 0.2s ease-out,
+			inset-block-start 0.2s ease-out,
+			inset-inline-start 0.2s ease-out,
+			block-size 0.2s ease-out,
+			border-radius 0.2s ease-out,
 			background 0.2s ease-out;
 		z-index: var(--z-sticky);
 	}
-	/* Inside the mobile drawer, anchor at top (no Topbar offset). */
+	/* Inside the mobile drawer, anchor at top (no Topbar/gap offset). */
 	:global([role='dialog']) .lk-sidebar {
 		position: relative;
-		inset-block-start: 0;
+		inset: 0;
 		block-size: 100%;
+		border-radius: 0;
+		box-shadow: none;
 	}
 	.lk-sidebar-section-title {
 		display: var(--lk-sidebar-section-title-display);

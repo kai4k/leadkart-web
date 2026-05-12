@@ -208,6 +208,14 @@
 	--lk-sidebar-label-display: inline;
 	--lk-sidebar-section-title-display: block;
 
+	/* Topbar brand cluster column width — matches sidebar width in
+	   the 'default' layout so the logo column aligns with the sidebar
+	   below it (Domiex's `md:group-data-[layout=default]:w-sidebar`).
+	   In boxed / semibox / horizontal / modern, the cluster shrinks
+	   to its natural width — those modes don't want the column lock. */
+	--lk-topbar-brand-col: var(--lk-sidebar-width);
+	--lk-topbar-brand-border: 1px solid var(--color-border);
+
 	/* Sidebar colour — surface + foreground tokens. Default `light` =
 	   bg-elevated (white) over fg (near-black). */
 	--lk-sidebar-bg: var(--color-bg-elevated);
@@ -221,11 +229,24 @@
 	/* Content width */
 	--lk-content-max-width: var(--container-2xl); /* default = 96rem */
 
-	/* Layout mode — outer wrapper padding + radius (used by AppShell
-	   root in 'boxed' / 'semibox'). Default = no outer treatment. */
-	--lk-shell-padding: 0;
-	--lk-shell-radius: 0;
-	--lk-shell-bg: transparent;
+	/* Layout-mode shell — outer "gap" each fixed surface (Topbar,
+	   Sidebar, page-card) insets itself by; card radius + bg drive
+	   the boxed/semibox visual. Default = flat full-bleed (gap=0,
+	   radius=0, transparent card so body canvas shows through).
+	   Boxed/semibox flip these on at lg+ only — mobile stays flat. */
+	--lk-shell-gap: 0px;
+	--lk-shell-radius: 0px;
+	--lk-page-bg: transparent;
+	--lk-shell-shadow: 0 0 transparent;
+}
+
+/* Mobile (< lg): brand cluster column always shrinks to natural
+   width since the sidebar is hidden behind a drawer trigger. */
+@media (max-width: 63.99rem) {
+	:root {
+		--lk-topbar-brand-col: auto;
+		--lk-topbar-brand-border: 0;
+	}
 }
 
 /* ── Sidebar size variants ─────────────────────────────────── */
@@ -283,16 +304,44 @@
 	--lk-content-max-width: none;
 }
 
-/* ── Layout mode — Boxed + Semibox add outer margin + radius ── */
-:root[data-layout='boxed'] {
-	--lk-shell-padding: 1rem;
-	--lk-shell-radius: 0.75rem;
-	--lk-shell-bg: var(--color-bg-elevated);
-}
-:root[data-layout='semibox'] {
-	--lk-shell-padding: 1rem;
-	--lk-shell-radius: 0.75rem;
-	--lk-shell-bg: transparent;
+/* ── Layout mode ──────────────────────────────────────────────
+   Each mode flips a small set of layout vars; the Topbar / Sidebar
+   / page-wrapper consume those vars and reposition themselves.
+   Gated to ≥ 64rem because boxed/semibox don't make sense on phones
+   (Domiex pattern: `lg:group-data-[layout=boxed]:left-8` etc.).
+
+   Boxed   — 2rem outer gap, white card behind page content, subtle
+             shadow on Topbar / Sidebar / card (each becomes a
+             distinct floating surface).
+   Semibox — same 1.5rem gap + radius as boxed but the page card is
+             transparent (canvas shows through) for a lighter feel.
+   Horizontal / Modern — brand-cluster column collapses (sidebar
+             behaviour handled by AppShell + Sidebar respectively). */
+@media (min-width: 64rem) {
+	:root[data-layout='boxed'] {
+		--lk-shell-gap: 2rem;
+		--lk-shell-radius: 0.5rem;
+		--lk-page-bg: var(--color-bg-elevated);
+		--lk-shell-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.05);
+		--lk-topbar-brand-col: auto;
+		--lk-topbar-brand-border: 0;
+	}
+	:root[data-layout='semibox'] {
+		--lk-shell-gap: 1.5rem;
+		--lk-shell-radius: 0.5rem;
+		--lk-page-bg: var(--color-bg-elevated);
+		--lk-shell-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.05);
+		--lk-topbar-brand-col: auto;
+		--lk-topbar-brand-border: 0;
+	}
+	:root[data-layout='horizontal'] {
+		--lk-topbar-brand-col: auto;
+		--lk-topbar-brand-border: 0;
+	}
+	:root[data-layout='modern'] {
+		--lk-topbar-brand-col: auto;
+		--lk-topbar-brand-border: 0;
+	}
 }
 
 @layer base {

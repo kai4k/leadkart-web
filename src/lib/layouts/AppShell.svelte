@@ -103,50 +103,78 @@
 		</div>
 	{/if}
 
-	<!-- ── Page wrapper — offset by fixed Topbar + Sidebar.
-	     Hosts the routed page + Footer. Single scrolling element. ── -->
+	<!-- ── Page wrapper — offset by fixed Topbar (top) + Sidebar (inline-
+	     start) + shell-gap (boxed/semibox). The wrapper itself is
+	     transparent; the white "card" surface lives in .lk-page-card
+	     so boxed mode shows canvas in the outer gap and elevated bg
+	     inside the card (Domiex's pattern). ── -->
 	<main id="main-content" class="lk-page-wrapper" tabindex="-1">
-		<div class="lk-page-inner">
-			{@render children()}
+		<div class="lk-page-card">
+			<div class="lk-page-inner">
+				{@render children()}
+			</div>
+			<Footer />
 		</div>
-		<Footer />
 	</main>
 
 	<SettingsModal bind:open={settingsOpen} />
 </div>
 
 <style>
-	/* ─── Root shell — outer wrapper consumes layout-mode vars
-	     (boxed / semibox add outer padding + radius). ─── */
+	/* ─── Root shell — body bg shows through; no outer padding (each
+	     fixed surface insets itself via --lk-shell-gap so the shell
+	     vars drive the boxed visual end-to-end). ─── */
 	.lk-app {
-		padding: var(--lk-shell-padding);
-		background: var(--lk-shell-bg);
+		background: var(--color-bg);
 		min-height: 100dvh;
 	}
 
-	/* ─── Page wrapper — fixed-offset from Topbar (top) + Sidebar (start).
-	     padding-top equals Topbar height so content sits below the bar.
-	     padding-inline-start equals sidebar width on desktop; 0 on mobile. ─── */
+	/* ─── Page wrapper — content region after Topbar + Sidebar +
+	     shell-gap offsets. Padding-top accounts for Topbar height
+	     PLUS the gap (Topbar sits at top:gap so its bottom edge is
+	     at gap + topbar-height). Padding-inline-start accounts for
+	     Sidebar width PLUS the gap on lg+; 0 on mobile.  ─── */
 	.lk-page-wrapper {
 		min-height: 100dvh;
-		padding-top: var(--lk-topbar-height);
-		padding-inline-start: 0;
-		background: var(--color-bg);
+		padding-block-start: calc(var(--lk-topbar-height) + var(--lk-shell-gap));
+		padding-block-end: var(--lk-shell-gap);
+		padding-inline-start: var(--lk-shell-gap);
+		padding-inline-end: var(--lk-shell-gap);
 		display: flex;
 		flex-direction: column;
-		transition: padding-inline-start 0.2s ease-out;
+		transition:
+			padding-block-start 0.2s ease-out,
+			padding-block-end 0.2s ease-out,
+			padding-inline-start 0.2s ease-out,
+			padding-inline-end 0.2s ease-out;
 	}
 	@media (min-width: 64rem) {
 		.lk-page-wrapper {
-			padding-inline-start: var(--lk-sidebar-width);
+			padding-inline-start: calc(var(--lk-sidebar-width) + var(--lk-shell-gap));
 		}
 	}
-	/* Horizontal layout — sidebar hidden, no inline-start offset. */
+	/* Horizontal layout — sidebar hidden, drop the inline-start offset
+	   to just the shell-gap. */
 	:global(:root[data-layout='horizontal']) .lk-page-wrapper {
-		padding-inline-start: 0;
+		padding-inline-start: var(--lk-shell-gap);
 	}
 	:global(:root[data-layout='horizontal']) .lk-sidebar-mount {
 		display: none;
+	}
+
+	/* ─── Page card — the visible "page" surface. Transparent in default
+	     mode (body canvas shows through), elevated white with radius +
+	     subtle shadow in boxed/semibox. ─── */
+	.lk-page-card {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		background: var(--lk-page-bg);
+		border-radius: var(--lk-shell-radius);
+		box-shadow: var(--lk-shell-shadow);
+		transition:
+			background 0.2s ease-out,
+			border-radius 0.2s ease-out;
 	}
 
 	.lk-page-inner {

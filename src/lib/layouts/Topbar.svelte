@@ -56,28 +56,41 @@
 <style>
 	.lk-topbar {
 		position: fixed;
-		inset: 0 0 auto 0;
+		inset-block-start: var(--lk-shell-gap);
+		inset-inline: var(--lk-shell-gap);
 		z-index: var(--z-sticky);
 		display: grid;
-		grid-template-columns: var(--lk-sidebar-width) 1fr auto;
+		grid-template-columns: var(--lk-topbar-brand-col) 1fr auto;
 		align-items: center;
 		block-size: var(--lk-topbar-height);
 		padding-inline-end: clamp(1rem, 2vw, 1.5rem);
+		padding-inline-start: 0;
 		background: var(--color-bg-elevated);
 		border-block-end: 1px solid var(--color-border);
-		transition: grid-template-columns 0.2s ease-out;
+		border-start-start-radius: var(--lk-shell-radius);
+		border-start-end-radius: var(--lk-shell-radius);
+		box-shadow: var(--lk-shell-shadow);
+		transition:
+			inset-block-start 0.2s ease-out,
+			inset-inline 0.2s ease-out,
+			grid-template-columns 0.2s ease-out,
+			border-radius 0.2s ease-out;
 	}
+	/* Brand-cluster column collapses → free up padding for the centre
+	   column. Only applies when brand-col is `auto` (mobile + boxed +
+	   semibox + horizontal + modern). */
 	@media (max-width: 63.99rem) {
 		.lk-topbar {
-			grid-template-columns: auto 1fr auto;
 			padding-inline-start: clamp(0.75rem, 2vw, 1.25rem);
 		}
 	}
-	/* Horizontal mode — no sidebar, so the brand cluster collapses
-	   to its natural width. */
-	:global(:root[data-layout='horizontal']) .lk-topbar {
-		grid-template-columns: auto 1fr auto;
-		padding-inline-start: clamp(0.75rem, 2vw, 1.25rem);
+	@media (min-width: 64rem) {
+		:global(:root[data-layout='horizontal']) .lk-topbar,
+		:global(:root[data-layout='boxed']) .lk-topbar,
+		:global(:root[data-layout='semibox']) .lk-topbar,
+		:global(:root[data-layout='modern']) .lk-topbar {
+			padding-inline-start: clamp(0.75rem, 2vw, 1.25rem);
+		}
 	}
 
 	.lk-topbar-brand {
@@ -86,15 +99,7 @@
 		gap: 0.5rem;
 		padding-inline: clamp(0.75rem, 1.5vw, 1.25rem);
 		block-size: 100%;
-		border-inline-end: 1px solid var(--color-border);
-	}
-	@media (max-width: 63.99rem) {
-		.lk-topbar-brand {
-			border-inline-end: none;
-		}
-	}
-	:global(:root[data-layout='horizontal']) .lk-topbar-brand {
-		border-inline-end: none;
+		border-inline-end: var(--lk-topbar-brand-border);
 	}
 
 	.lk-topbar-search {
