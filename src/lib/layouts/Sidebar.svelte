@@ -87,9 +87,9 @@
 <style>
 	.lk-sidebar {
 		position: fixed;
-		inset-block-start: var(--lk-topbar-height);
-		inset-inline-start: 0;
-		block-size: calc(100dvh - var(--lk-topbar-height));
+		inset-block-start: var(--lk-sidebar-top);
+		inset-inline-start: var(--lk-shell-gap);
+		block-size: calc(100dvh - var(--lk-sidebar-top) - var(--lk-sidebar-bottom));
 		inline-size: var(--lk-sidebar-width);
 		background: var(--lk-sidebar-bg);
 		color: var(--lk-sidebar-fg);
@@ -98,17 +98,32 @@
 		flex-direction: column;
 		transition:
 			inline-size 0.18s ease-out,
+			inset-block-start 0.18s ease-out,
+			inset-inline-start 0.18s ease-out,
+			block-size 0.18s ease-out,
+			border-radius 0.18s ease-out,
 			background 0.15s ease-out;
 		z-index: var(--z-sticky);
 	}
 
-	/* Mobile drawer override: render in normal flow with no top-offset. */
+	/* Semibox — sidebar floats with a full border + radius + shadow. */
+	:global(:root[data-layout='semibox']) .lk-sidebar {
+		border: 1px solid var(--lk-sidebar-border);
+		border-radius: var(--lk-shell-radius);
+		box-shadow: var(--lk-shell-shadow);
+	}
+
+	/* Mobile drawer override: render in normal flow with no top-offset
+	   or floating border (the drawer's own panel handles the visual). */
 	:global([role='dialog']) .lk-sidebar {
 		position: relative;
 		inset: 0;
 		block-size: 100%;
 		inline-size: 100%;
+		border: 0;
 		border-inline-end: 0;
+		border-radius: 0;
+		box-shadow: none;
 	}
 
 	/* ── Brand block ───────────────────────────────────────────── */

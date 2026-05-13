@@ -92,6 +92,7 @@
 						]
 					);
 					applyIfValid('leadkart-sidebar-color', 'data-sidebar-colors', ['dark']);
+					applyIfValid('leadkart-layout-mode', 'data-layout', ['semibox']);
 
 					if (localStorage.getItem('leadkart-sidebar-collapsed') === '1') {
 						root.setAttribute('data-sidebar-collapsed', '');

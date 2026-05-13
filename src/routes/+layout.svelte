@@ -12,6 +12,7 @@
 		void theme.sidebarColor;
 		void theme.layoutDir;
 		void theme.sidebarCollapsed;
+		void theme.layoutMode;
 		theme.applyToDocument();
 	});
 </script>

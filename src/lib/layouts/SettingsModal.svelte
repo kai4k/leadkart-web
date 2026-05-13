@@ -6,9 +6,11 @@
 		PRIMARY_COLORS,
 		SIDEBAR_COLORS,
 		LAYOUT_DIRS,
+		LAYOUT_MODES,
 		type PrimaryColor,
 		type SidebarColor,
-		type LayoutDir
+		type LayoutDir,
+		type LayoutMode
 	} from '$lib/stores/theme.svelte';
 
 	/**
@@ -110,6 +112,29 @@
 		</header>
 
 		<div class="stack stack-relaxed flex-1 overflow-y-auto px-5 py-5">
+			<!-- ── Layout mode ── -->
+			<section class="stack stack-tight">
+				<h3 class="h6">Layout</h3>
+				<div class="grid grid-cols-2 gap-2">
+					{#each LAYOUT_MODES as opt (opt.id)}
+						{@const selected = theme.layoutMode === opt.id}
+						<button
+							type="button"
+							class={['lk-pref-card', selected && 'lk-pref-card--selected']}
+							aria-pressed={selected}
+							onclick={() => theme.setLayoutMode(opt.id as LayoutMode)}
+						>
+							<span class={`lk-layout-preview lk-layout-preview--${opt.id}`} aria-hidden="true">
+								<span class="lk-layout-bar lk-layout-bar--side"></span>
+								<span class="lk-layout-bar lk-layout-bar--top"></span>
+								<span class="lk-layout-bar lk-layout-bar--body"></span>
+							</span>
+							<span class="caption font-medium">{opt.label}</span>
+						</button>
+					{/each}
+				</div>
+			</section>
+
 			<!-- ── Primary colour ── -->
 			<section class="stack stack-tight">
 				<h3 class="h6">Brand colour</h3>
@@ -245,6 +270,62 @@
 		height: 2.25rem;
 		border-radius: 0.375rem;
 		border: 1px solid var(--color-border);
+	}
+
+	/* ── Layout-mode previews — schematic mini-diagrams ── */
+	.lk-layout-preview {
+		position: relative;
+		display: block;
+		height: 2.75rem;
+		border-radius: 0.25rem;
+		background: var(--color-bg-muted);
+		overflow: hidden;
+	}
+	.lk-layout-bar {
+		position: absolute;
+		background: var(--color-fg-muted);
+		opacity: 0.6;
+		border-radius: 1px;
+	}
+	/* Default — sidebar left full-height, topbar top full-width */
+	.lk-layout-preview--default .lk-layout-bar--side {
+		inset: 0 auto 0 0;
+		width: 26%;
+		background: var(--color-fg);
+		opacity: 0.85;
+	}
+	.lk-layout-preview--default .lk-layout-bar--top {
+		inset: 0 0 auto 26%;
+		height: 28%;
+	}
+	.lk-layout-preview--default .lk-layout-bar--body {
+		inset: 28% 0 0 26%;
+		background: var(--color-bg-elevated);
+		opacity: 1;
+	}
+	/* Semibox — both panes float with margins + radius; topbar sits to
+	   the right of the sidebar, not above it. */
+	.lk-layout-preview--semibox {
+		padding: 0.2rem;
+		background: var(--color-bg-subtle);
+	}
+	.lk-layout-preview--semibox .lk-layout-bar--side {
+		inset: 0.2rem auto 0.2rem 0.2rem;
+		width: 24%;
+		background: var(--color-fg);
+		opacity: 0.85;
+		border-radius: 2px;
+	}
+	.lk-layout-preview--semibox .lk-layout-bar--top {
+		inset: 0.2rem 0.2rem auto calc(24% + 0.4rem);
+		height: 26%;
+		border-radius: 2px;
+	}
+	.lk-layout-preview--semibox .lk-layout-bar--body {
+		inset: calc(26% + 0.4rem) 0.2rem 0.2rem calc(24% + 0.4rem);
+		background: var(--color-bg-elevated);
+		opacity: 1;
+		border-radius: 2px;
 	}
 
 	.lk-dir-preview {

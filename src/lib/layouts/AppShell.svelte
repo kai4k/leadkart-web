@@ -138,15 +138,21 @@
 
 	.lk-page-wrapper {
 		min-height: 100dvh;
-		padding-block-start: var(--lk-topbar-height);
-		padding-inline-start: 0;
+		padding-block-start: var(--lk-page-pad-top);
+		padding-block-end: var(--lk-shell-gap);
+		padding-inline-start: var(--lk-shell-gap);
+		padding-inline-end: var(--lk-shell-gap);
 		display: flex;
 		flex-direction: column;
-		transition: padding-inline-start 0.18s ease-out;
+		transition:
+			padding-block-start 0.18s ease-out,
+			padding-block-end 0.18s ease-out,
+			padding-inline-start 0.18s ease-out,
+			padding-inline-end 0.18s ease-out;
 	}
 	@media (min-width: 64rem) {
 		.lk-page-wrapper {
-			padding-inline-start: var(--lk-sidebar-width);
+			padding-inline-start: calc(var(--lk-sidebar-width) + var(--lk-shell-gap));
 		}
 	}
 

@@ -222,6 +222,21 @@
 	/* Page content max-width — soft cap so wide screens don't sprawl.
 	   No user toggle (Vercel / Linear ship a single width). */
 	--lk-content-max-width: var(--container-2xl);
+
+	/* ── Layout-mode shell vars ──────────────────────────────────
+	   Defaults match the flat Linear/Vercel shell. data-layout='semibox'
+	   overrides these to produce Domiex's floating-pane shell:
+	     gap = 0.75rem around topbar/sidebar/content; each pane has a
+	     1px border + 6px radius; topbar sits to the RIGHT of the
+	     sidebar (not above it) so they read as side-by-side floating
+	     surfaces. Pure CSS — no DOM changes between modes. */
+	--lk-shell-gap: 0px;
+	--lk-shell-radius: 0px;
+	--lk-shell-shadow: 0 0 transparent;
+	--lk-sidebar-top: var(--lk-topbar-height); /* default: below topbar */
+	--lk-sidebar-bottom: 0px;
+	--lk-topbar-inline-start: 0px; /* default: from left edge */
+	--lk-page-pad-top: var(--lk-topbar-height);
 }
 
 /* ── Sidebar collapsed (desktop) ──────────────────────────────
@@ -229,6 +244,31 @@
    On mobile the sidebar is a drawer and this attr is ignored.  */
 :root[data-sidebar-collapsed] {
 	--lk-sidebar-width: var(--lk-sidebar-width-collapsed);
+}
+
+/* ── Semibox layout (Domiex parity) ───────────────────────────
+   Verbatim values from Domiex semibox.js:
+     spacing.3 = 0.75rem    — gap on all sides + between panes
+     rounded-md = 0.375rem  — pane radius
+     topbar left (lg+) = sidebar-width + 2 * spacing.3
+     content margin-left (lg+) = sidebar-width + spacing.3
+     content padding-top = topbar-height + ~2 * spacing.3
+   The gap + radius apply on mobile too; only the side-by-side
+   topbar positioning is desktop-only (mobile topbar fills the gap
+   so the drawer can slide in). */
+:root[data-layout='semibox'] {
+	--lk-shell-gap: 0.75rem;
+	--lk-shell-radius: 0.5rem;
+	--lk-shell-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.04);
+	--lk-sidebar-top: var(--lk-shell-gap);
+	--lk-sidebar-bottom: var(--lk-shell-gap);
+	--lk-topbar-inline-start: var(--lk-shell-gap); /* mobile fallback */
+	--lk-page-pad-top: calc(var(--lk-topbar-height) + var(--lk-shell-gap) * 2);
+}
+@media (min-width: 64rem) {
+	:root[data-layout='semibox'] {
+		--lk-topbar-inline-start: calc(var(--lk-sidebar-width) + var(--lk-shell-gap) * 2);
+	}
 }
 
 /* ── Sidebar colour variants ──────────────────────────────────

@@ -72,8 +72,9 @@
 <style>
 	.lk-topbar {
 		position: fixed;
-		inset-block-start: 0;
-		inset-inline: 0;
+		inset-block-start: var(--lk-shell-gap);
+		inset-inline-start: var(--lk-topbar-inline-start);
+		inset-inline-end: var(--lk-shell-gap);
 		z-index: var(--z-sticky);
 		display: grid;
 		grid-template-columns: 1fr auto 1fr;
@@ -82,6 +83,19 @@
 		padding-inline: clamp(0.75rem, 1.5vw, 1.25rem);
 		background: var(--color-bg-elevated);
 		border-block-end: 1px solid var(--color-border);
+		transition:
+			inset-block-start 0.18s ease-out,
+			inset-inline-start 0.18s ease-out,
+			inset-inline-end 0.18s ease-out,
+			border-radius 0.18s ease-out;
+	}
+
+	/* Semibox — topbar floats with a full border + radius (replaces the
+	   single bottom border) and a subtle shadow. */
+	:global(:root[data-layout='semibox']) .lk-topbar {
+		border: 1px solid var(--color-border);
+		border-radius: var(--lk-shell-radius);
+		box-shadow: var(--lk-shell-shadow);
 	}
 
 	.lk-topbar-left {

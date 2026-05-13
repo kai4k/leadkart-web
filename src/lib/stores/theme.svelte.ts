@@ -32,6 +32,11 @@ export type PrimaryColor =
 
 export type SidebarColor = 'light' | 'dark';
 export type LayoutDir = 'ltr' | 'rtl';
+/** Layout mode — binary toggle. `default` is the flat Linear/Vercel
+ *  shell; `semibox` is Domiex's floating-pane variant (0.75rem gap
+ *  around the topbar + sidebar + content, each with a 1px border + 6px
+ *  radius — the topbar starts after the sidebar horizontally). */
+export type LayoutMode = 'default' | 'semibox';
 
 export const PRIMARY_COLORS: ReadonlyArray<{ id: PrimaryColor; label: string; hex: string }> = [
 	{ id: 'navy', label: 'Navy', hex: '#2D2F7E' },
@@ -57,11 +62,17 @@ export const LAYOUT_DIRS: ReadonlyArray<{ id: LayoutDir; label: string }> = [
 	{ id: 'rtl', label: 'RTL' }
 ];
 
+export const LAYOUT_MODES: ReadonlyArray<{ id: LayoutMode; label: string }> = [
+	{ id: 'default', label: 'Default' },
+	{ id: 'semibox', label: 'Semibox' }
+];
+
 const STORAGE_KEYS = {
 	primary: 'leadkart-primary',
 	sidebarColor: 'leadkart-sidebar-color',
 	layoutDir: 'leadkart-layout-dir',
-	sidebarCollapsed: 'leadkart-sidebar-collapsed'
+	sidebarCollapsed: 'leadkart-sidebar-collapsed',
+	layoutMode: 'leadkart-layout-mode'
 } as const;
 
 class ThemeStore {
@@ -75,6 +86,9 @@ class ThemeStore {
 		this.readInitial<LayoutDir>(STORAGE_KEYS.layoutDir, 'ltr', LAYOUT_DIRS)
 	);
 	sidebarCollapsed = $state<boolean>(this.readBoolean(STORAGE_KEYS.sidebarCollapsed, false));
+	layoutMode = $state<LayoutMode>(
+		this.readInitial<LayoutMode>(STORAGE_KEYS.layoutMode, 'default', LAYOUT_MODES)
+	);
 
 	private readInitial<T extends string>(
 		key: string,
@@ -118,12 +132,18 @@ class ThemeStore {
 		this.persist(STORAGE_KEYS.sidebarCollapsed, next ? '1' : '0');
 		this.applyToDocument();
 	}
+	setLayoutMode(next: LayoutMode) {
+		this.layoutMode = next;
+		this.persist(STORAGE_KEYS.layoutMode, next);
+		this.applyToDocument();
+	}
 
 	reset() {
 		this.setPrimary('navy');
 		this.setSidebarColor('light');
 		this.setLayoutDir('ltr');
 		this.setSidebarCollapsed(false);
+		this.setLayoutMode('default');
 	}
 
 	/**
@@ -140,6 +160,7 @@ class ThemeStore {
 
 		this.setAttr(root, 'data-primary', this.primary, 'navy');
 		this.setAttr(root, 'data-sidebar-colors', this.sidebarColor, 'light');
+		this.setAttr(root, 'data-layout', this.layoutMode, 'default');
 
 		if (this.sidebarCollapsed) root.setAttribute('data-sidebar-collapsed', '');
 		else root.removeAttribute('data-sidebar-collapsed');
