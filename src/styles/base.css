@@ -16,6 +16,45 @@
  * Visible).
  * ───────────────────────────────────────────────────────────────────── */
 
+/* ═══ RESPONSIVE BREAKPOINT LADDER (mobile-first) ═══════════════
+ * Every component authors its base styles for the smallest viewport
+ * then layers `min-width` enhancements upward. Single source of truth
+ * for the breakpoint values:
+ *
+ *   --bp-sm  : 40rem    ( 640px)  — large phones / phablets landscape
+ *   --bp-md  : 48rem    ( 768px)  — small tablets / portrait
+ *   --bp-lg  : 64rem    (1024px)  — laptops / desktops (sidebar reveals)
+ *   --bp-xl  : 80rem    (1280px)  — wide desktops
+ *
+ * NB: CSS @media rules can't read custom properties — the literal rem
+ * values must be used in queries. These vars exist as documentation
+ * + for JS / container-query consumption (window.matchMedia).
+ *
+ * Industry refs: Apple HIG (44pt minimum touch target), Material 3
+ * (48dp minimum), WCAG 2.5.5 AAA (target size).
+ * ────────────────────────────────────────────────────────────── */
+:root {
+	--bp-sm: 40rem;
+	--bp-md: 48rem;
+	--bp-lg: 64rem;
+	--bp-xl: 80rem;
+
+	/* Minimum touch-target dimension on coarse pointers (touch screens).
+	   2.75rem = 44px — Apple HIG / WCAG 2.5.5 AAA. Components apply
+	   this conditionally via @media (pointer: coarse). */
+	--lk-touch-target-min: 2.75rem;
+
+	/* Safe-area-inset shorthand vars — populated by the browser on
+	   notched / home-indicator iOS + Android devices. Components
+	   consume `max(value, var(--safe-*))` for fixed-position edge
+	   offsets so content never sits under the notch or the home bar.
+	   No-op (0px) on non-mobile / non-notched devices. */
+	--safe-top: env(safe-area-inset-top, 0px);
+	--safe-right: env(safe-area-inset-right, 0px);
+	--safe-bottom: env(safe-area-inset-bottom, 0px);
+	--safe-left: env(safe-area-inset-left, 0px);
+}
+
 /* ═══ PRIMARY COLOUR PICKER — multi-hue theme switching
  * Activated by `<html data-primary="X">` attribute set by
  * lib/stores/theme.svelte.ts. Each variant overrides the brand 11-stop

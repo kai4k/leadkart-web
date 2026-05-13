@@ -85,17 +85,25 @@
 </nav>
 
 <style>
+	/* ─── Sidebar surface ─────────────────────────────────────────
+	   Position-fixed column to the inline-start. Safe-area max() on
+	   block-start + inline-start guards against notched / curved
+	   devices in landscape. `contain: layout style` scopes reflow. */
 	.lk-sidebar {
 		position: fixed;
-		inset-block-start: var(--lk-sidebar-top);
-		inset-inline-start: var(--lk-shell-gap);
-		block-size: calc(100dvh - var(--lk-sidebar-top) - var(--lk-sidebar-bottom));
+		inset-block-start: max(var(--lk-sidebar-top), var(--safe-top));
+		inset-inline-start: max(var(--lk-shell-gap), var(--safe-left));
+		block-size: calc(
+			100dvh - max(var(--lk-sidebar-top), var(--safe-top)) -
+				max(var(--lk-sidebar-bottom), var(--safe-bottom))
+		);
 		inline-size: var(--lk-sidebar-width);
 		background: var(--lk-sidebar-bg);
 		color: var(--lk-sidebar-fg);
 		border-inline-end: 1px solid var(--lk-sidebar-border);
 		display: flex;
 		flex-direction: column;
+		contain: layout style;
 		transition:
 			inline-size 0.18s ease-out,
 			inset-block-start 0.18s ease-out,
@@ -187,12 +195,16 @@
 		gap: 0.125rem;
 	}
 
-	/* ── Link ──────────────────────────────────────────────────── */
+	/* ─── Link ────────────────────────────────────────────────────
+	   Default ≥ 36px tall (matches design density on laptops). On
+	   coarse pointers (touch screens), bump to 44px (Apple HIG /
+	   WCAG 2.5.5 AAA) and widen the rest area so taps don't miss. */
 	.lk-sidebar-link {
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
 		padding: 0.5rem 0.75rem;
+		min-block-size: 2.25rem;
 		border-radius: 0.5rem;
 		color: var(--lk-sidebar-fg);
 		font-size: var(--text-sm);
@@ -205,17 +217,28 @@
 	.lk-sidebar-link :global(svg) {
 		flex-shrink: 0;
 	}
-	.lk-sidebar-link:hover {
-		background: var(--lk-sidebar-hover-bg);
-		color: var(--lk-sidebar-fg);
-	}
 	.lk-sidebar-link:focus-visible {
 		outline: 2px solid var(--color-brand-500);
 		outline-offset: -2px;
 	}
+	.lk-sidebar-link:active {
+		background: var(--lk-sidebar-active-bg);
+	}
 	.lk-sidebar-link--active {
 		background: var(--lk-sidebar-active-bg);
 		color: var(--lk-sidebar-active-fg);
+	}
+	@media (hover: hover) and (pointer: fine) {
+		.lk-sidebar-link:hover {
+			background: var(--lk-sidebar-hover-bg);
+			color: var(--lk-sidebar-fg);
+		}
+	}
+	@media (pointer: coarse) {
+		.lk-sidebar-link {
+			min-block-size: var(--lk-touch-target-min);
+			padding-block: 0.625rem;
+		}
 	}
 
 	/* Collapsed: hide labels + section titles, center icons. The native

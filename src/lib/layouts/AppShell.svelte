@@ -113,8 +113,8 @@
 			role="dialog"
 			aria-modal="true"
 			aria-label="Primary navigation"
-			class="fixed inset-y-0 lg:hidden"
-			style="z-index: var(--z-modal); inset-inline-start: 0; inline-size: min(20rem, 85vw); animation: slide-in {`var(--duration-base) var(--ease-out)`};"
+			class="lk-drawer fixed inset-y-0 lg:hidden"
+			style="animation: slide-in {`var(--duration-base) var(--ease-out)`};"
 		>
 			<Sidebar onNavigate={closeDrawer} />
 		</div>
@@ -136,14 +136,22 @@
 		background: var(--color-bg);
 	}
 
+	/* ─── Page wrapper ────────────────────────────────────────────
+	   Offsets the fixed Topbar (top) + Sidebar (inline-start). Safe-
+	   area-inset baked into every edge via max() so content never
+	   underlaps the home indicator / curved edges. `contain: layout`
+	   isolates wrapper reflow from the surrounding shell — common
+	   FAANG pattern for app shells so child-page repaints don't
+	   bubble to Topbar/Sidebar. */
 	.lk-page-wrapper {
 		min-height: 100dvh;
 		padding-block-start: var(--lk-page-pad-top);
-		padding-block-end: var(--lk-shell-gap);
-		padding-inline-start: var(--lk-shell-gap);
-		padding-inline-end: var(--lk-shell-gap);
+		padding-block-end: max(var(--lk-shell-gap), var(--safe-bottom));
+		padding-inline-start: max(var(--lk-shell-gap), var(--safe-left));
+		padding-inline-end: max(var(--lk-shell-gap), var(--safe-right));
 		display: flex;
 		flex-direction: column;
+		contain: layout;
 		transition:
 			padding-block-start 0.18s ease-out,
 			padding-block-end 0.18s ease-out,
@@ -161,7 +169,19 @@
 		width: 100%;
 		max-inline-size: var(--lk-content-max-width);
 		margin-inline: auto;
-		padding: clamp(1rem, 2.5vw, 1.75rem);
+		padding-block: clamp(1rem, 2.5vw, 1.75rem);
+		padding-inline: clamp(0.75rem, 3vw, 1.75rem);
+	}
+
+	/* ─── Mobile drawer ────────────────────────────────────────────
+	   Width clamps responsively so it's not cramped on tiny phones
+	   nor wastefully wide on tablets. Safe-area-left so the drawer
+	   doesn't sit under a curved edge in landscape. */
+	.lk-drawer {
+		inset-inline-start: 0;
+		inline-size: clamp(17rem, 78vw, 22rem);
+		padding-inline-start: var(--safe-left);
+		z-index: var(--z-modal);
 	}
 
 	@keyframes slide-in {

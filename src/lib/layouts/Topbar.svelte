@@ -70,19 +70,27 @@
 </header>
 
 <style>
+	/* ─── Topbar surface ──────────────────────────────────────────
+	   Default mode: full-width bar pinned to viewport top edge with
+	   safe-area-aware padding so content clears the notch. Semibox
+	   mode: top + sides recede by --lk-shell-gap, side-by-side with
+	   the sidebar (handled by --lk-topbar-inline-start).
+	   `contain: layout style` scopes the bar's reflow so resizing
+	   inner content doesn't invalidate the outer page layout. */
 	.lk-topbar {
 		position: fixed;
-		inset-block-start: var(--lk-shell-gap);
-		inset-inline-start: var(--lk-topbar-inline-start);
-		inset-inline-end: var(--lk-shell-gap);
+		inset-block-start: max(var(--lk-shell-gap), var(--safe-top));
+		inset-inline-start: max(var(--lk-topbar-inline-start), var(--safe-left));
+		inset-inline-end: max(var(--lk-shell-gap), var(--safe-right));
 		z-index: var(--z-sticky);
 		display: grid;
-		grid-template-columns: 1fr auto 1fr;
+		grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
 		align-items: center;
 		block-size: var(--lk-topbar-height);
 		padding-inline: clamp(0.75rem, 1.5vw, 1.25rem);
 		background: var(--color-bg-elevated);
 		border-block-end: 1px solid var(--color-border);
+		contain: layout style;
 		transition:
 			inset-block-start 0.18s ease-out,
 			inset-inline-start 0.18s ease-out,
@@ -90,32 +98,35 @@
 			border-radius 0.18s ease-out;
 	}
 
-	/* Semibox — topbar floats with a full border + radius (replaces the
-	   single bottom border) and a subtle shadow. */
+	/* Semibox — topbar floats with a full border + radius + shadow. */
 	:global(:root[data-layout='semibox']) .lk-topbar {
 		border: 1px solid var(--color-border);
 		border-radius: var(--lk-shell-radius);
 		box-shadow: var(--lk-shell-shadow);
 	}
 
+	/* ─── Left cluster (toggle + breadcrumb) ─────────────────────── */
 	.lk-topbar-left {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		min-inline-size: 0;
+		min-inline-size: 0; /* allow text-overflow inside grid 1fr */
 	}
 	.lk-topbar-title {
 		font-size: var(--text-base);
 		font-weight: 600;
 		color: var(--color-fg);
 		margin: 0;
+		min-inline-size: 0;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
 
-	/* Cmd-K trigger — looks like an input but is a button. Hidden on
-	   mobile (< sm) to keep the title visible. */
+	/* ─── Cmd-K trigger ───────────────────────────────────────────
+	   Hidden by default (mobile + small tablets); reveals at 48rem
+	   (768px) so phones + small tablets get the full title width
+	   without ugly truncation. */
 	.lk-topbar-search-trigger {
 		display: none;
 		align-items: center;
@@ -132,13 +143,12 @@
 			border-color 0.15s,
 			background 0.15s;
 	}
-	.lk-topbar-search-trigger:hover {
-		border-color: var(--color-fg-subtle);
-		background: var(--color-bg-elevated);
-	}
 	.lk-topbar-search-trigger:focus-visible {
 		outline: 2px solid var(--color-brand-500);
 		outline-offset: 2px;
+	}
+	.lk-topbar-search-trigger:active {
+		background: var(--color-bg-muted);
 	}
 	.lk-topbar-search-placeholder {
 		flex: 1;
@@ -156,19 +166,33 @@
 		font-size: var(--text-xs);
 		font-weight: 500;
 	}
-	@media (min-width: 40rem) {
+	@media (min-width: 48rem) {
 		.lk-topbar-search-trigger {
 			display: inline-flex;
 		}
 	}
+	/* Hover only on hover-capable + fine pointers — prevents the
+	   sticky-hover anti-pattern on touch screens (Vercel / Linear
+	   canon since 2022). */
+	@media (hover: hover) and (pointer: fine) {
+		.lk-topbar-search-trigger:hover {
+			border-color: var(--color-fg-subtle);
+			background: var(--color-bg-elevated);
+		}
+	}
 
+	/* ─── Right cluster (actions) ───────────────────────────────── */
 	.lk-topbar-actions {
 		display: flex;
 		align-items: center;
 		gap: 0.25rem;
 		justify-content: flex-end;
+		min-inline-size: 0;
 	}
 
+	/* ─── Icon button — 36px desktop / 44px touch ────────────────
+	   Desktop default keeps the bar compact; coarse-pointer media
+	   query bumps to WCAG AAA 2.5.5 minimum target (44px). */
 	.lk-topbar-iconbtn {
 		position: relative;
 		display: inline-flex;
@@ -182,13 +206,25 @@
 			background 0.15s,
 			color 0.15s;
 	}
-	.lk-topbar-iconbtn:hover {
-		background: var(--color-bg-muted);
-		color: var(--color-fg);
-	}
 	.lk-topbar-iconbtn:focus-visible {
 		outline: 2px solid var(--color-brand-500);
 		outline-offset: 2px;
+	}
+	.lk-topbar-iconbtn:active {
+		background: var(--color-bg-subtle);
+		color: var(--color-fg);
+	}
+	@media (hover: hover) and (pointer: fine) {
+		.lk-topbar-iconbtn:hover {
+			background: var(--color-bg-muted);
+			color: var(--color-fg);
+		}
+	}
+	@media (pointer: coarse) {
+		.lk-topbar-iconbtn {
+			inline-size: var(--lk-touch-target-min);
+			block-size: var(--lk-touch-target-min);
+		}
 	}
 
 	.lk-topbar-dot {
@@ -200,5 +236,11 @@
 		background: var(--color-success-500, var(--color-secondary-500));
 		border-radius: 9999px;
 		border: 2px solid var(--color-bg-elevated);
+	}
+	@media (pointer: coarse) {
+		.lk-topbar-dot {
+			top: 0.625rem;
+			inset-inline-end: 0.625rem;
+		}
 	}
 </style>

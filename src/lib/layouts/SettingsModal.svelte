@@ -249,12 +249,12 @@
 			border-color 0.15s,
 			background 0.15s;
 	}
-	.lk-pref-card:hover {
-		background: var(--color-bg-muted);
-	}
 	.lk-pref-card:focus-visible {
 		outline: 2px solid var(--color-brand-500);
 		outline-offset: 2px;
+	}
+	.lk-pref-card:active {
+		background: var(--color-bg-subtle);
 	}
 	.lk-pref-card--selected {
 		border-color: var(--color-brand-600);
@@ -263,6 +263,17 @@
 	}
 	.lk-pref-card--selected .caption {
 		color: var(--color-brand-700);
+	}
+	@media (hover: hover) and (pointer: fine) {
+		.lk-pref-card:hover {
+			background: var(--color-bg-muted);
+		}
+	}
+	@media (pointer: coarse) {
+		.lk-pref-card {
+			min-block-size: var(--lk-touch-target-min);
+			padding: 0.75rem;
+		}
 	}
 
 	.lk-sb-preview {
@@ -365,15 +376,32 @@
 			transform 0.15s,
 			border-color 0.15s;
 	}
-	.lk-swatch:hover {
-		transform: scale(1.1);
-	}
 	.lk-swatch:focus-visible {
 		outline: 2px solid var(--color-brand-500);
 		outline-offset: 2px;
 	}
+	.lk-swatch:active {
+		transform: scale(0.95);
+	}
+	@media (hover: hover) and (pointer: fine) {
+		.lk-swatch:hover {
+			transform: scale(1.1);
+		}
+	}
+	@media (pointer: coarse) {
+		.lk-swatch {
+			inline-size: 2.25rem;
+			block-size: 2.25rem;
+		}
+	}
 	.lk-swatch--selected {
 		border-color: var(--color-fg);
 		box-shadow: 0 0 0 2px var(--color-bg-elevated);
+	}
+
+	.lk-swatch--lg {
+		inline-size: 2.25rem;
+		block-size: 2.25rem;
+		border-radius: 0.5rem;
 	}
 </style>
