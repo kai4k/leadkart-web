@@ -1,53 +1,69 @@
 <script lang="ts">
-	import { Bell, Menu, Search, Settings, Icon } from '$icons';
-	import { Logo } from '$ui';
+	import { page } from '$app/state';
+	import { Bell, Command, PanelLeft, Search, Settings, Icon } from '$icons';
+	import { routeTitle } from '$lib/utils/routeTitle';
 	import UserMenu from './UserMenu.svelte';
+
+	/**
+	 * Topbar — Linear/Vercel-minimal shape:
+	 *   left   : sidebar toggle + breadcrumb / page title
+	 *   centre : cmd-K search trigger button (palette deferred)
+	 *   right  : notifications + settings drawer + user menu
+	 *
+	 * No persistent brand logo — the logo lives in the Sidebar so the
+	 * topbar stays clean. Single fixed-height bar across the viewport,
+	 * border-bottom for separation.
+	 */
 
 	let { onToggleSidebar, onOpenSettings } = $props<{
 		onToggleSidebar?: () => void;
 		onOpenSettings?: () => void;
 	}>();
+
+	const title = $derived(routeTitle(page.url.pathname));
 </script>
 
-<!--
-  Domiex-style fixed Topbar. Spans the viewport top-edge; logo + sidebar
-  toggle live in the sidebar-width column on the left so the Topbar's
-  brand area aligns with the Sidebar below it. Search + actions on the
-  right. Bottom border separates from the page content below.
--->
 <header class="lk-topbar" aria-label="Application bar">
-	<!-- Left: brand cluster aligned to sidebar width -->
-	<div class="lk-topbar-brand">
+	<!-- Left: toggle + breadcrumb -->
+	<div class="lk-topbar-left">
 		<button
-			class="lk-topbar-iconbtn lg:hidden"
+			type="button"
+			class="lk-topbar-iconbtn"
 			aria-label="Toggle sidebar"
 			onclick={() => onToggleSidebar?.()}
 		>
-			<Icon icon={Menu} size="md" />
+			<Icon icon={PanelLeft} size="md" />
 		</button>
-		<a href="/dashboard" class="flex items-center gap-2" aria-label="LeadKart home">
-			<Logo size="lg" />
-		</a>
+		<h1 class="lk-topbar-title">{title}</h1>
 	</div>
 
-	<!-- Centre: search (hidden on mobile) -->
-	<div class="lk-topbar-search hidden lg:flex">
+	<!-- Centre: cmd-K trigger (deferred palette) -->
+	<button
+		type="button"
+		class="lk-topbar-search-trigger"
+		aria-label="Search (Cmd+K)"
+		title="Search · Cmd+K"
+	>
 		<Icon icon={Search} size="sm" />
-		<input type="search" class="lk-topbar-search-input" placeholder="Search…" aria-label="Search" />
-	</div>
+		<span class="lk-topbar-search-placeholder">Search…</span>
+		<kbd class="lk-topbar-kbd">
+			<Icon icon={Command} size="xs" />K
+		</kbd>
+	</button>
 
-	<!-- Right: action cluster -->
+	<!-- Right: actions -->
 	<div class="lk-topbar-actions">
+		<button class="lk-topbar-iconbtn" aria-label="Notifications">
+			<Icon icon={Bell} size="md" />
+			<span class="lk-topbar-dot" aria-hidden="true"></span>
+		</button>
 		<button
+			type="button"
 			class="lk-topbar-iconbtn"
-			aria-label="Open theme + layout settings"
+			aria-label="Open theme settings"
 			onclick={() => onOpenSettings?.()}
 		>
 			<Icon icon={Settings} size="md" />
-		</button>
-		<button class="lk-topbar-iconbtn lk-topbar-iconbtn--with-dot" aria-label="Notifications">
-			<Icon icon={Bell} size="md" />
-			<span class="lk-topbar-dot" aria-hidden="true"></span>
 		</button>
 		<UserMenu />
 	</div>
@@ -56,81 +72,87 @@
 <style>
 	.lk-topbar {
 		position: fixed;
-		inset-block-start: var(--lk-shell-gap);
-		inset-inline: var(--lk-shell-gap);
+		inset-block-start: 0;
+		inset-inline: 0;
 		z-index: var(--z-sticky);
 		display: grid;
-		grid-template-columns: var(--lk-topbar-brand-col) 1fr auto;
+		grid-template-columns: 1fr auto 1fr;
 		align-items: center;
 		block-size: var(--lk-topbar-height);
-		padding-inline-end: clamp(1rem, 2vw, 1.5rem);
-		padding-inline-start: 0;
+		padding-inline: clamp(0.75rem, 1.5vw, 1.25rem);
 		background: var(--color-bg-elevated);
 		border-block-end: 1px solid var(--color-border);
-		border-start-start-radius: var(--lk-shell-radius);
-		border-start-end-radius: var(--lk-shell-radius);
-		box-shadow: var(--lk-shell-shadow);
-		transition:
-			inset-block-start 0.2s ease-out,
-			inset-inline 0.2s ease-out,
-			grid-template-columns 0.2s ease-out,
-			border-radius 0.2s ease-out;
-	}
-	/* Brand-cluster column collapses → free up padding for the centre
-	   column. Only applies when brand-col is `auto` (mobile + boxed +
-	   semibox + horizontal + modern). */
-	@media (max-width: 63.99rem) {
-		.lk-topbar {
-			padding-inline-start: clamp(0.75rem, 2vw, 1.25rem);
-		}
-	}
-	@media (min-width: 64rem) {
-		:global(:root[data-layout='horizontal']) .lk-topbar,
-		:global(:root[data-layout='boxed']) .lk-topbar,
-		:global(:root[data-layout='semibox']) .lk-topbar,
-		:global(:root[data-layout='modern']) .lk-topbar {
-			padding-inline-start: clamp(0.75rem, 2vw, 1.25rem);
-		}
 	}
 
-	.lk-topbar-brand {
+	.lk-topbar-left {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		padding-inline: clamp(0.75rem, 1.5vw, 1.25rem);
-		block-size: 100%;
-		border-inline-end: var(--lk-topbar-brand-border);
+		min-inline-size: 0;
+	}
+	.lk-topbar-title {
+		font-size: var(--text-base);
+		font-weight: 600;
+		color: var(--color-fg);
+		margin: 0;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
-	.lk-topbar-search {
-		position: relative;
+	/* Cmd-K trigger — looks like an input but is a button. Hidden on
+	   mobile (< sm) to keep the title visible. */
+	.lk-topbar-search-trigger {
+		display: none;
 		align-items: center;
 		gap: 0.5rem;
-		padding-inline-start: clamp(1rem, 2.5vw, 1.75rem);
+		inline-size: clamp(16rem, 28vw, 22rem);
+		padding-inline: 0.75rem;
+		padding-block: 0.4375rem;
+		border-radius: 0.5rem;
+		border: 1px solid var(--color-border);
+		background: var(--color-bg);
 		color: var(--color-fg-muted);
-	}
-	.lk-topbar-search-input {
-		inline-size: 18rem;
-		max-inline-size: 100%;
-		padding-block: 0.5rem;
-		padding-inline: 0.5rem;
-		border: 0;
-		background: transparent;
 		font-size: var(--text-sm);
-		color: var(--color-fg);
+		transition:
+			border-color 0.15s,
+			background 0.15s;
 	}
-	.lk-topbar-search-input:focus {
-		outline: 0;
+	.lk-topbar-search-trigger:hover {
+		border-color: var(--color-fg-subtle);
+		background: var(--color-bg-elevated);
 	}
-	.lk-topbar-search-input::placeholder {
-		color: var(--color-fg-subtle);
+	.lk-topbar-search-trigger:focus-visible {
+		outline: 2px solid var(--color-brand-500);
+		outline-offset: 2px;
+	}
+	.lk-topbar-search-placeholder {
+		flex: 1;
+		text-align: start;
+	}
+	.lk-topbar-kbd {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.125rem;
+		padding: 0.125rem 0.375rem;
+		border-radius: 0.25rem;
+		background: var(--color-bg-muted);
+		color: var(--color-fg-muted);
+		font-family: var(--font-mono);
+		font-size: var(--text-xs);
+		font-weight: 500;
+	}
+	@media (min-width: 40rem) {
+		.lk-topbar-search-trigger {
+			display: inline-flex;
+		}
 	}
 
 	.lk-topbar-actions {
 		display: flex;
 		align-items: center;
 		gap: 0.25rem;
-		padding-inline-start: 0.5rem;
+		justify-content: flex-end;
 	}
 
 	.lk-topbar-iconbtn {

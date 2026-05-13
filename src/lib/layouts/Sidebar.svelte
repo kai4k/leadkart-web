@@ -3,14 +3,14 @@
 	import { navForTier } from '$lib/config/nav';
 	import { hasPermission, tierOf } from '$features/auth/tier';
 	import { session } from '$features/auth/stores/session.svelte';
+	import { Logo } from '$ui';
 
 	let { onNavigate } = $props<{ onNavigate?: () => void }>();
 
 	/**
-	 * Active-state matcher — top-level routes use exact match; nested
-	 * use startsWith with a trailing-slash boundary so /leads doesn't
-	 * also light up for /leads-archive. Industry-standard pattern (Vercel
-	 * dashboard, Linear sidebar).
+	 * Active-state matcher — exact match or trailing-slash prefix so
+	 * /leads doesn't light up for /leads-archive. Vercel / Linear
+	 * pattern.
 	 */
 	function isActive(href: string): boolean {
 		const path = page.url.pathname;
@@ -20,17 +20,9 @@
 
 	/**
 	 * Tier-scoped nav catalogue + per-item permission filter.
-	 *
-	 *   1. tier (platform-super / platform-staff / tenant-admin /
-	 *      tenant-user) picks the catalogue from nav.ts.
-	 *   2. Each item's `requires` permission is checked against the
-	 *      principal's JWT claims via `hasPermission`; SuperUser
-	 *      short-circuits everything.
-	 *   3. Sections with no items left after filtering disappear
-	 *      from the rendered tree.
-	 *
-	 * Re-derives reactively on signin / refresh — `session.principal`
-	 * is a $state-backed reactive ref.
+	 * SuperUser short-circuits everything via hasPermission. Sections
+	 * with no items left after filtering disappear from the rendered
+	 * tree.
 	 */
 	const sections = $derived.by(() => {
 		const principal = session.principal;
@@ -46,15 +38,28 @@
 	});
 </script>
 
-<nav class="lk-sidebar flex h-full flex-col" aria-label="Main navigation">
-	<div class="stack stack-relaxed flex-1 overflow-y-auto p-3">
+<nav class="lk-sidebar" aria-label="Main navigation">
+	<!-- Logo block — full wordmark when expanded, icon-only when collapsed.
+	     Sidebar is the single home of the brand mark (Linear / Vercel:
+	     logo lives in the sidebar, not the topbar). -->
+	<a href="/dashboard" class="lk-sidebar-brand" aria-label="LeadKart home">
+		<Logo size="md" class="lk-sidebar-brand-full" />
+		<img
+			src="/images/favicon/favicon_128x128.png"
+			alt=""
+			class="lk-sidebar-brand-mark"
+			aria-hidden="true"
+		/>
+	</a>
+
+	<div class="lk-sidebar-scroll">
 		{#each sections as section, i (section.title ?? i)}
 			{#if section.items.length > 0}
-				<div class="stack stack-tight">
+				<div class="lk-sidebar-group">
 					{#if section.title}
-						<p class="lk-sidebar-section-title px-3 pb-1 overline">{section.title}</p>
+						<p class="lk-sidebar-section-title overline">{section.title}</p>
 					{/if}
-					<ul class="stack stack-tight">
+					<ul class="lk-sidebar-list">
 						{#each section.items as item (item.href)}
 							{@const Icon = item.icon}
 							{@const active = isActive(item.href)}
@@ -65,12 +70,9 @@
 									aria-label={item.label}
 									onclick={() => onNavigate?.()}
 									title={item.label}
-									class={[
-										'lk-sidebar-link rounded-md font-medium transition-colors',
-										active && 'lk-sidebar-link--active'
-									]}
+									class={['lk-sidebar-link', active && 'lk-sidebar-link--active']}
 								>
-									<Icon aria-hidden="true" />
+									<Icon size={18} aria-hidden="true" />
 									<span class="lk-sidebar-label">{item.label}</span>
 								</a>
 							</li>
@@ -85,66 +87,151 @@
 <style>
 	.lk-sidebar {
 		position: fixed;
-		inset-block-start: calc(var(--lk-topbar-height) + var(--lk-shell-gap));
-		inset-inline-start: var(--lk-shell-gap);
-		block-size: calc(100dvh - var(--lk-topbar-height) - var(--lk-shell-gap) * 2);
+		inset-block-start: var(--lk-topbar-height);
+		inset-inline-start: 0;
+		block-size: calc(100dvh - var(--lk-topbar-height));
 		inline-size: var(--lk-sidebar-width);
 		background: var(--lk-sidebar-bg);
 		color: var(--lk-sidebar-fg);
 		border-inline-end: 1px solid var(--lk-sidebar-border);
-		border-end-start-radius: var(--lk-shell-radius);
-		box-shadow: var(--lk-shell-shadow);
+		display: flex;
+		flex-direction: column;
 		transition:
-			inline-size 0.2s ease-out,
-			inset-block-start 0.2s ease-out,
-			inset-inline-start 0.2s ease-out,
-			block-size 0.2s ease-out,
-			border-radius 0.2s ease-out,
-			background 0.2s ease-out;
+			inline-size 0.18s ease-out,
+			background 0.15s ease-out;
 		z-index: var(--z-sticky);
 	}
-	/* Inside the mobile drawer, anchor at top (no Topbar/gap offset). */
+
+	/* Mobile drawer override: render in normal flow with no top-offset. */
 	:global([role='dialog']) .lk-sidebar {
 		position: relative;
 		inset: 0;
 		block-size: 100%;
-		border-radius: 0;
-		box-shadow: none;
+		inline-size: 100%;
+		border-inline-end: 0;
+	}
+
+	/* ── Brand block ───────────────────────────────────────────── */
+	.lk-sidebar-brand {
+		display: flex;
+		align-items: center;
+		justify-content: flex-start;
+		block-size: 3.25rem;
+		padding-inline: 0.875rem;
+		flex-shrink: 0;
+	}
+	.lk-sidebar-brand-mark {
+		display: none;
+		inline-size: 1.75rem;
+		block-size: 1.75rem;
+		border-radius: 0.375rem;
+	}
+	/* Collapsed: hide wordmark, show mark + center it. Drawer always
+	   uses the full wordmark. */
+	:global(:root[data-sidebar-collapsed]) .lk-sidebar-brand {
+		justify-content: center;
+		padding-inline: 0.5rem;
+	}
+	:global(:root[data-sidebar-collapsed]) .lk-sidebar-brand :global(.lk-sidebar-brand-full) {
+		display: none;
+	}
+	:global(:root[data-sidebar-collapsed]) .lk-sidebar-brand-mark {
+		display: block;
+	}
+
+	/* ── Scroll region + groups ────────────────────────────────── */
+	.lk-sidebar-scroll {
+		flex: 1;
+		overflow-y: auto;
+		overflow-x: hidden;
+		padding: 0.5rem 0.5rem 1rem;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+	.lk-sidebar-group {
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
 	}
 	.lk-sidebar-section-title {
-		display: var(--lk-sidebar-section-title-display);
+		display: block;
+		padding-inline: 0.75rem;
+		padding-block-end: 0.25rem;
 		color: var(--lk-sidebar-fg-muted);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
-	.lk-sidebar-label {
-		display: var(--lk-sidebar-label-display);
-		font-size: var(--lk-sidebar-label-size);
-		line-height: 1.2;
+	.lk-sidebar-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
 	}
+
+	/* ── Link ──────────────────────────────────────────────────── */
 	.lk-sidebar-link {
 		display: flex;
-		flex-direction: var(--lk-sidebar-link-direction);
-		align-items: var(--lk-sidebar-link-align);
-		justify-content: var(--lk-sidebar-link-align);
-		text-align: var(--lk-sidebar-link-text-align);
-		gap: var(--lk-sidebar-link-gap);
-		padding: var(--lk-sidebar-link-padding);
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.5rem 0.75rem;
+		border-radius: 0.5rem;
 		color: var(--lk-sidebar-fg);
+		font-size: var(--text-sm);
+		font-weight: 500;
+		white-space: nowrap;
 		transition:
 			background 0.15s,
-			color 0.15s,
-			padding 0.2s ease-out,
-			gap 0.2s ease-out;
+			color 0.15s;
 	}
 	.lk-sidebar-link :global(svg) {
-		width: var(--lk-sidebar-icon-size);
-		height: var(--lk-sidebar-icon-size);
 		flex-shrink: 0;
 	}
 	.lk-sidebar-link:hover {
 		background: var(--lk-sidebar-hover-bg);
+		color: var(--lk-sidebar-fg);
+	}
+	.lk-sidebar-link:focus-visible {
+		outline: 2px solid var(--color-brand-500);
+		outline-offset: -2px;
 	}
 	.lk-sidebar-link--active {
 		background: var(--lk-sidebar-active-bg);
 		color: var(--lk-sidebar-active-fg);
+	}
+
+	/* Collapsed: hide labels + section titles, center icons. The native
+	   `title` attribute on each link provides the OS tooltip. */
+	:global(:root[data-sidebar-collapsed]) .lk-sidebar-label {
+		display: none;
+	}
+	:global(:root[data-sidebar-collapsed]) .lk-sidebar-section-title {
+		visibility: hidden;
+		block-size: 0.25rem;
+		padding: 0;
+	}
+	:global(:root[data-sidebar-collapsed]) .lk-sidebar-link {
+		justify-content: center;
+		padding-inline: 0.5rem;
+	}
+	/* Drawer (mobile): always show labels even if root is marked
+	   collapsed — the collapsed state is desktop-only. */
+	:global([role='dialog']) .lk-sidebar-label {
+		display: inline;
+	}
+	:global([role='dialog']) .lk-sidebar-section-title {
+		visibility: visible;
+		block-size: auto;
+		padding-block-end: 0.25rem;
+	}
+	:global([role='dialog']) .lk-sidebar-link {
+		justify-content: flex-start;
+		padding-inline: 0.75rem;
+	}
+	:global([role='dialog']) .lk-sidebar-brand-mark {
+		display: none !important;
 	}
 </style>

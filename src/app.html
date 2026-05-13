@@ -91,23 +91,11 @@
 							'cyan'
 						]
 					);
-					applyIfValid(
-						'leadkart-layout-mode',
-						'data-layout',
-						['horizontal', 'modern', 'boxed', 'semibox']
-					);
-					applyIfValid('leadkart-sidebar-size', 'data-sidebar-size', ['medium', 'small']);
-					applyIfValid(
-						'leadkart-sidebar-color',
-						'data-sidebar-colors',
-						['dark', 'brand', 'purple', 'sky']
-					);
-					applyIfValid('leadkart-content-width', 'data-content-width', ['fluid']);
-					applyIfValid(
-						'leadkart-nav-type',
-						'data-nav-type',
-						['floating', 'boxed', 'pattern']
-					);
+					applyIfValid('leadkart-sidebar-color', 'data-sidebar-colors', ['dark']);
+
+					if (localStorage.getItem('leadkart-sidebar-collapsed') === '1') {
+						root.setAttribute('data-sidebar-collapsed', '');
+					}
 
 					var dir = localStorage.getItem('leadkart-layout-dir');
 					root.setAttribute('dir', dir === 'rtl' ? 'rtl' : 'ltr');

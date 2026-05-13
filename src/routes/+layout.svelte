@@ -4,15 +4,14 @@
 
 	let { children } = $props();
 
-	// Reflect customiser state (primary colour + sidebar size + content
-	// width) on <html> on mount AND on every change. The effect re-runs
-	// whenever any $state field on the theme store mutates.
+	// Reflect customiser state on <html> on mount AND on every change.
+	// The effect re-runs whenever any $state field on the theme store
+	// mutates — touch each so the dep graph picks them up.
 	$effect(() => {
-		// Touch each reactive field so the effect's dep graph picks them
-		// up. Cheap reads; no runtime cost beyond the dep tracking.
 		void theme.primary;
-		void theme.sidebarSize;
-		void theme.contentWidth;
+		void theme.sidebarColor;
+		void theme.layoutDir;
+		void theme.sidebarCollapsed;
 		theme.applyToDocument();
 	});
 </script>

@@ -183,55 +183,34 @@
 	--color-brand-950: oklch(0.2 0.05 230);
 }
 
-/* ═══ LAYOUT CUSTOMISER — layout mode + sidebar size + sidebar colour
- *                         + content width + direction
- * Activated by data-attributes set on <html> by lib/stores/theme.svelte.ts.
- * Components consume these CSS vars instead of hard-coded values, so a
- * single user-side picker change re-skins the whole shell.
+/* ═══ LAYOUT CUSTOMISER — Linear/Vercel pattern
+ * One shell, sidebar collapses via hamburger. The customiser exposes
+ * three legitimate axes:
  *
- * Defaults (no attr / 'default' value) match base behaviour; alt values
- * activate the alternate layout. Modelled on Domiex's data-layout,
- * data-sidebar, data-sidebar-colors attribute system.
+ *   data-primary           — brand colour (re-skins the 11-stop brand
+ *                            palette to a different hue)
+ *   data-sidebar-colors    — sidebar surface (light | dark)
+ *   data-sidebar-collapsed — desktop collapsed state (boolean attr)
+ *   dir                    — LTR | RTL
+ *
+ * Removed 2026-05-13 (Domiex theme-marketplace gimmicks no real SaaS
+ * product ships as a user toggle): layout mode, sidebar size, nav type,
+ * content width. The shell is now a single canonical layout.
  * ───────────────────────────────────────────────────────────── */
 :root {
-	/* Topbar height — fluid scaling. clamp() lets it grow from ~60px
-	   on small laptops to ~80px on wide desktops, while staying within
-	   the 3.75rem–5rem range so the layout never feels squished or
-	   wasteful. Domiex's reference is 4.6875rem (75px) — that sits
-	   in the middle of this range. */
-	--lk-topbar-height: clamp(3.75rem, 4vw + 1.5rem, 5rem);
+	/* Topbar height — fixed across the product. Real SaaS dashboards
+	   use a stable 56–64px bar; LeadKart uses 60px (3.75rem) so the
+	   Linear/Vercel-style minimal topbar feels native. */
+	--lk-topbar-height: 3.75rem;
 
-	/* Sidebar size — width fluid in the 'default' tier, fixed widths
-	   for the alt sizes (medium = icon-stacked-above-label cards,
-	   small = icon-only column). Label / section-title visibility
-	   + per-link flex direction + icon size all flip per size so the
-	   nav items render correctly without per-component branching. */
-	--lk-sidebar-width: clamp(13rem, 16vw, 16rem); /* default — fluid */
-	--lk-sidebar-label-display: inline;
-	--lk-sidebar-section-title-display: block;
-	--lk-sidebar-link-direction: row;
-	--lk-sidebar-link-align: flex-start;
-	--lk-sidebar-link-text-align: start;
-	--lk-sidebar-link-gap: 0.75rem;
-	--lk-sidebar-link-padding: 0.5rem 0.75rem;
-	--lk-sidebar-icon-size: 18px;
-	--lk-sidebar-label-size: var(--text-sm);
+	/* Sidebar widths — binary expanded/collapsed. 16rem = 256px is the
+	   Linear / Vercel canonical width; 4.5rem = 72px the icon-only
+	   collapsed state. Single var, single transition. */
+	--lk-sidebar-width: 16rem;
+	--lk-sidebar-width-collapsed: 4.5rem;
 
-	/* Horizontal nav strip — only rendered when layoutMode=horizontal.
-	   Height stays 0 elsewhere so the page-wrapper top-offset math
-	   stays correct via a single expression. */
-	--lk-horizontal-nav-height: 0px;
-
-	/* Topbar brand cluster column width — matches sidebar width in
-	   the 'default' layout so the logo column aligns with the sidebar
-	   below it (Domiex's `md:group-data-[layout=default]:w-sidebar`).
-	   In boxed / semibox / horizontal / modern, the cluster shrinks
-	   to its natural width — those modes don't want the column lock. */
-	--lk-topbar-brand-col: var(--lk-sidebar-width);
-	--lk-topbar-brand-border: 1px solid var(--color-border);
-
-	/* Sidebar colour — surface + foreground tokens. Default `light` =
-	   bg-elevated (white) over fg (near-black). */
+	/* Sidebar colour surface tokens — default `light` (white-ish bg
+	   over near-black fg). Overridden by [data-sidebar-colors='dark']. */
 	--lk-sidebar-bg: var(--color-bg-elevated);
 	--lk-sidebar-fg: var(--color-fg);
 	--lk-sidebar-fg-muted: var(--color-fg-muted);
@@ -240,172 +219,30 @@
 	--lk-sidebar-hover-bg: var(--color-bg-muted);
 	--lk-sidebar-border: var(--color-border);
 
-	/* Content width */
-	--lk-content-max-width: var(--container-2xl); /* default = 96rem */
-
-	/* Layout-mode shell — outer "gap" each fixed surface (Topbar,
-	   Sidebar, page-card) insets itself by; card radius + bg drive
-	   the boxed/semibox visual. Default = flat full-bleed (gap=0,
-	   radius=0, transparent card so body canvas shows through).
-	   Boxed/semibox flip these on at lg+ only — mobile stays flat. */
-	--lk-shell-gap: 0px;
-	--lk-shell-radius: 0px;
-	--lk-page-bg: transparent;
-	--lk-shell-shadow: 0 0 transparent;
+	/* Page content max-width — soft cap so wide screens don't sprawl.
+	   No user toggle (Vercel / Linear ship a single width). */
+	--lk-content-max-width: var(--container-2xl);
 }
 
-/* Mobile (< lg): brand cluster column always shrinks to natural
-   width since the sidebar is hidden behind a drawer trigger. */
-@media (max-width: 63.99rem) {
-	:root {
-		--lk-topbar-brand-col: auto;
-		--lk-topbar-brand-border: 0;
-	}
-}
-
-/* ── Sidebar size variants ───────────────────────────────────
-   medium = icon stacked above label (Domiex's "medium" card style).
-   small  = icon-only column, labels hidden + section titles hidden.
-   Modern layout (handled below) inherits the 'small' visual via the
-   same vars. */
-:root[data-sidebar-size='medium'] {
-	--lk-sidebar-width: 13.75rem; /* 220px — matches Domiex medium */
-	--lk-sidebar-link-direction: column;
-	--lk-sidebar-link-align: center;
-	--lk-sidebar-link-text-align: center;
-	--lk-sidebar-link-gap: 0.375rem;
-	--lk-sidebar-link-padding: 0.625rem 0.5rem;
-	--lk-sidebar-icon-size: 22px;
-	--lk-sidebar-label-size: var(--text-xs);
-}
-:root[data-sidebar-size='small'] {
-	--lk-sidebar-width: 4.6875rem; /* 75px — icon-only column */
-	--lk-sidebar-label-display: none;
-	--lk-sidebar-section-title-display: none;
-	--lk-sidebar-link-align: center;
-	--lk-sidebar-link-padding: 0.625rem 0.5rem;
-	--lk-sidebar-icon-size: 20px;
+/* ── Sidebar collapsed (desktop) ──────────────────────────────
+   Boolean attribute set by ThemeStore.toggleSidebarCollapsed().
+   On mobile the sidebar is a drawer and this attr is ignored.  */
+:root[data-sidebar-collapsed] {
+	--lk-sidebar-width: var(--lk-sidebar-width-collapsed);
 }
 
 /* ── Sidebar colour variants ──────────────────────────────────
-   Each variant re-skins the bg / fg / hover / active token set so
-   Sidebar.svelte doesn't need to know which variant is active. ── */
+   Two surface options. Default = light (white over near-black).
+   Dark = inverted neutral. Each variant re-skins the bg / fg /
+   hover / active token set so Sidebar.svelte doesn't branch. */
 :root[data-sidebar-colors='dark'] {
-	--lk-sidebar-bg: oklch(0.25 0.02 256);
+	--lk-sidebar-bg: oklch(0.22 0.015 256);
 	--lk-sidebar-fg: oklch(0.92 0.01 256);
-	--lk-sidebar-fg-muted: oklch(0.7 0.01 256);
-	--lk-sidebar-active-bg: oklch(0.35 0.05 260);
+	--lk-sidebar-fg-muted: oklch(0.68 0.01 256);
+	--lk-sidebar-active-bg: oklch(0.32 0.04 260);
 	--lk-sidebar-active-fg: oklch(0.98 0 0);
-	--lk-sidebar-hover-bg: oklch(0.32 0.02 256);
-	--lk-sidebar-border: oklch(0.32 0.02 256);
-}
-:root[data-sidebar-colors='brand'] {
-	--lk-sidebar-bg: var(--color-brand-800);
-	--lk-sidebar-fg: var(--color-brand-100);
-	--lk-sidebar-fg-muted: var(--color-brand-300);
-	--lk-sidebar-active-bg: var(--color-brand-600);
-	--lk-sidebar-active-fg: oklch(1 0 0);
-	--lk-sidebar-hover-bg: var(--color-brand-700);
-	--lk-sidebar-border: var(--color-brand-700);
-}
-:root[data-sidebar-colors='purple'] {
-	--lk-sidebar-bg: oklch(0.32 0.12 305);
-	--lk-sidebar-fg: oklch(0.92 0.04 305);
-	--lk-sidebar-fg-muted: oklch(0.72 0.08 305);
-	--lk-sidebar-active-bg: oklch(0.45 0.18 305);
-	--lk-sidebar-active-fg: oklch(1 0 0);
-	--lk-sidebar-hover-bg: oklch(0.38 0.14 305);
-	--lk-sidebar-border: oklch(0.38 0.14 305);
-}
-:root[data-sidebar-colors='sky'] {
-	--lk-sidebar-bg: oklch(0.42 0.1 230);
-	--lk-sidebar-fg: oklch(0.93 0.03 230);
-	--lk-sidebar-fg-muted: oklch(0.75 0.06 230);
-	--lk-sidebar-active-bg: oklch(0.55 0.15 230);
-	--lk-sidebar-active-fg: oklch(1 0 0);
-	--lk-sidebar-hover-bg: oklch(0.48 0.12 230);
-	--lk-sidebar-border: oklch(0.48 0.12 230);
-}
-
-/* ── Content width ───────────────────────────────────────────── */
-:root[data-content-width='fluid'] {
-	--lk-content-max-width: none;
-}
-
-/* ── Layout mode ──────────────────────────────────────────────
-   Each mode flips a small set of layout vars; the Topbar / Sidebar
-   / page-wrapper consume those vars and reposition themselves.
-   Gated to ≥ 64rem because boxed/semibox don't make sense on phones
-   (Domiex pattern: `lg:group-data-[layout=boxed]:left-8` etc.).
-
-   Boxed   — 2rem outer gap, white card behind page content, subtle
-             shadow on Topbar / Sidebar / card (each becomes a
-             distinct floating surface).
-   Semibox — same 1.5rem gap + radius as boxed but the page card is
-             transparent (canvas shows through) for a lighter feel.
-   Horizontal / Modern — brand-cluster column collapses (sidebar
-             behaviour handled by AppShell + Sidebar respectively). */
-@media (min-width: 64rem) {
-	:root[data-layout='boxed'] {
-		--lk-shell-gap: 2rem;
-		--lk-shell-radius: 0.5rem;
-		--lk-page-bg: var(--color-bg-elevated);
-		--lk-shell-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.05);
-		--lk-topbar-brand-col: auto;
-		--lk-topbar-brand-border: 0;
-	}
-	:root[data-layout='semibox'] {
-		--lk-shell-gap: 1.5rem;
-		--lk-shell-radius: 0.5rem;
-		--lk-page-bg: var(--color-bg-elevated);
-		--lk-shell-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.05);
-		--lk-topbar-brand-col: auto;
-		--lk-topbar-brand-border: 0;
-	}
-	:root[data-layout='horizontal'] {
-		--lk-topbar-brand-col: auto;
-		--lk-topbar-brand-border: 0;
-		/* Horizontal-nav strip slots in below the topbar at ~3rem high.
-		   page-wrapper picks this up via padding-block-start. */
-		--lk-horizontal-nav-height: 3rem;
-	}
-	/* Modern layout — force the sidebar into the icon-only visual
-	   regardless of the user's data-sidebar-size pick, mirroring
-	   Domiex (modern locks the sidebar small + reveals nav-type). */
-	:root[data-layout='modern'] {
-		--lk-topbar-brand-col: auto;
-		--lk-topbar-brand-border: 0;
-		--lk-sidebar-width: 4.6875rem;
-		--lk-sidebar-label-display: none;
-		--lk-sidebar-section-title-display: none;
-		--lk-sidebar-link-align: center;
-		--lk-sidebar-link-padding: 0.625rem 0.5rem;
-		--lk-sidebar-icon-size: 20px;
-	}
-	/* ── Modern × nav-type combinations ──────────────────────────
-	   Only active when both data-layout='modern' AND data-nav-type
-	   are set. Each variant re-skins the sidebar token set so the
-	   Sidebar component renders differently without conditional
-	   markup. Mirrors Domiex's data-layout='modern' × data-nav-type
-	   combination matrix. */
-	:root[data-layout='modern'][data-nav-type='floating'] {
-		--lk-sidebar-bg: var(--color-bg-elevated);
-		--lk-sidebar-border: transparent;
-		--lk-shell-shadow: 0 6px 16px oklch(0 0 0 / 0.08);
-	}
-	:root[data-layout='modern'][data-nav-type='boxed'] {
-		--lk-sidebar-bg: var(--color-bg-subtle);
-		--lk-sidebar-border: var(--color-border);
-	}
-	:root[data-layout='modern'][data-nav-type='pattern'] {
-		--lk-sidebar-bg: var(--color-brand-700);
-		--lk-sidebar-fg: var(--color-brand-50);
-		--lk-sidebar-fg-muted: var(--color-brand-200);
-		--lk-sidebar-active-bg: var(--color-brand-900);
-		--lk-sidebar-active-fg: var(--color-brand-50);
-		--lk-sidebar-hover-bg: var(--color-brand-800);
-		--lk-sidebar-border: var(--color-brand-800);
-	}
+	--lk-sidebar-hover-bg: oklch(0.28 0.02 256);
+	--lk-sidebar-border: oklch(0.3 0.02 256);
 }
 
 @layer base {
