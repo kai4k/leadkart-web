@@ -89,6 +89,11 @@
 	   Position-fixed column to the inline-start. Safe-area max() on
 	   block-start + inline-start guards against notched / curved
 	   devices in landscape. `contain: layout style` scopes reflow. */
+	/* ─── Sidebar surface — Liquid Glass ─────────────────────────
+	   Same material as the Topbar; consumes the per-theme glass bg
+	   token (--lk-sidebar-bg). The light variant uses --glass-bg,
+	   the dark variant --glass-bg-dark; both blur the canvas behind.
+	   Top-edge specular highlight catches the light. */
 	.lk-sidebar {
 		position: fixed;
 		inset-block-start: max(var(--lk-sidebar-top), var(--safe-top));
@@ -98,9 +103,10 @@
 				max(var(--lk-sidebar-bottom), var(--safe-bottom))
 		);
 		inline-size: var(--lk-sidebar-width);
-		background: var(--lk-sidebar-bg);
+		background: var(--lk-sidebar-bg-solid);
 		color: var(--lk-sidebar-fg);
 		border-inline-end: 1px solid var(--lk-sidebar-border);
+		box-shadow: var(--lk-sidebar-specular);
 		display: flex;
 		flex-direction: column;
 		contain: layout style;
@@ -113,16 +119,26 @@
 			background 0.15s ease-out;
 		z-index: var(--z-sticky);
 	}
+	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+		.lk-sidebar {
+			background: var(--lk-sidebar-bg);
+			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+		}
+	}
 
-	/* Semibox — sidebar floats with a full border + radius + shadow. */
+	/* Semibox — sidebar floats with the full glass treatment. */
 	:global(:root[data-layout='semibox']) .lk-sidebar {
-		border: 1px solid var(--lk-sidebar-border);
+		border: var(--glass-border);
 		border-radius: var(--lk-shell-radius);
-		box-shadow: var(--lk-shell-shadow);
+		box-shadow: var(--glass-shadow), var(--lk-sidebar-specular);
 	}
 
 	/* Mobile drawer override: render in normal flow with no top-offset
-	   or floating border (the drawer's own panel handles the visual). */
+	   or floating border. Background switches to the solid variant —
+	   the drawer slides over the overlay which has nothing meaningful
+	   to refract, so glass here just looks murky. The drawer is the
+	   foreground surface on mobile and benefits from full legibility. */
 	:global([role='dialog']) .lk-sidebar {
 		position: relative;
 		inset: 0;
@@ -132,6 +148,9 @@
 		border-inline-end: 0;
 		border-radius: 0;
 		box-shadow: none;
+		background: var(--lk-sidebar-bg-solid);
+		-webkit-backdrop-filter: none;
+		backdrop-filter: none;
 	}
 
 	/* ── Brand block ───────────────────────────────────────────── */
@@ -223,14 +242,17 @@
 	}
 	.lk-sidebar-link:active {
 		background: var(--lk-sidebar-active-bg);
+		box-shadow: var(--lk-sidebar-specular);
 	}
 	.lk-sidebar-link--active {
 		background: var(--lk-sidebar-active-bg);
 		color: var(--lk-sidebar-active-fg);
+		box-shadow: var(--lk-sidebar-specular);
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.lk-sidebar-link:hover {
 			background: var(--lk-sidebar-hover-bg);
+			box-shadow: var(--lk-sidebar-specular);
 			color: var(--lk-sidebar-fg);
 		}
 	}

@@ -248,15 +248,20 @@
 	--lk-sidebar-width: 16rem;
 	--lk-sidebar-width-collapsed: 4.5rem;
 
-	/* Sidebar colour surface tokens — default `light` (white-ish bg
-	   over near-black fg). Overridden by [data-sidebar-colors='dark']. */
-	--lk-sidebar-bg: var(--color-bg-elevated);
+	/* Sidebar colour surface tokens — default `light` (frosted white
+	   glass) over near-black fg. Overridden by [data-sidebar-colors=
+	   'dark'] which switches to the dark glass tint. The
+	   --lk-sidebar-bg is consumed as the SEMI-TRANSPARENT fill; the
+	   backdrop-filter lives on the component to refract the canvas. */
+	--lk-sidebar-bg: var(--glass-bg);
+	--lk-sidebar-bg-solid: var(--color-bg-elevated); /* fallback for reduced-transparency */
 	--lk-sidebar-fg: var(--color-fg);
 	--lk-sidebar-fg-muted: var(--color-fg-muted);
-	--lk-sidebar-active-bg: var(--color-brand-50);
+	--lk-sidebar-active-bg: var(--glass-pill-bg);
 	--lk-sidebar-active-fg: var(--color-brand-700);
-	--lk-sidebar-hover-bg: var(--color-bg-muted);
-	--lk-sidebar-border: var(--color-border);
+	--lk-sidebar-hover-bg: var(--glass-pill-bg);
+	--lk-sidebar-border: oklch(1 0 0 / 0.3);
+	--lk-sidebar-specular: var(--glass-specular);
 
 	/* Page content max-width — soft cap so wide screens don't sprawl.
 	   No user toggle (Vercel / Linear ship a single width). */
@@ -315,13 +320,15 @@
    Dark = inverted neutral. Each variant re-skins the bg / fg /
    hover / active token set so Sidebar.svelte doesn't branch. */
 :root[data-sidebar-colors='dark'] {
-	--lk-sidebar-bg: oklch(0.22 0.015 256);
-	--lk-sidebar-fg: oklch(0.92 0.01 256);
-	--lk-sidebar-fg-muted: oklch(0.68 0.01 256);
-	--lk-sidebar-active-bg: oklch(0.32 0.04 260);
+	--lk-sidebar-bg: var(--glass-bg-dark);
+	--lk-sidebar-bg-solid: oklch(0.22 0.015 256);
+	--lk-sidebar-fg: oklch(0.94 0.01 256);
+	--lk-sidebar-fg-muted: oklch(0.7 0.01 256);
+	--lk-sidebar-active-bg: var(--glass-pill-bg-dark);
 	--lk-sidebar-active-fg: oklch(0.98 0 0);
-	--lk-sidebar-hover-bg: oklch(0.28 0.02 256);
-	--lk-sidebar-border: oklch(0.3 0.02 256);
+	--lk-sidebar-hover-bg: var(--glass-pill-bg-dark);
+	--lk-sidebar-border: oklch(1 0 0 / 0.08);
+	--lk-sidebar-specular: var(--glass-specular-dark);
 }
 
 @layer base {
@@ -368,6 +375,26 @@
 			animation-iteration-count: 1 !important;
 			transition-duration: 0.01ms !important;
 			scroll-behavior: auto !important;
+		}
+	}
+
+	/* Reduced-transparency respect — iOS / macOS Accessibility setting
+	 * (and Windows "Transparency effects: Off"). When the user has
+	 * disabled material translucency, fall back to the solid surface
+	 * tokens (--lk-sidebar-bg-solid, --color-bg-elevated) and skip the
+	 * backdrop-filter cost. Liquid Glass surfaces consult the
+	 * `--glass-bg*` vars normally; the override below substitutes
+	 * opaque values so the visual remains legible. */
+	@media (prefers-reduced-transparency: reduce) {
+		:root {
+			--glass-bg: var(--color-bg-elevated);
+			--glass-bg-elevated: var(--color-bg-elevated);
+			--glass-bg-dark: oklch(0.22 0.015 256);
+			--glass-pill-bg: var(--color-bg-muted);
+			--glass-pill-bg-dark: oklch(0.32 0.04 260);
+			--glass-blur: 0px;
+			--glass-blur-strong: 0px;
+			--glass-saturate: 100%;
 		}
 	}
 }

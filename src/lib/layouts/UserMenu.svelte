@@ -68,7 +68,7 @@
 <div class="relative">
 	<button
 		bind:this={triggerEl}
-		class="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-brand-100)] text-[var(--color-brand-700)] hover:bg-[var(--color-brand-200)]"
+		class="lk-avatar-btn"
 		aria-label="User menu"
 		aria-haspopup="menu"
 		aria-expanded={open}
@@ -78,19 +78,14 @@
 	</button>
 
 	{#if open}
-		<div
-			bind:this={menuEl}
-			role="menu"
-			class="absolute top-full right-0 mt-2 w-56 rounded-md border border-[var(--color-border)] bg-[var(--color-bg-elevated)] py-1 shadow-md"
-			style="z-index: var(--z-popover);"
-		>
-			<div class="border-b border-[var(--color-border)] px-3 py-2">
+		<div bind:this={menuEl} role="menu" class="lk-user-popover" style="z-index: var(--z-popover);">
+			<div class="lk-user-popover-header">
 				<p class="caption">Signed in as</p>
 				<p class="body-sm truncate-1 font-medium">{session.principal?.email ?? '—'}</p>
 			</div>
 			<button
 				role="menuitem"
-				class="body-sm flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-[var(--color-bg-muted)]"
+				class="lk-user-popover-item"
 				onclick={() => {
 					open = false;
 					goto('/settings/account/security');
@@ -101,7 +96,7 @@
 			</button>
 			<button
 				role="menuitem"
-				class="body-sm flex w-full items-center gap-2 px-3 py-2 text-left text-[var(--color-danger-700)] hover:bg-[var(--color-danger-50)]"
+				class="lk-user-popover-item lk-user-popover-item--danger"
 				onclick={handleSignOut}
 			>
 				<Icon icon={LogOut} size="sm" />
@@ -110,3 +105,111 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	/* ─── Avatar trigger — glass-tinted circle ────────────────────
+	   Brand-tinted glass pill: brand-100 base fades to glass-pill on
+	   hover with a top-edge specular. Matches the Topbar icon button
+	   visual language (rounded glass pill on hover + tap). */
+	.lk-avatar-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		inline-size: 2.25rem;
+		block-size: 2.25rem;
+		border-radius: 9999px;
+		background: var(--color-brand-100);
+		color: var(--color-brand-700);
+		box-shadow: var(--glass-specular);
+		transition:
+			background 0.15s,
+			box-shadow 0.15s,
+			transform 0.15s;
+	}
+	.lk-avatar-btn:focus-visible {
+		outline: 2px solid var(--color-brand-500);
+		outline-offset: 2px;
+	}
+	.lk-avatar-btn:active {
+		transform: scale(0.96);
+	}
+	@media (hover: hover) and (pointer: fine) {
+		.lk-avatar-btn:hover {
+			background: var(--color-brand-200);
+		}
+	}
+	@media (pointer: coarse) {
+		.lk-avatar-btn {
+			inline-size: var(--lk-touch-target-min);
+			block-size: var(--lk-touch-target-min);
+		}
+	}
+
+	/* ─── Popover surface — Liquid Glass ──────────────────────────
+	   Floating menu attached below the avatar. Uses --glass-bg-elevated
+	   for stronger legibility (popover content matters), softer
+	   blur, and the full drop-shadow + specular treatment. */
+	.lk-user-popover {
+		position: absolute;
+		inset-block-start: 100%;
+		inset-inline-end: 0;
+		margin-block-start: 0.5rem;
+		inline-size: 14rem;
+		padding-block: 0.25rem;
+		border-radius: 0.625rem;
+		border: var(--glass-border);
+		background: var(--color-bg-elevated);
+		box-shadow: var(--glass-shadow), var(--glass-specular);
+		overflow: hidden;
+	}
+	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+		.lk-user-popover {
+			background: var(--glass-bg-elevated);
+			-webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+			backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+		}
+	}
+
+	.lk-user-popover-header {
+		padding: 0.625rem 0.875rem;
+		border-block-end: var(--glass-border-subtle);
+	}
+
+	.lk-user-popover-item {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		inline-size: 100%;
+		padding: 0.5rem 0.875rem;
+		font-size: var(--text-sm);
+		color: var(--color-fg);
+		text-align: start;
+		transition:
+			background 0.12s,
+			color 0.12s;
+	}
+	.lk-user-popover-item:focus-visible {
+		outline: 2px solid var(--color-brand-500);
+		outline-offset: -2px;
+	}
+	.lk-user-popover-item:active {
+		background: var(--glass-pill-bg);
+	}
+	.lk-user-popover-item--danger {
+		color: var(--color-danger-700);
+	}
+	@media (hover: hover) and (pointer: fine) {
+		.lk-user-popover-item:hover {
+			background: var(--glass-pill-bg);
+		}
+		.lk-user-popover-item--danger:hover {
+			background: var(--color-danger-50);
+		}
+	}
+	@media (pointer: coarse) {
+		.lk-user-popover-item {
+			min-block-size: var(--lk-touch-target-min);
+			padding-block: 0.75rem;
+		}
+	}
+</style>

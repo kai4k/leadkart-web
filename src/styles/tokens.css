@@ -447,4 +447,54 @@
 	--container-lg: 64rem;
 	--container-xl: 80rem;
 	--container-2xl: 96rem;
+
+	/* ═══ LIQUID GLASS ═══════════════════════════════════════════
+	 * Apple WWDC25 design language adapted for the web. A frosted
+	 * translucent surface composed of:
+	 *
+	 *   1. semi-transparent fill (`--glass-bg-*`) — tints the surface
+	 *   2. backdrop-filter blur + saturate           — refracts content
+	 *      beneath so the surface picks up the canvas colour + a
+	 *      hint of shape
+	 *   3. top-edge specular highlight (inset shadow) — suggests a
+	 *      light catching the top edge of the glass
+	 *   4. soft outer drop-shadow                    — floats the
+	 *      surface above the canvas
+	 *
+	 * Two surface variants:
+	 *   --glass-bg            : white-tinted (default / light sidebar)
+	 *   --glass-bg-dark       : dark-tinted (sidebar when user picks
+	 *                            'dark' sidebar theme)
+	 *
+	 * Accessibility: components MUST gate the backdrop-filter behind
+	 * a `@supports` check (older Safari + Firefox without backdrop-
+	 * filter fall back to a solid colour) AND respect the
+	 * `prefers-reduced-transparency: reduce` media query (iOS / macOS
+	 * accessibility setting that disables material translucency).
+	 *
+	 * Refs: Apple HIG "Materials" 2025 update, WWDC25 "Meet Liquid
+	 * Glass", Apple Developer Documentation §"Designing for Liquid
+	 * Glass" — adapted for browser environments without UIKit's
+	 * native UIVisualEffectView. */
+	--glass-bg: oklch(1 0 0 / 0.72);
+	--glass-bg-dark: oklch(0.22 0.015 256 / 0.7);
+	--glass-bg-elevated: oklch(1 0 0 / 0.84);
+	--glass-blur: 24px;
+	--glass-blur-strong: 36px;
+	--glass-saturate: 180%;
+	--glass-border: 1px solid oklch(1 0 0 / 0.35);
+	--glass-border-subtle: 1px solid oklch(0 0 0 / 0.06);
+	--glass-shadow: 0 8px 32px -12px oklch(0 0 0 / 0.16), 0 2px 6px -2px oklch(0 0 0 / 0.06);
+	--glass-shadow-sm: 0 4px 16px -8px oklch(0 0 0 / 0.12), 0 1px 2px oklch(0 0 0 / 0.04);
+	/* Top-edge specular highlight — light glass + dark glass variants.
+	   Implemented as inset box-shadow at the top so the bright edge
+	   catches a hint of "light from above" without bleeding inward. */
+	--glass-specular: inset 0 1px 0 0 oklch(1 0 0 / 0.6);
+	--glass-specular-dark: inset 0 1px 0 0 oklch(1 0 0 / 0.14);
+	/* Pill highlight — used by interactive states (button hover,
+	   active nav links) to render an ephemeral glass-pill over the
+	   underlying surface. Lighter tint + thinner specular than the
+	   parent surface. */
+	--glass-pill-bg: oklch(1 0 0 / 0.5);
+	--glass-pill-bg-dark: oklch(1 0 0 / 0.12);
 }

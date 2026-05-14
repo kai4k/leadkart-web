@@ -70,13 +70,12 @@
 </header>
 
 <style>
-	/* ─── Topbar surface ──────────────────────────────────────────
-	   Default mode: full-width bar pinned to viewport top edge with
-	   safe-area-aware padding so content clears the notch. Semibox
-	   mode: top + sides recede by --lk-shell-gap, side-by-side with
-	   the sidebar (handled by --lk-topbar-inline-start).
-	   `contain: layout style` scopes the bar's reflow so resizing
-	   inner content doesn't invalidate the outer page layout. */
+	/* ─── Topbar surface — Liquid Glass ───────────────────────────
+	   Apple WWDC25 material: backdrop-filter blur + saturate over a
+	   semi-transparent fill, with a top-edge specular inset shadow
+	   to catch the light. Falls back to a solid surface in the
+	   @supports check + via the global `prefers-reduced-transparency`
+	   rule in base.css. */
 	.lk-topbar {
 		position: fixed;
 		inset-block-start: max(var(--lk-shell-gap), var(--safe-top));
@@ -89,7 +88,8 @@
 		block-size: var(--lk-topbar-height);
 		padding-inline: clamp(0.75rem, 1.5vw, 1.25rem);
 		background: var(--color-bg-elevated);
-		border-block-end: 1px solid var(--color-border);
+		border-block-end: var(--glass-border-subtle);
+		box-shadow: var(--glass-specular);
 		contain: layout style;
 		transition:
 			inset-block-start 0.18s ease-out,
@@ -97,12 +97,21 @@
 			inset-inline-end 0.18s ease-out,
 			border-radius 0.18s ease-out;
 	}
+	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+		.lk-topbar {
+			background: var(--glass-bg);
+			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+		}
+	}
 
-	/* Semibox — topbar floats with a full border + radius + shadow. */
+	/* Semibox — topbar floats; glass border + radius + drop-shadow
+	   complete the Liquid-Glass treatment (specular highlight stays
+	   on top). */
 	:global(:root[data-layout='semibox']) .lk-topbar {
-		border: 1px solid var(--color-border);
+		border: var(--glass-border);
 		border-radius: var(--lk-shell-radius);
-		box-shadow: var(--lk-shell-shadow);
+		box-shadow: var(--glass-shadow), var(--glass-specular);
 	}
 
 	/* ─── Left cluster (toggle + breadcrumb) ─────────────────────── */
@@ -134,14 +143,16 @@
 		inline-size: clamp(16rem, 28vw, 22rem);
 		padding-inline: 0.75rem;
 		padding-block: 0.4375rem;
-		border-radius: 0.5rem;
-		border: 1px solid var(--color-border);
-		background: var(--color-bg);
+		border-radius: 0.625rem;
+		border: var(--glass-border-subtle);
+		background: var(--glass-pill-bg);
+		box-shadow: var(--glass-specular);
 		color: var(--color-fg-muted);
 		font-size: var(--text-sm);
 		transition:
 			border-color 0.15s,
-			background 0.15s;
+			background 0.15s,
+			box-shadow 0.15s;
 	}
 	.lk-topbar-search-trigger:focus-visible {
 		outline: 2px solid var(--color-brand-500);
@@ -211,12 +222,14 @@
 		outline-offset: 2px;
 	}
 	.lk-topbar-iconbtn:active {
-		background: var(--color-bg-subtle);
+		background: var(--glass-pill-bg);
+		box-shadow: var(--glass-specular);
 		color: var(--color-fg);
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.lk-topbar-iconbtn:hover {
-			background: var(--color-bg-muted);
+			background: var(--glass-pill-bg);
+			box-shadow: var(--glass-specular);
 			color: var(--color-fg);
 		}
 	}

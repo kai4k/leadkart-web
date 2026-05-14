@@ -92,8 +92,8 @@
 		role="dialog"
 		aria-modal="true"
 		aria-label="Theme settings"
-		class="fixed inset-y-0 right-0 flex w-full max-w-sm flex-col bg-[var(--color-bg-elevated)] shadow-2xl"
-		style="z-index: var(--z-modal); animation: slide-in-right {`var(--duration-base) var(--ease-out)`};"
+		class="lk-settings-drawer fixed inset-y-0 right-0 flex w-full max-w-sm flex-col"
+		style="animation: slide-in-right {`var(--duration-base) var(--ease-out)`};"
 	>
 		<header
 			class="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4"
@@ -221,6 +221,27 @@
 {/if}
 
 <style>
+	/* ─── Drawer surface — Liquid Glass ──────────────────────────
+	   Frosted-white panel slid in from the inline-end edge. Uses the
+	   "elevated" glass variant (slightly more opaque than the topbar/
+	   sidebar) since the drawer is the foreground surface and needs
+	   stronger legibility. Outer drop-shadow lifts it off the canvas. */
+	.lk-settings-drawer {
+		background: var(--color-bg-elevated);
+		box-shadow: var(--glass-shadow), var(--glass-specular);
+		z-index: var(--z-modal);
+		padding-block-start: var(--safe-top);
+		padding-block-end: var(--safe-bottom);
+		padding-inline-end: var(--safe-right);
+	}
+	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+		.lk-settings-drawer {
+			background: var(--glass-bg-elevated);
+			-webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+			backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+		}
+	}
+
 	@keyframes slide-in-right {
 		from {
 			transform: translateX(100%);
