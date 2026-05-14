@@ -242,6 +242,11 @@
 	   Linear/Vercel-style minimal topbar feels native. */
 	--lk-topbar-height: 3.75rem;
 
+	/* Footer height — slim status bar pinned to the viewport bottom.
+	   Same fixed-glass treatment as the topbar; consumed by AppShell
+	   for the page-wrapper's padding-block-end. */
+	--lk-footer-height: 2.5rem;
+
 	/* Sidebar widths — binary expanded/collapsed. 16rem = 256px is the
 	   Linear / Vercel canonical width; 4.5rem = 72px the icon-only
 	   collapsed state. Single var, single transition. */

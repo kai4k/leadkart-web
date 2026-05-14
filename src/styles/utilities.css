@@ -54,75 +54,166 @@
 		pointer-events: none;
 	}
 
-	/* ═══ LIQUID GLASS surface utilities — iOS-flavoured frosted
-	 * surfaces per the Blazor canon. Compose with bg + border + shadow
-	 * tokens. Cards stay SOLID — glass is for nav chrome / overlays. */
+	/* ═══ LIQUID GLASS surface utilities — Apple WWDC25 material adapted
+	 * for the web. ONE canonical recipe applied across every chrome
+	 * surface in the product (topbar, sidebar, footer, popover, drawer,
+	 * dialog, toast, tooltip + interactive pills). Components compose
+	 * these classes via `class="lk-topbar glass-appbar"` instead of
+	 * duplicating the @supports / backdrop-filter blocks per file.
+	 *
+	 * Every surface consumes the same token set in tokens.css:
+	 *   --glass-bg              60% elevated   — base chrome
+	 *   --glass-bg-elevated     78% elevated   — popover / drawer
+	 *   --glass-blur            20px           — base
+	 *   --glass-blur-strong     30px           — foreground (popover)
+	 *   --glass-saturate        180%
+	 *   --glass-shadow / -specular / -pill-bg  — shared
+	 *
+	 * Result: changing `--glass-blur` once re-skins every glass
+	 * surface in the app. Identical recipe to the AuthShell's local
+	 * `.lk-glass` class so auth + app shell render the same material.
+	 *
+	 * @supports gate ensures graceful fallback in browsers without
+	 * backdrop-filter (very old Firefox / Safari) — the base
+	 * `.glass-*` class sets a solid background; the @supports adds
+	 * the translucent + blurred treatment on top. */
 
+	/* Base glass surface — apply to anything that should refract */
+	.glass {
+		background: var(--color-bg-elevated);
+		box-shadow: var(--glass-specular);
+	}
+	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+		.glass {
+			background: var(--glass-bg);
+			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+		}
+	}
+
+	/* Appbar — topbar surface. Subtle bottom border, no full ring. */
 	.glass-appbar {
-		background: color-mix(in srgb, var(--color-bg-elevated) var(--glass-opacity-base), transparent);
-		backdrop-filter: blur(var(--glass-blur-md)) saturate(var(--glass-saturate-md));
-		-webkit-backdrop-filter: blur(var(--glass-blur-md)) saturate(var(--glass-saturate-md));
-		border-bottom: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+		background: var(--color-bg-elevated);
+		border-block-end: var(--glass-border-subtle);
+		box-shadow: var(--glass-specular);
+	}
+	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+		.glass-appbar {
+			background: var(--glass-bg);
+			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+		}
 	}
 
+	/* Drawer — sidebar surface. Inline-end border, specular. */
 	.glass-drawer {
-		background: color-mix(
-			in srgb,
-			var(--color-bg-elevated) var(--glass-opacity-strong),
-			transparent
-		);
-		backdrop-filter: blur(var(--glass-blur-md)) saturate(var(--glass-saturate-md));
-		-webkit-backdrop-filter: blur(var(--glass-blur-md)) saturate(var(--glass-saturate-md));
-		border-right: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+		background: var(--color-bg-elevated);
+		border-inline-end: var(--glass-border-subtle);
+		box-shadow: var(--glass-specular);
+	}
+	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+		.glass-drawer {
+			background: var(--glass-bg);
+			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+		}
 	}
 
+	/* Bordered glass — floating shell surfaces in semibox mode + popover.
+	 * Pairs with .glass-* to add the full ring + radius + drop-shadow. */
+	.glass-bordered {
+		border: var(--glass-border);
+		border-radius: 0.5rem;
+		box-shadow: var(--glass-shadow), var(--glass-specular);
+	}
+
+	/* Popover — menus, dropdowns, foreground panels. Stronger blur +
+	 * higher opacity (78%) so menu content stays legible. */
 	.glass-popover {
-		background: color-mix(
-			in srgb,
-			var(--color-bg-elevated) var(--glass-opacity-light),
-			transparent
-		);
-		backdrop-filter: blur(var(--glass-blur-lg)) saturate(var(--glass-saturate-lg));
-		-webkit-backdrop-filter: blur(var(--glass-blur-lg)) saturate(var(--glass-saturate-lg));
-		border: 1px solid color-mix(in srgb, var(--color-border) 35%, transparent);
-		border-top-color: var(--glass-highlight-subtle);
-		box-shadow:
-			inset 0 1px 0 var(--glass-highlight-subtle),
-			0 8px 32px -4px oklch(0 0 0 / 0.12),
-			0 0 0 1px oklch(1 0 0 / 0.04);
+		background: var(--color-bg-elevated);
+		border: var(--glass-border);
+		border-radius: 0.625rem;
+		box-shadow: var(--glass-shadow), var(--glass-specular);
+	}
+	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+		.glass-popover {
+			background: var(--glass-bg-elevated);
+			-webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+			backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+		}
 	}
 
+	/* Dialog — modal panels (settings drawer, confirmation modals).
+	 * Same recipe as popover but with stronger shadow lift. */
 	.glass-dialog {
-		background: color-mix(
-			in srgb,
-			var(--color-bg-elevated) var(--glass-opacity-translucent),
-			transparent
-		);
-		backdrop-filter: blur(var(--glass-blur-2xl)) saturate(var(--glass-saturate-2xl));
-		-webkit-backdrop-filter: blur(var(--glass-blur-2xl)) saturate(var(--glass-saturate-2xl));
-		border: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
-		border-top-color: var(--glass-highlight);
+		background: var(--color-bg-elevated);
 		box-shadow:
-			inset 0 1px 0 var(--glass-highlight),
-			inset 0 0 20px oklch(1 0 0 / 0.03),
-			0 24px 80px -12px oklch(0 0 0 / 0.15),
-			0 0 0 1px oklch(1 0 0 / 0.05);
+			var(--glass-specular),
+			0 24px 60px color-mix(in srgb, var(--color-fg) 14%, transparent),
+			0 8px 16px color-mix(in srgb, var(--color-fg) 6%, transparent);
+	}
+	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+		.glass-dialog {
+			background: var(--glass-bg-elevated);
+			-webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+			backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+		}
 	}
 
+	/* Toast — transient status messages. */
 	.glass-toast {
-		backdrop-filter: blur(var(--glass-blur-md)) saturate(var(--glass-saturate-lg));
-		-webkit-backdrop-filter: blur(var(--glass-blur-md)) saturate(var(--glass-saturate-lg));
-		border: 1px solid color-mix(in srgb, var(--color-border) 30%, transparent);
-		border-top-color: var(--glass-highlight-subtle);
-		border-radius: var(--radius-sm);
-		box-shadow:
-			inset 0 1px 0 var(--glass-highlight-subtle),
-			0 8px 32px oklch(0 0 0 / 0.12);
+		background: var(--color-bg-elevated);
+		border: var(--glass-border);
+		border-radius: 0.625rem;
+		box-shadow: var(--glass-shadow), var(--glass-specular);
+	}
+	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+		.glass-toast {
+			background: var(--glass-bg-elevated);
+			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+		}
 	}
 
+	/* Tooltip — small inline hint. Just blur, inherits its own tint. */
 	.glass-tooltip {
-		backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate-sm));
-		-webkit-backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate-sm));
+		backdrop-filter: blur(16px) saturate(var(--glass-saturate));
+		-webkit-backdrop-filter: blur(16px) saturate(var(--glass-saturate));
+	}
+
+	/* Pill — interactive state background (hover / active / selected).
+	 * Sits over a parent glass surface as an ephemeral highlight. */
+	.glass-pill {
+		background: var(--glass-pill-bg);
+		box-shadow: var(--glass-specular);
+		border-radius: 0.5rem;
+	}
+
+	/* Brand-tinted icon square — Topbar route badge, sidebar collapsed
+	 * brand mark, etc. Tinted glass with brand-600 stroke. */
+	.glass-icon-square {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		background: color-mix(in srgb, var(--color-brand-600) 14%, var(--glass-pill-bg));
+		color: var(--color-brand-600);
+		box-shadow: var(--glass-specular);
+		border-radius: 0.5rem;
+	}
+
+	/* Status bar — fixed footer strip. Top border only (since the
+	 * floating-glass insets give the side + bottom edges naturally). */
+	.glass-statusbar {
+		background: var(--color-bg-elevated);
+		border-block-start: var(--glass-border-subtle);
+		box-shadow: var(--glass-specular);
+	}
+	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+		.glass-statusbar {
+			background: var(--glass-bg);
+			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+		}
 	}
 
 	/* ═══ INTERACTIVE — composable lift/press/glow primitives

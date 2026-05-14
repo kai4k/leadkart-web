@@ -135,8 +135,9 @@
 		<div class="lk-page-inner">
 			{@render children()}
 		</div>
-		<Footer />
 	</main>
+
+	<Footer />
 
 	<SettingsModal bind:open={settingsOpen} />
 </div>
@@ -239,7 +240,9 @@
 		z-index: 1; /* stacks above .lk-app-blobs (z-index 0) */
 		min-height: 100dvh;
 		padding-block-start: var(--lk-page-pad-top);
-		padding-block-end: max(var(--lk-shell-gap), var(--safe-bottom));
+		padding-block-end: calc(
+			var(--lk-footer-height) + max(var(--lk-shell-gap), var(--safe-bottom)) + var(--lk-shell-gap)
+		);
 		padding-inline-start: max(var(--lk-shell-gap), var(--safe-left));
 		padding-inline-end: max(var(--lk-shell-gap), var(--safe-right));
 		display: flex;

@@ -78,7 +78,12 @@
 	</button>
 
 	{#if open}
-		<div bind:this={menuEl} role="menu" class="lk-user-popover" style="z-index: var(--z-popover);">
+		<div
+			bind:this={menuEl}
+			role="menu"
+			class="lk-user-popover glass-popover"
+			style="z-index: var(--z-popover);"
+		>
 			<div class="lk-user-popover-header">
 				<p class="caption">Signed in as</p>
 				<p class="body-sm truncate-1 font-medium">{session.principal?.email ?? '—'}</p>
@@ -151,10 +156,8 @@
 		}
 	}
 
-	/* ─── Popover surface — Liquid Glass ──────────────────────────
-	   Floating menu attached below the avatar. Uses --glass-bg-elevated
-	   for stronger legibility (popover content matters), softer
-	   blur, and the full drop-shadow + specular treatment. */
+	/* Popover layout only — visual treatment composes from
+	   .glass-popover utility (utilities.css). */
 	.lk-user-popover {
 		position: absolute;
 		inset-block-start: 100%;
@@ -162,18 +165,7 @@
 		margin-block-start: 0.5rem;
 		inline-size: 14rem;
 		padding-block: 0.25rem;
-		border-radius: 0.625rem;
-		border: var(--glass-border);
-		background: var(--color-bg-elevated);
-		box-shadow: var(--glass-shadow), var(--glass-specular);
 		overflow: hidden;
-	}
-	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-		.lk-user-popover {
-			background: var(--glass-bg-elevated);
-			-webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
-			backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
-		}
 	}
 
 	.lk-user-popover-header {

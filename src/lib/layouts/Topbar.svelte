@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Bell, Command, PanelLeft, Search, Settings, Icon } from '$icons';
+	import { Bell, ChevronRight, Command, PanelLeft, Search, Settings, Icon } from '$icons';
 	import { routeContext } from '$lib/utils/routeTitle';
 	import UserMenu from './UserMenu.svelte';
 
@@ -23,7 +23,7 @@
 	const route = $derived(routeContext(page.url.pathname));
 </script>
 
-<header class="lk-topbar" aria-label="Application bar">
+<header class="lk-topbar glass-appbar" aria-label="Application bar">
 	<!-- Left: toggle + route badge (icon + title in a glass pill).
 	     Matches the Liquid-Glass language of the surface and gives
 	     the current location a visual anchor (Apple Music / Notion
@@ -37,20 +37,32 @@
 		>
 			<Icon icon={PanelLeft} size="md" />
 		</button>
-		<div class="lk-topbar-badge">
-			{#if route.icon}
-				<span class="lk-topbar-badge-icon" aria-hidden="true">
-					<Icon icon={route.icon} size="sm" />
-				</span>
-			{/if}
-			<h1 class="lk-topbar-title">{route.label}</h1>
-		</div>
+		<nav class="lk-topbar-crumbs" aria-label="Breadcrumb">
+			<ol class="lk-topbar-crumb-list">
+				{#each route.crumbs as crumb, i (crumb.href)}
+					{@const isLast = i === route.crumbs.length - 1}
+					<li class="lk-topbar-crumb">
+						{#if isLast}
+							{#if crumb.icon}
+								<span class="lk-topbar-badge-icon glass-icon-square" aria-hidden="true">
+									<Icon icon={crumb.icon} size="sm" />
+								</span>
+							{/if}
+							<h1 class="lk-topbar-title" aria-current="page">{crumb.label}</h1>
+						{:else}
+							<a class="lk-topbar-crumb-link" href={crumb.href}>{crumb.label}</a>
+							<Icon icon={ChevronRight} size="xs" class="lk-topbar-crumb-sep" />
+						{/if}
+					</li>
+				{/each}
+			</ol>
+		</nav>
 	</div>
 
 	<!-- Centre: cmd-K trigger (deferred palette) -->
 	<button
 		type="button"
-		class="lk-topbar-search-trigger"
+		class="lk-topbar-search-trigger glass-pill"
 		aria-label="Search (Cmd+K)"
 		title="Search · Cmd+K"
 	>
@@ -80,12 +92,12 @@
 </header>
 
 <style>
-	/* ─── Topbar surface — Liquid Glass ───────────────────────────
-	   Apple WWDC25 material: backdrop-filter blur + saturate over a
-	   semi-transparent fill, with a top-edge specular inset shadow
-	   to catch the light. Falls back to a solid surface in the
-	   @supports check + via the global `prefers-reduced-transparency`
-	   rule in base.css. */
+	/* ─── Topbar layout ────────────────────────────────────────────
+	   Layout only — the GLASS treatment (translucent bg + blur +
+	   specular) is provided by the `.glass-appbar` utility class
+	   (utilities.css). In semibox mode we ADD `.glass-bordered` via
+	   the :global rule below — same utility composition, no per-
+	   component recipe duplication. */
 	.lk-topbar {
 		position: fixed;
 		inset-block-start: max(var(--lk-shell-gap), var(--safe-top));
@@ -97,9 +109,6 @@
 		align-items: center;
 		block-size: var(--lk-topbar-height);
 		padding-inline: clamp(0.75rem, 1.5vw, 1.25rem);
-		background: var(--color-bg-elevated);
-		border-block-end: var(--glass-border-subtle);
-		box-shadow: var(--glass-specular);
 		contain: layout style;
 		transition:
 			inset-block-start 0.18s ease-out,
@@ -107,17 +116,9 @@
 			inset-inline-end 0.18s ease-out,
 			border-radius 0.18s ease-out;
 	}
-	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-		.lk-topbar {
-			background: var(--glass-bg);
-			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-		}
-	}
 
-	/* Semibox — topbar floats; glass border + radius + drop-shadow
-	   complete the Liquid-Glass treatment (specular highlight stays
-	   on top). */
+	/* Semibox — borrow .glass-bordered's full ring + radius + drop-
+	   shadow without re-declaring it here. */
 	:global(:root[data-layout='semibox']) .lk-topbar {
 		border: var(--glass-border);
 		border-radius: var(--lk-shell-radius);
@@ -131,30 +132,69 @@
 		gap: 0.5rem;
 		min-inline-size: 0; /* allow text-overflow inside grid 1fr */
 	}
-	/* ─── Route badge (icon + title) ──────────────────────────────
-	   Visually anchors the current location. The icon sits in a small
-	   brand-tinted glass square; the title runs alongside in semibold.
-	   The whole badge is a flex row so the icon + title read as one
-	   unit (Apple Music's "Now Playing" pattern, Notion's page
-	   header). Padding-inline-start: 0.25rem because the badge sits
-	   right after the sidebar-toggle button. */
-	.lk-topbar-badge {
+	/* ─── Breadcrumb trail ────────────────────────────────────────
+	   Multi-segment crumb path; intermediate crumbs are subtle
+	   clickable text muted by `--color-fg-muted`, separated by a
+	   chevron glyph. The trailing (current) crumb gets the icon
+	   badge + the page <h1> in semibold so screen readers + visual
+	   readers find the title at the end. Apple Music / Notion /
+	   Vercel pattern: location reads as one progressive unit. */
+	.lk-topbar-crumbs {
 		display: flex;
 		align-items: center;
-		gap: 0.625rem;
+		min-inline-size: 0;
 		padding-inline-start: 0.25rem;
+	}
+	.lk-topbar-crumb-list {
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
+		min-inline-size: 0;
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+	.lk-topbar-crumb {
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
 		min-inline-size: 0;
 	}
+	.lk-topbar-crumb-link {
+		font-size: var(--text-sm);
+		font-weight: 500;
+		color: var(--color-fg-muted);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-inline-size: 8rem;
+		transition: color 0.15s;
+	}
+	.lk-topbar-crumb-link:focus-visible {
+		outline: 2px solid var(--color-brand-500);
+		outline-offset: 2px;
+		border-radius: 0.25rem;
+	}
+	@media (hover: hover) and (pointer: fine) {
+		.lk-topbar-crumb-link:hover {
+			color: var(--color-fg);
+		}
+	}
+	.lk-topbar-crumb :global(.lk-topbar-crumb-sep) {
+		color: var(--color-fg-subtle);
+		flex-shrink: 0;
+	}
+	/* On phones, hide all intermediate crumbs — keep only the last one
+	   so the topbar doesn't crowd. Linear / Notion canon. */
+	@media (max-width: 47.99rem) {
+		.lk-topbar-crumb:not(:last-child) {
+			display: none;
+		}
+	}
+	/* Size only — visual treatment comes from .glass-icon-square */
 	.lk-topbar-badge-icon {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
 		inline-size: 1.75rem;
 		block-size: 1.75rem;
-		border-radius: 0.5rem;
-		background: color-mix(in srgb, var(--color-brand-600) 14%, var(--glass-pill-bg));
-		color: var(--color-brand-600);
-		box-shadow: var(--glass-specular);
 		flex-shrink: 0;
 	}
 	.lk-topbar-title {
@@ -182,6 +222,7 @@
 	   Hidden by default (mobile + small tablets); reveals at 48rem
 	   (768px) so phones + small tablets get the full title width
 	   without ugly truncation. */
+	/* Layout only — visual is .glass-pill (added via class binding) */
 	.lk-topbar-search-trigger {
 		display: none;
 		align-items: center;
@@ -189,10 +230,7 @@
 		inline-size: clamp(16rem, 28vw, 22rem);
 		padding-inline: 0.75rem;
 		padding-block: 0.4375rem;
-		border-radius: 0.625rem;
 		border: var(--glass-border-subtle);
-		background: var(--glass-pill-bg);
-		box-shadow: var(--glass-specular);
 		color: var(--color-fg-muted);
 		font-size: var(--text-sm);
 		transition:

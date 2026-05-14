@@ -3,7 +3,6 @@
 	import { navForTier } from '$lib/config/nav';
 	import { hasPermission, tierOf } from '$features/auth/tier';
 	import { session } from '$features/auth/stores/session.svelte';
-	import { Logo } from '$ui';
 
 	let { onNavigate } = $props<{ onNavigate?: () => void }>();
 
@@ -39,11 +38,19 @@
 </script>
 
 <nav class="lk-sidebar" aria-label="Main navigation">
-	<!-- Logo block — full wordmark when expanded, icon-only when collapsed.
-	     Sidebar is the single home of the brand mark (Linear / Vercel:
-	     logo lives in the sidebar, not the topbar). -->
+	<!-- Brand block — wordmark when expanded, icon mark when collapsed.
+	     The wordmark image scales to fill the inner container via
+	     object-fit: contain, so the visible artwork stays centred
+	     regardless of the PNG asset's internal whitespace. Container
+	     gives explicit height so the image has a frame to scale into. -->
 	<a href="/dashboard" class="lk-sidebar-brand" aria-label="LeadKart home">
-		<Logo size="lg" class="lk-sidebar-brand-full" />
+		<span class="lk-sidebar-brand-full" aria-hidden="true">
+			<img
+				src="/images/logo/LeadKart_Logo_Light_Theme.png"
+				alt="LeadKart"
+				class="lk-sidebar-brand-img"
+			/>
+		</span>
 		<img
 			src="/images/favicon/favicon_128x128.png"
 			alt=""
@@ -89,11 +96,15 @@
 	   Position-fixed column to the inline-start. Safe-area max() on
 	   block-start + inline-start guards against notched / curved
 	   devices in landscape. `contain: layout style` scopes reflow. */
-	/* ─── Sidebar surface — Liquid Glass ─────────────────────────
-	   Same material as the Topbar; consumes the per-theme glass bg
-	   token (--lk-sidebar-bg). The light variant uses --glass-bg,
-	   the dark variant --glass-bg-dark; both blur the canvas behind.
-	   Top-edge specular highlight catches the light. */
+	/* ─── Sidebar surface ──────────────────────────────────────────
+	   The Sidebar opts OUT of the `.glass-drawer` utility class
+	   because its surface tint switches per theme (light → --glass-bg,
+	   dark → --glass-bg-dark). It still consumes the SAME tokens
+	   (--glass-blur / --glass-saturate / --glass-border-subtle /
+	   --glass-specular) as every other glass surface — change a token
+	   in tokens.css and the sidebar re-renders alongside the topbar,
+	   popovers, dialogs etc. The duplication here is recipe, not
+	   values; per-theme tinting is a legitimate component variant. */
 	.lk-sidebar {
 		position: fixed;
 		inset-block-start: max(var(--lk-sidebar-top), var(--safe-top));
@@ -127,11 +138,11 @@
 		}
 	}
 
-	/* Semibox — sidebar floats with the full glass treatment. */
+	/* Semibox — sidebar floats; .glass-bordered shape via this rule. */
 	:global(:root[data-layout='semibox']) .lk-sidebar {
 		border: var(--glass-border);
 		border-radius: var(--lk-shell-radius);
-		box-shadow: var(--glass-shadow), var(--lk-sidebar-specular);
+		box-shadow: var(--glass-shadow), var(--glass-specular);
 	}
 
 	/* Mobile drawer override: render in normal flow with no top-offset
@@ -168,11 +179,32 @@
 		flex-shrink: 0;
 		border-block-end: var(--glass-border-subtle);
 	}
+	/* Wordmark — sized container + object-fit: contain so the PNG art
+	   scales proportionally to fill the brand block height minus a
+	   small padding ring. Works whether the asset has internal
+	   whitespace or not — the visible artwork always centres. */
+	.lk-sidebar-brand-full {
+		display: flex;
+		align-items: center;
+		justify-content: flex-start;
+		block-size: calc(var(--lk-topbar-height) - 1rem);
+		inline-size: 100%;
+		min-inline-size: 0;
+	}
+	.lk-sidebar-brand-img {
+		max-block-size: 100%;
+		max-inline-size: 100%;
+		block-size: 100%;
+		inline-size: auto;
+		object-fit: contain;
+		object-position: left center;
+	}
 	.lk-sidebar-brand-mark {
 		display: none;
 		inline-size: 2.5rem;
 		block-size: 2.5rem;
 		border-radius: 0.5rem;
+		object-fit: contain;
 		box-shadow: var(--glass-specular);
 	}
 	/* Collapsed: hide wordmark, show mark + center it. Drawer always
