@@ -179,22 +179,22 @@
 		flex-shrink: 0;
 		border-block-end: var(--glass-border-subtle);
 	}
-	/* Wordmark — sized container + object-fit: contain so the PNG art
-	   scales proportionally to fill the brand block height minus a
-	   small padding ring. Works whether the asset has internal
-	   whitespace or not — the visible artwork always centres. */
+	/* Wordmark — fills the full brand block height. The image scales
+	   proportionally (object-fit: contain) and anchors to the inline-
+	   start edge so it lines up with the nav-link icons below. If the
+	   PNG asset has internal whitespace the visible artwork will
+	   appear smaller — that's an asset-level concern, not CSS. */
 	.lk-sidebar-brand-full {
 		display: flex;
 		align-items: center;
 		justify-content: flex-start;
-		block-size: calc(var(--lk-topbar-height) - 1rem);
+		block-size: 100%;
 		inline-size: 100%;
 		min-inline-size: 0;
 	}
 	.lk-sidebar-brand-img {
-		max-block-size: 100%;
-		max-inline-size: 100%;
 		block-size: 100%;
+		max-inline-size: 100%;
 		inline-size: auto;
 		object-fit: contain;
 		object-position: left center;

@@ -130,7 +130,7 @@
 		background:
 			radial-gradient(at 70% 80%, var(--color-secondary-200), transparent 60%),
 			linear-gradient(135deg, var(--color-brand-100), var(--color-brand-200));
-		color: var(--color-brand-700);
+		color: var(--color-primary);
 		box-shadow: var(--glass-specular);
 		transition:
 			background 0.15s,

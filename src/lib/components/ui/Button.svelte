@@ -24,10 +24,12 @@
 		{
 			variants: {
 				variant: {
-					// Primary — navy-violet brand gradient + brand-halo glow + sheen sweep.
-					// `relative overflow-hidden` enables the .glass-sheen ::after overlay.
+					// Primary — pure logo-blue gradient (brand-500 → brand-600), no
+					// hue shift to wordmark-purple. Both stops sit at hue 269 so the
+					// button reads as the SAME blue as the sidebar nav active state
+					// (Sign-In + nav-active now share one logo identity).
 					primary:
-						'relative overflow-hidden bg-gradient-to-b from-[var(--color-brand-500)] to-[var(--color-brand-700)] text-[var(--color-fg-on-brand)] hover:from-[var(--color-brand-400)] hover:to-[var(--color-brand-600)] brand-halo glass-sheen',
+						'relative overflow-hidden bg-gradient-to-b from-[var(--color-brand-500)] to-[var(--color-brand-600)] text-[var(--color-primary-fg)] hover:from-[var(--color-brand-400)] hover:to-[var(--color-brand-500)] brand-halo glass-sheen',
 					// Secondary — vibrant logo green for "growth" CTAs (purchase lead,
 					// confirm conversion). Gradient from-700 → to-900 with white text
 					// keeps WCAG 2.2 AA on both stops:

@@ -56,6 +56,20 @@
 	--color-brand-950: oklch(0.12 0.05 296);
 	--color-brand: var(--color-brand-600);
 
+	/* ─── PRIMARY semantic alias ──────────────────────────────────
+	 * "The brand colour" — anchored at the LeadKart logo's #3146a5
+	 * mark blue (brand-600). Components consume --color-primary
+	 * rather than --color-brand-600 directly so the alias can be
+	 * retargeted later (e.g. if marketing picks a new flagship hue)
+	 * without grep-replacing every call site. Also doubles as a
+	 * readability win — `--color-primary` reads as design intent;
+	 * `--color-brand-600` reads as a token coordinate. */
+	--color-primary: var(--color-brand-600);
+	--color-primary-hover: var(--color-brand-500);
+	--color-primary-active: var(--color-brand-700);
+	--color-primary-soft: var(--color-brand-50);
+	--color-primary-fg: oklch(1 0 0); /* on solid primary surfaces */
+
 	/* Logo palette — true asset colours from the LeadKart logo SVG.
 	 * Promoted globally (2026-05-14) so every surface — auth + app
 	 * shell + dashboards + charts — can reach for the exact brand hex.
@@ -335,11 +349,11 @@
 	 * (`-600 lightness/chroma/hue` etc.) so future edits stay in sync.
 	 * ─────────────────────────────────────────────────────────────── */
 	--shadow-brand:
-		0 4px 14px -4px oklch(0.4 0.18 260 / 0.35),
-		/* brand-600 */ 0 2px 4px -2px oklch(0.4 0.18 260 / 0.18); /* brand-600 */
+		0 4px 14px -4px color-mix(in srgb, var(--color-brand-600) 35%, transparent),
+		0 2px 4px -2px color-mix(in srgb, var(--color-brand-600) 18%, transparent);
 	--shadow-brand-hover:
-		0 8px 22px -4px oklch(0.5 0.19 260 / 0.45),
-		/* brand-500 */ 0 4px 8px -2px oklch(0.5 0.19 260 / 0.25); /* brand-500 */
+		0 8px 22px -4px color-mix(in srgb, var(--color-brand-500) 45%, transparent),
+		0 4px 8px -2px color-mix(in srgb, var(--color-brand-500) 25%, transparent);
 
 	/* Secondary green CTA — uses secondary-700 shade for AA-safe halo
 	 * (the visible button text contrast is the tighter constraint; the
@@ -349,12 +363,13 @@
 	/* Danger red CTA — same shape as brand/secondary. */
 	--shadow-danger: 0 4px 14px -4px oklch(0.66 0.23 25 / 0.4); /* danger-500 */
 
-	/* Brand glow — pulsed halo for primary "next-step" CTAs. Two stops
-	 * for the @keyframes brand-glow animation. */
-	--brand-glow-rest: oklch(0.5 0.19 260 / 0.4); /* brand-500 */
-	--brand-glow-rest-shadow: oklch(0.5 0.19 260 / 0.25); /* brand-500 */
-	--brand-glow-peak-shadow: oklch(0.5 0.19 260 / 0.35); /* brand-500 */
-	--brand-glow-fade: oklch(0.5 0.19 260 / 0); /* brand-500 transparent */
+	/* Brand glow — pulsed halo for primary "next-step" CTAs. References
+	 * --color-brand-500 via color-mix so the glow auto-tracks the
+	 * primary hue if the brand scale is retuned (no stale literals). */
+	--brand-glow-rest: color-mix(in srgb, var(--color-brand-500) 40%, transparent);
+	--brand-glow-rest-shadow: color-mix(in srgb, var(--color-brand-500) 25%, transparent);
+	--brand-glow-peak-shadow: color-mix(in srgb, var(--color-brand-500) 35%, transparent);
+	--brand-glow-fade: color-mix(in srgb, var(--color-brand-500) 0%, transparent);
 
 	/* ═══ LIQUID GLASS — translucent surface system per Blazor canon
 	 * (LeadKart.Web/wwwroot/css/leadkart.css "iOS-inspired design system
