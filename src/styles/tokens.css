@@ -43,18 +43,28 @@
 	 *
 	 * Full 11-stop OKLCH scale — perceptually uniform lightness stepping.
 	 * ──────────────────────────────────────────────────────────── */
-	--color-brand-50: oklch(0.97 0.02 260);
-	--color-brand-100: oklch(0.93 0.05 260);
-	--color-brand-200: oklch(0.86 0.09 260);
-	--color-brand-300: oklch(0.76 0.13 260);
-	--color-brand-400: oklch(0.62 0.17 260);
-	--color-brand-500: oklch(0.5 0.19 260); /* vibrant navy-violet */
-	--color-brand-600: oklch(0.4 0.18 260); /* ≈ #2D2F7E logo wordmark */
-	--color-brand-700: oklch(0.32 0.15 260);
-	--color-brand-800: oklch(0.25 0.12 260);
-	--color-brand-900: oklch(0.18 0.09 260);
-	--color-brand-950: oklch(0.12 0.06 260);
+	--color-brand-50: oklch(0.97 0.02 269);
+	--color-brand-100: oklch(0.93 0.05 269);
+	--color-brand-200: oklch(0.86 0.09 269);
+	--color-brand-300: oklch(0.76 0.13 269);
+	--color-brand-400: oklch(0.55 0.18 269);
+	--color-brand-500: oklch(0.48 0.2 269); /* vibrant logo blue */
+	--color-brand-600: oklch(0.41 0.2 269); /* ≈ #3146a5 logo "LK" mark blue */
+	--color-brand-700: oklch(0.33 0.1 296); /* ≈ #47356b logo wordmark dark */
+	--color-brand-800: oklch(0.27 0.09 296);
+	--color-brand-900: oklch(0.2 0.07 296);
+	--color-brand-950: oklch(0.12 0.05 296);
 	--color-brand: var(--color-brand-600);
+
+	/* Logo palette — true asset colours from the LeadKart logo SVG.
+	 * Promoted globally (2026-05-14) so every surface — auth + app
+	 * shell + dashboards + charts — can reach for the exact brand hex.
+	 * `*-on-light` derivatives bump the lightness/chroma where the raw
+	 * colour fails WCAG AA contrast on a white background. */
+	--color-logo-purple: oklch(0.58 0.18 305); /* #a05dce LK mark highlight */
+	--color-logo-blue: oklch(0.41 0.2 269); /* #3146a5 LK mark base = brand-600 */
+	--color-logo-green-on-light: oklch(0.55 0.21 142);
+	--color-medical-red: oklch(0.58 0.22 27);
 
 	/* ═══ SECONDARY — vibrant green from the LeadKart logo icon.
 	 * The chemist-bag/cart that hosts the LK monogram is rendered in a
@@ -476,25 +486,26 @@
 	 * Glass", Apple Developer Documentation §"Designing for Liquid
 	 * Glass" — adapted for browser environments without UIKit's
 	 * native UIVisualEffectView. */
-	--glass-bg: oklch(1 0 0 / 0.72);
-	--glass-bg-dark: oklch(0.22 0.015 256 / 0.7);
-	--glass-bg-elevated: oklch(1 0 0 / 0.84);
-	--glass-blur: 24px;
-	--glass-blur-strong: 36px;
+	/* Glass recipe — uses color-mix(in srgb, ...) so the surface tint
+	   adapts to whatever --color-bg-elevated resolves to. Matches the
+	   AuthShell's .lk-glass recipe verbatim so auth + app shell render
+	   identical material across pages. */
+	--glass-bg: color-mix(in srgb, var(--color-bg-elevated) 60%, transparent);
+	--glass-bg-elevated: color-mix(in srgb, var(--color-bg-elevated) 78%, transparent);
+	--glass-bg-dark: color-mix(in srgb, oklch(0.22 0.015 256) 70%, transparent);
+	--glass-blur: 20px;
+	--glass-blur-strong: 30px;
 	--glass-saturate: 180%;
-	--glass-border: 1px solid oklch(1 0 0 / 0.35);
-	--glass-border-subtle: 1px solid oklch(0 0 0 / 0.06);
-	--glass-shadow: 0 8px 32px -12px oklch(0 0 0 / 0.16), 0 2px 6px -2px oklch(0 0 0 / 0.06);
-	--glass-shadow-sm: 0 4px 16px -8px oklch(0 0 0 / 0.12), 0 1px 2px oklch(0 0 0 / 0.04);
-	/* Top-edge specular highlight — light glass + dark glass variants.
-	   Implemented as inset box-shadow at the top so the bright edge
-	   catches a hint of "light from above" without bleeding inward. */
-	--glass-specular: inset 0 1px 0 0 oklch(1 0 0 / 0.6);
-	--glass-specular-dark: inset 0 1px 0 0 oklch(1 0 0 / 0.14);
-	/* Pill highlight — used by interactive states (button hover,
-	   active nav links) to render an ephemeral glass-pill over the
-	   underlying surface. Lighter tint + thinner specular than the
-	   parent surface. */
-	--glass-pill-bg: oklch(1 0 0 / 0.5);
-	--glass-pill-bg-dark: oklch(1 0 0 / 0.12);
+	--glass-border: 1px solid color-mix(in srgb, var(--color-bg-elevated) 60%, transparent);
+	--glass-border-subtle: 1px solid color-mix(in srgb, var(--color-fg) 8%, transparent);
+	--glass-shadow:
+		0 8px 24px color-mix(in srgb, var(--color-fg) 10%, transparent),
+		0 2px 6px color-mix(in srgb, var(--color-fg) 5%, transparent);
+	--glass-shadow-sm:
+		0 4px 12px color-mix(in srgb, var(--color-fg) 6%, transparent),
+		0 1px 2px color-mix(in srgb, var(--color-fg) 4%, transparent);
+	--glass-specular: inset 0 1px 0 0 color-mix(in srgb, var(--color-bg-elevated) 80%, transparent);
+	--glass-specular-dark: inset 0 1px 0 0 color-mix(in srgb, oklch(1 0 0) 14%, transparent);
+	--glass-pill-bg: color-mix(in srgb, var(--color-bg-elevated) 50%, transparent);
+	--glass-pill-bg-dark: color-mix(in srgb, oklch(1 0 0) 12%, transparent);
 }

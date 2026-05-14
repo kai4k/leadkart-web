@@ -154,17 +154,17 @@
 	}
 
 	/* ─── Brand block ──────────────────────────────────────────
-	   Height matches --lk-topbar-height so the top edge of the
-	   sidebar's brand row lines up horizontally with the bottom edge
-	   of the topbar to its right (Apple Music / Notion alignment).
-	   Border-block-end hairline draws the separator that continues
-	   the topbar's bottom border seamlessly across the join. */
+	   Height matches --lk-topbar-height so the brand row lines up
+	   horizontally with the topbar's bottom edge. Padding-inline
+	   matches the nav link's effective inline-offset (scroll-padding
+	   0.5rem + link-padding 0.75rem = 1.25rem) so the logo's left edge
+	   sits at the same x-coordinate as the nav icons below. */
 	.lk-sidebar-brand {
 		display: flex;
 		align-items: center;
 		justify-content: flex-start;
 		block-size: var(--lk-topbar-height);
-		padding-inline: 1rem;
+		padding-inline: 1.25rem;
 		flex-shrink: 0;
 		border-block-end: var(--glass-border-subtle);
 	}
@@ -188,15 +188,19 @@
 		display: block;
 	}
 
-	/* ── Scroll region + groups ────────────────────────────────── */
+	/* ── Scroll region + groups ──────────────────────────────────
+	   padding-block-start: 1rem creates breathing room between the
+	   brand divider and the first nav item (Apple HIG §"List Spacing"
+	   recommends ≥ 16px between dividers and content). Inline-padding
+	   0.5rem leaves room for the OS scrollbar without clipping links. */
 	.lk-sidebar-scroll {
 		flex: 1;
 		overflow-y: auto;
 		overflow-x: hidden;
-		padding: 0.5rem 0.5rem 1rem;
+		padding: 1rem 0.5rem 1.25rem;
 		display: flex;
 		flex-direction: column;
-		gap: 1rem;
+		gap: 1.25rem;
 	}
 	.lk-sidebar-group {
 		display: flex;

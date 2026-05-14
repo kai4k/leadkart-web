@@ -295,30 +295,10 @@
 	     rather than mint new ones, so modal + pills + canvas all inherit
 	     the standard surface hierarchy without one-off names. ─── */
 	.lk-auth {
-		/* Surface + foreground tokens inherit from the global token
-		   layer (tokens.css), which now defines the soft brand-tinted
-		   off-white canvas globally. No per-shell override needed.
-
-		   Brand stops are derived DIRECTLY from the LeadKart logo asset
-		   so the entire page reads as one colour family with the
-		   wordmark — text matches wordmark, button matches the logo
-		   "LK" mark, no orphan blues. */
-		--color-brand-600: oklch(0.41 0.2 269); /* #3146a5 logo mark blue → button + links */
-		--color-brand-700: oklch(
-			0.33 0.1 296
-		); /* #47356b logo wordmark dark → headings + body emphasis */
-		--color-brand-800: oklch(0.27 0.09 296); /* derived darker wordmark stop */
-
-		/* Logo palette — true asset colours, with on-light derivatives
-		   where raw chroma fails AA contrast against white. */
-		--color-logo-purple: oklch(0.58 0.18 305); /* #a05dce LK mark highlight */
-		--color-logo-blue: oklch(0.41 0.2 269); /* #3146a5 LK mark base = brand-600 */
-		--color-logo-green-on-light: oklch(0.55 0.21 142);
-		/* Medical-cross red — iconic pharma signal colour. Used only on
-		   the cross-shaped particles so the medical-plus reads as a
-		   canonical red cross, not just another branded shape. */
-		--color-medical-red: oklch(0.58 0.22 27);
-
+		/* Brand stops + logo palette + medical-red are now defined
+		   globally in tokens.css (promoted 2026-05-14) so the auth
+		   shell + app shell read as one colour family. No local
+		   overrides needed here — semantic aliases stay below. */
 		--color-brand-heading: var(--color-brand-700);
 		--color-brand-link: var(--color-brand-600);
 		--color-brand-link-hover: var(--color-brand-700);

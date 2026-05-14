@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { Bell, Command, PanelLeft, Search, Settings, Icon } from '$icons';
-	import { routeTitle } from '$lib/utils/routeTitle';
+	import { routeContext } from '$lib/utils/routeTitle';
 	import UserMenu from './UserMenu.svelte';
 
 	/**
@@ -20,11 +20,14 @@
 		onOpenSettings?: () => void;
 	}>();
 
-	const title = $derived(routeTitle(page.url.pathname));
+	const route = $derived(routeContext(page.url.pathname));
 </script>
 
 <header class="lk-topbar" aria-label="Application bar">
-	<!-- Left: toggle + breadcrumb -->
+	<!-- Left: toggle + route badge (icon + title in a glass pill).
+	     Matches the Liquid-Glass language of the surface and gives
+	     the current location a visual anchor (Apple Music / Notion
+	     pattern: icon + name as a single readable unit). -->
 	<div class="lk-topbar-left">
 		<button
 			type="button"
@@ -34,7 +37,14 @@
 		>
 			<Icon icon={PanelLeft} size="md" />
 		</button>
-		<h1 class="lk-topbar-title">{title}</h1>
+		<div class="lk-topbar-badge">
+			{#if route.icon}
+				<span class="lk-topbar-badge-icon" aria-hidden="true">
+					<Icon icon={route.icon} size="sm" />
+				</span>
+			{/if}
+			<h1 class="lk-topbar-title">{route.label}</h1>
+		</div>
 	</div>
 
 	<!-- Centre: cmd-K trigger (deferred palette) -->
@@ -121,15 +131,51 @@
 		gap: 0.5rem;
 		min-inline-size: 0; /* allow text-overflow inside grid 1fr */
 	}
+	/* ─── Route badge (icon + title) ──────────────────────────────
+	   Visually anchors the current location. The icon sits in a small
+	   brand-tinted glass square; the title runs alongside in semibold.
+	   The whole badge is a flex row so the icon + title read as one
+	   unit (Apple Music's "Now Playing" pattern, Notion's page
+	   header). Padding-inline-start: 0.25rem because the badge sits
+	   right after the sidebar-toggle button. */
+	.lk-topbar-badge {
+		display: flex;
+		align-items: center;
+		gap: 0.625rem;
+		padding-inline-start: 0.25rem;
+		min-inline-size: 0;
+	}
+	.lk-topbar-badge-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		inline-size: 1.75rem;
+		block-size: 1.75rem;
+		border-radius: 0.5rem;
+		background: color-mix(in srgb, var(--color-brand-600) 14%, var(--glass-pill-bg));
+		color: var(--color-brand-600);
+		box-shadow: var(--glass-specular);
+		flex-shrink: 0;
+	}
 	.lk-topbar-title {
 		font-size: var(--text-base);
 		font-weight: 600;
+		letter-spacing: -0.01em;
 		color: var(--color-fg);
 		margin: 0;
 		min-inline-size: 0;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+	@media (min-width: 48rem) {
+		.lk-topbar-title {
+			font-size: var(--text-lg);
+		}
+		.lk-topbar-badge-icon {
+			inline-size: 2rem;
+			block-size: 2rem;
+		}
 	}
 
 	/* ─── Cmd-K trigger ───────────────────────────────────────────

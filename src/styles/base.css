@@ -257,10 +257,15 @@
 	--lk-sidebar-bg-solid: var(--color-bg-elevated); /* fallback for reduced-transparency */
 	--lk-sidebar-fg: var(--color-fg);
 	--lk-sidebar-fg-muted: var(--color-fg-muted);
-	--lk-sidebar-active-bg: var(--glass-pill-bg);
-	--lk-sidebar-active-fg: var(--color-brand-700);
-	--lk-sidebar-hover-bg: var(--glass-pill-bg);
-	--lk-sidebar-border: oklch(1 0 0 / 0.3);
+	/* Active state — brand-tinted glass pill so the row reads as the
+	   same colour family as the auth Sign-In button (--color-brand-600
+	   logo blue). 18% brand-600 mixed into the white glass pill gives
+	   a soft blue wash; foreground stays brand-600 so the text matches
+	   the wash hue exactly. */
+	--lk-sidebar-active-bg: color-mix(in srgb, var(--color-brand-600) 16%, var(--glass-pill-bg));
+	--lk-sidebar-active-fg: var(--color-brand-600);
+	--lk-sidebar-hover-bg: color-mix(in srgb, var(--color-brand-600) 8%, var(--glass-pill-bg));
+	--lk-sidebar-border: color-mix(in srgb, var(--color-bg-elevated) 40%, transparent);
 	--lk-sidebar-specular: var(--glass-specular);
 
 	/* Page content max-width — soft cap so wide screens don't sprawl.
@@ -371,20 +376,7 @@
 
 	body {
 		min-height: 100dvh;
-		/* Ambient brand-tinted gradient over the flat canvas. Two soft
-		   radial halos — brand-100 at top-start, secondary-100 at
-		   bottom-end — give Liquid-Glass surfaces something varied to
-		   refract through their backdrop-filter blur (a flat single-
-		   colour canvas just looks like tinted paint, not glass). The
-		   tint is faint (~5% opacity at peak) so the canvas still reads
-		   as a near-white off-white. background-attachment: fixed so
-		   the gradient stays anchored as the page scrolls (otherwise
-		   the glass tint would shift with content). */
-		background:
-			radial-gradient(ellipse 80% 60% at 0% 0%, var(--color-brand-100), transparent 55%),
-			radial-gradient(ellipse 70% 70% at 100% 100%, var(--color-secondary-100), transparent 60%),
-			var(--color-bg);
-		background-attachment: fixed;
+		background: var(--color-bg);
 		color: var(--color-fg);
 		font-size: var(--text-base);
 		line-height: var(--text-base--line-height);

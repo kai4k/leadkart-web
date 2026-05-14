@@ -92,6 +92,17 @@
 </script>
 
 <div class="lk-app">
+	<!-- Ambient colour blobs — soft, heavily blurred, slow drift. Logo-
+	     palette tints give the Liquid-Glass surfaces something varied to
+	     refract through. Matches the AuthShell decoration so the two
+	     surfaces read as one product. Lower opacity than auth (this is
+	     the working surface, not the marketing landing) — content focus. -->
+	<div class="lk-app-blobs" aria-hidden="true">
+		<span class="lk-blob lk-blob--purple"></span>
+		<span class="lk-blob lk-blob--blue"></span>
+		<span class="lk-blob lk-blob--green"></span>
+	</div>
+
 	<Topbar onToggleSidebar={onHamburger} onOpenSettings={() => (settingsOpen = true)} />
 
 	<!-- Desktop fixed sidebar -->
@@ -132,8 +143,88 @@
 
 <style>
 	.lk-app {
+		position: relative;
 		min-height: 100dvh;
 		background: var(--color-bg);
+		overflow-x: clip; /* contain blob overflow horizontally only */
+	}
+
+	/* ─── Ambient blob decoration ─────────────────────────────────
+	   Three blobs in logo-palette colours drift slowly + heavily-
+	   blurred behind every shell surface. Together with the Liquid-
+	   Glass topbar/sidebar/popovers, they produce the "alive glass
+	   over coloured wash" visual the AuthShell ships. Lower peak
+	   opacity than auth (~35% vs ~55%) so working-content surfaces
+	   stay legible. position: fixed so blobs stay anchored as the
+	   page scrolls. */
+	.lk-app-blobs {
+		position: fixed;
+		inset: 0;
+		z-index: 0;
+		pointer-events: none;
+		overflow: hidden;
+	}
+	.lk-blob {
+		position: absolute;
+		border-radius: 50%;
+		filter: blur(80px);
+		will-change: transform;
+	}
+	.lk-blob--purple {
+		inline-size: 26rem;
+		block-size: 26rem;
+		top: -8%;
+		left: -6%;
+		background: color-mix(in srgb, var(--color-logo-purple) 35%, transparent);
+		animation: lk-app-drift-a 38s ease-in-out infinite;
+	}
+	.lk-blob--blue {
+		inline-size: 30rem;
+		block-size: 30rem;
+		top: 30%;
+		right: -10%;
+		background: color-mix(in srgb, var(--color-logo-blue) 28%, transparent);
+		animation: lk-app-drift-b 42s ease-in-out infinite;
+	}
+	.lk-blob--green {
+		inline-size: 22rem;
+		block-size: 22rem;
+		bottom: -10%;
+		left: 30%;
+		background: color-mix(in srgb, var(--color-logo-green-on-light) 22%, transparent);
+		animation: lk-app-drift-c 36s ease-in-out infinite;
+	}
+	@keyframes lk-app-drift-a {
+		0%,
+		100% {
+			translate: 0 0;
+		}
+		50% {
+			translate: 4rem 3rem;
+		}
+	}
+	@keyframes lk-app-drift-b {
+		0%,
+		100% {
+			translate: 0 0;
+		}
+		50% {
+			translate: -4rem 5rem;
+		}
+	}
+	@keyframes lk-app-drift-c {
+		0%,
+		100% {
+			translate: 0 0;
+		}
+		50% {
+			translate: 5rem -3rem;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.lk-blob {
+			animation: none;
+		}
 	}
 
 	/* ─── Page wrapper ────────────────────────────────────────────
@@ -144,6 +235,8 @@
 	   FAANG pattern for app shells so child-page repaints don't
 	   bubble to Topbar/Sidebar. */
 	.lk-page-wrapper {
+		position: relative;
+		z-index: 1; /* stacks above .lk-app-blobs (z-index 0) */
 		min-height: 100dvh;
 		padding-block-start: var(--lk-page-pad-top);
 		padding-block-end: max(var(--lk-shell-gap), var(--safe-bottom));
