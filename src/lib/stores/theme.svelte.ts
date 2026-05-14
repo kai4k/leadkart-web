@@ -32,6 +32,10 @@ export type PrimaryColor =
 
 export type SidebarColor = 'light' | 'dark';
 export type LayoutDir = 'ltr' | 'rtl';
+/** Content width — `default` caps page-inner at the 2xl container
+ *  (96rem) so wide screens don't sprawl text across half a metre.
+ *  `fluid` removes the cap. Slack / Notion / GitHub all ship this. */
+export type ContentWidth = 'default' | 'fluid';
 /** Layout mode — binary toggle. `default` is the flat Linear/Vercel
  *  shell; `semibox` is Domiex's floating-pane variant (0.75rem gap
  *  around the topbar + sidebar + content, each with a 1px border + 6px
@@ -67,12 +71,18 @@ export const LAYOUT_MODES: ReadonlyArray<{ id: LayoutMode; label: string }> = [
 	{ id: 'semibox', label: 'Semibox' }
 ];
 
+export const CONTENT_WIDTHS: ReadonlyArray<{ id: ContentWidth; label: string }> = [
+	{ id: 'default', label: 'Default' },
+	{ id: 'fluid', label: 'Fluid' }
+];
+
 const STORAGE_KEYS = {
 	primary: 'leadkart-primary',
 	sidebarColor: 'leadkart-sidebar-color',
 	layoutDir: 'leadkart-layout-dir',
 	sidebarCollapsed: 'leadkart-sidebar-collapsed',
-	layoutMode: 'leadkart-layout-mode'
+	layoutMode: 'leadkart-layout-mode',
+	contentWidth: 'leadkart-content-width'
 } as const;
 
 class ThemeStore {
@@ -88,6 +98,9 @@ class ThemeStore {
 	sidebarCollapsed = $state<boolean>(this.readBoolean(STORAGE_KEYS.sidebarCollapsed, false));
 	layoutMode = $state<LayoutMode>(
 		this.readInitial<LayoutMode>(STORAGE_KEYS.layoutMode, 'default', LAYOUT_MODES)
+	);
+	contentWidth = $state<ContentWidth>(
+		this.readInitial<ContentWidth>(STORAGE_KEYS.contentWidth, 'default', CONTENT_WIDTHS)
 	);
 
 	private readInitial<T extends string>(
@@ -137,6 +150,11 @@ class ThemeStore {
 		this.persist(STORAGE_KEYS.layoutMode, next);
 		this.applyToDocument();
 	}
+	setContentWidth(next: ContentWidth) {
+		this.contentWidth = next;
+		this.persist(STORAGE_KEYS.contentWidth, next);
+		this.applyToDocument();
+	}
 
 	reset() {
 		this.setPrimary('navy');
@@ -144,6 +162,7 @@ class ThemeStore {
 		this.setLayoutDir('ltr');
 		this.setSidebarCollapsed(false);
 		this.setLayoutMode('default');
+		this.setContentWidth('default');
 	}
 
 	/**
@@ -161,6 +180,7 @@ class ThemeStore {
 		this.setAttr(root, 'data-primary', this.primary, 'navy');
 		this.setAttr(root, 'data-sidebar-colors', this.sidebarColor, 'light');
 		this.setAttr(root, 'data-layout', this.layoutMode, 'default');
+		this.setAttr(root, 'data-content-width', this.contentWidth, 'default');
 
 		if (this.sidebarCollapsed) root.setAttribute('data-sidebar-collapsed', '');
 		else root.removeAttribute('data-sidebar-collapsed');

@@ -7,10 +7,12 @@
 		SIDEBAR_COLORS,
 		LAYOUT_DIRS,
 		LAYOUT_MODES,
+		CONTENT_WIDTHS,
 		type PrimaryColor,
 		type SidebarColor,
 		type LayoutDir,
-		type LayoutMode
+		type LayoutMode,
+		type ContentWidth
 	} from '$lib/stores/theme.svelte';
 
 	/**
@@ -171,6 +173,27 @@
 						>
 							<span class="lk-sb-preview" style="background: {opt.swatch};" aria-hidden="true"
 							></span>
+							<span class="caption font-medium">{opt.label}</span>
+						</button>
+					{/each}
+				</div>
+			</section>
+
+			<!-- ── Content width ── -->
+			<section class="stack stack-tight">
+				<h3 class="h6">Content width</h3>
+				<div class="grid grid-cols-2 gap-2">
+					{#each CONTENT_WIDTHS as opt (opt.id)}
+						{@const selected = theme.contentWidth === opt.id}
+						<button
+							type="button"
+							class={['lk-pref-card', selected && 'lk-pref-card--selected']}
+							aria-pressed={selected}
+							onclick={() => theme.setContentWidth(opt.id as ContentWidth)}
+						>
+							<span class={`lk-cw-preview lk-cw-preview--${opt.id}`} aria-hidden="true">
+								<span class="lk-cw-preview-body"></span>
+							</span>
 							<span class="caption font-medium">{opt.label}</span>
 						</button>
 					{/each}
@@ -358,6 +381,32 @@
 		background: var(--color-bg-elevated);
 		opacity: 1;
 		border-radius: 2px;
+	}
+
+	/* ── Content-width previews ── */
+	.lk-cw-preview {
+		position: relative;
+		display: block;
+		height: 2.25rem;
+		border-radius: 0.375rem;
+		background: var(--color-bg-muted);
+		overflow: hidden;
+		padding: 0.3rem;
+	}
+	.lk-cw-preview-body {
+		position: absolute;
+		background: var(--color-bg-elevated);
+		border-radius: 2px;
+		top: 0.3rem;
+		bottom: 0.3rem;
+	}
+	.lk-cw-preview--default .lk-cw-preview-body {
+		left: 22%;
+		right: 22%;
+	}
+	.lk-cw-preview--fluid .lk-cw-preview-body {
+		left: 0.3rem;
+		right: 0.3rem;
 	}
 
 	.lk-dir-preview {

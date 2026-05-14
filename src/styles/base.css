@@ -267,20 +267,34 @@
 	   No user toggle (Vercel / Linear ship a single width). */
 	--lk-content-max-width: var(--container-2xl);
 
-	/* ── Layout-mode shell vars ──────────────────────────────────
-	   Defaults match the flat Linear/Vercel shell. data-layout='semibox'
-	   overrides these to produce Domiex's floating-pane shell:
-	     gap = 0.75rem around topbar/sidebar/content; each pane has a
-	     1px border + 6px radius; topbar sits to the RIGHT of the
-	     sidebar (not above it) so they read as side-by-side floating
-	     surfaces. Pure CSS — no DOM changes between modes. */
+	/* ── Layout-mode shell vars (Apple / Notion canon) ───────────
+	   In every mode the sidebar runs FULL-HEIGHT from top:0 and the
+	   topbar starts AFTER the sidebar horizontally (Apple Music,
+	   macOS Finder, Notion, iCloud.com pattern). This produces the
+	   "left rail + right column with top toolbar" visual that
+	   Liquid Glass design language targets.
+	     Default mode  : flat, full-bleed; sidebar 16rem + topbar
+	                     starts at left = 16rem on lg+.
+	     Semibox mode  : 0.75rem gap on all sides; sidebar floats with
+	                     border + radius; topbar starts at left =
+	                     16rem + 1.5rem (two gaps) on lg+.
+	   Mobile (< lg): sidebar hidden behind drawer; topbar spans full
+	   width since there's no sidebar consuming the inline-start. */
 	--lk-shell-gap: 0px;
 	--lk-shell-radius: 0px;
 	--lk-shell-shadow: 0 0 transparent;
-	--lk-sidebar-top: var(--lk-topbar-height); /* default: below topbar */
+	--lk-sidebar-top: 0px; /* full-height sidebar in every mode */
 	--lk-sidebar-bottom: 0px;
-	--lk-topbar-inline-start: 0px; /* default: from left edge */
+	--lk-topbar-inline-start: 0px; /* mobile fallback (no sidebar) */
 	--lk-page-pad-top: var(--lk-topbar-height);
+}
+
+/* On lg+ desktops the default-mode topbar starts after the sidebar
+   so the sidebar can occupy the full-height column on its left. */
+@media (min-width: 64rem) {
+	:root {
+		--lk-topbar-inline-start: var(--lk-sidebar-width);
+	}
 }
 
 /* ── Sidebar collapsed (desktop) ──────────────────────────────
@@ -288,6 +302,15 @@
    On mobile the sidebar is a drawer and this attr is ignored.  */
 :root[data-sidebar-collapsed] {
 	--lk-sidebar-width: var(--lk-sidebar-width-collapsed);
+}
+
+/* ── Content width ───────────────────────────────────────────
+   `default` caps page-inner at the 2xl container (96rem) so wide
+   screens don't sprawl text across half a metre. `fluid` removes
+   the cap — content fills the full content area minus padding.
+   Slack / Notion / GitHub all ship this toggle. */
+:root[data-content-width='fluid'] {
+	--lk-content-max-width: none;
 }
 
 /* ── Semibox layout (Domiex parity) ───────────────────────────
@@ -306,11 +329,14 @@
 	--lk-shell-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.04);
 	--lk-sidebar-top: var(--lk-shell-gap);
 	--lk-sidebar-bottom: var(--lk-shell-gap);
-	--lk-topbar-inline-start: var(--lk-shell-gap); /* mobile fallback */
+	--lk-topbar-inline-start: var(--lk-shell-gap); /* mobile (drawer hidden) */
 	--lk-page-pad-top: calc(var(--lk-topbar-height) + var(--lk-shell-gap) * 2);
 }
 @media (min-width: 64rem) {
 	:root[data-layout='semibox'] {
+		/* Topbar sits to the right of the floating sidebar (sidebar
+		   takes inline-start: gap + width: sidebar-width; gap on the
+		   right of the sidebar separates it from the topbar). */
 		--lk-topbar-inline-start: calc(var(--lk-sidebar-width) + var(--lk-shell-gap) * 2);
 	}
 }
@@ -345,7 +371,20 @@
 
 	body {
 		min-height: 100dvh;
-		background: var(--color-bg);
+		/* Ambient brand-tinted gradient over the flat canvas. Two soft
+		   radial halos — brand-100 at top-start, secondary-100 at
+		   bottom-end — give Liquid-Glass surfaces something varied to
+		   refract through their backdrop-filter blur (a flat single-
+		   colour canvas just looks like tinted paint, not glass). The
+		   tint is faint (~5% opacity at peak) so the canvas still reads
+		   as a near-white off-white. background-attachment: fixed so
+		   the gradient stays anchored as the page scrolls (otherwise
+		   the glass tint would shift with content). */
+		background:
+			radial-gradient(ellipse 80% 60% at 0% 0%, var(--color-brand-100), transparent 55%),
+			radial-gradient(ellipse 70% 70% at 100% 100%, var(--color-secondary-100), transparent 60%),
+			var(--color-bg);
+		background-attachment: fixed;
 		color: var(--color-fg);
 		font-size: var(--text-base);
 		line-height: var(--text-base--line-height);

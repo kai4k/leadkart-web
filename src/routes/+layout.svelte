@@ -13,6 +13,7 @@
 		void theme.layoutDir;
 		void theme.sidebarCollapsed;
 		void theme.layoutMode;
+		void theme.contentWidth;
 		theme.applyToDocument();
 	});
 </script>

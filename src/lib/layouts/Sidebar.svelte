@@ -43,7 +43,7 @@
 	     Sidebar is the single home of the brand mark (Linear / Vercel:
 	     logo lives in the sidebar, not the topbar). -->
 	<a href="/dashboard" class="lk-sidebar-brand" aria-label="LeadKart home">
-		<Logo size="md" class="lk-sidebar-brand-full" />
+		<Logo size="lg" class="lk-sidebar-brand-full" />
 		<img
 			src="/images/favicon/favicon_128x128.png"
 			alt=""
@@ -153,20 +153,27 @@
 		backdrop-filter: none;
 	}
 
-	/* ── Brand block ───────────────────────────────────────────── */
+	/* ─── Brand block ──────────────────────────────────────────
+	   Height matches --lk-topbar-height so the top edge of the
+	   sidebar's brand row lines up horizontally with the bottom edge
+	   of the topbar to its right (Apple Music / Notion alignment).
+	   Border-block-end hairline draws the separator that continues
+	   the topbar's bottom border seamlessly across the join. */
 	.lk-sidebar-brand {
 		display: flex;
 		align-items: center;
 		justify-content: flex-start;
-		block-size: 3.25rem;
-		padding-inline: 0.875rem;
+		block-size: var(--lk-topbar-height);
+		padding-inline: 1rem;
 		flex-shrink: 0;
+		border-block-end: var(--glass-border-subtle);
 	}
 	.lk-sidebar-brand-mark {
 		display: none;
-		inline-size: 1.75rem;
-		block-size: 1.75rem;
-		border-radius: 0.375rem;
+		inline-size: 2.5rem;
+		block-size: 2.5rem;
+		border-radius: 0.5rem;
+		box-shadow: var(--glass-specular);
 	}
 	/* Collapsed: hide wordmark, show mark + center it. Drawer always
 	   uses the full wordmark. */
@@ -233,8 +240,33 @@
 			background 0.15s,
 			color 0.15s;
 	}
+	/* Brand-tinted icon stroke — picks up the navy-violet brand colour
+	   at rest in the light sidebar so the column reads as themed
+	   rather than monochrome. The dark-sidebar variant tones this
+	   down (handled below) since brand-500 over the dark glass tint
+	   loses contrast. */
 	.lk-sidebar-link :global(svg) {
 		flex-shrink: 0;
+		color: var(--color-brand-500);
+		transition: color 0.15s;
+	}
+	.lk-sidebar-link--active :global(svg),
+	.lk-sidebar-link:active :global(svg) {
+		color: var(--color-brand-700);
+	}
+	@media (hover: hover) and (pointer: fine) {
+		.lk-sidebar-link:hover :global(svg) {
+			color: var(--color-brand-600);
+		}
+	}
+	/* Dark sidebar — keep icons in the muted-fg neutral so they read
+	   over the dark glass tint without losing legibility. */
+	:global(:root[data-sidebar-colors='dark']) .lk-sidebar-link :global(svg) {
+		color: var(--lk-sidebar-fg-muted);
+	}
+	:global(:root[data-sidebar-colors='dark']) .lk-sidebar-link--active :global(svg),
+	:global(:root[data-sidebar-colors='dark']) .lk-sidebar-link:active :global(svg) {
+		color: var(--lk-sidebar-active-fg);
 	}
 	.lk-sidebar-link:focus-visible {
 		outline: 2px solid var(--color-brand-500);
