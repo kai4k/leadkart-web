@@ -43,11 +43,6 @@
 					{@const isLast = i === route.crumbs.length - 1}
 					<li class="lk-topbar-crumb">
 						{#if isLast}
-							{#if crumb.icon}
-								<span class="lk-topbar-badge-icon glass-icon-square" aria-hidden="true">
-									<Icon icon={crumb.icon} size="sm" />
-								</span>
-							{/if}
 							<h1 class="lk-topbar-title" aria-current="page">{crumb.label}</h1>
 						{:else}
 							<a class="lk-topbar-crumb-link" href={crumb.href}>{crumb.label}</a>
@@ -191,12 +186,6 @@
 			display: none;
 		}
 	}
-	/* Size only — visual treatment comes from .glass-icon-square */
-	.lk-topbar-badge-icon {
-		inline-size: 1.75rem;
-		block-size: 1.75rem;
-		flex-shrink: 0;
-	}
 	.lk-topbar-title {
 		font-size: var(--text-base);
 		font-weight: 600;
@@ -211,10 +200,6 @@
 	@media (min-width: 48rem) {
 		.lk-topbar-title {
 			font-size: var(--text-lg);
-		}
-		.lk-topbar-badge-icon {
-			inline-size: 2rem;
-			block-size: 2rem;
 		}
 	}
 

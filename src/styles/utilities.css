@@ -189,18 +189,6 @@
 		border-radius: 0.5rem;
 	}
 
-	/* Brand-tinted icon square — Topbar route badge, sidebar collapsed
-	 * brand mark, etc. Tinted glass with brand-600 stroke. */
-	.glass-icon-square {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		background: color-mix(in srgb, var(--color-brand-600) 14%, var(--glass-pill-bg));
-		color: var(--color-brand-600);
-		box-shadow: var(--glass-specular);
-		border-radius: 0.5rem;
-	}
-
 	/* Status bar — fixed footer strip. Top border only (since the
 	 * floating-glass insets give the side + bottom edges naturally). */
 	.glass-statusbar {
