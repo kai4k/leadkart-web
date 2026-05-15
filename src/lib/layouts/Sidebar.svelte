@@ -133,8 +133,10 @@
 	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
 		.lk-sidebar {
 			background: var(--lk-sidebar-bg);
-			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+				brightness(var(--glass-brightness));
+			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+				brightness(var(--glass-brightness));
 		}
 	}
 

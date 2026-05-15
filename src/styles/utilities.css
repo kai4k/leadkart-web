@@ -91,31 +91,38 @@
 		}
 	}
 
-	/* Appbar — topbar surface. Subtle bottom border, no full ring. */
+	/* Appbar — topbar surface. Subtle bottom border + soft drop-shadow
+	   (default mode) so the bar floats above content as it scrolls
+	   underneath. Brightness boost in the backdrop-filter gives the
+	   "lit from above" feel that distinguishes glass from tinted bg. */
 	.glass-appbar {
 		background: var(--color-bg-elevated);
 		border-block-end: var(--glass-border-subtle);
-		box-shadow: var(--glass-specular);
+		box-shadow: var(--glass-shadow-sm), var(--glass-specular);
 	}
 	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
 		.glass-appbar {
 			background: var(--glass-bg);
-			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+				brightness(var(--glass-brightness));
+			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+				brightness(var(--glass-brightness));
 		}
 	}
 
-	/* Drawer — sidebar surface. Inline-end border, specular. */
+	/* Drawer — sidebar surface. Inline-end border + soft drop-shadow. */
 	.glass-drawer {
 		background: var(--color-bg-elevated);
 		border-inline-end: var(--glass-border-subtle);
-		box-shadow: var(--glass-specular);
+		box-shadow: var(--glass-shadow-sm), var(--glass-specular);
 	}
 	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
 		.glass-drawer {
 			background: var(--glass-bg);
-			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+				brightness(var(--glass-brightness));
+			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+				brightness(var(--glass-brightness));
 		}
 	}
 
@@ -138,8 +145,10 @@
 	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
 		.glass-popover {
 			background: var(--glass-bg-elevated);
-			-webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
-			backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+			-webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate))
+				brightness(var(--glass-brightness));
+			backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate))
+				brightness(var(--glass-brightness));
 		}
 	}
 
@@ -155,8 +164,10 @@
 	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
 		.glass-dialog {
 			background: var(--glass-bg-elevated);
-			-webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
-			backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+			-webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate))
+				brightness(var(--glass-brightness));
+			backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate))
+				brightness(var(--glass-brightness));
 		}
 	}
 
@@ -189,18 +200,23 @@
 		border-radius: 0.5rem;
 	}
 
-	/* Status bar — fixed footer strip. Top border only (since the
-	 * floating-glass insets give the side + bottom edges naturally). */
+	/* Status bar — fixed footer strip. Top border + soft upward drop-
+	 * shadow so the bar floats above content above it. */
 	.glass-statusbar {
 		background: var(--color-bg-elevated);
 		border-block-start: var(--glass-border-subtle);
-		box-shadow: var(--glass-specular);
+		box-shadow:
+			0 -4px 14px color-mix(in srgb, var(--color-fg) 8%, transparent),
+			0 -1px 3px color-mix(in srgb, var(--color-fg) 5%, transparent),
+			var(--glass-specular);
 	}
 	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
 		.glass-statusbar {
 			background: var(--glass-bg);
-			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+				brightness(var(--glass-brightness));
+			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+				brightness(var(--glass-brightness));
 		}
 	}
 

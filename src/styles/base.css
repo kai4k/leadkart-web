@@ -398,14 +398,19 @@
 		   shift with content scroll. */
 		background:
 			radial-gradient(
-				ellipse 70% 50% at 0% 0%,
-				color-mix(in srgb, var(--color-brand-200) 30%, transparent),
-				transparent 60%
+				ellipse 80% 60% at 0% 0%,
+				color-mix(in srgb, var(--color-brand-200) 90%, transparent),
+				transparent 65%
 			),
 			radial-gradient(
-				ellipse 60% 60% at 100% 100%,
-				color-mix(in srgb, var(--color-bg-subtle) 80%, transparent),
+				ellipse 70% 70% at 100% 100%,
+				color-mix(in srgb, var(--color-secondary-100) 85%, transparent),
 				transparent 70%
+			),
+			radial-gradient(
+				ellipse 60% 50% at 50% 0%,
+				color-mix(in srgb, var(--color-brand-100) 60%, transparent),
+				transparent 60%
 			),
 			var(--color-bg);
 		background-attachment: fixed;

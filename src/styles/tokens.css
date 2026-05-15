@@ -524,26 +524,35 @@
 	--glass-bg: color-mix(in srgb, var(--color-bg-elevated) 60%, transparent);
 	--glass-bg-elevated: color-mix(in srgb, var(--color-bg-elevated) 78%, transparent);
 	--glass-bg-dark: color-mix(in srgb, oklch(0.22 0.015 256) 70%, transparent);
-	--glass-blur: 20px;
-	--glass-blur-strong: 30px;
-	/* 200% saturate boosts ambient colour variation so even faint canvas
-	   tints (like the body's static brand wash) register through the
-	   blur. Without enough saturate, glass over a uniform bg just looks
-	   like tinted paint. Apple's iOS 26 Liquid Glass uses ~200%. */
-	--glass-saturate: 200%;
-	--glass-border: 1px solid color-mix(in srgb, var(--color-bg-elevated) 60%, transparent);
+	/* Blur radius — 32px gives Liquid-Glass-grade refraction on the
+	   canvas wash. iOS 26 Liquid Glass uses 30-40px on chrome. */
+	--glass-blur: 32px;
+	--glass-blur-strong: 44px;
+	/* Saturate boosts colour variation through the blur — without it
+	   glass over near-white reads as flat tinted paint. */
+	--glass-saturate: 220%;
+	/* Brightness boost — Apple's Liquid Glass uses a subtle brightness
+	   bump (≈1.05-1.08) so the surface reads as "lit from above"
+	   regardless of what's beneath. Combined with the specular this
+	   gives the surface its dimensional "lift". */
+	--glass-brightness: 1.06;
+	--glass-border: 1px solid color-mix(in srgb, var(--color-bg-elevated) 80%, transparent);
 	--glass-border-subtle: 1px solid color-mix(in srgb, var(--color-fg) 8%, transparent);
 	--glass-shadow:
-		0 8px 24px color-mix(in srgb, var(--color-fg) 10%, transparent),
-		0 2px 6px color-mix(in srgb, var(--color-fg) 5%, transparent);
-	--glass-shadow-sm:
-		0 4px 12px color-mix(in srgb, var(--color-fg) 6%, transparent),
+		0 12px 32px color-mix(in srgb, var(--color-fg) 12%, transparent),
+		0 4px 10px color-mix(in srgb, var(--color-fg) 8%, transparent),
 		0 1px 2px color-mix(in srgb, var(--color-fg) 4%, transparent);
-	/* Specular highlight — top-edge inset shadow that reads as "light
-	   catching the glass edge". Brighter (95% white) than the previous
-	   80% so it remains visible against the new lighter canvas. */
-	--glass-specular: inset 0 1px 0 0 color-mix(in srgb, var(--color-bg-elevated) 95%, transparent);
-	--glass-specular-dark: inset 0 1px 0 0 color-mix(in srgb, oklch(1 0 0) 18%, transparent);
+	--glass-shadow-sm:
+		0 4px 14px color-mix(in srgb, var(--color-fg) 8%, transparent),
+		0 1px 3px color-mix(in srgb, var(--color-fg) 5%, transparent);
+	/* Double-edge specular — bright top edge + faint dark bottom edge.
+	   Two inset shadows on opposite edges create the dimensional
+	   "looking at a piece of glass" effect rather than just "tinted
+	   paint with a top highlight". Apple iOS 26 canon. */
+	--glass-specular:
+		inset 0 1px 0 0 oklch(1 0 0 / 0.95),
+		inset 0 -1px 0 0 color-mix(in srgb, var(--color-fg) 4%, transparent);
+	--glass-specular-dark: inset 0 1px 0 0 oklch(1 0 0 / 0.22), inset 0 -1px 0 0 oklch(0 0 0 / 0.16);
 	--glass-pill-bg: color-mix(in srgb, var(--color-bg-elevated) 50%, transparent);
 	--glass-pill-bg-dark: color-mix(in srgb, oklch(1 0 0) 12%, transparent);
 }
