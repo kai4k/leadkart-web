@@ -293,13 +293,13 @@
 	.lk-topbar-iconbtn:active {
 		background: var(--glass-pill-bg);
 		box-shadow: var(--glass-specular);
-		color: var(--color-brand-700);
+		color: var(--color-primary-active);
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.lk-topbar-iconbtn:hover {
 			background: var(--glass-pill-bg);
 			box-shadow: var(--glass-specular);
-			color: var(--color-brand-600);
+			color: var(--color-primary-hover);
 		}
 	}
 	@media (pointer: coarse) {

@@ -56,17 +56,23 @@
 	--color-brand-950: oklch(0.12 0.05 296);
 	--color-brand: var(--color-brand-600);
 
-	/* ─── PRIMARY semantic alias ──────────────────────────────────
-	 * "The brand colour" — anchored at the LeadKart logo's #3146a5
-	 * mark blue (brand-600). Components consume --color-primary
-	 * rather than --color-brand-600 directly so the alias can be
-	 * retargeted later (e.g. if marketing picks a new flagship hue)
-	 * without grep-replacing every call site. Also doubles as a
-	 * readability win — `--color-primary` reads as design intent;
-	 * `--color-brand-600` reads as a token coordinate. */
+	/* ─── PRIMARY semantic alias + state layers ────────────────────
+	 * Material 3 / Apple HIG canon: ONE primary colour token; state
+	 * variants computed from it via color-mix overlays rather than
+	 * declared as separate brand-scale stops. Changing --color-primary
+	 * here auto-rebuilds rest + hover + press without anyone having
+	 * to verify a second brand stop still looks right.
+	 *
+	 * Hover  = primary darkened ~10% toward --color-fg  (state layer)
+	 * Active = primary darkened ~20% toward --color-fg  (deeper press)
+	 *
+	 * For TEXT colours this reads as "ink gets darker on hover".
+	 * For FILLED button backgrounds this reads as "surface darkens on
+	 * press-ready" — both directions correct because the mix is
+	 * toward the foreground (near-black) in both cases. */
 	--color-primary: var(--color-brand-600);
-	--color-primary-hover: var(--color-brand-500);
-	--color-primary-active: var(--color-brand-700);
+	--color-primary-hover: color-mix(in srgb, var(--color-primary) 90%, var(--color-fg));
+	--color-primary-active: color-mix(in srgb, var(--color-primary) 80%, var(--color-fg));
 	--color-primary-soft: var(--color-brand-50);
 	--color-primary-fg: oklch(1 0 0); /* on solid primary surfaces */
 
@@ -217,7 +223,7 @@
 	 * Material state-layer convention: rest → primary, hover → darker. */
 	--color-brand-heading: var(--color-primary);
 	--color-brand-link: var(--color-primary);
-	--color-brand-link-hover: var(--color-brand-700);
+	--color-brand-link-hover: var(--color-primary-hover);
 
 	--color-overlay: oklch(0.18 0.02 250 / 0.5);
 	--color-overlay-strong: oklch(0.18 0.02 250 / 0.7);

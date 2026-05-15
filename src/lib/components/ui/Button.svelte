@@ -24,12 +24,14 @@
 		{
 			variants: {
 				variant: {
-					// Primary — pure logo-blue gradient (brand-500 → brand-600), no
-					// hue shift to wordmark-purple. Both stops sit at hue 269 so the
-					// button reads as the SAME blue as the sidebar nav active state
-					// (Sign-In + nav-active now share one logo identity).
+					// Primary — solid --color-primary with Material 3 state-layer
+					// hover/active (computed from primary via color-mix in
+					// tokens.css). Single token, no two-stop gradient: changing
+					// --color-primary rebuilds rest + hover + active automatically.
+					// The `brand-halo` + `glass-sheen` overlays carry visual depth
+					// so the surface stays rich without needing a gradient fill.
 					primary:
-						'relative overflow-hidden bg-gradient-to-b from-[var(--color-brand-500)] to-[var(--color-brand-600)] text-[var(--color-primary-fg)] hover:from-[var(--color-brand-400)] hover:to-[var(--color-brand-500)] brand-halo glass-sheen',
+						'relative overflow-hidden bg-[var(--color-primary)] text-[var(--color-primary-fg)] hover:bg-[var(--color-primary-hover)] active:bg-[var(--color-primary-active)] brand-halo glass-sheen',
 					// Secondary — vibrant logo green for "growth" CTAs (purchase lead,
 					// confirm conversion). Gradient from-700 → to-900 with white text
 					// keeps WCAG 2.2 AA on both stops:
@@ -49,9 +51,9 @@
 						'bg-gradient-to-b from-[var(--color-danger-500)] to-[var(--color-danger-700)] text-[var(--color-fg-on-brand)] hover:from-[var(--color-danger-400)] hover:to-[var(--color-danger-600)] shadow-[var(--shadow-danger)]',
 					// Glass — frosted iOS-style button on top of imagery / hero panels.
 					glass:
-						'relative overflow-hidden glass-popover glass-sheen text-[var(--color-fg)] hover:text-[var(--color-brand-700)]',
+						'relative overflow-hidden glass-popover glass-sheen text-[var(--color-fg)] hover:text-[var(--color-primary-hover)]',
 					// Link — pure text, no transform on hover/press (overrides .interactive).
-					link: '!transform-none hover:!transform-none active:!transform-none text-[var(--color-brand-600)] underline-offset-4 hover:underline hover:text-[var(--color-brand-700)] p-0 h-auto'
+					link: '!transform-none hover:!transform-none active:!transform-none text-[var(--color-primary)] underline-offset-4 hover:underline hover:text-[var(--color-primary-hover)] p-0 h-auto'
 				},
 				// Touch targets — Apple HIG floor 44px for primary tap surfaces,
 				// Material 3 floor 48px. md=h-11 (44px) hits Apple; lg=h-12 (48px)

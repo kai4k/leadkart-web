@@ -276,23 +276,22 @@
 			background 0.15s,
 			color 0.15s;
 	}
-	/* Brand-tinted icon stroke — picks up the navy-violet brand colour
-	   at rest in the light sidebar so the column reads as themed
-	   rather than monochrome. The dark-sidebar variant tones this
-	   down (handled below) since brand-500 over the dark glass tint
-	   loses contrast. */
+	/* Brand-tinted icon stroke — single --color-primary token, state
+	   variants via the primary-hover/-active state-layer tokens. The
+	   dark-sidebar variant tones this down (handled below) since
+	   primary over the dark glass tint loses contrast. */
 	.lk-sidebar-link :global(svg) {
 		flex-shrink: 0;
-		color: var(--color-brand-500);
+		color: var(--color-primary);
 		transition: color 0.15s;
 	}
 	.lk-sidebar-link--active :global(svg),
 	.lk-sidebar-link:active :global(svg) {
-		color: var(--color-brand-700);
+		color: var(--color-primary-active);
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.lk-sidebar-link:hover :global(svg) {
-			color: var(--color-brand-600);
+			color: var(--color-primary-hover);
 		}
 	}
 	/* Dark sidebar — keep icons in the muted-fg neutral so they read
