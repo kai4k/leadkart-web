@@ -116,7 +116,7 @@
 	}
 	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
 		.glass-appbar {
-			background: var(--glass-bg-thin);
+			background: var(--glass-bg-thick);
 			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
 				brightness(var(--glass-brightness));
 			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
@@ -146,7 +146,7 @@
 	}
 	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
 		.glass-drawer {
-			background: var(--glass-bg-thin);
+			background: var(--glass-bg-thick);
 			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
 				brightness(var(--glass-brightness));
 			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
@@ -208,7 +208,7 @@
 	}
 	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
 		.glass-popover {
-			background: var(--glass-bg-elevated);
+			background: var(--glass-bg-thick);
 			-webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate))
 				brightness(var(--glass-brightness));
 			backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate))
@@ -227,7 +227,7 @@
 	}
 	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
 		.glass-dialog {
-			background: var(--glass-bg-elevated);
+			background: var(--glass-bg-thick);
 			-webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate))
 				brightness(var(--glass-brightness));
 			backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate))
@@ -244,7 +244,7 @@
 	}
 	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
 		.glass-toast {
-			background: var(--glass-bg-elevated);
+			background: var(--glass-bg-thick);
 			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
 			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
 		}
@@ -323,7 +323,7 @@
 	}
 	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
 		.glass-statusbar {
-			background: var(--glass-bg-thin);
+			background: var(--glass-bg-thick);
 			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
 				brightness(var(--glass-brightness));
 			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
