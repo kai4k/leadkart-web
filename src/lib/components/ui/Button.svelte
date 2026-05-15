@@ -17,7 +17,7 @@
 			// Composes with .interactive utility (transform/shadow/bg/filter transitions).
 			// `link` variant overrides scale via :where() in its own variant string.
 			'interactive',
-			'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-500)] focus-visible:ring-offset-2',
+			'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2',
 			'disabled:cursor-not-allowed disabled:opacity-60 disabled:!transform-none',
 			'motion-reduce:!transition-none motion-reduce:!transform-none motion-reduce:hover:!transform-none'
 		],

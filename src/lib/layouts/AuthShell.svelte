@@ -320,7 +320,7 @@
 		padding-block: 1rem;
 		padding-inline: clamp(1rem, 4vw, 1.5rem);
 		border-block-end: 1px solid var(--color-border);
-		background: var(--color-brand-50);
+		background: var(--color-primary-soft);
 		color: var(--color-primary);
 	}
 	.lk-auth-mobile-banner .caption {

@@ -81,7 +81,7 @@
 				'focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
 				error
 					? 'border-[var(--color-danger-500)] focus-visible:ring-[var(--color-danger-500)]'
-					: 'border-[var(--color-border)] focus-visible:ring-[var(--color-brand-500)]',
+					: 'border-[var(--color-border)] focus-visible:ring-[var(--color-focus-ring)]',
 				'disabled:cursor-not-allowed disabled:opacity-60'
 			)}
 			{...rest}

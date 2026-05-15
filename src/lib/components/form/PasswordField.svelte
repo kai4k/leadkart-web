@@ -51,7 +51,7 @@
 	{#snippet trailing()}
 		<button
 			type="button"
-			class="rounded-sm p-1.5 text-[var(--color-fg-subtle)] hover:text-[var(--color-fg)] focus-visible:ring-2 focus-visible:ring-[var(--color-brand-500)] focus-visible:outline-none"
+			class="rounded-sm p-1.5 text-[var(--color-fg-subtle)] hover:text-[var(--color-fg)] focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:outline-none"
 			aria-label={visible ? 'Hide password' : 'Show password'}
 			aria-pressed={visible}
 			onclick={() => (visible = !visible)}

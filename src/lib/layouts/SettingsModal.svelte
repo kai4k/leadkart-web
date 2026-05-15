@@ -232,7 +232,7 @@
 					'body-sm inline-flex items-center gap-2 rounded-md border border-[var(--color-border)] px-4 py-2 font-medium',
 					'text-[var(--color-fg)] transition-colors hover:bg-[var(--color-bg-muted)]',
 					'focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
-					'focus-visible:ring-[var(--color-brand-500)]'
+					'focus-visible:ring-[var(--color-focus-ring)]'
 				]}
 				onclick={() => theme.reset()}
 			>
@@ -282,16 +282,12 @@
 			border-color 0.15s,
 			background 0.15s;
 	}
-	.lk-pref-card:focus-visible {
-		outline: 2px solid var(--color-brand-500);
-		outline-offset: 2px;
-	}
 	.lk-pref-card:active {
 		background: var(--color-bg-subtle);
 	}
 	.lk-pref-card--selected {
 		border-color: var(--color-primary);
-		background: var(--color-brand-50);
+		background: var(--color-primary-soft);
 		color: var(--color-primary);
 	}
 	.lk-pref-card--selected .caption {
@@ -434,10 +430,6 @@
 		transition:
 			transform 0.15s,
 			border-color 0.15s;
-	}
-	.lk-swatch:focus-visible {
-		outline: 2px solid var(--color-brand-500);
-		outline-offset: 2px;
 	}
 	.lk-swatch:active {
 		transform: scale(0.95);

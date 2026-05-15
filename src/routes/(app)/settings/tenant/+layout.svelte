@@ -94,7 +94,7 @@
 						class={cn(
 							'body-sm -mb-px inline-block border-b-2 px-4 py-2 font-medium transition-colors',
 							'focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
-							'focus-visible:ring-[var(--color-brand-500)]',
+							'focus-visible:ring-[var(--color-focus-ring)]',
 							active
 								? 'border-[var(--color-primary)] text-[var(--color-primary)]'
 								: 'border-transparent text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]'

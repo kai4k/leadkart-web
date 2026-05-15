@@ -303,9 +303,13 @@
 	:global(:root[data-sidebar-colors='dark']) .lk-sidebar-link:active :global(svg) {
 		color: var(--lk-sidebar-active-fg);
 	}
+	/* Inset focus ring — the link has its own glass-pill background
+	   when focused/hovered, so the outline sits INSIDE the pill edge
+	   rather than offsetting outward (which would clip into adjacent
+	   links). Inset offset is a legitimate override of the global. */
 	.lk-sidebar-link:focus-visible {
-		outline: 2px solid var(--color-brand-500);
-		outline-offset: -2px;
+		outline: var(--border-medium) solid var(--color-focus-ring);
+		outline-offset: calc(var(--border-medium) * -1);
 	}
 	.lk-sidebar-link:active {
 		background: var(--lk-sidebar-active-bg);

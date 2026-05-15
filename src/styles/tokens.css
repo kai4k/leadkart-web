@@ -75,6 +75,11 @@
 	--color-primary-active: color-mix(in srgb, var(--color-primary) 80%, var(--color-fg));
 	--color-primary-soft: var(--color-brand-50);
 	--color-primary-fg: oklch(1 0 0); /* on solid primary surfaces */
+	/* Focus indicator — a brighter, saturated stop (NOT a darker
+	 * state-layer of primary). Apple/Material both treat the focus
+	 * ring as a separate visual concern from rest/hover/press because
+	 * a focus indicator needs to ATTRACT attention, not blend in. */
+	--color-focus-ring: var(--color-brand-500);
 
 	/* Logo palette — true asset colours from the LeadKart logo SVG.
 	 * Promoted globally (2026-05-14) so every surface — auth + app

@@ -389,9 +389,11 @@
 
 	/* Default focus ring — keyboard-only via :focus-visible.
 	 * Industry canon since 2021 (W3C focus-visible spec). NEVER
-	 * suppress focus globally — accessibility violation. */
+	 * suppress focus globally — accessibility violation.
+	 * Uses --color-focus-ring semantic alias so the focus visual can
+	 * be retargeted in one place. */
 	:focus-visible {
-		outline: var(--border-medium) solid var(--color-brand-500);
+		outline: var(--border-medium) solid var(--color-focus-ring);
 		outline-offset: var(--border-medium);
 	}
 

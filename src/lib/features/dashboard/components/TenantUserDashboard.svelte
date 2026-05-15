@@ -99,7 +99,7 @@
 		flex-shrink: 0;
 	}
 	.lk-dash-tile-icon--brand {
-		background: var(--color-brand-50);
+		background: var(--color-primary-soft);
 		color: var(--color-primary);
 	}
 	.lk-dash-tile-icon--success {

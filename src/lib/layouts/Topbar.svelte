@@ -165,11 +165,7 @@
 		max-inline-size: 8rem;
 		transition: color 0.15s;
 	}
-	.lk-topbar-crumb-link:focus-visible {
-		outline: 2px solid var(--color-brand-500);
-		outline-offset: 2px;
-		border-radius: 0.25rem;
-	}
+	/* Focus ring handled by global :focus-visible in base.css */
 	@media (hover: hover) and (pointer: fine) {
 		.lk-topbar-crumb-link:hover {
 			color: var(--color-fg);
@@ -222,10 +218,6 @@
 			border-color 0.15s,
 			background 0.15s,
 			box-shadow 0.15s;
-	}
-	.lk-topbar-search-trigger:focus-visible {
-		outline: 2px solid var(--color-brand-500);
-		outline-offset: 2px;
 	}
 	.lk-topbar-search-trigger:active {
 		background: var(--color-bg-muted);
@@ -285,10 +277,6 @@
 		transition:
 			background 0.15s,
 			color 0.15s;
-	}
-	.lk-topbar-iconbtn:focus-visible {
-		outline: 2px solid var(--color-brand-500);
-		outline-offset: 2px;
 	}
 	.lk-topbar-iconbtn:active {
 		background: var(--glass-pill-bg);

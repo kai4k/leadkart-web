@@ -137,10 +137,6 @@
 			box-shadow 0.15s,
 			transform 0.15s;
 	}
-	.lk-avatar-btn:focus-visible {
-		outline: 2px solid var(--color-brand-500);
-		outline-offset: 2px;
-	}
 	.lk-avatar-btn:active {
 		transform: scale(0.96);
 	}
@@ -186,9 +182,12 @@
 			background 0.12s,
 			color 0.12s;
 	}
+	/* Inset focus ring — popover items sit edge-to-edge inside the
+	   popover; outside-offset would clip on the popover's rounded
+	   corners. Inset offset is a legitimate override of the global. */
 	.lk-user-popover-item:focus-visible {
-		outline: 2px solid var(--color-brand-500);
-		outline-offset: -2px;
+		outline: var(--border-medium) solid var(--color-focus-ring);
+		outline-offset: calc(var(--border-medium) * -1);
 	}
 	.lk-user-popover-item:active {
 		background: var(--glass-pill-bg);
