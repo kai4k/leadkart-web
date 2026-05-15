@@ -387,7 +387,28 @@
 
 	body {
 		min-height: 100dvh;
-		background: var(--color-bg);
+		/* Canvas + a barely-perceptible static ambient wash. Two soft
+		   radial gradients (~6% peak alpha) — brand-200 top-start,
+		   bg-subtle bottom-end — give the backdrop-filter on glass
+		   surfaces something to refract so they read as glass and not
+		   flat tinted paint. No animation, no decoration; this is
+		   purely "depth substrate" — the kind of subtle canvas-tint
+		   variation Apple ships on every surface that hosts material.
+		   background-attachment: fixed anchors the wash so it doesn't
+		   shift with content scroll. */
+		background:
+			radial-gradient(
+				ellipse 70% 50% at 0% 0%,
+				color-mix(in srgb, var(--color-brand-200) 30%, transparent),
+				transparent 60%
+			),
+			radial-gradient(
+				ellipse 60% 60% at 100% 100%,
+				color-mix(in srgb, var(--color-bg-subtle) 80%, transparent),
+				transparent 70%
+			),
+			var(--color-bg);
+		background-attachment: fixed;
 		color: var(--color-fg);
 		font-size: var(--text-base);
 		line-height: var(--text-base--line-height);
