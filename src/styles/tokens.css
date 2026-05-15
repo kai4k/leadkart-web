@@ -553,6 +553,10 @@
 		inset 0 1px 0 0 oklch(1 0 0 / 0.95),
 		inset 0 -1px 0 0 color-mix(in srgb, var(--color-fg) 4%, transparent);
 	--glass-specular-dark: inset 0 1px 0 0 oklch(1 0 0 / 0.22), inset 0 -1px 0 0 oklch(0 0 0 / 0.16);
-	--glass-pill-bg: color-mix(in srgb, var(--color-bg-elevated) 50%, transparent);
-	--glass-pill-bg-dark: color-mix(in srgb, oklch(1 0 0) 12%, transparent);
+	/* Pill highlight — interactive-state background. Brighter than the
+	   parent glass surface (65% vs 60%) so hovers visibly "bloom" out
+	   of the chrome — the contrast between parent and overlay reads
+	   as lifted refraction, not just a tinted square. */
+	--glass-pill-bg: color-mix(in srgb, var(--color-bg-elevated) 65%, transparent);
+	--glass-pill-bg-dark: color-mix(in srgb, oklch(1 0 0) 18%, transparent);
 }

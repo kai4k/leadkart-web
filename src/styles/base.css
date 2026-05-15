@@ -270,10 +270,14 @@
 	   all use white-glass hover and tinted active. */
 	--lk-sidebar-hover-bg: var(--glass-pill-bg);
 	--lk-sidebar-hover-ring: color-mix(in srgb, var(--color-bg-elevated) 50%, transparent);
-	/* Active state — brand-tinted glass pill for committed selection. */
-	--lk-sidebar-active-bg: color-mix(in srgb, var(--color-primary) 16%, var(--glass-pill-bg));
+	/* Active state — light brand-tint over glass-pill. 10% primary
+	   mix (was 16%) keeps the active state reading as GLASS with a
+	   primary hint rather than as a solid paint patch — Apple Music
+	   selected-item canon. The ring + tinted shadow carry the brand
+	   weight so the bg fill can stay glass-like. */
+	--lk-sidebar-active-bg: color-mix(in srgb, var(--color-primary) 10%, var(--glass-pill-bg));
 	--lk-sidebar-active-fg: var(--color-primary);
-	--lk-sidebar-active-ring: color-mix(in srgb, var(--color-primary) 24%, transparent);
+	--lk-sidebar-active-ring: color-mix(in srgb, var(--color-primary) 22%, transparent);
 	--lk-sidebar-border: color-mix(in srgb, var(--color-bg-elevated) 40%, transparent);
 	--lk-sidebar-specular: var(--glass-specular);
 
@@ -366,9 +370,9 @@
 	--lk-sidebar-fg-muted: oklch(0.7 0.01 256);
 	--lk-sidebar-hover-bg: var(--glass-pill-bg-dark);
 	--lk-sidebar-hover-ring: color-mix(in srgb, oklch(1 0 0) 12%, transparent);
-	--lk-sidebar-active-bg: color-mix(in srgb, var(--color-primary) 30%, var(--glass-pill-bg-dark));
+	--lk-sidebar-active-bg: color-mix(in srgb, var(--color-primary) 22%, var(--glass-pill-bg-dark));
 	--lk-sidebar-active-fg: oklch(0.98 0 0);
-	--lk-sidebar-active-ring: color-mix(in srgb, var(--color-primary) 36%, transparent);
+	--lk-sidebar-active-ring: color-mix(in srgb, var(--color-primary) 32%, transparent);
 	--lk-sidebar-border: oklch(1 0 0 / 0.08);
 	--lk-sidebar-specular: var(--glass-specular-dark);
 }

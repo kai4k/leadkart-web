@@ -200,6 +200,38 @@
 		border-radius: 0.5rem;
 	}
 
+	/* Glass-hover — REUSABLE interactive lift pattern. Apply to any
+	 * surface that should hover with the same premium Liquid-Glass
+	 * refraction the sidebar nav uses: brighter glass-pill background
+	 * + double-edge specular + crisp 1px alpha ring + soft outer drop.
+	 *
+	 * One source of truth for "interactive hover" across the product —
+	 * sidebar links, dashboard cards, settings tiles, list rows etc.
+	 * all reach for this class instead of redeclaring four-layer
+	 * shadow recipes. Pointer + hover gates respect touch devices. */
+	.glass-hover {
+		transition:
+			background 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+			box-shadow 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+			transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+	}
+	@media (hover: hover) and (pointer: fine) {
+		.glass-hover:hover {
+			background: var(--glass-pill-bg);
+			box-shadow:
+				var(--glass-specular),
+				inset 0 0 0 1px color-mix(in srgb, var(--color-bg-elevated) 60%, transparent),
+				0 2px 6px color-mix(in srgb, var(--color-fg) 8%, transparent);
+		}
+	}
+	.glass-hover:active {
+		background: var(--glass-pill-bg);
+		box-shadow:
+			var(--glass-specular),
+			inset 0 0 0 1px color-mix(in srgb, var(--color-bg-elevated) 60%, transparent),
+			0 1px 2px color-mix(in srgb, var(--color-fg) 6%, transparent);
+	}
+
 	/* Status bar — fixed footer strip. Top border + soft upward drop-
 	 * shadow so the bar floats above content above it. */
 	.glass-statusbar {
