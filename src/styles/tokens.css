@@ -553,10 +553,16 @@
 		inset 0 1px 0 0 oklch(1 0 0 / 0.95),
 		inset 0 -1px 0 0 color-mix(in srgb, var(--color-fg) 4%, transparent);
 	--glass-specular-dark: inset 0 1px 0 0 oklch(1 0 0 / 0.22), inset 0 -1px 0 0 oklch(0 0 0 / 0.16);
-	/* Pill highlight — interactive-state background. Brighter than the
-	   parent glass surface (65% vs 60%) so hovers visibly "bloom" out
-	   of the chrome — the contrast between parent and overlay reads
-	   as lifted refraction, not just a tinted square. */
-	--glass-pill-bg: color-mix(in srgb, var(--color-bg-elevated) 65%, transparent);
-	--glass-pill-bg-dark: color-mix(in srgb, oklch(1 0 0) 18%, transparent);
+	/* Pill highlight — interactive-state background. SUBTLE DARKEN
+	   against the white-tinted chrome (iOS Mail / Music / Finder
+	   sidebar hover canon). White-on-white doesn't contrast on a
+	   light Liquid-Glass chrome; the hover needs a direction shift —
+	   slight tint toward --color-fg — to register as a lift. The
+	   parent glass + this darken combine to read as "selected
+	   refraction" without competing with the active state's brand
+	   tint. */
+	--glass-pill-bg: color-mix(in srgb, var(--color-fg) 5%, transparent);
+	/* Dark chrome (data-sidebar-colors='dark') wants the opposite —
+	   subtle LIGHTEN against the dark glass parent. */
+	--glass-pill-bg-dark: color-mix(in srgb, oklch(1 0 0) 14%, transparent);
 }

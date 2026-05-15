@@ -262,14 +262,13 @@
 	--lk-sidebar-bg-solid: var(--color-bg-elevated); /* fallback for reduced-transparency */
 	--lk-sidebar-fg: var(--color-fg);
 	--lk-sidebar-fg-muted: var(--color-fg-muted);
-	/* Hover state — PURE glass pill (no brand tint). Hover reads as
-	   "ambient glass refraction lift" rather than "committed state".
-	   Active/selected state separately uses a brand-tinted pill so
-	   the two visual languages are distinct: hover = lift, active =
-	   commitment. Apple HIG canon — Music app sidebar, Finder, Mail
-	   all use white-glass hover and tinted active. */
+	/* Hover state — SUBTLE DARKEN (fg-tinted) against the white-
+	   tinted sidebar chrome. iOS Mail / Music / Finder canon: hover
+	   over white-glass chrome is a 5-8% black overlay (a direction
+	   shift toward fg), NOT another layer of white. The ring uses
+	   the same direction (fg-alpha) so the pill edge stays crisp. */
 	--lk-sidebar-hover-bg: var(--glass-pill-bg);
-	--lk-sidebar-hover-ring: color-mix(in srgb, var(--color-bg-elevated) 50%, transparent);
+	--lk-sidebar-hover-ring: color-mix(in srgb, var(--color-fg) 8%, transparent);
 	/* Active state — light brand-tint over glass-pill. 10% primary
 	   mix (was 16%) keeps the active state reading as GLASS with a
 	   primary hint rather than as a solid paint patch — Apple Music
