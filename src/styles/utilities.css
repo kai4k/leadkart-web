@@ -91,18 +91,32 @@
 		}
 	}
 
-	/* Appbar — topbar surface. Subtle bottom border + soft drop-shadow
-	   (default mode) so the bar floats above content as it scrolls
-	   underneath. Brightness boost in the backdrop-filter gives the
-	   "lit from above" feel that distinguishes glass from tinted bg. */
+	/* Appbar — TOPBAR surface (iOS 26 thin material).
+	   Chrome embeds into content rather than floating above it. NO
+	   outer drop-shadow — Apple's Liquid Glass chrome conveys depth
+	   via translucency + blur + edge specular alone. The inner
+	   gradient (::before) provides the dimensional curvature. */
 	.glass-appbar {
+		position: relative;
 		background: var(--color-bg-elevated);
 		border-block-end: var(--glass-border-subtle);
-		box-shadow: var(--glass-shadow-sm), var(--glass-specular);
+		box-shadow: var(--glass-specular);
+	}
+	.glass-appbar::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: var(--glass-inner-gradient);
+		pointer-events: none;
+		z-index: 0;
+	}
+	.glass-appbar > * {
+		position: relative;
+		z-index: 1;
 	}
 	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
 		.glass-appbar {
-			background: var(--glass-bg);
+			background: var(--glass-bg-thin);
 			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
 				brightness(var(--glass-brightness));
 			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
@@ -110,15 +124,65 @@
 		}
 	}
 
-	/* Drawer — sidebar surface. Inline-end border + soft drop-shadow. */
+	/* Drawer — SIDEBAR surface (iOS 26 thin material). Same canon as
+	   appbar: embedded chrome, no outer shadow, inner gradient. */
 	.glass-drawer {
+		position: relative;
 		background: var(--color-bg-elevated);
 		border-inline-end: var(--glass-border-subtle);
-		box-shadow: var(--glass-shadow-sm), var(--glass-specular);
+		box-shadow: var(--glass-specular);
+	}
+	.glass-drawer::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: var(--glass-inner-gradient);
+		pointer-events: none;
+		z-index: 0;
+	}
+	.glass-drawer > * {
+		position: relative;
+		z-index: 1;
 	}
 	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
 		.glass-drawer {
-			background: var(--glass-bg);
+			background: var(--glass-bg-thin);
+			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+				brightness(var(--glass-brightness));
+			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+				brightness(var(--glass-brightness));
+		}
+	}
+
+	/* Card — CONTENT surface (iOS 26 thick material).
+	   For dashboard tiles, lead cards, list items — anywhere paragraph
+	   text needs to be legible. Thicker fill (85%) than chrome (45%)
+	   so text contrast meets WCAG AA without losing the glass
+	   refraction signature. No heavy elevation shadow — sits
+	   embedded in the page flow.  */
+	.glass-card {
+		position: relative;
+		background: var(--color-bg-elevated);
+		border: var(--glass-border-subtle);
+		border-radius: 0.625rem;
+		box-shadow: var(--glass-specular);
+	}
+	.glass-card::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+		background: var(--glass-inner-gradient);
+		pointer-events: none;
+		z-index: 0;
+	}
+	.glass-card > * {
+		position: relative;
+		z-index: 1;
+	}
+	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+		.glass-card {
+			background: var(--glass-bg-thick);
 			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
 				brightness(var(--glass-brightness));
 			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
@@ -226,31 +290,40 @@
 			background: var(--glass-pill-bg);
 			box-shadow:
 				var(--glass-specular),
-				inset 0 0 0 1px color-mix(in srgb, var(--color-fg) 8%, transparent),
-				0 2px 6px color-mix(in srgb, var(--color-fg) 8%, transparent);
+				inset 0 0 0 1px color-mix(in srgb, var(--color-fg) 8%, transparent);
 		}
 	}
 	.glass-hover:active {
 		background: var(--glass-pill-bg);
 		box-shadow:
 			var(--glass-specular),
-			inset 0 0 0 1px color-mix(in srgb, var(--color-fg) 8%, transparent),
-			0 1px 2px color-mix(in srgb, var(--color-fg) 6%, transparent);
+			inset 0 0 0 1px color-mix(in srgb, var(--color-fg) 8%, transparent);
 	}
 
-	/* Status bar — fixed footer strip. Top border + soft upward drop-
-	 * shadow so the bar floats above content above it. */
+	/* Status bar — FOOTER surface (iOS 26 thin material).
+	   Embedded chrome — top hairline border + edge specular, no
+	   drop-shadow. Same canon as appbar/drawer. */
 	.glass-statusbar {
+		position: relative;
 		background: var(--color-bg-elevated);
 		border-block-start: var(--glass-border-subtle);
-		box-shadow:
-			0 -4px 14px color-mix(in srgb, var(--color-fg) 8%, transparent),
-			0 -1px 3px color-mix(in srgb, var(--color-fg) 5%, transparent),
-			var(--glass-specular);
+		box-shadow: var(--glass-specular);
+	}
+	.glass-statusbar::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: var(--glass-inner-gradient);
+		pointer-events: none;
+		z-index: 0;
+	}
+	.glass-statusbar > * {
+		position: relative;
+		z-index: 1;
 	}
 	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
 		.glass-statusbar {
-			background: var(--glass-bg);
+			background: var(--glass-bg-thin);
 			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
 				brightness(var(--glass-brightness));
 			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))

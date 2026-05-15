@@ -517,13 +517,33 @@
 	 * Glass", Apple Developer Documentation §"Designing for Liquid
 	 * Glass" — adapted for browser environments without UIKit's
 	 * native UIVisualEffectView. */
-	/* Glass recipe — uses color-mix(in srgb, ...) so the surface tint
-	   adapts to whatever --color-bg-elevated resolves to. Matches the
-	   AuthShell's .lk-glass recipe verbatim so auth + app shell render
-	   identical material across pages. */
+	/* Material thickness tiers — Apple iOS 26 Liquid Glass model.
+	   THIN material: navigation chrome (topbar, sidebar, footer) —
+	     most translucent so content underneath remains visible
+	   REGULAR material: popovers, dropdowns, drawers — balance of
+	     translucency + legibility
+	   THICK material: content cards, dialogs — opaque enough for
+	     paragraph text legibility while still refracting underneath
+	   Each tier inherits the same brightness/saturate/blur recipe —
+	   only the FILL opacity changes. */
+	--glass-bg-thin: color-mix(in srgb, var(--color-bg-elevated) 45%, transparent);
 	--glass-bg: color-mix(in srgb, var(--color-bg-elevated) 60%, transparent);
-	--glass-bg-elevated: color-mix(in srgb, var(--color-bg-elevated) 78%, transparent);
-	--glass-bg-dark: color-mix(in srgb, oklch(0.22 0.015 256) 70%, transparent);
+	--glass-bg-elevated: color-mix(in srgb, var(--color-bg-elevated) 75%, transparent);
+	--glass-bg-thick: color-mix(in srgb, var(--color-bg-elevated) 85%, transparent);
+	--glass-bg-dark: color-mix(in srgb, oklch(0.22 0.015 256) 65%, transparent);
+
+	/* Inner gradient overlay — applied via ::before pseudo-element on
+	   every glass surface. Top is slightly lighter, bottom slightly
+	   darker, simulating the dimensional curvature of a real piece of
+	   glass catching light from above. Apple iOS 26 ships this on
+	   every Liquid Glass surface — without it, glass reads as a
+	   flat-tinted sheet rather than a curved physical material. */
+	--glass-inner-gradient: linear-gradient(
+		to bottom,
+		color-mix(in srgb, oklch(1 0 0) 22%, transparent),
+		transparent 40%,
+		color-mix(in srgb, var(--color-fg) 5%, transparent)
+	);
 	/* Blur radius — 32px gives Liquid-Glass-grade refraction on the
 	   canvas wash. iOS 26 Liquid Glass uses 30-40px on chrome. */
 	--glass-blur: 32px;

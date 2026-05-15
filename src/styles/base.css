@@ -258,7 +258,10 @@
 	   'dark'] which switches to the dark glass tint. The
 	   --lk-sidebar-bg is consumed as the SEMI-TRANSPARENT fill; the
 	   backdrop-filter lives on the component to refract the canvas. */
-	--lk-sidebar-bg: var(--glass-bg);
+	/* Sidebar uses THIN material (iOS 26 chrome canon) — same 45% fill
+	   as topbar/footer so the three chrome surfaces feel like one
+	   continuous Liquid-Glass material wrapping the content area. */
+	--lk-sidebar-bg: var(--glass-bg-thin);
 	--lk-sidebar-bg-solid: var(--color-bg-elevated); /* fallback for reduced-transparency */
 	--lk-sidebar-fg: var(--color-fg);
 	--lk-sidebar-fg-muted: var(--color-fg-muted);

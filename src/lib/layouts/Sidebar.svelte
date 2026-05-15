@@ -139,6 +139,21 @@
 				brightness(var(--glass-brightness));
 		}
 	}
+	/* Inner gradient overlay — top-light → bottom-darker for the
+	   dimensional curvature that distinguishes glass from tinted bg.
+	   Same recipe every glass surface uses (utilities.css). */
+	.lk-sidebar::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: var(--glass-inner-gradient);
+		pointer-events: none;
+		z-index: 0;
+	}
+	.lk-sidebar > * {
+		position: relative;
+		z-index: 1;
+	}
 
 	/* Semibox — sidebar floats; .glass-bordered shape via this rule. */
 	:global(:root[data-layout='semibox']) .lk-sidebar {
@@ -331,28 +346,26 @@
 		outline: var(--border-medium) solid var(--color-focus-ring);
 		outline-offset: calc(var(--border-medium) * -1);
 	}
-	/* Active (committed): brand-tinted glass pill with brand-coloured
-	   ring tracing the interior + outer brand-tinted soft shadow. */
+	/* Active (committed): brand-tinted glass pill — inset ring +
+	   specular only, NO outer drop-shadow. iOS Music selected-row
+	   canon: the row is embedded in the chrome, not floating above. */
 	.lk-sidebar-link:active,
 	.lk-sidebar-link--active {
 		background: var(--lk-sidebar-active-bg);
 		color: var(--lk-sidebar-active-fg);
 		box-shadow:
 			var(--lk-sidebar-specular),
-			inset 0 0 0 1px var(--lk-sidebar-active-ring),
-			0 1px 2px color-mix(in srgb, var(--color-primary) 14%, transparent);
+			inset 0 0 0 1px var(--lk-sidebar-active-ring);
 	}
-	/* Hover (ambient lift): PURE glass pill — white specular + white
-	   alpha ring + neutral soft drop. No brand tint. Reads as glass
-	   refraction "lift", not committed state. */
+	/* Hover (ambient lift): SUBTLE darken pill — inset ring + specular
+	   only, NO outer drop. iOS Mail/Music sidebar hover canon. */
 	@media (hover: hover) and (pointer: fine) {
 		.lk-sidebar-link:hover {
 			background: var(--lk-sidebar-hover-bg);
 			color: var(--lk-sidebar-fg);
 			box-shadow:
 				var(--lk-sidebar-specular),
-				inset 0 0 0 1px var(--lk-sidebar-hover-ring),
-				0 1px 2px color-mix(in srgb, var(--color-fg) 6%, transparent);
+				inset 0 0 0 1px var(--lk-sidebar-hover-ring);
 		}
 	}
 	@media (pointer: coarse) {

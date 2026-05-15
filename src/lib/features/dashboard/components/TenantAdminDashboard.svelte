@@ -101,7 +101,7 @@
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 		{#each tiles as tile (tile.label)}
 			{@const Icon = tile.icon}
-			<Card.Root class="lk-dash-tile glass-hover">
+			<Card.Root surface="glass" class="lk-dash-tile glass-hover">
 				<Card.Header>
 					<div class="cluster" style="--cluster-gap: var(--spacing-3);">
 						<span class={`lk-dash-tile-icon lk-dash-tile-icon--${tile.accent}`} aria-hidden="true">
