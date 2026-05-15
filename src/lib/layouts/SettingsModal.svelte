@@ -290,12 +290,12 @@
 		background: var(--color-bg-subtle);
 	}
 	.lk-pref-card--selected {
-		border-color: var(--color-brand-600);
+		border-color: var(--color-primary);
 		background: var(--color-brand-50);
-		color: var(--color-brand-700);
+		color: var(--color-primary);
 	}
 	.lk-pref-card--selected .caption {
-		color: var(--color-brand-700);
+		color: var(--color-primary);
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.lk-pref-card:hover {

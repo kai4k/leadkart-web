@@ -96,7 +96,7 @@
 							'focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
 							'focus-visible:ring-[var(--color-brand-500)]',
 							active
-								? 'border-[var(--color-brand-600)] text-[var(--color-brand-700)]'
+								? 'border-[var(--color-primary)] text-[var(--color-primary)]'
 								: 'border-transparent text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]'
 						)}
 					>

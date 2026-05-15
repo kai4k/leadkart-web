@@ -207,11 +207,16 @@
 	--color-border: oklch(0.9 0.01 245); /* ≈ #E2E8F0 */
 	--color-border-strong: oklch(0.78 0.01 245);
 
-	/* ═══ SEMANTIC BRAND-TEXT — used in place of raw brand-700/600
-	 * Forms / headings / links read these aliases so a brand re-skin
-	 * via the customiser flows through. ─────────────────── */
-	--color-brand-heading: var(--color-brand-700);
-	--color-brand-link: var(--color-brand-600);
+	/* ═══ SEMANTIC BRAND-TEXT — emphasis + link tokens.
+	 * Both `heading` and `link` point at --color-primary (logo mark blue)
+	 * so brand-emphasised text + primary actions render the SAME hue
+	 * across the product. Two equally-weighted brand colours on one
+	 * page is drift, not hierarchy (Material 3 / Apple HIG / Fluent
+	 * canon: one primary, accent reserved for sparing differentiation).
+	 * Hover stops at brand-700 (the darker wordmark stop) per the
+	 * Material state-layer convention: rest → primary, hover → darker. */
+	--color-brand-heading: var(--color-primary);
+	--color-brand-link: var(--color-primary);
 	--color-brand-link-hover: var(--color-brand-700);
 
 	--color-overlay: oklch(0.18 0.02 250 / 0.5);

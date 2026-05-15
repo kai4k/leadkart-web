@@ -243,7 +243,7 @@
 				<div class="lk-auth-content-washes"></div>
 
 				<div class="lk-glass lk-glass--hero">
-					<p class="display-2 leading-[1.05] tracking-tight text-[var(--color-brand-700)]">
+					<p class="display-2 leading-[1.05] tracking-tight text-[var(--color-primary)]">
 						Pharma lead management,<br />simplified.
 					</p>
 				</div>
@@ -299,9 +299,8 @@
 		   globally in tokens.css (promoted 2026-05-14) so the auth
 		   shell + app shell read as one colour family. No local
 		   overrides needed here — semantic aliases stay below. */
-		--color-brand-heading: var(--color-brand-700);
-		--color-brand-link: var(--color-brand-600);
-		--color-brand-link-hover: var(--color-brand-700);
+		/* Brand-text aliases inherit from tokens.css (heading + link both
+		   resolve to --color-primary globally). No local override here. */
 
 		/* ─── Root container layout ─── */
 		position: relative;
@@ -322,10 +321,10 @@
 		padding-inline: clamp(1rem, 4vw, 1.5rem);
 		border-block-end: 1px solid var(--color-border);
 		background: var(--color-brand-50);
-		color: var(--color-brand-700);
+		color: var(--color-primary);
 	}
 	.lk-auth-mobile-banner .caption {
-		color: var(--color-brand-700);
+		color: var(--color-primary);
 		font-weight: 500;
 	}
 	@media (min-width: 64rem) {

@@ -100,7 +100,7 @@
 	}
 	.lk-dash-tile-icon--brand {
 		background: var(--color-brand-50);
-		color: var(--color-brand-700);
+		color: var(--color-primary);
 	}
 	.lk-dash-tile-icon--success {
 		background: var(--color-success-50);

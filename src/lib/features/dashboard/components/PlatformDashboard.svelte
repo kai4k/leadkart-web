@@ -79,7 +79,7 @@
 				</span>
 			{:else}
 				<span
-					class="caption inline-flex items-center rounded-full bg-[var(--color-brand-50)] px-2 py-0.5 font-medium text-[var(--color-brand-700)]"
+					class="caption inline-flex items-center rounded-full bg-[var(--color-brand-50)] px-2 py-0.5 font-medium text-[var(--color-primary)]"
 				>
 					Platform Staff
 				</span>
@@ -129,7 +129,7 @@
 	}
 	.lk-dash-tile-icon--brand {
 		background: var(--color-brand-50);
-		color: var(--color-brand-700);
+		color: var(--color-primary);
 	}
 	.lk-dash-tile-icon--success {
 		background: var(--color-success-50);
