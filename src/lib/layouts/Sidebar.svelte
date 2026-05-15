@@ -261,6 +261,23 @@
 	   Default ≥ 36px tall (matches design density on laptops). On
 	   coarse pointers (touch screens), bump to 44px (Apple HIG /
 	   WCAG 2.5.5 AAA) and widen the rest area so taps don't miss. */
+	/* Premium Liquid-Glass pill — composed of FOUR visual layers
+	   activated on hover/active:
+	     1. Background fill   — semi-transparent white (or brand-tinted
+	                            for active) via --lk-sidebar-{hover,
+	                            active}-bg
+	     2. Inset top specular — catches "light from above" (white edge
+	                            highlight on the rounded top inside)
+	     3. Inset hairline ring — 1px alpha border tracing the pill's
+	                            interior — gives it crisp glass edges
+	                            without competing with the parent
+	                            sidebar's border
+	     4. Soft outer drop    — 1px tinted shadow grounds the pill
+	                            against the sidebar surface so it
+	                            feels physically lifted
+	   At rest, all four shadow layers collapse to `none` — the link
+	   is invisible chrome. Spring-eased transition (180ms) for the
+	   premium "snap" feel. Apple Music sidebar / Finder canon. */
 	.lk-sidebar-link {
 		display: flex;
 		align-items: center;
@@ -273,8 +290,9 @@
 		font-weight: 500;
 		white-space: nowrap;
 		transition:
-			background 0.15s,
-			color 0.15s;
+			background 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+			box-shadow 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+			color 0.15s ease-out;
 	}
 	/* Brand-tinted icon stroke — single --color-primary token, state
 	   variants via the primary-hover/-active state-layer tokens. The
@@ -311,20 +329,28 @@
 		outline: var(--border-medium) solid var(--color-focus-ring);
 		outline-offset: calc(var(--border-medium) * -1);
 	}
-	.lk-sidebar-link:active {
-		background: var(--lk-sidebar-active-bg);
-		box-shadow: var(--lk-sidebar-specular);
-	}
+	/* Active (committed): brand-tinted glass pill with brand-coloured
+	   ring tracing the interior + outer brand-tinted soft shadow. */
+	.lk-sidebar-link:active,
 	.lk-sidebar-link--active {
 		background: var(--lk-sidebar-active-bg);
 		color: var(--lk-sidebar-active-fg);
-		box-shadow: var(--lk-sidebar-specular);
+		box-shadow:
+			var(--lk-sidebar-specular),
+			inset 0 0 0 1px var(--lk-sidebar-active-ring),
+			0 1px 2px color-mix(in srgb, var(--color-primary) 14%, transparent);
 	}
+	/* Hover (ambient lift): PURE glass pill — white specular + white
+	   alpha ring + neutral soft drop. No brand tint. Reads as glass
+	   refraction "lift", not committed state. */
 	@media (hover: hover) and (pointer: fine) {
 		.lk-sidebar-link:hover {
 			background: var(--lk-sidebar-hover-bg);
-			box-shadow: var(--lk-sidebar-specular);
 			color: var(--lk-sidebar-fg);
+			box-shadow:
+				var(--lk-sidebar-specular),
+				inset 0 0 0 1px var(--lk-sidebar-hover-ring),
+				0 1px 2px color-mix(in srgb, var(--color-fg) 6%, transparent);
 		}
 	}
 	@media (pointer: coarse) {

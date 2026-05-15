@@ -262,14 +262,18 @@
 	--lk-sidebar-bg-solid: var(--color-bg-elevated); /* fallback for reduced-transparency */
 	--lk-sidebar-fg: var(--color-fg);
 	--lk-sidebar-fg-muted: var(--color-fg-muted);
-	/* Active state — brand-tinted glass pill so the row reads as the
-	   same colour family as the auth Sign-In button (--color-brand-600
-	   logo blue). 18% brand-600 mixed into the white glass pill gives
-	   a soft blue wash; foreground stays brand-600 so the text matches
-	   the wash hue exactly. */
-	--lk-sidebar-active-bg: color-mix(in srgb, var(--color-brand-600) 16%, var(--glass-pill-bg));
-	--lk-sidebar-active-fg: var(--color-brand-600);
-	--lk-sidebar-hover-bg: color-mix(in srgb, var(--color-brand-600) 8%, var(--glass-pill-bg));
+	/* Hover state — PURE glass pill (no brand tint). Hover reads as
+	   "ambient glass refraction lift" rather than "committed state".
+	   Active/selected state separately uses a brand-tinted pill so
+	   the two visual languages are distinct: hover = lift, active =
+	   commitment. Apple HIG canon — Music app sidebar, Finder, Mail
+	   all use white-glass hover and tinted active. */
+	--lk-sidebar-hover-bg: var(--glass-pill-bg);
+	--lk-sidebar-hover-ring: color-mix(in srgb, var(--color-bg-elevated) 50%, transparent);
+	/* Active state — brand-tinted glass pill for committed selection. */
+	--lk-sidebar-active-bg: color-mix(in srgb, var(--color-primary) 16%, var(--glass-pill-bg));
+	--lk-sidebar-active-fg: var(--color-primary);
+	--lk-sidebar-active-ring: color-mix(in srgb, var(--color-primary) 24%, transparent);
 	--lk-sidebar-border: color-mix(in srgb, var(--color-bg-elevated) 40%, transparent);
 	--lk-sidebar-specular: var(--glass-specular);
 
@@ -360,9 +364,11 @@
 	--lk-sidebar-bg-solid: oklch(0.22 0.015 256);
 	--lk-sidebar-fg: oklch(0.94 0.01 256);
 	--lk-sidebar-fg-muted: oklch(0.7 0.01 256);
-	--lk-sidebar-active-bg: var(--glass-pill-bg-dark);
-	--lk-sidebar-active-fg: oklch(0.98 0 0);
 	--lk-sidebar-hover-bg: var(--glass-pill-bg-dark);
+	--lk-sidebar-hover-ring: color-mix(in srgb, oklch(1 0 0) 12%, transparent);
+	--lk-sidebar-active-bg: color-mix(in srgb, var(--color-primary) 30%, var(--glass-pill-bg-dark));
+	--lk-sidebar-active-fg: oklch(0.98 0 0);
+	--lk-sidebar-active-ring: color-mix(in srgb, var(--color-primary) 36%, transparent);
 	--lk-sidebar-border: oklch(1 0 0 / 0.08);
 	--lk-sidebar-specular: var(--glass-specular-dark);
 }
