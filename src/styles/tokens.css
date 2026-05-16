@@ -45,14 +45,25 @@
 	 *
 	 * Full 11-stop OKLCH scale — perceptually uniform lightness stepping.
 	 * ──────────────────────────────────────────────────────────── */
+	/* Brand-600 anchored to the LITERAL logo asset hex (#3146a5).
+	 * Previously declared as `oklch(0.41 0.2 269)` with a "≈ #3146a5"
+	 * comment — but high-chroma OKLCH gamut-clips on sRGB to render
+	 * closer to #2434b4 (deeper, more saturated than the actual logo).
+	 * Anchoring with the hex directly guarantees the rendered colour
+	 * matches the asset pixel-for-pixel.
+	 *
+	 * Brand-700 similarly anchored to the wordmark hex (#47356b).
+	 * The 50/100/200/300/400/500/800/900/950 stops STAY in OKLCH —
+	 * those are perceptually-uniform interpolations around the
+	 * anchor stops and don't need to match a specific asset hex.   */
 	--color-brand-50: oklch(0.97 0.02 269);
 	--color-brand-100: oklch(0.93 0.05 269);
 	--color-brand-200: oklch(0.86 0.09 269);
 	--color-brand-300: oklch(0.76 0.13 269);
-	--color-brand-400: oklch(0.55 0.18 269);
-	--color-brand-500: oklch(0.48 0.2 269); /* vibrant logo blue */
-	--color-brand-600: oklch(0.41 0.2 269); /* ≈ #3146a5 logo "LK" mark blue */
-	--color-brand-700: oklch(0.33 0.1 296); /* ≈ #47356b logo wordmark dark */
+	--color-brand-400: oklch(0.55 0.16 269);
+	--color-brand-500: oklch(0.48 0.16 269); /* one step lighter than logo */
+	--color-brand-600: #3146a5; /* LITERAL logo "LK" mark base */
+	--color-brand-700: #47356b; /* LITERAL logo wordmark dark */
 	--color-brand-800: oklch(0.27 0.09 296);
 	--color-brand-900: oklch(0.2 0.07 296);
 	--color-brand-950: oklch(0.12 0.05 296);
