@@ -173,7 +173,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		block-size: 6.5rem;
+		block-size: 5.5rem;
 		padding-block: 0.5rem;
 		padding-inline: 0.5rem;
 		flex-shrink: 0;
