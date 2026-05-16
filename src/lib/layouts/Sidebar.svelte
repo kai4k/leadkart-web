@@ -173,8 +173,8 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		block-size: 5rem;
-		padding-block: 0.75rem;
+		block-size: 6.5rem;
+		padding-block: 0.5rem;
 		padding-inline: 0.5rem;
 		flex-shrink: 0;
 		border-block-end: var(--glass-border-subtle);
