@@ -428,17 +428,40 @@
 		filter: blur(36px);
 	}
 
-	/* ─── Liquid Glass pill (iOS 26 design language) ─── */
+	/* ─── Liquid Glass pill (iOS 26 thick material) ───────────────
+	   Same recipe as .glass-card / .glass-appbar / .glass-drawer /
+	   .glass-statusbar / Card.Root[surface=glass] so the auth-page
+	   hero / tagline / feature pills read as the SAME surface as the
+	   rest of the product. Shape-only variants (.lk-glass--hero etc.)
+	   set padding + border-radius; the visual material is one recipe. */
 	.lk-glass {
 		position: relative;
-		background: color-mix(in srgb, var(--color-bg-elevated) 60%, transparent);
-		backdrop-filter: blur(20px) saturate(180%);
-		-webkit-backdrop-filter: blur(20px) saturate(180%);
-		border: 1px solid color-mix(in srgb, var(--color-bg-elevated) 60%, transparent);
-		box-shadow:
-			inset 0 1px 0 0 color-mix(in srgb, var(--color-bg-elevated) 80%, transparent),
-			0 8px 24px color-mix(in srgb, var(--color-fg) 8%, transparent);
+		background: var(--color-bg-elevated);
+		border: var(--glass-border-subtle);
+		box-shadow: var(--glass-specular);
 		overflow: hidden;
+	}
+	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+		.lk-glass {
+			background: var(--glass-bg-thick);
+			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+				brightness(var(--glass-brightness));
+			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+				brightness(var(--glass-brightness));
+		}
+	}
+	.lk-glass::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+		background: var(--glass-inner-gradient);
+		pointer-events: none;
+		z-index: 0;
+	}
+	.lk-glass > * {
+		position: relative;
+		z-index: 1;
 	}
 	.lk-glass--hero {
 		padding-block: 1.5rem;
@@ -458,29 +481,22 @@
 		padding-inline: 1rem 0.625rem;
 		border-radius: 9999px;
 	}
-	.lk-glass--purple {
-		background: color-mix(
-			in srgb,
-			var(--color-logo-purple) 28%,
-			color-mix(in srgb, var(--color-bg-elevated) 60%, transparent)
-		);
-		border-color: color-mix(in srgb, var(--color-logo-purple) 40%, transparent);
-	}
-	.lk-glass--green {
-		background: color-mix(
-			in srgb,
-			var(--color-logo-green-on-light) 24%,
-			color-mix(in srgb, var(--color-bg-elevated) 60%, transparent)
-		);
-		border-color: color-mix(in srgb, var(--color-logo-green-on-light) 40%, transparent);
-	}
-	.lk-glass--blue {
-		background: color-mix(
-			in srgb,
-			var(--color-brand-600) 24%,
-			color-mix(in srgb, var(--color-bg-elevated) 60%, transparent)
-		);
-		border-color: color-mix(in srgb, var(--color-brand-600) 40%, transparent);
+	/* Coloured variants — brand-tinted overlays on the thick-glass base.
+	   Mix the logo colour into --glass-bg-thick so the variant inherits
+	   the system opacity + the standard inner-gradient curvature. */
+	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+		.lk-glass--purple {
+			background: color-mix(in srgb, var(--color-logo-purple) 22%, var(--glass-bg-thick));
+			border-color: color-mix(in srgb, var(--color-logo-purple) 35%, transparent);
+		}
+		.lk-glass--green {
+			background: color-mix(in srgb, var(--color-logo-green-on-light) 20%, var(--glass-bg-thick));
+			border-color: color-mix(in srgb, var(--color-logo-green-on-light) 35%, transparent);
+		}
+		.lk-glass--blue {
+			background: color-mix(in srgb, var(--color-brand-600) 20%, var(--glass-bg-thick));
+			border-color: color-mix(in srgb, var(--color-brand-600) 35%, transparent);
+		}
 	}
 
 	.lk-auth-features {
