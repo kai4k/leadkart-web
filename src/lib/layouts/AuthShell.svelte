@@ -242,32 +242,32 @@
 			<div class="lk-auth-brand-content" aria-hidden="true">
 				<div class="lk-auth-content-washes"></div>
 
-				<div class="lk-glass lk-glass--hero">
+				<div class="glass-card lk-glass--hero">
 					<p class="display-2 leading-[1.05] tracking-tight text-[var(--color-primary)]">
 						Pharma lead management,<br />simplified.
 					</p>
 				</div>
 
-				<div class="lk-glass lk-glass--tagline">
+				<div class="glass-card lk-glass--tagline">
 					<p class="body-base text-[var(--color-fg-muted)]">
 						End-to-end CRM, orders, inventory &amp; dispatch — built for India's PCD pharma market.
 					</p>
 				</div>
 
 				<ul class="lk-auth-features">
-					<li class="lk-glass lk-glass--feature lk-glass--purple">
+					<li class="glass-card lk-glass--feature lk-glass--purple">
 						<span class="lk-auth-feature-icon lk-auth-feature-icon--purple">
 							<ShieldCheck size={18} />
 						</span>
 						<span class="body-base">Enterprise-grade security</span>
 					</li>
-					<li class="lk-glass lk-glass--feature lk-glass--green">
+					<li class="glass-card lk-glass--feature lk-glass--green">
 						<span class="lk-auth-feature-icon lk-auth-feature-icon--green">
 							<TrendingUp size={18} />
 						</span>
 						<span class="body-base">Real-time lead tracking</span>
 					</li>
-					<li class="lk-glass lk-glass--feature lk-glass--blue">
+					<li class="glass-card lk-glass--feature lk-glass--blue">
 						<span class="lk-auth-feature-icon lk-auth-feature-icon--blue">
 							<Truck size={18} />
 						</span>
@@ -428,45 +428,14 @@
 		filter: blur(36px);
 	}
 
-	/* ─── Liquid Glass pill (iOS 26 thick material) ───────────────
-	   Same recipe as .glass-card / .glass-appbar / .glass-drawer /
-	   .glass-statusbar / Card.Root[surface=glass] so the auth-page
-	   hero / tagline / feature pills read as the SAME surface as the
-	   rest of the product. Shape-only variants (.lk-glass--hero etc.)
-	   set padding + border-radius; the visual material is one recipe. */
-	.lk-glass {
-		position: relative;
-		background: var(--color-bg-elevated);
-		border: var(--glass-border-subtle);
-		box-shadow: var(--glass-specular);
-		overflow: hidden;
-	}
-	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-		.lk-glass {
-			background: var(--glass-bg-thick);
-			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
-				brightness(var(--glass-brightness));
-			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
-				brightness(var(--glass-brightness));
-		}
-	}
-	.lk-glass::before {
-		content: '';
-		position: absolute;
-		inset: 0;
-		border-radius: inherit;
-		background: var(--glass-inner-gradient);
-		pointer-events: none;
-		z-index: 0;
-	}
-	.lk-glass > * {
-		position: relative;
-		z-index: 1;
-	}
+	/* ─── Auth-page pill modifiers ─────────────────────────────────
+	   The base material is .glass-card (utilities.css). These modifier
+	   classes ONLY set shape (padding + border-radius) + per-variant
+	   colour tints. The recipe (bg + blur + saturate + brightness +
+	   specular + inner gradient) is single-source in .glass-card. */
 	.lk-glass--hero {
 		padding-block: 1.5rem;
 		padding-inline: 1.75rem;
-		border-radius: 1.5rem;
 	}
 	.lk-glass--tagline {
 		padding-block: 1rem;
