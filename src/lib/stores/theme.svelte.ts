@@ -43,7 +43,7 @@ export type ContentWidth = 'default' | 'fluid';
 export type LayoutMode = 'default' | 'semibox';
 
 export const PRIMARY_COLORS: ReadonlyArray<{ id: PrimaryColor; label: string; hex: string }> = [
-	{ id: 'navy', label: 'Navy', hex: '#2D2F7E' },
+	{ id: 'navy', label: 'Brand', hex: '#502d81' },
 	{ id: 'blue', label: 'Blue', hex: '#265A8E' },
 	{ id: 'green', label: 'Green', hex: '#34C759' },
 	{ id: 'indigo', label: 'Indigo', hex: '#5856D6' },

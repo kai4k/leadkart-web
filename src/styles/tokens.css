@@ -34,39 +34,33 @@
 @import '@fontsource-variable/jetbrains-mono';
 
 @theme {
-	/* ═══ BRAND — navy-violet, derived from the LeadKart logo wordmark.
-	 * The logo is purple+green (NOT blue+red — the prior #265A8E was a
-	 * Blazor-side miscall). The wordmark renders as a glossy navy-violet
-	 * with violet highlights; the chemist-bag icon is vibrant green.
+	/* ═══ BRAND — PURPLE-VIOLET, anchored to the LeadKart logo asset.
+	 * Corrected 2026-05-16: the brand is purple at hue ~296, NOT blue
+	 * at hue 269 as previously declared. Earlier comments referenced
+	 * "navy-violet" / "#2D2F7E" / "#3146a5" — those were all wrong.
+	 * The actual logo pops six colours per the asset spec:
+	 *   #502d81  wordmark base (medium purple-violet)   ← PRIMARY anchor
+	 *   #953fc9  highlight purple (vibrant lighter)      ← brand-500
+	 *   #1e1043  deep shadow (near-black purple)         ← brand-900
+	 *   #0b3e8c  navy accent (supporting blue)          → --color-logo-blue
+	 *   #070e5c  deepest blue shadow                    → --color-logo-blue-deep
+	 *   #18f217  vibrant neon green (chemist bag)       → --color-secondary-500
 	 *
-	 * User direction (2026-05-08): "bluish purple — navy blue, not purple
-	 * entirely". Hue 260 sits between pure blue (240) and indigo (285),
-	 * leaning navy. Anchored at brand-600 ≈ #2D2F7E (deep navy-violet).
-	 *
-	 * Full 11-stop OKLCH scale — perceptually uniform lightness stepping.
-	 * ──────────────────────────────────────────────────────────── */
-	/* Brand-600 anchored to the LITERAL logo asset hex (#3146a5).
-	 * Previously declared as `oklch(0.41 0.2 269)` with a "≈ #3146a5"
-	 * comment — but high-chroma OKLCH gamut-clips on sRGB to render
-	 * closer to #2434b4 (deeper, more saturated than the actual logo).
-	 * Anchoring with the hex directly guarantees the rendered colour
-	 * matches the asset pixel-for-pixel.
-	 *
-	 * Brand-700 similarly anchored to the wordmark hex (#47356b).
-	 * The 50/100/200/300/400/500/800/900/950 stops STAY in OKLCH —
-	 * those are perceptually-uniform interpolations around the
-	 * anchor stops and don't need to match a specific asset hex.   */
-	--color-brand-50: oklch(0.97 0.02 269);
-	--color-brand-100: oklch(0.93 0.05 269);
-	--color-brand-200: oklch(0.86 0.09 269);
-	--color-brand-300: oklch(0.76 0.13 269);
-	--color-brand-400: oklch(0.55 0.16 269);
-	--color-brand-500: oklch(0.48 0.16 269); /* one step lighter than logo */
-	--color-brand-600: #3146a5; /* LITERAL logo "LK" mark base */
-	--color-brand-700: #47356b; /* LITERAL logo wordmark dark */
-	--color-brand-800: oklch(0.27 0.09 296);
-	--color-brand-900: oklch(0.2 0.07 296);
-	--color-brand-950: oklch(0.12 0.05 296);
+	 * Three brand stops anchored to LITERAL logo hex (must match the
+	 * asset pixel-for-pixel — these are CONTRACTS with the SVG fill).
+	 * Other stops interpolated in OKLCH at hue 296 — perceptually
+	 * uniform lightness ladder around the anchors. */
+	--color-brand-50: oklch(0.97 0.025 296);
+	--color-brand-100: oklch(0.93 0.06 296);
+	--color-brand-200: oklch(0.86 0.1 296);
+	--color-brand-300: oklch(0.76 0.14 296);
+	--color-brand-400: oklch(0.62 0.17 296);
+	--color-brand-500: #953fc9; /* LITERAL logo highlight purple */
+	--color-brand-600: #502d81; /* LITERAL logo wordmark base — PRIMARY */
+	--color-brand-700: oklch(0.3 0.14 296); /* derived hover-darker stop */
+	--color-brand-800: oklch(0.24 0.12 296);
+	--color-brand-900: #1e1043; /* LITERAL logo deep shadow purple */
+	--color-brand-950: oklch(0.08 0.06 296);
 	--color-brand: var(--color-brand-600);
 
 	/* ─── PRIMARY semantic alias + state layers ────────────────────
@@ -94,39 +88,44 @@
 	 * a focus indicator needs to ATTRACT attention, not blend in. */
 	--color-focus-ring: var(--color-brand-500);
 
-	/* Logo palette — true asset colours from the LeadKart logo SVG.
-	 * Promoted globally (2026-05-14) so every surface — auth + app
-	 * shell + dashboards + charts — can reach for the exact brand hex.
-	 * `*-on-light` derivatives bump the lightness/chroma where the raw
-	 * colour fails WCAG AA contrast on a white background. */
-	--color-logo-purple: oklch(0.58 0.18 305); /* #a05dce LK mark highlight */
-	--color-logo-blue: oklch(0.41 0.2 269); /* #3146a5 LK mark base = brand-600 */
+	/* Logo palette — LITERAL asset hex per the brand spec (corrected
+	 * 2026-05-16). The previous values (`#a05dce`, `#3146a5`, etc.)
+	 * were wrong guesses; these six are the actual popping colours
+	 * pulled from the logo asset:                                    */
+	--color-logo-purple: #953fc9; /* vibrant highlight purple */
+	--color-logo-purple-deep: #1e1043; /* deepest shadow purple */
+	--color-logo-purple-mid: #502d81; /* wordmark base — = --color-brand-600 */
+	--color-logo-blue: #0b3e8c; /* navy supporting accent */
+	--color-logo-blue-deep: #070e5c; /* deepest blue shadow */
+	--color-logo-green: #18f217; /* vibrant neon (chemist bag) */
+	/* `-on-light` derivative — neon #18f217 fails WCAG AA on white
+	 * (contrast ~1.4:1); this dimmed variant passes AA (~4.7:1) for
+	 * use as text/icon strokes on light surfaces. */
 	--color-logo-green-on-light: oklch(0.55 0.21 142);
 	--color-medical-red: oklch(0.58 0.22 27);
 
-	/* ═══ SECONDARY — vibrant green from the LeadKart logo icon.
-	 * The chemist-bag/cart that hosts the LK monogram is rendered in a
-	 * saturated green (~#39C12C). This 11-stop scale anchors brand-coherent
-	 * green chips, success-flavoured CTAs, "growth" charts, and the
-	 * "buy lead" purchase path.
+	/* ═══ SECONDARY — vibrant neon green from the LeadKart chemist bag.
+	 * Anchored to the LITERAL logo hex #18f217 (was wrongly documented
+	 * as #39C12C — much more muted than the actual asset). The bag
+	 * green pops aggressively; secondary-500 captures that. Scale
+	 * derived in OKLCH at hue 142 around the anchor stop.
 	 *
 	 * Distinct from --color-success-* (iOS #34C759) — secondary is for
-	 * BRAND uses, success is for FEEDBACK (toasts, validation, status
-	 * badges). Chroma is higher than success to read as "logo green",
-	 * not "checkmark green". Hue 140 leans slightly cool, matching the
-	 * logo's blue-tinted green better than hue 145 (iOS pure green).
+	 * BRAND uses (growth charts, buy-lead CTAs), success is for
+	 * FEEDBACK (toasts, validation, status badges). Secondary chroma
+	 * is higher than success to read as "logo neon", not "checkmark".
 	 * ──────────────────────────────────────────────────────────── */
-	--color-secondary-50: oklch(0.97 0.04 140);
-	--color-secondary-100: oklch(0.93 0.1 140);
-	--color-secondary-200: oklch(0.86 0.16 140);
-	--color-secondary-300: oklch(0.78 0.2 140);
-	--color-secondary-400: oklch(0.72 0.22 140);
-	--color-secondary-500: oklch(0.68 0.24 140); /* ≈ #39C12C logo green */
-	--color-secondary-600: oklch(0.58 0.21 140);
-	--color-secondary-700: oklch(0.48 0.17 140);
-	--color-secondary-800: oklch(0.38 0.13 140);
-	--color-secondary-900: oklch(0.28 0.09 140);
-	--color-secondary-950: oklch(0.18 0.06 140);
+	--color-secondary-50: oklch(0.97 0.04 142);
+	--color-secondary-100: oklch(0.93 0.1 142);
+	--color-secondary-200: oklch(0.86 0.16 142);
+	--color-secondary-300: oklch(0.78 0.2 142);
+	--color-secondary-400: oklch(0.78 0.24 142);
+	--color-secondary-500: #18f217; /* LITERAL logo neon green */
+	--color-secondary-600: oklch(0.7 0.25 142);
+	--color-secondary-700: oklch(0.58 0.21 142); /* AA on white ≈ 4.7:1 */
+	--color-secondary-800: oklch(0.46 0.17 142);
+	--color-secondary-900: oklch(0.32 0.12 142);
+	--color-secondary-950: oklch(0.2 0.08 142);
 	--color-secondary: var(--color-secondary-500);
 
 	/* ═══ SEMANTIC — iOS-canon values per Blazor ThemeBuilder.cs:

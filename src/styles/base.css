@@ -62,8 +62,8 @@
  * consistent. Components consuming `var(--color-brand-{N})` re-skin
  * automatically — no per-component changes.
  *
- * Default (no data-primary attr) = navy-violet logo brand from tokens.css
- * (≈ #2D2F7E, hue 260). Picker alternatives:
+ * Default (no data-primary attr) = purple-violet logo brand from
+ * tokens.css (#502d81 wordmark base, hue ≈ 296). Picker alternatives:
  *   blue    #265A8E   (hue ≈ 245)  — legacy corporate blue
  *   green   #34C759   (hue ≈ 145)  — iOS pure green
  *   indigo  #5856D6   (hue ≈ 285)
