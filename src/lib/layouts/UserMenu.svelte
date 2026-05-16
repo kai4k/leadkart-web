@@ -176,6 +176,7 @@
 		inline-size: 100%;
 		padding: 0.5rem 0.875rem;
 		font-size: var(--text-sm);
+		letter-spacing: var(--tracking-body);
 		color: var(--color-fg);
 		text-align: start;
 		transition:

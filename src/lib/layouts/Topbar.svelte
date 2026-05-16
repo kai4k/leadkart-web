@@ -158,6 +158,7 @@
 	.lk-topbar-crumb-link {
 		font-size: var(--text-sm);
 		font-weight: 500;
+		letter-spacing: var(--tracking-body);
 		color: var(--color-fg-muted);
 		white-space: nowrap;
 		overflow: hidden;
@@ -185,7 +186,7 @@
 	.lk-topbar-title {
 		font-size: var(--text-base);
 		font-weight: 600;
-		letter-spacing: -0.01em;
+		letter-spacing: var(--tracking-heading);
 		color: var(--color-fg);
 		margin: 0;
 		min-inline-size: 0;
@@ -214,6 +215,7 @@
 		border: var(--glass-border-subtle);
 		color: var(--color-fg-muted);
 		font-size: var(--text-sm);
+		letter-spacing: var(--tracking-body);
 		transition:
 			border-color 0.15s,
 			background 0.15s,
@@ -237,6 +239,7 @@
 		font-family: var(--font-mono);
 		font-size: var(--text-xs);
 		font-weight: 500;
+		letter-spacing: var(--tracking-caption);
 	}
 	@media (min-width: 48rem) {
 		.lk-topbar-search-trigger {

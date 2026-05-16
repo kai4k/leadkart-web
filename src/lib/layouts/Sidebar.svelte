@@ -305,6 +305,7 @@
 		color: var(--lk-sidebar-fg);
 		font-size: var(--text-sm);
 		font-weight: 500;
+		letter-spacing: var(--tracking-body);
 		white-space: nowrap;
 		transition:
 			background 0.18s cubic-bezier(0.22, 1, 0.36, 1),
