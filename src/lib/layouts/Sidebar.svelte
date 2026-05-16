@@ -164,16 +164,17 @@
 	}
 
 	/* ─── Brand block ──────────────────────────────────────────
-	   Taller than the topbar (5.5rem vs 3.75rem) to give the logo
-	   more vertical room — trading horizontal alignment with the
-	   topbar's bottom edge for a more prominent wordmark. Padding-
-	   block keeps the logo from touching the splitter line below. */
+	   Tall enough to give the logo prominent vertical room while
+	   pushing the splitter line further down (6.5rem block vs the
+	   topbar's 3.75rem). Padding-block grows along with block-size
+	   so the logo stays the same size — just shifted down within
+	   the taller surround. */
 	.lk-sidebar-brand {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		block-size: 5.5rem;
-		padding-block: 0.5rem;
+		block-size: 6.5rem;
+		padding-block: 1rem;
 		padding-inline: 0.5rem;
 		flex-shrink: 0;
 		border-block-end: var(--glass-border-subtle);
