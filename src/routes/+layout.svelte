@@ -9,10 +9,7 @@
 	// mutates — touch each so the dep graph picks them up.
 	$effect(() => {
 		void theme.primary;
-		void theme.sidebarColor;
-		void theme.layoutDir;
 		void theme.sidebarCollapsed;
-		void theme.layoutMode;
 		void theme.contentWidth;
 		theme.applyToDocument();
 	});

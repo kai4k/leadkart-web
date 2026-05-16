@@ -46,8 +46,7 @@
 		<meta name="theme-color" content="#502d81" />
 		<title>LeadKart</title>
 		<!--
-			Customiser prime — runs SYNCHRONOUSLY before first paint to
-			apply the user's saved primary-colour + layout choices, so
+			Customiser prime — runs SYNCHRONOUSLY before first paint so
 			the page renders branded on first paint (no FOUC).
 
 			Industry canon: every modern dashboard (Vercel, Linear,
@@ -55,21 +54,20 @@
 			script. The cost is ~200 bytes + ~1ms execution; the win is
 			no flash-of-unbranded-content.
 
-			Tracks `localStorage['leadkart-primary']`,
-			`leadkart-sidebar-size`, and `leadkart-content-width`
-			written by lib/stores/theme.svelte.ts. Failure-mode tolerant:
-			try/catch swallows errors so a private-mode browser falls
-			back to defaults cleanly.
-
-			Also strips any legacy `.dark` class — dark mode was removed
-			2026-05-12 and users who toggled it before then would
-			otherwise carry a stale class.
+			Tracks `localStorage['leadkart-primary']` and
+			`leadkart-content-width` written by lib/stores/theme.svelte.ts.
+			data-layout='semibox' is set unconditionally — semibox is
+			the only supported chrome shape (the prior 'default' flat
+			variant + dark sidebar + RTL toggles were removed
+			2026-05-17). Failure-mode tolerant: try/catch swallows
+			errors so a private-mode browser falls back to defaults
+			cleanly.
 		-->
 		<script>
 			(function () {
 				try {
 					var root = document.documentElement;
-					root.classList.remove('dark');
+					root.setAttribute('data-layout', 'semibox');
 
 					function applyIfValid(key, attr, valid) {
 						var v = localStorage.getItem(key);
@@ -92,16 +90,11 @@
 							'cyan'
 						]
 					);
-					applyIfValid('leadkart-sidebar-color', 'data-sidebar-colors', ['dark']);
-					applyIfValid('leadkart-layout-mode', 'data-layout', ['semibox']);
 					applyIfValid('leadkart-content-width', 'data-content-width', ['fluid']);
 
 					if (localStorage.getItem('leadkart-sidebar-collapsed') === '1') {
 						root.setAttribute('data-sidebar-collapsed', '');
 					}
-
-					var dir = localStorage.getItem('leadkart-layout-dir');
-					root.setAttribute('dir', dir === 'rtl' ? 'rtl' : 'ltr');
 				} catch (e) {
 					/* private-mode: fall back to defaults */
 				}

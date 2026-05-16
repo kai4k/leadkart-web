@@ -1,16 +1,12 @@
 /**
- * Theme store — Svelte 5 class-based reactive store managing the
- * customiser state for LeadKart's Linear/Vercel-style shell:
- *
- *   - primary           (one of 11 brand-stop choices)
- *   - sidebarColor      ('light' | 'dark') — preference / accessibility
- *   - layoutDir         ('ltr' | 'rtl')    — i18n
- *   - sidebarCollapsed  (boolean)          — desktop hamburger state
- *
- * All other axes (layoutMode, sidebarSize, navType, contentWidth) were
- * removed 2026-05-13 — no professional SaaS dashboard (Linear, Vercel,
- * Stripe Dashboard, Notion, GitHub) ships those as user-facing toggles.
- * They were a Domiex theme-marketplace demo feature.
+ * Theme store — Svelte 5 class-based reactive store for the trimmed
+ * customiser surface: brand colour + content width. The semibox layout
+ * is now the only chrome shape (forced via data-layout='semibox' on
+ * <html> by the FOUC prime in app.html); the previous user-facing
+ * toggles for layout, sidebar theme, and direction were removed
+ * 2026-05-17 — no canonical SaaS dashboard (Linear, Vercel, Stripe
+ * Dashboard, Notion, GitHub) exposes those as customer-facing knobs
+ * either.
  *
  * Industry canon: Svelte 5 stores are class instances with `$state`
  * fields, NOT module-level `let foo = $state(...)` + function accessors.
@@ -30,17 +26,10 @@ export type PrimaryColor =
 	| 'mint'
 	| 'cyan';
 
-export type SidebarColor = 'light' | 'dark';
-export type LayoutDir = 'ltr' | 'rtl';
 /** Content width — `default` caps page-inner at the 2xl container
  *  (96rem) so wide screens don't sprawl text across half a metre.
  *  `fluid` removes the cap. Slack / Notion / GitHub all ship this. */
 export type ContentWidth = 'default' | 'fluid';
-/** Layout mode — binary toggle. `default` is the flat Linear/Vercel
- *  shell; `semibox` is Domiex's floating-pane variant (0.75rem gap
- *  around the topbar + sidebar + content, each with a 1px border + 6px
- *  radius — the topbar starts after the sidebar horizontally). */
-export type LayoutMode = 'default' | 'semibox';
 
 export const PRIMARY_COLORS: ReadonlyArray<{ id: PrimaryColor; label: string; hex: string }> = [
 	{ id: 'navy', label: 'Brand', hex: '#502d81' },
@@ -56,32 +45,14 @@ export const PRIMARY_COLORS: ReadonlyArray<{ id: PrimaryColor; label: string; he
 	{ id: 'cyan', label: 'Cyan', hex: '#32ADE6' }
 ];
 
-export const SIDEBAR_COLORS: ReadonlyArray<{ id: SidebarColor; label: string; swatch: string }> = [
-	{ id: 'light', label: 'Light', swatch: 'oklch(0.98 0.005 245)' },
-	{ id: 'dark', label: 'Dark', swatch: 'oklch(0.25 0.02 256)' }
-];
-
-export const LAYOUT_DIRS: ReadonlyArray<{ id: LayoutDir; label: string }> = [
-	{ id: 'ltr', label: 'LTR' },
-	{ id: 'rtl', label: 'RTL' }
-];
-
-export const LAYOUT_MODES: ReadonlyArray<{ id: LayoutMode; label: string }> = [
-	{ id: 'default', label: 'Default' },
-	{ id: 'semibox', label: 'Semibox' }
-];
-
 export const CONTENT_WIDTHS: ReadonlyArray<{ id: ContentWidth; label: string }> = [
-	{ id: 'default', label: 'Default' },
+	{ id: 'default', label: 'Boxed' },
 	{ id: 'fluid', label: 'Fluid' }
 ];
 
 const STORAGE_KEYS = {
 	primary: 'leadkart-primary',
-	sidebarColor: 'leadkart-sidebar-color',
-	layoutDir: 'leadkart-layout-dir',
 	sidebarCollapsed: 'leadkart-sidebar-collapsed',
-	layoutMode: 'leadkart-layout-mode',
 	contentWidth: 'leadkart-content-width'
 } as const;
 
@@ -89,16 +60,7 @@ class ThemeStore {
 	primary = $state<PrimaryColor>(
 		this.readInitial<PrimaryColor>(STORAGE_KEYS.primary, 'navy', PRIMARY_COLORS)
 	);
-	sidebarColor = $state<SidebarColor>(
-		this.readInitial<SidebarColor>(STORAGE_KEYS.sidebarColor, 'light', SIDEBAR_COLORS)
-	);
-	layoutDir = $state<LayoutDir>(
-		this.readInitial<LayoutDir>(STORAGE_KEYS.layoutDir, 'ltr', LAYOUT_DIRS)
-	);
 	sidebarCollapsed = $state<boolean>(this.readBoolean(STORAGE_KEYS.sidebarCollapsed, false));
-	layoutMode = $state<LayoutMode>(
-		this.readInitial<LayoutMode>(STORAGE_KEYS.layoutMode, 'default', LAYOUT_MODES)
-	);
 	contentWidth = $state<ContentWidth>(
 		this.readInitial<ContentWidth>(STORAGE_KEYS.contentWidth, 'default', CONTENT_WIDTHS)
 	);
@@ -127,27 +89,12 @@ class ThemeStore {
 		this.persist(STORAGE_KEYS.primary, next);
 		this.applyToDocument();
 	}
-	setSidebarColor(next: SidebarColor) {
-		this.sidebarColor = next;
-		this.persist(STORAGE_KEYS.sidebarColor, next);
-		this.applyToDocument();
-	}
-	setLayoutDir(next: LayoutDir) {
-		this.layoutDir = next;
-		this.persist(STORAGE_KEYS.layoutDir, next);
-		this.applyToDocument();
-	}
 	toggleSidebarCollapsed() {
 		this.setSidebarCollapsed(!this.sidebarCollapsed);
 	}
 	setSidebarCollapsed(next: boolean) {
 		this.sidebarCollapsed = next;
 		this.persist(STORAGE_KEYS.sidebarCollapsed, next ? '1' : '0');
-		this.applyToDocument();
-	}
-	setLayoutMode(next: LayoutMode) {
-		this.layoutMode = next;
-		this.persist(STORAGE_KEYS.layoutMode, next);
 		this.applyToDocument();
 	}
 	setContentWidth(next: ContentWidth) {
@@ -158,34 +105,29 @@ class ThemeStore {
 
 	reset() {
 		this.setPrimary('navy');
-		this.setSidebarColor('light');
-		this.setLayoutDir('ltr');
 		this.setSidebarCollapsed(false);
-		this.setLayoutMode('default');
 		this.setContentWidth('default');
 	}
 
 	/**
 	 * Reflects state on <html>:
-	 *   data-primary         — colour token override
-	 *   data-sidebar-colors  — light/dark sidebar surface
-	 *   data-sidebar-collapsed (boolean attribute) — sidebar width
-	 *   dir                  — native LTR/RTL
+	 *   data-primary           — colour token override
+	 *   data-content-width     — boxed | fluid page-inner cap
+	 *   data-sidebar-collapsed — boolean attribute, sidebar width
+	 *
+	 * data-layout='semibox' is set unconditionally by the FOUC prime
+	 * in app.html and never touched at runtime — semibox is the only
+	 * supported chrome shape.
 	 */
 	applyToDocument() {
 		if (typeof document === 'undefined') return;
 		const root = document.documentElement;
-		root.classList.remove('dark');
 
 		this.setAttr(root, 'data-primary', this.primary, 'navy');
-		this.setAttr(root, 'data-sidebar-colors', this.sidebarColor, 'light');
-		this.setAttr(root, 'data-layout', this.layoutMode, 'default');
 		this.setAttr(root, 'data-content-width', this.contentWidth, 'default');
 
 		if (this.sidebarCollapsed) root.setAttribute('data-sidebar-collapsed', '');
 		else root.removeAttribute('data-sidebar-collapsed');
-
-		root.setAttribute('dir', this.layoutDir);
 	}
 
 	private setAttr(el: Element, name: string, value: string, defaultValue: string) {

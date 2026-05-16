@@ -4,22 +4,17 @@
 	import {
 		theme,
 		PRIMARY_COLORS,
-		SIDEBAR_COLORS,
-		LAYOUT_DIRS,
-		LAYOUT_MODES,
 		CONTENT_WIDTHS,
 		type PrimaryColor,
-		type SidebarColor,
-		type LayoutDir,
-		type LayoutMode,
 		type ContentWidth
 	} from '$lib/stores/theme.svelte';
 
 	/**
-	 * SettingsModal — right-side drawer. Three legitimate axes that
-	 * real SaaS products expose: brand colour, sidebar theme, RTL.
-	 * Sidebar collapse is owned by the topbar hamburger, not this
-	 * drawer.
+	 * SettingsModal — right-side drawer. Two legitimate axes that real
+	 * SaaS products expose to end users: brand colour and content
+	 * width (boxed / fluid). The chrome shape (semibox) is fixed; the
+	 * previous default-layout / dark-sidebar / RTL toggles were
+	 * removed 2026-05-17 as theme-marketplace cruft.
 	 *
 	 * WAI-ARIA dialog canon: focus trap, Escape closes, focus restore,
 	 * backdrop overlay.
@@ -102,7 +97,7 @@
 		>
 			<div>
 				<h2 class="h4 text-[var(--color-fg)]">Appearance</h2>
-				<p class="caption text-[var(--color-fg-muted)]">Brand, sidebar theme, direction</p>
+				<p class="caption text-[var(--color-fg-muted)]">Brand colour and content width</p>
 			</div>
 			<button
 				class="rounded-md p-1.5 hover:bg-[var(--color-bg-muted)]"
@@ -114,29 +109,6 @@
 		</header>
 
 		<div class="stack stack-relaxed flex-1 overflow-y-auto px-5 py-5">
-			<!-- ── Layout mode ── -->
-			<section class="stack stack-tight">
-				<h3 class="h6">Layout</h3>
-				<div class="grid grid-cols-2 gap-2">
-					{#each LAYOUT_MODES as opt (opt.id)}
-						{@const selected = theme.layoutMode === opt.id}
-						<button
-							type="button"
-							class={['lk-pref-card', selected && 'lk-pref-card--selected']}
-							aria-pressed={selected}
-							onclick={() => theme.setLayoutMode(opt.id as LayoutMode)}
-						>
-							<span class={`lk-layout-preview lk-layout-preview--${opt.id}`} aria-hidden="true">
-								<span class="lk-layout-bar lk-layout-bar--side"></span>
-								<span class="lk-layout-bar lk-layout-bar--top"></span>
-								<span class="lk-layout-bar lk-layout-bar--body"></span>
-							</span>
-							<span class="label-small">{opt.label}</span>
-						</button>
-					{/each}
-				</div>
-			</section>
-
 			<!-- ── Primary colour ── -->
 			<section class="stack stack-tight">
 				<h3 class="h6">Brand colour</h3>
@@ -159,26 +131,6 @@
 				</div>
 			</section>
 
-			<!-- ── Sidebar theme ── -->
-			<section class="stack stack-tight">
-				<h3 class="h6">Sidebar theme</h3>
-				<div class="grid grid-cols-2 gap-2">
-					{#each SIDEBAR_COLORS as opt (opt.id)}
-						{@const selected = theme.sidebarColor === opt.id}
-						<button
-							type="button"
-							class={['lk-pref-card', selected && 'lk-pref-card--selected']}
-							aria-pressed={selected}
-							onclick={() => theme.setSidebarColor(opt.id as SidebarColor)}
-						>
-							<span class="lk-sb-preview" style="background: {opt.swatch};" aria-hidden="true"
-							></span>
-							<span class="label-small">{opt.label}</span>
-						</button>
-					{/each}
-				</div>
-			</section>
-
 			<!-- ── Content width ── -->
 			<section class="stack stack-tight">
 				<h3 class="h6">Content width</h3>
@@ -193,28 +145,6 @@
 						>
 							<span class={`lk-cw-preview lk-cw-preview--${opt.id}`} aria-hidden="true">
 								<span class="lk-cw-preview-body"></span>
-							</span>
-							<span class="label-small">{opt.label}</span>
-						</button>
-					{/each}
-				</div>
-			</section>
-
-			<!-- ── Direction ── -->
-			<section class="stack stack-tight">
-				<h3 class="h6">Direction</h3>
-				<div class="grid grid-cols-2 gap-2">
-					{#each LAYOUT_DIRS as opt (opt.id)}
-						{@const selected = theme.layoutDir === opt.id}
-						<button
-							type="button"
-							class={['lk-pref-card', selected && 'lk-pref-card--selected']}
-							aria-pressed={selected}
-							onclick={() => theme.setLayoutDir(opt.id as LayoutDir)}
-						>
-							<span class={`lk-dir-preview lk-dir-preview--${opt.id}`} aria-hidden="true">
-								<span class="lk-dir-preview-aside"></span>
-								<span class="lk-dir-preview-body"></span>
 							</span>
 							<span class="label-small">{opt.label}</span>
 						</button>
@@ -313,69 +243,6 @@
 		}
 	}
 
-	.lk-sb-preview {
-		display: block;
-		height: 2.25rem;
-		border-radius: 0.375rem;
-		border: 1px solid var(--color-border);
-	}
-
-	/* ── Layout-mode previews — schematic mini-diagrams ── */
-	.lk-layout-preview {
-		position: relative;
-		display: block;
-		height: 2.75rem;
-		border-radius: 0.25rem;
-		background: var(--color-bg-muted);
-		overflow: hidden;
-	}
-	.lk-layout-bar {
-		position: absolute;
-		background: var(--color-fg-muted);
-		opacity: 0.6;
-		border-radius: 1px;
-	}
-	/* Default — sidebar left full-height, topbar top full-width */
-	.lk-layout-preview--default .lk-layout-bar--side {
-		inset: 0 auto 0 0;
-		width: 26%;
-		background: var(--color-fg);
-		opacity: 0.85;
-	}
-	.lk-layout-preview--default .lk-layout-bar--top {
-		inset: 0 0 auto 26%;
-		height: 28%;
-	}
-	.lk-layout-preview--default .lk-layout-bar--body {
-		inset: 28% 0 0 26%;
-		background: var(--color-bg-elevated);
-		opacity: 1;
-	}
-	/* Semibox — both panes float with margins + radius; topbar sits to
-	   the right of the sidebar, not above it. */
-	.lk-layout-preview--semibox {
-		padding: 0.2rem;
-		background: var(--color-bg-subtle);
-	}
-	.lk-layout-preview--semibox .lk-layout-bar--side {
-		inset: 0.2rem auto 0.2rem 0.2rem;
-		width: 24%;
-		background: var(--color-fg);
-		opacity: 0.85;
-		border-radius: 2px;
-	}
-	.lk-layout-preview--semibox .lk-layout-bar--top {
-		inset: 0.2rem 0.2rem auto calc(24% + 0.4rem);
-		height: 26%;
-		border-radius: 2px;
-	}
-	.lk-layout-preview--semibox .lk-layout-bar--body {
-		inset: calc(26% + 0.4rem) 0.2rem 0.2rem calc(24% + 0.4rem);
-		background: var(--color-bg-elevated);
-		opacity: 1;
-		border-radius: 2px;
-	}
-
 	/* ── Content-width previews ── */
 	.lk-cw-preview {
 		position: relative;
@@ -400,32 +267,6 @@
 	.lk-cw-preview--fluid .lk-cw-preview-body {
 		left: 0.3rem;
 		right: 0.3rem;
-	}
-
-	.lk-dir-preview {
-		position: relative;
-		display: block;
-		height: 2.25rem;
-		border-radius: 0.375rem;
-		background: var(--color-bg-muted);
-		overflow: hidden;
-	}
-	.lk-dir-preview-aside {
-		position: absolute;
-		inset: 0 auto 0 0;
-		width: 26%;
-		background: var(--color-fg);
-	}
-	.lk-dir-preview-body {
-		position: absolute;
-		inset: 0 0 0 26%;
-		background: var(--color-bg-elevated);
-	}
-	.lk-dir-preview--rtl .lk-dir-preview-aside {
-		inset: 0 0 0 auto;
-	}
-	.lk-dir-preview--rtl .lk-dir-preview-body {
-		inset: 0 26% 0 0;
 	}
 
 	.lk-swatch {
@@ -456,11 +297,5 @@
 	.lk-swatch--selected {
 		border-color: var(--color-fg);
 		box-shadow: 0 0 0 2px var(--color-bg-elevated);
-	}
-
-	.lk-swatch--lg {
-		inline-size: 2.25rem;
-		block-size: 2.25rem;
-		border-radius: 0.5rem;
 	}
 </style>
