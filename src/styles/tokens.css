@@ -20,15 +20,17 @@
  * (Tailwind 4 default, Radix Colors v3 variant).
  * ───────────────────────────────────────────────────────────────────── */
 
-/* Poppins — Blazor brand canon (LeadKart legacy theme used Poppins).
- * Imports five weights covering body (400) / medium (500) / button +
- * heading semibold (600) / heading bold (700) + light caption (300).
- * Static (non-variable) font; ~32 KB gzipped per weight via fontsource. */
-@import '@fontsource/poppins/300.css';
-@import '@fontsource/poppins/400.css';
-@import '@fontsource/poppins/500.css';
-@import '@fontsource/poppins/600.css';
-@import '@fontsource/poppins/700.css';
+/* System font stack — real SF Pro on Apple devices, Segoe UI Variable
+ * on Windows 11, Inter or system sans on Linux. Industry canon for
+ * cross-platform native feel: Stripe Dashboard, GitHub, Tailwind UI,
+ * Apple's own marketing site all use a variant of this stack. Zero
+ * web-font load cost; weights come from each platform's native UI font.
+ *
+ * Poppins (legacy Blazor brand) + Inter (legacy CLAUDE.md spec) both
+ * dropped 2026-05-16 — the project now reads as native on Apple
+ * platforms first, native on Windows second. JetBrains Mono kept for
+ * code blocks since SF Mono is licence-restricted and `ui-monospace`
+ * falls back inconsistently across browsers. */
 @import '@fontsource-variable/jetbrains-mono';
 
 @theme {
@@ -239,9 +241,20 @@
 	 *   FontFamily = ["Poppins", "system-ui", "sans-serif"]
 	 * Keeping the same family on the Svelte side preserves brand
 	 * continuity for users + matches print/marketing assets. */
-	--font-sans: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
+	/* Apple-first system stack — `-apple-system` + `BlinkMacSystemFont`
+	 * trigger SF Pro Text / SF Pro Display automatically on iOS / macOS
+	 * (the OS picks the right variant based on size). Windows 11 falls
+	 * back to Segoe UI Variable; older Windows to Segoe UI; Android to
+	 * Roboto; Linux to whatever the GTK default is. system-ui is the
+	 * generic CSS keyword that resolves to each OS's UI font — kept as
+	 * a last-fallback so platforms without explicit names still get
+	 * something native. */
+	--font-sans:
+		-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Segoe UI Variable Text',
+		'Segoe UI', system-ui, 'Helvetica Neue', Arial, sans-serif;
 	--font-mono:
-		'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'Cascadia Code', monospace;
+		ui-monospace, 'SF Mono', 'JetBrains Mono Variable', 'JetBrains Mono', 'Cascadia Code', Menlo,
+		Consolas, monospace;
 
 	/* Fluid type scale per Utopia.fyi — clamp(min, preferred, max).
 	 * Each step has a paired line-height per Tailwind 4 convention
@@ -254,7 +267,7 @@
 	--text-sm--line-height: 1.5;
 
 	--text-base: clamp(1rem, 0.95rem + 0.27vw, 1.06rem);
-	--text-base--line-height: 1.55;
+	--text-base--line-height: 1.45;
 
 	--text-lg: clamp(1.125rem, 1.06rem + 0.33vw, 1.19rem);
 	--text-lg--line-height: 1.5;
@@ -279,8 +292,22 @@
 	--leading-normal: 1.5;
 	--leading-relaxed: 1.65;
 
-	--tracking-tight: -0.02em;
-	--tracking-normal: 0;
+	/* Letter-spacing — Apple HIG SF Pro tracking values converted from
+	 * pt to em at each typography step. SF Pro's optical-sizing
+	 * automatically tightens display sizes; on web we approximate with
+	 * negative tracking on large text, normal on body, slight positive
+	 * on captions for legibility at small sizes.
+	 *   display (≥ 32px)   -0.022em  (large-title -0.4pt / 34pt)
+	 *   heading (20-31px)  -0.014em  (title-1 -0.36pt / 28pt)
+	 *   body    (15-19px)  -0.011em  (body -0.4pt / 17pt)
+	 *   caption (13-14px)  -0.006em  (footnote -0.08pt / 13pt)
+	 *   overline (≤ 12px)   0.04em   (kept for ALL-CAPS legibility) */
+	--tracking-display: -0.022em;
+	--tracking-heading: -0.014em;
+	--tracking-tight: -0.014em; /* legacy alias */
+	--tracking-body: -0.011em;
+	--tracking-normal: -0.011em; /* legacy alias */
+	--tracking-caption: -0.006em;
 	--tracking-wide: 0.04em;
 
 	--font-weight-thin: 100;

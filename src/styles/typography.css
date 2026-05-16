@@ -20,51 +20,59 @@
  * ───────────────────────────────────────────────────────────────────── */
 
 @layer components {
-	/* ═══ Display — hero / marketing landings ═══ */
+	/* ═══ Display — Apple HIG "Large Title" + "Title 1" canon ═══
+	   Display sizes use negative tracking (-0.022em) to compensate for
+	   the optical-sizing SF Pro performs natively at ≥ 32px. Bold
+	   weight reads as "display-bold" on SF Pro. */
 	.display-1 {
 		font-size: var(--text-5xl);
 		line-height: var(--text-5xl--line-height);
-		letter-spacing: var(--tracking-tight);
+		letter-spacing: var(--tracking-display);
 		font-weight: var(--font-weight-bold);
 	}
 
 	.display-2 {
 		font-size: var(--text-4xl);
 		line-height: var(--text-4xl--line-height);
-		letter-spacing: var(--tracking-tight);
+		letter-spacing: var(--tracking-display);
 		font-weight: var(--font-weight-bold);
 	}
 
-	/* ═══ Headings ═══ */
+	/* ═══ Headings — Apple HIG "Title 1-3" + "Headline" canon ═══
+	   Slightly looser tracking than display (-0.014em). Semibold is
+	   the canonical heading weight on SF Pro. */
 	.h1 {
 		font-size: var(--text-3xl);
 		line-height: var(--text-3xl--line-height);
-		letter-spacing: var(--tracking-tight);
+		letter-spacing: var(--tracking-heading);
 		font-weight: var(--font-weight-semibold);
 	}
 
 	.h2 {
 		font-size: var(--text-2xl);
 		line-height: var(--text-2xl--line-height);
-		letter-spacing: var(--tracking-tight);
+		letter-spacing: var(--tracking-heading);
 		font-weight: var(--font-weight-semibold);
 	}
 
 	.h3 {
 		font-size: var(--text-xl);
 		line-height: var(--text-xl--line-height);
+		letter-spacing: var(--tracking-heading);
 		font-weight: var(--font-weight-semibold);
 	}
 
 	.h4 {
 		font-size: var(--text-lg);
 		line-height: var(--text-lg--line-height);
+		letter-spacing: var(--tracking-heading);
 		font-weight: var(--font-weight-semibold);
 	}
 
 	.h5 {
 		font-size: var(--text-base);
 		line-height: var(--text-base--line-height);
+		letter-spacing: var(--tracking-body);
 		font-weight: var(--font-weight-semibold);
 	}
 
@@ -76,32 +84,42 @@
 		letter-spacing: var(--tracking-wide);
 	}
 
-	/* ═══ Body — long-form prose ═══ */
+	/* ═══ Body — Apple HIG "Body" + "Callout" canon ═══
+	   17pt body uses -0.4pt tracking ≈ -0.024em (we use -0.011em as a
+	   web-friendly compromise that still feels tightened). */
 	.lead {
 		font-size: var(--text-lg);
 		line-height: var(--leading-relaxed);
+		letter-spacing: var(--tracking-body);
 		color: var(--color-fg-muted);
 	}
 
 	.body-lg {
 		font-size: var(--text-lg);
 		line-height: var(--text-lg--line-height);
+		letter-spacing: var(--tracking-body);
 	}
 
 	.body-base {
 		font-size: var(--text-base);
 		line-height: var(--text-base--line-height);
+		letter-spacing: var(--tracking-body);
 	}
 
 	.body-sm {
 		font-size: var(--text-sm);
 		line-height: var(--text-sm--line-height);
+		letter-spacing: var(--tracking-body);
 	}
 
-	/* ═══ Supporting — captions, eyebrows, labels ═══ */
+	/* ═══ Supporting — Apple HIG "Footnote" + "Caption 1/2" canon ═══
+	   Footnote (13pt) uses very slight negative tracking; Caption 2
+	   (11pt) flips to positive tracking for legibility at small sizes.
+	   We use -0.006em for caption to compromise between the two. */
 	.caption {
 		font-size: var(--text-xs);
 		line-height: var(--text-xs--line-height);
+		letter-spacing: var(--tracking-caption);
 		color: var(--color-fg-muted);
 	}
 
