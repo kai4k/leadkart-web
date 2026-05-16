@@ -246,8 +246,13 @@
 <style>
 	/* Drawer layout — composes .glass-card material; overrides for the
 	   edge-anchored geometry (right-attached, full viewport height,
-	   border on inline-start only, no radius on viewport-flush edges). */
+	   border on inline-start only, no radius on viewport-flush edges).
+	   `position: fixed` is set EXPLICITLY here because .glass-card
+	   declares `position: relative` (needed to anchor its ::before
+	   inner-gradient pseudo). Without this override the drawer falls
+	   out of fixed positioning into normal document flow. */
 	.lk-settings-drawer {
+		position: fixed;
 		z-index: var(--z-modal);
 		padding-block-start: var(--safe-top);
 		padding-block-end: var(--safe-bottom);
