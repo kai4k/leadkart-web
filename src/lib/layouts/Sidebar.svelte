@@ -165,38 +165,36 @@
 
 	/* ─── Brand block ──────────────────────────────────────────
 	   Height matches --lk-topbar-height so the brand row lines up
-	   horizontally with the topbar's bottom edge. Padding-inline
-	   matches the nav link's effective inline-offset (scroll-padding
-	   0.5rem + link-padding 0.75rem = 1.25rem) so the logo's left edge
-	   sits at the same x-coordinate as the nav icons below. */
+	   horizontally with the topbar's bottom edge. Uses the FULL
+	   sidebar width (no inline padding) so the logo can stretch
+	   to the sidebar's edges. */
 	.lk-sidebar-brand {
 		display: flex;
 		align-items: center;
-		justify-content: flex-start;
+		justify-content: center;
 		block-size: var(--lk-topbar-height);
-		padding-inline: 1.25rem;
+		padding-inline: 0.5rem;
 		flex-shrink: 0;
 		border-block-end: var(--glass-border-subtle);
 	}
-	/* Wordmark — fills the full brand block height. The image scales
-	   proportionally (object-fit: contain) and anchors to the inline-
-	   start edge so it lines up with the nav-link icons below. If the
-	   PNG asset has internal whitespace the visible artwork will
-	   appear smaller — that's an asset-level concern, not CSS. */
+	/* Wordmark — fills the full brand-block width AND height. The
+	   image scales proportionally (object-fit: contain) and centers
+	   in the available space (object-position: center). The container
+	   is now full-width so the logo gets the full sidebar inline-size
+	   to scale into. */
 	.lk-sidebar-brand-full {
 		display: flex;
 		align-items: center;
-		justify-content: flex-start;
+		justify-content: center;
 		block-size: 100%;
 		inline-size: 100%;
 		min-inline-size: 0;
 	}
 	.lk-sidebar-brand-img {
 		block-size: 100%;
-		max-inline-size: 100%;
-		inline-size: auto;
+		inline-size: 100%;
 		object-fit: contain;
-		object-position: left center;
+		object-position: center center;
 	}
 	.lk-sidebar-brand-mark {
 		display: none;
