@@ -94,7 +94,7 @@
 		role="dialog"
 		aria-modal="true"
 		aria-label="Theme settings"
-		class="lk-settings-drawer glass-dialog fixed inset-y-0 right-0 flex w-full max-w-sm flex-col"
+		class="lk-settings-drawer glass-card fixed inset-y-0 right-0 flex w-full max-w-sm flex-col"
 		style="animation: slide-in-right {`var(--duration-base) var(--ease-out)`};"
 	>
 		<header
@@ -244,14 +244,17 @@
 {/if}
 
 <style>
-	/* Drawer layout only — visual treatment composes from .glass-dialog
-	   utility (utilities.css). Adds safe-area padding for notched
-	   devices in landscape. */
+	/* Drawer layout — composes .glass-card material; overrides for the
+	   edge-anchored geometry (right-attached, full viewport height,
+	   border on inline-start only, no radius on viewport-flush edges). */
 	.lk-settings-drawer {
 		z-index: var(--z-modal);
 		padding-block-start: var(--safe-top);
 		padding-block-end: var(--safe-bottom);
 		padding-inline-end: var(--safe-right);
+		border: 0;
+		border-inline-start: var(--glass-border-subtle);
+		border-radius: 0;
 	}
 
 	@keyframes slide-in-right {

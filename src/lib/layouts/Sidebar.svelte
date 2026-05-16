@@ -37,7 +37,7 @@
 	});
 </script>
 
-<nav class="lk-sidebar" aria-label="Main navigation">
+<nav class="lk-sidebar glass-card" aria-label="Main navigation">
 	<!-- Brand block — wordmark when expanded, icon mark when collapsed.
 	     The wordmark image scales to fill the inner container via
 	     object-fit: contain, so the visible artwork stays centred
@@ -92,19 +92,17 @@
 </nav>
 
 <style>
-	/* ─── Sidebar surface ─────────────────────────────────────────
-	   Position-fixed column to the inline-start. Safe-area max() on
-	   block-start + inline-start guards against notched / curved
-	   devices in landscape. `contain: layout style` scopes reflow. */
-	/* ─── Sidebar surface ──────────────────────────────────────────
-	   The Sidebar opts OUT of the `.glass-drawer` utility class
-	   because its surface tint switches per theme (light → --glass-bg,
-	   dark → --glass-bg-dark). It still consumes the SAME tokens
-	   (--glass-blur / --glass-saturate / --glass-border-subtle /
-	   --glass-specular) as every other glass surface — change a token
-	   in tokens.css and the sidebar re-renders alongside the topbar,
-	   popovers, dialogs etc. The duplication here is recipe, not
-	   values; per-theme tinting is a legitimate component variant. */
+	/* ─── Sidebar layout + chrome geometry ─────────────────────────
+	   Composes the universal `.glass-card` material. This block
+	   handles sidebar-specific GEOMETRY (edge-anchored full-height
+	   column, right-edge border only, zero radius at viewport edges)
+	   and the per-theme tint swap.
+
+	   For the `data-sidebar-colors='dark'` theme variant, we LOCALLY
+	   override --glass-bg-thick to the dark glass token so .glass-card
+	   picks up the dark tint without re-declaring the recipe. Single
+	   source of truth: the recipe still lives in utilities.css; only
+	   the substituted FILL is overridden here per-theme. */
 	.lk-sidebar {
 		position: fixed;
 		inset-block-start: max(var(--lk-sidebar-top), var(--safe-top));
@@ -114,12 +112,13 @@
 				max(var(--lk-sidebar-bottom), var(--safe-bottom))
 		);
 		inline-size: var(--lk-sidebar-width);
-		background: var(--lk-sidebar-bg-solid);
 		color: var(--lk-sidebar-fg);
-		border-inline-end: 1px solid var(--lk-sidebar-border);
-		box-shadow: var(--lk-sidebar-specular);
 		display: flex;
 		flex-direction: column;
+		/* Override .glass-card defaults for edge-anchored chrome */
+		border: 0;
+		border-inline-end: 1px solid var(--lk-sidebar-border);
+		border-radius: 0;
 		contain: layout style;
 		transition:
 			inline-size 0.18s ease-out,
@@ -130,43 +129,23 @@
 			background 0.15s ease-out;
 		z-index: var(--z-sticky);
 	}
-	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-		.lk-sidebar {
-			background: var(--lk-sidebar-bg);
-			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
-				brightness(var(--glass-brightness));
-			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
-				brightness(var(--glass-brightness));
-		}
-	}
-	/* Inner gradient overlay — top-light → bottom-darker for the
-	   dimensional curvature that distinguishes glass from tinted bg.
-	   Same recipe every glass surface uses (utilities.css). */
-	.lk-sidebar::before {
-		content: '';
-		position: absolute;
-		inset: 0;
-		background: var(--glass-inner-gradient);
-		pointer-events: none;
-		z-index: 0;
-	}
-	.lk-sidebar > * {
-		position: relative;
-		z-index: 1;
+
+	/* Dark sidebar — locally swap --glass-bg-thick so .glass-card
+	   composes the dark tint while keeping all other material vars. */
+	:global(:root[data-sidebar-colors='dark']) .lk-sidebar {
+		--glass-bg-thick: var(--glass-bg-dark);
 	}
 
-	/* Semibox — sidebar floats; .glass-bordered shape via this rule. */
+	/* Semibox — sidebar floats; restore .glass-card full ring + radius. */
 	:global(:root[data-layout='semibox']) .lk-sidebar {
 		border: var(--glass-border);
 		border-radius: var(--lk-shell-radius);
-		box-shadow: var(--glass-shadow), var(--glass-specular);
 	}
 
 	/* Mobile drawer override: render in normal flow with no top-offset
-	   or floating border. Background switches to the solid variant —
-	   the drawer slides over the overlay which has nothing meaningful
-	   to refract, so glass here just looks murky. The drawer is the
-	   foreground surface on mobile and benefits from full legibility. */
+	   or floating border. Strips the .glass-card backdrop-filter to
+	   solid bg — the drawer slides over an overlay with nothing
+	   meaningful to refract, so glass here would look murky. */
 	:global([role='dialog']) .lk-sidebar {
 		position: relative;
 		inset: 0;
@@ -179,6 +158,9 @@
 		background: var(--lk-sidebar-bg-solid);
 		-webkit-backdrop-filter: none;
 		backdrop-filter: none;
+	}
+	:global([role='dialog']) .lk-sidebar::before {
+		display: none;
 	}
 
 	/* ─── Brand block ──────────────────────────────────────────

@@ -54,117 +54,39 @@
 		pointer-events: none;
 	}
 
-	/* ═══ LIQUID GLASS surface utilities — Apple WWDC25 material adapted
-	 * for the web. ONE canonical recipe applied across every chrome
-	 * surface in the product (topbar, sidebar, footer, popover, drawer,
-	 * dialog, toast, tooltip + interactive pills). Components compose
-	 * these classes via `class="lk-topbar glass-appbar"` instead of
-	 * duplicating the @supports / backdrop-filter blocks per file.
+	/* ═══ LIQUID GLASS — single canonical surface ════════════════════
+	 * `.glass-card` is THE Liquid-Glass class. Every surface in the
+	 * product that should read as glass — login modal, dashboard
+	 * tiles, popovers, dialogs, toasts, and chrome (topbar/sidebar/
+	 * footer) — composes this one class. Chrome surfaces add their
+	 * own component-CSS overrides for geometry (border-radius: 0 at
+	 * viewport edges, edge-only border) since they're position-fixed
+	 * and edge-anchored, but the MATERIAL (bg + blur + saturate +
+	 * brightness + specular + inner gradient) is identical.
 	 *
-	 * Every surface consumes the same token set in tokens.css:
-	 *   --glass-bg              60% elevated   — base chrome
-	 *   --glass-bg-elevated     78% elevated   — popover / drawer
-	 *   --glass-blur            20px           — base
-	 *   --glass-blur-strong     30px           — foreground (popover)
-	 *   --glass-saturate        180%
-	 *   --glass-shadow / -specular / -pill-bg  — shared
+	 * Recipe (Apple iOS 26 thick material, 1.5rem widget radius):
+	 *   background           --glass-bg-thick (85% elevated)
+	 *   backdrop-filter      blur 32px + saturate 220% + brightness 1.06
+	 *   border               --glass-border-subtle hairline
+	 *   border-radius        1.5rem (Apple iOS 26 widget canon)
+	 *   box-shadow           --glass-specular (top-edge highlight only,
+	 *                          NO outer drop-shadow — embedded, not
+	 *                          floating, per iOS Liquid Glass canon)
+	 *   ::before             --glass-inner-gradient (top-light →
+	 *                          bottom-dark dimensional curvature)
 	 *
-	 * Result: changing `--glass-blur` once re-skins every glass
-	 * surface in the app. Identical recipe to the AuthShell's local
-	 * `.lk-glass` class so auth + app shell render the same material.
+	 * Result: change a token in tokens.css and every glass surface
+	 * across the product re-skins in lockstep. One class. One source.
 	 *
 	 * @supports gate ensures graceful fallback in browsers without
-	 * backdrop-filter (very old Firefox / Safari) — the base
-	 * `.glass-*` class sets a solid background; the @supports adds
-	 * the translucent + blurred treatment on top. */
-
-	/* Base glass surface — apply to anything that should refract */
-	.glass {
-		background: var(--color-bg-elevated);
-		box-shadow: var(--glass-specular);
-	}
-	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-		.glass {
-			background: var(--glass-bg);
-			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-		}
-	}
-
-	/* Appbar — TOPBAR surface (iOS 26 thin material).
-	   Chrome embeds into content rather than floating above it. NO
-	   outer drop-shadow — Apple's Liquid Glass chrome conveys depth
-	   via translucency + blur + edge specular alone. The inner
-	   gradient (::before) provides the dimensional curvature. */
-	.glass-appbar {
-		position: relative;
-		background: var(--color-bg-elevated);
-		border-block-end: var(--glass-border-subtle);
-		box-shadow: var(--glass-specular);
-	}
-	.glass-appbar::before {
-		content: '';
-		position: absolute;
-		inset: 0;
-		background: var(--glass-inner-gradient);
-		pointer-events: none;
-		z-index: 0;
-	}
-	.glass-appbar > * {
-		position: relative;
-		z-index: 1;
-	}
-	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-		.glass-appbar {
-			background: var(--glass-bg-thick);
-			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
-				brightness(var(--glass-brightness));
-			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
-				brightness(var(--glass-brightness));
-		}
-	}
-
-	/* Drawer — SIDEBAR surface (iOS 26 thin material). Same canon as
-	   appbar: embedded chrome, no outer shadow, inner gradient. */
-	.glass-drawer {
-		position: relative;
-		background: var(--color-bg-elevated);
-		border-inline-end: var(--glass-border-subtle);
-		box-shadow: var(--glass-specular);
-	}
-	.glass-drawer::before {
-		content: '';
-		position: absolute;
-		inset: 0;
-		background: var(--glass-inner-gradient);
-		pointer-events: none;
-		z-index: 0;
-	}
-	.glass-drawer > * {
-		position: relative;
-		z-index: 1;
-	}
-	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-		.glass-drawer {
-			background: var(--glass-bg-thick);
-			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
-				brightness(var(--glass-brightness));
-			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
-				brightness(var(--glass-brightness));
-		}
-	}
-
-	/* Card — CONTENT surface (iOS 26 thick material).
-	   For dashboard tiles, lead cards, list items — anywhere paragraph
-	   text needs to be legible. Thicker fill (85%) than chrome (45%)
-	   so text contrast meets WCAG AA without losing the glass
-	   refraction signature. No heavy elevation shadow — sits
-	   embedded in the page flow.  */
+	 * backdrop-filter — the base sets a solid `--color-bg-elevated`
+	 * background; the @supports block layers the translucent glass
+	 * on top when the property is supported. */
 	.glass-card {
 		position: relative;
 		background: var(--color-bg-elevated);
 		border: var(--glass-border-subtle);
-		border-radius: 0.625rem;
+		border-radius: 1.5rem;
 		box-shadow: var(--glass-specular);
 	}
 	.glass-card::before {
@@ -190,64 +112,10 @@
 		}
 	}
 
-	/* Bordered glass — floating shell surfaces in semibox mode + popover.
-	 * Pairs with .glass-* to add the full ring + radius + drop-shadow. */
-	.glass-bordered {
-		border: var(--glass-border);
-		border-radius: 0.5rem;
-		box-shadow: var(--glass-shadow), var(--glass-specular);
-	}
-
-	/* Popover — menus, dropdowns, foreground panels. Stronger blur +
-	 * higher opacity (78%) so menu content stays legible. */
-	.glass-popover {
-		background: var(--color-bg-elevated);
-		border: var(--glass-border);
-		border-radius: 0.625rem;
-		box-shadow: var(--glass-shadow), var(--glass-specular);
-	}
-	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-		.glass-popover {
-			background: var(--glass-bg-thick);
-			-webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate))
-				brightness(var(--glass-brightness));
-			backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate))
-				brightness(var(--glass-brightness));
-		}
-	}
-
-	/* Dialog — modal panels (settings drawer, confirmation modals).
-	 * Same recipe as popover but with stronger shadow lift. */
-	.glass-dialog {
-		background: var(--color-bg-elevated);
-		box-shadow:
-			var(--glass-specular),
-			0 24px 60px color-mix(in srgb, var(--color-fg) 14%, transparent),
-			0 8px 16px color-mix(in srgb, var(--color-fg) 6%, transparent);
-	}
-	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-		.glass-dialog {
-			background: var(--glass-bg-thick);
-			-webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate))
-				brightness(var(--glass-brightness));
-			backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate))
-				brightness(var(--glass-brightness));
-		}
-	}
-
-	/* Toast — transient status messages. */
-	.glass-toast {
-		background: var(--color-bg-elevated);
-		border: var(--glass-border);
-		border-radius: 0.625rem;
-		box-shadow: var(--glass-shadow), var(--glass-specular);
-	}
-	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-		.glass-toast {
-			background: var(--glass-bg-thick);
-			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-		}
+	/* Tooltip — small inline hint. Just blur, inherits its own tint. */
+	.glass-tooltip {
+		backdrop-filter: blur(16px) saturate(var(--glass-saturate));
+		-webkit-backdrop-filter: blur(16px) saturate(var(--glass-saturate));
 	}
 
 	/* Tooltip — small inline hint. Just blur, inherits its own tint. */

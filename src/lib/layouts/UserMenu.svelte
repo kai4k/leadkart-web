@@ -81,7 +81,7 @@
 		<div
 			bind:this={menuEl}
 			role="menu"
-			class="lk-user-popover glass-popover"
+			class="lk-user-popover glass-card"
 			style="z-index: var(--z-popover);"
 		>
 			<div class="lk-user-popover-header">

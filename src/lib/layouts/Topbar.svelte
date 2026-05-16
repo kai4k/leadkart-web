@@ -23,7 +23,7 @@
 	const route = $derived(routeContext(page.url.pathname));
 </script>
 
-<header class="lk-topbar glass-appbar" aria-label="Application bar">
+<header class="lk-topbar glass-card" aria-label="Application bar">
 	<!-- Left: toggle + route badge (icon + title in a glass pill).
 	     Matches the Liquid-Glass language of the surface and gives
 	     the current location a visual anchor (Apple Music / Notion
@@ -87,12 +87,13 @@
 </header>
 
 <style>
-	/* ─── Topbar layout ────────────────────────────────────────────
-	   Layout only — the GLASS treatment (translucent bg + blur +
-	   specular) is provided by the `.glass-appbar` utility class
-	   (utilities.css). In semibox mode we ADD `.glass-bordered` via
-	   the :global rule below — same utility composition, no per-
-	   component recipe duplication. */
+	/* ─── Topbar layout + chrome geometry ──────────────────────────
+	   Composes the universal `.glass-card` material; this block only
+	   handles topbar-specific GEOMETRY: full-width edge-anchored strip
+	   with bottom-edge border and zero corner radius (the 1.5rem
+	   default from .glass-card would round the viewport-top corners
+	   which makes no sense on a flush chrome bar). Semibox layout
+	   restores the radius for floating-pane mode. */
 	.lk-topbar {
 		position: fixed;
 		inset-block-start: max(var(--lk-shell-gap), var(--safe-top));
@@ -104,6 +105,10 @@
 		align-items: center;
 		block-size: var(--lk-topbar-height);
 		padding-inline: clamp(0.75rem, 1.5vw, 1.25rem);
+		/* Override .glass-card defaults for edge-anchored chrome */
+		border: 0;
+		border-block-end: var(--glass-border-subtle);
+		border-radius: 0;
 		contain: layout style;
 		transition:
 			inset-block-start 0.18s ease-out,
@@ -112,12 +117,11 @@
 			border-radius 0.18s ease-out;
 	}
 
-	/* Semibox — borrow .glass-bordered's full ring + radius + drop-
-	   shadow without re-declaring it here. */
+	/* Semibox — topbar floats with the .glass-card defaults restored
+	   (full ring + 1.5rem radius). */
 	:global(:root[data-layout='semibox']) .lk-topbar {
 		border: var(--glass-border);
 		border-radius: var(--lk-shell-radius);
-		box-shadow: var(--glass-shadow), var(--glass-specular);
 	}
 
 	/* ─── Left cluster (toggle + breadcrumb) ─────────────────────── */
