@@ -164,33 +164,37 @@
 	}
 
 	/* ─── Brand block ──────────────────────────────────────────
-	   Logo stretches to the FULL sidebar width — no inline padding
-	   to constrain it. Block-size is auto: the brand block grows
-	   vertically to fit the logo's natural aspect ratio at full
-	   sidebar width. Padding-block keeps the logo clear of the
-	   splitter line below. */
+	   Capped height (6rem) — the logo asset is icon + wordmark
+	   stacked (~1:1 aspect), so a smaller block keeps the logo
+	   visually proportionate within the sidebar. object-fit:
+	   contain centers the image and scales it as large as possible
+	   within the height cap; with the square-aspect asset this
+	   means the logo doesn't reach the full sidebar width.
+	   (For true full-width, the asset would need to be a horizontal
+	   wordmark-only PNG.) */
 	.lk-sidebar-brand {
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		block-size: 6rem;
 		padding-block: 1rem;
-		padding-inline: 0;
+		padding-inline: 0.5rem;
 		flex-shrink: 0;
 		border-block-end: var(--glass-border-subtle);
 	}
-	/* Wordmark — img has width 100% + height auto so it stretches
-	   to the full sidebar inline-size, scaling its height
-	   proportionally from the natural aspect ratio. */
 	.lk-sidebar-brand-full {
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		block-size: 100%;
 		inline-size: 100%;
 		min-inline-size: 0;
 	}
 	.lk-sidebar-brand-img {
+		block-size: 100%;
 		inline-size: 100%;
-		block-size: auto;
+		object-fit: contain;
+		object-position: center center;
 		display: block;
 	}
 	.lk-sidebar-brand-mark {
