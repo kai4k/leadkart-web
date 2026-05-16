@@ -123,10 +123,10 @@
 		inline-size: 2.25rem;
 		block-size: 2.25rem;
 		border-radius: 9999px;
-		/* Brand gradient — diagonal from brand-100 to brand-200 with a
-		   secondary (logo green) splash in the bottom-right corner.
-		   Matches the LeadKart logo's navy-violet + green identity in
-		   miniature on every avatar circle. */
+		/* Brand gradient — diagonal from brand-100 to brand-200 (pale
+		   logo purples) with a secondary (logo neon green) splash in
+		   the bottom-right corner. Matches the LeadKart logo's purple-
+		   violet + neon green identity in miniature on every avatar. */
 		background:
 			radial-gradient(at 70% 80%, var(--color-secondary-200), transparent 60%),
 			linear-gradient(135deg, var(--color-brand-100), var(--color-brand-200));
