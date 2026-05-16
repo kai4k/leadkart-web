@@ -45,11 +45,7 @@
 	     gives explicit height so the image has a frame to scale into. -->
 	<a href="/dashboard" class="lk-sidebar-brand" aria-label="LeadKart home">
 		<span class="lk-sidebar-brand-full" aria-hidden="true">
-			<img
-				src="/images/logo/LeadKart_Logo_Light_Theme.png"
-				alt="LeadKart"
-				class="lk-sidebar-brand-img"
-			/>
+			<img src="/images/favicon/favicon_512x512.png" alt="LeadKart" class="lk-sidebar-brand-img" />
 		</span>
 		<img
 			src="/images/favicon/favicon_128x128.png"
@@ -164,13 +160,15 @@
 	}
 
 	/* ─── Brand block ──────────────────────────────────────────
-	   Capped height; logo stretched to full sidebar width via
-	   `object-fit: cover` which crops the natural square-aspect
-	   asset to a horizontal strip. `object-position: center top`
-	   anchors the visible region to the TOP of the asset (where
-	   the chemist-bag "cart" icon with LK monogram sits) so the
-	   cropped strip shows the cart icon rather than the wordmark
-	   text below. */
+	   Cart-icon brand mark (favicon asset) shown at natural 1:1
+	   aspect, centred. The asset is a square chemist-bag icon
+	   with the LK monogram — stretching a square mark across the
+	   full sidebar width would either distort it or, with
+	   object-fit: cover, crop it to an unreadable horizontal
+	   strip. Industry canon (Notion, Linear, Vercel sidebars)
+	   keeps brand marks at natural aspect so the shape stays
+	   legible; the 5rem block-size gives it presence without
+	   forcing a stretch. */
 	.lk-sidebar-brand {
 		display: flex;
 		align-items: center;
@@ -191,9 +189,9 @@
 	}
 	.lk-sidebar-brand-img {
 		block-size: 100%;
-		inline-size: 100%;
-		object-fit: cover;
-		object-position: center top;
+		inline-size: auto;
+		max-inline-size: 100%;
+		object-fit: contain;
 		display: block;
 	}
 	.lk-sidebar-brand-mark {
