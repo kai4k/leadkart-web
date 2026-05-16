@@ -166,10 +166,11 @@
 	/* ─── Brand block ──────────────────────────────────────────
 	   Capped height; logo stretched to full sidebar width via
 	   `object-fit: cover` which crops the natural square-aspect
-	   asset to a horizontal strip. `object-position: center bottom`
-	   anchors the visible region to the BOTTOM of the asset (where
-	   the "LEADKART" wordmark sits) so the cropped strip shows the
-	   wordmark text rather than the icon above it. */
+	   asset to a horizontal strip. `object-position: center top`
+	   anchors the visible region to the TOP of the asset (where
+	   the chemist-bag "cart" icon with LK monogram sits) so the
+	   cropped strip shows the cart icon rather than the wordmark
+	   text below. */
 	.lk-sidebar-brand {
 		display: flex;
 		align-items: center;
@@ -192,7 +193,7 @@
 		block-size: 100%;
 		inline-size: 100%;
 		object-fit: cover;
-		object-position: center bottom;
+		object-position: center top;
 		display: block;
 	}
 	.lk-sidebar-brand-mark {
