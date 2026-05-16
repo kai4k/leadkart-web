@@ -43,59 +43,54 @@
 </script>
 
 <div class={cn('lk-auth-card', className)}>
-	<div class="lk-auth-card-flare" aria-hidden="true"></div>
 	<div class={cn('lk-auth-card-content', layoutClass)}>
 		{@render children()}
 	</div>
 </div>
 
 <style>
+	/* Liquid-Glass thick material — matches .glass-card recipe so the
+	   login modal reads as the SAME surface as the dashboard tiles /
+	   topbar / sidebar / footer. The previous solid-white + heavy
+	   shadow has been replaced with translucent thick-glass fill +
+	   backdrop-filter + inset specular + inner gradient via ::before. */
 	.lk-auth-card {
 		position: relative;
 		overflow: hidden;
 		border-radius: 1.5rem;
 		padding: clamp(1.5rem, 4vw, 2.5rem);
-		/* Solid bg-elevated. With the form-side now also pure white
-		   (bg-elevated), the card needs its border + shadow to do ALL
-		   the visual containment — no bg-difference to lean on. Border
-		   uses border-strong; shadow stack adds a soft brand-tinted
-		   drop that pops on white without looking heavy. */
 		background: var(--color-bg-elevated);
-		border: 1px solid var(--color-border-strong);
-		box-shadow:
-			0 1px 2px color-mix(in srgb, var(--color-brand-900) 5%, transparent),
-			0 8px 24px color-mix(in srgb, var(--color-brand-900) 10%, transparent),
-			0 20px 48px color-mix(in srgb, var(--color-brand-900) 8%, transparent);
+		border: var(--glass-border-subtle);
+		box-shadow: var(--glass-specular);
 		animation:
 			lk-auth-card-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards,
 			lk-auth-card-border-glow 4s ease-in-out 1s infinite;
+	}
+	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+		.lk-auth-card {
+			background: var(--glass-bg-thick);
+			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+				brightness(var(--glass-brightness));
+			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+				brightness(var(--glass-brightness));
+		}
+	}
+	/* Inner gradient — same dimensional curvature every glass surface
+	   uses (top-light → bottom-darker). Replaces the legacy .lk-auth-
+	   card-flare's bespoke linear gradient with the system token. */
+	.lk-auth-card::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+		background: var(--glass-inner-gradient);
+		pointer-events: none;
+		z-index: 0;
 	}
 
 	/* No dark-mode override needed — the AuthShell scope theme-locks
 	   all surface + foreground tokens to light, so the AuthCard
 	   renders identically in both OS themes. */
-
-	.lk-auth-card-flare {
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		height: 50%;
-		background: linear-gradient(
-			180deg,
-			color-mix(in srgb, var(--color-bg-elevated) 50%, transparent) 0%,
-			color-mix(in srgb, var(--color-bg-elevated) 15%, transparent) 30%,
-			transparent 100%
-		);
-		border-radius: 1.5rem 1.5rem 0 0;
-		pointer-events: none;
-		z-index: 0;
-		/* `black` here is mask intensity, not a colour — CSS masks take
-		   any opaque colour and only use the alpha channel. Keeping as
-		   `black` is canonical for masks (most readable intent). */
-		mask-image: linear-gradient(180deg, black 0%, transparent 70%);
-		-webkit-mask-image: linear-gradient(180deg, black 0%, transparent 70%);
-	}
 
 	.lk-auth-card-content {
 		position: relative;
@@ -137,7 +132,7 @@
 			-webkit-backdrop-filter: none;
 			background: var(--color-bg-elevated);
 		}
-		.lk-auth-card-flare {
+		.lk-auth-card::before {
 			display: none;
 		}
 	}

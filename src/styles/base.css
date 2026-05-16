@@ -465,14 +465,18 @@
 	 * opaque values so the visual remains legible. */
 	@media (prefers-reduced-transparency: reduce) {
 		:root {
+			--glass-bg-thin: var(--color-bg-elevated);
 			--glass-bg: var(--color-bg-elevated);
 			--glass-bg-elevated: var(--color-bg-elevated);
+			--glass-bg-thick: var(--color-bg-elevated);
 			--glass-bg-dark: oklch(0.22 0.015 256);
 			--glass-pill-bg: var(--color-bg-muted);
 			--glass-pill-bg-dark: oklch(0.32 0.04 260);
 			--glass-blur: 0px;
 			--glass-blur-strong: 0px;
 			--glass-saturate: 100%;
+			--glass-brightness: 1;
+			--glass-inner-gradient: none;
 		}
 	}
 }

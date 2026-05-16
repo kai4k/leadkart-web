@@ -279,12 +279,11 @@
 			<footer class="lk-auth-brand-footer caption">© LeadKart 2026</footer>
 		</section>
 
-		<!-- Form panel — the actual task. The modal-wrap is a glass-card
-		     so the login form reads as the SAME Liquid-Glass surface the
-		     dashboard / topbar / sidebar / footer use. One consistent
-		     material across the product. -->
+		<!-- Form panel — the actual task. SigninForm's <AuthCard> wraps
+		     the children in their own glass surface; the modal-wrap is
+		     just a sizing/centering container (no own background). -->
 		<main class="lk-auth-form-panel">
-			<div class="lk-auth-modal-wrap glass-card">
+			<div class="lk-auth-modal-wrap">
 				{@render children()}
 			</div>
 		</main>
@@ -403,8 +402,6 @@
 	.lk-auth-modal-wrap {
 		inline-size: 100%;
 		max-inline-size: min(28rem, 100%);
-		padding: clamp(1.75rem, 3.5vw, 2.5rem);
-		border-radius: 1rem;
 	}
 
 	/* ─── Soft logo-palette washes behind the brand content stack —
