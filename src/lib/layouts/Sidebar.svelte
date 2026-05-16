@@ -164,15 +164,16 @@
 	}
 
 	/* ─── Brand block ──────────────────────────────────────────
-	   Height matches --lk-topbar-height so the brand row lines up
-	   horizontally with the topbar's bottom edge. Uses the FULL
-	   sidebar width (no inline padding) so the logo can stretch
-	   to the sidebar's edges. */
+	   Taller than the topbar (5.5rem vs 3.75rem) to give the logo
+	   more vertical room — trading horizontal alignment with the
+	   topbar's bottom edge for a more prominent wordmark. Padding-
+	   block keeps the logo from touching the splitter line below. */
 	.lk-sidebar-brand {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		block-size: var(--lk-topbar-height);
+		block-size: 5.5rem;
+		padding-block: 0.5rem;
 		padding-inline: 0.5rem;
 		flex-shrink: 0;
 		border-block-end: var(--glass-border-subtle);
