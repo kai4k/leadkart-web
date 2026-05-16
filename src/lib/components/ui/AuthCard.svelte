@@ -27,19 +27,19 @@
 	let { class: className = '', layoutClass = 'stack stack-relaxed', children }: Props = $props();
 </script>
 
-<div class={cn('lk-auth-card glass-card', className)}>
+<div class={cn('lk-auth-card glass-card glass-border-glow', className)}>
 	<div class={cn(layoutClass)}>
 		{@render children()}
 	</div>
 </div>
 
 <style>
-	/* Auth-card-specific extras layered on top of `.glass-card` */
+	/* Auth-card-specific extras layered on top of `.glass-card`.
+	   Border-glow pulse comes from the `.glass-border-glow` utility
+	   (animations.css). Local concern: the entrance animation only. */
 	.lk-auth-card {
 		padding: clamp(1.5rem, 4vw, 2.5rem);
-		animation:
-			lk-auth-card-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards,
-			lk-auth-card-border-glow 4s ease-in-out 1s infinite;
+		animation: lk-auth-card-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 	}
 
 	@keyframes lk-auth-card-enter {
@@ -50,16 +50,6 @@
 		100% {
 			opacity: 1;
 			transform: translateY(0) scale(1);
-		}
-	}
-
-	@keyframes lk-auth-card-border-glow {
-		0%,
-		100% {
-			border-color: color-mix(in srgb, var(--color-fg) 8%, transparent);
-		}
-		50% {
-			border-color: color-mix(in srgb, var(--color-brand-400) 45%, transparent);
 		}
 	}
 

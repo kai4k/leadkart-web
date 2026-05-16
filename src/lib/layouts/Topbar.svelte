@@ -23,7 +23,7 @@
 	const route = $derived(routeContext(page.url.pathname));
 </script>
 
-<header class="lk-topbar glass-card" aria-label="Application bar">
+<header class="lk-topbar glass-card glass-border-glow" aria-label="Application bar">
 	<!-- Left: toggle + route badge (icon + title in a glass pill).
 	     Matches the Liquid-Glass language of the surface and gives
 	     the current location a visual anchor (Apple Music / Notion

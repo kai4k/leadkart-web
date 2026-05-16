@@ -37,7 +37,7 @@
 	});
 </script>
 
-<nav class="lk-sidebar glass-card" aria-label="Main navigation">
+<nav class="lk-sidebar glass-card glass-border-glow" aria-label="Main navigation">
 	<!-- Brand block — wordmark when expanded, icon mark when collapsed.
 	     The wordmark image scales to fill the inner container via
 	     object-fit: contain, so the visible artwork stays centred

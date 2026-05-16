@@ -19,7 +19,7 @@
   Glass material composes from .glass-statusbar (utilities.css) — one
   recipe shared with topbar/popover/dialog. No per-component duplication.
 -->
-<footer class="lk-footer glass-card label-small" aria-label="Application footer">
+<footer class="lk-footer glass-card glass-border-glow label-small" aria-label="Application footer">
 	© {year} LeadKart · Pharma SaaS
 </footer>
 
