@@ -164,39 +164,34 @@
 	}
 
 	/* ─── Brand block ──────────────────────────────────────────
-	   Tall enough to give the logo prominent vertical room while
-	   pushing the splitter line further down (6.5rem block vs the
-	   topbar's 3.75rem). Padding-block grows along with block-size
-	   so the logo stays the same size — just shifted down within
-	   the taller surround. */
+	   Logo stretches to the FULL sidebar width — no inline padding
+	   to constrain it. Block-size is auto: the brand block grows
+	   vertically to fit the logo's natural aspect ratio at full
+	   sidebar width. Padding-block keeps the logo clear of the
+	   splitter line below. */
 	.lk-sidebar-brand {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		block-size: 6.5rem;
 		padding-block: 1rem;
-		padding-inline: 0.5rem;
+		padding-inline: 0;
 		flex-shrink: 0;
 		border-block-end: var(--glass-border-subtle);
 	}
-	/* Wordmark — fills the full brand-block width AND height. The
-	   image scales proportionally (object-fit: contain) and centers
-	   in the available space (object-position: center). The container
-	   is now full-width so the logo gets the full sidebar inline-size
-	   to scale into. */
+	/* Wordmark — img has width 100% + height auto so it stretches
+	   to the full sidebar inline-size, scaling its height
+	   proportionally from the natural aspect ratio. */
 	.lk-sidebar-brand-full {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		block-size: 100%;
 		inline-size: 100%;
 		min-inline-size: 0;
 	}
 	.lk-sidebar-brand-img {
-		block-size: 100%;
 		inline-size: 100%;
-		object-fit: contain;
-		object-position: center center;
+		block-size: auto;
+		display: block;
 	}
 	.lk-sidebar-brand-mark {
 		display: none;
