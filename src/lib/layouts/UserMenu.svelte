@@ -86,7 +86,7 @@
 		>
 			<div class="lk-user-popover-header">
 				<p class="caption">Signed in as</p>
-				<p class="body-sm truncate-1 font-medium">{session.principal?.email ?? '—'}</p>
+				<p class="label truncate-1">{session.principal?.email ?? '—'}</p>
 			</div>
 			<button
 				role="menuitem"

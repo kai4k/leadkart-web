@@ -87,7 +87,7 @@
 		<div class="cluster">
 			<h1 class="h1">Tenant Dashboard</h1>
 			<span
-				class="caption inline-flex items-center rounded-full bg-[var(--color-primary-soft)] px-2 py-0.5 font-medium text-[var(--color-primary)]"
+				class="label-small inline-flex items-center rounded-full bg-[var(--color-primary-soft)] px-2 py-0.5 text-[var(--color-primary)]"
 			>
 				Admin
 			</span>

@@ -176,7 +176,7 @@
 				<button
 					type="button"
 					onclick={() => theme.setPrimary(id)}
-					class="interactive body-sm flex items-center gap-2 rounded-md border border-[var(--color-border)] px-3 py-2 font-medium"
+					class="interactive label flex items-center gap-2 rounded-md border border-[var(--color-border)] px-3 py-2"
 					class:ring-2={theme.primary === id}
 					aria-pressed={theme.primary === id}
 				>

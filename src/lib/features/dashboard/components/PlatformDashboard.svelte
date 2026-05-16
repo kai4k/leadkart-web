@@ -73,13 +73,13 @@
 			<h1 class="h1">Operator Dashboard</h1>
 			{#if isSuper}
 				<span
-					class="caption inline-flex items-center rounded-full bg-[var(--color-danger-50)] px-2 py-0.5 font-medium text-[var(--color-danger-900)]"
+					class="label-small inline-flex items-center rounded-full bg-[var(--color-danger-50)] px-2 py-0.5 text-[var(--color-danger-900)]"
 				>
 					SuperAdmin
 				</span>
 			{:else}
 				<span
-					class="caption inline-flex items-center rounded-full bg-[var(--color-primary-soft)] px-2 py-0.5 font-medium text-[var(--color-primary)]"
+					class="label-small inline-flex items-center rounded-full bg-[var(--color-primary-soft)] px-2 py-0.5 text-[var(--color-primary)]"
 				>
 					Platform Staff
 				</span>

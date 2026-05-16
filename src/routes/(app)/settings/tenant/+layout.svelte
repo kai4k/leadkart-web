@@ -62,7 +62,7 @@
 				<h1 class="h1">{tenantDisplayName(tenant.current)}</h1>
 				<span
 					class={cn(
-						'caption inline-flex items-center rounded-full px-2 py-0.5 font-medium',
+						'label-small inline-flex items-center rounded-full px-2 py-0.5',
 						badge.variant === 'success' &&
 							'bg-[var(--color-success-50)] text-[var(--color-success-900)]',
 						badge.variant === 'warning' &&
@@ -92,7 +92,7 @@
 						href={tab.href}
 						aria-current={active ? 'page' : undefined}
 						class={cn(
-							'body-sm -mb-px inline-block border-b-2 px-4 py-2 font-medium transition-colors',
+							'label -mb-px inline-block border-b-2 px-4 py-2 transition-colors',
 							'focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
 							'focus-visible:ring-[var(--color-focus-ring)]',
 							active

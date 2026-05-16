@@ -131,7 +131,7 @@
 								<span class="lk-layout-bar lk-layout-bar--top"></span>
 								<span class="lk-layout-bar lk-layout-bar--body"></span>
 							</span>
-							<span class="caption font-medium">{opt.label}</span>
+							<span class="label-small">{opt.label}</span>
 						</button>
 					{/each}
 				</div>
@@ -173,7 +173,7 @@
 						>
 							<span class="lk-sb-preview" style="background: {opt.swatch};" aria-hidden="true"
 							></span>
-							<span class="caption font-medium">{opt.label}</span>
+							<span class="label-small">{opt.label}</span>
 						</button>
 					{/each}
 				</div>
@@ -194,7 +194,7 @@
 							<span class={`lk-cw-preview lk-cw-preview--${opt.id}`} aria-hidden="true">
 								<span class="lk-cw-preview-body"></span>
 							</span>
-							<span class="caption font-medium">{opt.label}</span>
+							<span class="label-small">{opt.label}</span>
 						</button>
 					{/each}
 				</div>
@@ -216,7 +216,7 @@
 								<span class="lk-dir-preview-aside"></span>
 								<span class="lk-dir-preview-body"></span>
 							</span>
-							<span class="caption font-medium">{opt.label}</span>
+							<span class="label-small">{opt.label}</span>
 						</button>
 					{/each}
 				</div>
@@ -229,7 +229,7 @@
 			<button
 				type="button"
 				class={[
-					'body-sm inline-flex items-center gap-2 rounded-md border border-[var(--color-border)] px-4 py-2 font-medium',
+					'label inline-flex items-center gap-2 rounded-md border border-[var(--color-border)] px-4 py-2',
 					'text-[var(--color-fg)] transition-colors hover:bg-[var(--color-bg-muted)]',
 					'focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
 					'focus-visible:ring-[var(--color-focus-ring)]'
@@ -290,7 +290,7 @@
 		background: var(--color-primary-soft);
 		color: var(--color-primary);
 	}
-	.lk-pref-card--selected .caption {
+	.lk-pref-card--selected .label-small {
 		color: var(--color-primary);
 	}
 	@media (hover: hover) and (pointer: fine) {

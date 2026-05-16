@@ -53,10 +53,7 @@
 </script>
 
 <div class={cn('stack stack-tight', className)}>
-	<label
-		for={fieldId}
-		class={cn('body-sm font-medium text-[var(--color-fg)]', srLabel && 'sr-only')}
-	>
+	<label for={fieldId} class={cn('label text-[var(--color-fg)]', srLabel && 'sr-only')}>
 		{label}
 	</label>
 

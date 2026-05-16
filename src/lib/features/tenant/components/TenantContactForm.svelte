@@ -97,7 +97,7 @@
 	/>
 
 	<fieldset class="stack stack-tight">
-		<legend class="body-sm font-medium text-[var(--color-fg)]">Postal address</legend>
+		<legend class="label text-[var(--color-fg)]">Postal address</legend>
 
 		<TextField
 			label="Street"
