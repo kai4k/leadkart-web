@@ -19,7 +19,7 @@
   Glass material composes from .glass-statusbar (utilities.css) — one
   recipe shared with topbar/popover/dialog. No per-component duplication.
 -->
-<footer class="lk-footer glass-statusbar caption" aria-label="Application footer">
+<footer class="lk-footer glass-statusbar label-small" aria-label="Application footer">
 	© {year} LeadKart · Pharma SaaS
 </footer>
 
@@ -35,7 +35,6 @@
 		block-size: var(--lk-footer-height);
 		padding-inline: clamp(0.75rem, 1.5vw, 1.25rem);
 		color: var(--color-fg-muted);
-		font-weight: 500;
 		transition:
 			inset-inline-start 0.18s ease-out,
 			inset-inline-end 0.18s ease-out,

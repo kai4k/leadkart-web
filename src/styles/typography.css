@@ -112,10 +112,41 @@
 		letter-spacing: var(--tracking-body);
 	}
 
+	/* ═══ Labels — Apple HIG "Headline" + "Subhead" canon ═══════
+	   Medium-weight UI text used by interactive surfaces (nav items,
+	   card descriptions, breadcrumbs, footer notice, form labels,
+	   chips, pills). The ROLE that was previously missing — every
+	   consumer was reconstructing it as `body-sm + font-medium +
+	   text-color`. Now ONE class.
+
+	   Color stays SEPARATE (Apple HIG splits typographic style from
+	   color hierarchy — .primaryLabel vs .secondaryLabel use the same
+	   text-style + different tokens). Compose with text-fg-muted /
+	   text-fg-subtle utilities for hierarchy.
+
+	   Two tiers:
+	     .label        text-sm  + medium 500 + body tracking
+	     .label-small  text-xs  + medium 500 + caption tracking */
+	.label {
+		font-size: var(--text-sm);
+		line-height: var(--text-sm--line-height);
+		letter-spacing: var(--tracking-body);
+		font-weight: var(--font-weight-medium);
+	}
+
+	.label-small {
+		font-size: var(--text-xs);
+		line-height: var(--text-xs--line-height);
+		letter-spacing: var(--tracking-caption);
+		font-weight: var(--font-weight-medium);
+	}
+
 	/* ═══ Supporting — Apple HIG "Footnote" + "Caption 1/2" canon ═══
 	   Footnote (13pt) uses very slight negative tracking; Caption 2
 	   (11pt) flips to positive tracking for legibility at small sizes.
-	   We use -0.006em for caption to compromise between the two. */
+	   We use -0.006em for caption to compromise between the two.
+	   REGULAR weight (400) — for actual footnotes / asides. UI text
+	   that needs to be readable as a "label" should use .label-small. */
 	.caption {
 		font-size: var(--text-xs);
 		line-height: var(--text-xs--line-height);

@@ -10,6 +10,6 @@
 	let { class: className = '', children, ...rest }: Props = $props();
 </script>
 
-<p class={cn('body-sm font-medium text-[var(--color-fg-muted)]', className)} {...rest}>
+<p class={cn('label text-[var(--color-fg-muted)]', className)} {...rest}>
 	{#if children}{@render children()}{/if}
 </p>
