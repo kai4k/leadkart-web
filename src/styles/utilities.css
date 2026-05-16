@@ -118,10 +118,39 @@
 		-webkit-backdrop-filter: blur(16px) saturate(var(--glass-saturate));
 	}
 
-	/* Tooltip — small inline hint. Just blur, inherits its own tint. */
-	.glass-tooltip {
-		backdrop-filter: blur(16px) saturate(var(--glass-saturate));
-		-webkit-backdrop-filter: blur(16px) saturate(var(--glass-saturate));
+	/* ─── Glass input — inset variant (iOS Safari address-bar pattern) ─
+	 * Form fields need their own glass treatment because:
+	 *   1. They often sit INSIDE a .glass-card parent (login form
+	 *      inside AuthCard, settings rows inside the drawer). Using
+	 *      .glass-card on inputs would stack two ~85% surfaces and
+	 *      flatten to near-white.
+	 *   2. They need to read as "content surface" — a recessed input,
+	 *      not a raised card. iOS Safari address bar, Spotlight search,
+	 *      and Settings text fields all use this inset-glass treatment.
+	 *
+	 * Recipe:
+	 *   - LIGHTER fill than .glass-card (50% vs 85%) so it contrasts
+	 *     against a glass-card parent AND still refracts canvas behind
+	 *     when used standalone.
+	 *   - INSET top-edge shadow simulating "pressed-in" depth (the
+	 *     opposite of .glass-card's top-edge specular highlight).
+	 *   - Small radius (0.5rem) matching input convention.
+	 *   - Reduced blur (12px vs 32px) — inputs are small surfaces,
+	 *     heavy blur on them looks soft / out-of-focus. */
+	.glass-input {
+		background: var(--color-bg-elevated);
+		border: 1px solid color-mix(in srgb, var(--color-fg) 10%, transparent);
+		border-radius: 0.5rem;
+		box-shadow:
+			inset 0 1px 2px color-mix(in srgb, var(--color-fg) 6%, transparent),
+			inset 0 0 0 0.5px color-mix(in srgb, var(--color-bg-elevated) 60%, transparent);
+	}
+	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+		.glass-input {
+			background: color-mix(in srgb, var(--color-bg-elevated) 50%, transparent);
+			-webkit-backdrop-filter: blur(12px) saturate(var(--glass-saturate));
+			backdrop-filter: blur(12px) saturate(var(--glass-saturate));
+		}
 	}
 
 	/* Pill — interactive state background (hover / active / selected).

@@ -74,11 +74,11 @@
 			aria-invalid={error ? 'true' : undefined}
 			aria-describedby={describedBy}
 			class={cn(
-				'body-sm block w-full appearance-none rounded-md border bg-[var(--color-bg-elevated)] px-3 py-2 pr-10 text-[var(--color-fg)]',
+				'glass-input body-sm block w-full appearance-none px-3 py-2 pr-10 text-[var(--color-fg)]',
 				'focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
 				error
 					? 'border-[var(--color-danger-500)] focus-visible:ring-[var(--color-danger-500)]'
-					: 'border-[var(--color-border)] focus-visible:ring-[var(--color-focus-ring)]',
+					: 'focus-visible:ring-[var(--color-focus-ring)]',
 				'disabled:cursor-not-allowed disabled:opacity-60'
 			)}
 			{...rest}

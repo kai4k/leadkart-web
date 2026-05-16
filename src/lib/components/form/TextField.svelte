@@ -73,12 +73,12 @@
 			aria-invalid={error ? 'true' : undefined}
 			aria-describedby={describedBy}
 			class={cn(
-				'body-sm block w-full rounded-md border bg-[var(--color-bg-elevated)] px-3 py-2 text-[var(--color-fg)]',
+				'glass-input body-sm block w-full px-3 py-2 text-[var(--color-fg)]',
 				'placeholder:text-[var(--color-fg-subtle)]',
 				'focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
 				error
 					? 'border-[var(--color-danger-500)] focus-visible:ring-[var(--color-danger-500)]'
-					: 'border-[var(--color-border)] focus-visible:ring-[var(--color-focus-ring)]',
+					: 'focus-visible:ring-[var(--color-focus-ring)]',
 				'disabled:cursor-not-allowed disabled:opacity-60',
 				leading ? 'pl-10' : '',
 				trailing ? 'pr-10' : ''
