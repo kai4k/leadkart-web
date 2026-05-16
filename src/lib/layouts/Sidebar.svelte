@@ -164,20 +164,18 @@
 	}
 
 	/* ─── Brand block ──────────────────────────────────────────
-	   Capped height (6rem) — the logo asset is icon + wordmark
-	   stacked (~1:1 aspect), so a smaller block keeps the logo
-	   visually proportionate within the sidebar. object-fit:
-	   contain centers the image and scales it as large as possible
-	   within the height cap; with the square-aspect asset this
-	   means the logo doesn't reach the full sidebar width.
-	   (For true full-width, the asset would need to be a horizontal
-	   wordmark-only PNG.) */
+	   Capped height; logo stretched to full sidebar width via
+	   `object-fit: cover` which crops the natural square-aspect
+	   asset to a horizontal strip. `object-position: center bottom`
+	   anchors the visible region to the BOTTOM of the asset (where
+	   the "LEADKART" wordmark sits) so the cropped strip shows the
+	   wordmark text rather than the icon above it. */
 	.lk-sidebar-brand {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		block-size: 6rem;
-		padding-block: 1rem;
+		block-size: 5rem;
+		padding-block: 0.75rem;
 		padding-inline: 0.5rem;
 		flex-shrink: 0;
 		border-block-end: var(--glass-border-subtle);
@@ -193,8 +191,8 @@
 	.lk-sidebar-brand-img {
 		block-size: 100%;
 		inline-size: 100%;
-		object-fit: contain;
-		object-position: center center;
+		object-fit: cover;
+		object-position: center bottom;
 		display: block;
 	}
 	.lk-sidebar-brand-mark {
