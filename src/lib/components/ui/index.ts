@@ -8,6 +8,7 @@
  */
 export { default as Alert } from './Alert.svelte';
 export { default as AuthCard } from './AuthCard.svelte';
+export { default as Avatar } from './Avatar.svelte';
 export { default as Badge } from './Badge.svelte';
 export { default as Button } from './Button.svelte';
 export * as Card from './card';
@@ -15,5 +16,7 @@ export { default as ConfirmDialog } from './ConfirmDialog.svelte';
 export * as Dialog from './dialog';
 export * as Drawer from './drawer';
 export * as Dropdown from './dropdown';
+export { default as EmptyState } from './EmptyState.svelte';
 export { default as Logo } from './Logo.svelte';
+export { default as Pagination } from './Pagination.svelte';
 export { default as Spinner } from './Spinner.svelte';
