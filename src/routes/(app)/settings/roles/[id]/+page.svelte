@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Alert, Badge, Breadcrumbs, Button, Card, Spinner } from '$ui';
+	import { Alert, Badge, Breadcrumbs, Button, Card, CopyButton, Spinner } from '$ui';
 	import type { BreadcrumbItem } from '$ui';
 	import { TextField } from '$lib/components/form';
 	import PermissionTree from '$features/roles/components/PermissionTree.svelte';
@@ -112,6 +112,10 @@
 					<Badge variant={badge.variant} style="soft" size="sm">{badge.label}</Badge>
 				</div>
 				<p class="caption text-fg-muted">Hierarchy level {role.hierarchy_level}</p>
+				<div class="cluster cluster-tight">
+					<code class="caption text-fg-subtle">{role.id}</code>
+					<CopyButton value={role.id} label="Copy role ID" />
+				</div>
 			</div>
 		</header>
 

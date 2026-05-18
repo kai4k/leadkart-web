@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Alert, Badge, Button, Card, Spinner } from '$ui';
+	import { Alert, Badge, Button, Card, CopyButton, Spinner } from '$ui';
 	import { Eye, Icon } from '$icons';
 	import ImpersonateModal from '$features/operator/impersonation/components/ImpersonateModal.svelte';
 	import { tenantBySlugQuery } from '$features/operator/tenants/queries';
@@ -68,8 +68,18 @@
 						<dd class="body-base text-fg">{tenant.admin_email || '—'}</dd>
 					</div>
 					<div>
-						<dt class="caption text-fg-muted">ID</dt>
-						<dd class="body-base text-fg"><code>{tenant.id}</code></dd>
+						<dt class="caption text-fg-muted">Slug</dt>
+						<dd class="cluster cluster-tight">
+							<code class="caption text-fg-subtle">{tenant.slug}</code>
+							<CopyButton value={tenant.slug} label="Copy slug" />
+						</dd>
+					</div>
+					<div>
+						<dt class="caption text-fg-muted">Tenant ID</dt>
+						<dd class="cluster cluster-tight">
+							<code class="caption text-fg-subtle">{tenant.id}</code>
+							<CopyButton value={tenant.id} label="Copy tenant ID" />
+						</dd>
 					</div>
 				</dl>
 			</Card.Content>

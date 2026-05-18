@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Alert, Avatar, Badge, Button, Card, Spinner } from '$ui';
+	import { Alert, Avatar, Badge, Button, Card, CopyButton, Spinner } from '$ui';
 	import { Pause, Play, UserMinus, Icon } from '$icons';
 	import {
 		personDetailQuery,
@@ -83,8 +83,16 @@
 							<span class="h2">{displayName}</span>
 							<Badge variant={badge.variant} style="soft" size="sm">{badge.label}</Badge>
 						</div>
-						<p class="body-base text-fg-muted break-all">{p.email}</p>
-						<p class="caption text-fg-subtle">ID <code class="break-all">{p.id}</code></p>
+						<div class="cluster cluster-tight flex-wrap">
+							<p class="body-base text-fg-muted break-all">{p.email}</p>
+							<CopyButton value={p.email} label="Copy email" />
+						</div>
+						<div class="cluster cluster-tight flex-wrap">
+							<p class="caption text-fg-subtle">
+								ID <code class="break-all">{p.id}</code>
+							</p>
+							<CopyButton value={p.id} label="Copy person ID" />
+						</div>
 					</div>
 				</div>
 

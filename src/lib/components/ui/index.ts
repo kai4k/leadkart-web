@@ -9,6 +9,7 @@
 export { default as Alert } from './Alert.svelte';
 export { default as Breadcrumbs } from './Breadcrumbs.svelte';
 export type { BreadcrumbItem } from './Breadcrumbs.svelte';
+export { default as CopyButton } from './CopyButton.svelte';
 export { default as AuthCard } from './AuthCard.svelte';
 export { default as Avatar } from './Avatar.svelte';
 export { default as Badge } from './Badge.svelte';
