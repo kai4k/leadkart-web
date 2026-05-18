@@ -1,3 +1,39 @@
+<script lang="ts" module>
+	import { cva, type VariantProps } from 'class-variance-authority';
+
+	export const textFieldInputVariants = cva(
+		[
+			'glass-input body-sm block w-full px-3 py-2 text-[var(--color-fg)]',
+			'placeholder:text-[var(--color-fg-subtle)]',
+			'focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
+			'disabled:cursor-not-allowed disabled:opacity-60'
+		],
+		{
+			variants: {
+				error: {
+					true: 'border-[var(--color-danger-500)] focus-visible:ring-[var(--color-danger-500)]',
+					false: 'focus-visible:ring-[var(--color-focus-ring)]'
+				},
+				hasLeading: {
+					true: 'pl-10',
+					false: ''
+				},
+				hasTrailing: {
+					true: 'pr-10',
+					false: ''
+				}
+			},
+			defaultVariants: {
+				error: false,
+				hasLeading: false,
+				hasTrailing: false
+			}
+		}
+	);
+
+	export type TextFieldInputVariants = VariantProps<typeof textFieldInputVariants>;
+</script>
+
 <script lang="ts">
 	import type { HTMLInputAttributes } from 'svelte/elements';
 	import type { Snippet } from 'svelte';
@@ -73,15 +109,11 @@
 			aria-invalid={error ? 'true' : undefined}
 			aria-describedby={describedBy}
 			class={cn(
-				'glass-input body-sm block w-full px-3 py-2 text-[var(--color-fg)]',
-				'placeholder:text-[var(--color-fg-subtle)]',
-				'focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
-				error
-					? 'border-[var(--color-danger-500)] focus-visible:ring-[var(--color-danger-500)]'
-					: 'focus-visible:ring-[var(--color-focus-ring)]',
-				'disabled:cursor-not-allowed disabled:opacity-60',
-				leading ? 'pl-10' : '',
-				trailing ? 'pr-10' : ''
+				textFieldInputVariants({
+					error: !!error,
+					hasLeading: !!leading,
+					hasTrailing: !!trailing
+				})
 			)}
 			{...rest}
 		/>

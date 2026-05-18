@@ -1,3 +1,26 @@
+<script lang="ts" module>
+	import { cva, type VariantProps } from 'class-variance-authority';
+
+	export const selectVariants = cva(
+		[
+			'glass-input body-sm block w-full appearance-none px-3 py-2 pr-10 text-[var(--color-fg)]',
+			'focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
+			'disabled:cursor-not-allowed disabled:opacity-60'
+		],
+		{
+			variants: {
+				error: {
+					true: 'border-[var(--color-danger-500)] focus-visible:ring-[var(--color-danger-500)]',
+					false: 'focus-visible:ring-[var(--color-focus-ring)]'
+				}
+			},
+			defaultVariants: { error: false }
+		}
+	);
+
+	export type SelectVariants = VariantProps<typeof selectVariants>;
+</script>
+
 <script lang="ts">
 	import type { HTMLSelectAttributes } from 'svelte/elements';
 	import { ChevronDown } from 'lucide-svelte';
@@ -73,14 +96,7 @@
 			bind:value
 			aria-invalid={error ? 'true' : undefined}
 			aria-describedby={describedBy}
-			class={cn(
-				'glass-input body-sm block w-full appearance-none px-3 py-2 pr-10 text-[var(--color-fg)]',
-				'focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
-				error
-					? 'border-[var(--color-danger-500)] focus-visible:ring-[var(--color-danger-500)]'
-					: 'focus-visible:ring-[var(--color-focus-ring)]',
-				'disabled:cursor-not-allowed disabled:opacity-60'
-			)}
+			class={cn(selectVariants({ error: !!error }))}
 			{...rest}
 		>
 			{#if placeholder}

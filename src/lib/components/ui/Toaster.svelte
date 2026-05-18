@@ -15,9 +15,24 @@
 	 * canonical exception pattern (used by shadcn-svelte, Melt UI, etc).
 	 */
 	import { browser } from '$app/environment';
+	import { cva, type VariantProps } from 'class-variance-authority';
 
-	type ToastVariant = 'success' | 'danger' | 'warning' | 'info';
+	export type ToastVariant = 'success' | 'danger' | 'warning' | 'info';
 	type Toast = { id: string; variant: ToastVariant; message: string };
+
+	export const toastVariants = cva('border-l-4', {
+		variants: {
+			variant: {
+				success: 'border-[var(--color-success-500)]',
+				danger: 'border-[var(--color-danger-500)]',
+				warning: 'border-[var(--color-warning-500)]',
+				info: 'border-[var(--color-info-500)]'
+			}
+		},
+		defaultVariants: { variant: 'info' }
+	});
+
+	export type ToastVariants = VariantProps<typeof toastVariants>;
 
 	const toasts = $state<Toast[]>([]);
 
@@ -41,22 +56,21 @@
 	}
 </script>
 
+<script lang="ts">
+	import { cn } from '$lib/utils/cn';
+</script>
+
 <div
 	class="pointer-events-none fixed right-4 bottom-4 z-[var(--z-toast)] flex flex-col gap-2"
 	aria-live="polite"
 	aria-atomic="false"
 >
 	{#each toasts as t (t.id)}
-		{@const borderColour =
-			t.variant === 'success'
-				? 'border-l-4 border-[var(--color-success-500)]'
-				: t.variant === 'danger'
-					? 'border-l-4 border-[var(--color-danger-500)]'
-					: t.variant === 'warning'
-						? 'border-l-4 border-[var(--color-warning-500)]'
-						: 'border-l-4 border-[var(--color-info-500)]'}
 		<div
-			class="glass-card animate-slide-in-right pointer-events-auto max-w-sm px-4 py-3 {borderColour}"
+			class={cn(
+				'glass-card animate-slide-in-right pointer-events-auto max-w-sm px-4 py-3',
+				toastVariants({ variant: t.variant })
+			)}
 			role="status"
 		>
 			<p class="label text-[var(--color-fg)]">{t.message}</p>

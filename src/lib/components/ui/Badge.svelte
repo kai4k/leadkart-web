@@ -1,7 +1,132 @@
 <script lang="ts" module>
-	export type BadgeVariant = 'neutral' | 'success' | 'warning' | 'danger' | 'info' | 'brand';
-	export type BadgeStyle = 'solid' | 'soft' | 'outline';
-	export type BadgeSize = 'sm' | 'md';
+	import { cva, type VariantProps } from 'class-variance-authority';
+
+	export const badgeVariants = cva(
+		'label-small inline-flex items-center rounded-full leading-tight',
+		{
+			variants: {
+				variant: {
+					neutral: '',
+					success: '',
+					warning: '',
+					danger: '',
+					info: '',
+					brand: ''
+				},
+				style: {
+					solid: '',
+					soft: '',
+					outline: 'border'
+				},
+				size: {
+					sm: 'px-1.5 py-0.5 text-[var(--text-2xs)]',
+					md: 'px-2 py-0.5 text-xs'
+				}
+			},
+			compoundVariants: [
+				{
+					variant: 'neutral',
+					style: 'solid',
+					class: 'bg-[var(--color-fg)] text-[var(--color-bg-elevated)]'
+				},
+				{
+					variant: 'neutral',
+					style: 'soft',
+					class: 'bg-[var(--color-bg-muted)] text-[var(--color-fg)]'
+				},
+				{
+					variant: 'neutral',
+					style: 'outline',
+					class: 'border-[var(--color-border)] text-[var(--color-fg)]'
+				},
+				{
+					variant: 'success',
+					style: 'solid',
+					class: 'bg-[var(--color-success-500)] text-white'
+				},
+				{
+					variant: 'success',
+					style: 'soft',
+					class: 'bg-[var(--color-success-50)] text-[var(--color-success-900)]'
+				},
+				{
+					variant: 'success',
+					style: 'outline',
+					class: 'border-[var(--color-success-500)] text-[var(--color-success-900)]'
+				},
+				{
+					variant: 'warning',
+					style: 'solid',
+					class: 'bg-[var(--color-warning-500)] text-white'
+				},
+				{
+					variant: 'warning',
+					style: 'soft',
+					class: 'bg-[var(--color-warning-50)] text-[var(--color-warning-900)]'
+				},
+				{
+					variant: 'warning',
+					style: 'outline',
+					class: 'border-[var(--color-warning-500)] text-[var(--color-warning-900)]'
+				},
+				{
+					variant: 'danger',
+					style: 'solid',
+					class: 'bg-[var(--color-danger-500)] text-white'
+				},
+				{
+					variant: 'danger',
+					style: 'soft',
+					class: 'bg-[var(--color-danger-50)] text-[var(--color-danger-900)]'
+				},
+				{
+					variant: 'danger',
+					style: 'outline',
+					class: 'border-[var(--color-danger-500)] text-[var(--color-danger-900)]'
+				},
+				{
+					variant: 'info',
+					style: 'solid',
+					class: 'bg-[var(--color-info-500)] text-white'
+				},
+				{
+					variant: 'info',
+					style: 'soft',
+					class: 'bg-[var(--color-info-50)] text-[var(--color-info-900)]'
+				},
+				{
+					variant: 'info',
+					style: 'outline',
+					class: 'border-[var(--color-info-500)] text-[var(--color-info-900)]'
+				},
+				{
+					variant: 'brand',
+					style: 'solid',
+					class: 'bg-[var(--color-primary)] text-white'
+				},
+				{
+					variant: 'brand',
+					style: 'soft',
+					class: 'bg-[var(--color-primary-soft)] text-[var(--color-primary)]'
+				},
+				{
+					variant: 'brand',
+					style: 'outline',
+					class: 'border-[var(--color-primary)] text-[var(--color-primary)]'
+				}
+			],
+			defaultVariants: {
+				variant: 'neutral',
+				style: 'soft',
+				size: 'md'
+			}
+		}
+	);
+
+	export type BadgeVariant = NonNullable<VariantProps<typeof badgeVariants>['variant']>;
+	export type BadgeStyle = NonNullable<VariantProps<typeof badgeVariants>['style']>;
+	export type BadgeSize = NonNullable<VariantProps<typeof badgeVariants>['size']>;
+	export type BadgeVariants = VariantProps<typeof badgeVariants>;
 </script>
 
 <script lang="ts">
@@ -23,59 +148,8 @@
 		class: className = '',
 		children
 	}: Props = $props();
-
-	/**
-	 * Token map — every visual decision routes through a CSS variable
-	 * pair (`--color-{role}-{50,900}`) defined in tokens.css. NEVER
-	 * inline hex / RGB / oklch literals here; if a new role needs a
-	 * pair, add it in tokens.css first.
-	 */
-	const stylesByVariant: Record<BadgeVariant, Record<BadgeStyle, string>> = {
-		neutral: {
-			solid: 'bg-[var(--color-fg)] text-[var(--color-bg-elevated)]',
-			soft: 'bg-[var(--color-bg-muted)] text-[var(--color-fg)]',
-			outline: 'border border-[var(--color-border)] text-[var(--color-fg)]'
-		},
-		success: {
-			solid: 'bg-[var(--color-success-500)] text-white',
-			soft: 'bg-[var(--color-success-50)] text-[var(--color-success-900)]',
-			outline: 'border border-[var(--color-success-500)] text-[var(--color-success-900)]'
-		},
-		warning: {
-			solid: 'bg-[var(--color-warning-500)] text-white',
-			soft: 'bg-[var(--color-warning-50)] text-[var(--color-warning-900)]',
-			outline: 'border border-[var(--color-warning-500)] text-[var(--color-warning-900)]'
-		},
-		danger: {
-			solid: 'bg-[var(--color-danger-500)] text-white',
-			soft: 'bg-[var(--color-danger-50)] text-[var(--color-danger-900)]',
-			outline: 'border border-[var(--color-danger-500)] text-[var(--color-danger-900)]'
-		},
-		info: {
-			solid: 'bg-[var(--color-info-500)] text-white',
-			soft: 'bg-[var(--color-info-50)] text-[var(--color-info-900)]',
-			outline: 'border border-[var(--color-info-500)] text-[var(--color-info-900)]'
-		},
-		brand: {
-			solid: 'bg-[var(--color-primary)] text-white',
-			soft: 'bg-[var(--color-primary-soft)] text-[var(--color-primary)]',
-			outline: 'border border-[var(--color-primary)] text-[var(--color-primary)]'
-		}
-	};
-
-	const sizes: Record<BadgeSize, string> = {
-		sm: 'px-1.5 py-0.5 text-[var(--text-2xs)]',
-		md: 'px-2 py-0.5 text-xs'
-	};
 </script>
 
-<span
-	class={cn(
-		'label-small inline-flex items-center rounded-full leading-tight',
-		stylesByVariant[variant][badgeStyle],
-		sizes[size],
-		className
-	)}
->
+<span class={cn(badgeVariants({ variant, style: badgeStyle, size }), className)}>
 	{@render children()}
 </span>
