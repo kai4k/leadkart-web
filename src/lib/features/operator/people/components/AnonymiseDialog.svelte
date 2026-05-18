@@ -47,14 +47,14 @@
 		<Alert variant="danger">
 			<strong>This cannot be undone.</strong> Type the email below to confirm.
 		</Alert>
-		<label class="stack stack-tight mt-4">
-			<span class="label"
+		<label class="stack stack-tight mt-4 w-full">
+			<span class="label text-sm md:text-base"
 				>Type <code class="bg-bg-muted rounded px-1">{person?.email ?? ''}</code> to confirm</span
 			>
-			<input bind:value={typedEmail} class="glass-input rounded-md px-3 py-2 text-sm" />
+			<input bind:value={typedEmail} class="glass-input w-full rounded-md px-3 py-2 text-sm" />
 		</label>
-		<label class="stack stack-tight mt-4">
-			<span class="label">Reason (required, audited)</span>
+		<label class="stack stack-tight mt-4 w-full">
+			<span class="label text-sm md:text-base">Reason (required, audited)</span>
 			<textarea
 				bind:value={reason}
 				required

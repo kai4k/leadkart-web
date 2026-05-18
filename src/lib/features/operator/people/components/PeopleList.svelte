@@ -97,7 +97,7 @@
 		<p class="caption text-fg-muted">Cross-tenant person identity management.</p>
 	</header>
 
-	<div class="cluster">
+	<div class="flex flex-col gap-3 md:flex-row md:items-center">
 		<div class="relative flex-1">
 			<span class="pointer-events-none absolute inset-y-0 left-3 flex items-center">
 				<Icon icon={Search} size="sm" class="text-fg-subtle" />

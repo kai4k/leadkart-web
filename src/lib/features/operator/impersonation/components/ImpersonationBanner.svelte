@@ -51,12 +51,21 @@
 		top: 0;
 		z-index: var(--z-banner);
 		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: var(--spacing-3);
+		flex-direction: column;
+		align-items: flex-start;
+		gap: var(--spacing-2);
 		padding-inline: var(--spacing-4);
 		padding-block: var(--spacing-2);
 		background: var(--color-warning-500);
 		color: white;
+	}
+
+	@media (min-width: 768px) {
+		.lk-impersonation-banner {
+			flex-direction: row;
+			align-items: center;
+			justify-content: space-between;
+			gap: var(--spacing-3);
+		}
 	}
 </style>

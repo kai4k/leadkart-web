@@ -87,7 +87,7 @@
 				{/if}
 			</form>
 		</Dialog.Body>
-		<Dialog.Footer>
+		<Dialog.Footer class="flex flex-col gap-2 sm:flex-row sm:justify-end">
 			<Dialog.Close>
 				<Button variant="ghost" disabled={isPending}>Cancel</Button>
 			</Dialog.Close>

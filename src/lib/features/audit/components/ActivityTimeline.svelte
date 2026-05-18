@@ -115,8 +115,10 @@
 						</span>
 
 						<div class="stack stack-tight min-w-0">
-							<!-- Summary row -->
-							<div class="cluster cluster-spread">
+							<!-- Summary row: stacked on mobile, spread on md+ -->
+							<div
+								class="flex flex-col gap-1 md:flex-row md:items-center md:justify-between md:gap-2"
+							>
 								<p class="body-sm text-fg truncate font-medium">
 									{summarise(ev)}
 								</p>

@@ -78,15 +78,15 @@
 				<Card.Title>Identity</Card.Title>
 			</Card.Header>
 			<Card.Content>
-				<div class="cluster items-start gap-4">
+				<div class="flex flex-col gap-4 sm:flex-row sm:items-start">
 					<Avatar initials={initials(displayName)} size="lg" />
-					<div class="stack stack-tight">
-						<div class="cluster cluster-tight">
+					<div class="stack stack-tight min-w-0">
+						<div class="flex flex-wrap items-center gap-2">
 							<span class="h2">{displayName}</span>
 							<Badge variant={badge.variant} style="soft" size="sm">{badge.label}</Badge>
 						</div>
-						<p class="body-base text-fg-muted">{p.email}</p>
-						<p class="caption text-fg-subtle">ID <code>{p.id}</code></p>
+						<p class="body-base text-fg-muted break-all">{p.email}</p>
+						<p class="caption text-fg-subtle">ID <code class="break-all">{p.id}</code></p>
 					</div>
 				</div>
 

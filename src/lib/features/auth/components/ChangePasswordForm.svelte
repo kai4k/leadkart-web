@@ -105,8 +105,8 @@
 		<Alert variant="success">{$_('account.security.changePassword.success')}</Alert>
 	{/if}
 
-	<div class="cluster justify-end">
-		<Button type="submit" loading={form.isSubmitting}>
+	<div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+		<Button type="submit" loading={form.isSubmitting} fullWidth class="sm:w-auto">
 			{$_('account.security.changePassword.submit')}
 		</Button>
 	</div>

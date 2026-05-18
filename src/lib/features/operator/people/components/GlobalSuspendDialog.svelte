@@ -39,8 +39,8 @@
 	{onConfirm}
 >
 	{#snippet body()}
-		<label class="stack stack-tight">
-			<span class="label">Reason (required, audited)</span>
+		<label class="stack stack-tight w-full">
+			<span class="label text-sm md:text-base">Reason (required, audited)</span>
 			<textarea
 				bind:value={reason}
 				required

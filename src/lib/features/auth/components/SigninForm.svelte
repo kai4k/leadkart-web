@@ -103,7 +103,9 @@
 	</form>
 
 	<!-- Security trust badge — "256-bit SSL encrypted" microcopy with shield -->
-	<div class="border-border text-fg-subtle flex items-center justify-center gap-2 border-t pt-4">
+	<div
+		class="border-border text-fg-subtle flex flex-col items-center gap-2 border-t pt-4 sm:flex-row sm:justify-center"
+	>
 		<Lock size={14} aria-hidden="true" />
 		<span class="caption">256-bit SSL encrypted</span>
 	</div>

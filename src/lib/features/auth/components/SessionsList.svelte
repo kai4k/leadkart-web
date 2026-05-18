@@ -39,7 +39,7 @@
 </script>
 
 <div class="stack stack-relaxed">
-	<header class="cluster cluster-spread">
+	<header class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
 		<div class="stack stack-tight">
 			<h2 class="h5">Active sessions</h2>
 			<p class="caption text-fg-muted">
@@ -76,9 +76,11 @@
 				{@const current = isCurrentSession(sess, currentFamilyId)}
 				<li>
 					<Card.Root>
-						<Card.Content class="flex items-center justify-between gap-4">
+						<Card.Content
+							class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4"
+						>
 							<div class="stack stack-tight min-w-0">
-								<div class="cluster">
+								<div class="cluster flex-wrap">
 									<p class="body-base text-fg truncate font-medium">
 										{sess.device_label || 'Unknown device'}
 									</p>
