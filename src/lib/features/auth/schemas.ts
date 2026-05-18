@@ -105,8 +105,3 @@ export const updateProfileRequestSchema = z
 		status_message: z.string().max(280)
 	})
 	.strict();
-
-export type UserDto = z.output<typeof userDtoSchema>;
-export type SessionDto = z.output<typeof sessionDtoSchema>;
-export type ListSessionsResponse = z.output<typeof listSessionsResponseSchema>;
-export type UpdateProfileRequest = z.output<typeof updateProfileRequestSchema>;
