@@ -74,22 +74,18 @@
 						if (v && valid.indexOf(v) >= 0) root.setAttribute(attr, v);
 					}
 
-					applyIfValid(
-						'leadkart-primary',
-						'data-primary',
-						[
-							'blue',
-							'green',
-							'indigo',
-							'orange',
-							'teal',
-							'purple',
-							'pink',
-							'red',
-							'mint',
-							'cyan'
-						]
-					);
+					applyIfValid('leadkart-primary', 'data-primary', [
+						'blue',
+						'green',
+						'indigo',
+						'orange',
+						'teal',
+						'purple',
+						'pink',
+						'red',
+						'mint',
+						'cyan'
+					]);
 					applyIfValid('leadkart-content-width', 'data-content-width', ['fluid']);
 
 					if (localStorage.getItem('leadkart-sidebar-collapsed') === '1') {
