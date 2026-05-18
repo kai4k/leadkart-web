@@ -1,0 +1,166 @@
+<script lang="ts">
+	import { Alert, Badge, Button, Card, Spinner } from '$ui';
+	import { TextField } from '$lib/components/form';
+	import PermissionTree from '$features/roles/components/PermissionTree.svelte';
+	import { roles } from '$features/roles/stores/roles.svelte';
+	import { roleBadgeVariant, isProtectedRole } from '$features/roles/view-models';
+	import { hasPermission } from '$features/auth/tier';
+	import { session } from '$features/auth/stores/session.svelte';
+
+	let { data } = $props();
+
+	let name = $state('');
+	let hierarchyLevel = $state(0);
+	let selectedPerms = $state<string[]>([]);
+	let error = $state<string | null>(null);
+	let saved = $state(false);
+
+	const role = $derived(roles.list.find((r) => r.id === data.roleId) ?? null);
+	const protectedRole = $derived(role ? isProtectedRole(role) : false);
+	const canUpdate = $derived(
+		!protectedRole && hasPermission(session.principal, 'identity.roles.update')
+	);
+
+	$effect(() => {
+		if (role) {
+			name = role.name;
+			hierarchyLevel = role.hierarchy_level;
+			selectedPerms = [...role.permissions];
+		}
+	});
+
+	$effect(() => {
+		if (roles.status === 'idle') {
+			roles.load().catch(() => {});
+		}
+	});
+
+	const isMutating = $derived(roles.status === 'mutating');
+	const metaDirty = $derived(
+		role !== null && (name !== role.name || hierarchyLevel !== role.hierarchy_level)
+	);
+	const permsDirty = $derived(
+		role !== null &&
+			(selectedPerms.length !== role.permissions.length ||
+				selectedPerms.some((p) => !role.permissions.includes(p)))
+	);
+
+	async function saveMeta() {
+		if (!role || !canUpdate) return;
+		error = null;
+		saved = false;
+		try {
+			await roles.update(role.id, { name: name.trim(), hierarchy_level: hierarchyLevel });
+			saved = true;
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to save';
+		}
+	}
+
+	async function savePerms() {
+		if (!role || !canUpdate) return;
+		error = null;
+		saved = false;
+		try {
+			await roles.setPermissions(role.id, selectedPerms);
+			saved = true;
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to save permissions';
+		}
+	}
+</script>
+
+<svelte:head>
+	<title>{role?.name ?? 'Role'} · LeadKart</title>
+</svelte:head>
+
+<div class="stack stack-relaxed">
+	<a
+		href="/settings/roles"
+		class="caption text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]">← All roles</a
+	>
+
+	{#if roles.status === 'loading'}
+		<div class="flex justify-center py-16"><Spinner size={32} /></div>
+	{:else if !role}
+		<Alert variant="warning" title="Role not found"
+			>This role doesn't exist or you don't have access.</Alert
+		>
+	{:else}
+		{@const badge = roleBadgeVariant(role)}
+		<header class="cluster cluster-spread">
+			<div class="stack stack-tight">
+				<div class="cluster cluster-tight">
+					<h1 class="h1">{role.name}</h1>
+					<Badge variant={badge.variant} style="soft" size="sm">{badge.label}</Badge>
+				</div>
+				<p class="caption text-[var(--color-fg-muted)]">Hierarchy level {role.hierarchy_level}</p>
+			</div>
+		</header>
+
+		{#if protectedRole}
+			<Alert variant="info"
+				>This role is protected by the system. Properties and permissions can't be edited.</Alert
+			>
+		{/if}
+		{#if error}<Alert variant="danger">{error}</Alert>{/if}
+		{#if saved}<Alert variant="success">Saved.</Alert>{/if}
+
+		<Card.Root>
+			<Card.Header>
+				<Card.Title>Properties</Card.Title>
+			</Card.Header>
+			<Card.Content class="stack stack-relaxed">
+				<TextField
+					label="Name"
+					name="name"
+					bind:value={name}
+					minlength={3}
+					maxlength={100}
+					disabled={!canUpdate}
+				/>
+				<label class="stack stack-tight">
+					<span class="label">Hierarchy level</span>
+					<input
+						type="number"
+						bind:value={hierarchyLevel}
+						min={0}
+						max={100}
+						disabled={!canUpdate}
+						class="glass-input rounded-md px-3 py-2 text-sm"
+					/>
+				</label>
+			</Card.Content>
+			<Card.Footer>
+				<Button
+					disabled={!canUpdate || !metaDirty || isMutating}
+					loading={isMutating}
+					onclick={saveMeta}>Save properties</Button
+				>
+			</Card.Footer>
+		</Card.Root>
+
+		<Card.Root>
+			<Card.Header>
+				<Card.Title>Permissions</Card.Title>
+				<Card.Description>
+					{selectedPerms.length} selected · changes apply atomically on save (PUT replaces the whole set).
+				</Card.Description>
+			</Card.Header>
+			<Card.Content>
+				<PermissionTree
+					selected={selectedPerms}
+					disabled={!canUpdate}
+					onChange={(next) => (selectedPerms = next)}
+				/>
+			</Card.Content>
+			<Card.Footer>
+				<Button
+					disabled={!canUpdate || !permsDirty || isMutating}
+					loading={isMutating}
+					onclick={savePerms}>Save permissions</Button
+				>
+			</Card.Footer>
+		</Card.Root>
+	{/if}
+</div>
