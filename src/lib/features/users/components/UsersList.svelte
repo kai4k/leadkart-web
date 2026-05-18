@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { page as pageStore } from '$app/stores';
+	import { goto } from '$app/navigation';
+	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { Alert, Button, EmptyState, Pagination, Spinner } from '$ui';
 	import { Plus, UserPlus, Users as UsersIcon, Icon } from '$icons';
 	import {
@@ -30,9 +33,31 @@
 	let permsOpen = $state(false);
 	let targetUser = $state<UserDto | null>(null);
 
-	let search = $state('');
-	let page = $state(1);
+	// URL-driven filter state.
+	const search = $derived($pageStore.url.searchParams.get('q') ?? '');
+	const page = $derived(Number($pageStore.url.searchParams.get('page') ?? '1') || 1);
 	const pageSize = 10;
+
+	function setSearch(value: string) {
+		const params = new SvelteURLSearchParams($pageStore.url.searchParams.toString());
+		if (value) {
+			params.set('q', value);
+		} else {
+			params.delete('q');
+		}
+		params.delete('page');
+		goto(`?${params}`, { replaceState: true, keepFocus: true });
+	}
+
+	function setPage(p: number) {
+		const params = new SvelteURLSearchParams($pageStore.url.searchParams.toString());
+		if (p > 1) {
+			params.set('page', String(p));
+		} else {
+			params.delete('page');
+		}
+		goto(`?${params}`, { replaceState: true });
+	}
 
 	const listQuery = $derived(usersListQuery(tenantId));
 	const rolesQuery = $derived(rolesCatalogQuery(tenantId));
@@ -98,7 +123,8 @@
 			<input
 				type="search"
 				placeholder="Search by name, email, role…"
-				bind:value={search}
+				value={search}
+				oninput={(e) => setSearch((e.currentTarget as HTMLInputElement).value)}
 				class="glass-input w-64 rounded-md px-3 py-2 text-sm"
 			/>
 			<Button onclick={() => (createOpen = true)}>
@@ -133,7 +159,7 @@
 				<UserListRow {user} roles={roleList} allUsers={userList} {onAction} />
 			{/each}
 		</ul>
-		<Pagination {page} {pageCount} onChange={(p) => (page = p)} />
+		<Pagination {page} {pageCount} onChange={setPage} />
 	{/if}
 </div>
 

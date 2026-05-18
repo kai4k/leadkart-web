@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { page as pageStore } from '$app/stores';
+	import { goto } from '$app/navigation';
+	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { Alert, Badge, Button, Card, EmptyState, Pagination, Spinner, Dropdown } from '$ui';
 	import { Plus, Shield, MoreVertical, Trash2, Edit, Icon } from '$icons';
 	import { rolesListQuery } from '$features/roles/queries';
@@ -12,8 +15,19 @@
 	let deleteOpen = $state(false);
 	let targetRole = $state<RoleDto | null>(null);
 
-	let page = $state(1);
+	// URL-driven pagination.
+	const page = $derived(Number($pageStore.url.searchParams.get('page') ?? '1') || 1);
 	const pageSize = 10;
+
+	function setPage(p: number) {
+		const params = new SvelteURLSearchParams($pageStore.url.searchParams.toString());
+		if (p > 1) {
+			params.set('page', String(p));
+		} else {
+			params.delete('page');
+		}
+		goto(`?${params}`, { replaceState: true });
+	}
 
 	const rolesQuery = rolesListQuery();
 	const usersQuery = usersListQuery();
@@ -106,7 +120,7 @@
 				</li>
 			{/each}
 		</ul>
-		<Pagination {page} {pageCount} onChange={(p) => (page = p)} />
+		<Pagination {page} {pageCount} onChange={setPage} />
 	{/if}
 </div>
 

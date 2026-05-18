@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { page as pageStore } from '$app/stores';
+	import { goto } from '$app/navigation';
+	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { Alert, Badge, Button, Card, EmptyState, Spinner } from '$ui';
 	import { Building2, Eye, Plus, Search, Shield, Icon } from '$icons';
 	import { tenantsListQuery } from '$features/operator/tenants/queries';
@@ -15,8 +18,31 @@
 	let createOpen = $state(false);
 	let impersonateOpen = $state(false);
 	let impersonateTarget = $state<TenantDto | null>(null);
-	let page = $state(1);
-	let search = $state('');
+
+	// URL-driven filter state — read from searchParams, write back via goto.
+	const search = $derived($pageStore.url.searchParams.get('q') ?? '');
+	const page = $derived(Number($pageStore.url.searchParams.get('page') ?? '1') || 1);
+
+	function setSearch(value: string) {
+		const params = new SvelteURLSearchParams($pageStore.url.searchParams.toString());
+		if (value) {
+			params.set('q', value);
+		} else {
+			params.delete('q');
+		}
+		params.delete('page'); // reset pagination on new search
+		goto(`?${params}`, { replaceState: true, keepFocus: true });
+	}
+
+	function setPage(p: number) {
+		const params = new SvelteURLSearchParams($pageStore.url.searchParams.toString());
+		if (p > 1) {
+			params.set('page', String(p));
+		} else {
+			params.delete('page');
+		}
+		goto(`?${params}`, { replaceState: true });
+	}
 
 	const canCreate = $derived(hasPermission(session.principal, 'platform.tenants.create'));
 	const canView = $derived(hasPermission(session.principal, 'platform.tenants.view'));
@@ -48,12 +74,6 @@
 	const totalPages = $derived(Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)));
 	const paged = $derived(filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE));
 
-	// Reset to page 1 when search changes.
-	$effect(() => {
-		void search;
-		page = 1;
-	});
-
 	function openImpersonate(tenant: TenantDto) {
 		impersonateTarget = tenant;
 		impersonateOpen = true;
@@ -81,7 +101,8 @@
 			<input
 				type="search"
 				placeholder="Filter by name, slug, or legal name"
-				bind:value={search}
+				value={search}
+				oninput={(e) => setSearch((e.currentTarget as HTMLInputElement).value)}
 				class="glass-input w-full rounded-md py-2 pr-3 pl-9 text-sm"
 				aria-label="Filter tenants"
 			/>
@@ -177,7 +198,7 @@
 						variant="ghost"
 						size="sm"
 						disabled={page <= 1}
-						onclick={() => (page -= 1)}
+						onclick={() => setPage(page - 1)}
 						aria-label="Previous page"
 					>
 						← Prev
@@ -187,7 +208,7 @@
 						variant="ghost"
 						size="sm"
 						disabled={page >= totalPages}
-						onclick={() => (page += 1)}
+						onclick={() => setPage(page + 1)}
 						aria-label="Next page"
 					>
 						Next →

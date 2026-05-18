@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { page as pageStore } from '$app/stores';
+	import { goto } from '$app/navigation';
+	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { Alert, Avatar, Badge, Card, EmptyState, Spinner } from '$ui';
 	import { Users, Search, Icon } from '$icons';
 	import { personsListQuery } from '$features/operator/people/queries';
@@ -6,18 +9,26 @@
 
 	const DEBOUNCE_MS = 300;
 
-	let searchInput = $state('');
-	let debouncedSearch = $state('');
-	let debounceTimer = $state<ReturnType<typeof setTimeout> | null>(null);
+	// URL is the single source of truth for search state.
+	const urlSearch = $derived($pageStore.url.searchParams.get('q') ?? '');
 
-	function onSearchInput() {
-		if (debounceTimer) clearTimeout(debounceTimer);
-		debounceTimer = setTimeout(() => {
-			debouncedSearch = searchInput.trim();
+	let debounceHandle: ReturnType<typeof setTimeout> | undefined;
+
+	function onSearchInput(e: Event) {
+		const value = (e.currentTarget as HTMLInputElement).value;
+		clearTimeout(debounceHandle);
+		debounceHandle = setTimeout(() => {
+			const next = new SvelteURLSearchParams($pageStore.url.searchParams.toString());
+			if (value.trim()) {
+				next.set('q', value.trim());
+			} else {
+				next.delete('q');
+			}
+			goto(`?${next}`, { replaceState: true, keepFocus: true });
 		}, DEBOUNCE_MS);
 	}
 
-	const queryParams = $derived(debouncedSearch ? { q: debouncedSearch, limit: 20 } : { limit: 20 });
+	const queryParams = $derived(urlSearch ? { q: urlSearch, limit: 20 } : { limit: 20 });
 	const query = $derived(personsListQuery(queryParams));
 
 	const persons = $derived(query.data?.persons ?? []);
@@ -43,7 +54,7 @@
 			<input
 				type="search"
 				placeholder="Search by email or name"
-				bind:value={searchInput}
+				value={urlSearch}
 				oninput={onSearchInput}
 				class="glass-input w-full rounded-md py-2 pr-3 pl-9 text-sm"
 				aria-label="Search persons by email or name"
@@ -60,10 +71,8 @@
 	{:else if persons.length === 0}
 		<EmptyState
 			icon={Users}
-			title={debouncedSearch ? `No results for "${debouncedSearch}"` : 'No persons found'}
-			description={debouncedSearch
-				? 'Try a different email or name.'
-				: 'No persons in the platform yet.'}
+			title={urlSearch ? `No results for "${urlSearch}"` : 'No persons found'}
+			description={urlSearch ? 'Try a different email or name.' : 'No persons in the platform yet.'}
 		/>
 	{:else}
 		<ul class="stack stack-tight" aria-label="People">
