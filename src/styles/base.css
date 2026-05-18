@@ -228,7 +228,6 @@
  *
  *   data-primary           — brand colour (re-skins the 11-stop brand
  *                            palette to a different hue)
- *   data-sidebar-colors    — sidebar surface (light | dark)
  *   data-sidebar-collapsed — desktop collapsed state (boolean attr)
  *   dir                    — LTR | RTL
  *
@@ -253,11 +252,6 @@
 	--lk-sidebar-width: 16rem;
 	--lk-sidebar-width-collapsed: 4.5rem;
 
-	/* Sidebar colour surface tokens — default `light` (frosted white
-	   glass) over near-black fg. Overridden by [data-sidebar-colors=
-	   'dark'] which switches to the dark glass tint. The
-	   --lk-sidebar-bg is consumed as the SEMI-TRANSPARENT fill; the
-	   backdrop-filter lives on the component to refract the canvas. */
 	/* Sidebar uses THICK material (85%) — matches topbar / footer /
 	   content cards / login modal so the whole product reads as ONE
 	   consistent Liquid-Glass surface. User direction over Apple's
@@ -361,24 +355,6 @@
 		   right of the sidebar separates it from the topbar). */
 		--lk-topbar-inline-start: calc(var(--lk-sidebar-width) + var(--lk-shell-gap) * 2);
 	}
-}
-
-/* ── Sidebar colour variants ──────────────────────────────────
-   Two surface options. Default = light (white over near-black).
-   Dark = inverted neutral. Each variant re-skins the bg / fg /
-   hover / active token set so Sidebar.svelte doesn't branch. */
-:root[data-sidebar-colors='dark'] {
-	--lk-sidebar-bg: var(--glass-bg-dark);
-	--lk-sidebar-bg-solid: oklch(0.22 0.015 256);
-	--lk-sidebar-fg: oklch(0.94 0.01 256);
-	--lk-sidebar-fg-muted: oklch(0.7 0.01 256);
-	--lk-sidebar-hover-bg: var(--glass-pill-bg-dark);
-	--lk-sidebar-hover-ring: color-mix(in srgb, oklch(1 0 0) 12%, transparent);
-	--lk-sidebar-active-bg: color-mix(in srgb, var(--color-primary) 22%, var(--glass-pill-bg-dark));
-	--lk-sidebar-active-fg: oklch(0.98 0 0);
-	--lk-sidebar-active-ring: color-mix(in srgb, var(--color-primary) 32%, transparent);
-	--lk-sidebar-border: oklch(1 0 0 / 0.08);
-	--lk-sidebar-specular: var(--glass-specular-dark);
 }
 
 @layer base {

@@ -172,14 +172,7 @@
 	/* ─── Sidebar layout + chrome geometry ─────────────────────────
 	   Composes the universal `.glass-card` material. This block
 	   handles sidebar-specific GEOMETRY (edge-anchored full-height
-	   column, right-edge border only, zero radius at viewport edges)
-	   and the per-theme tint swap.
-
-	   For the `data-sidebar-colors='dark'` theme variant, we LOCALLY
-	   override --glass-bg-thick to the dark glass token so .glass-card
-	   picks up the dark tint without re-declaring the recipe. Single
-	   source of truth: the recipe still lives in utilities.css; only
-	   the substituted FILL is overridden here per-theme. */
+	   column, right-edge border only, zero radius at viewport edges). */
 	.lk-sidebar {
 		position: fixed;
 		inset-block-start: max(var(--lk-sidebar-top), var(--safe-top));
@@ -205,12 +198,6 @@
 			border-radius 0.18s ease-out,
 			background 0.15s ease-out;
 		z-index: var(--z-sticky);
-	}
-
-	/* Dark sidebar — locally swap --glass-bg-thick so .glass-card
-	   composes the dark tint while keeping all other material vars. */
-	:global(:root[data-sidebar-colors='dark']) .lk-sidebar {
-		--glass-bg-thick: var(--glass-bg-dark);
 	}
 
 	/* Semibox — sidebar floats; restore .glass-card full ring + radius. */
@@ -388,15 +375,6 @@
 		.lk-sidebar-link:hover :global(svg) {
 			color: var(--color-primary-hover);
 		}
-	}
-	/* Dark sidebar — keep icons in the muted-fg neutral so they read
-	   over the dark glass tint without losing legibility. */
-	:global(:root[data-sidebar-colors='dark']) .lk-sidebar-link :global(svg) {
-		color: var(--lk-sidebar-fg-muted);
-	}
-	:global(:root[data-sidebar-colors='dark']) .lk-sidebar-link--active :global(svg),
-	:global(:root[data-sidebar-colors='dark']) .lk-sidebar-link:active :global(svg) {
-		color: var(--lk-sidebar-active-fg);
 	}
 	/* Inset focus ring — the link has its own glass-pill background
 	   when focused/hovered, so the outline sits INSIDE the pill edge

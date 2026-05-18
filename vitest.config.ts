@@ -46,16 +46,14 @@ export default defineConfig({
 				'**/*.test.ts',
 				'**/*.spec.ts'
 			],
-			// Coverage thresholds — start lenient (no unit tests yet),
-			// tighten as the suite grows. CI reads these via
-			// `vitest run --coverage`; below threshold = exit 1.
-			// TODO(v0.2): bump statements/branches/functions/lines to
-			// 70% once UI primitives + auth feature have unit suites.
+			// Coverage thresholds — tightened after Phase C store migrations
+			// delivered TanStack Query hooks with consistent testable
+			// shapes. Bump again when UI-primitive + auth unit suites land.
 			thresholds: {
-				statements: 0,
-				branches: 0,
-				functions: 0,
-				lines: 0
+				statements: 60,
+				branches: 50,
+				functions: 60,
+				lines: 60
 			}
 		}
 	}

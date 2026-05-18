@@ -623,7 +623,4 @@
 	   refraction" without competing with the active state's brand
 	   tint. */
 	--glass-pill-bg: color-mix(in srgb, var(--color-fg) 5%, transparent);
-	/* Dark chrome (data-sidebar-colors='dark') wants the opposite —
-	   subtle LIGHTEN against the dark glass parent. */
-	--glass-pill-bg-dark: color-mix(in srgb, oklch(1 0 0) 14%, transparent);
 }
