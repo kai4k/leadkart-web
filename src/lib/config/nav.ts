@@ -42,7 +42,6 @@ import {
 	Settings,
 	ShieldCheck,
 	Building2,
-	UserCheck,
 	type Icon as LucideIcon
 } from 'lucide-svelte';
 import type { PrincipalTier } from '$lib/features/auth/tier';
@@ -70,26 +69,6 @@ export const PLATFORM_NAV: NavSection[] = [
 	{
 		items: [
 			{ href: '/dashboard', label: 'Operator Dashboard', icon: LayoutDashboard, requires: null }
-		]
-	},
-	{
-		title: 'Marketplace',
-		items: [
-			{ href: '/platform/leads', label: 'Lead Marketplace', icon: ShoppingCart, requires: null },
-			{ href: '/platform/verify', label: 'Verification Queue', icon: UserCheck, requires: null }
-		]
-	},
-	{
-		title: 'Operators',
-		items: [
-			{ href: '/platform/tenants', label: 'Tenants', icon: Building2, requires: null },
-			{ href: '/platform/persons', label: 'People', icon: Users, requires: null },
-			{
-				href: '/platform/impersonation',
-				label: 'Impersonation',
-				icon: ShieldCheck,
-				requires: null
-			}
 		]
 	},
 	{
