@@ -1,32 +1,40 @@
 <!-- src/lib/features/users/components/DeactivateUserDialog.svelte -->
 <script lang="ts">
 	import { ConfirmDialog, Alert } from '$ui';
-	import { users } from '$features/users/stores/users.svelte';
+	import { deactivateUserMutation } from '$features/users/queries';
 	import type { UserDto } from '$features/users/types';
 	import { displayName } from '$features/auth/view-models';
 
 	type Props = {
+		tenantId?: string;
 		open: boolean;
 		user: UserDto | null;
 		onOpenChange: (open: boolean) => void;
 	};
 
-	let { open = $bindable(false), user, onOpenChange }: Props = $props();
+	let { tenantId, open = $bindable(false), user, onOpenChange }: Props = $props();
 
 	let reason = $state('');
 	let error = $state<string | null>(null);
-	const isPending = $derived(users.status === 'mutating');
+
+	const mutation = $derived(deactivateUserMutation(tenantId));
+	const isPending = $derived(mutation.isPending);
 
 	async function onConfirm() {
 		if (!user) return;
 		error = null;
-		try {
-			await users.deactivate(user.membership_id, reason.trim());
-			reason = '';
-			onOpenChange(false);
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to deactivate';
-		}
+		mutation.mutate(
+			{ id: user.membership_id, reason: reason.trim() },
+			{
+				onSuccess: () => {
+					reason = '';
+					onOpenChange(false);
+				},
+				onError: (err) => {
+					error = err instanceof Error ? err.message : 'Failed to deactivate';
+				}
+			}
+		);
 	}
 </script>
 

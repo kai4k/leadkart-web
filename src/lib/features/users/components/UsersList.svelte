@@ -1,7 +1,12 @@
 <script lang="ts">
 	import { Alert, Button, EmptyState, Pagination, Spinner } from '$ui';
 	import { Plus, UserPlus, Users as UsersIcon, Icon } from '$icons';
-	import { users } from '$features/users/stores/users.svelte';
+	import {
+		usersListQuery,
+		rolesCatalogQuery,
+		reactivateUserMutation,
+		unlockUserMutation
+	} from '$features/users/queries';
 	import type { UserDto } from '$features/users/types';
 	import UserListRow from './UserListRow.svelte';
 	import CreateUserDrawer from './CreateUserDrawer.svelte';
@@ -9,6 +14,14 @@
 	import RoleAssignmentDrawer from './RoleAssignmentDrawer.svelte';
 	import ManagerSelectorDrawer from './ManagerSelectorDrawer.svelte';
 	import PermissionOverridesPanel from './PermissionOverridesPanel.svelte';
+
+	/**
+	 * When tenantId is set, all queries and mutations inject X-Tenant-Id
+	 * (operator-context member view). When absent, uses the caller's JWT
+	 * tenant (tenant-admin self-view at /settings/users).
+	 */
+	type Props = { tenantId?: string };
+	let { tenantId }: Props = $props();
 
 	let createOpen = $state(false);
 	let deactivateOpen = $state(false);
@@ -21,10 +34,18 @@
 	let page = $state(1);
 	const pageSize = 10;
 
+	const listQuery = $derived(usersListQuery(tenantId));
+	const rolesQuery = $derived(rolesCatalogQuery(tenantId));
+	const reactivate = $derived(reactivateUserMutation(tenantId));
+	const unlock = $derived(unlockUserMutation(tenantId));
+
+	const userList = $derived(listQuery.data?.users ?? []);
+	const roleList = $derived(rolesQuery.data?.roles ?? []);
+
 	const filtered = $derived.by(() => {
 		const q = search.trim().toLowerCase();
-		if (!q) return users.list;
-		return users.list.filter(
+		if (!q) return userList;
+		return userList.filter(
 			(u) =>
 				u.email.toLowerCase().includes(q) ||
 				u.first_name.toLowerCase().includes(q) ||
@@ -47,10 +68,10 @@
 				deactivateOpen = true;
 				break;
 			case 'reactivate':
-				users.reactivate(user.membership_id).catch(() => {});
+				reactivate.mutate(user.membership_id);
 				break;
 			case 'unlock':
-				users.unlock(user.membership_id).catch(() => {});
+				unlock.mutate(user.membership_id);
 				break;
 			case 'roles':
 				rolesOpen = true;
@@ -70,7 +91,7 @@
 		<div class="stack stack-tight">
 			<h1 class="h1">Team</h1>
 			<p class="caption text-[var(--color-fg-muted)]">
-				{users.list.length} member{users.list.length === 1 ? '' : 's'}
+				{userList.length} member{userList.length === 1 ? '' : 's'}
 			</p>
 		</div>
 		<div class="cluster">
@@ -86,10 +107,10 @@
 		</div>
 	</header>
 
-	{#if users.status === 'loading'}
+	{#if listQuery.isPending}
 		<div class="flex justify-center py-16"><Spinner size={32} /></div>
-	{:else if users.status === 'error' && users.error}
-		<Alert variant="danger" title="Couldn't load members">{users.error}</Alert>
+	{:else if listQuery.isError}
+		<Alert variant="danger" title="Couldn't load members">{listQuery.error?.message}</Alert>
 	{:else if filtered.length === 0}
 		<EmptyState
 			icon={UsersIcon}
@@ -109,30 +130,36 @@
 	{:else}
 		<ul class="stack stack-tight" aria-label="Team members">
 			{#each paged as user (user.membership_id)}
-				<UserListRow {user} {onAction} />
+				<UserListRow {user} roles={roleList} allUsers={userList} {onAction} />
 			{/each}
 		</ul>
 		<Pagination {page} {pageCount} onChange={(p) => (page = p)} />
 	{/if}
 </div>
 
-<CreateUserDrawer bind:open={createOpen} onOpenChange={(o) => (createOpen = o)} />
+<CreateUserDrawer {tenantId} bind:open={createOpen} onOpenChange={(o) => (createOpen = o)} />
 <DeactivateUserDialog
+	{tenantId}
 	bind:open={deactivateOpen}
 	user={targetUser}
 	onOpenChange={(o) => (deactivateOpen = o)}
 />
 <RoleAssignmentDrawer
+	{tenantId}
+	{roleList}
 	bind:open={rolesOpen}
 	user={targetUser}
 	onOpenChange={(o) => (rolesOpen = o)}
 />
 <ManagerSelectorDrawer
+	{tenantId}
+	{userList}
 	bind:open={managerOpen}
 	user={targetUser}
 	onOpenChange={(o) => (managerOpen = o)}
 />
 <PermissionOverridesPanel
+	{tenantId}
 	bind:open={permsOpen}
 	user={targetUser}
 	onOpenChange={(o) => (permsOpen = o)}

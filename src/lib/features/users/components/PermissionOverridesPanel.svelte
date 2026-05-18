@@ -1,16 +1,17 @@
 <script lang="ts">
 	import { Drawer, Button, Badge, Alert } from '$ui';
-	import { users } from '$features/users/stores/users.svelte';
+	import { replacePermissionOverridesMutation } from '$features/users/queries';
 	import type { UserDto } from '$features/users/types';
 	import { displayName } from '$features/auth/view-models';
 
 	type Props = {
+		tenantId?: string;
 		open: boolean;
 		user: UserDto | null;
 		onOpenChange: (open: boolean) => void;
 	};
 
-	let { open = $bindable(false), user, onOpenChange }: Props = $props();
+	let { tenantId, open = $bindable(false), user, onOpenChange }: Props = $props();
 
 	let granted = $state<string[]>([]);
 	let revoked = $state<string[]>([]);
@@ -26,6 +27,9 @@
 
 	let newGrant = $state('');
 	let newRevoke = $state('');
+
+	const mutation = $derived(replacePermissionOverridesMutation(tenantId));
+	const isPending = $derived(mutation.isPending);
 
 	function addGrant() {
 		const name = newGrant.trim();
@@ -50,15 +54,14 @@
 	async function onSave() {
 		if (!user) return;
 		error = null;
-		try {
-			await users.replacePermissionOverrides(user.membership_id, { granted, revoked });
-			onOpenChange(false);
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to save overrides';
-		}
+		mutation.mutate(
+			{ id: user.membership_id, body: { granted, revoked } },
+			{
+				onSuccess: () => onOpenChange(false),
+				onError: (err) => (error = err instanceof Error ? err.message : 'Failed to save overrides')
+			}
+		);
 	}
-
-	const isPending = $derived(users.status === 'mutating');
 </script>
 
 <Drawer.Root bind:open {onOpenChange}>

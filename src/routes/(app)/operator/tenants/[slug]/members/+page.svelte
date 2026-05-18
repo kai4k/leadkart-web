@@ -15,7 +15,6 @@
 	 * Phase A.
 	 */
 	import { tenantDetailQuery } from '$features/operator/tenants/queries';
-	import { users } from '$features/users/stores/users.svelte';
 	import UsersList from '$features/users/components/UsersList.svelte';
 	import { Spinner, Alert } from '$ui';
 
@@ -24,13 +23,6 @@
 	const slug = $derived(data.slug);
 	const query = $derived(tenantDetailQuery(slug));
 	const tenant = $derived(query.data ?? null);
-
-	$effect(() => {
-		const t = tenant;
-		if (t && users.scopedTenantId !== t.id) {
-			users.loadForTenant(t.id).catch(() => {});
-		}
-	});
 </script>
 
 <svelte:head>
@@ -44,5 +36,5 @@
 		No tenant with that ID or slug, or you don't have access.
 	</Alert>
 {:else}
-	<UsersList />
+	<UsersList tenantId={tenant.id} />
 {/if}

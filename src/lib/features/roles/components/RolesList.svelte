@@ -2,7 +2,7 @@
 	import { Alert, Badge, Button, Card, EmptyState, Pagination, Spinner, Dropdown } from '$ui';
 	import { Plus, Shield, MoreVertical, Trash2, Edit, Icon } from '$icons';
 	import { roles } from '$features/roles/stores/roles.svelte';
-	import { users } from '$features/users/stores/users.svelte';
+	import { usersListQuery } from '$features/users/queries';
 	import type { RoleDto } from '$features/roles/types';
 	import { roleBadgeVariant, isProtectedRole, roleMemberCount } from '$features/roles/view-models';
 	import CreateRoleDrawer from './CreateRoleDrawer.svelte';
@@ -16,6 +16,10 @@
 	const pageSize = 10;
 	const pageCount = $derived(Math.max(1, Math.ceil(roles.list.length / pageSize)));
 	const paged = $derived(roles.list.slice((page - 1) * pageSize, page * pageSize));
+
+	// Users list query — only to derive member counts per role.
+	const usersQuery = usersListQuery();
+	const userList = $derived(usersQuery.data?.users ?? []);
 
 	function onDelete(role: RoleDto) {
 		targetRole = role;
@@ -56,7 +60,7 @@
 		<ul class="stack stack-tight" aria-label="Roles">
 			{#each paged as role (role.id)}
 				{@const badge = roleBadgeVariant(role)}
-				{@const memberCount = roleMemberCount(role, users.list)}
+				{@const memberCount = roleMemberCount(role, userList)}
 				<li>
 					<Card.Root>
 						<Card.Content class="grid grid-cols-[1fr_auto_auto] items-center gap-4">

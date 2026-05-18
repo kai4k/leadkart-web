@@ -1,46 +1,47 @@
 <script lang="ts">
 	import { Drawer, Button, Badge, Alert } from '$ui';
 	import { Icon, Plus, X } from '$icons';
-	import { users } from '$features/users/stores/users.svelte';
-	import type { UserDto } from '$features/users/types';
+	import { assignRoleMutation, revokeRoleMutation } from '$features/users/queries';
+	import type { UserDto, RoleDto } from '$features/users/types';
 	import { canRevokeRole } from '$features/users/view-models';
 	import { displayName } from '$features/auth/view-models';
 
 	type Props = {
+		tenantId?: string;
+		roleList: RoleDto[];
 		open: boolean;
 		user: UserDto | null;
 		onOpenChange: (open: boolean) => void;
 	};
 
-	let { open = $bindable(false), user, onOpenChange }: Props = $props();
+	let { tenantId, roleList, open = $bindable(false), user, onOpenChange }: Props = $props();
 
 	let error = $state<string | null>(null);
+
+	const assignMutation = $derived(assignRoleMutation(tenantId));
+	const revokeMutation = $derived(revokeRoleMutation(tenantId));
 
 	async function onAssign(roleId: string) {
 		if (!user) return;
 		error = null;
-		try {
-			await users.assignRole(user.membership_id, roleId);
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to assign role';
-		}
+		assignMutation.mutate(
+			{ id: user.membership_id, roleId },
+			{ onError: (err) => (error = err instanceof Error ? err.message : 'Failed to assign role') }
+		);
 	}
 
 	async function onRevoke(roleId: string) {
 		if (!user) return;
 		error = null;
-		try {
-			await users.revokeRole(user.membership_id, roleId);
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to revoke role';
-		}
+		revokeMutation.mutate(
+			{ id: user.membership_id, roleId },
+			{ onError: (err) => (error = err instanceof Error ? err.message : 'Failed to revoke role') }
+		);
 	}
 
-	const assignedRoles = $derived(
-		user ? users.roles.filter((r) => user.role_ids.includes(r.id)) : []
-	);
+	const assignedRoles = $derived(user ? roleList.filter((r) => user.role_ids.includes(r.id)) : []);
 	const availableRoles = $derived(
-		user ? users.roles.filter((r) => !user.role_ids.includes(r.id)) : []
+		user ? roleList.filter((r) => !user.role_ids.includes(r.id)) : []
 	);
 </script>
 

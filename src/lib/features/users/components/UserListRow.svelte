@@ -8,22 +8,25 @@
 		canDeactivate
 	} from '$features/users/view-models';
 	import { displayName, initials } from '$features/auth/view-models';
-	import { users } from '$features/users/stores/users.svelte';
-	import type { UserDto } from '$features/users/types';
+	import type { UserDto, RoleDto } from '$features/users/types';
 
 	type Props = {
 		user: UserDto;
+		/** Role catalogue from the query — passed down by UsersList. */
+		roles?: RoleDto[];
+		/** Full user list — used to resolve manager display name. */
+		allUsers?: UserDto[];
 		onAction: (
 			action: 'deactivate' | 'reactivate' | 'roles' | 'manager' | 'permissions' | 'unlock',
 			user: UserDto
 		) => void;
 	};
 
-	let { user, onAction }: Props = $props();
+	let { user, roles = [], allUsers = [], onAction }: Props = $props();
 
 	const status = $derived(userStatusBadge(user.status));
-	const roles = $derived(userRoleBadges(user, users.roles));
-	const manager = $derived(managerLabel(user, users.list));
+	const roleBadges = $derived(userRoleBadges(user, roles));
+	const manager = $derived(managerLabel(user, allUsers));
 </script>
 
 <li
@@ -39,7 +42,7 @@
 		<span class="caption text-[var(--color-fg-subtle)]">{user.department || '—'}</span>
 	</div>
 	<div class="cluster cluster-tight">
-		{#each roles as r (r.id)}
+		{#each roleBadges as r (r.id)}
 			<Badge variant="brand" style="soft" size="sm">{r.name}</Badge>
 		{/each}
 		<Badge variant={status.variant} style="soft" size="sm">{status.label}</Badge>

@@ -1,17 +1,19 @@
 <script lang="ts">
 	import { Drawer, Button, Alert } from '$ui';
 	import { Select } from '$lib/components/form';
-	import { users } from '$features/users/stores/users.svelte';
+	import { assignManagerMutation, removeManagerMutation } from '$features/users/queries';
 	import type { UserDto } from '$features/users/types';
 	import { displayName } from '$features/auth/view-models';
 
 	type Props = {
+		tenantId?: string;
+		userList: UserDto[];
 		open: boolean;
 		user: UserDto | null;
 		onOpenChange: (open: boolean) => void;
 	};
 
-	let { open = $bindable(false), user, onOpenChange }: Props = $props();
+	let { tenantId, userList, open = $bindable(false), user, onOpenChange }: Props = $props();
 
 	let selectedManager = $state<string>('');
 	let error = $state<string | null>(null);
@@ -22,26 +24,36 @@
 
 	const eligibleManagers = $derived(
 		user
-			? users.list.filter((u) => u.membership_id !== user.membership_id && u.status === 'active')
+			? userList.filter((u) => u.membership_id !== user.membership_id && u.status === 'active')
 			: []
 	);
+
+	const assignMutation = $derived(assignManagerMutation(tenantId));
+	const removeMutation = $derived(removeManagerMutation(tenantId));
+
+	const isPending = $derived(assignMutation.isPending || removeMutation.isPending);
 
 	async function onSave() {
 		if (!user) return;
 		error = null;
-		try {
-			if (selectedManager) {
-				await users.assignManager(user.membership_id, selectedManager);
-			} else if (user.reports_to) {
-				await users.removeManager(user.membership_id);
-			}
+		if (selectedManager) {
+			assignMutation.mutate(
+				{ id: user.membership_id, managerId: selectedManager },
+				{
+					onSuccess: () => onOpenChange(false),
+					onError: (err) =>
+						(error = err instanceof Error ? err.message : 'Failed to update manager')
+				}
+			);
+		} else if (user.reports_to) {
+			removeMutation.mutate(user.membership_id, {
+				onSuccess: () => onOpenChange(false),
+				onError: (err) => (error = err instanceof Error ? err.message : 'Failed to remove manager')
+			});
+		} else {
 			onOpenChange(false);
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to update manager';
 		}
 	}
-
-	const isPending = $derived(users.status === 'mutating');
 </script>
 
 <Drawer.Root bind:open {onOpenChange}>

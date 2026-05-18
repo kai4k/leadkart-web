@@ -2,15 +2,16 @@
 <script lang="ts">
 	import { Drawer, Button, Alert } from '$ui';
 	import { TextField, PasswordField } from '$lib/components/form';
-	import { users } from '$features/users/stores/users.svelte';
+	import { createUserMutation } from '$features/users/queries';
 	import type { CreateUserRequest } from '$features/users/types';
 
 	type Props = {
+		tenantId?: string;
 		open: boolean;
 		onOpenChange: (open: boolean) => void;
 	};
 
-	let { open = $bindable(false), onOpenChange }: Props = $props();
+	let { tenantId, open = $bindable(false), onOpenChange }: Props = $props();
 
 	let email = $state('');
 	let password = $state('');
@@ -18,6 +19,8 @@
 	let lastName = $state('');
 	let error = $state<string | null>(null);
 	let success = $state<{ membershipId: string; personExisted: boolean } | null>(null);
+
+	const mutation = $derived(createUserMutation(tenantId));
 
 	function resetForm() {
 		email = '';
@@ -38,12 +41,14 @@
 			first_name: firstName.trim(),
 			last_name: lastName.trim()
 		};
-		try {
-			const resp = await users.create(req);
-			success = { membershipId: resp.membership_id, personExisted: resp.person_existed };
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to create user';
-		}
+		mutation.mutate(req, {
+			onSuccess: (resp) => {
+				success = { membershipId: resp.membership_id, personExisted: resp.person_existed };
+			},
+			onError: (err) => {
+				error = err instanceof Error ? err.message : 'Failed to create user';
+			}
+		});
 	}
 
 	function handleClose(next: boolean) {
@@ -51,7 +56,7 @@
 		onOpenChange(next);
 	}
 
-	const isSubmitting = $derived(users.status === 'mutating');
+	const isSubmitting = $derived(mutation.isPending);
 </script>
 
 <Drawer.Root bind:open onOpenChange={handleClose}>
