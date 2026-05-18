@@ -1,17 +1,27 @@
 <script lang="ts">
 	import { Alert, Badge, Button, Card, EmptyState } from '$ui';
-	import { Building2, Plus, Search, Icon } from '$icons';
+	import { Building2, Eye, Plus, Search, Icon } from '$icons';
 	import { operatorTenants } from '$features/operator/tenants/stores/operator-tenants.svelte';
 	import { tenantLifecycleBadge } from '$features/operator/tenants/view-models';
 	import { hasPermission } from '$features/auth/tier';
 	import { session } from '$features/auth/stores/session.svelte';
 	import CreateTenantDrawer from './CreateTenantDrawer.svelte';
+	import ImpersonateModal from '$features/operator/impersonation/components/ImpersonateModal.svelte';
+	import type { TenantDto } from '$features/operator/tenants/types';
 
 	let createOpen = $state(false);
+	let impersonateOpen = $state(false);
+	let impersonateTarget = $state<TenantDto | null>(null);
 	let search = $state('');
 	let pending = $state(false);
 
 	const canCreate = $derived(hasPermission(session.principal, 'platform.tenants.create'));
+	const canView = $derived(hasPermission(session.principal, 'platform.tenants.view'));
+
+	function openImpersonate(tenant: TenantDto) {
+		impersonateTarget = tenant;
+		impersonateOpen = true;
+	}
 
 	async function onSearch(e: SubmitEvent) {
 		e.preventDefault();
@@ -76,10 +86,22 @@
 									{t.slug} · {t.legal_name}
 								</p>
 							</div>
-							<a
-								href="/operator/tenants/{t.id}"
-								class="label text-[var(--color-primary)] hover:underline">Open →</a
-							>
+							<div class="cluster cluster-tight">
+								{#if canView}
+									<Button
+										variant="ghost"
+										size="sm"
+										onclick={() => openImpersonate(t)}
+										aria-label="Impersonate {t.display_name}"
+									>
+										<Icon icon={Eye} size="sm" /> Impersonate
+									</Button>
+								{/if}
+								<a
+									href="/operator/tenants/{t.id}"
+									class="label text-[var(--color-primary)] hover:underline">Open →</a
+								>
+							</div>
 						</Card.Content>
 					</Card.Root>
 				</li>
@@ -95,3 +117,8 @@
 </div>
 
 <CreateTenantDrawer bind:open={createOpen} onOpenChange={(o) => (createOpen = o)} />
+<ImpersonateModal
+	bind:open={impersonateOpen}
+	tenant={impersonateTarget}
+	onOpenChange={(o) => (impersonateOpen = o)}
+/>

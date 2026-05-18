@@ -1,17 +1,24 @@
 <script lang="ts">
-	import { Alert, Badge, Card, Spinner } from '$ui';
+	import { Alert, Badge, Button, Card, Spinner } from '$ui';
+	import { Eye, Icon } from '$icons';
 	import TenantActionPanel from '$features/operator/tenants/components/TenantActionPanel.svelte';
 	import SuspendDialog from '$features/operator/tenants/components/SuspendDialog.svelte';
 	import MarkForDeletionDialog from '$features/operator/tenants/components/MarkForDeletionDialog.svelte';
+	import ImpersonateModal from '$features/operator/impersonation/components/ImpersonateModal.svelte';
 	import { operatorTenants } from '$features/operator/tenants/stores/operator-tenants.svelte';
 	import { tenantLifecycleBadge } from '$features/operator/tenants/view-models';
+	import { hasPermission } from '$features/auth/tier';
+	import { session } from '$features/auth/stores/session.svelte';
 	import type { TenantDto } from '$features/operator/tenants/types';
 
 	let { data } = $props();
 
 	let suspendOpen = $state(false);
 	let markOpen = $state(false);
+	let impersonateOpen = $state(false);
 	let target = $state<TenantDto | null>(null);
+
+	const canView = $derived(hasPermission(session.principal, 'platform.tenants.view'));
 
 	$effect(() => {
 		if (data.tenantId) {
@@ -45,14 +52,21 @@
 	{:else}
 		{@const t = operatorTenants.current}
 		{@const badge = tenantLifecycleBadge(t)}
-		<header class="stack stack-tight">
-			<div class="cluster cluster-tight">
-				<h1 class="h1">{t.display_name}</h1>
-				<Badge variant={badge.variant} style="soft" size="sm">{badge.label}</Badge>
+		<header class="cluster cluster-spread">
+			<div class="stack stack-tight">
+				<div class="cluster cluster-tight">
+					<h1 class="h1">{t.display_name}</h1>
+					<Badge variant={badge.variant} style="soft" size="sm">{badge.label}</Badge>
+				</div>
+				<p class="caption text-[var(--color-fg-muted)]">
+					{t.slug} · {t.legal_name} · ID <code>{t.id}</code>
+				</p>
 			</div>
-			<p class="caption text-[var(--color-fg-muted)]">
-				{t.slug} · {t.legal_name} · ID <code>{t.id}</code>
-			</p>
+			{#if canView}
+				<Button variant="ghost" onclick={() => (impersonateOpen = true)}>
+					<Icon icon={Eye} size="sm" /> Impersonate this tenant
+				</Button>
+			{/if}
 		</header>
 
 		<Card.Root>
@@ -87,3 +101,8 @@
 
 <SuspendDialog bind:open={suspendOpen} tenant={target} onOpenChange={(o) => (suspendOpen = o)} />
 <MarkForDeletionDialog bind:open={markOpen} tenant={target} onOpenChange={(o) => (markOpen = o)} />
+<ImpersonateModal
+	bind:open={impersonateOpen}
+	tenant={operatorTenants.current}
+	onOpenChange={(o) => (impersonateOpen = o)}
+/>
