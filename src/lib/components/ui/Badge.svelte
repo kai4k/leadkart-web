@@ -64,7 +64,7 @@
 	};
 
 	const sizes: Record<BadgeSize, string> = {
-		sm: 'px-1.5 py-0.5 text-[0.6875rem]',
+		sm: 'px-1.5 py-0.5 text-[var(--text-2xs)]',
 		md: 'px-2 py-0.5 text-xs'
 	};
 </script>
