@@ -13,7 +13,7 @@
 import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 import * as api from './api';
 import { toast } from '$ui';
-import type { CreateUserRequest, ReplacePermissionOverridesRequest } from './types';
+import type { CreateUserRequest, ReplacePermissionOverridesRequest, UserDto } from './types';
 
 // ── Query key factory ──────────────────────────────────────────────
 
@@ -61,15 +61,17 @@ export function createUserMutation(tenantId?: string) {
 	}));
 }
 
-/** Deactivate a user membership. Invalidates list + detail on success. */
+/** Deactivate a user membership. Uses setQueryData for instant hydration when
+ *  server returns 200+UserDto (E4), falls back to invalidate for 204. */
 export function deactivateUserMutation(tenantId?: string) {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: ({ id, reason }: { id: string; reason: string }) =>
 			api.deactivateUser(id, { reason }),
-		onSuccess: (_, vars) => {
+		onSuccess: (data: UserDto | void, vars: { id: string; reason: string }) => {
+			if (data) qc.setQueryData<UserDto>(usersKeys.detail(vars.id, tenantId), data);
 			qc.invalidateQueries({ queryKey: usersKeys.list(tenantId) });
-			qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id, tenantId) });
+			if (!data) qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id, tenantId) });
 			toast('success', 'Member deactivated');
 		}
 	}));
@@ -80,9 +82,10 @@ export function reactivateUserMutation(tenantId?: string) {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: (id: string) => api.reactivateUser(id),
-		onSuccess: (_, id) => {
+		onSuccess: (data: UserDto | void, id: string) => {
+			if (data) qc.setQueryData<UserDto>(usersKeys.detail(id, tenantId), data);
 			qc.invalidateQueries({ queryKey: usersKeys.list(tenantId) });
-			qc.invalidateQueries({ queryKey: usersKeys.detail(id, tenantId) });
+			if (!data) qc.invalidateQueries({ queryKey: usersKeys.detail(id, tenantId) });
 			toast('success', 'Member reactivated');
 		}
 	}));
@@ -93,8 +96,9 @@ export function unlockUserMutation(tenantId?: string) {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: (id: string) => api.unlockUser(id),
-		onSuccess: (_, id) => {
-			qc.invalidateQueries({ queryKey: usersKeys.detail(id, tenantId) });
+		onSuccess: (data: UserDto | void, id: string) => {
+			if (data) qc.setQueryData<UserDto>(usersKeys.detail(id, tenantId), data);
+			else qc.invalidateQueries({ queryKey: usersKeys.detail(id, tenantId) });
 			toast('success', 'Account unlocked');
 		}
 	}));

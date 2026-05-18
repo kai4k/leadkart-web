@@ -7,7 +7,7 @@
 import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 import * as api from './api';
 import { toast } from '$ui';
-import type { CreateRoleRequest, UpdateRoleRequest } from './types';
+import type { CreateRoleRequest, UpdateRoleRequest, RoleDto } from './types';
 
 // ── Query key factory ──────────────────────────────────────────────
 
@@ -50,13 +50,15 @@ export function createRoleMutation() {
 	}));
 }
 
-/** Update a role's name / hierarchy level. */
+/** Update a role's name / hierarchy level. Uses setQueryData for instant
+ *  hydration when server returns 200+RoleDto (E4), falls back to invalidate. */
 export function updateRoleMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: ({ id, req }: { id: string; req: UpdateRoleRequest }) => api.updateRole(id, req),
-		onSuccess: (_, vars) => {
-			qc.invalidateQueries({ queryKey: rolesKeys.detail(vars.id) });
+		onSuccess: (data: RoleDto | void, vars: { id: string; req: UpdateRoleRequest }) => {
+			if (data) qc.setQueryData<RoleDto>(rolesKeys.detail(vars.id), data);
+			else qc.invalidateQueries({ queryKey: rolesKeys.detail(vars.id) });
 			qc.invalidateQueries({ queryKey: rolesKeys.list() });
 			toast('success', 'Role updated');
 		}

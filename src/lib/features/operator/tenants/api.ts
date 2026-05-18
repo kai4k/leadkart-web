@@ -13,6 +13,18 @@ import type {
 	ListAllTenantsResponse
 } from './types';
 
+/**
+ * Try to parse a 200+body response as TenantDto.
+ * Returns the DTO when the server sends one (E4 pattern), undefined for 204.
+ * This lets mutation hooks use setQueryData for instant cache hydration
+ * when the backend ships 200+DTO instead of 204 No Content.
+ */
+function parseTenantOrVoid(raw: unknown): TenantDto | void {
+	if (raw === null || raw === undefined || raw === '') return;
+	const result = tenantDtoSchema.safeParse(raw);
+	return result.success ? result.data : undefined;
+}
+
 /** Register a new tenant + seed admin. Returns IDs of all three
  *  created records; the seed-admin credentials are the caller's input
  *  and must be conveyed out-of-band (UI surfaces them post-201). */
@@ -29,23 +41,30 @@ export async function getTenant(tenantId: string): Promise<TenantDto> {
 	return tenantDtoSchema.parse(raw);
 }
 
-export async function suspendTenant(tenantId: string, req: SuspendTenantRequest): Promise<void> {
-	await api.post<void>(`/v1/tenants/${tenantId}/suspend`, req);
+export async function suspendTenant(
+	tenantId: string,
+	req: SuspendTenantRequest
+): Promise<TenantDto | void> {
+	const raw = await api.post<unknown>(`/v1/tenants/${tenantId}/suspend`, req);
+	return parseTenantOrVoid(raw);
 }
 
-export async function activateTenant(tenantId: string): Promise<void> {
-	await api.post<void>(`/v1/tenants/${tenantId}/activate`, {});
+export async function activateTenant(tenantId: string): Promise<TenantDto | void> {
+	const raw = await api.post<unknown>(`/v1/tenants/${tenantId}/activate`, {});
+	return parseTenantOrVoid(raw);
 }
 
 export async function markForDeletion(
 	tenantId: string,
 	req: MarkForDeletionRequest
-): Promise<void> {
-	await api.post<void>(`/v1/tenants/${tenantId}/mark-for-deletion`, req);
+): Promise<TenantDto | void> {
+	const raw = await api.post<unknown>(`/v1/tenants/${tenantId}/mark-for-deletion`, req);
+	return parseTenantOrVoid(raw);
 }
 
-export async function restoreTenant(tenantId: string): Promise<void> {
-	await api.post<void>(`/v1/tenants/${tenantId}/restore`, {});
+export async function restoreTenant(tenantId: string): Promise<TenantDto | void> {
+	const raw = await api.post<unknown>(`/v1/tenants/${tenantId}/restore`, {});
+	return parseTenantOrVoid(raw);
 }
 
 /** List all tenants — operator-scoped (platform.tenants.view).

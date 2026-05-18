@@ -20,7 +20,7 @@
  */
 import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 import * as api from './api';
-import type { RegisterTenantRequest } from './types';
+import type { RegisterTenantRequest, TenantDto } from './types';
 
 // ── Query key factory ──────────────────────────────────────────────────
 
@@ -70,47 +70,52 @@ export function registerTenantMutation() {
 	}));
 }
 
-/** Suspend a tenant. On success, invalidates list + detail. */
+/** Suspend a tenant. Uses setQueryData for instant hydration when the
+ *  server returns 200+TenantDto (E4), falls back to invalidate for 204. */
 export function suspendTenantMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: ({ id, reason }: { id: string; reason: string }) =>
 			api.suspendTenant(id, { reason }),
-		onSuccess: () => {
+		onSuccess: (data: TenantDto | void, vars: { id: string; reason: string }) => {
+			if (data) qc.setQueryData<TenantDto>(tenantsKeys.detail(vars.id), data);
 			qc.invalidateQueries({ queryKey: tenantsKeys.all });
 		}
 	}));
 }
 
-/** Activate a tenant. On success, invalidates list + detail. */
+/** Activate a tenant. Uses setQueryData when server returns 200+TenantDto. */
 export function activateTenantMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: (id: string) => api.activateTenant(id),
-		onSuccess: () => {
+		onSuccess: (data: TenantDto | void, id: string) => {
+			if (data) qc.setQueryData<TenantDto>(tenantsKeys.detail(id), data);
 			qc.invalidateQueries({ queryKey: tenantsKeys.all });
 		}
 	}));
 }
 
-/** Mark a tenant for deletion. On success, invalidates list + detail. */
+/** Mark a tenant for deletion. Uses setQueryData when server returns 200+TenantDto. */
 export function markForDeletionMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: ({ id, reason }: { id: string; reason: string }) =>
 			api.markForDeletion(id, { reason }),
-		onSuccess: () => {
+		onSuccess: (data: TenantDto | void, vars: { id: string; reason: string }) => {
+			if (data) qc.setQueryData<TenantDto>(tenantsKeys.detail(vars.id), data);
 			qc.invalidateQueries({ queryKey: tenantsKeys.all });
 		}
 	}));
 }
 
-/** Restore a marked-for-deletion tenant. On success, invalidates list + detail. */
+/** Restore a marked-for-deletion tenant. Uses setQueryData when server returns 200+TenantDto. */
 export function restoreTenantMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: (id: string) => api.restoreTenant(id),
-		onSuccess: () => {
+		onSuccess: (data: TenantDto | void, id: string) => {
+			if (data) qc.setQueryData<TenantDto>(tenantsKeys.detail(id), data);
 			qc.invalidateQueries({ queryKey: tenantsKeys.all });
 		}
 	}));

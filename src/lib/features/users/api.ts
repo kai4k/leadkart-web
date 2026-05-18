@@ -16,6 +16,16 @@ import type {
 	UserDto
 } from './types';
 
+/**
+ * Try to parse a 200+body response as UserDto.
+ * Returns the DTO when the server sends one (E4 pattern), undefined for 204.
+ */
+function parseUserOrVoid(raw: unknown): UserDto | void {
+	if (raw === null || raw === undefined || raw === '') return;
+	const result = userDtoSchema.safeParse(raw);
+	return result.success ? result.data : undefined;
+}
+
 export async function listUsers(): Promise<ListUsersResponse> {
 	const raw = await api.get<unknown>('/v1/users');
 	return listUsersResponseSchema.parse(raw);
@@ -44,16 +54,19 @@ export async function createUser(req: CreateUserRequest): Promise<CreateUserResp
 export async function deactivateUser(
 	membershipId: string,
 	body: DeactivateUserRequest
-): Promise<void> {
-	await api.post<void>(`/v1/users/${membershipId}/deactivate`, body);
+): Promise<UserDto | void> {
+	const raw = await api.post<unknown>(`/v1/users/${membershipId}/deactivate`, body);
+	return parseUserOrVoid(raw);
 }
 
-export async function reactivateUser(membershipId: string): Promise<void> {
-	await api.post<void>(`/v1/users/${membershipId}/reactivate`);
+export async function reactivateUser(membershipId: string): Promise<UserDto | void> {
+	const raw = await api.post<unknown>(`/v1/users/${membershipId}/reactivate`);
+	return parseUserOrVoid(raw);
 }
 
-export async function unlockUser(membershipId: string): Promise<void> {
-	await api.post<void>(`/v1/users/${membershipId}/unlock`);
+export async function unlockUser(membershipId: string): Promise<UserDto | void> {
+	const raw = await api.post<unknown>(`/v1/users/${membershipId}/unlock`);
+	return parseUserOrVoid(raw);
 }
 
 export async function assignRole(membershipId: string, body: AssignUserRoleRequest): Promise<void> {
