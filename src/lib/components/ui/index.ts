@@ -22,3 +22,5 @@ export { default as Pagination } from './Pagination.svelte';
 export { default as Spinner } from './Spinner.svelte';
 export * as Tooltip from './tooltip';
 export { toast } from './Toaster.svelte';
+export * as DataTable from './data-table';
+export type { DataTableColumn, DataTableProps } from './data-table';

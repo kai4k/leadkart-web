@@ -34,6 +34,7 @@ export {
 	ChevronLeft,
 	ChevronRight,
 	ChevronUp,
+	ChevronsUpDown,
 	Command,
 	Copy,
 	Edit,
