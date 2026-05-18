@@ -2,6 +2,7 @@
 	import { TextField } from '$lib/components/form';
 	import { Alert, Button } from '$ui';
 	import { profile } from '$features/auth/stores/profile.svelte';
+	import { ValidationError } from '$api/errors';
 	import type { UpdateProfileRequest } from '$features/auth/types';
 	import { displayName } from '$features/auth/view-models';
 
@@ -17,6 +18,7 @@
 	let designation = $state('');
 	let department = $state('');
 	let statusMessage = $state('');
+	let fieldErrors = $state<Record<string, string>>({});
 	let saveError = $state<string | null>(null);
 	let saved = $state(false);
 
@@ -32,6 +34,7 @@
 		e.preventDefault();
 		saved = false;
 		saveError = null;
+		fieldErrors = {};
 		const patch: UpdateProfileRequest = {
 			designation: designation.trim(),
 			department: department.trim(),
@@ -41,7 +44,11 @@
 			await profile.update(patch);
 			saved = true;
 		} catch (err) {
-			saveError = err instanceof Error ? err.message : 'Failed to save changes';
+			if (err instanceof ValidationError) {
+				fieldErrors = err.fields;
+			} else {
+				saveError = err instanceof Error ? err.message : 'Failed to save changes';
+			}
 		}
 	}
 
@@ -83,6 +90,7 @@
 				bind:value={designation}
 				placeholder="e.g. Sales Executive"
 				maxlength={120}
+				error={fieldErrors.designation}
 			/>
 			<TextField
 				label="Department"
@@ -90,6 +98,7 @@
 				bind:value={department}
 				placeholder="e.g. Sales"
 				maxlength={120}
+				error={fieldErrors.department}
 			/>
 			<TextField
 				label="Status message"
@@ -97,6 +106,7 @@
 				bind:value={statusMessage}
 				placeholder="Optional — shown to teammates"
 				maxlength={280}
+				error={fieldErrors.status_message}
 			/>
 		</section>
 

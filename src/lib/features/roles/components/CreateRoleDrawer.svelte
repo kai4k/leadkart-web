@@ -2,19 +2,22 @@
 	import { Drawer, Button, Alert } from '$ui';
 	import { TextField } from '$lib/components/form';
 	import { createRoleMutation } from '$features/roles/queries';
+	import { ValidationError } from '$api/errors';
 
 	type Props = { open: boolean; onOpenChange: (open: boolean) => void };
 	let { open = $bindable(false), onOpenChange }: Props = $props();
 
 	let name = $state('');
 	let hierarchyLevel = $state(5);
-	let error = $state<string | null>(null);
+	let fieldErrors = $state<Record<string, string>>({});
+	let bannerError = $state<string | null>(null);
 
 	const mutation = createRoleMutation();
 
 	async function onSubmit(e: SubmitEvent) {
 		e.preventDefault();
-		error = null;
+		fieldErrors = {};
+		bannerError = null;
 		mutation.mutate(
 			{ name: name.trim(), hierarchy_level: hierarchyLevel },
 			{
@@ -24,7 +27,11 @@
 					onOpenChange(false);
 				},
 				onError: (err) => {
-					error = err instanceof Error ? err.message : 'Failed to create role';
+					if (err instanceof ValidationError) {
+						fieldErrors = err.fields;
+					} else {
+						bannerError = err instanceof Error ? err.message : 'Failed to create role';
+					}
 				}
 			}
 		);
@@ -59,6 +66,7 @@
 					minlength={3}
 					maxlength={100}
 					required
+					error={fieldErrors.name}
 				/>
 				<label class="stack stack-tight">
 					<span class="label">Hierarchy level</span>
@@ -74,7 +82,7 @@
 						approval).
 					</span>
 				</label>
-				{#if error}<Alert variant="danger">{error}</Alert>{/if}
+				{#if bannerError}<Alert variant="danger">{bannerError}</Alert>{/if}
 			</form>
 		</Drawer.Body>
 		<Drawer.Footer>

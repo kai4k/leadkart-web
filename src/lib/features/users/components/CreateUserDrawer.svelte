@@ -3,6 +3,8 @@
 	import { Drawer, Button, Alert } from '$ui';
 	import { TextField, PasswordField } from '$lib/components/form';
 	import { createUserMutation } from '$features/users/queries';
+	import { ValidationError } from '$api/errors';
+	import { toast } from '$ui';
 	import type { CreateUserRequest } from '$features/users/types';
 
 	type Props = {
@@ -17,7 +19,8 @@
 	let password = $state('');
 	let firstName = $state('');
 	let lastName = $state('');
-	let error = $state<string | null>(null);
+	let fieldErrors = $state<Record<string, string>>({});
+	let bannerError = $state<string | null>(null);
 	let success = $state<{ membershipId: string; personExisted: boolean } | null>(null);
 
 	const mutation = $derived(createUserMutation(tenantId));
@@ -27,13 +30,15 @@
 		password = '';
 		firstName = '';
 		lastName = '';
-		error = null;
+		fieldErrors = {};
+		bannerError = null;
 		success = null;
 	}
 
 	async function onSubmit(e: SubmitEvent) {
 		e.preventDefault();
-		error = null;
+		fieldErrors = {};
+		bannerError = null;
 		success = null;
 		const req: CreateUserRequest = {
 			email: email.trim(),
@@ -46,7 +51,12 @@
 				success = { membershipId: resp.membership_id, personExisted: resp.person_existed };
 			},
 			onError: (err) => {
-				error = err instanceof Error ? err.message : 'Failed to create user';
+				if (err instanceof ValidationError) {
+					fieldErrors = err.fields;
+				} else {
+					bannerError = err instanceof Error ? err.message : 'Failed to create user';
+					toast('danger', bannerError);
+				}
 			}
 		});
 	}
@@ -91,13 +101,21 @@
 				</div>
 			{:else}
 				<form id="create-user-form" class="stack stack-relaxed" onsubmit={onSubmit} novalidate>
-					<TextField label="Email" name="email" type="email" bind:value={email} required />
+					<TextField
+						label="Email"
+						name="email"
+						type="email"
+						bind:value={email}
+						required
+						error={fieldErrors.email}
+					/>
 					<TextField
 						label="First name"
 						name="first_name"
 						bind:value={firstName}
 						required
 						maxlength={120}
+						error={fieldErrors.first_name}
 					/>
 					<TextField
 						label="Last name"
@@ -105,12 +123,19 @@
 						bind:value={lastName}
 						required
 						maxlength={120}
+						error={fieldErrors.last_name}
 					/>
-					<PasswordField label="Initial password" name="password" bind:value={password} required />
+					<PasswordField
+						label="Initial password"
+						name="password"
+						bind:value={password}
+						required
+						error={fieldErrors.password}
+					/>
 					<p class="caption text-[var(--color-fg-subtle)]">
 						The user will be prompted to change this on first sign-in.
 					</p>
-					{#if error}<Alert variant="danger">{error}</Alert>{/if}
+					{#if bannerError}<Alert variant="danger">{bannerError}</Alert>{/if}
 				</form>
 			{/if}
 		</Drawer.Body>

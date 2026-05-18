@@ -4,6 +4,7 @@
 	import { TextField, PasswordField } from '$lib/components/form';
 	import { Copy, Icon } from '$icons';
 	import { registerTenantMutation } from '$features/operator/tenants/queries';
+	import { ValidationError } from '$api/errors';
 	import type {
 		RegisterTenantRequest,
 		RegisterTenantResponse
@@ -19,7 +20,8 @@
 	let adminPassword = $state('');
 	let adminFirstName = $state('');
 	let adminLastName = $state('');
-	let formError = $state<string | null>(null);
+	let fieldErrors = $state<Record<string, string>>({});
+	let bannerError = $state<string | null>(null);
 	let credentials = $state<{
 		email: string;
 		password: string;
@@ -39,13 +41,15 @@
 		adminPassword = '';
 		adminFirstName = '';
 		adminLastName = '';
-		formError = null;
+		fieldErrors = {};
+		bannerError = null;
 		credentials = null;
 	}
 
 	async function onSubmit(e: SubmitEvent) {
 		e.preventDefault();
-		formError = null;
+		fieldErrors = {};
+		bannerError = null;
 		const req: RegisterTenantRequest = {
 			slug: slug.trim().toLowerCase(),
 			legal_name: legalName.trim(),
@@ -67,7 +71,11 @@
 				toast('success', `Tenant ${req.display_name} registered`);
 			},
 			onError: (err: unknown) => {
-				formError = err instanceof Error ? err.message : 'Failed to register tenant';
+				if (err instanceof ValidationError) {
+					fieldErrors = err.fields;
+				} else {
+					bannerError = err instanceof Error ? err.message : 'Failed to register tenant';
+				}
 			}
 		});
 	}
@@ -178,6 +186,7 @@
 						required
 						maxlength={60}
 						placeholder="acme-pharma"
+						error={fieldErrors.slug}
 					/>
 					<TextField
 						label="Legal name"
@@ -185,6 +194,7 @@
 						bind:value={legalName}
 						required
 						maxlength={200}
+						error={fieldErrors.legal_name}
 					/>
 					<TextField
 						label="Display name"
@@ -192,6 +202,7 @@
 						bind:value={displayName}
 						required
 						maxlength={200}
+						error={fieldErrors.display_name}
 					/>
 					<h3 class="mt-2 overline">Seed admin</h3>
 					<TextField
@@ -200,6 +211,7 @@
 						bind:value={adminFirstName}
 						required
 						maxlength={120}
+						error={fieldErrors.admin_first_name}
 					/>
 					<TextField
 						label="Last name"
@@ -207,6 +219,7 @@
 						bind:value={adminLastName}
 						required
 						maxlength={120}
+						error={fieldErrors.admin_last_name}
 					/>
 					<TextField
 						label="Email"
@@ -214,6 +227,7 @@
 						type="email"
 						bind:value={adminEmail}
 						required
+						error={fieldErrors.admin_email}
 					/>
 					<PasswordField
 						label="Initial password"
@@ -221,8 +235,9 @@
 						bind:value={adminPassword}
 						required
 						minlength={8}
+						error={fieldErrors.admin_password}
 					/>
-					{#if formError}<Alert variant="danger">{formError}</Alert>{/if}
+					{#if bannerError}<Alert variant="danger">{bannerError}</Alert>{/if}
 				</form>
 			{/if}
 		</Drawer.Body>
