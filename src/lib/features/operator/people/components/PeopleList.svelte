@@ -1,36 +1,32 @@
 <script lang="ts">
-	import { Alert, Avatar, Badge, Button, Card, EmptyState } from '$ui';
+	import { Alert, Avatar, Badge, Card, EmptyState, Spinner } from '$ui';
 	import { Users, Search, Icon } from '$icons';
-	import { personDetailQuery } from '$features/operator/people/queries';
+	import { personsListQuery } from '$features/operator/people/queries';
 	import { personDisplayName, personLifecycleBadge } from '$features/operator/people/view-models';
 
-	let search = $state('');
-	let pending = $state(false);
-	let lookedUpId = $state('');
+	const DEBOUNCE_MS = 300;
 
-	// Query — only fires when lookedUpId is set.
-	const query = $derived(lookedUpId ? personDetailQuery(lookedUpId) : null);
-	const personList = $derived(query?.data ? [query.data] : []);
+	let searchInput = $state('');
+	let debouncedSearch = $state('');
+	let debounceTimer = $state<ReturnType<typeof setTimeout> | null>(null);
 
-	async function onSearch(e: SubmitEvent) {
-		e.preventDefault();
-		const trimmed = search.trim();
-		if (!trimmed) {
-			lookedUpId = '';
-			return;
-		}
-		lookedUpId = trimmed;
+	function onSearchInput() {
+		if (debounceTimer) clearTimeout(debounceTimer);
+		debounceTimer = setTimeout(() => {
+			debouncedSearch = searchInput.trim();
+		}, DEBOUNCE_MS);
 	}
+
+	const queryParams = $derived(debouncedSearch ? { q: debouncedSearch, limit: 20 } : { limit: 20 });
+	const query = $derived(personsListQuery(queryParams));
+
+	const persons = $derived(query.data?.persons ?? []);
 
 	function initials(name: string): string {
 		const parts = name.trim().split(/\s+/);
 		if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 		return name.slice(0, 2).toUpperCase();
 	}
-
-	const isLoading = $derived(query?.isPending ?? false);
-	const isError = $derived(query?.isError ?? false);
-	const errorMsg = $derived(query?.error instanceof Error ? query.error.message : 'Lookup failed');
 </script>
 
 <div class="stack stack-relaxed">
@@ -39,32 +35,39 @@
 		<p class="caption text-[var(--color-fg-muted)]">Cross-tenant person identity management.</p>
 	</header>
 
-	<Alert variant="info" title="Discover platform users via tenants">
-		Open a tenant from <a href="/operator/tenants" class="underline">/operator/tenants</a> to see its
-		user roster; click any user to view their cross-tenant person record. The search below is for direct
-		UUID lookup only.
-	</Alert>
+	<div class="cluster">
+		<div class="relative flex-1">
+			<span class="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+				<Icon icon={Search} size="sm" class="text-[var(--color-fg-subtle)]" />
+			</span>
+			<input
+				type="search"
+				placeholder="Search by email or name"
+				bind:value={searchInput}
+				oninput={onSearchInput}
+				class="glass-input w-full rounded-md py-2 pr-3 pl-9 text-sm"
+				aria-label="Search persons by email or name"
+			/>
+		</div>
+	</div>
 
-	<form class="cluster" onsubmit={onSearch}>
-		<input
-			type="search"
-			placeholder="Person UUID (advanced)"
-			bind:value={search}
-			class="glass-input flex-1 rounded-md px-3 py-2 text-sm"
-			aria-label="Person UUID lookup"
+	{#if query.isPending}
+		<div class="flex justify-center py-8"><Spinner size={28} /></div>
+	{:else if query.isError}
+		<Alert variant="danger" title="Failed to load people">
+			{query.error instanceof Error ? query.error.message : 'Unknown error'}
+		</Alert>
+	{:else if persons.length === 0}
+		<EmptyState
+			icon={Users}
+			title={debouncedSearch ? `No results for "${debouncedSearch}"` : 'No persons found'}
+			description={debouncedSearch
+				? 'Try a different email or name.'
+				: 'No persons in the platform yet.'}
 		/>
-		<Button type="submit" loading={pending || isLoading}>
-			<Icon icon={Search} size="sm" /> Look up
-		</Button>
-	</form>
-
-	{#if isError}
-		<Alert variant="danger" title="Lookup failed">{errorMsg}</Alert>
-	{:else if personList.length === 0 && lookedUpId && !isLoading}
-		<EmptyState icon={Users} title="No match" description="Try a different person ID." />
-	{:else if personList.length > 0}
+	{:else}
 		<ul class="stack stack-tight" aria-label="People">
-			{#each personList as p (p.id)}
+			{#each persons as p (p.id)}
 				{@const badge = personLifecycleBadge(p)}
 				{@const displayName = personDisplayName(p)}
 				<li>
@@ -90,11 +93,5 @@
 				</li>
 			{/each}
 		</ul>
-	{:else}
-		<EmptyState
-			icon={Users}
-			title="Search for a person"
-			description="Paste a person ID above to load their detail page."
-		/>
 	{/if}
 </div>

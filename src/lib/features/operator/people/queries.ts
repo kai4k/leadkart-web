@@ -1,25 +1,31 @@
 /**
  * TanStack Query hooks for the operator people surface.
- *
- * NOTE: The backend does not yet expose GET /v1/platform/persons (list).
- * Until it ships, the list surface uses direct UUID lookup (lookupById
- * approach from OperatorPeopleStore). The queries here handle detail +
- * memberships, and mutations. Once the backend ships the list endpoint,
- * add personListQuery() following the same pattern.
  */
 import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 import * as api from './api';
+import type { PersonListParams } from './api';
 import { toast } from '$ui';
 
 // ── Query key factory ──────────────────────────────────────────────
 
 export const peopleKeys = {
 	all: ['persons'] as const,
+	list: (params?: PersonListParams) => [...peopleKeys.all, 'list', params ?? {}] as const,
 	detail: (id: string) => [...peopleKeys.all, 'detail', id] as const,
 	memberships: (id: string) => [...peopleKeys.all, 'memberships', id] as const
 };
 
 // ── Query hooks ────────────────────────────────────────────────────
+
+/** Persons list with optional search — operator-scoped (platform.users.view). */
+export function personsListQuery(params?: PersonListParams) {
+	return createQuery(() => ({
+		queryKey: peopleKeys.list(params),
+		queryFn: () => api.listPersons(params),
+		enabled: true,
+		staleTime: 30_000
+	}));
+}
 
 /** Single person by ID — operator-scoped (platform.users.view). */
 export function personDetailQuery(personId: string) {

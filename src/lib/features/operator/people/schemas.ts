@@ -42,3 +42,8 @@ export const updatePersonProfileRequestSchema = z
 export const anonymisePersonRequestSchema = z
 	.object({ reason: z.string().min(1).max(500) })
 	.strict();
+
+export const personListResponseSchema = z.object({
+	persons: z.array(personDtoSchema),
+	next_cursor: z.string().nullable().optional()
+});
