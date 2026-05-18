@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { ValidationError } from '$api/errors';
 	import { Alert, Button } from '$ui';
 	import { TextField } from '$form';
 	import { updateTenantProfileSchema } from '../schemas';
 	import { updateTenantProfileMutation } from '../queries';
+	import { useForm } from '$lib/utils/use-form.svelte';
 	import type { Tenant } from '../types';
 
 	/**
@@ -19,51 +19,28 @@
 
 	let { tenant, tenantId }: Props = $props();
 
-	let legalName = $state('');
-	let displayName = $state('');
-	let formError = $state<string | null>(null);
-	let fieldErrors = $state<{ legal_name?: string; display_name?: string }>({});
-	let errorRegion: HTMLElement | undefined = $state();
-
-	$effect.pre(() => {
-		legalName = tenant.legal_name;
-		displayName = tenant.display_name;
-	});
-
 	const mutation = $derived(updateTenantProfileMutation(tenantId));
 
+	const form = useForm(updateTenantProfileSchema, {
+		legal_name: '',
+		display_name: ''
+	});
+
+	$effect.pre(() => {
+		form.values.legal_name = tenant.legal_name;
+		form.values.display_name = tenant.display_name;
+	});
+
 	async function onSubmit(e: SubmitEvent) {
-		e.preventDefault();
-		formError = null;
-		fieldErrors = {};
-
-		const parsed = updateTenantProfileSchema.safeParse({
-			legal_name: legalName,
-			display_name: displayName
-		});
-		if (!parsed.success) {
-			const flat = parsed.error.flatten().fieldErrors;
-			fieldErrors = {
-				legal_name: flat.legal_name?.[0],
-				display_name: flat.display_name?.[0]
-			};
-			return;
-		}
-
-		mutation.mutate(parsed.data, {
-			onError: (err) => {
-				if (err instanceof ValidationError) {
-					fieldErrors = err.fields as typeof fieldErrors;
-				} else {
-					formError =
-						err instanceof Error ? err.message : 'Could not save changes. Please try again.';
-					queueMicrotask(() => errorRegion?.focus());
-				}
-			}
+		await form.submit(e, async (values) => {
+			await new Promise<void>((resolve, reject) => {
+				mutation.mutate(values, {
+					onSuccess: () => resolve(),
+					onError: (err) => reject(err)
+				});
+			});
 		});
 	}
-
-	const isSaving = $derived(mutation.isPending);
 </script>
 
 <form class="stack" onsubmit={onSubmit} novalidate>
@@ -71,25 +48,23 @@
 		label="Legal name"
 		hint="The registered name on the tenant's drug-licence and tax filings."
 		required
-		bind:value={legalName}
-		error={fieldErrors.legal_name}
+		bind:value={form.values.legal_name}
+		error={form.errors.legal_name}
 	/>
 
 	<TextField
 		label="Display name"
 		hint="The friendly name shown in the topbar and on emailed documents."
 		required
-		bind:value={displayName}
-		error={fieldErrors.display_name}
+		bind:value={form.values.display_name}
+		error={form.errors.display_name}
 	/>
 
-	{#if formError}
-		<div bind:this={errorRegion} tabindex="-1">
-			<Alert variant="danger">{formError}</Alert>
-		</div>
+	{#if form.bannerError}
+		<Alert variant="danger">{form.bannerError}</Alert>
 	{/if}
 
 	<div class="cluster justify-end">
-		<Button type="submit" loading={isSaving}>Save changes</Button>
+		<Button type="submit" loading={form.isSubmitting}>Save changes</Button>
 	</div>
 </form>

@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { ValidationError } from '$api/errors';
 	import { Alert, Button } from '$ui';
 	import { Select, type SelectOption } from '$form';
 	import { updateTenantDisplayPreferencesSchema } from '../schemas';
 	import { updateTenantDisplayPreferencesMutation } from '../queries';
+	import { useForm } from '$lib/utils/use-form.svelte';
 	import type { Tenant } from '../types';
 
 	/**
@@ -50,68 +50,47 @@
 		{ value: 'SGD', label: 'S$ Singapore Dollar (SGD)' }
 	];
 
-	let locale = $state('');
-	let timeZone = $state('');
-	let dateFormat = $state('');
-	let currency = $state('');
-	let formError = $state<string | null>(null);
-	let errorRegion: HTMLElement | undefined = $state();
-
-	$effect.pre(() => {
-		locale = tenant.locale ?? 'en-IN';
-		timeZone = tenant.time_zone ?? 'Asia/Kolkata';
-		dateFormat = tenant.date_format ?? 'dd-MM-yyyy';
-		currency = tenant.currency ?? 'INR';
-	});
-
 	const mutation = $derived(updateTenantDisplayPreferencesMutation(tenantId));
 
+	const form = useForm(updateTenantDisplayPreferencesSchema, {
+		locale: 'en-IN',
+		time_zone: 'Asia/Kolkata',
+		date_format: 'dd-MM-yyyy',
+		currency: 'INR'
+	});
+
+	$effect.pre(() => {
+		form.values.locale = tenant.locale ?? 'en-IN';
+		form.values.time_zone = tenant.time_zone ?? 'Asia/Kolkata';
+		form.values.date_format = tenant.date_format ?? 'dd-MM-yyyy';
+		form.values.currency = tenant.currency ?? 'INR';
+	});
+
 	async function onSubmit(e: SubmitEvent) {
-		e.preventDefault();
-		formError = null;
-
-		const parsed = updateTenantDisplayPreferencesSchema.safeParse({
-			locale,
-			time_zone: timeZone,
-			date_format: dateFormat,
-			currency
-		});
-		if (!parsed.success) {
-			formError = 'Some values were rejected. Please check the highlighted fields.';
-			return;
-		}
-
-		mutation.mutate(parsed.data, {
-			onError: (err) => {
-				if (err instanceof ValidationError) {
-					formError = 'Some values were rejected by the server.';
-				} else {
-					formError =
-						err instanceof Error ? err.message : 'Could not save changes. Please try again.';
-				}
-				queueMicrotask(() => errorRegion?.focus());
-			}
+		await form.submit(e, async (values) => {
+			await new Promise<void>((resolve, reject) => {
+				mutation.mutate(values, {
+					onSuccess: () => resolve(),
+					onError: (err) => reject(err)
+				});
+			});
 		});
 	}
-
-	const isSaving = $derived(mutation.isPending);
 </script>
 
 <form class="stack" onsubmit={onSubmit} novalidate>
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-		<Select label="Locale" options={localeOptions} bind:value={locale} />
-		<Select label="Time zone" options={timeZoneOptions} bind:value={timeZone} />
-		<Select label="Date format" options={dateFormatOptions} bind:value={dateFormat} />
-		<Select label="Currency" options={currencyOptions} bind:value={currency} />
+		<Select label="Locale" options={localeOptions} bind:value={form.values.locale} />
+		<Select label="Time zone" options={timeZoneOptions} bind:value={form.values.time_zone} />
+		<Select label="Date format" options={dateFormatOptions} bind:value={form.values.date_format} />
+		<Select label="Currency" options={currencyOptions} bind:value={form.values.currency} />
 	</div>
 
-	{#if formError}
-		<div bind:this={errorRegion} tabindex="-1">
-			<Alert variant="danger">{formError}</Alert>
-		</div>
+	{#if form.bannerError}
+		<Alert variant="danger">{form.bannerError}</Alert>
 	{/if}
 
 	<div class="cluster justify-end">
-		<Button type="submit" loading={isSaving}>Save changes</Button>
+		<Button type="submit" loading={form.isSubmitting}>Save changes</Button>
 	</div>
 </form>

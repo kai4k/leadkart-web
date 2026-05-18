@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { ValidationError } from '$api/errors';
 	import { Alert, Button } from '$ui';
 	import { TextField } from '$form';
 	import { updateTenantStatutorySchema } from '../schemas';
 	import { updateTenantStatutoryMutation } from '../queries';
+	import { useForm } from '$lib/utils/use-form.svelte';
 	import type { Tenant } from '../types';
 
 	/**
@@ -20,48 +20,30 @@
 
 	let { tenant, tenantId }: Props = $props();
 
-	let gst = $state('');
-	let pan = $state('');
-	let drugLicence = $state('');
-	let formError = $state<string | null>(null);
-	let errorRegion: HTMLElement | undefined = $state();
-
-	$effect.pre(() => {
-		gst = tenant.gst_number ?? '';
-		pan = tenant.pan_number ?? '';
-		drugLicence = tenant.drug_licence_number ?? '';
-	});
-
 	const mutation = $derived(updateTenantStatutoryMutation(tenantId));
 
+	const form = useForm(updateTenantStatutorySchema, {
+		gst_number: '',
+		pan_number: '',
+		drug_licence_number: ''
+	});
+
+	$effect.pre(() => {
+		form.values.gst_number = tenant.gst_number ?? '';
+		form.values.pan_number = tenant.pan_number ?? '';
+		form.values.drug_licence_number = tenant.drug_licence_number ?? '';
+	});
+
 	async function onSubmit(e: SubmitEvent) {
-		e.preventDefault();
-		formError = null;
-
-		const parsed = updateTenantStatutorySchema.safeParse({
-			gst_number: gst.trim(),
-			pan_number: pan.trim(),
-			drug_licence_number: drugLicence.trim()
-		});
-		if (!parsed.success) {
-			formError = 'Some values were rejected. Please check the highlighted fields.';
-			return;
-		}
-
-		mutation.mutate(parsed.data, {
-			onError: (err) => {
-				if (err instanceof ValidationError) {
-					formError = 'Some values were rejected by the server.';
-				} else {
-					formError =
-						err instanceof Error ? err.message : 'Could not save changes. Please try again.';
-				}
-				queueMicrotask(() => errorRegion?.focus());
-			}
+		await form.submit(e, async (values) => {
+			await new Promise<void>((resolve, reject) => {
+				mutation.mutate(values, {
+					onSuccess: () => resolve(),
+					onError: (err) => reject(err)
+				});
+			});
 		});
 	}
-
-	const isSaving = $derived(mutation.isPending);
 </script>
 
 <form class="stack" onsubmit={onSubmit} novalidate>
@@ -70,7 +52,8 @@
 		hint="15-character GSTIN (e.g. 27AAAPL1234C1Z1). Leave blank if not registered."
 		autocomplete="off"
 		spellcheck={false}
-		bind:value={gst}
+		bind:value={form.values.gst_number}
+		error={form.errors.gst_number}
 	/>
 
 	<TextField
@@ -78,7 +61,8 @@
 		hint="10-character permanent account number (e.g. AAAPL1234C)."
 		autocomplete="off"
 		spellcheck={false}
-		bind:value={pan}
+		bind:value={form.values.pan_number}
+		error={form.errors.pan_number}
 	/>
 
 	<TextField
@@ -86,16 +70,15 @@
 		hint="Issued by the State Drug Controller — required for retail / wholesale pharma operations."
 		autocomplete="off"
 		spellcheck={false}
-		bind:value={drugLicence}
+		bind:value={form.values.drug_licence_number}
+		error={form.errors.drug_licence_number}
 	/>
 
-	{#if formError}
-		<div bind:this={errorRegion} tabindex="-1">
-			<Alert variant="danger">{formError}</Alert>
-		</div>
+	{#if form.bannerError}
+		<Alert variant="danger">{form.bannerError}</Alert>
 	{/if}
 
 	<div class="cluster justify-end">
-		<Button type="submit" loading={isSaving}>Save changes</Button>
+		<Button type="submit" loading={form.isSubmitting}>Save changes</Button>
 	</div>
 </form>

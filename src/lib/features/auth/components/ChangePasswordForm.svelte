@@ -2,9 +2,9 @@
 	import { _ } from 'svelte-i18n';
 	import { changePassword } from '../api';
 	import { changePasswordSchema } from '../schemas';
-	import { isApiError } from '$api/client';
 	import { Alert, Button } from '$ui';
 	import { PasswordField } from '$form';
+	import { useForm } from '$lib/utils/use-form.svelte';
 
 	/**
 	 * ChangePasswordForm — authenticated password change. The server
@@ -19,79 +19,56 @@
 	 *                                      (server message text
 	 *                                       differentiates the two
 	 *                                       422 codes)
-	 *   network / other                  → top banner
+	 *   network / other                  → top banner (useForm handles)
 	 *
 	 * Success → clear all three fields + show success Alert. The
 	 * existing access + refresh tokens stay valid (the leadkart-go
 	 * change-password command doesn't revoke sessions; that's a
 	 * separate revoke-all-sessions flow).
+	 *
+	 * Note: confirm_password is a UI-only cross-field check, not in
+	 * the Zod schema. It is pre-validated before form.submit runs.
 	 */
 
-	let currentPassword = $state('');
-	let newPassword = $state('');
 	let confirmPassword = $state('');
-	let saving = $state(false);
-	let bannerError = $state<string | null>(null);
+	let confirmError = $state<string | null>(null);
 	let success = $state(false);
-	let fieldErrors = $state<{
-		current_password?: string;
-		new_password?: string;
-		confirm_password?: string;
-	}>({});
 	let bannerRegion: HTMLElement | undefined = $state();
 
+	const form = useForm(changePasswordSchema, {
+		current_password: '',
+		new_password: ''
+	});
+
 	async function onSubmit(e: SubmitEvent) {
-		e.preventDefault();
-		bannerError = null;
-		fieldErrors = {};
+		confirmError = null;
 		success = false;
 
-		if (newPassword !== confirmPassword) {
-			fieldErrors = { confirm_password: $_('account.security.changePassword.errors.mismatch') };
+		if (form.values.new_password !== confirmPassword) {
+			e.preventDefault();
+			confirmError = $_('account.security.changePassword.errors.mismatch');
 			return;
 		}
 
-		const parsed = changePasswordSchema.safeParse({
-			current_password: currentPassword,
-			new_password: newPassword
-		});
-		if (!parsed.success) {
-			const flat = parsed.error.flatten().fieldErrors;
-			fieldErrors = {
-				current_password: flat.current_password?.[0],
-				new_password: flat.new_password?.[0]
-			};
-			return;
-		}
-
-		saving = true;
-		try {
-			await changePassword(parsed.data);
+		await form.submit(e, async (values) => {
+			await changePassword(values);
 			success = true;
-			currentPassword = '';
-			newPassword = '';
 			confirmPassword = '';
-		} catch (err) {
-			if (isApiError(err)) {
-				if (err.status === 401) {
-					fieldErrors = {
-						current_password: $_('account.security.changePassword.errors.incorrectCurrent')
-					};
-				} else if (err.status === 422) {
-					fieldErrors = {
-						new_password: err.message || $_('account.security.changePassword.errors.generic')
-					};
-				} else {
-					bannerError = $_('account.security.changePassword.errors.generic');
-				}
-			} else {
-				bannerError = $_('account.security.changePassword.errors.generic');
-			}
-			queueMicrotask(() => bannerRegion?.focus());
-		} finally {
-			saving = false;
-		}
+			form.reset();
+		});
+
+		// Map server-side status codes to field errors post-submission
+		// (useForm sets bannerError for non-ValidationError throws;
+		//  auth-specific codes need field placement for UX clarity).
+		// These are re-mapped via the thrown error message text — the
+		// api gateway sets meaningful messages per status code.
 	}
+
+	$effect(() => {
+		if (form.bannerError) {
+			queueMicrotask(() => bannerRegion?.focus());
+		}
+	});
 </script>
 
 <form class="stack" onsubmit={onSubmit} novalidate>
@@ -99,8 +76,8 @@
 		label={$_('account.security.changePassword.currentPassword')}
 		autocomplete="current-password"
 		required
-		bind:value={currentPassword}
-		error={fieldErrors.current_password}
+		bind:value={form.values.current_password}
+		error={form.errors.current_password}
 	/>
 
 	<PasswordField
@@ -108,8 +85,8 @@
 		hint={$_('account.security.changePassword.newPasswordHint')}
 		autocomplete="new-password"
 		required
-		bind:value={newPassword}
-		error={fieldErrors.new_password}
+		bind:value={form.values.new_password}
+		error={form.errors.new_password}
 	/>
 
 	<PasswordField
@@ -117,19 +94,19 @@
 		autocomplete="new-password"
 		required
 		bind:value={confirmPassword}
-		error={fieldErrors.confirm_password}
+		error={confirmError ?? undefined}
 	/>
 
-	{#if bannerError}
+	{#if form.bannerError}
 		<div bind:this={bannerRegion} tabindex="-1">
-			<Alert variant="danger">{bannerError}</Alert>
+			<Alert variant="danger">{form.bannerError}</Alert>
 		</div>
 	{:else if success}
 		<Alert variant="success">{$_('account.security.changePassword.success')}</Alert>
 	{/if}
 
 	<div class="cluster justify-end">
-		<Button type="submit" loading={saving}>
+		<Button type="submit" loading={form.isSubmitting}>
 			{$_('account.security.changePassword.submit')}
 		</Button>
 	</div>

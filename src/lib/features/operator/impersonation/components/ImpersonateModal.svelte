@@ -1,34 +1,40 @@
 <script lang="ts">
+	import { z } from 'zod';
 	import { Alert, Button, Dialog } from '$ui';
+	import { useForm } from '$lib/utils/use-form.svelte';
 	import { impersonation } from '$features/operator/impersonation/stores/impersonation.svelte';
 	import type { TenantDto } from '$features/operator/tenants/types';
 
 	type Props = { open: boolean; tenant: TenantDto | null; onOpenChange: (open: boolean) => void };
 	let { open = $bindable(false), tenant, onOpenChange }: Props = $props();
 
-	let reason = $state('');
-	let durationMinutes = $state(30);
-	let error = $state<string | null>(null);
+	/** Form-local schema — reason min 10 chars, duration 1-240 min. */
+	const impersonateFormSchema = z.object({
+		reason: z.string().min(10, 'Reason must be at least 10 characters').max(500),
+		duration_minutes: z.number().int().min(1).max(240)
+	});
 
 	const isPending = $derived(impersonation.status === 'mutating');
-	const canSubmit = $derived(tenant !== null && reason.trim().length >= 10);
+
+	const form = useForm(impersonateFormSchema, {
+		reason: '',
+		duration_minutes: 30
+	});
 
 	async function onSubmit(e: SubmitEvent) {
-		e.preventDefault();
-		if (!tenant || !canSubmit) return;
-		error = null;
-		try {
-			await impersonation.start({
-				target_tenant_id: tenant.id,
-				reason: reason.trim(),
-				duration_minutes: durationMinutes
-			});
-			reason = '';
-			durationMinutes = 30;
-			onOpenChange(false);
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to start impersonation';
+		if (!tenant) {
+			e.preventDefault();
+			return;
 		}
+		await form.submit(e, async (values) => {
+			await impersonation.start({
+				target_tenant_id: tenant!.id,
+				reason: values.reason,
+				duration_minutes: values.duration_minutes
+			});
+			form.reset();
+			onOpenChange(false);
+		});
 	}
 </script>
 
@@ -52,32 +58,45 @@
 				<label class="stack stack-tight">
 					<span class="label">Reason (required, audited — minimum 10 characters)</span>
 					<textarea
-						bind:value={reason}
+						bind:value={form.values.reason}
 						required
 						minlength={10}
 						maxlength={500}
 						rows={3}
 						class="glass-input w-full rounded-md px-3 py-2 text-sm"
 					></textarea>
+					{#if form.errors.reason}
+						<span class="caption text-[var(--color-danger)]">{form.errors.reason}</span>
+					{/if}
 				</label>
 				<label class="stack stack-tight">
 					<span class="label">Duration (minutes — max 240)</span>
 					<input
 						type="number"
-						bind:value={durationMinutes}
+						bind:value={form.values.duration_minutes}
 						min={1}
 						max={240}
 						class="glass-input rounded-md px-3 py-2 text-sm"
 					/>
+					{#if form.errors.duration_minutes}
+						<span class="caption text-[var(--color-danger)]">{form.errors.duration_minutes}</span>
+					{/if}
 				</label>
-				{#if error}<Alert variant="danger">{error}</Alert>{/if}
+				{#if form.bannerError}
+					<Alert variant="danger">{form.bannerError}</Alert>
+				{/if}
 			</form>
 		</Dialog.Body>
 		<Dialog.Footer>
 			<Dialog.Close>
 				<Button variant="ghost" disabled={isPending}>Cancel</Button>
 			</Dialog.Close>
-			<Button type="submit" form="impersonate-form" disabled={!canSubmit} loading={isPending}>
+			<Button
+				type="submit"
+				form="impersonate-form"
+				disabled={!tenant || form.isSubmitting}
+				loading={isPending}
+			>
 				Start impersonation
 			</Button>
 		</Dialog.Footer>
