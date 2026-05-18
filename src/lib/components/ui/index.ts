@@ -14,5 +14,6 @@ export * as Card from './card';
 export { default as ConfirmDialog } from './ConfirmDialog.svelte';
 export * as Dialog from './dialog';
 export * as Drawer from './drawer';
+export * as Dropdown from './dropdown';
 export { default as Logo } from './Logo.svelte';
 export { default as Spinner } from './Spinner.svelte';
