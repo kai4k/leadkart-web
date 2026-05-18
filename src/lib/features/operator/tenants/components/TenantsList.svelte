@@ -133,7 +133,7 @@
 										<Icon icon={Shield} size="sm" class="text-[var(--color-primary)]" />
 									{/if}
 									<a
-										href="/operator/tenants/{t.slug ?? t.id}"
+										href="/operator/tenants/{t.slug}"
 										class="h5 text-[var(--color-fg)] hover:underline">{t.display_name}</a
 									>
 									{#if isPlatform}
@@ -157,7 +157,7 @@
 									</Button>
 								{/if}
 								<a
-									href="/operator/tenants/{t.slug ?? t.id}"
+									href="/operator/tenants/{t.slug}"
 									class="label text-[var(--color-primary)] hover:underline">Open →</a
 								>
 							</div>

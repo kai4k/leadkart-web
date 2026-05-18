@@ -164,7 +164,7 @@
 				<div class="cluster mt-4">
 					<Button variant="ghost" onclick={reset}>Register another</Button>
 					<a
-						href="/operator/tenants/{credentials.tenantId}"
+						href="/operator/tenants/{credentials.slug}"
 						class="label text-[var(--color-primary)] hover:underline">View tenant →</a
 					>
 					<Button onclick={() => handleClose(false)}>Done</Button>
