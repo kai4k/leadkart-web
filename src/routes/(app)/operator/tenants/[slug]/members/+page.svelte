@@ -14,14 +14,14 @@
 	 * the backend's operator permission bypass already handles this for
 	 * Phase A.
 	 */
-	import { tenantDetailQuery } from '$features/operator/tenants/queries';
+	import { tenantBySlugQuery } from '$features/operator/tenants/queries';
 	import UsersList from '$features/users/components/UsersList.svelte';
 	import { Spinner, Alert } from '$ui';
 
 	let { data } = $props();
 
 	const slug = $derived(data.slug);
-	const query = $derived(tenantDetailQuery(slug));
+	const query = $derived(tenantBySlugQuery(slug));
 	const tenant = $derived(query.data ?? null);
 </script>
 

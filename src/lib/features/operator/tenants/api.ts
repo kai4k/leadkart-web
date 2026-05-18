@@ -21,11 +21,18 @@ export async function registerTenant(req: RegisterTenantRequest): Promise<Regist
 	return registerTenantResponseSchema.parse(raw);
 }
 
-/** Read a tenant by ID — operator-scoped (platform.tenants.view).
+/** Read a tenant by UUID — operator-scoped (platform.tenants.view).
  *  Same endpoint the tenant feature uses; access is widened by
  *  the operator's permission claim. */
 export async function getTenant(tenantId: string): Promise<TenantDto> {
 	const raw = await api.get<unknown>(`/v1/tenants/${tenantId}`);
+	return tenantDtoSchema.parse(raw);
+}
+
+/** Read a tenant by human-readable slug — per ADR 0038 A.3.
+ *  Used by the [slug]/ route hierarchy; slug is the canonical URL path param. */
+export async function getTenantBySlug(slug: string): Promise<TenantDto> {
+	const raw = await api.get<unknown>(`/v1/tenants/by-slug/${encodeURIComponent(slug)}`);
 	return tenantDtoSchema.parse(raw);
 }
 

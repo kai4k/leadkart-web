@@ -58,6 +58,18 @@ export function tenantDetailQuery(tenantId: string) {
 	}));
 }
 
+/**
+ * Single tenant by slug — canonical route lookup per ADR 0038 A.3.
+ * The [slug]/ route hierarchy uses this instead of the UUID lookup.
+ */
+export function tenantBySlugQuery(slug: string) {
+	return createQuery(() => ({
+		queryKey: tenantsKeys.detailBySlug(slug),
+		queryFn: () => api.getTenantBySlug(slug),
+		enabled: !!slug
+	}));
+}
+
 // ── Mutation hooks ─────────────────────────────────────────────────────
 
 /** Register a new tenant. On success, invalidates the full list. */

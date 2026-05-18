@@ -5,7 +5,7 @@
 	import SuspendDialog from '$features/operator/tenants/components/SuspendDialog.svelte';
 	import MarkForDeletionDialog from '$features/operator/tenants/components/MarkForDeletionDialog.svelte';
 	import ImpersonateModal from '$features/operator/impersonation/components/ImpersonateModal.svelte';
-	import { tenantDetailQuery } from '$features/operator/tenants/queries';
+	import { tenantBySlugQuery } from '$features/operator/tenants/queries';
 	import { tenantLifecycleBadge } from '$features/operator/tenants/view-models';
 	import { hasPermission } from '$features/auth/tier';
 	import { session } from '$features/auth/stores/session.svelte';
@@ -20,7 +20,7 @@
 
 	const canView = $derived(hasPermission(session.principal, 'platform.tenants.view'));
 	const slug = $derived(data.slug);
-	const query = $derived(tenantDetailQuery(slug));
+	const query = $derived(tenantBySlugQuery(slug));
 	const tenant = $derived(query.data ?? null);
 
 	function onAction(action: 'suspend' | 'mark', t: TenantDto) {

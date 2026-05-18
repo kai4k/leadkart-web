@@ -3,7 +3,7 @@
 	import { navForTier } from '$lib/config/nav';
 	import { hasPermission, tierOf } from '$features/auth/tier';
 	import { session } from '$features/auth/stores/session.svelte';
-	import { tenantDetailQuery } from '$features/operator/tenants/queries';
+	import { tenantBySlugQuery } from '$features/operator/tenants/queries';
 	import { Building2, Shield, Users, Settings, Activity, UserCog, Icon } from '$icons';
 
 	let { onNavigate } = $props<{ onNavigate?: () => void }>();
@@ -48,7 +48,7 @@
 	);
 
 	// Reactive query — only fetches when tenantSlug is non-null (enabled: !!tenantSlug).
-	const contextTenantQuery = $derived(tenantSlug ? tenantDetailQuery(tenantSlug) : null);
+	const contextTenantQuery = $derived(tenantSlug ? tenantBySlugQuery(tenantSlug) : null);
 	const contextTenant = $derived(contextTenantQuery?.data ?? null);
 
 	const contextualLinks = $derived(

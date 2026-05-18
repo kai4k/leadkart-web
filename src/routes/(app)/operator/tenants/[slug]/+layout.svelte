@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { tenantDetailQuery } from '$features/operator/tenants/queries';
+	import { tenantBySlugQuery } from '$features/operator/tenants/queries';
 	import { Badge, Spinner, Alert } from '$ui';
 	import { Building2, Icon, Users, Shield, Settings, Activity, UserCog } from '$icons';
 
 	let { children, data } = $props();
 
 	const slug = $derived(data.slug);
-	const query = $derived(tenantDetailQuery(slug));
+	const query = $derived(tenantBySlugQuery(slug));
 	const tenant = $derived(query.data ?? null);
 
 	/** Sub-nav tabs for the tenant-context surface (all 5 per spec §B.2.2). */
