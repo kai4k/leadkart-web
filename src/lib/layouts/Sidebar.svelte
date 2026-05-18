@@ -361,9 +361,7 @@
 			color 0.15s ease-out;
 	}
 	/* Brand-tinted icon stroke — single --color-primary token, state
-	   variants via the primary-hover/-active state-layer tokens. The
-	   dark-sidebar variant tones this down (handled below) since
-	   primary over the dark glass tint loses contrast. */
+	   variants via the primary-hover/-active state-layer tokens. */
 	.lk-sidebar-link :global(svg) {
 		flex-shrink: 0;
 		color: var(--color-primary);

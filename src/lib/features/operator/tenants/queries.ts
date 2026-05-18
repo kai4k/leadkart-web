@@ -10,10 +10,6 @@
  *   ['tenants', 'list']             — full list (GET /v1/platform/tenants)
  *   ['tenants', 'detail', id]       — single tenant by UUID
  *
- * NOTE: OperatorTenantsStore is NOT deleted in this commit — the
- * detail page still uses it. Migration is incremental: list + create +
- * mutate hooks land here; detail-page migration is a follow-up slice.
- *
  * API note: @tanstack/svelte-query v6 uses Accessor<Options> — options
  * must be wrapped in a function `() => ({ ... })`. Results are Svelte 5
  * reactive state accessed directly (no `$` prefix needed).

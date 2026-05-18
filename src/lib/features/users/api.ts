@@ -23,8 +23,8 @@ export async function listUsers(): Promise<ListUsersResponse> {
 
 /**
  * Operator-scope variant — fetches members of any tenant by injecting
- * X-Tenant-Id. Used by operator/tenants/[slug]/members and the
- * extended UsersStore.loadForTenant().
+ * X-Tenant-Id. Used by the operator/tenants/[slug]/members route via
+ * tenantMembersQuery.
  */
 export async function listUsersScoped(tenantId: string): Promise<ListUsersResponse> {
 	const raw = await withTenant(tenantId).get<unknown>('/v1/users');

@@ -3,8 +3,8 @@
  * Extracted from queries.ts so unit tests can import this without
  * pulling in the toast / $app/* chain.
  *
- * hasCapability is the canonical replacement for the deleted
- * hasPermission(principal, ...) from tier.ts. The superuser
+ * hasCapability is the canonical permission-check helper.
+ * The superuser
  * short-circuit mirrors ADR 0036 §4.1.
  */
 

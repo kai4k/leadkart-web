@@ -1,9 +1,8 @@
 /**
  * TanStack Query hooks for the tenant-self feature.
  *
- * Replaces TenantStore (class-based) — all server state flows through
- * these hooks. tenantSelfQuery fetches the caller's own tenant by the
- * tenantId in the session JWT; the five update mutations PATCH and then
+ * All server state flows through these hooks. tenantSelfQuery fetches
+ * the caller's own tenant; the five update mutations PATCH and then
  * invalidate the cache so the query layer re-fetches canonical state.
  *
  * API note: @tanstack/svelte-query v6 uses Accessor<Options> — options
