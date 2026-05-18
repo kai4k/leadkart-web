@@ -86,9 +86,9 @@
 			<div class="lk-sidebar-group lk-sidebar-ctx-group">
 				<div class="lk-sidebar-ctx-header">
 					{#if contextTenant?.slug === 'platform'}
-						<Icon icon={Shield} size={12} class="lk-sidebar-ctx-icon" aria-hidden="true" />
+						<Icon icon={Shield} size="xs" class="lk-sidebar-ctx-icon" />
 					{:else}
-						<Icon icon={Building2} size={12} class="lk-sidebar-ctx-icon" aria-hidden="true" />
+						<Icon icon={Building2} size="xs" class="lk-sidebar-ctx-icon" />
 					{/if}
 					<p class="lk-sidebar-section-title lk-sidebar-ctx-title overline">
 						{contextTenant?.display_name ?? tenantSlug}
@@ -447,7 +447,7 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
-	.lk-sidebar-ctx-icon {
+	:global(.lk-sidebar-ctx-icon) {
 		color: var(--color-primary);
 		flex-shrink: 0;
 	}

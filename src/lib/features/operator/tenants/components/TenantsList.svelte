@@ -115,12 +115,7 @@
 							<div class="stack stack-tight">
 								<div class="cluster cluster-tight">
 									{#if isPlatform}
-										<Icon
-											icon={Shield}
-											size="sm"
-											class="text-[var(--color-primary)]"
-											aria-hidden="true"
-										/>
+										<Icon icon={Shield} size="sm" class="text-[var(--color-primary)]" />
 									{/if}
 									<a
 										href="/operator/tenants/{t.id}"

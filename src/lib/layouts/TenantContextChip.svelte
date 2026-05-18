@@ -26,13 +26,8 @@
 	title="Back to all tenants"
 >
 	<span class="lk-tenant-chip-label">Operator</span>
-	<Icon icon={ChevronRight} size="xs" class="lk-tenant-chip-sep" aria-hidden="true" />
-	<Icon
-		icon={isPlatform ? Shield : Building2}
-		size="xs"
-		class="lk-tenant-chip-icon"
-		aria-hidden="true"
-	/>
+	<Icon icon={ChevronRight} size="xs" class="lk-tenant-chip-sep" />
+	<Icon icon={isPlatform ? Shield : Building2} size="xs" class="lk-tenant-chip-icon" />
 	<span class="lk-tenant-chip-name">{displayName}</span>
 </a>
 

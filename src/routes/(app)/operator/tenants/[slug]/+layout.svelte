@@ -10,10 +10,10 @@
 	const slug = $derived(page.params.slug);
 
 	/** Sub-nav tabs for the tenant-context surface. */
-	const tabs = [
+	const tabs = $derived([
 		{ href: `/operator/tenants/${slug}/profile`, label: 'Profile', icon: Building2 },
 		{ href: `/operator/tenants/${slug}/members`, label: 'Members', icon: Users }
-	] as const;
+	]);
 
 	function isActive(href: string): boolean {
 		return page.url.pathname === href || page.url.pathname.startsWith(href + '/');
