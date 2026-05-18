@@ -5,11 +5,13 @@
 	import SuspendDialog from '$features/operator/tenants/components/SuspendDialog.svelte';
 	import MarkForDeletionDialog from '$features/operator/tenants/components/MarkForDeletionDialog.svelte';
 	import ImpersonateModal from '$features/operator/impersonation/components/ImpersonateModal.svelte';
-	import { operatorTenants } from '$features/operator/tenants/stores/operator-tenants.svelte';
+	import { tenantDetailQuery } from '$features/operator/tenants/queries';
 	import { tenantLifecycleBadge } from '$features/operator/tenants/view-models';
 	import { hasPermission } from '$features/auth/tier';
 	import { session } from '$features/auth/stores/session.svelte';
 	import type { TenantDto } from '$features/operator/tenants/types';
+
+	let { data } = $props();
 
 	let suspendOpen = $state(false);
 	let markOpen = $state(false);
@@ -17,27 +19,29 @@
 	let target = $state<TenantDto | null>(null);
 
 	const canView = $derived(hasPermission(session.principal, 'platform.tenants.view'));
+	const slug = $derived(data.slug);
+	const query = $derived(tenantDetailQuery(slug));
+	const tenant = $derived(query.data ?? null);
 
-	function onAction(action: 'suspend' | 'mark', tenant: TenantDto) {
-		target = tenant;
+	function onAction(action: 'suspend' | 'mark', t: TenantDto) {
+		target = t;
 		if (action === 'suspend') suspendOpen = true;
 		else markOpen = true;
 	}
 </script>
 
 <svelte:head>
-	<title>{operatorTenants.current?.display_name ?? 'Tenant'} · Profile · LeadKart</title>
+	<title>{tenant?.display_name ?? 'Tenant'} · Profile · LeadKart</title>
 </svelte:head>
 
-{#if operatorTenants.status === 'loading' && !operatorTenants.current}
+{#if query.isPending}
 	<div class="flex justify-center py-16"><Spinner size={32} /></div>
-{:else if !operatorTenants.current}
-	<Alert variant="warning" title="Tenant not found"
-		>No tenant with that ID or slug, or you don't have access.</Alert
-	>
-{:else}
-	{@const t = operatorTenants.current}
-	{@const badge = tenantLifecycleBadge(t)}
+{:else if query.isError}
+	<Alert variant="warning" title="Tenant not found">
+		No tenant with that ID or slug, or you don't have access.
+	</Alert>
+{:else if tenant}
+	{@const badge = tenantLifecycleBadge(tenant)}
 	<div class="stack stack-relaxed">
 		<header class="cluster cluster-spread">
 			<div class="cluster cluster-tight">
@@ -58,33 +62,33 @@
 				<dl class="grid grid-cols-2 gap-x-6 gap-y-2">
 					<div>
 						<dt class="caption text-[var(--color-fg-muted)]">GSTIN</dt>
-						<dd class="body-base text-[var(--color-fg)]">{t.gst_number || '—'}</dd>
+						<dd class="body-base text-[var(--color-fg)]">{tenant.gst_number || '—'}</dd>
 					</div>
 					<div>
 						<dt class="caption text-[var(--color-fg-muted)]">PAN</dt>
-						<dd class="body-base text-[var(--color-fg)]">{t.pan_number || '—'}</dd>
+						<dd class="body-base text-[var(--color-fg)]">{tenant.pan_number || '—'}</dd>
 					</div>
 					<div>
 						<dt class="caption text-[var(--color-fg-muted)]">Drug licence</dt>
-						<dd class="body-base text-[var(--color-fg)]">{t.drug_licence_number || '—'}</dd>
+						<dd class="body-base text-[var(--color-fg)]">{tenant.drug_licence_number || '—'}</dd>
 					</div>
 					<div>
 						<dt class="caption text-[var(--color-fg-muted)]">Phone</dt>
-						<dd class="body-base text-[var(--color-fg)]">{t.admin_phone || '—'}</dd>
+						<dd class="body-base text-[var(--color-fg)]">{tenant.admin_phone || '—'}</dd>
 					</div>
 					<div>
 						<dt class="caption text-[var(--color-fg-muted)]">Admin email</dt>
-						<dd class="body-base text-[var(--color-fg)]">{t.admin_email || '—'}</dd>
+						<dd class="body-base text-[var(--color-fg)]">{tenant.admin_email || '—'}</dd>
 					</div>
 					<div>
 						<dt class="caption text-[var(--color-fg-muted)]">ID</dt>
-						<dd class="body-base text-[var(--color-fg)]"><code>{t.id}</code></dd>
+						<dd class="body-base text-[var(--color-fg)]"><code>{tenant.id}</code></dd>
 					</div>
 				</dl>
 			</Card.Content>
 		</Card.Root>
 
-		<TenantActionPanel tenant={t} {onAction} />
+		<TenantActionPanel {tenant} {onAction} />
 	</div>
 {/if}
 
@@ -92,6 +96,6 @@
 <MarkForDeletionDialog bind:open={markOpen} tenant={target} onOpenChange={(o) => (markOpen = o)} />
 <ImpersonateModal
 	bind:open={impersonateOpen}
-	tenant={operatorTenants.current}
+	{tenant}
 	onOpenChange={(o) => (impersonateOpen = o)}
 />

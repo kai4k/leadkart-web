@@ -1,18 +1,22 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { operatorTenants } from '$features/operator/tenants/stores/operator-tenants.svelte';
-	import { Badge, Spinner } from '$ui';
-	import { Building2, Icon, Users, Shield } from '$icons';
+	import { tenantDetailQuery } from '$features/operator/tenants/queries';
+	import { Badge, Spinner, Alert } from '$ui';
+	import { Building2, Icon, Users, Shield, Settings, Activity, UserCog } from '$icons';
 
-	let { children } = $props();
+	let { children, data } = $props();
 
-	const tenant = $derived(operatorTenants.current);
-	const slug = $derived(page.params.slug);
+	const slug = $derived(data.slug);
+	const query = $derived(tenantDetailQuery(slug));
+	const tenant = $derived(query.data ?? null);
 
-	/** Sub-nav tabs for the tenant-context surface. */
+	/** Sub-nav tabs for the tenant-context surface (all 5 per spec §B.2.2). */
 	const tabs = $derived([
 		{ href: `/operator/tenants/${slug}/profile`, label: 'Profile', icon: Building2 },
-		{ href: `/operator/tenants/${slug}/members`, label: 'Members', icon: Users }
+		{ href: `/operator/tenants/${slug}/members`, label: 'Members', icon: Users },
+		{ href: `/operator/tenants/${slug}/roles`, label: 'Roles', icon: UserCog },
+		{ href: `/operator/tenants/${slug}/activity`, label: 'Activity', icon: Activity },
+		{ href: `/operator/tenants/${slug}/settings`, label: 'Settings', icon: Settings }
 	]);
 
 	function isActive(href: string): boolean {
@@ -22,8 +26,12 @@
 
 <div class="stack stack-relaxed">
 	<!-- Tenant context header -->
-	{#if operatorTenants.status === 'loading' && !tenant}
+	{#if query.isPending}
 		<div class="flex justify-center py-8"><Spinner size={28} /></div>
+	{:else if query.isError}
+		<Alert variant="warning" title="Tenant not found">
+			No tenant with that ID or slug, or you don't have access.
+		</Alert>
 	{:else if tenant}
 		<header class="stack stack-tight">
 			<a

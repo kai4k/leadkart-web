@@ -63,6 +63,7 @@ export {
 	Unlock,
 	User,
 	UserCheck,
+	UserCog,
 	UserMinus,
 	UserPlus,
 	Users,

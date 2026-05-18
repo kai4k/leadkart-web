@@ -10,11 +10,13 @@
 	 * enhancement (noted in the spec).
 	 */
 	import { Building2, ChevronRight, Shield, Icon } from '$icons';
-	import { operatorTenants } from '$features/operator/tenants/stores/operator-tenants.svelte';
+	import { tenantDetailQuery } from '$features/operator/tenants/queries';
 
 	let { slug }: { slug: string } = $props();
 
-	const tenant = $derived(operatorTenants.current);
+	// $props() values are reactive — use them directly in $derived.
+	const query = $derived(tenantDetailQuery(slug));
+	const tenant = $derived(query.data ?? null);
 	const isPlatform = $derived(tenant?.slug === 'platform');
 	const displayName = $derived(tenant?.display_name ?? slug);
 </script>

@@ -3,8 +3,8 @@
 	import { navForTier } from '$lib/config/nav';
 	import { hasPermission, tierOf } from '$features/auth/tier';
 	import { session } from '$features/auth/stores/session.svelte';
-	import { operatorTenants } from '$features/operator/tenants/stores/operator-tenants.svelte';
-	import { Building2, Shield, Users, Icon } from '$icons';
+	import { tenantDetailQuery } from '$features/operator/tenants/queries';
+	import { Building2, Shield, Users, Settings, Activity, UserCog, Icon } from '$icons';
 
 	let { onNavigate } = $props<{ onNavigate?: () => void }>();
 
@@ -46,17 +46,27 @@
 	const tenantSlug = $derived(
 		page.url.pathname.startsWith('/operator/tenants/') ? (page.params.slug ?? null) : null
 	);
-	const contextTenant = $derived(tenantSlug ? operatorTenants.current : null);
+
+	// Reactive query — only fetches when tenantSlug is non-null (enabled: !!tenantSlug).
+	const contextTenantQuery = $derived(tenantSlug ? tenantDetailQuery(tenantSlug) : null);
+	const contextTenant = $derived(contextTenantQuery?.data ?? null);
 
 	const contextualLinks = $derived(
 		tenantSlug
 			? [
+					{ href: `/operator/tenants/${tenantSlug}/profile`, label: 'Profile', icon: Building2 },
+					{ href: `/operator/tenants/${tenantSlug}/members`, label: 'Members', icon: Users },
+					{ href: `/operator/tenants/${tenantSlug}/roles`, label: 'Roles', icon: UserCog },
 					{
-						href: `/operator/tenants/${tenantSlug}/profile`,
-						label: 'Profile',
-						icon: Building2
+						href: `/operator/tenants/${tenantSlug}/activity`,
+						label: 'Activity',
+						icon: Activity
 					},
-					{ href: `/operator/tenants/${tenantSlug}/members`, label: 'Members', icon: Users }
+					{
+						href: `/operator/tenants/${tenantSlug}/settings`,
+						label: 'Settings',
+						icon: Settings
+					}
 				]
 			: []
 	);

@@ -7,7 +7,10 @@
 		canMarkForDeletion,
 		canRestore
 	} from '$features/operator/tenants/view-models';
-	import { operatorTenants } from '$features/operator/tenants/stores/operator-tenants.svelte';
+	import {
+		activateTenantMutation,
+		restoreTenantMutation
+	} from '$features/operator/tenants/queries';
 	import { hasPermission } from '$features/auth/tier';
 	import { session } from '$features/auth/stores/session.svelte';
 	import type { TenantDto } from '$features/operator/tenants/types';
@@ -20,24 +23,20 @@
 	let { tenant, onAction }: Props = $props();
 
 	const canManage = $derived(hasPermission(session.principal, 'platform.tenants.manage'));
-	const isPending = $derived(operatorTenants.status === 'mutating');
 	/** Platform tenant is immutable — backend rejects lifecycle mutations via
 	 *  ensureNotPlatformTenant. Hide the buttons rather than let them 422. */
 	const isPlatformTenant = $derived(tenant.slug === 'platform');
 
+	const activateMutation = activateTenantMutation();
+	const restoreMutation = restoreTenantMutation();
+
+	const isPending = $derived(activateMutation.isPending || restoreMutation.isPending);
+
 	async function activate() {
-		try {
-			await operatorTenants.activate(tenant.id);
-		} catch {
-			/* error surfaced via store */
-		}
+		activateMutation.mutate(tenant.id);
 	}
 	async function restore() {
-		try {
-			await operatorTenants.restore(tenant.id);
-		} catch {
-			/* error surfaced via store */
-		}
+		restoreMutation.mutate(tenant.id);
 	}
 </script>
 

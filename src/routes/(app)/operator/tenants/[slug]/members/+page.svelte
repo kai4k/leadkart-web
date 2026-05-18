@@ -14,29 +14,35 @@
 	 * the backend's operator permission bypass already handles this for
 	 * Phase A.
 	 */
-	import { operatorTenants } from '$features/operator/tenants/stores/operator-tenants.svelte';
+	import { tenantDetailQuery } from '$features/operator/tenants/queries';
 	import { users } from '$features/users/stores/users.svelte';
 	import UsersList from '$features/users/components/UsersList.svelte';
 	import { Spinner, Alert } from '$ui';
 
+	let { data } = $props();
+
+	const slug = $derived(data.slug);
+	const query = $derived(tenantDetailQuery(slug));
+	const tenant = $derived(query.data ?? null);
+
 	$effect(() => {
-		const tenant = operatorTenants.current;
-		if (tenant && users.scopedTenantId !== tenant.id) {
-			users.loadForTenant(tenant.id).catch(() => {});
+		const t = tenant;
+		if (t && users.scopedTenantId !== t.id) {
+			users.loadForTenant(t.id).catch(() => {});
 		}
 	});
 </script>
 
 <svelte:head>
-	<title>{operatorTenants.current?.display_name ?? 'Tenant'} · Members · LeadKart</title>
+	<title>{tenant?.display_name ?? 'Tenant'} · Members · LeadKart</title>
 </svelte:head>
 
-{#if operatorTenants.status === 'loading' && !operatorTenants.current}
+{#if query.isPending}
 	<div class="flex justify-center py-16"><Spinner size={32} /></div>
-{:else if !operatorTenants.current}
-	<Alert variant="warning" title="Tenant not found"
-		>No tenant with that ID or slug, or you don't have access.</Alert
-	>
+{:else if query.isError || !tenant}
+	<Alert variant="warning" title="Tenant not found">
+		No tenant with that ID or slug, or you don't have access.
+	</Alert>
 {:else}
 	<UsersList />
 {/if}
