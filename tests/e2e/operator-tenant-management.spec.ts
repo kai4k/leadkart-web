@@ -6,7 +6,7 @@ import { fakeLoginResponse, TEST_TENANT_ID, TEST_MEMBERSHIP_ID } from './helpers
  * Operator tenant management e2e — slice 4 acceptance gate.
  *
  * Two scenarios:
- *   1. List page renders with the info banner (no list endpoint workaround).
+ *   1. List page renders tenant cards from the real list endpoint.
  *   2. a11y — axe finds no serious/critical violations on the list page.
  *
  * The leadkart-go backend is NOT running in CI, so each test sets up
@@ -14,6 +14,7 @@ import { fakeLoginResponse, TEST_TENANT_ID, TEST_MEMBERSHIP_ID } from './helpers
  * endpoints the flow exercises:
  *
  *   POST  /api/v1/auth/login                          → {tokens} (platform principal)
+ *   GET   /api/v1/platform/tenants                    → ListAllTenantsResponse
  *   GET   /api/v1/tenants/{tid}                       → minimal TenantDto (sidebar)
  *   GET   /api/v1/users/{mid}                         → UserDto (profile/sidebar)
  *
@@ -66,6 +67,25 @@ const MINIMAL_TENANT = {
 	}
 };
 
+const LIST_TENANTS_RESPONSE = {
+	tenants: [
+		{
+			...MINIMAL_TENANT,
+			id: 'tid-aaa',
+			slug: 'acme-pharma',
+			display_name: 'Acme Pharma',
+			legal_name: 'Acme Pharma Pvt Ltd'
+		},
+		{
+			...MINIMAL_TENANT,
+			id: 'tid-bbb',
+			slug: 'beta-meds',
+			display_name: 'Beta Meds',
+			legal_name: 'Beta Meds Ltd'
+		}
+	]
+};
+
 async function signInAsPlatformOperator(page: Page): Promise<void> {
 	// Mock login — platform principal with operator permissions so the
 	// /operator/tenants load guard (hasPermission platform.tenants.view) passes.
@@ -80,6 +100,19 @@ async function signInAsPlatformOperator(page: Page): Promise<void> {
 				})
 			)
 		});
+	});
+
+	// List tenants — the real GET /v1/platform/tenants that the store calls on mount.
+	await page.route('**/api/v1/platform/tenants', async (route: Route) => {
+		if (route.request().method() === 'GET') {
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify(LIST_TENANTS_RESPONSE)
+			});
+		} else {
+			await route.continue();
+		}
 	});
 
 	// Tenant fetch — AppShell sidebar triggers this on every (app) route.
@@ -116,15 +149,16 @@ async function signInAsPlatformOperator(page: Page): Promise<void> {
 }
 
 test.describe('Operator tenant management', () => {
-	test('tenants list: info banner renders', async ({ page }) => {
+	test('tenants list: renders tenant cards from real list endpoint', async ({ page }) => {
 		await signInAsPlatformOperator(page);
 		await page.goto('/operator/tenants');
 
 		// Page heading is present
 		await expect(page.getByRole('heading', { name: /tenants/i })).toBeVisible();
 
-		// Info banner re: missing list endpoint
-		await expect(page.getByText(/listing endpoint pending on the backend/i)).toBeVisible();
+		// Tenant cards from the mocked list are rendered
+		await expect(page.getByText('Acme Pharma')).toBeVisible();
+		await expect(page.getByText('Beta Meds')).toBeVisible();
 
 		// Register tenant button is visible (platform.tenants.create granted)
 		await expect(page.getByRole('button', { name: /register tenant/i })).toBeVisible();
@@ -134,8 +168,8 @@ test.describe('Operator tenant management', () => {
 		await signInAsPlatformOperator(page);
 		await page.goto('/operator/tenants');
 
-		// Wait for the info banner to confirm load completed
-		await expect(page.getByText(/listing endpoint pending on the backend/i)).toBeVisible();
+		// Wait for the list to load
+		await expect(page.getByText('Acme Pharma')).toBeVisible();
 
 		const results = await new AxeBuilder({ page })
 			.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'])

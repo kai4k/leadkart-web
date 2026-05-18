@@ -43,3 +43,7 @@ export const suspendTenantRequestSchema = z.object({ reason: z.string().min(1).m
 export const markForDeletionRequestSchema = z
 	.object({ reason: z.string().min(1).max(500) })
 	.strict();
+
+export const listAllTenantsResponseSchema = z.object({
+	tenants: z.array(tenantDtoSchema)
+});

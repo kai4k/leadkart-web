@@ -10,7 +10,8 @@ import {
 	registerTenantResponseSchema,
 	suspendTenantRequestSchema,
 	markForDeletionRequestSchema,
-	tenantDtoSchema
+	tenantDtoSchema,
+	listAllTenantsResponseSchema
 } from '$lib/features/operator/tenants/schemas';
 
 // ---------------------------------------------------------------------------
@@ -206,5 +207,49 @@ describe('tenantDtoSchema re-export', () => {
 			}
 		});
 		expect(result.success).toBe(true);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// listAllTenantsResponseSchema
+// ---------------------------------------------------------------------------
+
+const VALID_TENANT_DTO = {
+	id: 'tid-001',
+	slug: 'acme',
+	legal_name: 'Acme Ltd',
+	display_name: 'Acme',
+	admin_email: 'a@acme.test',
+	status: 'active',
+	created_at: '2026-01-01T00:00:00Z',
+	admin_address: {},
+	password_policy: {
+		min_length: 8,
+		require_uppercase: false,
+		require_lowercase: false,
+		require_digit: false,
+		require_symbol: false,
+		max_failed_attempts: 5,
+		lockout_minutes: 15
+	}
+};
+
+describe('listAllTenantsResponseSchema', () => {
+	it('parses a response with an empty tenants array', () => {
+		expect(listAllTenantsResponseSchema.safeParse({ tenants: [] }).success).toBe(true);
+	});
+
+	it('parses a response with one valid tenant DTO', () => {
+		expect(listAllTenantsResponseSchema.safeParse({ tenants: [VALID_TENANT_DTO] }).success).toBe(
+			true
+		);
+	});
+
+	it('rejects a response missing the tenants field', () => {
+		expect(listAllTenantsResponseSchema.safeParse({}).success).toBe(false);
+	});
+
+	it('rejects a response where tenants is not an array', () => {
+		expect(listAllTenantsResponseSchema.safeParse({ tenants: null }).success).toBe(false);
 	});
 });

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Alert, Badge, Button, Card, EmptyState } from '$ui';
+	import { Alert, Badge, Button, Card, EmptyState, Spinner } from '$ui';
 	import { Building2, Eye, Plus, Search, Icon } from '$icons';
 	import { operatorTenants } from '$features/operator/tenants/stores/operator-tenants.svelte';
 	import { tenantLifecycleBadge } from '$features/operator/tenants/view-models';
@@ -9,28 +9,36 @@
 	import ImpersonateModal from '$features/operator/impersonation/components/ImpersonateModal.svelte';
 	import type { TenantDto } from '$features/operator/tenants/types';
 
+	const PAGE_SIZE = 10;
+
 	let createOpen = $state(false);
 	let impersonateOpen = $state(false);
 	let impersonateTarget = $state<TenantDto | null>(null);
-	let search = $state('');
-	let pending = $state(false);
+	let page = $state(1);
 
 	const canCreate = $derived(hasPermission(session.principal, 'platform.tenants.create'));
 	const canView = $derived(hasPermission(session.principal, 'platform.tenants.view'));
 
+	const filtered = $derived(operatorTenants.filtered);
+	const totalPages = $derived(Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)));
+	const paged = $derived(filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE));
+
+	// Reset to page 1 whenever the filter changes.
+	$effect(() => {
+		void operatorTenants.search;
+		page = 1;
+	});
+
+	// Load on mount when still idle.
+	$effect(() => {
+		if (operatorTenants.status === 'idle') {
+			operatorTenants.load();
+		}
+	});
+
 	function openImpersonate(tenant: TenantDto) {
 		impersonateTarget = tenant;
 		impersonateOpen = true;
-	}
-
-	async function onSearch(e: SubmitEvent) {
-		e.preventDefault();
-		pending = true;
-		try {
-			await operatorTenants.lookupById(search.trim());
-		} finally {
-			pending = false;
-		}
 	}
 </script>
 
@@ -47,29 +55,47 @@
 		{/if}
 	</header>
 
-	<Alert variant="info">
-		Listing endpoint pending on the backend. For now, look up a tenant by ID or slug below.
-	</Alert>
+	<div class="cluster">
+		<div class="relative flex-1">
+			<span class="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+				<Icon icon={Search} size="sm" class="text-[var(--color-fg-subtle)]" />
+			</span>
+			<input
+				type="search"
+				placeholder="Filter by name, slug, or legal name"
+				bind:value={operatorTenants.search}
+				class="glass-input w-full rounded-md py-2 pr-3 pl-9 text-sm"
+				aria-label="Filter tenants"
+			/>
+		</div>
+	</div>
 
-	<form class="cluster" onsubmit={onSearch}>
-		<input
-			type="search"
-			placeholder="Tenant ID or slug"
-			bind:value={search}
-			class="glass-input flex-1 rounded-md px-3 py-2 text-sm"
+	{#if operatorTenants.status === 'loading'}
+		<div class="flex items-center justify-center py-12">
+			<Spinner size="lg" />
+		</div>
+	{:else if operatorTenants.status === 'error' && operatorTenants.error}
+		<Alert variant="danger" title="Failed to load tenants">
+			{operatorTenants.error}
+			<Button variant="ghost" size="sm" onclick={() => operatorTenants.load()} class="mt-2"
+				>Retry</Button
+			>
+		</Alert>
+	{:else if operatorTenants.list.length === 0 && operatorTenants.status === 'ready'}
+		<EmptyState
+			icon={Building2}
+			title="No tenants yet"
+			description="Register the first one using the button above."
 		/>
-		<Button type="submit" loading={pending || operatorTenants.status === 'loading'}>
-			<Icon icon={Search} size="sm" /> Look up
-		</Button>
-	</form>
-
-	{#if operatorTenants.status === 'error' && operatorTenants.error}
-		<Alert variant="danger" title="Lookup failed">{operatorTenants.error}</Alert>
-	{:else if operatorTenants.list.length === 0 && operatorTenants.status !== 'idle'}
-		<EmptyState icon={Building2} title="No match" description="Try a different ID or slug." />
-	{:else if operatorTenants.list.length > 0}
+	{:else if filtered.length === 0}
+		<EmptyState
+			icon={Building2}
+			title="No matches for '{operatorTenants.search}'"
+			description="Try a different name or slug."
+		/>
+	{:else}
 		<ul class="stack stack-tight" aria-label="Tenants">
-			{#each operatorTenants.list as t (t.id)}
+			{#each paged as t (t.id)}
 				{@const badge = tenantLifecycleBadge(t)}
 				<li>
 					<Card.Root>
@@ -107,12 +133,35 @@
 				</li>
 			{/each}
 		</ul>
-	{:else}
-		<EmptyState
-			icon={Building2}
-			title="Search for a tenant"
-			description="Paste a tenant ID or slug above to load its detail page."
-		/>
+
+		{#if totalPages > 1}
+			<nav class="cluster cluster-spread" aria-label="Tenant list pagination">
+				<p class="caption text-[var(--color-fg-muted)]">
+					{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+				</p>
+				<div class="cluster cluster-tight">
+					<Button
+						variant="ghost"
+						size="sm"
+						disabled={page <= 1}
+						onclick={() => (page -= 1)}
+						aria-label="Previous page"
+					>
+						← Prev
+					</Button>
+					<span class="caption">Page {page} / {totalPages}</span>
+					<Button
+						variant="ghost"
+						size="sm"
+						disabled={page >= totalPages}
+						onclick={() => (page += 1)}
+						aria-label="Next page"
+					>
+						Next →
+					</Button>
+				</div>
+			</nav>
+		{/if}
 	{/if}
 </div>
 

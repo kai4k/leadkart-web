@@ -10,7 +10,8 @@ import type {
 	registerTenantRequestSchema,
 	registerTenantResponseSchema,
 	suspendTenantRequestSchema,
-	markForDeletionRequestSchema
+	markForDeletionRequestSchema,
+	listAllTenantsResponseSchema
 } from './schemas';
 
 export type { Tenant as TenantDto } from '$lib/features/tenant/types';
@@ -19,3 +20,4 @@ export type RegisterTenantRequest = z.output<typeof registerTenantRequestSchema>
 export type RegisterTenantResponse = z.output<typeof registerTenantResponseSchema>;
 export type SuspendTenantRequest = z.output<typeof suspendTenantRequestSchema>;
 export type MarkForDeletionRequest = z.output<typeof markForDeletionRequestSchema>;
+export type ListAllTenantsResponse = z.output<typeof listAllTenantsResponseSchema>;

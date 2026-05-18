@@ -1,11 +1,16 @@
 import { api } from '$api/client';
-import { tenantDtoSchema, registerTenantResponseSchema } from './schemas';
+import {
+	tenantDtoSchema,
+	registerTenantResponseSchema,
+	listAllTenantsResponseSchema
+} from './schemas';
 import type {
 	RegisterTenantRequest,
 	RegisterTenantResponse,
 	SuspendTenantRequest,
 	MarkForDeletionRequest,
-	TenantDto
+	TenantDto,
+	ListAllTenantsResponse
 } from './types';
 
 /** Register a new tenant + seed admin. Returns IDs of all three
@@ -43,8 +48,9 @@ export async function restoreTenant(tenantId: string): Promise<void> {
 	await api.post<void>(`/v1/tenants/${tenantId}/restore`, {});
 }
 
-/**
- * TODO(backend): GET /v1/tenants (list) does not yet exist.
- * When it ships, add `listTenants()` here returning a paginated
- * response, and update OperatorTenantsStore.load() to use it.
- */
+/** List all tenants — operator-scoped (platform.tenants.view).
+ *  Calls GET /v1/platform/tenants which returns the full collection. */
+export async function listTenants(): Promise<ListAllTenantsResponse> {
+	const raw = await api.get<unknown>('/v1/platform/tenants');
+	return listAllTenantsResponseSchema.parse(raw);
+}

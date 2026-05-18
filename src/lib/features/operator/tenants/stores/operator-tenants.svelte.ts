@@ -1,5 +1,6 @@
 import {
 	getTenant,
+	listTenants as listTenantsApi,
 	registerTenant as registerApi,
 	suspendTenant as suspendApi,
 	activateTenant as activateApi,
@@ -14,21 +15,42 @@ import type {
 
 export type OperatorTenantsStatus = 'idle' | 'loading' | 'ready' | 'mutating' | 'error';
 
-/**
- * Until the backend exposes GET /v1/tenants (list), this store
- * operates as a one-tenant cache fed by manual lookup-by-ID. The
- * `list` field is a one-element array (or empty) so list-view
- * components can iterate without special-casing.
- *
- * Once backend ships the list endpoint, replace `lookupById` with a
- * proper `load()` that populates `list` with the full collection.
- */
 export class OperatorTenantsStore {
+	/** Full collection from GET /v1/platform/tenants. */
 	list = $state<TenantDto[]>([]);
+	/** Client-side filter string — matched against slug / display_name / legal_name. */
+	search = $state('');
 	current = $state<TenantDto | null>(null);
 	status = $state<OperatorTenantsStatus>('idle');
 	error = $state<string | null>(null);
 
+	/** Filtered view of list — use this in list-view components. */
+	get filtered(): TenantDto[] {
+		const q = this.search.trim().toLowerCase();
+		if (!q) return this.list;
+		return this.list.filter(
+			(t) =>
+				t.slug.toLowerCase().includes(q) ||
+				t.display_name.toLowerCase().includes(q) ||
+				t.legal_name.toLowerCase().includes(q)
+		);
+	}
+
+	/** Load full tenant list from GET /v1/platform/tenants. */
+	async load(): Promise<void> {
+		this.status = 'loading';
+		this.error = null;
+		try {
+			const resp = await listTenantsApi();
+			this.list = resp.tenants;
+			this.status = 'ready';
+		} catch (e) {
+			this.status = 'error';
+			this.error = e instanceof Error ? e.message : 'Failed to load tenants';
+		}
+	}
+
+	/** Direct UUID lookup — power-user fallback when the caller already has an ID. */
 	async lookupById(tenantId: string): Promise<void> {
 		const trimmed = tenantId.trim();
 		if (!trimmed) {
@@ -89,6 +111,7 @@ export class OperatorTenantsStore {
 
 	reset(): void {
 		this.list = [];
+		this.search = '';
 		this.current = null;
 		this.status = 'idle';
 		this.error = null;
