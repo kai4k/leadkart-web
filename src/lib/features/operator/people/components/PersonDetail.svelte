@@ -18,6 +18,8 @@
 	import type { PersonDto } from '$features/operator/people/types';
 	import GlobalSuspendDialog from './GlobalSuspendDialog.svelte';
 	import AnonymiseDialog from './AnonymiseDialog.svelte';
+	import { personActivityQuery } from '$lib/features/audit/queries';
+	import ActivityTimeline from '$lib/features/audit/components/ActivityTimeline.svelte';
 
 	type Props = { personId: string };
 	let { personId }: Props = $props();
@@ -41,6 +43,8 @@
 
 	const canManage = $derived(hasPermission(session.principal, 'platform.users.manage'));
 	const canAnonymiseOp = $derived(hasPermission(session.principal, 'identity.users.anonymise'));
+
+	const activityQuery = $derived(personId ? personActivityQuery(personId) : null);
 
 	function initials(name: string): string {
 		const parts = name.trim().split(/\s+/);
@@ -142,6 +146,24 @@
 						</table>
 					</div>
 				{/if}
+			</Card.Content>
+		</Card.Root>
+
+		<!-- Activity timeline -->
+		<Card.Root>
+			<Card.Header>
+				<Card.Title>Activity</Card.Title>
+				<Card.Description>Audit log for this person.</Card.Description>
+			</Card.Header>
+			<Card.Content>
+				<ActivityTimeline
+					data={activityQuery?.data ?? null}
+					isPending={activityQuery?.isPending ?? true}
+					isError={activityQuery?.isError ?? false}
+					errorMessage={activityQuery?.error instanceof Error
+						? activityQuery.error.message
+						: 'Failed to load activity'}
+				/>
 			</Card.Content>
 		</Card.Root>
 
