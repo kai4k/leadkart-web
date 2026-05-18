@@ -4,8 +4,8 @@
  * Architecture": shape, status mapping, Zod-parse the response. NO
  * business logic; NO state mutation; NO session reads.
  *
- * The service layer threads `session.principal.tenantId` into these
- * wrappers — keeping the gateway stateless leaves it trivially
+ * The service layer threads `myCapabilitiesQuery().data.tenant_id` into
+ * these wrappers — keeping the gateway stateless leaves it trivially
  * testable + reusable from server-side renders if SvelteKit ever
  * moves off adapter-static.
  *

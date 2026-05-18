@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { Alert, Spinner } from '$ui';
-	import { session } from '$features/auth/stores/session.svelte';
+	import { myCapabilitiesQuery } from '$features/auth/queries';
 	import { tenantSelfQuery } from '$features/tenant/queries';
 	import { tenantDisplayName, tenantStatusBadge } from '$features/tenant/view-models';
 	import { cn } from '$lib/utils/cn';
@@ -27,7 +27,8 @@
 
 	let { children } = $props();
 
-	const tenantId = $derived(session.principal?.tenantId ?? '');
+	const capsQuery = myCapabilitiesQuery();
+	const tenantId = $derived(capsQuery.data?.tenant_id ?? '');
 	const tenantQuery = $derived(tenantSelfQuery(tenantId));
 	const tenantData = $derived(tenantQuery.data ?? null);
 	const badge = $derived(tenantData ? tenantStatusBadge(tenantData.status) : null);

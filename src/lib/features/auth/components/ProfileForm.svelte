@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { TextField } from '$lib/components/form';
 	import { Alert, Button } from '$ui';
-	import { session } from '$features/auth/stores/session.svelte';
-	import { myProfileQuery, updateMyProfileMutation } from '$features/auth/queries';
+	import {
+		myCapabilitiesQuery,
+		myProfileQuery,
+		updateMyProfileMutation
+	} from '$features/auth/queries';
 	import { updateProfileRequestSchema } from '$features/auth/schemas';
 	import { useForm } from '$lib/utils/use-form.svelte';
 	import { displayName } from '$features/auth/view-models';
@@ -13,7 +16,8 @@
 	 * status_message below. Backed by useForm + updateMyProfileMutation.
 	 */
 
-	const membershipId = $derived(session.principal?.membershipId ?? '');
+	const capsQuery = myCapabilitiesQuery();
+	const membershipId = $derived(capsQuery.data?.membership_id ?? '');
 	const profileQuery = $derived(myProfileQuery(membershipId));
 	const profileData = $derived(profileQuery.data ?? null);
 	const mutation = $derived(updateMyProfileMutation(membershipId));

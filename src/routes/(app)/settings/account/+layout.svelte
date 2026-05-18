@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { Alert, Spinner } from '$ui';
-	import { session } from '$features/auth/stores/session.svelte';
-	import { myProfileQuery } from '$features/auth/queries';
+	import { myCapabilitiesQuery, myProfileQuery } from '$features/auth/queries';
 	import { displayName } from '$features/auth/view-models';
 	import { cn } from '$lib/utils/cn';
 
@@ -16,7 +15,8 @@
 
 	let { children } = $props();
 
-	const membershipId = $derived(session.principal?.membershipId ?? '');
+	const capsQuery = myCapabilitiesQuery();
+	const membershipId = $derived(capsQuery.data?.membership_id ?? '');
 	const profileQuery = $derived(myProfileQuery(membershipId));
 	const profileData = $derived(profileQuery.data ?? null);
 

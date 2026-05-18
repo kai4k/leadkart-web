@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { session } from '$features/auth/stores/session.svelte';
 	import { logout } from '$features/auth/api';
+	import { myCapabilitiesQuery } from '$features/auth/queries';
 
 	let open = $state(false);
 	let triggerEl: HTMLButtonElement | undefined = $state();
@@ -47,6 +48,8 @@
 		await goto('/signin');
 	}
 
+	const capsQuery = myCapabilitiesQuery();
+
 	/**
 	 * Initials from the email's local part — falls back to the first
 	 * letter of the local part if the email lacks separators (e.g.
@@ -55,7 +58,7 @@
 	 * canon for missing-display-name avatars.
 	 */
 	const initials = $derived.by(() => {
-		const email = session.principal?.email;
+		const email = capsQuery.data?.email;
 		if (!email) return '?';
 		const local = email.split('@')[0] ?? '';
 		const parts = local.split(/[._-]+/).filter(Boolean);
@@ -86,7 +89,7 @@
 		>
 			<div class="lk-user-popover-header">
 				<p class="caption">Signed in as</p>
-				<p class="label truncate-1">{session.principal?.email ?? '—'}</p>
+				<p class="label truncate-1">{capsQuery.data?.email ?? '—'}</p>
 			</div>
 			<button
 				role="menuitem"

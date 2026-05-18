@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { UserPlus, PhoneCall, AlarmClock, ClipboardList } from 'lucide-svelte';
 	import { Alert, Card } from '$ui';
-	import { session } from '$features/auth/stores/session.svelte';
+	import { myCapabilitiesQuery } from '$features/auth/queries';
 
 	/**
 	 * Regular-tenant-user dashboard skeleton.
@@ -17,7 +17,8 @@
 	 *   GET /api/v1/tasks/me                         — my open tasks
 	 */
 
-	const principal = $derived(session.principal);
+	const capsQuery = myCapabilitiesQuery();
+	const email = $derived(capsQuery.data?.email ?? '—');
 
 	type TileAccent = 'brand' | 'success' | 'warning' | 'danger';
 
@@ -58,7 +59,7 @@
 	<header class="stack stack-tight">
 		<h1 class="h1">My Dashboard</h1>
 		<p class="body-sm text-[var(--color-fg-muted)]">
-			Signed in as <code class="code-inline">{principal?.email ?? '—'}</code>.
+			Signed in as <code class="code-inline">{email}</code>.
 		</p>
 	</header>
 

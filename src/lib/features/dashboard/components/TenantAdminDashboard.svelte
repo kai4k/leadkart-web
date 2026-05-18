@@ -10,7 +10,7 @@
 		ClipboardList
 	} from 'lucide-svelte';
 	import { Alert, Card } from '$ui';
-	import { session } from '$features/auth/stores/session.svelte';
+	import { myCapabilitiesQuery } from '$features/auth/queries';
 
 	/**
 	 * Tenant-admin dashboard skeleton.
@@ -31,7 +31,8 @@
 	 *   GET /api/v1/tasks/me + GET /tasks/overdue    — task summary
 	 */
 
-	const principal = $derived(session.principal);
+	const capsQuery = myCapabilitiesQuery();
+	const email = $derived(capsQuery.data?.email ?? '—');
 
 	type TileAccent = 'brand' | 'success' | 'warning' | 'danger';
 
@@ -93,8 +94,8 @@
 			</span>
 		</div>
 		<p class="body-sm text-[var(--color-fg-muted)]">
-			Signed in as <code class="code-inline">{principal?.email ?? '—'}</code>. Full team overview
-			across CRM, orders, inventory, and dispatch.
+			Signed in as <code class="code-inline">{email}</code>. Full team overview across CRM, orders,
+			inventory, and dispatch.
 		</p>
 	</header>
 
