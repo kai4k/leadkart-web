@@ -3,6 +3,7 @@
 	import { Bell, ChevronRight, Command, PanelLeft, Search, Settings, Icon } from '$icons';
 	import { routeContext } from '$lib/utils/routeTitle';
 	import UserMenu from './UserMenu.svelte';
+	import TenantContextChip from './TenantContextChip.svelte';
 
 	/**
 	 * Topbar — Linear/Vercel-minimal shape:
@@ -21,6 +22,11 @@
 	}>();
 
 	const route = $derived(routeContext(page.url.pathname));
+	/** Show the tenant-context chip when the route contains a [slug] param
+	 *  under /operator/tenants/ — i.e. when operator is in a tenant context. */
+	const tenantSlug = $derived(
+		page.url.pathname.startsWith('/operator/tenants/') ? (page.params.slug ?? null) : null
+	);
 </script>
 
 <header class="lk-topbar glass-card glass-border-glow" aria-label="Application bar">
@@ -37,6 +43,9 @@
 		>
 			<Icon icon={PanelLeft} size="md" />
 		</button>
+		{#if tenantSlug}
+			<TenantContextChip slug={tenantSlug} />
+		{/if}
 		<nav class="lk-topbar-crumbs" aria-label="Breadcrumb">
 			<ol class="lk-topbar-crumb-list">
 				{#each route.crumbs as crumb, i (crumb.href)}

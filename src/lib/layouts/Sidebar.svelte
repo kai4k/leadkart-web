@@ -3,6 +3,8 @@
 	import { navForTier } from '$lib/config/nav';
 	import { hasPermission, tierOf } from '$features/auth/tier';
 	import { session } from '$features/auth/stores/session.svelte';
+	import { operatorTenants } from '$features/operator/tenants/stores/operator-tenants.svelte';
+	import { Building2, Shield, Users, Icon } from '$icons';
 
 	let { onNavigate } = $props<{ onNavigate?: () => void }>();
 
@@ -35,6 +37,29 @@
 			}))
 			.filter((section) => section.items.length > 0);
 	});
+
+	/**
+	 * Contextual sidebar section — shown when the route matches
+	 * /operator/tenants/[slug]/... so the operator can quickly jump
+	 * between the tenant's sub-pages without leaving the sidebar.
+	 */
+	const tenantSlug = $derived(
+		page.url.pathname.startsWith('/operator/tenants/') ? (page.params.slug ?? null) : null
+	);
+	const contextTenant = $derived(tenantSlug ? operatorTenants.current : null);
+
+	const contextualLinks = $derived(
+		tenantSlug
+			? [
+					{
+						href: `/operator/tenants/${tenantSlug}/profile`,
+						label: 'Profile',
+						icon: Building2
+					},
+					{ href: `/operator/tenants/${tenantSlug}/members`, label: 'Members', icon: Users }
+				]
+			: []
+	);
 </script>
 
 <nav class="lk-sidebar glass-card glass-border-glow" aria-label="Main navigation">
@@ -56,6 +81,52 @@
 	</a>
 
 	<div class="lk-sidebar-scroll">
+		<!-- Contextual section: only visible inside /operator/tenants/[slug]/* -->
+		{#if tenantSlug && contextualLinks.length > 0}
+			<div class="lk-sidebar-group lk-sidebar-ctx-group">
+				<div class="lk-sidebar-ctx-header">
+					{#if contextTenant?.slug === 'platform'}
+						<Icon icon={Shield} size={12} class="lk-sidebar-ctx-icon" aria-hidden="true" />
+					{:else}
+						<Icon icon={Building2} size={12} class="lk-sidebar-ctx-icon" aria-hidden="true" />
+					{/if}
+					<p class="lk-sidebar-section-title lk-sidebar-ctx-title overline">
+						{contextTenant?.display_name ?? tenantSlug}
+					</p>
+				</div>
+				<ul class="lk-sidebar-list">
+					{#each contextualLinks as link (link.href)}
+						{@const active = isActive(link.href)}
+						<li>
+							<a
+								href={link.href}
+								aria-current={active ? 'page' : undefined}
+								aria-label={link.label}
+								onclick={() => onNavigate?.()}
+								title={link.label}
+								class={['lk-sidebar-link', active && 'lk-sidebar-link--active']}
+							>
+								<link.icon size={18} aria-hidden="true" />
+								<span class="lk-sidebar-label">{link.label}</span>
+							</a>
+						</li>
+					{/each}
+					<li>
+						<a
+							href="/operator/tenants"
+							class="lk-sidebar-link lk-sidebar-ctx-exit"
+							onclick={() => onNavigate?.()}
+							title="Exit tenant context"
+						>
+							<span class="lk-sidebar-label">← Exit tenant</span>
+						</a>
+					</li>
+				</ul>
+			</div>
+			<!-- Divider between context section and regular nav -->
+			<div class="lk-sidebar-ctx-divider" aria-hidden="true"></div>
+		{/if}
+
 		{#each sections as section, i (section.title ?? i)}
 			{#if section.items.length > 0}
 				<div class="lk-sidebar-group">
@@ -64,7 +135,7 @@
 					{/if}
 					<ul class="lk-sidebar-list">
 						{#each section.items as item (item.href)}
-							{@const Icon = item.icon}
+							{@const SidebarIcon = item.icon}
 							{@const active = isActive(item.href)}
 							<li>
 								<a
@@ -75,7 +146,7 @@
 									title={item.label}
 									class={['lk-sidebar-link', active && 'lk-sidebar-link--active']}
 								>
-									<Icon size={18} aria-hidden="true" />
+									<SidebarIcon size={18} aria-hidden="true" />
 									<span class="lk-sidebar-label">{item.label}</span>
 								</a>
 							</li>
@@ -352,6 +423,42 @@
 			min-block-size: var(--lk-touch-target-min);
 			padding-block: 0.625rem;
 		}
+	}
+
+	/* ── Contextual tenant section ──────────────────────────────────
+	   Surfaced inside /operator/tenants/[slug]/* only. A subtle tinted
+	   background distinguishes the context block from the main nav so
+	   the operator knows they are scoped. Exit link is intentionally
+	   muted — it's a navigation aid, not a primary action. */
+	.lk-sidebar-ctx-group {
+		background: var(--color-bg-muted);
+		border-radius: 0.5rem;
+		padding: 0.5rem 0.25rem;
+	}
+	.lk-sidebar-ctx-header {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		padding-inline: 0.75rem;
+		padding-block-end: 0.25rem;
+	}
+	.lk-sidebar-ctx-title {
+		padding: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.lk-sidebar-ctx-icon {
+		color: var(--color-primary);
+		flex-shrink: 0;
+	}
+	.lk-sidebar-ctx-exit {
+		color: var(--color-fg-subtle);
+		font-size: var(--text-xs);
+	}
+	.lk-sidebar-ctx-divider {
+		block-size: 1px;
+		background: var(--color-border-subtle, var(--glass-border-color, oklch(50% 0 0 / 0.1)));
+		margin-block: 0.25rem;
 	}
 
 	/* Collapsed: hide labels + section titles, center icons. The native
