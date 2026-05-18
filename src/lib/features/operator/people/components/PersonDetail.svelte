@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Alert, Avatar, Badge, Button, Card, Spinner } from '$ui';
-	import { Pause, Play, ShieldOff, Icon } from '$icons';
+	import { Pause, Play, UserMinus, Icon } from '$icons';
 	import { operatorPeople } from '$features/operator/people/stores/operator-people.svelte';
 	import {
 		personDisplayName,
@@ -166,7 +166,7 @@
 						}}
 						disabled={isPending}
 					>
-						<Icon icon={ShieldOff} size="sm" /> Anonymise
+						<Icon icon={UserMinus} size="sm" /> Anonymise
 					</Button>
 				{/if}
 			</Card.Content>
