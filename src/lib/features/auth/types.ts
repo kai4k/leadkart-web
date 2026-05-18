@@ -1,3 +1,11 @@
+import type { z } from 'zod';
+import type {
+	userDtoSchema,
+	sessionDtoSchema,
+	listSessionsResponseSchema,
+	updateProfileRequestSchema
+} from './schemas';
+
 /**
  * Auth feature types — mirrors the leadkart-go Identity HTTP DTOs.
  * Until OpenAPI codegen lands (`openapi-typescript api/openapi.yaml`),
@@ -48,3 +56,8 @@ export interface SessionPrincipal {
 	isSuperUser?: boolean;
 	permissions?: string[];
 }
+
+export type UserDto = z.output<typeof userDtoSchema>;
+export type SessionDto = z.output<typeof sessionDtoSchema>;
+export type ListSessionsResponse = z.output<typeof listSessionsResponseSchema>;
+export type UpdateProfileRequest = z.output<typeof updateProfileRequestSchema>;
