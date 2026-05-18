@@ -31,23 +31,37 @@ Three mechanisms, in order of friction:
 
 This is what exists today. No change.
 
-### 2. `?tenant_id=` query parameter — read-side override
+### 2. `X-Tenant-Id` header — read-side scope override
+
+> **Refined 2026-05-18 per backend review** — was `?tenant_id=` query param; moved to header per Stripe `Stripe-Account` canon. See ADR 0038 for the architectural lock.
 
 For **read-only operator queries** on another tenant:
 
 ```
-GET /api/v1/users?tenant_id={target-tenant-uuid-or-slug}
-   → If JWT has is_platform=true: server overrides RLS scope to target tenant.
-   → If JWT lacks is_platform=true: 403.
+GET /api/v1/users
+X-Tenant-Id: 019234ab-cd56-...
+Authorization: Bearer <operator-JWT-with-is_platform=true>
+
+   → If JWT.is_platform=true: server overrides RLS scope to the target tenant.
+   → If JWT.is_platform=false: header silently ignored; JWT-pinned scope stays in effect.
 ```
 
-Concrete addition: every tenant-scoped GET should accept an optional `?tenant_id=` override that:
+Concrete addition: every tenant-scoped GET reads an optional `X-Tenant-Id` header in the JWT-bridge middleware that:
 
-- Is silently ignored when JWT.is_platform = false (server scopes to JWT.tenant_id as today)
-- Is honored when JWT.is_platform = true (server overrides RLS to the target)
-- Accepts UUID OR slug — backend resolves slug → UUID
+- Is silently ignored when `JWT.is_platform = false` (server scopes to `JWT.tenant_id` as today)
+- Is honored when `JWT.is_platform = true` (server overrides the RLS GUC to the target)
+- Accepts UUID only — slug → UUID resolution happens on dedicated lookup endpoints (see A.3)
 
-**No new endpoints.** Just an extension to existing query parameters.
+**Why header, not query param** (canonical reasoning):
+
+1. **Access-log hygiene** — query params get logged by default in nginx / Cloudflare / every CDN. UUIDs aren't secret, but a CDN log of every tenant an operator probed is needless metadata exfiltration. Headers don't auto-log.
+2. **Browser history / linkability** — query-param URLs get bookmarked, pasted in Slack, indexed by browser history. Headers don't.
+3. **Semantic correctness** — `?tenant_id=` reads as a filter parameter alongside `?q=` and `?sort=`. Tenant is **auth context**, not a search filter.
+4. **Cache key sanity** — HTTP intermediaries cache by URL. Switching operator-probed tenants by URL parameter risks cross-tenant cache contamination on a misconfigured CDN.
+
+Backend implementation is one-line in the JWT-bridge middleware — read `X-Tenant-Id`, validate against `is_platform`, set `app.current_tenant` GUC accordingly.
+
+**No new endpoints.** Just an extension to the auth-context middleware.
 
 ### 3. Scoped-JWT impersonation — write-side scope
 
@@ -91,16 +105,18 @@ For each existing endpoint, what changes:
 All these accept `?tenant_id=` (UUID or slug) as a read-side scope override when JWT.is_platform=true:
 
 ```
-GET    /api/v1/users[?tenant_id=]                      list members of any tenant
-GET    /api/v1/users/{id}[?tenant_id=]                 read member (id is membership_id; tenant_id disambiguates)
-GET    /api/v1/roles[?tenant_id=]                      list roles of any tenant
-GET    /api/v1/roles/{id}[?tenant_id=]                 read role
+GET    /api/v1/users (with optional X-Tenant-Id)                      list members of any tenant
+GET    /api/v1/users/{id} (with optional X-Tenant-Id)                 read member (id is membership_id; tenant_id disambiguates)
+GET    /api/v1/roles (with optional X-Tenant-Id)                      list roles of any tenant
+GET    /api/v1/roles/{id} (with optional X-Tenant-Id)                 read role
 GET    /api/v1/tenants/{id-or-slug}                    read tenant by UUID or slug    ← see A.4
 ```
 
-### A.2 Cursor pagination + search on lists
+### A.2 Cursor pagination + search on lists that grow
 
-Same request shape on every list endpoint:
+> **Refined 2026-05-18** — "every list endpoint" was over-broad. Scope to lists that can plausibly exceed ~100 entries. Roles per tenant are capped naturally at ~20; permission catalogue is closed; sessions per user is small. Don't paginate what won't grow.
+
+Same request shape on every paginated list endpoint:
 
 ```
 ?q=<term>&cursor=<opaque>&limit=20&sort=<field>&order=asc|desc&<filter>=<value>
@@ -118,24 +134,34 @@ Apply to:
 GET /api/v1/tenants                          q searches: display_name, legal_name, slug, gst_number, pan_number
                                               filters: status, is_platform_tenant (special hint for the platform tenant)
                                               sort: created_at, display_name, status, activated_at
-GET /api/v1/users[?tenant_id=]                q searches: email, first_name, last_name, designation, department
+GET /api/v1/users (with optional X-Tenant-Id)                q searches: email, first_name, last_name, designation, department
                                               filters: status, role_id
                                               sort: joined_at, email, status
-GET /api/v1/roles[?tenant_id=]                q searches: name
+GET /api/v1/roles (with optional X-Tenant-Id)                q searches: name
                                               sort: hierarchy_level, name, created_at
 ```
 
 The previous `GET /v1/platform/tenants` becomes simply `GET /api/v1/tenants` with the operator's JWT — the `is_platform=true` claim grants visibility across tenants. **Drop the `/platform/tenants` path** — it's redundant once the regular endpoint respects platform-bypass.
 
-### A.3 Tenant lookup by slug (existing endpoint, overload key)
+### A.3 Tenant lookup — UUID + slug as separate endpoints
+
+> **Refined 2026-05-18 per backend review** — was a single overloaded `{key}` endpoint that discriminated by regex. Moved to two endpoints per GitHub canon. See ADR 0038.
 
 ```
-GET /api/v1/tenants/{key}
+GET /api/v1/tenants/{tenantId}              # UUID — primary, stable, all internal callers
+GET /api/v1/tenants/by-slug/{slug}          # slug — convenience for human-typed URLs
 ```
 
-`{key}` matches UUID regex → UUID lookup; otherwise → slug lookup. Backend does the discriminator. Single endpoint, two key formats.
+Both return the same `TenantDto`. The by-slug route is genuinely a convenience overlay; making it a separate path makes the convenience explicit instead of magic.
 
-Frontend uses slug in URLs always (`/operator/tenants/acme-pharma`); UUID only in deep-link JWT references.
+**Why two paths, not one overloaded:**
+
+1. **Handler doesn't have to decide UUID-vs-slug per request** via regex or attempted parse.
+2. **OpenAPI generation is cleaner** — two distinct operations with distinct path-param types (UUID vs string).
+3. **Tests are clearer** — each route has a single contract.
+4. **Cost is one extra route registration** — negligible.
+
+Frontend uses slug in URLs always (`/operator/tenants/acme-pharma`); the page-load resolves slug → UUID once via `GET /v1/tenants/by-slug/{slug}`, then all subsequent operations (mutations, related-resource queries) use the canonical UUID. UUID never appears in the operator's URL bar.
 
 ### A.4 Mutation responses return the resource
 
@@ -154,26 +180,45 @@ POST  /api/v1/roles/{id}/permissions/grant → 200 RoleDto
 
 Saves a network round-trip per mutation. Stripe / GitHub / Auth0 canon.
 
-### A.5 Structured error responses
+### A.5 Structured error responses (RFC 9457 ProblemDetails)
 
-Existing `{ code, message }` extended to include field-level errors + retry hint + trace ID:
+> **Refined 2026-05-18 per backend review** — adopt full RFC 9457 ProblemDetails (adds `type`, `title`, `status` fields) rather than a partial extension. Cost is zero, future-proofing is high.
 
-```json
+Per RFC 9457 (the successor to RFC 7807):
+
+```http
+HTTP/1.1 422 Unprocessable Entity
+Content-Type: application/problem+json
+
 {
-	"error": {
-		"code": "validation_failed",
-		"message": "Request validation failed",
-		"fields": {
-			"email": "must be a valid email address",
-			"admin_password": "must be at least 8 characters"
-		},
-		"trace_id": "req_a3f5d8e2",
-		"retryable": false
-	}
+  "type": "https://leadkart.io/errors/validation-failed",
+  "title": "Validation failed",
+  "status": 422,
+  "detail": "Request body failed schema validation.",
+  "code": "validation_failed",
+  "trace_id": "req_a3f5d8e2",
+  "retryable": false,
+  "fields": {
+    "email": "must be a valid email address",
+    "admin_password": "must be at least 8 characters"
+  }
 }
 ```
 
-`fields` is optional — only present on 422 / 400. Other status codes carry `code` + `message` + `trace_id` + `retryable`. Per Stripe / Twilio / Auth0.
+Field reference:
+
+- `type` — URI identifying the problem type (canonical Stripe/Auth0/RFC pattern; permanent URL the dev can visit)
+- `title` — short human-readable summary
+- `status` — HTTP status (redundant with the actual response status but conventional)
+- `detail` — long-form human-readable explanation
+- `code` — programmatic error code (frontend pattern-matches against this, not against `title`)
+- `trace_id` — request-scoped trace ID for log lookup
+- `retryable` — boolean: should the client retry?
+- `fields` — present only on 422 / 400 with field-scoped errors; keyed by request field name
+
+`Content-Type: application/problem+json` is the standard MIME type — IDEs and frameworks recognize it.
+
+The frontend's error taxonomy (`NetworkError` / `ValidationError` / `AuthError` / etc.) maps to these `code` values, not the `title`. `ValidationError.fields` reads from `response.fields`. Per Stripe / Auth0 / Microsoft Graph / Spring HATEOAS — all use ProblemDetails.
 
 ---
 
@@ -205,9 +250,9 @@ Frontend reads this once per session (`@tanstack/svelte-query` with 5min stale t
 ### B.2 Audit log read endpoints
 
 ```
-GET /api/v1/tenants/{id}/activity[?tenant_id=]        tenant-scoped audit log
+GET /api/v1/tenants/{id}/activity (with optional X-Tenant-Id)        tenant-scoped audit log
 GET /api/v1/auth/me/activity                          caller's own audit log
-GET /api/v1/users/{id}/activity[?tenant_id=]          one member's audit log
+GET /api/v1/users/{id}/activity (with optional X-Tenant-Id)          one member's audit log
 GET /api/v1/persons/{id}/activity                     one person's cross-tenant audit log (operator-scope)
 
 All paginated with cursor + filters:
@@ -269,7 +314,7 @@ This is Stripe Dashboard's omni-search, Linear's Cmd+K, GitHub's `/` search.
 ### B.5 Per-tenant stats
 
 ```
-GET /api/v1/tenants/{id}/stats[?tenant_id=]
+GET /api/v1/tenants/{id}/stats (with optional X-Tenant-Id)
 auth + identity.tenants.view (own) | platform.tenants.view (any)
 → {
     members_total, members_active, members_pending, members_inactive,
