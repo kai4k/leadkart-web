@@ -42,6 +42,7 @@ import {
 	Settings,
 	ShieldCheck,
 	Shield,
+	Activity,
 	Building2,
 	type Icon as LucideIcon
 } from 'lucide-svelte';
@@ -81,6 +82,16 @@ export const PLATFORM_NAV: NavSection[] = [
 				href: '/operator/tenants',
 				label: 'Tenants',
 				icon: Building2,
+				requires: 'platform.tenants.view'
+			},
+			/**
+			 * Activity — placeholder; backend audit-log endpoint (ADR 0038 A.3)
+			 * not yet shipped. Route is a stub empty-state until backend lands.
+			 */
+			{
+				href: '/operator/activity',
+				label: 'Activity',
+				icon: Activity,
 				requires: 'platform.tenants.view'
 			}
 		]

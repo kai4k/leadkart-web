@@ -22,6 +22,7 @@ export { default as Icon, iconSize, type IconSize } from './Icon.svelte';
 // import surface curated; stops random Lucide icons appearing in the
 // codebase without an audit.
 export {
+	Activity,
 	AlertCircle,
 	ArrowLeft,
 	ArrowRight,
