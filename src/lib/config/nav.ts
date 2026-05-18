@@ -46,7 +46,7 @@ import {
 	Building2,
 	type Icon as LucideIcon
 } from 'lucide-svelte';
-import type { PrincipalTier } from '$lib/features/auth/tier';
+import type { PrincipalTier } from '$lib/features/auth/capabilities';
 
 export interface NavItem {
 	href: string;
@@ -208,6 +208,7 @@ export function navForTier(tier: PrincipalTier): NavSection[] {
 		case 'tenant-user':
 			return TENANT_USER_NAV;
 		case 'unknown':
+		default:
 			return [];
 	}
 }

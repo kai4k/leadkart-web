@@ -13,6 +13,8 @@ function caps(overrides: Partial<Capabilities> = {}): Capabilities {
 		tier: 'tenant-user',
 		tenant_id: 'tid-1',
 		tenant_slug: 'acme',
+		membership_id: 'mid-1',
+		email: 'user@acme.test',
 		is_platform: false,
 		is_super_user: false,
 		permissions: [],
