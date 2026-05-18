@@ -34,6 +34,7 @@ export {
 	ChevronRight,
 	ChevronUp,
 	Command,
+	Edit,
 	Eye,
 	EyeOff,
 	Info,
