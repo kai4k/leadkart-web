@@ -81,12 +81,7 @@
 	</button>
 
 	{#if open}
-		<div
-			bind:this={menuEl}
-			role="menu"
-			class="lk-user-popover glass-card"
-			style="z-index: var(--z-popover);"
-		>
+		<div bind:this={menuEl} role="menu" class="lk-user-popover z-popover glass-card">
 			<div class="lk-user-popover-header">
 				<p class="caption">Signed in as</p>
 				<p class="label truncate-1">{capsQuery.data?.email ?? '—'}</p>

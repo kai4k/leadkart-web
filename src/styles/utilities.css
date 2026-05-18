@@ -8,6 +8,52 @@
  * ───────────────────────────────────────────────────────────────────── */
 
 @layer utilities {
+	/* ═══ Fixed-overlay stack helpers ════════════════════════════════
+	 * Canonical position+z-index pairs for every overlay layer in the
+	 * stacking order. Replaces inline `style="z-index: var(--z-X);
+	 * position: fixed;"` workarounds caused by .glass-card's
+	 * `position: relative` anchoring its ::before pseudo-element.
+	 *
+	 * Use the `-fixed` variants when the element must escape the
+	 * document flow (dialogs, drawers, tooltips, backdrops).
+	 * Use the plain `z-*` utilities (Tailwind generates these from
+	 * @theme --z-* tokens) when the element is already positioned by
+	 * bits-ui / Floating UI (dropdown menus, popovers). */
+	.is-fixed-overlay--modal {
+		position: fixed;
+		z-index: var(--z-modal);
+	}
+	.is-fixed-overlay--overlay {
+		position: fixed;
+		z-index: var(--z-overlay);
+	}
+	.is-fixed-overlay--dropdown {
+		position: fixed;
+		z-index: var(--z-dropdown);
+	}
+	.is-fixed-overlay--tooltip {
+		position: fixed;
+		z-index: var(--z-tooltip);
+	}
+	.is-fixed-overlay--sticky-top {
+		position: sticky;
+		top: 0;
+		z-index: var(--z-sticky);
+	}
+
+	/* Z-index-only helpers — for Floating UI / bits-ui portalled content
+	 * that manages its own position (absolute) but needs the z-index
+	 * token lifted out of an inline style attribute.               */
+	.z-dropdown {
+		z-index: var(--z-dropdown);
+	}
+	.z-popover {
+		z-index: var(--z-popover);
+	}
+	.z-overlay {
+		z-index: var(--z-overlay);
+	}
+
 	/* ═══ Container — max-width-centred, with padded inline gutters
 	 * `.container-page` for the main outer container of every route. */
 	.container-page {

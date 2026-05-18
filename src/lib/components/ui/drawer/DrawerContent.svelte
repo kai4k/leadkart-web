@@ -22,17 +22,15 @@
 
 <BitsDialog.Portal>
 	<BitsDialog.Overlay
-		class="fixed inset-0 bg-[var(--color-overlay)] backdrop-blur-sm"
-		style="z-index: var(--z-overlay);"
+		class="is-fixed-overlay--overlay inset-0 bg-[var(--color-overlay)] backdrop-blur-sm"
 	/>
 	<BitsDialog.Content
 		class={cn(
-			'glass-card fixed inset-y-0 right-0 flex w-full max-w-md flex-col',
+			'glass-card is-fixed-overlay--modal inset-y-0 right-0 flex w-full max-w-md flex-col',
 			'rounded-none border-0 border-l border-[var(--glass-border-subtle)]',
 			'animate-slide-in-right',
 			className
 		)}
-		style="z-index: var(--z-modal); position: fixed;"
 	>
 		{@render children()}
 	</BitsDialog.Content>

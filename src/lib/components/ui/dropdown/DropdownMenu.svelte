@@ -28,14 +28,13 @@
 		{align}
 		{sideOffset}
 		class={cn(
-			'glass-card',
+			'glass-card z-dropdown',
 			'min-w-[10rem] rounded-xl p-1',
 			'border border-[var(--glass-border-subtle)]',
 			'shadow-[var(--glass-shadow-sm)]',
 			'data-[state=open]:animate-pop-in data-[state=closed]:animate-fade-out',
 			className
 		)}
-		style="z-index: var(--z-dropdown);"
 	>
 		{@render children()}
 	</BitsMenu.Content>

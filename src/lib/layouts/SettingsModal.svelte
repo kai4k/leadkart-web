@@ -78,8 +78,7 @@
 {#if open}
 	<button
 		type="button"
-		class="fixed inset-0 bg-[var(--color-overlay)] backdrop-blur-sm transition-opacity"
-		style="z-index: var(--z-overlay);"
+		class="is-fixed-overlay--overlay inset-0 bg-[var(--color-overlay)] backdrop-blur-sm transition-opacity"
 		aria-label="Close settings"
 		onclick={close}
 	></button>

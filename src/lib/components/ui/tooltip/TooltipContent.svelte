@@ -12,11 +12,10 @@
 		{side}
 		sideOffset={6}
 		class={cn(
-			'glass-card label-small max-w-xs px-2 py-1 text-xs text-[var(--color-fg)]',
+			'glass-card is-fixed-overlay--tooltip label-small max-w-xs px-2 py-1 text-xs text-[var(--color-fg)]',
 			'animate-fade-in',
 			className
 		)}
-		style="z-index: var(--z-tooltip); position: fixed;"
 	>
 		{@render children()}
 	</BitsTooltip.Content>
