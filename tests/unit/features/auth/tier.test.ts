@@ -1,123 +1,70 @@
 /**
- * Tier-classification tests. The function decides which sidebar /
- * dashboard variant the user sees — drift here means the wrong UI
- * surface ships. Pin every branch.
+ * Capability / permission-check tests. These cover the hasCapability helper
+ * that replaced the deleted tier.ts module. The function is the UX-hint gate
+ * components use to show/hide actions — drift here means buttons appear for
+ * users who can't take the action. Pin every branch.
  */
 import { describe, expect, it } from 'vitest';
-import { hasPermission, isPlatformTier, isTenantAdmin, tierOf } from '$lib/features/auth/tier';
-import type { SessionPrincipal } from '$lib/features/auth/types';
+import { hasCapability } from '$lib/features/auth/capabilities';
+import type { Capabilities } from '$lib/features/auth/capabilities';
 
-function principal(overrides: Partial<SessionPrincipal> = {}): SessionPrincipal {
+function caps(overrides: Partial<Capabilities> = {}): Capabilities {
 	return {
-		personId: 'pid-1',
-		tenantId: 'tid-1',
-		membershipId: 'mid-1',
-		email: 'user@acme.test',
-		accessToken: 'fake',
-		refreshToken: 'fake',
-		accessTokenExpiresAt: new Date(Date.now() + 3_600_000),
+		tier: 'tenant-user',
+		tenant_id: 'tid-1',
+		tenant_slug: 'acme',
+		is_platform: false,
+		is_super_user: false,
+		permissions: [],
+		features: [],
 		...overrides
 	};
 }
 
-describe('tierOf', () => {
-	it('returns "unknown" for null principal (signed-out)', () => {
-		expect(tierOf(null)).toBe('unknown');
-	});
-
-	it('returns "platform-super" for is_platform=true + is_super_user=true', () => {
-		expect(tierOf(principal({ isPlatform: true, isSuperUser: true }))).toBe('platform-super');
-	});
-
-	it('returns "platform-staff" for is_platform=true without super-user (PlatformManager / LeadAgent)', () => {
-		expect(tierOf(principal({ isPlatform: true, isSuperUser: false }))).toBe('platform-staff');
-		expect(tierOf(principal({ isPlatform: true }))).toBe('platform-staff');
-	});
-
-	it('returns "tenant-admin" when is_super_user is set without is_platform (legacy seed)', () => {
-		expect(tierOf(principal({ isPlatform: false, isSuperUser: true }))).toBe('tenant-admin');
-	});
-
-	it('returns "tenant-admin" when permissions include tenant.admin', () => {
-		expect(tierOf(principal({ permissions: ['tenant.admin', 'identity.users.view'] }))).toBe(
-			'tenant-admin'
-		);
-	});
-
-	it('returns "tenant-user" for a regular tenant Membership', () => {
-		expect(tierOf(principal({ permissions: ['crm.leads.view', 'crm.leads.update'] }))).toBe(
-			'tenant-user'
-		);
-	});
-
-	it('returns "tenant-user" when permissions array is missing', () => {
-		expect(tierOf(principal())).toBe('tenant-user');
-	});
-});
-
-describe('hasPermission', () => {
-	it('returns false for null principal', () => {
-		expect(hasPermission(null, 'identity.users.create')).toBe(false);
+describe('hasCapability', () => {
+	it('returns false when caps is undefined (query not yet resolved)', () => {
+		expect(hasCapability(undefined, 'identity.users.create')).toBe(false);
 	});
 
 	it('returns true unconditionally for is_super_user (short-circuit per ADR 0036)', () => {
-		const p = principal({ isSuperUser: true, permissions: [] });
-		expect(hasPermission(p, 'literally.anything')).toBe(true);
+		expect(
+			hasCapability(caps({ is_super_user: true, permissions: [] }), 'literally.anything')
+		).toBe(true);
 	});
 
-	it('returns true when the permission is in the claim list', () => {
+	it('returns true when the permission is in the list', () => {
 		expect(
-			hasPermission(principal({ permissions: ['identity.users.create'] }), 'identity.users.create')
+			hasCapability(caps({ permissions: ['identity.users.create'] }), 'identity.users.create')
 		).toBe(true);
 	});
 
 	it('returns false when the permission is absent', () => {
 		expect(
-			hasPermission(principal({ permissions: ['crm.leads.view'] }), 'identity.tenants.delete')
+			hasCapability(caps({ permissions: ['crm.leads.view'] }), 'identity.tenants.delete')
 		).toBe(false);
 	});
 
-	it('returns false when permissions claim is missing entirely', () => {
-		expect(hasPermission(principal(), 'identity.users.view')).toBe(false);
-	});
-});
-
-describe('isPlatformTier', () => {
-	it('true for platform-super', () => {
-		expect(isPlatformTier(principal({ isPlatform: true, isSuperUser: true }))).toBe(true);
+	it('returns false when permissions list is empty', () => {
+		expect(hasCapability(caps(), 'identity.users.view')).toBe(false);
 	});
 
-	it('true for platform-staff', () => {
-		expect(isPlatformTier(principal({ isPlatform: true }))).toBe(true);
+	it('returns true for platform-super user on any permission', () => {
+		const c = caps({ is_platform: true, is_super_user: true, tier: 'platform-super' });
+		expect(hasCapability(c, 'platform.tenants.delete')).toBe(true);
 	});
 
-	it('false for tenant-admin (SuperUser-in-tenant)', () => {
-		expect(isPlatformTier(principal({ isSuperUser: true }))).toBe(false);
+	it('returns false for platform-staff without the specific permission', () => {
+		const c = caps({ is_platform: true, is_super_user: false, tier: 'platform-staff' });
+		expect(hasCapability(c, 'platform.tenants.manage')).toBe(false);
 	});
 
-	it('false for tenant-user', () => {
-		expect(isPlatformTier(principal())).toBe(false);
-	});
-
-	it('false for unknown', () => {
-		expect(isPlatformTier(null)).toBe(false);
-	});
-});
-
-describe('isTenantAdmin', () => {
-	it('true for tenant.admin permission', () => {
-		expect(isTenantAdmin(principal({ permissions: ['tenant.admin'] }))).toBe(true);
-	});
-
-	it('true for platform-super (god-mode covers tenant-admin)', () => {
-		expect(isTenantAdmin(principal({ isPlatform: true, isSuperUser: true }))).toBe(true);
-	});
-
-	it('false for platform-staff (cross-tenant read, no tenant-admin scope)', () => {
-		expect(isTenantAdmin(principal({ isPlatform: true }))).toBe(false);
-	});
-
-	it('false for plain tenant-user', () => {
-		expect(isTenantAdmin(principal({ permissions: ['crm.leads.view'] }))).toBe(false);
+	it('returns true for platform-staff with the specific permission', () => {
+		const c = caps({
+			is_platform: true,
+			is_super_user: false,
+			tier: 'platform-staff',
+			permissions: ['platform.tenants.view']
+		});
+		expect(hasCapability(c, 'platform.tenants.view')).toBe(true);
 	});
 });

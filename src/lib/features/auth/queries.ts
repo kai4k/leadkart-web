@@ -13,10 +13,9 @@
 import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { toast } from '$ui';
 import * as api from './api';
-import type { Capabilities } from './api';
 import type { UpdateProfileRequest, SessionDto } from './types';
-
-export { type Capabilities };
+// Pure helpers — re-exported so components can import from one place
+export { hasCapability, type Capabilities } from './capabilities';
 
 export const capabilitiesKey = ['me', 'capabilities'] as const;
 const profileKey = (membershipId: string) => ['me', 'profile', membershipId] as const;
@@ -38,20 +37,6 @@ export function myCapabilitiesQuery() {
 		staleTime: 5 * 60_000,
 		gcTime: 30 * 60_000
 	}));
-}
-
-/**
- * Convenience helper — readable by components that just need a boolean
- * for a single permission check.
- *
- * Usage:
- *   const caps = myCapabilitiesQuery();
- *   const canSuspend = $derived(hasCapability(caps.data, 'platform.tenants.manage'));
- */
-export function hasCapability(caps: Capabilities | undefined, permission: string): boolean {
-	if (!caps) return false;
-	if (caps.is_super_user) return true;
-	return caps.permissions.includes(permission);
 }
 
 // ── Profile ────────────────────────────────────────────────────────
