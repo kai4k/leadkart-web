@@ -10,6 +10,7 @@
  * naming convention (dto suffix makes the gateway-boundary role explicit).
  */
 import { z } from 'zod';
+import { tenantSchema } from '$lib/features/tenant/schemas';
 
 export { tenantSchema as tenantDtoSchema } from '$lib/features/tenant/schemas';
 
@@ -45,5 +46,5 @@ export const markForDeletionRequestSchema = z
 	.strict();
 
 export const listAllTenantsResponseSchema = z.object({
-	tenants: z.array(tenantDtoSchema)
+	tenants: z.array(tenantSchema)
 });

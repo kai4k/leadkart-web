@@ -72,7 +72,7 @@
 
 	{#if operatorTenants.status === 'loading'}
 		<div class="flex items-center justify-center py-12">
-			<Spinner size="lg" />
+			<Spinner size={32} />
 		</div>
 	{:else if operatorTenants.status === 'error' && operatorTenants.error}
 		<Alert variant="danger" title="Failed to load tenants">

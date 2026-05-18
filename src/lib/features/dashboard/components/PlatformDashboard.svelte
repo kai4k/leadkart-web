@@ -171,7 +171,7 @@
 				</Card.Header>
 				<Card.Content>
 					{#if statsLoading}
-						<Spinner size="sm" />
+						<Spinner size={16} />
 					{:else}
 						<p class="display-2 text-[var(--color-fg)] tabular-nums">{tile.value()}</p>
 					{/if}
