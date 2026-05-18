@@ -8,6 +8,7 @@
  */
 import {
 	listUsers,
+	listUsersScoped,
 	createUser as createUserApi,
 	deactivateUser as deactivateUserApi,
 	reactivateUser as reactivateUserApi,
@@ -35,6 +36,12 @@ export class UsersStore {
 	roles = $state<RoleDto[]>([]);
 	status = $state<UsersStatus>('idle');
 	error = $state<string | null>(null);
+	/**
+	 * When non-null, the store is operating in operator-tenant-scope:
+	 * loads members from GET /v1/users with X-Tenant-Id header set to
+	 * this value. Null = caller's own tenant (default behaviour).
+	 */
+	scopedTenantId = $state<string | null>(null);
 
 	async load(): Promise<void> {
 		this.status = 'loading';
@@ -50,9 +57,31 @@ export class UsersStore {
 		}
 	}
 
+	/**
+	 * Operator-scope load — fetches the member roster for a specific
+	 * tenant by injecting X-Tenant-Id on the request (Commit 1 helper).
+	 * Sets scopedTenantId so callers can detect the active scope.
+	 */
+	async loadForTenant(tenantId: string): Promise<void> {
+		this.status = 'loading';
+		this.error = null;
+		this.scopedTenantId = tenantId;
+		try {
+			const [{ users }, { roles }] = await Promise.all([listUsersScoped(tenantId), listRolesApi()]);
+			this.list = users;
+			this.roles = roles;
+			this.status = 'ready';
+		} catch (e) {
+			this.status = 'error';
+			this.error = e instanceof Error ? e.message : 'Failed to load tenant members';
+		}
+	}
+
 	async refresh(): Promise<void> {
 		try {
-			const { users } = await listUsers();
+			const { users } = this.scopedTenantId
+				? await listUsersScoped(this.scopedTenantId)
+				: await listUsers();
 			this.list = users;
 		} catch (e) {
 			this.error = e instanceof Error ? e.message : 'Failed to refresh users';
@@ -118,6 +147,7 @@ export class UsersStore {
 		this.roles = [];
 		this.status = 'idle';
 		this.error = null;
+		this.scopedTenantId = null;
 	}
 
 	/**

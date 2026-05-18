@@ -1,0 +1,42 @@
+<script lang="ts">
+	/**
+	 * Operator — tenant member management.
+	 *
+	 * Reuses the canonical UsersList component from /settings/users.
+	 * The store is loaded via UsersStore.loadForTenant(tenantId) which
+	 * injects X-Tenant-Id on the request so the backend scopes the
+	 * response to the target tenant (Commit 1 helper).
+	 *
+	 * Phase A: The full mutating actions (deactivate, role-assign, etc.)
+	 * within the UsersList will also need tenant-scoped gateway calls when
+	 * the backend enforces operator-on-behalf-of semantics. For now, the
+	 * store mutation path uses the caller's own token (operator JWT) —
+	 * the backend's operator permission bypass already handles this for
+	 * Phase A.
+	 */
+	import { operatorTenants } from '$features/operator/tenants/stores/operator-tenants.svelte';
+	import { users } from '$features/users/stores/users.svelte';
+	import UsersList from '$features/users/components/UsersList.svelte';
+	import { Spinner, Alert } from '$ui';
+
+	$effect(() => {
+		const tenant = operatorTenants.current;
+		if (tenant && users.scopedTenantId !== tenant.id) {
+			users.loadForTenant(tenant.id).catch(() => {});
+		}
+	});
+</script>
+
+<svelte:head>
+	<title>{operatorTenants.current?.display_name ?? 'Tenant'} · Members · LeadKart</title>
+</svelte:head>
+
+{#if operatorTenants.status === 'loading' && !operatorTenants.current}
+	<div class="flex justify-center py-16"><Spinner size={32} /></div>
+{:else if !operatorTenants.current}
+	<Alert variant="warning" title="Tenant not found"
+		>No tenant with that ID or slug, or you don't have access.</Alert
+	>
+{:else}
+	<UsersList />
+{/if}
