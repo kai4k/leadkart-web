@@ -100,6 +100,12 @@ export const PLATFORM_NAV: NavSection[] = [
 				label: 'Tenants',
 				icon: Building2,
 				requires: 'platform.tenants.view'
+			},
+			{
+				href: '/operator/people',
+				label: 'Platform users',
+				icon: Users,
+				requires: 'platform.users.view'
 			}
 		]
 	},
