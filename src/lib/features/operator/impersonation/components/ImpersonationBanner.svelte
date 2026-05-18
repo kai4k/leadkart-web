@@ -22,7 +22,7 @@
 		aria-label="Active impersonation session"
 	>
 		<div class="cluster cluster-tight">
-			<Icon icon={Eye} size="sm" aria-hidden="true" />
+			<Icon icon={Eye} size="sm" />
 			<span class="label-small">
 				Impersonating <code class="rounded bg-black/10 px-1"
 					>{impersonation.active.target_tenant_id}</code
@@ -39,7 +39,7 @@
 			class="!text-white hover:!bg-white/10"
 			aria-label="End impersonation session"
 		>
-			<Icon icon={LogOut} size="sm" aria-hidden="true" /> End impersonation
+			<Icon icon={LogOut} size="sm" /> End impersonation
 		</Button>
 	</div>
 {/if}
