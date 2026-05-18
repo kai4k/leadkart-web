@@ -2,10 +2,12 @@
 	import { page as pageStore } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
-	import { Alert, Avatar, Badge, Card, EmptyState, Spinner } from '$ui';
+	import { Avatar, Badge, DataTable, EmptyState } from '$ui';
+	import type { DataTableColumn } from '$ui';
 	import { Users, Search, Icon } from '$icons';
 	import { personsListQuery } from '$features/operator/people/queries';
 	import { personDisplayName, personLifecycleBadge } from '$features/operator/people/view-models';
+	import type { PersonDto } from '$features/operator/people/types';
 
 	const DEBOUNCE_MS = 300;
 
@@ -33,12 +35,61 @@
 
 	const persons = $derived(query.data?.persons ?? []);
 
-	function initials(name: string): string {
+	const tableState = $derived(
+		query.isPending ? 'loading' : query.isError ? 'error' : persons.length === 0 ? 'empty' : 'ready'
+	);
+
+	function personInitials(name: string): string {
 		const parts = name.trim().split(/\s+/);
 		if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 		return name.slice(0, 2).toUpperCase();
 	}
+
+	const columns: DataTableColumn<PersonDto>[] = [
+		{
+			id: 'person',
+			header: 'Person',
+			accessor: (p) => personDisplayName(p),
+			cell: personCell
+		},
+		{
+			id: 'status',
+			header: 'Status',
+			accessor: (p) => (p.is_active ? 'active' : 'inactive'),
+			cell: statusCell
+		},
+		{
+			id: 'created',
+			header: 'Joined',
+			accessor: 'created_at',
+			hideBelow: 'lg',
+			cell: dateCell
+		}
+	];
 </script>
+
+{#snippet personCell(p: PersonDto)}
+	{@const name = personDisplayName(p)}
+	<div class="cluster cluster-tight">
+		<Avatar initials={personInitials(name)} size="md" />
+		<div class="stack stack-tight min-w-0">
+			<a
+				href="/operator/persons/{p.id}"
+				class="text-fg hover:text-primary truncate font-medium hover:underline">{name}</a
+			>
+			<span class="caption text-fg-muted truncate">{p.email}</span>
+		</div>
+	</div>
+{/snippet}
+
+{#snippet statusCell(p: PersonDto)}
+	{@const badge = personLifecycleBadge(p)}
+	<Badge variant={badge.variant} style="soft" size="sm">{badge.label}</Badge>
+{/snippet}
+
+{#snippet dateCell(p: PersonDto)}
+	<span class="caption text-fg-muted">{new Date(p.created_at).toLocaleDateString()}</span>
+{/snippet}
 
 <div class="stack stack-relaxed">
 	<header class="stack stack-tight">
@@ -62,43 +113,21 @@
 		</div>
 	</div>
 
-	{#if query.isPending}
-		<div class="flex justify-center py-8"><Spinner size={28} /></div>
-	{:else if query.isError}
-		<Alert variant="danger" title="Failed to load people">
-			{query.error instanceof Error ? query.error.message : 'Unknown error'}
-		</Alert>
-	{:else if persons.length === 0}
-		<EmptyState
-			icon={Users}
-			title={urlSearch ? `No results for "${urlSearch}"` : 'No persons found'}
-			description={urlSearch ? 'Try a different email or name.' : 'No persons in the platform yet.'}
-		/>
-	{:else}
-		<ul class="stack stack-tight" aria-label="People">
-			{#each persons as p (p.id)}
-				{@const badge = personLifecycleBadge(p)}
-				{@const displayName = personDisplayName(p)}
-				<li>
-					<Card.Root>
-						<Card.Content class="grid grid-cols-[auto_1fr_auto] items-center gap-4">
-							<Avatar initials={initials(displayName)} size="md" />
-							<div class="stack stack-tight">
-								<div class="cluster cluster-tight">
-									<a href="/operator/persons/{p.id}" class="h5 text-fg hover:underline"
-										>{displayName}</a
-									>
-									<Badge variant={badge.variant} style="soft" size="sm">{badge.label}</Badge>
-								</div>
-								<p class="caption text-fg-muted">{p.email}</p>
-							</div>
-							<a href="/operator/persons/{p.id}" class="label text-primary hover:underline"
-								>Open →</a
-							>
-						</Card.Content>
-					</Card.Root>
-				</li>
-			{/each}
-		</ul>
-	{/if}
+	<DataTable.Root
+		{columns}
+		rows={persons}
+		rowKey={(p) => p.id}
+		state={tableState}
+		error={query.error instanceof Error ? query.error.message : null}
+	>
+		{#snippet emptyState()}
+			<EmptyState
+				icon={Users}
+				title={urlSearch ? `No results for "${urlSearch}"` : 'No persons found'}
+				description={urlSearch
+					? 'Try a different email or name.'
+					: 'No persons in the platform yet.'}
+			/>
+		{/snippet}
+	</DataTable.Root>
 </div>
