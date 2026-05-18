@@ -32,6 +32,24 @@ class SessionStore {
 	}
 
 	/**
+	 * Extracts the `fam` (family ID) claim from the refresh token JWT.
+	 * leadkart-go embeds this claim so the sessions list can mark the
+	 * "you are here" row without a separate API round-trip.
+	 *
+	 * Degrades gracefully: returns null if there is no refresh token,
+	 * if the token is opaque (non-JWT), or if the `fam` claim is absent.
+	 */
+	get activeFamilyId(): string | null {
+		if (!this.refreshToken) return null;
+		try {
+			const payload = JSON.parse(atob(this.refreshToken.split('.')[1]));
+			return typeof payload.fam === 'string' ? payload.fam : null;
+		} catch {
+			return null;
+		}
+	}
+
+	/**
 	 * Hydrates the session from a successful login response. The wire
 	 * body carries only the tokens; the principal claims (personId,
 	 * tenantId, membershipId, etc.) are decoded from the access_token
