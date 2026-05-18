@@ -21,6 +21,9 @@
 
 	const canManage = $derived(hasPermission(session.principal, 'platform.tenants.manage'));
 	const isPending = $derived(operatorTenants.status === 'mutating');
+	/** Platform tenant is immutable — backend rejects lifecycle mutations via
+	 *  ensureNotPlatformTenant. Hide the buttons rather than let them 422. */
+	const isPlatformTenant = $derived(tenant.slug === 'platform');
 
 	async function activate() {
 		try {
@@ -48,25 +51,31 @@
 		>
 	</Card.Header>
 	<Card.Content class="cluster">
-		{#if canManage && canSuspend(tenant)}
-			<Button variant="ghost" onclick={() => onAction('suspend', tenant)} disabled={isPending}>
-				<Icon icon={Pause} size="sm" /> Suspend
-			</Button>
-		{/if}
-		{#if canManage && canActivate(tenant)}
-			<Button variant="ghost" onclick={activate} loading={isPending}>
-				<Icon icon={Play} size="sm" /> Activate
-			</Button>
-		{/if}
-		{#if canManage && canMarkForDeletion(tenant)}
-			<Button variant="danger" onclick={() => onAction('mark', tenant)} disabled={isPending}>
-				<Icon icon={Trash2} size="sm" /> Mark for deletion
-			</Button>
-		{/if}
-		{#if canManage && canRestore(tenant)}
-			<Button variant="ghost" onclick={restore} loading={isPending}>
-				<Icon icon={RotateCcw} size="sm" /> Restore
-			</Button>
+		{#if isPlatformTenant}
+			<p class="caption text-[var(--color-fg-muted)]">
+				Lifecycle mutations are locked for the platform tenant.
+			</p>
+		{:else}
+			{#if canManage && canSuspend(tenant)}
+				<Button variant="ghost" onclick={() => onAction('suspend', tenant)} disabled={isPending}>
+					<Icon icon={Pause} size="sm" /> Suspend
+				</Button>
+			{/if}
+			{#if canManage && canActivate(tenant)}
+				<Button variant="ghost" onclick={activate} loading={isPending}>
+					<Icon icon={Play} size="sm" /> Activate
+				</Button>
+			{/if}
+			{#if canManage && canMarkForDeletion(tenant)}
+				<Button variant="danger" onclick={() => onAction('mark', tenant)} disabled={isPending}>
+					<Icon icon={Trash2} size="sm" /> Mark for deletion
+				</Button>
+			{/if}
+			{#if canManage && canRestore(tenant)}
+				<Button variant="ghost" onclick={restore} loading={isPending}>
+					<Icon icon={RotateCcw} size="sm" /> Restore
+				</Button>
+			{/if}
 		{/if}
 	</Card.Content>
 </Card.Root>

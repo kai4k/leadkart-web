@@ -41,6 +41,7 @@ import {
 	Bell,
 	Settings,
 	ShieldCheck,
+	Shield,
 	Building2,
 	type Icon as LucideIcon
 } from 'lucide-svelte';
@@ -67,24 +68,20 @@ export interface NavSection {
 
 export const PLATFORM_NAV: NavSection[] = [
 	{
+		title: 'Operator',
 		items: [
-			{ href: '/dashboard', label: 'Operator Dashboard', icon: LayoutDashboard, requires: null }
-		]
-	},
-	{
-		title: 'Administration',
-		items: [
+			{ href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, requires: null },
+			{
+				href: '/operator/tenants/platform',
+				label: 'Your platform',
+				icon: Shield,
+				requires: null
+			},
 			{
 				href: '/operator/tenants',
 				label: 'Tenants',
 				icon: Building2,
 				requires: 'platform.tenants.view'
-			},
-			{
-				href: '/operator/people',
-				label: 'Platform users',
-				icon: Users,
-				requires: 'platform.users.view'
 			}
 		]
 	},

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Alert, Badge, Button, Card, EmptyState, Spinner } from '$ui';
-	import { Building2, Eye, Plus, Search, Icon } from '$icons';
+	import { Building2, Eye, Plus, Search, Shield, Icon } from '$icons';
 	import { operatorTenants } from '$features/operator/tenants/stores/operator-tenants.svelte';
 	import { tenantLifecycleBadge } from '$features/operator/tenants/view-models';
 	import { hasPermission } from '$features/auth/tier';
@@ -19,7 +19,18 @@
 	const canCreate = $derived(hasPermission(session.principal, 'platform.tenants.create'));
 	const canView = $derived(hasPermission(session.principal, 'platform.tenants.view'));
 
-	const filtered = $derived(operatorTenants.filtered);
+	/**
+	 * Pin the platform tenant (slug === 'platform') to the top of the
+	 * list regardless of search/filter order. Stripe Connect / Auth0
+	 * tenant-list pattern: the operator's own platform is always the
+	 * first visible entry and carries a distinct visual treatment.
+	 */
+	const filtered = $derived.by(() => {
+		const all = operatorTenants.filtered;
+		const platform = all.find((t) => t.slug === 'platform');
+		const rest = all.filter((t) => t.slug !== 'platform');
+		return platform ? [platform, ...rest] : rest;
+	});
 	const totalPages = $derived(Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)));
 	const paged = $derived(filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE));
 
@@ -97,15 +108,27 @@
 		<ul class="stack stack-tight" aria-label="Tenants">
 			{#each paged as t (t.id)}
 				{@const badge = tenantLifecycleBadge(t)}
+				{@const isPlatform = t.slug === 'platform'}
 				<li>
 					<Card.Root>
 						<Card.Content class="grid grid-cols-[1fr_auto] items-center gap-4">
 							<div class="stack stack-tight">
 								<div class="cluster cluster-tight">
+									{#if isPlatform}
+										<Icon
+											icon={Shield}
+											size="sm"
+											class="text-[var(--color-primary)]"
+											aria-hidden="true"
+										/>
+									{/if}
 									<a
 										href="/operator/tenants/{t.id}"
 										class="h5 text-[var(--color-fg)] hover:underline">{t.display_name}</a
 									>
+									{#if isPlatform}
+										<Badge variant="brand" style="soft" size="sm">Platform</Badge>
+									{/if}
 									<Badge variant={badge.variant} style="soft" size="sm">{badge.label}</Badge>
 								</div>
 								<p class="caption text-[var(--color-fg-muted)]">
@@ -113,7 +136,7 @@
 								</p>
 							</div>
 							<div class="cluster cluster-tight">
-								{#if canView}
+								{#if canView && !isPlatform}
 									<Button
 										variant="ghost"
 										size="sm"
