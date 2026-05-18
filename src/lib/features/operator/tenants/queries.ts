@@ -16,6 +16,7 @@
  */
 import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 import * as api from './api';
+import { toast } from '$ui';
 import type { RegisterTenantRequest, TenantDto } from './types';
 
 // ── Query key factory ──────────────────────────────────────────────────
@@ -111,6 +112,18 @@ export function suspendTenantMutation() {
 			qc.setQueryData<TenantDto>(tenantsKeys.detail(vars.id), data);
 			qc.setQueryData<TenantDto>(tenantsKeys.detailBySlug(data.slug), data);
 			qc.invalidateQueries({ queryKey: tenantsKeys.list() });
+			toast('success', 'Tenant suspended', {
+				action: {
+					label: 'Undo',
+					onClick: async () => {
+						const restored = await api.activateTenant(vars.id);
+						qc.setQueryData<TenantDto>(tenantsKeys.detail(vars.id), restored);
+						qc.setQueryData<TenantDto>(tenantsKeys.detailBySlug(restored.slug), restored);
+						qc.invalidateQueries({ queryKey: tenantsKeys.list() });
+					}
+				},
+				duration: 10_000
+			});
 		}
 	}));
 }
@@ -156,6 +169,18 @@ export function markForDeletionMutation() {
 			qc.setQueryData<TenantDto>(tenantsKeys.detail(data.id), data);
 			qc.setQueryData<TenantDto>(tenantsKeys.detailBySlug(data.slug), data);
 			qc.invalidateQueries({ queryKey: tenantsKeys.list() });
+			toast('success', 'Tenant marked for deletion', {
+				action: {
+					label: 'Undo',
+					onClick: async () => {
+						const restored = await api.restoreTenant(data.id);
+						qc.setQueryData<TenantDto>(tenantsKeys.detail(data.id), restored);
+						qc.setQueryData<TenantDto>(tenantsKeys.detailBySlug(restored.slug), restored);
+						qc.invalidateQueries({ queryKey: tenantsKeys.list() });
+					}
+				},
+				duration: 10_000
+			});
 		}
 	}));
 }

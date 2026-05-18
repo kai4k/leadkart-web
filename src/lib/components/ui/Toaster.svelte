@@ -18,7 +18,19 @@
 	import { cva, type VariantProps } from 'class-variance-authority';
 
 	export type ToastVariant = 'success' | 'danger' | 'warning' | 'info';
-	type Toast = { id: string; variant: ToastVariant; message: string };
+
+	export type ToastAction = {
+		label: string;
+		onClick: () => void | Promise<void>;
+	};
+
+	type Toast = {
+		id: string;
+		variant: ToastVariant;
+		message: string;
+		action?: ToastAction;
+		duration: number;
+	};
 
 	export const toastVariants = cva('border-l-4', {
 		variants: {
@@ -37,22 +49,40 @@
 	const toasts = $state<Toast[]>([]);
 
 	/**
-	 * Enqueues a toast notification. Auto-dismissed after 5 s.
+	 * Dismiss a toast by ID. Safe to call multiple times.
+	 */
+	export function dismiss(id: string): void {
+		const idx = toasts.findIndex((t) => t.id === id);
+		if (idx >= 0) toasts.splice(idx, 1);
+	}
+
+	/**
+	 * Enqueues a toast notification.
 	 * No-op during SSR (`browser` guard).
+	 *
+	 * @param variant  - visual variant
+	 * @param message  - toast body text
+	 * @param opts.action  - optional action button (label + onClick)
+	 * @param opts.duration - auto-dismiss ms; default 5000 (10 000 recommended for undo)
 	 *
 	 * Usage:
 	 *   import { toast } from '$ui';
 	 *   toast('success', 'Tenant suspended');
-	 *   toast('danger', 'Failed to load tenants');
+	 *   toast('success', 'Member deactivated', {
+	 *     action: { label: 'Undo', onClick: () => reactivate(id) },
+	 *     duration: 10_000
+	 *   });
 	 */
-	export function toast(variant: ToastVariant, message: string): void {
+	export function toast(
+		variant: ToastVariant,
+		message: string,
+		opts?: { action?: ToastAction; duration?: number }
+	): void {
 		if (!browser) return;
 		const id = crypto.randomUUID();
-		toasts.push({ id, variant, message });
-		setTimeout(() => {
-			const idx = toasts.findIndex((t) => t.id === id);
-			if (idx >= 0) toasts.splice(idx, 1);
-		}, 5000);
+		const duration = opts?.duration ?? 5000;
+		toasts.push({ id, variant, message, action: opts?.action, duration });
+		setTimeout(() => dismiss(id), duration);
 	}
 </script>
 
@@ -73,7 +103,21 @@
 			)}
 			role="status"
 		>
-			<p class="label text-fg">{t.message}</p>
+			<div class="flex items-start justify-between gap-3">
+				<p class="label text-fg">{t.message}</p>
+				{#if t.action}
+					<button
+						type="button"
+						class="label-small text-primary focus-visible:ring-focus-ring flex-shrink-0 hover:underline focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+						onclick={async () => {
+							await t.action!.onClick();
+							dismiss(t.id);
+						}}
+					>
+						{t.action.label}
+					</button>
+				{/if}
+			</div>
 		</div>
 	{/each}
 </div>

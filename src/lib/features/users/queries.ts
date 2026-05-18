@@ -88,7 +88,16 @@ export function deactivateUserMutation(tenantId?: string) {
 		onSuccess: (data: UserDto, vars: { id: string; reason: string }) => {
 			qc.setQueryData<UserDto>(usersKeys.detail(vars.id, tenantId), data);
 			qc.invalidateQueries({ queryKey: usersKeys.list(tenantId) });
-			toast('success', 'Member deactivated');
+			toast('success', 'Member deactivated', {
+				action: {
+					label: 'Undo',
+					onClick: async () => {
+						await api.reactivateUser(vars.id);
+						qc.invalidateQueries({ queryKey: usersKeys.all });
+					}
+				},
+				duration: 10_000
+			});
 		}
 	}));
 }
@@ -155,7 +164,16 @@ export function revokeRoleMutation(tenantId?: string) {
 		onSuccess: (_, vars) => {
 			// Narrow: role change only affects this member's detail, not the list shape.
 			qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id, tenantId) });
-			toast('success', 'Role revoked');
+			toast('success', 'Role revoked', {
+				action: {
+					label: 'Undo',
+					onClick: async () => {
+						await api.assignRole(vars.id, { role_id: vars.roleId });
+						qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id, tenantId) });
+					}
+				},
+				duration: 10_000
+			});
 		}
 	}));
 }

@@ -26,6 +26,7 @@ export { default as Skeleton } from './Skeleton.svelte';
 export type { SkeletonVariants } from './Skeleton.svelte';
 export { default as Spinner } from './Spinner.svelte';
 export * as Tooltip from './tooltip';
-export { toast } from './Toaster.svelte';
+export { toast, dismiss } from './Toaster.svelte';
+export type { ToastAction } from './Toaster.svelte';
 export * as DataTable from './data-table';
 export type { DataTableColumn, DataTableProps } from './data-table';
