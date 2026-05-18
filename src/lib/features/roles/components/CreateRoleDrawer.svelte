@@ -2,42 +2,29 @@
 	import { Drawer, Button, Alert } from '$ui';
 	import { TextField } from '$lib/components/form';
 	import { createRoleMutation } from '$features/roles/queries';
-	import { ValidationError } from '$api/errors';
+	import { createRoleRequestSchema } from '$features/roles/schemas';
+	import { useForm } from '$lib/utils/use-form.svelte';
 
 	type Props = { open: boolean; onOpenChange: (open: boolean) => void };
 	let { open = $bindable(false), onOpenChange }: Props = $props();
 
-	let name = $state('');
-	let hierarchyLevel = $state(5);
-	let fieldErrors = $state<Record<string, string>>({});
-	let bannerError = $state<string | null>(null);
-
 	const mutation = createRoleMutation();
+	const form = useForm(createRoleRequestSchema, { name: '', hierarchy_level: 5 });
 
 	async function onSubmit(e: SubmitEvent) {
-		e.preventDefault();
-		fieldErrors = {};
-		bannerError = null;
-		mutation.mutate(
-			{ name: name.trim(), hierarchy_level: hierarchyLevel },
-			{
-				onSuccess: () => {
-					name = '';
-					hierarchyLevel = 5;
-					onOpenChange(false);
-				},
-				onError: (err) => {
-					if (err instanceof ValidationError) {
-						fieldErrors = err.fields;
-					} else {
-						bannerError = err instanceof Error ? err.message : 'Failed to create role';
-					}
-				}
-			}
-		);
+		await form.submit(e, async (values) => {
+			await new Promise<void>((resolve, reject) => {
+				mutation.mutate(values, {
+					onSuccess: () => {
+						form.reset();
+						onOpenChange(false);
+						resolve();
+					},
+					onError: (err) => reject(err)
+				});
+			});
+		});
 	}
-
-	const isPending = $derived(mutation.isPending);
 </script>
 
 <Drawer.Root bind:open {onOpenChange}>
@@ -62,17 +49,17 @@
 				<TextField
 					label="Name"
 					name="name"
-					bind:value={name}
+					bind:value={form.values.name}
 					minlength={3}
 					maxlength={100}
 					required
-					error={fieldErrors.name}
+					error={form.errors.name}
 				/>
 				<label class="stack stack-tight">
 					<span class="label">Hierarchy level</span>
 					<input
 						type="number"
-						bind:value={hierarchyLevel}
+						bind:value={form.values.hierarchy_level}
 						min={0}
 						max={100}
 						class="glass-input rounded-md px-3 py-2 text-sm"
@@ -82,14 +69,14 @@
 						approval).
 					</span>
 				</label>
-				{#if bannerError}<Alert variant="danger">{bannerError}</Alert>{/if}
+				{#if form.bannerError}<Alert variant="danger">{form.bannerError}</Alert>{/if}
 			</form>
 		</Drawer.Body>
 		<Drawer.Footer>
 			<Drawer.Close>
-				<Button variant="ghost" disabled={isPending}>Cancel</Button>
+				<Button variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
 			</Drawer.Close>
-			<Button type="submit" form="create-role-form" loading={isPending}>Create role</Button>
+			<Button type="submit" form="create-role-form" loading={form.isSubmitting}>Create role</Button>
 		</Drawer.Footer>
 	</Drawer.Content>
 </Drawer.Root>

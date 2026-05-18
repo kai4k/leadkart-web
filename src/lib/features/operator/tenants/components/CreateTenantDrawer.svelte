@@ -1,27 +1,15 @@
 <script lang="ts">
 	import { Drawer, Button, Alert, Card } from '$ui';
-	import { toast } from '$ui';
 	import { TextField, PasswordField } from '$lib/components/form';
 	import { Copy, Icon } from '$icons';
 	import { registerTenantMutation } from '$features/operator/tenants/queries';
-	import { ValidationError } from '$api/errors';
-	import type {
-		RegisterTenantRequest,
-		RegisterTenantResponse
-	} from '$features/operator/tenants/types';
+	import { registerTenantRequestSchema } from '$features/operator/tenants/schemas';
+	import { useForm } from '$lib/utils/use-form.svelte';
+	import type { RegisterTenantResponse } from '$features/operator/tenants/types';
 
 	type Props = { open: boolean; onOpenChange: (open: boolean) => void };
 	let { open = $bindable(false), onOpenChange }: Props = $props();
 
-	let slug = $state('');
-	let legalName = $state('');
-	let displayName = $state('');
-	let adminEmail = $state('');
-	let adminPassword = $state('');
-	let adminFirstName = $state('');
-	let adminLastName = $state('');
-	let fieldErrors = $state<Record<string, string>>({});
-	let bannerError = $state<string | null>(null);
 	let credentials = $state<{
 		email: string;
 		password: string;
@@ -32,51 +20,38 @@
 
 	// TanStack Query v6 (Svelte 5): result is Svelte 5 reactive state, accessed directly.
 	const registerMutation = registerTenantMutation();
+	const form = useForm(registerTenantRequestSchema, {
+		slug: '',
+		legal_name: '',
+		display_name: '',
+		admin_email: '',
+		admin_password: '',
+		admin_first_name: '',
+		admin_last_name: ''
+	});
 
 	function reset() {
-		slug = '';
-		legalName = '';
-		displayName = '';
-		adminEmail = '';
-		adminPassword = '';
-		adminFirstName = '';
-		adminLastName = '';
-		fieldErrors = {};
-		bannerError = null;
+		form.reset();
 		credentials = null;
 	}
 
 	async function onSubmit(e: SubmitEvent) {
-		e.preventDefault();
-		fieldErrors = {};
-		bannerError = null;
-		const req: RegisterTenantRequest = {
-			slug: slug.trim().toLowerCase(),
-			legal_name: legalName.trim(),
-			display_name: displayName.trim(),
-			admin_email: adminEmail.trim(),
-			admin_password: adminPassword,
-			admin_first_name: adminFirstName.trim(),
-			admin_last_name: adminLastName.trim()
-		};
-		registerMutation.mutate(req, {
-			onSuccess: (resp: RegisterTenantResponse) => {
-				credentials = {
-					email: req.admin_email,
-					password: req.admin_password,
-					tenantId: resp.tenant_id,
-					slug: req.slug,
-					displayName: req.display_name
-				};
-				toast('success', `Tenant ${req.display_name} registered`);
-			},
-			onError: (err: unknown) => {
-				if (err instanceof ValidationError) {
-					fieldErrors = err.fields;
-				} else {
-					bannerError = err instanceof Error ? err.message : 'Failed to register tenant';
-				}
-			}
+		await form.submit(e, async (values) => {
+			await new Promise<void>((resolve, reject) => {
+				registerMutation.mutate(values, {
+					onSuccess: (resp: RegisterTenantResponse) => {
+						credentials = {
+							email: values.admin_email,
+							password: values.admin_password,
+							tenantId: resp.tenant_id,
+							slug: values.slug,
+							displayName: values.display_name
+						};
+						resolve();
+					},
+					onError: (err: unknown) => reject(err)
+				});
+			});
 		});
 	}
 
@@ -92,8 +67,6 @@
 		if (!next) reset();
 		onOpenChange(next);
 	}
-
-	const isPending = $derived(registerMutation.isPending);
 </script>
 
 <Drawer.Root bind:open onOpenChange={handleClose}>
@@ -182,71 +155,71 @@
 					<TextField
 						label="Slug"
 						name="slug"
-						bind:value={slug}
+						bind:value={form.values.slug}
 						required
 						maxlength={60}
 						placeholder="acme-pharma"
-						error={fieldErrors.slug}
+						error={form.errors.slug}
 					/>
 					<TextField
 						label="Legal name"
 						name="legal_name"
-						bind:value={legalName}
+						bind:value={form.values.legal_name}
 						required
 						maxlength={200}
-						error={fieldErrors.legal_name}
+						error={form.errors.legal_name}
 					/>
 					<TextField
 						label="Display name"
 						name="display_name"
-						bind:value={displayName}
+						bind:value={form.values.display_name}
 						required
 						maxlength={200}
-						error={fieldErrors.display_name}
+						error={form.errors.display_name}
 					/>
 					<h3 class="mt-2 overline">Seed admin</h3>
 					<TextField
 						label="First name"
 						name="admin_first_name"
-						bind:value={adminFirstName}
+						bind:value={form.values.admin_first_name}
 						required
 						maxlength={120}
-						error={fieldErrors.admin_first_name}
+						error={form.errors.admin_first_name}
 					/>
 					<TextField
 						label="Last name"
 						name="admin_last_name"
-						bind:value={adminLastName}
+						bind:value={form.values.admin_last_name}
 						required
 						maxlength={120}
-						error={fieldErrors.admin_last_name}
+						error={form.errors.admin_last_name}
 					/>
 					<TextField
 						label="Email"
 						name="admin_email"
 						type="email"
-						bind:value={adminEmail}
+						bind:value={form.values.admin_email}
 						required
-						error={fieldErrors.admin_email}
+						error={form.errors.admin_email}
 					/>
 					<PasswordField
 						label="Initial password"
 						name="admin_password"
-						bind:value={adminPassword}
+						bind:value={form.values.admin_password}
 						required
 						minlength={8}
-						error={fieldErrors.admin_password}
+						error={form.errors.admin_password}
 					/>
-					{#if bannerError}<Alert variant="danger">{bannerError}</Alert>{/if}
+					{#if form.bannerError}<Alert variant="danger">{form.bannerError}</Alert>{/if}
 				</form>
 			{/if}
 		</Drawer.Body>
 		{#if !credentials}
 			<Drawer.Footer>
 				<Drawer.Close>
-					<Button variant="ghost" disabled={isPending}>Cancel</Button>
+					<Button variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
 				</Drawer.Close>
-				<Button type="submit" form="register-tenant-form" loading={isPending}
+				<Button type="submit" form="register-tenant-form" loading={form.isSubmitting}
 					>Register tenant</Button
 				>
 			</Drawer.Footer>

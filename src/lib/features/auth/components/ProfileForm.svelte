@@ -3,17 +3,14 @@
 	import { Alert, Button } from '$ui';
 	import { session } from '$features/auth/stores/session.svelte';
 	import { myProfileQuery, updateMyProfileMutation } from '$features/auth/queries';
-	import { ValidationError } from '$api/errors';
-	import type { UpdateProfileRequest } from '$features/auth/types';
+	import { updateProfileRequestSchema } from '$features/auth/schemas';
+	import { useForm } from '$lib/utils/use-form.svelte';
 	import { displayName } from '$features/auth/view-models';
 
 	/**
 	 * ProfileForm — read-only name + email block at the top (admin-
 	 * controlled fields), editable designation / department /
-	 * status_message below. Save calls updateMyProfileMutation.
-	 *
-	 * Loading state is the responsibility of the parent route —
-	 * this component renders only when the profile query has data.
+	 * status_message below. Backed by useForm + updateMyProfileMutation.
 	 */
 
 	const membershipId = $derived(session.principal?.membershipId ?? '');
@@ -21,46 +18,36 @@
 	const profileData = $derived(profileQuery.data ?? null);
 	const mutation = $derived(updateMyProfileMutation(membershipId));
 
-	let designation = $state('');
-	let department = $state('');
-	let statusMessage = $state('');
-	let fieldErrors = $state<Record<string, string>>({});
-	let saveError = $state<string | null>(null);
+	const form = useForm(updateProfileRequestSchema, {
+		designation: '',
+		department: '',
+		status_message: ''
+	});
 
 	$effect(() => {
 		if (profileData) {
-			designation = profileData.designation;
-			department = profileData.department;
-			statusMessage = profileData.status_message;
+			form.values.designation = profileData.designation;
+			form.values.department = profileData.department;
+			form.values.status_message = profileData.status_message;
 		}
 	});
 
 	async function onSubmit(e: SubmitEvent) {
-		e.preventDefault();
-		saveError = null;
-		fieldErrors = {};
-		const patch: UpdateProfileRequest = {
-			designation: designation.trim(),
-			department: department.trim(),
-			status_message: statusMessage.trim()
-		};
-		mutation.mutate(patch, {
-			onError: (err) => {
-				if (err instanceof ValidationError) {
-					fieldErrors = err.fields;
-				} else {
-					saveError = err instanceof Error ? err.message : 'Failed to save changes';
-				}
-			}
+		await form.submit(e, async (values) => {
+			await new Promise<void>((resolve, reject) => {
+				mutation.mutate(values, {
+					onSuccess: () => resolve(),
+					onError: (err) => reject(err)
+				});
+			});
 		});
 	}
 
-	const isSaving = $derived(mutation.isPending);
 	const dirty = $derived(
 		profileData !== null &&
-			(designation.trim() !== profileData.designation ||
-				department.trim() !== profileData.department ||
-				statusMessage.trim() !== profileData.status_message)
+			(form.values.designation.trim() !== profileData.designation ||
+				form.values.department.trim() !== profileData.department ||
+				form.values.status_message.trim() !== profileData.status_message)
 	);
 </script>
 
@@ -90,35 +77,37 @@
 			<TextField
 				label="Designation"
 				name="designation"
-				bind:value={designation}
+				bind:value={form.values.designation}
 				placeholder="e.g. Sales Executive"
 				maxlength={120}
-				error={fieldErrors.designation}
+				error={form.errors.designation}
 			/>
 			<TextField
 				label="Department"
 				name="department"
-				bind:value={department}
+				bind:value={form.values.department}
 				placeholder="e.g. Sales"
 				maxlength={120}
-				error={fieldErrors.department}
+				error={form.errors.department}
 			/>
 			<TextField
 				label="Status message"
 				name="status_message"
-				bind:value={statusMessage}
+				bind:value={form.values.status_message}
 				placeholder="Optional — shown to teammates"
 				maxlength={280}
-				error={fieldErrors.status_message}
+				error={form.errors.status_message}
 			/>
 		</section>
 
-		{#if saveError}
-			<Alert variant="danger">{saveError}</Alert>
+		{#if form.bannerError}
+			<Alert variant="danger">{form.bannerError}</Alert>
 		{/if}
 
 		<div class="cluster">
-			<Button type="submit" loading={isSaving} disabled={!dirty || isSaving}>Save changes</Button>
+			<Button type="submit" loading={form.isSubmitting} disabled={!dirty || form.isSubmitting}
+				>Save changes</Button
+			>
 		</div>
 	</form>
 {/if}

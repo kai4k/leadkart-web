@@ -3,9 +3,8 @@
 	import { Drawer, Button, Alert } from '$ui';
 	import { TextField, PasswordField } from '$lib/components/form';
 	import { createUserMutation } from '$features/users/queries';
-	import { ValidationError } from '$api/errors';
-	import { toast } from '$ui';
-	import type { CreateUserRequest } from '$features/users/types';
+	import { createUserRequestSchema } from '$features/users/schemas';
+	import { useForm } from '$lib/utils/use-form.svelte';
 
 	type Props = {
 		tenantId?: string;
@@ -15,58 +14,39 @@
 
 	let { tenantId, open = $bindable(false), onOpenChange }: Props = $props();
 
-	let email = $state('');
-	let password = $state('');
-	let firstName = $state('');
-	let lastName = $state('');
-	let fieldErrors = $state<Record<string, string>>({});
-	let bannerError = $state<string | null>(null);
 	let success = $state<{ membershipId: string; personExisted: boolean } | null>(null);
 
 	const mutation = $derived(createUserMutation(tenantId));
+	const form = useForm(createUserRequestSchema, {
+		email: '',
+		password: '',
+		first_name: '',
+		last_name: ''
+	});
 
-	function resetForm() {
-		email = '';
-		password = '';
-		firstName = '';
-		lastName = '';
-		fieldErrors = {};
-		bannerError = null;
+	function resetAll() {
+		form.reset();
 		success = null;
 	}
 
 	async function onSubmit(e: SubmitEvent) {
-		e.preventDefault();
-		fieldErrors = {};
-		bannerError = null;
-		success = null;
-		const req: CreateUserRequest = {
-			email: email.trim(),
-			password,
-			first_name: firstName.trim(),
-			last_name: lastName.trim()
-		};
-		mutation.mutate(req, {
-			onSuccess: (resp) => {
-				success = { membershipId: resp.membership_id, personExisted: resp.person_existed };
-			},
-			onError: (err) => {
-				if (err instanceof ValidationError) {
-					fieldErrors = err.fields;
-				} else {
-					bannerError = err instanceof Error ? err.message : 'Failed to create user';
-					toast('danger', bannerError);
-				}
-			}
+		await form.submit(e, async (values) => {
+			await new Promise<void>((resolve, reject) => {
+				mutation.mutate(values, {
+					onSuccess: (resp) => {
+						success = { membershipId: resp.membership_id, personExisted: resp.person_existed };
+						resolve();
+					},
+					onError: (err) => reject(err)
+				});
+			});
 		});
 	}
 
 	function handleClose(next: boolean) {
-		if (!next && success) resetForm();
+		if (!next && success) resetAll();
 		onOpenChange(next);
 	}
-
-	const isSubmitting = $derived(mutation.isPending);
 </script>
 
 <Drawer.Root bind:open onOpenChange={handleClose}>
@@ -96,7 +76,7 @@
 						: 'A new identity was created.'}
 				</Alert>
 				<div class="cluster mt-4">
-					<Button variant="ghost" onclick={resetForm}>Add another</Button>
+					<Button variant="ghost" onclick={resetAll}>Add another</Button>
 					<Button onclick={() => handleClose(false)}>Done</Button>
 				</div>
 			{:else}
@@ -105,46 +85,48 @@
 						label="Email"
 						name="email"
 						type="email"
-						bind:value={email}
+						bind:value={form.values.email}
 						required
-						error={fieldErrors.email}
+						error={form.errors.email}
 					/>
 					<TextField
 						label="First name"
 						name="first_name"
-						bind:value={firstName}
+						bind:value={form.values.first_name}
 						required
 						maxlength={120}
-						error={fieldErrors.first_name}
+						error={form.errors.first_name}
 					/>
 					<TextField
 						label="Last name"
 						name="last_name"
-						bind:value={lastName}
+						bind:value={form.values.last_name}
 						required
 						maxlength={120}
-						error={fieldErrors.last_name}
+						error={form.errors.last_name}
 					/>
 					<PasswordField
 						label="Initial password"
 						name="password"
-						bind:value={password}
+						bind:value={form.values.password}
 						required
-						error={fieldErrors.password}
+						error={form.errors.password}
 					/>
 					<p class="caption text-[var(--color-fg-subtle)]">
 						The user will be prompted to change this on first sign-in.
 					</p>
-					{#if bannerError}<Alert variant="danger">{bannerError}</Alert>{/if}
+					{#if form.bannerError}<Alert variant="danger">{form.bannerError}</Alert>{/if}
 				</form>
 			{/if}
 		</Drawer.Body>
 		{#if !success}
 			<Drawer.Footer>
 				<Drawer.Close>
-					<Button variant="ghost" disabled={isSubmitting}>Cancel</Button>
+					<Button variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
 				</Drawer.Close>
-				<Button type="submit" form="create-user-form" loading={isSubmitting}>Create user</Button>
+				<Button type="submit" form="create-user-form" loading={form.isSubmitting}
+					>Create user</Button
+				>
 			</Drawer.Footer>
 		{/if}
 	</Drawer.Content>
