@@ -1,9 +1,13 @@
 <script lang="ts">
 	import { Drawer, Button, Alert, Card } from '$ui';
+	import { toast } from '$ui';
 	import { TextField, PasswordField } from '$lib/components/form';
 	import { Copy, Icon } from '$icons';
-	import { operatorTenants } from '$features/operator/tenants/stores/operator-tenants.svelte';
-	import type { RegisterTenantRequest } from '$features/operator/tenants/types';
+	import { registerTenantMutation } from '$features/operator/tenants/queries';
+	import type {
+		RegisterTenantRequest,
+		RegisterTenantResponse
+	} from '$features/operator/tenants/types';
 
 	type Props = { open: boolean; onOpenChange: (open: boolean) => void };
 	let { open = $bindable(false), onOpenChange }: Props = $props();
@@ -15,7 +19,7 @@
 	let adminPassword = $state('');
 	let adminFirstName = $state('');
 	let adminLastName = $state('');
-	let error = $state<string | null>(null);
+	let formError = $state<string | null>(null);
 	let credentials = $state<{
 		email: string;
 		password: string;
@@ -23,6 +27,9 @@
 		slug: string;
 		displayName: string;
 	} | null>(null);
+
+	// TanStack Query v6 (Svelte 5): result is Svelte 5 reactive state, accessed directly.
+	const registerMutation = registerTenantMutation();
 
 	function reset() {
 		slug = '';
@@ -32,13 +39,13 @@
 		adminPassword = '';
 		adminFirstName = '';
 		adminLastName = '';
-		error = null;
+		formError = null;
 		credentials = null;
 	}
 
 	async function onSubmit(e: SubmitEvent) {
 		e.preventDefault();
-		error = null;
+		formError = null;
 		const req: RegisterTenantRequest = {
 			slug: slug.trim().toLowerCase(),
 			legal_name: legalName.trim(),
@@ -48,18 +55,21 @@
 			admin_first_name: adminFirstName.trim(),
 			admin_last_name: adminLastName.trim()
 		};
-		try {
-			const resp = await operatorTenants.register(req);
-			credentials = {
-				email: req.admin_email,
-				password: req.admin_password,
-				tenantId: resp.tenant_id,
-				slug: req.slug,
-				displayName: req.display_name
-			};
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to register tenant';
-		}
+		registerMutation.mutate(req, {
+			onSuccess: (resp: RegisterTenantResponse) => {
+				credentials = {
+					email: req.admin_email,
+					password: req.admin_password,
+					tenantId: resp.tenant_id,
+					slug: req.slug,
+					displayName: req.display_name
+				};
+				toast('success', `Tenant ${req.display_name} registered`);
+			},
+			onError: (err: unknown) => {
+				formError = err instanceof Error ? err.message : 'Failed to register tenant';
+			}
+		});
 	}
 
 	async function copy(text: string) {
@@ -75,7 +85,7 @@
 		onOpenChange(next);
 	}
 
-	const isPending = $derived(operatorTenants.status === 'mutating');
+	const isPending = $derived(registerMutation.isPending);
 </script>
 
 <Drawer.Root bind:open onOpenChange={handleClose}>
@@ -212,7 +222,7 @@
 						required
 						minlength={8}
 					/>
-					{#if error}<Alert variant="danger">{error}</Alert>{/if}
+					{#if formError}<Alert variant="danger">{formError}</Alert>{/if}
 				</form>
 			{/if}
 		</Drawer.Body>

@@ -1,25 +1,35 @@
 <script lang="ts">
 	import { ConfirmDialog, Alert } from '$ui';
-	import { operatorTenants } from '$features/operator/tenants/stores/operator-tenants.svelte';
+	import { toast } from '$ui';
+	import { markForDeletionMutation } from '$features/operator/tenants/queries';
 	import type { TenantDto } from '$features/operator/tenants/types';
 
 	type Props = { open: boolean; tenant: TenantDto | null; onOpenChange: (open: boolean) => void };
 	let { open = $bindable(false), tenant, onOpenChange }: Props = $props();
 
 	let reason = $state('');
-	let error = $state<string | null>(null);
-	const isPending = $derived(operatorTenants.status === 'mutating');
+	let formError = $state<string | null>(null);
+
+	// TanStack Query v6 (Svelte 5): result is Svelte 5 reactive state, accessed directly.
+	const markMutation = markForDeletionMutation();
+	const isPending = $derived(markMutation.isPending);
 
 	async function onConfirm() {
 		if (!tenant) return;
-		error = null;
-		try {
-			await operatorTenants.markForDeletion(tenant.id, reason.trim());
-			reason = '';
-			onOpenChange(false);
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to mark for deletion';
-		}
+		formError = null;
+		markMutation.mutate(
+			{ id: tenant.id, reason: reason.trim() },
+			{
+				onSuccess: () => {
+					toast('success', `${tenant!.display_name} marked for deletion`);
+					reason = '';
+					onOpenChange(false);
+				},
+				onError: (err: unknown) => {
+					formError = err instanceof Error ? err.message : 'Failed to mark for deletion';
+				}
+			}
+		);
 	}
 </script>
 
@@ -46,6 +56,6 @@
 			></textarea>
 		</label>
 		<Alert variant="warning">Reversible for 30 days via Restore.</Alert>
-		{#if error}<Alert variant="danger">{error}</Alert>{/if}
+		{#if formError}<Alert variant="danger">{formError}</Alert>{/if}
 	{/snippet}
 </ConfirmDialog>

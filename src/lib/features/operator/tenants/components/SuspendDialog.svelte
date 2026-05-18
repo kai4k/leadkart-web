@@ -1,25 +1,35 @@
 <script lang="ts">
 	import { ConfirmDialog, Alert } from '$ui';
-	import { operatorTenants } from '$features/operator/tenants/stores/operator-tenants.svelte';
+	import { toast } from '$ui';
+	import { suspendTenantMutation } from '$features/operator/tenants/queries';
 	import type { TenantDto } from '$features/operator/tenants/types';
 
 	type Props = { open: boolean; tenant: TenantDto | null; onOpenChange: (open: boolean) => void };
 	let { open = $bindable(false), tenant, onOpenChange }: Props = $props();
 
 	let reason = $state('');
-	let error = $state<string | null>(null);
-	const isPending = $derived(operatorTenants.status === 'mutating');
+	let formError = $state<string | null>(null);
+
+	// TanStack Query v6 (Svelte 5): result is Svelte 5 reactive state, accessed directly.
+	const suspendMutation = suspendTenantMutation();
+	const isPending = $derived(suspendMutation.isPending);
 
 	async function onConfirm() {
 		if (!tenant) return;
-		error = null;
-		try {
-			await operatorTenants.suspend(tenant.id, reason.trim());
-			reason = '';
-			onOpenChange(false);
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to suspend';
-		}
+		formError = null;
+		suspendMutation.mutate(
+			{ id: tenant.id, reason: reason.trim() },
+			{
+				onSuccess: () => {
+					toast('success', `${tenant!.display_name} suspended`);
+					reason = '';
+					onOpenChange(false);
+				},
+				onError: (err: unknown) => {
+					formError = err instanceof Error ? err.message : 'Failed to suspend';
+				}
+			}
+		);
 	}
 </script>
 
@@ -45,6 +55,6 @@
 				class="glass-input w-full rounded-md px-3 py-2 text-sm"
 			></textarea>
 		</label>
-		{#if error}<Alert variant="danger">{error}</Alert>{/if}
+		{#if formError}<Alert variant="danger">{formError}</Alert>{/if}
 	{/snippet}
 </ConfirmDialog>
