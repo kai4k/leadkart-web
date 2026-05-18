@@ -1,6 +1,21 @@
 import { z } from 'zod';
 
 /**
+ * CapabilitiesDto — wire shape of GET /v1/auth/me/capabilities per ADR 0038 N1.
+ * The tier field drives sidebar catalogue selection; permissions drive per-item
+ * visibility. is_super_user short-circuits all permission checks.
+ */
+export const capabilitiesSchema = z.object({
+	tier: z.enum(['platform-super', 'platform-staff', 'tenant-admin', 'tenant-user', 'unknown']),
+	tenant_id: z.string().nullable(),
+	tenant_slug: z.string().nullable(),
+	is_platform: z.boolean(),
+	is_super_user: z.boolean(),
+	permissions: z.array(z.string()),
+	features: z.array(z.string()).optional().default([])
+});
+
+/**
  * Auth feature Zod schemas — used for both client-side form validation
  * AND runtime API response validation (industry canon: Stripe SDK,
  * tRPC, TanStack Query all do schema-at-the-boundary).

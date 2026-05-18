@@ -31,7 +31,8 @@ import {
 	loginResponseSchema,
 	refreshResponseSchema,
 	userDtoSchema,
-	listSessionsResponseSchema
+	listSessionsResponseSchema,
+	capabilitiesSchema
 } from './schemas';
 import type {
 	LoginRequest,
@@ -43,6 +44,8 @@ import type {
 	UpdateProfileRequest
 } from './types';
 import { z } from 'zod';
+
+export type Capabilities = z.output<typeof capabilitiesSchema>;
 
 export async function login(body: LoginRequest): Promise<LoginResponse> {
 	const raw = await api.post<unknown>('/v1/auth/login', body, { auth: false });
@@ -56,6 +59,16 @@ export async function refresh(body: RefreshRequest): Promise<RefreshResponse> {
 
 export function logout(refreshToken: string): Promise<void> {
 	return api.post<void>('/v1/auth/logout', { refresh_token: refreshToken });
+}
+
+/**
+ * Authenticated. Returns the caller's capability set — tier, permissions,
+ * features — synthesized from JWT claims server-side per ADR 0038 N1.
+ * staleTime 5 min in the query layer; gcTime 30 min.
+ */
+export async function getMyCapabilities(): Promise<Capabilities> {
+	const raw = await api.get<unknown>('/v1/auth/me/capabilities');
+	return capabilitiesSchema.parse(raw);
 }
 
 /**
