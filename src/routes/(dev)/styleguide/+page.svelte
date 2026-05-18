@@ -41,7 +41,7 @@
 <div class="container-page stack stack-loose py-8">
 	<header class="stack stack-tight">
 		<h1 class="display-1">LeadKart design system</h1>
-		<p class="body-lg text-[var(--color-fg-muted)]">
+		<p class="body-lg text-fg-muted">
 			Every Button variant × size × state, every Card variant, the full token catalogue. This page
 			is the a11y CI ground truth — if a variant fails axe-core here, it will fail in production
 			wherever it's used.
@@ -88,7 +88,7 @@
 					<Card.Description>elevation="sm" padding="md"</Card.Description>
 				</Card.Header>
 				<Card.Content>
-					<p class="body-sm text-[var(--color-fg-muted)]">Standard surface for most content.</p>
+					<p class="body-sm text-fg-muted">Standard surface for most content.</p>
 				</Card.Content>
 			</Card.Root>
 
@@ -98,9 +98,7 @@
 					<Card.Description>Spring lift on hover · scale on press</Card.Description>
 				</Card.Header>
 				<Card.Content>
-					<p class="body-sm text-[var(--color-fg-muted)]">
-						For clickable grid items + dashboard widgets.
-					</p>
+					<p class="body-sm text-fg-muted">For clickable grid items + dashboard widgets.</p>
 				</Card.Content>
 			</Card.Root>
 
@@ -110,9 +108,7 @@
 					<Card.Description>Frosted iOS-style surface</Card.Description>
 				</Card.Header>
 				<Card.Content>
-					<p class="body-sm text-[var(--color-fg-muted)]">
-						For overlays + popovers + customiser panels.
-					</p>
+					<p class="body-sm text-fg-muted">For overlays + popovers + customiser panels.</p>
 				</Card.Content>
 			</Card.Root>
 		</div>
@@ -132,7 +128,7 @@
 	<!-- ═══ COLOUR PALETTES ══════════════════════════════════════════════ -->
 	<section aria-labelledby="colors-heading" class="stack stack-loose">
 		<h2 id="colors-heading" class="h2">Colour palette</h2>
-		<p class="body-sm text-[var(--color-fg-muted)]">
+		<p class="body-sm text-fg-muted">
 			OKLCH 11-stop scales — perceptually uniform lightness stepping. Each chip shows the token
 			alias plus its stop number; hover for the CSS variable.
 		</p>
@@ -147,15 +143,13 @@
 						     bgs on dark stops, false-positives the foreground span. -->
 						<div class="stack stack-tight gap-1">
 							<div
-								class="h-10 rounded-md border border-[var(--color-border)]"
+								class="border-border h-10 rounded-md border"
 								style="background: var(--color-{palette}-{shade});"
 								role="img"
 								aria-label="{palette} {shade}"
 								title="--color-{palette}-{shade}"
 							></div>
-							<span class="text-center font-mono text-[10px] text-[var(--color-fg-muted)]"
-								>{shade}</span
-							>
+							<span class="text-fg-muted text-center font-mono text-[10px]">{shade}</span>
 						</div>
 					{/each}
 				</div>
@@ -166,7 +160,7 @@
 	<!-- ═══ THEME PICKER (programmatic API) ══════════════════════════════ -->
 	<section aria-labelledby="theme-heading" class="stack stack-loose">
 		<h2 id="theme-heading" class="h2">Theme picker</h2>
-		<p class="body-sm text-[var(--color-fg-muted)]">
+		<p class="body-sm text-fg-muted">
 			11 primary colour choices. <strong>Navy</strong> is the default (logo wordmark). Picking
 			re-skins every <code>--color-brand-*</code> token instantly via a
 			<code>&lt;html data-primary="X"&gt;</code> attribute swap.
@@ -176,13 +170,13 @@
 				<button
 					type="button"
 					onclick={() => theme.setPrimary(id)}
-					class="interactive label flex items-center gap-2 rounded-md border border-[var(--color-border)] px-3 py-2"
+					class="interactive label border-border flex items-center gap-2 rounded-md border px-3 py-2"
 					class:ring-2={theme.primary === id}
 					aria-pressed={theme.primary === id}
 				>
 					<span
 						aria-hidden="true"
-						class="h-4 w-4 rounded-full border border-[var(--color-border)]"
+						class="border-border h-4 w-4 rounded-full border"
 						style="background: {hex};"
 					></span>
 					{label}
@@ -202,7 +196,7 @@
 				class="glass-popover glass-sheen absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg p-6"
 			>
 				<p class="h4">Frosted glass overlay</p>
-				<p class="body-sm mt-2 text-[var(--color-fg-muted)]">
+				<p class="body-sm text-fg-muted mt-2">
 					Hover to see the sheen sweep. Composes glass-popover + glass-sheen.
 				</p>
 			</div>

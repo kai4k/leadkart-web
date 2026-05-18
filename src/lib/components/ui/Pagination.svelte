@@ -36,7 +36,7 @@
 <nav class={cn('cluster cluster-tight', className)} aria-label="Pagination">
 	<button
 		type="button"
-		class="label inline-flex items-center gap-1 rounded-md px-2 py-1 text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] disabled:cursor-not-allowed disabled:opacity-40"
+		class="label text-fg-muted hover:text-fg inline-flex items-center gap-1 rounded-md px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40"
 		disabled={!canPrev}
 		aria-label="Previous page"
 		onclick={() => onChange(page - 1)}
@@ -48,15 +48,15 @@
 		{#each pages as p, i (i)}
 			<li>
 				{#if p === 'gap'}
-					<span class="px-2 text-[var(--color-fg-subtle)]">…</span>
+					<span class="text-fg-subtle px-2">…</span>
 				{:else}
 					<button
 						type="button"
 						class={cn(
 							'label inline-flex h-7 min-w-7 items-center justify-center rounded-md px-2',
 							p === page
-								? 'bg-[var(--color-primary-soft)] text-[var(--color-primary)]'
-								: 'text-[var(--color-fg-muted)] hover:bg-[var(--color-bg-muted)] hover:text-[var(--color-fg)]'
+								? 'bg-primary-soft text-primary'
+								: 'text-fg-muted hover:bg-bg-muted hover:text-fg'
 						)}
 						aria-current={p === page ? 'page' : undefined}
 						onclick={() => onChange(p)}
@@ -69,7 +69,7 @@
 	</ul>
 	<button
 		type="button"
-		class="label inline-flex items-center gap-1 rounded-md px-2 py-1 text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] disabled:cursor-not-allowed disabled:opacity-40"
+		class="label text-fg-muted hover:text-fg inline-flex items-center gap-1 rounded-md px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40"
 		disabled={!canNext}
 		aria-label="Next page"
 		onclick={() => onChange(page + 1)}

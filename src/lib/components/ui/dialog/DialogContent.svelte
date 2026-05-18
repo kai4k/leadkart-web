@@ -22,7 +22,7 @@
 
 <BitsDialog.Portal>
 	<BitsDialog.Overlay
-		class="is-fixed-overlay--overlay animate-fade-in inset-0 bg-[var(--color-overlay)] backdrop-blur-sm"
+		class="is-fixed-overlay--overlay animate-fade-in bg-overlay inset-0 backdrop-blur-sm"
 	/>
 	<BitsDialog.Content
 		class={cn(

@@ -62,15 +62,15 @@
 			<h2 class="h5">{displayName(profileData)}</h2>
 			<dl class="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
 				<div>
-					<dt class="caption text-[var(--color-fg-muted)]">Email</dt>
-					<dd class="body-base text-[var(--color-fg)]">{profileData.email}</dd>
+					<dt class="caption text-fg-muted">Email</dt>
+					<dd class="body-base text-fg">{profileData.email}</dd>
 				</div>
 				<div>
-					<dt class="caption text-[var(--color-fg-muted)]">Status</dt>
-					<dd class="body-base text-[var(--color-fg)] capitalize">{profileData.status}</dd>
+					<dt class="caption text-fg-muted">Status</dt>
+					<dd class="body-base text-fg capitalize">{profileData.status}</dd>
 				</div>
 			</dl>
-			<p class="caption text-[var(--color-fg-subtle)]">
+			<p class="caption text-fg-subtle">
 				Name + email are managed by your tenant administrator. To change them, ask your admin.
 			</p>
 		</section>

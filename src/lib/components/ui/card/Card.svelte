@@ -14,7 +14,7 @@
 			 *   none  : structure only, caller paints the surface
 			 */
 			surface: {
-				solid: 'rounded-lg border bg-[var(--color-bg-elevated)] border-[var(--color-border)]',
+				solid: 'rounded-lg border bg-bg-elevated border-border',
 				glass: 'glass-card',
 				none: ''
 			},

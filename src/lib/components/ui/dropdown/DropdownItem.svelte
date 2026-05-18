@@ -21,13 +21,10 @@
 		{
 			variants: {
 				variant: {
-					default: [
-						'text-[var(--color-fg)]',
-						'data-[highlighted]:bg-[var(--color-brand-50)] data-[highlighted]:text-[var(--color-brand-600)]'
-					],
+					default: ['text-fg', 'data-[highlighted]:bg-brand-50 data-[highlighted]:text-brand-600'],
 					danger: [
-						'text-[var(--color-danger-700)]',
-						'data-[highlighted]:bg-[var(--color-danger-50)] data-[highlighted]:text-[var(--color-danger-700)]'
+						'text-danger-700',
+						'data-[highlighted]:bg-danger-50 data-[highlighted]:text-danger-700'
 					]
 				}
 			},

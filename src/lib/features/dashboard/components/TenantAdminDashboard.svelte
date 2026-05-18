@@ -88,12 +88,12 @@
 		<div class="cluster">
 			<h1 class="h1">Tenant Dashboard</h1>
 			<span
-				class="label-small inline-flex items-center rounded-full bg-[var(--color-primary-soft)] px-2 py-0.5 text-[var(--color-primary)]"
+				class="label-small bg-primary-soft text-primary inline-flex items-center rounded-full px-2 py-0.5"
 			>
 				Admin
 			</span>
 		</div>
-		<p class="body-sm text-[var(--color-fg-muted)]">
+		<p class="body-sm text-fg-muted">
 			Signed in as <code class="code-inline">{email}</code>. Full team overview across CRM, orders,
 			inventory, and dispatch.
 		</p>
@@ -112,8 +112,8 @@
 					</div>
 				</Card.Header>
 				<Card.Content>
-					<p class="display-2 text-[var(--color-fg-subtle)] tabular-nums">—</p>
-					<p class="caption mt-1 text-[var(--color-fg-subtle)]">{tile.hint}</p>
+					<p class="display-2 text-fg-subtle tabular-nums">—</p>
+					<p class="caption text-fg-subtle mt-1">{tile.hint}</p>
 				</Card.Content>
 			</Card.Root>
 		{/each}

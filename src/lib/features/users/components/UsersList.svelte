@@ -115,7 +115,7 @@
 	<header class="cluster cluster-spread">
 		<div class="stack stack-tight">
 			<h1 class="h1">Team</h1>
-			<p class="caption text-[var(--color-fg-muted)]">
+			<p class="caption text-fg-muted">
 				{userList.length} member{userList.length === 1 ? '' : 's'}
 			</p>
 		</div>

@@ -4,13 +4,10 @@
 	export const alertVariants = cva(['rounded-md border p-4 body-sm'], {
 		variants: {
 			variant: {
-				info: 'bg-[var(--color-info-50)] border-[var(--color-info-100)] text-[var(--color-info-900)]',
-				success:
-					'bg-[var(--color-success-50)] border-[var(--color-success-100)] text-[var(--color-success-900)]',
-				warning:
-					'bg-[var(--color-warning-50)] border-[var(--color-warning-100)] text-[var(--color-warning-900)]',
-				danger:
-					'bg-[var(--color-danger-50)] border-[var(--color-danger-100)] text-[var(--color-danger-900)]'
+				info: 'bg-info-50 border-info-100 text-info-900',
+				success: 'bg-success-50 border-success-100 text-success-900',
+				warning: 'bg-warning-50 border-warning-100 text-warning-900',
+				danger: 'bg-danger-50 border-danger-100 text-danger-900'
 			}
 		},
 		defaultVariants: { variant: 'info' }

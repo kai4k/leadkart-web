@@ -74,16 +74,14 @@
 		<Drawer.Header>
 			<div class="stack stack-tight">
 				<h2 class="h4">Register tenant</h2>
-				<p class="caption text-[var(--color-fg-muted)]">
+				<p class="caption text-fg-muted">
 					Creates the tenant + a CompanyOwner membership for the seed admin. The admin signs in with
 					the credentials below.
 				</p>
 			</div>
 			<Drawer.Close>
-				<button
-					type="button"
-					class="rounded-md p-1.5 hover:bg-[var(--color-bg-muted)]"
-					aria-label="Close">×</button
+				<button type="button" class="hover:bg-bg-muted rounded-md p-1.5" aria-label="Close"
+					>×</button
 				>
 			</Drawer.Close>
 		</Drawer.Header>
@@ -96,9 +94,9 @@
 				<Card.Root class="mt-4">
 					<Card.Content class="stack stack-tight">
 						<div class="cluster cluster-spread">
-							<span class="caption text-[var(--color-fg-muted)]">Tenant ID</span>
+							<span class="caption text-fg-muted">Tenant ID</span>
 							<div class="cluster cluster-tight">
-								<code class="caption text-[var(--color-fg-subtle)]">{credentials.tenantId}</code>
+								<code class="caption text-fg-subtle">{credentials.tenantId}</code>
 								<Button
 									variant="ghost"
 									size="sm"
@@ -110,7 +108,7 @@
 							</div>
 						</div>
 						<div class="cluster cluster-spread">
-							<span class="caption text-[var(--color-fg-muted)]">Email</span>
+							<span class="caption text-fg-muted">Email</span>
 							<div class="cluster cluster-tight">
 								<code class="label">{credentials.email}</code>
 								<Button
@@ -124,7 +122,7 @@
 							</div>
 						</div>
 						<div class="cluster cluster-spread">
-							<span class="caption text-[var(--color-fg-muted)]">Password</span>
+							<span class="caption text-fg-muted">Password</span>
 							<div class="cluster cluster-tight">
 								<code class="label">{credentials.password}</code>
 								<Button
@@ -139,14 +137,13 @@
 						</div>
 					</Card.Content>
 				</Card.Root>
-				<p class="caption mt-4 text-[var(--color-warning-900)]">
+				<p class="caption text-warning-900 mt-4">
 					This password forces a change on first sign-in. Share via a secure channel only.
 				</p>
 				<div class="cluster mt-4">
 					<Button variant="ghost" onclick={reset}>Register another</Button>
-					<a
-						href="/operator/tenants/{credentials.slug}"
-						class="label text-[var(--color-primary)] hover:underline">View tenant →</a
+					<a href="/operator/tenants/{credentials.slug}" class="label text-primary hover:underline"
+						>View tenant →</a
 					>
 					<Button onclick={() => handleClose(false)}>Done</Button>
 				</div>

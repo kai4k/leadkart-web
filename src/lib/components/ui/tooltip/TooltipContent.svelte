@@ -12,7 +12,7 @@
 		{side}
 		sideOffset={6}
 		class={cn(
-			'glass-card is-fixed-overlay--tooltip label-small max-w-xs px-2 py-1 text-xs text-[var(--color-fg)]',
+			'glass-card is-fixed-overlay--tooltip label-small text-fg max-w-xs px-2 py-1 text-xs',
 			'animate-fade-in',
 			className
 		)}

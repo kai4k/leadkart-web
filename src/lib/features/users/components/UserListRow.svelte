@@ -30,16 +30,16 @@
 </script>
 
 <li
-	class="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-4 rounded-md border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-4 py-3"
+	class="border-border bg-bg-elevated grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-4 rounded-md border px-4 py-3"
 >
 	<Avatar initials={initials(user)} size="md" />
 	<div class="stack stack-tight min-w-0">
-		<span class="body-base truncate font-medium text-[var(--color-fg)]">{displayName(user)}</span>
-		<span class="caption truncate text-[var(--color-fg-muted)]">{user.email}</span>
+		<span class="body-base text-fg truncate font-medium">{displayName(user)}</span>
+		<span class="caption text-fg-muted truncate">{user.email}</span>
 	</div>
 	<div class="stack stack-tight hidden md:flex">
-		<span class="caption text-[var(--color-fg-muted)]">{user.designation || '—'}</span>
-		<span class="caption text-[var(--color-fg-subtle)]">{user.department || '—'}</span>
+		<span class="caption text-fg-muted">{user.designation || '—'}</span>
+		<span class="caption text-fg-subtle">{user.department || '—'}</span>
 	</div>
 	<div class="cluster cluster-tight">
 		{#each roleBadges as r (r.id)}

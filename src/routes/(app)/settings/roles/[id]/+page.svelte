@@ -89,10 +89,7 @@
 </svelte:head>
 
 <div class="stack stack-relaxed">
-	<a
-		href="/settings/roles"
-		class="caption text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]">← All roles</a
-	>
+	<a href="/settings/roles" class="caption text-fg-muted hover:text-fg">← All roles</a>
 
 	{#if query.isPending}
 		<div class="flex justify-center py-16"><Spinner size={32} /></div>
@@ -108,7 +105,7 @@
 					<h1 class="h1">{role.name}</h1>
 					<Badge variant={badge.variant} style="soft" size="sm">{badge.label}</Badge>
 				</div>
-				<p class="caption text-[var(--color-fg-muted)]">Hierarchy level {role.hierarchy_level}</p>
+				<p class="caption text-fg-muted">Hierarchy level {role.hierarchy_level}</p>
 			</div>
 		</header>
 

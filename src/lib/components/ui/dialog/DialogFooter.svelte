@@ -7,10 +7,7 @@
 </script>
 
 <footer
-	class={cn(
-		'flex items-center justify-end gap-2 border-t border-[var(--color-border)] px-5 py-4',
-		className
-	)}
+	class={cn('border-border flex items-center justify-end gap-2 border-t px-5 py-4', className)}
 >
 	{@render children()}
 </footer>

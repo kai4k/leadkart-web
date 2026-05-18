@@ -54,16 +54,12 @@
 		<Drawer.Header>
 			<div class="stack stack-tight">
 				<h2 class="h4">Add team member</h2>
-				<p class="caption text-[var(--color-fg-muted)]">
+				<p class="caption text-fg-muted">
 					Sends a sign-in to the email below. Roles can be assigned after creation.
 				</p>
 			</div>
 			<Drawer.Close>
-				<button
-					type="button"
-					class="rounded-md p-1.5 hover:bg-[var(--color-bg-muted)]"
-					aria-label="Close"
-				>
+				<button type="button" class="hover:bg-bg-muted rounded-md p-1.5" aria-label="Close">
 					×
 				</button>
 			</Drawer.Close>
@@ -112,7 +108,7 @@
 						required
 						error={form.errors.password}
 					/>
-					<p class="caption text-[var(--color-fg-subtle)]">
+					<p class="caption text-fg-subtle">
 						The user will be prompted to change this on first sign-in.
 					</p>
 					{#if form.bannerError}<Alert variant="danger">{form.bannerError}</Alert>{/if}

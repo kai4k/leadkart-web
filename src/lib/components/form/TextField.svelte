@@ -3,16 +3,16 @@
 
 	export const textFieldInputVariants = cva(
 		[
-			'glass-input body-sm block w-full px-3 py-2 text-[var(--color-fg)]',
-			'placeholder:text-[var(--color-fg-subtle)]',
+			'glass-input body-sm block w-full px-3 py-2 text-fg',
+			'placeholder:text-fg-subtle',
 			'focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
 			'disabled:cursor-not-allowed disabled:opacity-60'
 		],
 		{
 			variants: {
 				error: {
-					true: 'border-[var(--color-danger-500)] focus-visible:ring-[var(--color-danger-500)]',
-					false: 'focus-visible:ring-[var(--color-focus-ring)]'
+					true: 'border-danger-500 focus-visible:ring-danger-500',
+					false: 'focus-visible:ring-focus-ring'
 				},
 				hasLeading: {
 					true: 'pl-10',
@@ -89,14 +89,14 @@
 </script>
 
 <div class={cn('stack stack-tight', className)}>
-	<label for={fieldId} class={cn('label text-[var(--color-fg)]', srLabel && 'sr-only')}>
+	<label for={fieldId} class={cn('label text-fg', srLabel && 'sr-only')}>
 		{label}
 	</label>
 
 	<div class="relative">
 		{#if leading}
 			<span
-				class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-[var(--color-fg-subtle)]"
+				class="text-fg-subtle pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
 				aria-hidden="true"
 			>
 				{@render leading()}
@@ -130,7 +130,7 @@
 	{/if}
 
 	{#if error}
-		<p id={errorId} class="body-sm text-[var(--color-danger-700)]">
+		<p id={errorId} class="body-sm text-danger-700">
 			{error}
 		</p>
 	{/if}

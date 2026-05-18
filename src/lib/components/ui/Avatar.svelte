@@ -5,7 +5,7 @@
 		[
 			'inline-flex items-center justify-center rounded-full font-medium uppercase',
 			'bg-[linear-gradient(135deg,var(--color-primary-soft),var(--color-bg-muted))]',
-			'text-[var(--color-primary)]'
+			'text-primary'
 		],
 		{
 			variants: {

@@ -17,19 +17,19 @@
 
 <div
 	class={cn(
-		'flex flex-col items-center justify-center gap-3 py-12 text-center text-[var(--color-fg-muted)]',
+		'text-fg-muted flex flex-col items-center justify-center gap-3 py-12 text-center',
 		className
 	)}
 >
 	{#if icon}
 		<div
-			class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-bg-muted)] text-[var(--color-fg-subtle)]"
+			class="bg-bg-muted text-fg-subtle inline-flex h-12 w-12 items-center justify-center rounded-full"
 		>
 			<Icon {icon} size="lg" />
 		</div>
 	{/if}
 	<div class="stack stack-tight">
-		<h3 class="h6 text-[var(--color-fg)]">{title}</h3>
+		<h3 class="h6 text-fg">{title}</h3>
 		{#if description}<p class="body-sm">{description}</p>{/if}
 	</div>
 	{#if action}{@render action()}{/if}

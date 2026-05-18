@@ -47,7 +47,7 @@
 	<header class="cluster cluster-spread">
 		<div class="stack stack-tight">
 			<h1 class="h1">Roles</h1>
-			<p class="caption text-[var(--color-fg-muted)]">
+			<p class="caption text-fg-muted">
 				{roleList.length} role{roleList.length === 1 ? '' : 's'}
 			</p>
 		</div>
@@ -82,13 +82,12 @@
 						<Card.Content class="grid grid-cols-[1fr_auto_auto] items-center gap-4">
 							<div class="stack stack-tight">
 								<div class="cluster cluster-tight">
-									<a
-										href="/settings/roles/{role.id}"
-										class="h5 text-[var(--color-fg)] hover:underline">{role.name}</a
+									<a href="/settings/roles/{role.id}" class="h5 text-fg hover:underline"
+										>{role.name}</a
 									>
 									<Badge variant={badge.variant} style="soft" size="sm">{badge.label}</Badge>
 								</div>
-								<p class="caption text-[var(--color-fg-muted)]">
+								<p class="caption text-fg-muted">
 									{memberCount} member{memberCount === 1 ? '' : 's'} · {role.permissions.length} permission{role
 										.permissions.length === 1
 										? ''

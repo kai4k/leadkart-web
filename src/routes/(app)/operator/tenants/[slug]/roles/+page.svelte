@@ -36,7 +36,7 @@
 					<Card.Content class="cluster cluster-spread items-center">
 						<div class="stack stack-tight">
 							<div class="cluster cluster-tight">
-								<p class="h5 text-[var(--color-fg)]">{role.name}</p>
+								<p class="h5 text-fg">{role.name}</p>
 								{#if role.is_system_default}
 									<Badge variant="neutral" style="soft" size="sm">System</Badge>
 								{/if}
@@ -44,7 +44,7 @@
 									<Badge variant="brand" style="soft" size="sm">Super admin</Badge>
 								{/if}
 							</div>
-							<p class="caption text-[var(--color-fg-muted)]">
+							<p class="caption text-fg-muted">
 								Level {role.hierarchy_level} · {role.permissions.length} permissions
 							</p>
 						</div>

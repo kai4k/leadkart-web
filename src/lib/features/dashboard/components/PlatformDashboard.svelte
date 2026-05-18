@@ -125,19 +125,19 @@
 			<h1 class="h1">Operator Dashboard</h1>
 			{#if isSuper}
 				<span
-					class="label-small inline-flex items-center rounded-full bg-[var(--color-danger-50)] px-2 py-0.5 text-[var(--color-danger-900)]"
+					class="label-small bg-danger-50 text-danger-900 inline-flex items-center rounded-full px-2 py-0.5"
 				>
 					SuperAdmin
 				</span>
 			{:else}
 				<span
-					class="label-small inline-flex items-center rounded-full bg-[var(--color-primary-soft)] px-2 py-0.5 text-[var(--color-primary)]"
+					class="label-small bg-primary-soft text-primary inline-flex items-center rounded-full px-2 py-0.5"
 				>
 					Platform Staff
 				</span>
 			{/if}
 		</div>
-		<p class="body-sm text-[var(--color-fg-muted)]">
+		<p class="body-sm text-fg-muted">
 			Cross-tenant operations: lead verification, tenant management, marketplace ops.
 		</p>
 	</header>
@@ -162,9 +162,9 @@
 					{#if statsLoading}
 						<Spinner size={16} />
 					{:else}
-						<p class="display-2 text-[var(--color-fg)] tabular-nums">{tile.value()}</p>
+						<p class="display-2 text-fg tabular-nums">{tile.value()}</p>
 					{/if}
-					<p class="caption mt-1 text-[var(--color-fg-subtle)]">{tile.hint}</p>
+					<p class="caption text-fg-subtle mt-1">{tile.hint}</p>
 				</Card.Content>
 			</Card.Root>
 		{/each}
@@ -181,8 +181,8 @@
 					</div>
 				</Card.Header>
 				<Card.Content>
-					<p class="display-2 text-[var(--color-fg-subtle)] tabular-nums">—</p>
-					<p class="caption mt-1 text-[var(--color-fg-subtle)]">{tile.hint}</p>
+					<p class="display-2 text-fg-subtle tabular-nums">—</p>
+					<p class="caption text-fg-subtle mt-1">{tile.hint}</p>
 				</Card.Content>
 			</Card.Root>
 		{/each}

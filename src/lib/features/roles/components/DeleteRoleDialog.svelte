@@ -41,13 +41,13 @@
 	{#snippet body()}
 		<label class="stack stack-tight">
 			<span class="label"
-				>Type <code class="rounded bg-[var(--color-bg-muted)] px-1">{role?.name ?? ''}</code> to confirm</span
+				>Type <code class="bg-bg-muted rounded px-1">{role?.name ?? ''}</code> to confirm</span
 			>
 			<input bind:value={confirmName} class="glass-input rounded-md px-3 py-2 text-sm" />
 		</label>
 		{#if error}<Alert variant="danger">{error}</Alert>{/if}
 		{#if !canConfirm && confirmName.length > 0}
-			<p class="caption text-[var(--color-warning-900)]">Name doesn't match.</p>
+			<p class="caption text-warning-900">Name doesn't match.</p>
 		{/if}
 	{/snippet}
 </ConfirmDialog>

@@ -42,7 +42,7 @@
 	<header class="cluster cluster-spread">
 		<div class="stack stack-tight">
 			<h2 class="h5">Active sessions</h2>
-			<p class="caption text-[var(--color-fg-muted)]">
+			<p class="caption text-fg-muted">
 				Each row is a device or browser signed in to your account.
 			</p>
 		</div>
@@ -67,7 +67,7 @@
 	{#if sessionList.length === 0 && !sessionsQuery.isPending}
 		<Card.Root>
 			<Card.Content class="text-center">
-				<p class="body-base text-[var(--color-fg-muted)]">No active sessions.</p>
+				<p class="body-base text-fg-muted">No active sessions.</p>
 			</Card.Content>
 		</Card.Root>
 	{:else}
@@ -79,14 +79,14 @@
 						<Card.Content class="flex items-center justify-between gap-4">
 							<div class="stack stack-tight min-w-0">
 								<div class="cluster">
-									<p class="body-base truncate font-medium text-[var(--color-fg)]">
+									<p class="body-base text-fg truncate font-medium">
 										{sess.device_label || 'Unknown device'}
 									</p>
 									{#if current}
 										<Badge variant="success" style="soft" size="sm">This device</Badge>
 									{/if}
 								</div>
-								<p class="caption text-[var(--color-fg-muted)]">
+								<p class="caption text-fg-muted">
 									Last active {lastSeenLabel(sess.last_used_at)} · Started
 									{lastSeenLabel(sess.created_at)}
 								</p>

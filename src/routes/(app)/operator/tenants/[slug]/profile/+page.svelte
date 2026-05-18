@@ -48,28 +48,28 @@
 			<Card.Content>
 				<dl class="grid grid-cols-2 gap-x-6 gap-y-2">
 					<div>
-						<dt class="caption text-[var(--color-fg-muted)]">GSTIN</dt>
-						<dd class="body-base text-[var(--color-fg)]">{tenant.gst_number || '—'}</dd>
+						<dt class="caption text-fg-muted">GSTIN</dt>
+						<dd class="body-base text-fg">{tenant.gst_number || '—'}</dd>
 					</div>
 					<div>
-						<dt class="caption text-[var(--color-fg-muted)]">PAN</dt>
-						<dd class="body-base text-[var(--color-fg)]">{tenant.pan_number || '—'}</dd>
+						<dt class="caption text-fg-muted">PAN</dt>
+						<dd class="body-base text-fg">{tenant.pan_number || '—'}</dd>
 					</div>
 					<div>
-						<dt class="caption text-[var(--color-fg-muted)]">Drug licence</dt>
-						<dd class="body-base text-[var(--color-fg)]">{tenant.drug_licence_number || '—'}</dd>
+						<dt class="caption text-fg-muted">Drug licence</dt>
+						<dd class="body-base text-fg">{tenant.drug_licence_number || '—'}</dd>
 					</div>
 					<div>
-						<dt class="caption text-[var(--color-fg-muted)]">Phone</dt>
-						<dd class="body-base text-[var(--color-fg)]">{tenant.admin_phone || '—'}</dd>
+						<dt class="caption text-fg-muted">Phone</dt>
+						<dd class="body-base text-fg">{tenant.admin_phone || '—'}</dd>
 					</div>
 					<div>
-						<dt class="caption text-[var(--color-fg-muted)]">Admin email</dt>
-						<dd class="body-base text-[var(--color-fg)]">{tenant.admin_email || '—'}</dd>
+						<dt class="caption text-fg-muted">Admin email</dt>
+						<dd class="body-base text-fg">{tenant.admin_email || '—'}</dd>
 					</div>
 					<div>
-						<dt class="caption text-[var(--color-fg-muted)]">ID</dt>
-						<dd class="body-base text-[var(--color-fg)]"><code>{tenant.id}</code></dd>
+						<dt class="caption text-fg-muted">ID</dt>
+						<dd class="body-base text-fg"><code>{tenant.id}</code></dd>
 					</div>
 				</dl>
 			</Card.Content>

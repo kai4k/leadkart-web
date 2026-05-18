@@ -61,15 +61,13 @@
 		<Drawer.Header>
 			<div class="stack stack-tight">
 				<h2 class="h4">Manager for {user ? displayName(user) : 'user'}</h2>
-				<p class="caption text-[var(--color-fg-muted)]">
+				<p class="caption text-fg-muted">
 					Used by hierarchy-scoped lists (lead reports, leave approvals) and the org tree.
 				</p>
 			</div>
 			<Drawer.Close>
-				<button
-					type="button"
-					class="rounded-md p-1.5 hover:bg-[var(--color-bg-muted)]"
-					aria-label="Close">×</button
+				<button type="button" class="hover:bg-bg-muted rounded-md p-1.5" aria-label="Close"
+					>×</button
 				>
 			</Drawer.Close>
 		</Drawer.Header>

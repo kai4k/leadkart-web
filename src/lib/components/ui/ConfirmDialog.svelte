@@ -42,7 +42,7 @@
 		<Dialog.Header>
 			<div class="stack stack-tight">
 				<h2 class="h5">{title}</h2>
-				{#if description}<p class="body-sm text-[var(--color-fg-muted)]">{description}</p>{/if}
+				{#if description}<p class="body-sm text-fg-muted">{description}</p>{/if}
 			</div>
 		</Dialog.Header>
 		{#if body}

@@ -27,92 +27,92 @@
 				{
 					variant: 'neutral',
 					style: 'solid',
-					class: 'bg-[var(--color-fg)] text-[var(--color-bg-elevated)]'
+					class: 'bg-fg text-bg-elevated'
 				},
 				{
 					variant: 'neutral',
 					style: 'soft',
-					class: 'bg-[var(--color-bg-muted)] text-[var(--color-fg)]'
+					class: 'bg-bg-muted text-fg'
 				},
 				{
 					variant: 'neutral',
 					style: 'outline',
-					class: 'border-[var(--color-border)] text-[var(--color-fg)]'
+					class: 'border-border text-fg'
 				},
 				{
 					variant: 'success',
 					style: 'solid',
-					class: 'bg-[var(--color-success-500)] text-white'
+					class: 'bg-success-500 text-white'
 				},
 				{
 					variant: 'success',
 					style: 'soft',
-					class: 'bg-[var(--color-success-50)] text-[var(--color-success-900)]'
+					class: 'bg-success-50 text-success-900'
 				},
 				{
 					variant: 'success',
 					style: 'outline',
-					class: 'border-[var(--color-success-500)] text-[var(--color-success-900)]'
+					class: 'border-success-500 text-success-900'
 				},
 				{
 					variant: 'warning',
 					style: 'solid',
-					class: 'bg-[var(--color-warning-500)] text-white'
+					class: 'bg-warning-500 text-white'
 				},
 				{
 					variant: 'warning',
 					style: 'soft',
-					class: 'bg-[var(--color-warning-50)] text-[var(--color-warning-900)]'
+					class: 'bg-warning-50 text-warning-900'
 				},
 				{
 					variant: 'warning',
 					style: 'outline',
-					class: 'border-[var(--color-warning-500)] text-[var(--color-warning-900)]'
+					class: 'border-warning-500 text-warning-900'
 				},
 				{
 					variant: 'danger',
 					style: 'solid',
-					class: 'bg-[var(--color-danger-500)] text-white'
+					class: 'bg-danger-500 text-white'
 				},
 				{
 					variant: 'danger',
 					style: 'soft',
-					class: 'bg-[var(--color-danger-50)] text-[var(--color-danger-900)]'
+					class: 'bg-danger-50 text-danger-900'
 				},
 				{
 					variant: 'danger',
 					style: 'outline',
-					class: 'border-[var(--color-danger-500)] text-[var(--color-danger-900)]'
+					class: 'border-danger-500 text-danger-900'
 				},
 				{
 					variant: 'info',
 					style: 'solid',
-					class: 'bg-[var(--color-info-500)] text-white'
+					class: 'bg-info-500 text-white'
 				},
 				{
 					variant: 'info',
 					style: 'soft',
-					class: 'bg-[var(--color-info-50)] text-[var(--color-info-900)]'
+					class: 'bg-info-50 text-info-900'
 				},
 				{
 					variant: 'info',
 					style: 'outline',
-					class: 'border-[var(--color-info-500)] text-[var(--color-info-900)]'
+					class: 'border-info-500 text-info-900'
 				},
 				{
 					variant: 'brand',
 					style: 'solid',
-					class: 'bg-[var(--color-primary)] text-white'
+					class: 'bg-primary text-white'
 				},
 				{
 					variant: 'brand',
 					style: 'soft',
-					class: 'bg-[var(--color-primary-soft)] text-[var(--color-primary)]'
+					class: 'bg-primary-soft text-primary'
 				},
 				{
 					variant: 'brand',
 					style: 'outline',
-					class: 'border-[var(--color-primary)] text-[var(--color-primary)]'
+					class: 'border-primary text-primary'
 				}
 			],
 			defaultVariants: {

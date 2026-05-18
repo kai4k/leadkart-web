@@ -93,7 +93,7 @@
 	<div class="flex justify-center py-8"><Spinner size={28} /></div>
 {:else if isError}
 	<div class="stack stack-tight">
-		<p class="body-sm text-[var(--color-danger-700)]">{errorMessage}</p>
+		<p class="body-sm text-danger-700">{errorMessage}</p>
 	</div>
 {:else if items.length === 0}
 	<EmptyState icon={Activity} title="No activity" description="Nothing recorded yet." />
@@ -108,21 +108,21 @@
 					<Card.Content class="grid grid-cols-[auto_1fr] gap-3">
 						<!-- Timeline dot + icon -->
 						<span
-							class="mt-0.5 inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-bg-muted)]"
+							class="bg-bg-muted mt-0.5 inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full"
 							aria-hidden="true"
 						>
-							<EventIcon size={14} class="text-[var(--color-fg-muted)]" />
+							<EventIcon size={14} class="text-fg-muted" />
 						</span>
 
 						<div class="stack stack-tight min-w-0">
 							<!-- Summary row -->
 							<div class="cluster cluster-spread">
-								<p class="body-sm truncate font-medium text-[var(--color-fg)]">
+								<p class="body-sm text-fg truncate font-medium">
 									{summarise(ev)}
 								</p>
 								<time
 									datetime={ev.occurred_at}
-									class="caption flex-shrink-0 text-[var(--color-fg-subtle)]"
+									class="caption text-fg-subtle flex-shrink-0"
 									title={new Date(ev.occurred_at).toLocaleString()}
 								>
 									{relativeTime(ev.occurred_at)}
@@ -131,7 +131,7 @@
 
 							<!-- Trace ID chip -->
 							{#if ev.trace_id}
-								<p class="caption font-mono text-[var(--color-fg-subtle)]">
+								<p class="caption text-fg-subtle font-mono">
 									ref: {ev.trace_id}
 								</p>
 							{/if}
@@ -140,7 +140,7 @@
 							{#if hasPayload}
 								<button
 									type="button"
-									class="caption self-start text-[var(--color-primary)] hover:underline focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:outline-none"
+									class="caption text-primary focus-visible:ring-focus-ring self-start hover:underline focus-visible:ring-2 focus-visible:outline-none"
 									onclick={() => toggle(ev.id)}
 									aria-expanded={isExpanded}
 								>
@@ -148,7 +148,7 @@
 								</button>
 								{#if isExpanded}
 									<pre
-										class="body-xs mt-1 overflow-x-auto rounded-md bg-[var(--color-bg-muted)] p-2 text-[var(--color-fg-muted)]">{JSON.stringify(
+										class="body-xs bg-bg-muted text-fg-muted mt-1 overflow-x-auto rounded-md p-2">{JSON.stringify(
 											ev.payload,
 											null,
 											2

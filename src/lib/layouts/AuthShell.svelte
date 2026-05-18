@@ -243,13 +243,13 @@
 				<div class="lk-auth-content-washes"></div>
 
 				<div class="glass-card lk-glass--hero">
-					<p class="display-2 leading-[1.05] tracking-tight text-[var(--color-primary)]">
+					<p class="display-2 text-primary leading-[1.05] tracking-tight">
 						Pharma lead management,<br />simplified.
 					</p>
 				</div>
 
 				<div class="glass-card lk-glass--tagline">
-					<p class="body-base text-[var(--color-fg-muted)]">
+					<p class="body-base text-fg-muted">
 						End-to-end CRM, orders, inventory &amp; dispatch — built for India's PCD pharma market.
 					</p>
 				</div>

@@ -61,7 +61,7 @@
 					/>
 					<span class="h6 capitalize">{group}</span>
 				</label>
-				<span class="caption text-[var(--color-fg-muted)]">
+				<span class="caption text-fg-muted">
 					{entries.filter((e) => selected.includes(e.name)).length} / {entries.length}
 				</span>
 			</header>
@@ -76,12 +76,10 @@
 								onchange={() => toggle(entry.name)}
 								aria-label={entry.name}
 							/>
-							<span class="label font-mono text-xs text-[var(--color-fg)]">{entry.name}</span>
+							<span class="label text-fg font-mono text-xs">{entry.name}</span>
 						</label>
 						<Tooltip.Root>
-							<Tooltip.Trigger
-								class="text-[var(--color-fg-subtle)] hover:text-[var(--color-fg-muted)]"
-							>
+							<Tooltip.Trigger class="text-fg-subtle hover:text-fg-muted">
 								<Icon icon={Info} size="sm" />
 							</Tooltip.Trigger>
 							<Tooltip.Content>{entry.description}</Tooltip.Content>

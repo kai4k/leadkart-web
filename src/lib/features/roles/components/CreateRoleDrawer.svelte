@@ -32,15 +32,13 @@
 		<Drawer.Header>
 			<div class="stack stack-tight">
 				<h2 class="h4">Create role</h2>
-				<p class="caption text-[var(--color-fg-muted)]">
+				<p class="caption text-fg-muted">
 					Permissions can be assigned in the role detail view after creation.
 				</p>
 			</div>
 			<Drawer.Close>
-				<button
-					type="button"
-					class="rounded-md p-1.5 hover:bg-[var(--color-bg-muted)]"
-					aria-label="Close">×</button
+				<button type="button" class="hover:bg-bg-muted rounded-md p-1.5" aria-label="Close"
+					>×</button
 				>
 			</Drawer.Close>
 		</Drawer.Header>
@@ -64,7 +62,7 @@
 						max={100}
 						class="glass-input rounded-md px-3 py-2 text-sm"
 					/>
-					<span class="caption text-[var(--color-fg-subtle)]">
+					<span class="caption text-fg-subtle">
 						0 = highest authority. Used for hierarchy-scoped operations (lead reassignment, leave
 						approval).
 					</span>

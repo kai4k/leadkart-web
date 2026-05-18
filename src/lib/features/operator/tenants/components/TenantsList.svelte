@@ -84,7 +84,7 @@
 	<header class="cluster cluster-spread">
 		<div class="stack stack-tight">
 			<h1 class="h1">Tenants</h1>
-			<p class="caption text-[var(--color-fg-muted)]">Operator-side tenant management.</p>
+			<p class="caption text-fg-muted">Operator-side tenant management.</p>
 		</div>
 		{#if canCreate}
 			<Button onclick={() => (createOpen = true)}>
@@ -96,7 +96,7 @@
 	<div class="cluster">
 		<div class="relative flex-1">
 			<span class="pointer-events-none absolute inset-y-0 left-3 flex items-center">
-				<Icon icon={Search} size="sm" class="text-[var(--color-fg-subtle)]" />
+				<Icon icon={Search} size="sm" class="text-fg-subtle" />
 			</span>
 			<input
 				type="search"
@@ -151,18 +151,17 @@
 							<div class="stack stack-tight">
 								<div class="cluster cluster-tight">
 									{#if isPlatform}
-										<Icon icon={Shield} size="sm" class="text-[var(--color-primary)]" />
+										<Icon icon={Shield} size="sm" class="text-primary" />
 									{/if}
-									<a
-										href="/operator/tenants/{t.slug}"
-										class="h5 text-[var(--color-fg)] hover:underline">{t.display_name}</a
+									<a href="/operator/tenants/{t.slug}" class="h5 text-fg hover:underline"
+										>{t.display_name}</a
 									>
 									{#if isPlatform}
 										<Badge variant="brand" style="soft" size="sm">Platform</Badge>
 									{/if}
 									<Badge variant={badge.variant} style="soft" size="sm">{badge.label}</Badge>
 								</div>
-								<p class="caption text-[var(--color-fg-muted)]">
+								<p class="caption text-fg-muted">
 									{t.slug} · {t.legal_name}
 								</p>
 							</div>
@@ -177,9 +176,8 @@
 										<Icon icon={Eye} size="sm" /> Impersonate
 									</Button>
 								{/if}
-								<a
-									href="/operator/tenants/{t.slug}"
-									class="label text-[var(--color-primary)] hover:underline">Open →</a
+								<a href="/operator/tenants/{t.slug}" class="label text-primary hover:underline"
+									>Open →</a
 								>
 							</div>
 						</Card.Content>
@@ -190,7 +188,7 @@
 
 		{#if totalPages > 1}
 			<nav class="cluster cluster-spread" aria-label="Tenant list pagination">
-				<p class="caption text-[var(--color-fg-muted)]">
+				<p class="caption text-fg-muted">
 					{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
 				</p>
 				<div class="cluster cluster-tight">

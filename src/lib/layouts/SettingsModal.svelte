@@ -78,7 +78,7 @@
 {#if open}
 	<button
 		type="button"
-		class="is-fixed-overlay--overlay inset-0 bg-[var(--color-overlay)] backdrop-blur-sm transition-opacity"
+		class="is-fixed-overlay--overlay bg-overlay inset-0 backdrop-blur-sm transition-opacity"
 		aria-label="Close settings"
 		onclick={close}
 	></button>
@@ -91,18 +91,12 @@
 		class="lk-settings-drawer glass-card fixed inset-y-0 right-0 flex w-full max-w-sm flex-col"
 		style="animation: slide-in-right {`var(--duration-base) var(--ease-out)`};"
 	>
-		<header
-			class="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4"
-		>
+		<header class="border-border flex items-center justify-between border-b px-5 py-4">
 			<div>
-				<h2 class="h4 text-[var(--color-fg)]">Appearance</h2>
-				<p class="caption text-[var(--color-fg-muted)]">Brand colour and content width</p>
+				<h2 class="h4 text-fg">Appearance</h2>
+				<p class="caption text-fg-muted">Brand colour and content width</p>
 			</div>
-			<button
-				class="rounded-md p-1.5 hover:bg-[var(--color-bg-muted)]"
-				aria-label="Close"
-				onclick={close}
-			>
+			<button class="hover:bg-bg-muted rounded-md p-1.5" aria-label="Close" onclick={close}>
 				<Icon icon={X} size="md" />
 			</button>
 		</header>
@@ -111,9 +105,7 @@
 			<!-- ── Primary colour ── -->
 			<section class="stack stack-tight">
 				<h3 class="h6">Brand colour</h3>
-				<p class="caption text-[var(--color-fg-muted)]">
-					Re-skins primary surfaces across the app.
-				</p>
+				<p class="caption text-fg-muted">Re-skins primary surfaces across the app.</p>
 				<div class="flex flex-wrap items-center gap-3">
 					{#each PRIMARY_COLORS as colour (colour.id)}
 						{@const selected = theme.primary === colour.id}
@@ -152,16 +144,14 @@
 			</section>
 		</div>
 
-		<div
-			class="flex items-center justify-end gap-2 border-t border-[var(--color-border)] px-5 py-4"
-		>
+		<div class="border-border flex items-center justify-end gap-2 border-t px-5 py-4">
 			<button
 				type="button"
 				class={[
-					'label inline-flex items-center gap-2 rounded-md border border-[var(--color-border)] px-4 py-2',
-					'text-[var(--color-fg)] transition-colors hover:bg-[var(--color-bg-muted)]',
+					'label border-border inline-flex items-center gap-2 rounded-md border px-4 py-2',
+					'text-fg hover:bg-bg-muted transition-colors',
 					'focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
-					'focus-visible:ring-[var(--color-focus-ring)]'
+					'focus-visible:ring-focus-ring'
 				]}
 				onclick={() => theme.reset()}
 			>

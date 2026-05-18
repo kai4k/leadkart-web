@@ -49,7 +49,7 @@
 		</Alert>
 		<label class="stack stack-tight mt-4">
 			<span class="label"
-				>Type <code class="rounded bg-[var(--color-bg-muted)] px-1">{person?.email ?? ''}</code> to confirm</span
+				>Type <code class="bg-bg-muted rounded px-1">{person?.email ?? ''}</code> to confirm</span
 			>
 			<input bind:value={typedEmail} class="glass-input rounded-md px-3 py-2 text-sm" />
 		</label>

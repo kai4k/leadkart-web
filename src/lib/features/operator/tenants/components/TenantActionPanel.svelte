@@ -51,9 +51,7 @@
 	</Card.Header>
 	<Card.Content class="cluster">
 		{#if isPlatformTenant}
-			<p class="caption text-[var(--color-fg-muted)]">
-				Lifecycle mutations are locked for the platform tenant.
-			</p>
+			<p class="caption text-fg-muted">Lifecycle mutations are locked for the platform tenant.</p>
 		{:else}
 			{#if canManage && canSuspend(tenant)}
 				<Button variant="ghost" onclick={() => onAction('suspend', tenant)} disabled={isPending}>

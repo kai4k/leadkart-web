@@ -10,6 +10,6 @@
 	let { class: className = '', children, ...rest }: Props = $props();
 </script>
 
-<div class={cn('cluster border-t border-[var(--color-border)] p-4', className)} {...rest}>
+<div class={cn('cluster border-border border-t p-4', className)} {...rest}>
 	{#if children}{@render children()}{/if}
 </div>

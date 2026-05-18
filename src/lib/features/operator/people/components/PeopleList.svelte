@@ -43,13 +43,13 @@
 <div class="stack stack-relaxed">
 	<header class="stack stack-tight">
 		<h1 class="h1">Platform users</h1>
-		<p class="caption text-[var(--color-fg-muted)]">Cross-tenant person identity management.</p>
+		<p class="caption text-fg-muted">Cross-tenant person identity management.</p>
 	</header>
 
 	<div class="cluster">
 		<div class="relative flex-1">
 			<span class="pointer-events-none absolute inset-y-0 left-3 flex items-center">
-				<Icon icon={Search} size="sm" class="text-[var(--color-fg-subtle)]" />
+				<Icon icon={Search} size="sm" class="text-fg-subtle" />
 			</span>
 			<input
 				type="search"
@@ -85,17 +85,15 @@
 							<Avatar initials={initials(displayName)} size="md" />
 							<div class="stack stack-tight">
 								<div class="cluster cluster-tight">
-									<a
-										href="/operator/persons/{p.id}"
-										class="h5 text-[var(--color-fg)] hover:underline">{displayName}</a
+									<a href="/operator/persons/{p.id}" class="h5 text-fg hover:underline"
+										>{displayName}</a
 									>
 									<Badge variant={badge.variant} style="soft" size="sm">{badge.label}</Badge>
 								</div>
-								<p class="caption text-[var(--color-fg-muted)]">{p.email}</p>
+								<p class="caption text-fg-muted">{p.email}</p>
 							</div>
-							<a
-								href="/operator/persons/{p.id}"
-								class="label text-[var(--color-primary)] hover:underline">Open →</a
+							<a href="/operator/persons/{p.id}" class="label text-primary hover:underline"
+								>Open →</a
 							>
 						</Card.Content>
 					</Card.Root>

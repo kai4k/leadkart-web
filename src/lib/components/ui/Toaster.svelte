@@ -23,10 +23,10 @@
 	export const toastVariants = cva('border-l-4', {
 		variants: {
 			variant: {
-				success: 'border-[var(--color-success-500)]',
-				danger: 'border-[var(--color-danger-500)]',
-				warning: 'border-[var(--color-warning-500)]',
-				info: 'border-[var(--color-info-500)]'
+				success: 'border-success-500',
+				danger: 'border-danger-500',
+				warning: 'border-warning-500',
+				info: 'border-info-500'
 			}
 		},
 		defaultVariants: { variant: 'info' }
@@ -73,7 +73,7 @@
 			)}
 			role="status"
 		>
-			<p class="label text-[var(--color-fg)]">{t.message}</p>
+			<p class="label text-fg">{t.message}</p>
 		</div>
 	{/each}
 </div>

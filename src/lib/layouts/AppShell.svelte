@@ -103,7 +103,7 @@
 	{#if sidebarOpen}
 		<button
 			type="button"
-			class="is-fixed-overlay--overlay inset-0 bg-[var(--color-overlay)] backdrop-blur-sm lg:hidden"
+			class="is-fixed-overlay--overlay bg-overlay inset-0 backdrop-blur-sm lg:hidden"
 			aria-label="Close sidebar"
 			onclick={closeDrawer}
 		></button>

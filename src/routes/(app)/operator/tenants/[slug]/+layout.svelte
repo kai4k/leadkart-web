@@ -43,22 +43,19 @@
 		</Alert>
 	{:else if tenant}
 		<header class="stack stack-tight">
-			<a
-				href="/operator/tenants"
-				class="caption text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]">← All tenants</a
-			>
+			<a href="/operator/tenants" class="caption text-fg-muted hover:text-fg">← All tenants</a>
 			<div class="cluster cluster-tight">
 				{#if tenant.slug === 'platform'}
-					<Icon icon={Shield} size="sm" class="text-[var(--color-primary)]" />
+					<Icon icon={Shield} size="sm" class="text-primary" />
 				{:else}
-					<Icon icon={Building2} size="sm" class="text-[var(--color-fg-muted)]" />
+					<Icon icon={Building2} size="sm" class="text-fg-muted" />
 				{/if}
 				<h1 class="h2">{tenant.display_name}</h1>
 				{#if tenant.slug === 'platform'}
 					<Badge variant="brand" style="soft" size="sm">Platform</Badge>
 				{/if}
 			</div>
-			<p class="caption text-[var(--color-fg-muted)]">{tenant.slug} · {tenant.legal_name}</p>
+			<p class="caption text-fg-muted">{tenant.slug} · {tenant.legal_name}</p>
 		</header>
 
 		<!-- In-tenant sub-nav -->

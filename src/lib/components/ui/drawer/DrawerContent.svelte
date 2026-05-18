@@ -21,9 +21,7 @@
 </script>
 
 <BitsDialog.Portal>
-	<BitsDialog.Overlay
-		class="is-fixed-overlay--overlay inset-0 bg-[var(--color-overlay)] backdrop-blur-sm"
-	/>
+	<BitsDialog.Overlay class="is-fixed-overlay--overlay bg-overlay inset-0 backdrop-blur-sm" />
 	<BitsDialog.Content
 		class={cn(
 			'glass-card is-fixed-overlay--modal inset-y-0 right-0 flex w-full max-w-md flex-col',

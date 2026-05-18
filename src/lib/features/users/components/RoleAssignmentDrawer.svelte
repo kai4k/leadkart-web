@@ -50,16 +50,14 @@
 		<Drawer.Header>
 			<div class="stack stack-tight">
 				<h2 class="h4">Roles for {user ? displayName(user) : 'user'}</h2>
-				<p class="caption text-[var(--color-fg-muted)]">
+				<p class="caption text-fg-muted">
 					Assignments are immediate. Each role contributes its default permissions; user-level
 					grants/revokes overlay on top.
 				</p>
 			</div>
 			<Drawer.Close>
-				<button
-					type="button"
-					class="rounded-md p-1.5 hover:bg-[var(--color-bg-muted)]"
-					aria-label="Close">×</button
+				<button type="button" class="hover:bg-bg-muted rounded-md p-1.5" aria-label="Close"
+					>×</button
 				>
 			</Drawer.Close>
 		</Drawer.Header>
@@ -67,13 +65,11 @@
 			<section class="stack stack-tight mb-6">
 				<h3 class="overline">Assigned</h3>
 				{#if assignedRoles.length === 0}
-					<p class="body-sm text-[var(--color-fg-muted)]">No roles assigned.</p>
+					<p class="body-sm text-fg-muted">No roles assigned.</p>
 				{:else}
 					<ul class="stack stack-tight" aria-label="Assigned roles">
 						{#each assignedRoles as role (role.id)}
-							<li
-								class="cluster cluster-spread rounded-md border border-[var(--color-border)] px-3 py-2"
-							>
+							<li class="cluster cluster-spread border-border rounded-md border px-3 py-2">
 								<div class="stack stack-tight">
 									<span class="label">{role.name}</span>
 									{#if role.is_system_default}<Badge variant="info" style="soft" size="sm"
@@ -95,13 +91,11 @@
 			<section class="stack stack-tight">
 				<h3 class="overline">Available</h3>
 				{#if availableRoles.length === 0}
-					<p class="body-sm text-[var(--color-fg-muted)]">All catalogue roles already assigned.</p>
+					<p class="body-sm text-fg-muted">All catalogue roles already assigned.</p>
 				{:else}
 					<ul class="stack stack-tight" aria-label="Available roles">
 						{#each availableRoles as role (role.id)}
-							<li
-								class="cluster cluster-spread rounded-md border border-[var(--color-border)] px-3 py-2"
-							>
+							<li class="cluster cluster-spread border-border rounded-md border px-3 py-2">
 								<span class="label">{role.name}</span>
 								<Button variant="ghost" size="sm" onclick={() => onAssign(role.id)}>
 									<Icon icon={Plus} size="sm" /> Assign

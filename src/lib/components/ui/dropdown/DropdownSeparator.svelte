@@ -10,4 +10,4 @@
 	let { class: className = '' }: Props = $props();
 </script>
 
-<BitsMenu.Separator class={cn('-mx-1 my-1 h-px bg-[var(--color-border)]', className)} />
+<BitsMenu.Separator class={cn('bg-border -mx-1 my-1 h-px', className)} />

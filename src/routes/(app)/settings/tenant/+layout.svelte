@@ -58,13 +58,10 @@
 				<span
 					class={cn(
 						'label-small inline-flex items-center rounded-full px-2 py-0.5',
-						badge.variant === 'success' &&
-							'bg-[var(--color-success-50)] text-[var(--color-success-900)]',
-						badge.variant === 'warning' &&
-							'bg-[var(--color-warning-50)] text-[var(--color-warning-900)]',
-						badge.variant === 'danger' &&
-							'bg-[var(--color-danger-50)] text-[var(--color-danger-900)]',
-						badge.variant === 'info' && 'bg-[var(--color-info-50)] text-[var(--color-info-900)]'
+						badge.variant === 'success' && 'bg-success-50 text-success-900',
+						badge.variant === 'warning' && 'bg-warning-50 text-warning-900',
+						badge.variant === 'danger' && 'bg-danger-50 text-danger-900',
+						badge.variant === 'info' && 'bg-info-50 text-info-900'
 					)}
 				>
 					{badge.label}
@@ -73,12 +70,12 @@
 		{:else}
 			<h1 class="h1">Tenant Settings</h1>
 		{/if}
-		<p class="body-sm text-[var(--color-fg-muted)]">
+		<p class="body-sm text-fg-muted">
 			Manage your organisation's profile, statutory IDs, contact details, and platform preferences.
 		</p>
 	</header>
 
-	<nav aria-label="Tenant settings sections" class="border-b border-[var(--color-border)]">
+	<nav aria-label="Tenant settings sections" class="border-border border-b">
 		<ul class="cluster gap-0">
 			{#each tabs as tab (tab.href)}
 				{@const active = isActive(tab.href)}
@@ -89,10 +86,10 @@
 						class={cn(
 							'label -mb-px inline-block border-b-2 px-4 py-2 transition-colors',
 							'focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
-							'focus-visible:ring-[var(--color-focus-ring)]',
+							'focus-visible:ring-focus-ring',
 							active
-								? 'border-[var(--color-primary)] text-[var(--color-primary)]'
-								: 'border-transparent text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]'
+								? 'border-primary text-primary'
+								: 'text-fg-muted hover:text-fg border-transparent'
 						)}
 					>
 						{tab.label}

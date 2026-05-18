@@ -7,10 +7,7 @@
 </script>
 
 <header
-	class={cn(
-		'flex items-start justify-between gap-3 border-b border-[var(--color-border)] px-5 py-4',
-		className
-	)}
+	class={cn('border-border flex items-start justify-between gap-3 border-b px-5 py-4', className)}
 >
 	{@render children()}
 </header>

@@ -58,7 +58,7 @@
 <div class="stack stack-relaxed">
 	<header class="stack stack-tight">
 		<h1 class="h1">My Dashboard</h1>
-		<p class="body-sm text-[var(--color-fg-muted)]">
+		<p class="body-sm text-fg-muted">
 			Signed in as <code class="code-inline">{email}</code>.
 		</p>
 	</header>
@@ -76,8 +76,8 @@
 					</div>
 				</Card.Header>
 				<Card.Content>
-					<p class="display-2 text-[var(--color-fg-subtle)] tabular-nums">—</p>
-					<p class="caption mt-1 text-[var(--color-fg-subtle)]">{tile.hint}</p>
+					<p class="display-2 text-fg-subtle tabular-nums">—</p>
+					<p class="caption text-fg-subtle mt-1">{tile.hint}</p>
 				</Card.Content>
 			</Card.Root>
 		{/each}

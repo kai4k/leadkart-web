@@ -43,7 +43,7 @@
 		<Dialog.Header>
 			<div class="stack stack-tight">
 				<h2 class="h4">Impersonate {tenant?.display_name ?? 'tenant'}</h2>
-				<p class="caption text-[var(--color-fg-muted)]">
+				<p class="caption text-fg-muted">
 					Records an audited session of your activity while acting on this tenant's behalf. All
 					requests are logged with this session ID for the operator audit trail.
 				</p>
@@ -66,7 +66,7 @@
 						class="glass-input w-full rounded-md px-3 py-2 text-sm"
 					></textarea>
 					{#if form.errors.reason}
-						<span class="caption text-[var(--color-danger)]">{form.errors.reason}</span>
+						<span class="caption text-danger">{form.errors.reason}</span>
 					{/if}
 				</label>
 				<label class="stack stack-tight">
@@ -79,7 +79,7 @@
 						class="glass-input rounded-md px-3 py-2 text-sm"
 					/>
 					{#if form.errors.duration_minutes}
-						<span class="caption text-[var(--color-danger)]">{form.errors.duration_minutes}</span>
+						<span class="caption text-danger">{form.errors.duration_minutes}</span>
 					{/if}
 				</label>
 				{#if form.bannerError}

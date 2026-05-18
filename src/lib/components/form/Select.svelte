@@ -3,15 +3,15 @@
 
 	export const selectVariants = cva(
 		[
-			'glass-input body-sm block w-full appearance-none px-3 py-2 pr-10 text-[var(--color-fg)]',
+			'glass-input body-sm block w-full appearance-none px-3 py-2 pr-10 text-fg',
 			'focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
 			'disabled:cursor-not-allowed disabled:opacity-60'
 		],
 		{
 			variants: {
 				error: {
-					true: 'border-[var(--color-danger-500)] focus-visible:ring-[var(--color-danger-500)]',
-					false: 'focus-visible:ring-[var(--color-focus-ring)]'
+					true: 'border-danger-500 focus-visible:ring-danger-500',
+					false: 'focus-visible:ring-focus-ring'
 				}
 			},
 			defaultVariants: { error: false }
@@ -86,7 +86,7 @@
 </script>
 
 <div class={cn('stack stack-tight', className)}>
-	<label for={fieldId} class={cn('label text-[var(--color-fg)]', srLabel && 'sr-only')}>
+	<label for={fieldId} class={cn('label text-fg', srLabel && 'sr-only')}>
 		{label}
 	</label>
 
@@ -108,7 +108,7 @@
 		</select>
 
 		<span
-			class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-[var(--color-fg-subtle)]"
+			class="text-fg-subtle pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"
 			aria-hidden="true"
 		>
 			<ChevronDown size={16} />
@@ -120,7 +120,7 @@
 	{/if}
 
 	{#if error}
-		<p id={errorId} class="body-sm text-[var(--color-danger-700)]">
+		<p id={errorId} class="body-sm text-danger-700">
 			{error}
 		</p>
 	{/if}

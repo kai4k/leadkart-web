@@ -40,7 +40,7 @@
 	<header class="stack stack-tight">
 		{#if profileData}
 			<h1 class="h1">{displayName(profileData)}</h1>
-			<p class="body-sm text-[var(--color-fg-muted)]">
+			<p class="body-sm text-fg-muted">
 				{profileData.email}
 			</p>
 		{:else}
@@ -48,7 +48,7 @@
 		{/if}
 	</header>
 
-	<nav aria-label="Account settings sections" class="border-b border-[var(--color-border)]">
+	<nav aria-label="Account settings sections" class="border-border border-b">
 		<ul class="cluster gap-0">
 			{#each tabs as tab (tab.href)}
 				{@const active = isActive(tab.href)}
@@ -59,10 +59,10 @@
 						class={cn(
 							'label -mb-px inline-block border-b-2 px-4 py-2 transition-colors',
 							'focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
-							'focus-visible:ring-[var(--color-focus-ring)]',
+							'focus-visible:ring-focus-ring',
 							active
-								? 'border-[var(--color-primary)] text-[var(--color-primary)]'
-								: 'border-transparent text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]'
+								? 'border-primary text-primary'
+								: 'text-fg-muted hover:text-fg border-transparent'
 						)}
 					>
 						{tab.label}

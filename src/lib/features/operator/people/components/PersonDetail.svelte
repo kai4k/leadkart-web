@@ -70,10 +70,7 @@
 	{@const displayName = personDisplayName(p)}
 
 	<div class="stack stack-relaxed">
-		<a
-			href="/operator/people"
-			class="caption text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]">← All people</a
-		>
+		<a href="/operator/people" class="caption text-fg-muted hover:text-fg">← All people</a>
 
 		<!-- Identity card -->
 		<Card.Root>
@@ -88,8 +85,8 @@
 							<span class="h2">{displayName}</span>
 							<Badge variant={badge.variant} style="soft" size="sm">{badge.label}</Badge>
 						</div>
-						<p class="body-base text-[var(--color-fg-muted)]">{p.email}</p>
-						<p class="caption text-[var(--color-fg-subtle)]">ID <code>{p.id}</code></p>
+						<p class="body-base text-fg-muted">{p.email}</p>
+						<p class="caption text-fg-subtle">ID <code>{p.id}</code></p>
 					</div>
 				</div>
 
@@ -112,18 +109,15 @@
 				{#if membershipsQuery.isPending}
 					<div class="flex justify-center py-4"><Spinner size={24} /></div>
 				{:else if memberships.length === 0}
-					<p class="body-base text-[var(--color-fg-muted)]">No memberships found.</p>
+					<p class="body-base text-fg-muted">No memberships found.</p>
 				{:else}
 					<div class="overflow-x-auto">
 						<table class="w-full text-sm">
 							<thead>
-								<tr class="border-b border-[var(--color-border)]">
-									<th class="caption py-2 pr-4 text-left text-[var(--color-fg-muted)]">Tenant ID</th
-									>
-									<th class="caption py-2 pr-4 text-left text-[var(--color-fg-muted)]"
-										>Designation</th
-									>
-									<th class="caption py-2 text-left text-[var(--color-fg-muted)]">Status</th>
+								<tr class="border-border border-b">
+									<th class="caption text-fg-muted py-2 pr-4 text-left">Tenant ID</th>
+									<th class="caption text-fg-muted py-2 pr-4 text-left">Designation</th>
+									<th class="caption text-fg-muted py-2 text-left">Status</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -132,7 +126,7 @@
 										<td class="py-2 pr-4">
 											<code class="caption">{m.tenant_id}</code>
 										</td>
-										<td class="py-2 pr-4 text-[var(--color-fg)]">{m.designation || '—'}</td>
+										<td class="text-fg py-2 pr-4">{m.designation || '—'}</td>
 										<td class="py-2">
 											<Badge
 												variant={m.status === 'active' ? 'success' : 'warning'}
