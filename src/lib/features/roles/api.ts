@@ -10,16 +10,6 @@ import type {
 	RolePermissionRequest
 } from './types';
 
-/**
- * Try to parse a 200+body response as RoleDto.
- * Returns the DTO when the server sends one (E4 pattern), undefined for 204.
- */
-function parseRoleOrVoid(raw: unknown): RoleDto | void {
-	if (raw === null || raw === undefined || raw === '') return;
-	const result = roleDtoSchema.safeParse(raw);
-	return result.success ? result.data : undefined;
-}
-
 export async function listRoles(): Promise<ListRolesResponse> {
 	const raw = await api.get<unknown>('/v1/roles');
 	return listRolesResponseSchema.parse(raw);
@@ -35,9 +25,9 @@ export async function createRole(req: CreateRoleRequest): Promise<CreateRoleResp
 	return createRoleResponseSchema.parse(raw);
 }
 
-export async function updateRole(roleId: string, req: UpdateRoleRequest): Promise<RoleDto | void> {
+export async function updateRole(roleId: string, req: UpdateRoleRequest): Promise<RoleDto> {
 	const raw = await api.patch<unknown>(`/v1/roles/${roleId}`, req);
-	return parseRoleOrVoid(raw);
+	return roleDtoSchema.parse(raw);
 }
 
 export async function replaceRolePermissions(

@@ -27,7 +27,8 @@ import type { RegisterTenantRequest, TenantDto } from './types';
 export const tenantsKeys = {
 	all: ['tenants'] as const,
 	list: () => [...tenantsKeys.all, 'list'] as const,
-	detail: (id: string) => [...tenantsKeys.all, 'detail', id] as const
+	detail: (id: string) => [...tenantsKeys.all, 'detail', id] as const,
+	detailBySlug: (slug: string) => [...tenantsKeys.all, 'by-slug', slug] as const
 };
 
 // ── Query hooks ────────────────────────────────────────────────────────
@@ -70,53 +71,56 @@ export function registerTenantMutation() {
 	}));
 }
 
-/** Suspend a tenant. Uses setQueryData for instant hydration when the
- *  server returns 200+TenantDto (E4), falls back to invalidate for 204. */
+/** Suspend a tenant. Server returns 200+TenantDto per ADR 0038 E4. */
 export function suspendTenantMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: ({ id, reason }: { id: string; reason: string }) =>
 			api.suspendTenant(id, { reason }),
-		onSuccess: (data: TenantDto | void, vars: { id: string; reason: string }) => {
-			if (data) qc.setQueryData<TenantDto>(tenantsKeys.detail(vars.id), data);
-			qc.invalidateQueries({ queryKey: tenantsKeys.all });
+		onSuccess: (data: TenantDto, vars: { id: string; reason: string }) => {
+			qc.setQueryData<TenantDto>(tenantsKeys.detail(vars.id), data);
+			qc.setQueryData<TenantDto>(tenantsKeys.detailBySlug(data.slug), data);
+			qc.invalidateQueries({ queryKey: tenantsKeys.list() });
 		}
 	}));
 }
 
-/** Activate a tenant. Uses setQueryData when server returns 200+TenantDto. */
+/** Activate a tenant. Server returns 200+TenantDto per ADR 0038 E4. */
 export function activateTenantMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: (id: string) => api.activateTenant(id),
-		onSuccess: (data: TenantDto | void, id: string) => {
-			if (data) qc.setQueryData<TenantDto>(tenantsKeys.detail(id), data);
-			qc.invalidateQueries({ queryKey: tenantsKeys.all });
+		onSuccess: (data: TenantDto) => {
+			qc.setQueryData<TenantDto>(tenantsKeys.detail(data.id), data);
+			qc.setQueryData<TenantDto>(tenantsKeys.detailBySlug(data.slug), data);
+			qc.invalidateQueries({ queryKey: tenantsKeys.list() });
 		}
 	}));
 }
 
-/** Mark a tenant for deletion. Uses setQueryData when server returns 200+TenantDto. */
+/** Mark a tenant for deletion. Server returns 200+TenantDto per ADR 0038 E4. */
 export function markForDeletionMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: ({ id, reason }: { id: string; reason: string }) =>
 			api.markForDeletion(id, { reason }),
-		onSuccess: (data: TenantDto | void, vars: { id: string; reason: string }) => {
-			if (data) qc.setQueryData<TenantDto>(tenantsKeys.detail(vars.id), data);
-			qc.invalidateQueries({ queryKey: tenantsKeys.all });
+		onSuccess: (data: TenantDto) => {
+			qc.setQueryData<TenantDto>(tenantsKeys.detail(data.id), data);
+			qc.setQueryData<TenantDto>(tenantsKeys.detailBySlug(data.slug), data);
+			qc.invalidateQueries({ queryKey: tenantsKeys.list() });
 		}
 	}));
 }
 
-/** Restore a marked-for-deletion tenant. Uses setQueryData when server returns 200+TenantDto. */
+/** Restore a marked-for-deletion tenant. Server returns 200+TenantDto per ADR 0038 E4. */
 export function restoreTenantMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: (id: string) => api.restoreTenant(id),
-		onSuccess: (data: TenantDto | void, id: string) => {
-			if (data) qc.setQueryData<TenantDto>(tenantsKeys.detail(id), data);
-			qc.invalidateQueries({ queryKey: tenantsKeys.all });
+		onSuccess: (data: TenantDto) => {
+			qc.setQueryData<TenantDto>(tenantsKeys.detail(data.id), data);
+			qc.setQueryData<TenantDto>(tenantsKeys.detailBySlug(data.slug), data);
+			qc.invalidateQueries({ queryKey: tenantsKeys.list() });
 		}
 	}));
 }

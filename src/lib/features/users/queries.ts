@@ -61,17 +61,15 @@ export function createUserMutation(tenantId?: string) {
 	}));
 }
 
-/** Deactivate a user membership. Uses setQueryData for instant hydration when
- *  server returns 200+UserDto (E4), falls back to invalidate for 204. */
+/** Deactivate a user membership. Server returns 200+UserDto per ADR 0038 E4. */
 export function deactivateUserMutation(tenantId?: string) {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: ({ id, reason }: { id: string; reason: string }) =>
 			api.deactivateUser(id, { reason }),
-		onSuccess: (data: UserDto | void, vars: { id: string; reason: string }) => {
-			if (data) qc.setQueryData<UserDto>(usersKeys.detail(vars.id, tenantId), data);
+		onSuccess: (data: UserDto, vars: { id: string; reason: string }) => {
+			qc.setQueryData<UserDto>(usersKeys.detail(vars.id, tenantId), data);
 			qc.invalidateQueries({ queryKey: usersKeys.list(tenantId) });
-			if (!data) qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id, tenantId) });
 			toast('success', 'Member deactivated');
 		}
 	}));
@@ -82,10 +80,9 @@ export function reactivateUserMutation(tenantId?: string) {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: (id: string) => api.reactivateUser(id),
-		onSuccess: (data: UserDto | void, id: string) => {
-			if (data) qc.setQueryData<UserDto>(usersKeys.detail(id, tenantId), data);
+		onSuccess: (data: UserDto, id: string) => {
+			qc.setQueryData<UserDto>(usersKeys.detail(id, tenantId), data);
 			qc.invalidateQueries({ queryKey: usersKeys.list(tenantId) });
-			if (!data) qc.invalidateQueries({ queryKey: usersKeys.detail(id, tenantId) });
 			toast('success', 'Member reactivated');
 		}
 	}));
@@ -96,9 +93,9 @@ export function unlockUserMutation(tenantId?: string) {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: (id: string) => api.unlockUser(id),
-		onSuccess: (data: UserDto | void, id: string) => {
-			if (data) qc.setQueryData<UserDto>(usersKeys.detail(id, tenantId), data);
-			else qc.invalidateQueries({ queryKey: usersKeys.detail(id, tenantId) });
+		onSuccess: (data: UserDto, id: string) => {
+			qc.setQueryData<UserDto>(usersKeys.detail(id, tenantId), data);
+			qc.invalidateQueries({ queryKey: usersKeys.list(tenantId) });
 			toast('success', 'Account unlocked');
 		}
 	}));

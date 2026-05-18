@@ -50,15 +50,13 @@ export function createRoleMutation() {
 	}));
 }
 
-/** Update a role's name / hierarchy level. Uses setQueryData for instant
- *  hydration when server returns 200+RoleDto (E4), falls back to invalidate. */
+/** Update a role's name / hierarchy level. Server returns 200+RoleDto per ADR 0038 E4. */
 export function updateRoleMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: ({ id, req }: { id: string; req: UpdateRoleRequest }) => api.updateRole(id, req),
-		onSuccess: (data: RoleDto | void, vars: { id: string; req: UpdateRoleRequest }) => {
-			if (data) qc.setQueryData<RoleDto>(rolesKeys.detail(vars.id), data);
-			else qc.invalidateQueries({ queryKey: rolesKeys.detail(vars.id) });
+		onSuccess: (data: RoleDto, vars: { id: string; req: UpdateRoleRequest }) => {
+			qc.setQueryData<RoleDto>(rolesKeys.detail(vars.id), data);
 			qc.invalidateQueries({ queryKey: rolesKeys.list() });
 			toast('success', 'Role updated');
 		}
