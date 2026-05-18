@@ -30,7 +30,6 @@ export class ProfileStore {
 		} catch (err) {
 			this.status = 'error';
 			this.error = err instanceof Error ? err.message : 'Failed to load profile';
-			throw err;
 		}
 	}
 
