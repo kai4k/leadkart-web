@@ -35,10 +35,14 @@
 	let success = $state(false);
 	let bannerRegion: HTMLElement | undefined = $state();
 
-	const form = useForm(changePasswordSchema, {
-		current_password: '',
-		new_password: ''
-	});
+	const form = useForm(
+		changePasswordSchema,
+		{
+			current_password: '',
+			new_password: ''
+		},
+		{ validateOn: 'blur' }
+	);
 
 	async function onSubmit(e: SubmitEvent) {
 		confirmError = null;
@@ -78,6 +82,7 @@
 		required
 		bind:value={form.values.current_password}
 		error={form.errors.current_password}
+		onblur={() => form.validateField('current_password')}
 	/>
 
 	<PasswordField
@@ -87,6 +92,7 @@
 		required
 		bind:value={form.values.new_password}
 		error={form.errors.new_password}
+		onblur={() => form.validateField('new_password')}
 	/>
 
 	<PasswordField

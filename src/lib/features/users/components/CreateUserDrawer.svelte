@@ -17,12 +17,16 @@
 	let success = $state<{ membershipId: string; personExisted: boolean } | null>(null);
 
 	const mutation = $derived(createUserMutation(tenantId));
-	const form = useForm(createUserRequestSchema, {
-		email: '',
-		password: '',
-		first_name: '',
-		last_name: ''
-	});
+	const form = useForm(
+		createUserRequestSchema,
+		{
+			email: '',
+			password: '',
+			first_name: '',
+			last_name: ''
+		},
+		{ validateOn: 'blur' }
+	);
 
 	function resetAll() {
 		form.reset();
@@ -84,6 +88,7 @@
 						bind:value={form.values.email}
 						required
 						error={form.errors.email}
+						onblur={() => form.validateField('email')}
 					/>
 					<TextField
 						label="First name"
@@ -92,6 +97,7 @@
 						required
 						maxlength={120}
 						error={form.errors.first_name}
+						onblur={() => form.validateField('first_name')}
 					/>
 					<TextField
 						label="Last name"
@@ -100,6 +106,7 @@
 						required
 						maxlength={120}
 						error={form.errors.last_name}
+						onblur={() => form.validateField('last_name')}
 					/>
 					<PasswordField
 						label="Initial password"
@@ -107,6 +114,7 @@
 						bind:value={form.values.password}
 						required
 						error={form.errors.password}
+						onblur={() => form.validateField('password')}
 					/>
 					<p class="caption text-fg-subtle">
 						The user will be prompted to change this on first sign-in.

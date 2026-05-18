@@ -9,7 +9,11 @@
 	let { open = $bindable(false), onOpenChange }: Props = $props();
 
 	const mutation = createRoleMutation();
-	const form = useForm(createRoleRequestSchema, { name: '', hierarchy_level: 5 });
+	const form = useForm(
+		createRoleRequestSchema,
+		{ name: '', hierarchy_level: 5 },
+		{ validateOn: 'blur' }
+	);
 
 	async function onSubmit(e: SubmitEvent) {
 		await form.submit(e, async (values) => {
@@ -52,6 +56,7 @@
 					maxlength={100}
 					required
 					error={form.errors.name}
+					onblur={() => form.validateField('name')}
 				/>
 				<label class="stack stack-tight">
 					<span class="label">Hierarchy level</span>

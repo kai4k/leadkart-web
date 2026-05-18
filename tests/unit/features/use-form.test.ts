@@ -119,3 +119,49 @@ describe('FormState.clearErrors', () => {
 		expect(form.bannerError).toBeNull();
 	});
 });
+
+describe('FormState.validateField — blur validation', () => {
+	it('is a no-op when validateOn is not blur', () => {
+		const form = useForm(testSchema, { email: 'bad', name: 'x' });
+		// submitAttempted defaults false; even if we set it, without validateOn blur it no-ops
+		form.submitAttempted = true;
+		form.validateField('email');
+		expect(form.errors.email).toBeUndefined();
+	});
+
+	it('is a no-op before first submit attempt even with validateOn: blur', () => {
+		const form = useForm(testSchema, { email: 'bad', name: 'x' }, { validateOn: 'blur' });
+		// submitAttempted is false — blur fires but does nothing
+		form.validateField('email');
+		expect(form.errors.email).toBeUndefined();
+	});
+
+	it('sets field error on blur after submit attempt with invalid value', async () => {
+		const form = useForm(testSchema, { email: 'bad', name: 'x' }, { validateOn: 'blur' });
+		// Trigger submit attempt (will fail validation)
+		await form.submit(makeEvent(), vi.fn());
+		// Clear errors to simulate user fixing something
+		form.clearErrors();
+		// Now blur on email with still-invalid value
+		form.validateField('email');
+		expect(form.errors.email).toBe('Invalid email');
+	});
+
+	it('clears field error when value becomes valid on blur', async () => {
+		const form = useForm(testSchema, { email: 'bad', name: 'x' }, { validateOn: 'blur' });
+		await form.submit(makeEvent(), vi.fn());
+		// Fix the email
+		form.values.email = 'alice@example.com';
+		form.validateField('email');
+		expect(form.errors.email).toBeUndefined();
+	});
+
+	it('reset clears submitAttempted so blur is silenced again', async () => {
+		const form = useForm(testSchema, { email: 'bad', name: 'x' }, { validateOn: 'blur' });
+		await form.submit(makeEvent(), vi.fn());
+		form.reset();
+		expect(form.submitAttempted).toBe(false);
+		form.validateField('email');
+		expect(form.errors.email).toBeUndefined();
+	});
+});

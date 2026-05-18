@@ -20,15 +20,19 @@
 
 	// TanStack Query v6 (Svelte 5): result is Svelte 5 reactive state, accessed directly.
 	const registerMutation = registerTenantMutation();
-	const form = useForm(registerTenantRequestSchema, {
-		slug: '',
-		legal_name: '',
-		display_name: '',
-		admin_email: '',
-		admin_password: '',
-		admin_first_name: '',
-		admin_last_name: ''
-	});
+	const form = useForm(
+		registerTenantRequestSchema,
+		{
+			slug: '',
+			legal_name: '',
+			display_name: '',
+			admin_email: '',
+			admin_password: '',
+			admin_first_name: '',
+			admin_last_name: ''
+		},
+		{ validateOn: 'blur' }
+	);
 
 	function reset() {
 		form.reset();
@@ -157,6 +161,7 @@
 						maxlength={60}
 						placeholder="acme-pharma"
 						error={form.errors.slug}
+						onblur={() => form.validateField('slug')}
 					/>
 					<TextField
 						label="Legal name"
@@ -165,6 +170,7 @@
 						required
 						maxlength={200}
 						error={form.errors.legal_name}
+						onblur={() => form.validateField('legal_name')}
 					/>
 					<TextField
 						label="Display name"
@@ -173,6 +179,7 @@
 						required
 						maxlength={200}
 						error={form.errors.display_name}
+						onblur={() => form.validateField('display_name')}
 					/>
 					<h3 class="mt-2 overline">Seed admin</h3>
 					<TextField
@@ -182,6 +189,7 @@
 						required
 						maxlength={120}
 						error={form.errors.admin_first_name}
+						onblur={() => form.validateField('admin_first_name')}
 					/>
 					<TextField
 						label="Last name"
@@ -190,6 +198,7 @@
 						required
 						maxlength={120}
 						error={form.errors.admin_last_name}
+						onblur={() => form.validateField('admin_last_name')}
 					/>
 					<TextField
 						label="Email"
@@ -198,6 +207,7 @@
 						bind:value={form.values.admin_email}
 						required
 						error={form.errors.admin_email}
+						onblur={() => form.validateField('admin_email')}
 					/>
 					<PasswordField
 						label="Initial password"
@@ -206,6 +216,7 @@
 						required
 						minlength={8}
 						error={form.errors.admin_password}
+						onblur={() => form.validateField('admin_password')}
 					/>
 					{#if form.bannerError}<Alert variant="danger">{form.bannerError}</Alert>{/if}
 				</form>

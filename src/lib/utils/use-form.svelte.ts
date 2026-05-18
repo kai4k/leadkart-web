@@ -23,19 +23,39 @@ type AnyObjectSchema = z.ZodObject<any, any>;
 /** Field-level validation errors — keyed by field name. */
 export type FieldErrors = Record<string, string | undefined>;
 
+/**
+ * Options for useForm / FormState.
+ *
+ * validateOn:
+ *   'submit' (default) — validation only fires on submit attempt.
+ *   'blur'            — field-level validation fires on blur, BUT
+ *                        only AFTER the first submit attempt. Before
+ *                        that, blur is silent so the user isn't
+ *                        ambushed by red errors on empty fields they
+ *                        haven't tried to save yet (canon UX per
+ *                        NN/g Forms research + Stripe / GitHub).
+ */
+export type FormOpts = {
+	validateOn?: 'submit' | 'blur';
+};
+
 export class FormState<TSchema extends AnyObjectSchema> {
 	readonly schema: TSchema;
 	readonly initial: z.input<TSchema>;
+	readonly opts: FormOpts;
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	values: z.input<TSchema> = $state({} as any);
 	errors: FieldErrors = $state({});
 	bannerError: string | null = $state(null);
 	isSubmitting: boolean = $state(false);
+	/** True once the user has attempted to submit. Gate for blur-validation. */
+	submitAttempted: boolean = $state(false);
 
-	constructor(schema: TSchema, initial: z.input<TSchema>) {
+	constructor(schema: TSchema, initial: z.input<TSchema>, opts: FormOpts = {}) {
 		this.schema = schema;
 		this.initial = initial;
+		this.opts = opts;
 		this.values = { ...initial };
 	}
 
@@ -44,11 +64,41 @@ export class FormState<TSchema extends AnyObjectSchema> {
 		this.errors = {};
 		this.bannerError = null;
 		this.isSubmitting = false;
+		this.submitAttempted = false;
 	}
 
 	clearErrors(): void {
 		this.errors = {};
 		this.bannerError = null;
+	}
+
+	/**
+	 * Validate a single field and update `errors` in place.
+	 *
+	 * Only fires when:
+	 *   - opts.validateOn === 'blur'
+	 *   - AND the user has already attempted to submit once
+	 *
+	 * Calling it before first submit is a no-op (silent). This mirrors
+	 * the canonical UX rule: don't yell at users for fields they haven't
+	 * tried to save yet.
+	 *
+	 * Usage in a form component:
+	 *   <TextField onblur={() => form.validateField('email')} ... />
+	 */
+	validateField(field: string): void {
+		if (!this.submitAttempted || this.opts.validateOn !== 'blur') return;
+		const result = this.schema.safeParse(this.values);
+		if (!result.success) {
+			const flat = result.error.flatten().fieldErrors as Record<string, string[] | undefined>;
+			const fieldError = flat[field]?.[0];
+			this.errors = { ...this.errors, [field]: fieldError ?? '' };
+		} else if (this.errors[field]) {
+			// Field is now valid — clear its error.
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			const { [field]: _, ...rest } = this.errors;
+			this.errors = rest;
+		}
 	}
 
 	/**
@@ -64,6 +114,7 @@ export class FormState<TSchema extends AnyObjectSchema> {
 		submitFn: (values: z.output<TSchema>) => Promise<void>
 	): Promise<void> {
 		e.preventDefault();
+		this.submitAttempted = true;
 		this.clearErrors();
 
 		const result = this.schema.safeParse(this.values);
@@ -99,10 +150,13 @@ export class FormState<TSchema extends AnyObjectSchema> {
  *
  * Example:
  *   const form = useForm(createUserSchema, { email: '', first_name: '' });
+ *   // With blur validation (fires only after first submit attempt):
+ *   const form = useForm(schema, initial, { validateOn: 'blur' });
  */
 export function useForm<TSchema extends AnyObjectSchema>(
 	schema: TSchema,
-	initial: z.input<TSchema>
+	initial: z.input<TSchema>,
+	opts?: FormOpts
 ): FormState<TSchema> {
-	return new FormState(schema, initial);
+	return new FormState(schema, initial, opts);
 }
