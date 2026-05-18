@@ -61,12 +61,30 @@ export function createUserMutation(tenantId?: string) {
 	}));
 }
 
-/** Deactivate a user membership. Server returns 200+UserDto per ADR 0038 E4. */
+/** Deactivate a user membership. Optimistic: marks status=inactive immediately. */
 export function deactivateUserMutation(tenantId?: string) {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: ({ id, reason }: { id: string; reason: string }) =>
 			api.deactivateUser(id, { reason }),
+		onMutate: async ({ id }: { id: string; reason: string }) => {
+			await qc.cancelQueries({ queryKey: usersKeys.detail(id, tenantId) });
+			const previous = qc.getQueryData<UserDto>(usersKeys.detail(id, tenantId));
+			if (previous) {
+				qc.setQueryData<UserDto>(usersKeys.detail(id, tenantId), {
+					...previous,
+					status: 'inactive'
+				});
+			}
+			return { previous };
+		},
+		onError: (
+			_err: unknown,
+			{ id }: { id: string; reason: string },
+			ctx: { previous?: UserDto } | undefined
+		) => {
+			if (ctx?.previous) qc.setQueryData<UserDto>(usersKeys.detail(id, tenantId), ctx.previous);
+		},
 		onSuccess: (data: UserDto, vars: { id: string; reason: string }) => {
 			qc.setQueryData<UserDto>(usersKeys.detail(vars.id, tenantId), data);
 			qc.invalidateQueries({ queryKey: usersKeys.list(tenantId) });
@@ -75,11 +93,25 @@ export function deactivateUserMutation(tenantId?: string) {
 	}));
 }
 
-/** Reactivate a deactivated user membership. */
+/** Reactivate a deactivated user membership. Optimistic: marks status=active immediately. */
 export function reactivateUserMutation(tenantId?: string) {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: (id: string) => api.reactivateUser(id),
+		onMutate: async (id: string) => {
+			await qc.cancelQueries({ queryKey: usersKeys.detail(id, tenantId) });
+			const previous = qc.getQueryData<UserDto>(usersKeys.detail(id, tenantId));
+			if (previous) {
+				qc.setQueryData<UserDto>(usersKeys.detail(id, tenantId), {
+					...previous,
+					status: 'active'
+				});
+			}
+			return { previous };
+		},
+		onError: (_err: unknown, id: string, ctx: { previous?: UserDto } | undefined) => {
+			if (ctx?.previous) qc.setQueryData<UserDto>(usersKeys.detail(id, tenantId), ctx.previous);
+		},
 		onSuccess: (data: UserDto, id: string) => {
 			qc.setQueryData<UserDto>(usersKeys.detail(id, tenantId), data);
 			qc.invalidateQueries({ queryKey: usersKeys.list(tenantId) });
@@ -108,8 +140,8 @@ export function assignRoleMutation(tenantId?: string) {
 		mutationFn: ({ id, roleId }: { id: string; roleId: string }) =>
 			api.assignRole(id, { role_id: roleId }),
 		onSuccess: (_, vars) => {
+			// Narrow: role change only affects this member's detail, not the list shape.
 			qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id, tenantId) });
-			qc.invalidateQueries({ queryKey: usersKeys.list(tenantId) });
 			toast('success', 'Role assigned');
 		}
 	}));
@@ -121,8 +153,8 @@ export function revokeRoleMutation(tenantId?: string) {
 	return createMutation(() => ({
 		mutationFn: ({ id, roleId }: { id: string; roleId: string }) => api.revokeRole(id, roleId),
 		onSuccess: (_, vars) => {
+			// Narrow: role change only affects this member's detail, not the list shape.
 			qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id, tenantId) });
-			qc.invalidateQueries({ queryKey: usersKeys.list(tenantId) });
 			toast('success', 'Role revoked');
 		}
 	}));

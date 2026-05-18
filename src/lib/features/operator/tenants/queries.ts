@@ -83,12 +83,34 @@ export function registerTenantMutation() {
 	}));
 }
 
-/** Suspend a tenant. Server returns 200+TenantDto per ADR 0038 E4. */
+/** Suspend a tenant. Optimistic: marks status=suspended immediately. */
 export function suspendTenantMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: ({ id, reason }: { id: string; reason: string }) =>
 			api.suspendTenant(id, { reason }),
+		onMutate: async ({ id }: { id: string; reason: string }) => {
+			await qc.cancelQueries({ queryKey: tenantsKeys.detail(id) });
+			const previous = qc.getQueryData<TenantDto>(tenantsKeys.detail(id));
+			if (previous) {
+				qc.setQueryData<TenantDto>(tenantsKeys.detail(id), { ...previous, status: 'suspended' });
+				qc.setQueryData<TenantDto>(tenantsKeys.detailBySlug(previous.slug), {
+					...previous,
+					status: 'suspended'
+				});
+			}
+			return { previous };
+		},
+		onError: (
+			_err: unknown,
+			{ id }: { id: string; reason: string },
+			ctx: { previous?: TenantDto } | undefined
+		) => {
+			if (ctx?.previous) {
+				qc.setQueryData<TenantDto>(tenantsKeys.detail(id), ctx.previous);
+				qc.setQueryData<TenantDto>(tenantsKeys.detailBySlug(ctx.previous.slug), ctx.previous);
+			}
+		},
 		onSuccess: (data: TenantDto, vars: { id: string; reason: string }) => {
 			qc.setQueryData<TenantDto>(tenantsKeys.detail(vars.id), data);
 			qc.setQueryData<TenantDto>(tenantsKeys.detailBySlug(data.slug), data);
@@ -97,11 +119,29 @@ export function suspendTenantMutation() {
 	}));
 }
 
-/** Activate a tenant. Server returns 200+TenantDto per ADR 0038 E4. */
+/** Activate a tenant. Optimistic: marks status=active immediately. */
 export function activateTenantMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: (id: string) => api.activateTenant(id),
+		onMutate: async (id: string) => {
+			await qc.cancelQueries({ queryKey: tenantsKeys.detail(id) });
+			const previous = qc.getQueryData<TenantDto>(tenantsKeys.detail(id));
+			if (previous) {
+				qc.setQueryData<TenantDto>(tenantsKeys.detail(id), { ...previous, status: 'active' });
+				qc.setQueryData<TenantDto>(tenantsKeys.detailBySlug(previous.slug), {
+					...previous,
+					status: 'active'
+				});
+			}
+			return { previous };
+		},
+		onError: (_err: unknown, id: string, ctx: { previous?: TenantDto } | undefined) => {
+			if (ctx?.previous) {
+				qc.setQueryData<TenantDto>(tenantsKeys.detail(id), ctx.previous);
+				qc.setQueryData<TenantDto>(tenantsKeys.detailBySlug(ctx.previous.slug), ctx.previous);
+			}
+		},
 		onSuccess: (data: TenantDto) => {
 			qc.setQueryData<TenantDto>(tenantsKeys.detail(data.id), data);
 			qc.setQueryData<TenantDto>(tenantsKeys.detailBySlug(data.slug), data);
