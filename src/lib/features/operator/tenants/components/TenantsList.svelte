@@ -6,8 +6,7 @@
 	import { Building2, Eye, Plus, Search, Shield, Icon } from '$icons';
 	import { tenantsListQuery } from '$features/operator/tenants/queries';
 	import { tenantLifecycleBadge } from '$features/operator/tenants/view-models';
-	import { hasPermission } from '$features/auth/tier';
-	import { session } from '$features/auth/stores/session.svelte';
+	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 	import { NetworkError } from '$lib/api/errors';
 	import CreateTenantDrawer from './CreateTenantDrawer.svelte';
 	import ImpersonateModal from '$features/operator/impersonation/components/ImpersonateModal.svelte';
@@ -44,8 +43,9 @@
 		goto(`?${params}`, { replaceState: true });
 	}
 
-	const canCreate = $derived(hasPermission(session.principal, 'platform.tenants.create'));
-	const canView = $derived(hasPermission(session.principal, 'platform.tenants.view'));
+	const capsQuery = myCapabilitiesQuery();
+	const canCreate = $derived(hasCapability(capsQuery.data, 'platform.tenants.create'));
+	const canView = $derived(hasCapability(capsQuery.data, 'platform.tenants.view'));
 
 	// TanStack Query v6 (Svelte 5): result is Svelte 5 reactive state, accessed directly.
 	const query = tenantsListQuery();

@@ -1,12 +1,21 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import PersonDetail from '$features/operator/people/components/PersonDetail.svelte';
 	import { personDetailQuery } from '$features/operator/people/queries';
+	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 
 	let { data } = $props();
 
 	const personId = $derived(data.personId);
 	const query = $derived(personDetailQuery(personId));
 	const title = $derived(query.data?.email ?? 'Person');
+
+	const capsQuery = myCapabilitiesQuery();
+	$effect(() => {
+		if (capsQuery.data && !hasCapability(capsQuery.data, 'platform.users.view')) {
+			goto('/dashboard', { replaceState: true });
+		}
+	});
 </script>
 
 <svelte:head><title>{title} · LeadKart</title></svelte:head>

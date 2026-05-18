@@ -13,8 +13,7 @@
 		canLiftSuspension,
 		canAnonymise
 	} from '$features/operator/people/view-models';
-	import { hasPermission } from '$features/auth/tier';
-	import { session } from '$features/auth/stores/session.svelte';
+	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 	import type { PersonDto } from '$features/operator/people/types';
 	import GlobalSuspendDialog from './GlobalSuspendDialog.svelte';
 	import AnonymiseDialog from './AnonymiseDialog.svelte';
@@ -41,8 +40,9 @@
 	);
 	const isPending = $derived(liftMutation.isPending);
 
-	const canManage = $derived(hasPermission(session.principal, 'platform.users.manage'));
-	const canAnonymiseOp = $derived(hasPermission(session.principal, 'identity.users.anonymise'));
+	const capsQuery = myCapabilitiesQuery();
+	const canManage = $derived(hasCapability(capsQuery.data, 'platform.users.manage'));
+	const canAnonymiseOp = $derived(hasCapability(capsQuery.data, 'identity.users.anonymise'));
 
 	const activityQuery = $derived(personId ? personActivityQuery(personId) : null);
 

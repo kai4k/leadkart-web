@@ -1,10 +1,19 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { tenantBySlugQuery } from '$features/operator/tenants/queries';
+	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 	import { Badge, Spinner, Alert } from '$ui';
 	import { Building2, Icon, Users, Shield, Settings, Activity, UserCog } from '$icons';
 
 	let { children, data } = $props();
+
+	const capsQuery = myCapabilitiesQuery();
+	$effect(() => {
+		if (capsQuery.data && !hasCapability(capsQuery.data, 'platform.tenants.view')) {
+			goto('/dashboard', { replaceState: true });
+		}
+	});
 
 	const slug = $derived(data.slug);
 	const query = $derived(tenantBySlugQuery(slug));

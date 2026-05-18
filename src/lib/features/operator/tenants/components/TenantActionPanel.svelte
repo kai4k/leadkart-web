@@ -11,8 +11,7 @@
 		activateTenantMutation,
 		restoreTenantMutation
 	} from '$features/operator/tenants/queries';
-	import { hasPermission } from '$features/auth/tier';
-	import { session } from '$features/auth/stores/session.svelte';
+	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 	import type { TenantDto } from '$features/operator/tenants/types';
 
 	type Props = {
@@ -22,7 +21,8 @@
 
 	let { tenant, onAction }: Props = $props();
 
-	const canManage = $derived(hasPermission(session.principal, 'platform.tenants.manage'));
+	const capsQuery = myCapabilitiesQuery();
+	const canManage = $derived(hasCapability(capsQuery.data, 'platform.tenants.manage'));
 	/** Platform tenant is immutable — backend rejects lifecycle mutations via
 	 *  ensureNotPlatformTenant. Hide the buttons rather than let them 422. */
 	const isPlatformTenant = $derived(tenant.slug === 'platform');

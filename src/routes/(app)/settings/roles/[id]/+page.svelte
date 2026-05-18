@@ -7,9 +7,9 @@
 		updateRoleMutation,
 		replaceRolePermissionsMutation
 	} from '$features/roles/queries';
+	import { goto } from '$app/navigation';
 	import { roleBadgeVariant, isProtectedRole } from '$features/roles/view-models';
-	import { hasPermission } from '$features/auth/tier';
-	import { session } from '$features/auth/stores/session.svelte';
+	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 
 	let { data } = $props();
 
@@ -23,8 +23,16 @@
 	const query = $derived(roleDetailQuery(roleId));
 	const role = $derived(query.data ?? null);
 	const protectedRole = $derived(role ? isProtectedRole(role) : false);
+	const capsQuery = myCapabilitiesQuery();
+
+	$effect(() => {
+		if (capsQuery.data && !hasCapability(capsQuery.data, 'identity.roles.view')) {
+			goto('/dashboard', { replaceState: true });
+		}
+	});
+
 	const canUpdate = $derived(
-		!protectedRole && hasPermission(session.principal, 'identity.roles.update')
+		!protectedRole && hasCapability(capsQuery.data, 'identity.roles.update')
 	);
 
 	const updateMutation = $derived(updateRoleMutation());
