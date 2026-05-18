@@ -6,9 +6,7 @@ import type {
 	deactivateUserRequestSchema,
 	assignUserRoleRequestSchema,
 	replacePermissionOverridesRequestSchema,
-	assignManagerRequestSchema,
-	roleDtoSchema,
-	listRolesResponseSchema
+	assignManagerRequestSchema
 } from './schemas';
 
 export type { UserDto } from '$lib/features/auth/types';
@@ -22,5 +20,4 @@ export type ReplacePermissionOverridesRequest = z.output<
 	typeof replacePermissionOverridesRequestSchema
 >;
 export type AssignManagerRequest = z.output<typeof assignManagerRequestSchema>;
-export type RoleDto = z.output<typeof roleDtoSchema>;
-export type ListRolesResponse = z.output<typeof listRolesResponseSchema>;
+export type { RoleDto, ListRolesResponse } from '$lib/features/roles/types';

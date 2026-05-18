@@ -48,16 +48,4 @@ export const replacePermissionOverridesRequestSchema = z
 
 export const assignManagerRequestSchema = z.object({ manager_id: z.string() }).strict();
 
-export const roleDtoSchema = z.object({
-	id: z.string(),
-	tenant_id: z.string(),
-	name: z.string(),
-	is_system_default: z.boolean(),
-	is_super_admin: z.boolean(),
-	hierarchy_level: z.number().int(),
-	permissions: z.array(z.string()),
-	created_at: z.string(),
-	updated_at: z.string()
-});
-
-export const listRolesResponseSchema = z.object({ roles: z.array(roleDtoSchema) });
+export { roleDtoSchema, listRolesResponseSchema } from '$lib/features/roles/schemas';
