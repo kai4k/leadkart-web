@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Alert, Spinner } from '$ui';
+	import { Alert, Breadcrumbs, Spinner } from '$ui';
+	import type { BreadcrumbItem } from '$ui';
 	import { myCapabilitiesQuery } from '$features/auth/queries';
 	import { tenantSelfQuery } from '$features/tenant/queries';
 	import { tenantDisplayName, tenantStatusBadge } from '$features/tenant/view-models';
@@ -40,6 +41,13 @@
 		{ href: '/settings/tenant/preferences', label: 'Preferences' }
 	];
 
+	const activeTab = $derived(tabs.find((t) => isActive(t.href)));
+	const breadcrumbs = $derived<BreadcrumbItem[]>([
+		{ href: '/settings', label: 'Settings' },
+		{ href: '/settings/tenant', label: 'Tenant' },
+		...(activeTab ? [{ label: activeTab.label }] : [])
+	]);
+
 	function isActive(href: string): boolean {
 		const path = page.url.pathname;
 		return path === href || path.startsWith(href + '/');
@@ -51,6 +59,7 @@
 </svelte:head>
 
 <div class="stack stack-relaxed">
+	<Breadcrumbs items={breadcrumbs} />
 	<header class="stack stack-tight">
 		{#if tenantData && badge}
 			<div class="cluster">

@@ -3,7 +3,8 @@
 	import { page } from '$app/state';
 	import { tenantBySlugQuery } from '$features/operator/tenants/queries';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
-	import { Badge, Spinner, Alert } from '$ui';
+	import { Badge, Breadcrumbs, Spinner, Alert } from '$ui';
+	import type { BreadcrumbItem } from '$ui';
 	import { Building2, Icon, Users, Shield, Settings, Activity, UserCog } from '$icons';
 
 	let { children, data } = $props();
@@ -42,8 +43,13 @@
 			No tenant with that ID or slug, or you don't have access.
 		</Alert>
 	{:else if tenant}
+		{@const breadcrumbs: BreadcrumbItem[] = [
+			{ href: '/operator', label: 'Operator' },
+			{ href: '/operator/tenants', label: 'Tenants' },
+			{ label: tenant.display_name }
+		]}
+		<Breadcrumbs items={breadcrumbs} />
 		<header class="stack stack-tight">
-			<a href="/operator/tenants" class="caption text-fg-muted hover:text-fg">← All tenants</a>
 			<div class="cluster cluster-tight">
 				{#if tenant.slug === 'platform'}
 					<Icon icon={Shield} size="sm" class="text-primary" />

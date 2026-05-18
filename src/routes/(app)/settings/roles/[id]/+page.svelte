@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Alert, Badge, Button, Card, Spinner } from '$ui';
+	import { Alert, Badge, Breadcrumbs, Button, Card, Spinner } from '$ui';
+	import type { BreadcrumbItem } from '$ui';
 	import { TextField } from '$lib/components/form';
 	import PermissionTree from '$features/roles/components/PermissionTree.svelte';
 	import {
@@ -22,6 +23,11 @@
 	const roleId = $derived(data.roleId);
 	const query = $derived(roleDetailQuery(roleId));
 	const role = $derived(query.data ?? null);
+	const breadcrumbs = $derived<BreadcrumbItem[]>([
+		{ href: '/settings', label: 'Settings' },
+		{ href: '/settings/roles', label: 'Roles' },
+		{ label: role?.name ?? 'Role' }
+	]);
 	const protectedRole = $derived(role ? isProtectedRole(role) : false);
 	const capsQuery = myCapabilitiesQuery();
 
@@ -89,7 +95,7 @@
 </svelte:head>
 
 <div class="stack stack-relaxed">
-	<a href="/settings/roles" class="caption text-fg-muted hover:text-fg">← All roles</a>
+	<Breadcrumbs items={breadcrumbs} />
 
 	{#if query.isPending}
 		<div class="flex justify-center py-16"><Spinner size={32} /></div>

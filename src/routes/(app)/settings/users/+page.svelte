@@ -2,6 +2,8 @@
 	import { goto } from '$app/navigation';
 	import UsersList from '$features/users/components/UsersList.svelte';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
+	import { Breadcrumbs } from '$ui';
+	import type { BreadcrumbItem } from '$ui';
 
 	const capsQuery = myCapabilitiesQuery();
 	$effect(() => {
@@ -9,10 +11,18 @@
 			goto('/dashboard', { replaceState: true });
 		}
 	});
+
+	const breadcrumbs: BreadcrumbItem[] = [
+		{ href: '/settings', label: 'Settings' },
+		{ label: 'Team' }
+	];
 </script>
 
 <svelte:head>
 	<title>Team · LeadKart</title>
 </svelte:head>
 
-<UsersList />
+<div class="stack stack-relaxed">
+	<Breadcrumbs items={breadcrumbs} />
+	<UsersList />
+</div>

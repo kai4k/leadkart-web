@@ -70,8 +70,6 @@
 	{@const displayName = personDisplayName(p)}
 
 	<div class="stack stack-relaxed">
-		<a href="/operator/people" class="caption text-fg-muted hover:text-fg">← All people</a>
-
 		<!-- Identity card -->
 		<Card.Root>
 			<Card.Header>

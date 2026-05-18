@@ -29,6 +29,7 @@ export {
 	Bell,
 	Boxes,
 	Building2,
+	Check,
 	CheckCircle2,
 	ChevronDown,
 	ChevronLeft,
