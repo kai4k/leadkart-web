@@ -30,16 +30,19 @@
 		<p class="caption text-[var(--color-fg-muted)]">Cross-tenant person identity management.</p>
 	</header>
 
-	<Alert variant="info">
-		Person listing endpoint pending on the backend. For now, look up a person by their ID below.
+	<Alert variant="info" title="Discover platform users via tenants">
+		Open a tenant from <a href="/operator/tenants" class="underline">/operator/tenants</a> to see its
+		user roster; click any user to view their cross-tenant person record. The search below is for direct
+		UUID lookup only.
 	</Alert>
 
 	<form class="cluster" onsubmit={onSearch}>
 		<input
 			type="search"
-			placeholder="Person ID (UUID)"
+			placeholder="Person UUID (advanced)"
 			bind:value={search}
 			class="glass-input flex-1 rounded-md px-3 py-2 text-sm"
+			aria-label="Person UUID lookup"
 		/>
 		<Button type="submit" loading={pending || operatorPeople.status === 'loading'}>
 			<Icon icon={Search} size="sm" /> Look up
