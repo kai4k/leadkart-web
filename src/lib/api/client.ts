@@ -58,6 +58,17 @@ export interface RequestOptions extends Omit<RequestInit, 'body'> {
 	auth?: boolean;
 	/** Internal flag — true on the post-refresh retry to prevent loops. */
 	_retried?: boolean;
+	/**
+	 * Operator scope override — injects `X-Tenant-Id: <uuid>` on this
+	 * request only. Used by operator routes that need to read/mutate
+	 * data within a specific tenant's context without switching the
+	 * caller's own session tenant (Stripe Connect / Auth0 management
+	 * API pattern).
+	 *
+	 * The header is ONLY sent when this option is explicitly set — all
+	 * existing unauthenticated and tenant-scoped calls are unaffected.
+	 */
+	tenantId?: string;
 }
 
 /**
@@ -69,7 +80,7 @@ export interface RequestOptions extends Omit<RequestInit, 'body'> {
  * (typically session.clear) and rejects with REFRESH_FAILED.
  */
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-	const { json, auth = true, headers, _retried = false, ...rest } = options;
+	const { json, auth = true, headers, _retried = false, tenantId, ...rest } = options;
 	const url = resolveBaseUrl() + (path.startsWith('/') ? path : '/' + path);
 
 	const finalHeaders = new Headers(headers);
@@ -80,6 +91,10 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 	if (auth) {
 		const token = hooks.getAccessToken();
 		if (token) finalHeaders.set('Authorization', `Bearer ${token}`);
+	}
+	// Operator scope override — only injected when explicitly opted-in.
+	if (tenantId) {
+		finalHeaders.set('X-Tenant-Id', tenantId);
 	}
 
 	let response: Response;
@@ -137,5 +152,35 @@ export const api = {
 	delete: <T>(path: string, json?: unknown, options?: RequestOptions) =>
 		request<T>(path, { ...options, method: 'DELETE', json })
 };
+
+/**
+ * Returns a scoped client that injects `X-Tenant-Id: <tenantId>` on
+ * every request. Used by operator gateway functions that need to act
+ * on behalf of a specific tenant (Stripe Connect / Auth0 management
+ * API pattern).
+ *
+ * The returned object has the same shape as `api` — swap one for the
+ * other at the call site; all other behaviour (auth, error handling,
+ * 401-refresh) is identical.
+ *
+ * Example:
+ *   const scoped = withTenant(tenantId);
+ *   const raw = await scoped.get<unknown>('/v1/users');
+ */
+export function withTenant(tenantId: string): typeof api {
+	const opts = (base?: RequestOptions): RequestOptions => ({ ...base, tenantId });
+	return {
+		get: <T>(path: string, options?: RequestOptions) =>
+			request<T>(path, { ...opts(options), method: 'GET' }),
+		post: <T>(path: string, json?: unknown, options?: RequestOptions) =>
+			request<T>(path, { ...opts(options), method: 'POST', json }),
+		put: <T>(path: string, json?: unknown, options?: RequestOptions) =>
+			request<T>(path, { ...opts(options), method: 'PUT', json }),
+		patch: <T>(path: string, json?: unknown, options?: RequestOptions) =>
+			request<T>(path, { ...opts(options), method: 'PATCH', json }),
+		delete: <T>(path: string, json?: unknown, options?: RequestOptions) =>
+			request<T>(path, { ...opts(options), method: 'DELETE', json })
+	};
+}
 
 export { isApiError };
