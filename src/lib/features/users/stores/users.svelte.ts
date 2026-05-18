@@ -40,7 +40,7 @@ export class UsersStore {
 		this.status = 'loading';
 		this.error = null;
 		try {
-			const [{ users }, roles] = await Promise.all([listUsers(), listRolesApi()]);
+			const [{ users }, { roles }] = await Promise.all([listUsers(), listRolesApi()]);
 			this.list = users;
 			this.roles = roles;
 			this.status = 'ready';

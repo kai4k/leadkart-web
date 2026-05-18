@@ -4,12 +4,7 @@
  * tenant_id — no tenant_id parameter on any call.
  */
 import { api } from '$api/client';
-import {
-	listUsersResponseSchema,
-	createUserResponseSchema,
-	userDtoSchema,
-	listRolesResponseSchema
-} from './schemas';
+import { listUsersResponseSchema, createUserResponseSchema, userDtoSchema } from './schemas';
 import type {
 	ListUsersResponse,
 	CreateUserRequest,
@@ -18,8 +13,7 @@ import type {
 	AssignUserRoleRequest,
 	ReplacePermissionOverridesRequest,
 	AssignManagerRequest,
-	UserDto,
-	RoleDto
+	UserDto
 } from './types';
 
 export async function listUsers(): Promise<ListUsersResponse> {
@@ -78,12 +72,4 @@ export async function removeManager(membershipId: string): Promise<void> {
 	await api.delete<void>(`/v1/users/${membershipId}/manager`);
 }
 
-/**
- * Role catalogue read — used by the role-assignment drawer. Slice 3
- * will own the roles feature; this minimal pass-through is the
- * temporary read.
- */
-export async function listRoles(): Promise<RoleDto[]> {
-	const raw = await api.get<unknown>('/v1/roles');
-	return listRolesResponseSchema.parse(raw).roles;
-}
+export { listRoles } from '$features/roles/api';
