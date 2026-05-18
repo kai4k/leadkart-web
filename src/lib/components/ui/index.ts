@@ -20,3 +20,4 @@ export { default as EmptyState } from './EmptyState.svelte';
 export { default as Logo } from './Logo.svelte';
 export { default as Pagination } from './Pagination.svelte';
 export { default as Spinner } from './Spinner.svelte';
+export * as Tooltip from './tooltip';
