@@ -46,13 +46,20 @@ export default defineConfig({
 				'**/*.test.ts',
 				'**/*.spec.ts'
 			],
-			// Coverage thresholds — set to the current measured floor so the
-			// CI gate catches regressions without false-positives from the
-			// still-empty test stubs. Raise to 60/50/60/60 once the unit
-			// suite is populated (tracked in GitHub issue for Phase D).
+			// Coverage thresholds — ratcheted to measured floor after Phase E
+			// high-value tests (hasCapability, useForm).
+			// Measured 2026-05-19: statements 7.62%, branches 13.8%,
+			//   functions 4.18%, lines 9.88%.
+			// All below 20%: the codebase has ~4000 source lines; the unit
+			// suite covers schemas/view-models/pure utils only. Svelte
+			// components and TanStack query hooks require jsdom + SvelteKit
+			// mock setup that isn't worth scaffolding until the E2E suite
+			// covers the happy paths (tracked: Phase F coverage push).
+			// TODO(Phase F): scaffold svelte-kit mock + add component tests
+			//   to push statements/lines to ≥30%.
 			thresholds: {
 				statements: 7,
-				branches: 12,
+				branches: 13,
 				functions: 4,
 				lines: 9
 			}
