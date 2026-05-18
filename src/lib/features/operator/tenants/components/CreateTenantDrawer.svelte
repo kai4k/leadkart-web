@@ -16,7 +16,13 @@
 	let adminFirstName = $state('');
 	let adminLastName = $state('');
 	let error = $state<string | null>(null);
-	let credentials = $state<{ email: string; password: string; tenantId: string } | null>(null);
+	let credentials = $state<{
+		email: string;
+		password: string;
+		tenantId: string;
+		slug: string;
+		displayName: string;
+	} | null>(null);
 
 	function reset() {
 		slug = '';
@@ -47,7 +53,9 @@
 			credentials = {
 				email: req.admin_email,
 				password: req.admin_password,
-				tenantId: resp.tenant_id
+				tenantId: resp.tenant_id,
+				slug: req.slug,
+				displayName: req.display_name
 			};
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to register tenant';
@@ -91,11 +99,25 @@
 		<Drawer.Body>
 			{#if credentials}
 				<Alert variant="success">
-					Tenant <code>{credentials.tenantId}</code> registered. Share these credentials with the seed
-					admin (one-time view — not retrievable):
+					<strong>{credentials.displayName}</strong> registered (<code>{credentials.slug}</code>).
+					Share these credentials with the seed admin (one-time view — not retrievable):
 				</Alert>
 				<Card.Root class="mt-4">
 					<Card.Content class="stack stack-tight">
+						<div class="cluster cluster-spread">
+							<span class="caption text-[var(--color-fg-muted)]">Tenant ID</span>
+							<div class="cluster cluster-tight">
+								<code class="caption text-[var(--color-fg-subtle)]">{credentials.tenantId}</code>
+								<Button
+									variant="ghost"
+									size="sm"
+									aria-label="Copy tenant ID"
+									onclick={() => copy(credentials!.tenantId)}
+								>
+									<Icon icon={Copy} size="sm" />
+								</Button>
+							</div>
+						</div>
 						<div class="cluster cluster-spread">
 							<span class="caption text-[var(--color-fg-muted)]">Email</span>
 							<div class="cluster cluster-tight">
@@ -131,6 +153,10 @@
 				</p>
 				<div class="cluster mt-4">
 					<Button variant="ghost" onclick={reset}>Register another</Button>
+					<a
+						href="/operator/tenants/{credentials.tenantId}"
+						class="label text-[var(--color-primary)] hover:underline">View tenant →</a
+					>
 					<Button onclick={() => handleClose(false)}>Done</Button>
 				</div>
 			{:else}
