@@ -27,6 +27,15 @@ export function rolesListQuery() {
 	}));
 }
 
+/** Full role list for another tenant — operator scope (X-Tenant-Id injection). */
+export function rolesScopedListQuery(tenantId: string) {
+	return createQuery(() => ({
+		queryKey: [...rolesKeys.list(), tenantId],
+		queryFn: () => api.listRolesScoped(tenantId),
+		enabled: !!tenantId
+	}));
+}
+
 /** Single role by ID. */
 export function roleDetailQuery(roleId: string) {
 	return createQuery(() => ({

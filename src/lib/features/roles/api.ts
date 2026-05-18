@@ -1,4 +1,4 @@
-import { api } from '$api/client';
+import { api, withTenant } from '$api/client';
 import { listRolesResponseSchema, roleDtoSchema, createRoleResponseSchema } from './schemas';
 import type {
 	ListRolesResponse,
@@ -12,6 +12,12 @@ import type {
 
 export async function listRoles(): Promise<ListRolesResponse> {
 	const raw = await api.get<unknown>('/v1/roles');
+	return listRolesResponseSchema.parse(raw);
+}
+
+/** Operator-scope variant — fetches roles of any tenant by injecting X-Tenant-Id. */
+export async function listRolesScoped(tenantId: string): Promise<ListRolesResponse> {
+	const raw = await withTenant(tenantId).get<unknown>('/v1/roles');
 	return listRolesResponseSchema.parse(raw);
 }
 

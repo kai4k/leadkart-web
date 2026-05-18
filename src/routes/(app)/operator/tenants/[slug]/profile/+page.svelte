@@ -1,33 +1,20 @@
 <script lang="ts">
 	import { Alert, Badge, Button, Card, Spinner } from '$ui';
 	import { Eye, Icon } from '$icons';
-	import TenantActionPanel from '$features/operator/tenants/components/TenantActionPanel.svelte';
-	import SuspendDialog from '$features/operator/tenants/components/SuspendDialog.svelte';
-	import MarkForDeletionDialog from '$features/operator/tenants/components/MarkForDeletionDialog.svelte';
 	import ImpersonateModal from '$features/operator/impersonation/components/ImpersonateModal.svelte';
 	import { tenantBySlugQuery } from '$features/operator/tenants/queries';
 	import { tenantLifecycleBadge } from '$features/operator/tenants/view-models';
-	import { hasPermission } from '$features/auth/tier';
-	import { session } from '$features/auth/stores/session.svelte';
-	import type { TenantDto } from '$features/operator/tenants/types';
+	import { hasCapability, myCapabilitiesQuery } from '$features/auth/queries';
 
 	let { data } = $props();
 
-	let suspendOpen = $state(false);
-	let markOpen = $state(false);
 	let impersonateOpen = $state(false);
-	let target = $state<TenantDto | null>(null);
 
-	const canView = $derived(hasPermission(session.principal, 'platform.tenants.view'));
+	const capsQuery = myCapabilitiesQuery();
+	const canView = $derived(hasCapability(capsQuery.data, 'platform.tenants.view'));
 	const slug = $derived(data.slug);
 	const query = $derived(tenantBySlugQuery(slug));
 	const tenant = $derived(query.data ?? null);
-
-	function onAction(action: 'suspend' | 'mark', t: TenantDto) {
-		target = t;
-		if (action === 'suspend') suspendOpen = true;
-		else markOpen = true;
-	}
 </script>
 
 <svelte:head>
@@ -87,13 +74,9 @@
 				</dl>
 			</Card.Content>
 		</Card.Root>
-
-		<TenantActionPanel {tenant} {onAction} />
 	</div>
 {/if}
 
-<SuspendDialog bind:open={suspendOpen} tenant={target} onOpenChange={(o) => (suspendOpen = o)} />
-<MarkForDeletionDialog bind:open={markOpen} tenant={target} onOpenChange={(o) => (markOpen = o)} />
 <ImpersonateModal
 	bind:open={impersonateOpen}
 	{tenant}
