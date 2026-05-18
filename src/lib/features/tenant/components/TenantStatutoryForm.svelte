@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { isApiError } from '$api/client';
+	import { ValidationError } from '$api/errors';
 	import { Alert, Button } from '$ui';
 	import { TextField } from '$form';
 	import { updateTenantStatutorySchema } from '../schemas';
-	import { tenant as tenantStore } from '../stores/tenant.svelte';
+	import { updateTenantStatutoryMutation } from '../queries';
 	import type { Tenant } from '../types';
 
 	/**
@@ -11,32 +11,19 @@
 	 * (GSTIN + PAN + drug licence number). The leadkart-go aggregate
 	 * accepts empty strings as "clear this declaration" so partially-
 	 * onboarded tenants can stage values one at a time.
-	 *
-	 * Pattern mirrors TenantProfileForm — see that component for the
-	 * detailed per-field rationale (Zod source-of-truth validation,
-	 * $effect.pre re-sync, errorRegion focus-shift on submit failure).
-	 *
-	 * Format-level validation (GSTIN 15-char regex, PAN 10-char regex)
-	 * is intentionally NOT added here. The server's Statutory value-
-	 * object enforces the canonical format + returns 422 with the
-	 * exact rejection reason; client-side regex would only duplicate
-	 * the rule and risk drift. UX impact is negligible — the user
-	 * pastes a known value, server confirms or surfaces the precise
-	 * error.
 	 */
 
 	interface Props {
 		tenant: Tenant;
+		tenantId: string;
 	}
 
-	let { tenant }: Props = $props();
+	let { tenant, tenantId }: Props = $props();
 
 	let gst = $state('');
 	let pan = $state('');
 	let drugLicence = $state('');
-	let saving = $state(false);
 	let formError = $state<string | null>(null);
-	let success = $state(false);
 	let errorRegion: HTMLElement | undefined = $state();
 
 	$effect.pre(() => {
@@ -45,10 +32,11 @@
 		drugLicence = tenant.drug_licence_number ?? '';
 	});
 
+	const mutation = $derived(updateTenantStatutoryMutation(tenantId));
+
 	async function onSubmit(e: SubmitEvent) {
 		e.preventDefault();
 		formError = null;
-		success = false;
 
 		const parsed = updateTenantStatutorySchema.safeParse({
 			gst_number: gst.trim(),
@@ -60,20 +48,20 @@
 			return;
 		}
 
-		saving = true;
-		try {
-			await tenantStore.updateStatutory(parsed.data);
-			success = true;
-		} catch (err) {
-			formError =
-				isApiError(err) && err.status === 422
-					? err.message || 'The values entered were rejected by the server.'
-					: 'Could not save changes. Please try again.';
-			queueMicrotask(() => errorRegion?.focus());
-		} finally {
-			saving = false;
-		}
+		mutation.mutate(parsed.data, {
+			onError: (err) => {
+				if (err instanceof ValidationError) {
+					formError = 'Some values were rejected by the server.';
+				} else {
+					formError =
+						err instanceof Error ? err.message : 'Could not save changes. Please try again.';
+				}
+				queueMicrotask(() => errorRegion?.focus());
+			}
+		});
 	}
+
+	const isSaving = $derived(mutation.isPending);
 </script>
 
 <form class="stack" onsubmit={onSubmit} novalidate>
@@ -105,11 +93,9 @@
 		<div bind:this={errorRegion} tabindex="-1">
 			<Alert variant="danger">{formError}</Alert>
 		</div>
-	{:else if success}
-		<Alert variant="success">Statutory details updated.</Alert>
 	{/if}
 
 	<div class="cluster justify-end">
-		<Button type="submit" loading={saving}>Save changes</Button>
+		<Button type="submit" loading={isSaving}>Save changes</Button>
 	</div>
 </form>

@@ -1,32 +1,23 @@
 <script lang="ts">
-	import { isApiError } from '$api/client';
+	import { ValidationError } from '$api/errors';
 	import { Alert, Button } from '$ui';
 	import { TextField } from '$form';
 	import { updateTenantAdminContactSchema } from '../schemas';
-	import { tenant as tenantStore } from '../stores/tenant.svelte';
+	import { updateTenantAdminContactMutation } from '../queries';
 	import type { Tenant } from '../types';
 
 	/**
 	 * TenantContactForm — admin phone + postal address. Submits as a
 	 * single PATCH /admin-contact body where the address is a nested
 	 * object the leadkart-go aggregate accepts atomically.
-	 *
-	 * Layout: phone full-width; address fields grouped under a
-	 * fieldset (a11y best practice for multi-field address blocks
-	 * per WAI-ARIA Authoring Practices). Responsive grid stacks on
-	 * mobile, 2-col / 3-col on sm+.
-	 *
-	 * State code remains a TextField for now; commit 9 introduces a
-	 * Select primitive (driving locale / timezone / currency on the
-	 * Display Preferences form) and a follow-up could swap state_code
-	 * to that primitive once the Indian-state-code catalogue lands.
 	 */
 
 	interface Props {
 		tenant: Tenant;
+		tenantId: string;
 	}
 
-	let { tenant }: Props = $props();
+	let { tenant, tenantId }: Props = $props();
 
 	let phone = $state('');
 	let street = $state('');
@@ -35,9 +26,7 @@
 	let addressState = $state('');
 	let stateCode = $state('');
 	let pincode = $state('');
-	let saving = $state(false);
 	let formError = $state<string | null>(null);
-	let success = $state(false);
 	let errorRegion: HTMLElement | undefined = $state();
 
 	$effect.pre(() => {
@@ -50,10 +39,11 @@
 		pincode = tenant.admin_address.pincode ?? '';
 	});
 
+	const mutation = $derived(updateTenantAdminContactMutation(tenantId));
+
 	async function onSubmit(e: SubmitEvent) {
 		e.preventDefault();
 		formError = null;
-		success = false;
 
 		const parsed = updateTenantAdminContactSchema.safeParse({
 			phone: phone.trim(),
@@ -71,20 +61,20 @@
 			return;
 		}
 
-		saving = true;
-		try {
-			await tenantStore.updateAdminContact(parsed.data);
-			success = true;
-		} catch (err) {
-			formError =
-				isApiError(err) && err.status === 422
-					? err.message || 'The values entered were rejected by the server.'
-					: 'Could not save changes. Please try again.';
-			queueMicrotask(() => errorRegion?.focus());
-		} finally {
-			saving = false;
-		}
+		mutation.mutate(parsed.data, {
+			onError: (err) => {
+				if (err instanceof ValidationError) {
+					formError = 'Some values were rejected by the server.';
+				} else {
+					formError =
+						err instanceof Error ? err.message : 'Could not save changes. Please try again.';
+				}
+				queueMicrotask(() => errorRegion?.focus());
+			}
+		});
 	}
+
+	const isSaving = $derived(mutation.isPending);
 </script>
 
 <form class="stack" onsubmit={onSubmit} novalidate>
@@ -128,11 +118,9 @@
 		<div bind:this={errorRegion} tabindex="-1">
 			<Alert variant="danger">{formError}</Alert>
 		</div>
-	{:else if success}
-		<Alert variant="success">Contact details updated.</Alert>
 	{/if}
 
 	<div class="cluster justify-end">
-		<Button type="submit" loading={saving}>Save changes</Button>
+		<Button type="submit" loading={isSaving}>Save changes</Button>
 	</div>
 </form>

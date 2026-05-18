@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { TextField } from '$lib/components/form';
 	import { Alert, Button } from '$ui';
-	import { profile } from '$features/auth/stores/profile.svelte';
+	import { session } from '$features/auth/stores/session.svelte';
+	import { myProfileQuery, updateMyProfileMutation } from '$features/auth/queries';
 	import { ValidationError } from '$api/errors';
 	import type { UpdateProfileRequest } from '$features/auth/types';
 	import { displayName } from '$features/auth/view-models';
@@ -9,30 +10,33 @@
 	/**
 	 * ProfileForm — read-only name + email block at the top (admin-
 	 * controlled fields), editable designation / department /
-	 * status_message below. Save calls profile.update().
+	 * status_message below. Save calls updateMyProfileMutation.
 	 *
 	 * Loading state is the responsibility of the parent route —
-	 * this component renders only when profile.current is non-null.
+	 * this component renders only when the profile query has data.
 	 */
+
+	const membershipId = $derived(session.principal?.membershipId ?? '');
+	const profileQuery = $derived(myProfileQuery(membershipId));
+	const profileData = $derived(profileQuery.data ?? null);
+	const mutation = $derived(updateMyProfileMutation(membershipId));
 
 	let designation = $state('');
 	let department = $state('');
 	let statusMessage = $state('');
 	let fieldErrors = $state<Record<string, string>>({});
 	let saveError = $state<string | null>(null);
-	let saved = $state(false);
 
 	$effect(() => {
-		if (profile.current) {
-			designation = profile.current.designation;
-			department = profile.current.department;
-			statusMessage = profile.current.status_message;
+		if (profileData) {
+			designation = profileData.designation;
+			department = profileData.department;
+			statusMessage = profileData.status_message;
 		}
 	});
 
 	async function onSubmit(e: SubmitEvent) {
 		e.preventDefault();
-		saved = false;
 		saveError = null;
 		fieldErrors = {};
 		const patch: UpdateProfileRequest = {
@@ -40,40 +44,39 @@
 			department: department.trim(),
 			status_message: statusMessage.trim()
 		};
-		try {
-			await profile.update(patch);
-			saved = true;
-		} catch (err) {
-			if (err instanceof ValidationError) {
-				fieldErrors = err.fields;
-			} else {
-				saveError = err instanceof Error ? err.message : 'Failed to save changes';
+		mutation.mutate(patch, {
+			onError: (err) => {
+				if (err instanceof ValidationError) {
+					fieldErrors = err.fields;
+				} else {
+					saveError = err instanceof Error ? err.message : 'Failed to save changes';
+				}
 			}
-		}
+		});
 	}
 
-	const isSaving = $derived(profile.status === 'saving');
+	const isSaving = $derived(mutation.isPending);
 	const dirty = $derived(
-		profile.current !== null &&
-			(designation.trim() !== profile.current.designation ||
-				department.trim() !== profile.current.department ||
-				statusMessage.trim() !== profile.current.status_message)
+		profileData !== null &&
+			(designation.trim() !== profileData.designation ||
+				department.trim() !== profileData.department ||
+				statusMessage.trim() !== profileData.status_message)
 	);
 </script>
 
-{#if profile.current}
+{#if profileData}
 	<form class="stack stack-relaxed" onsubmit={onSubmit} novalidate>
 		<!-- Read-only identity block -->
 		<section class="stack stack-tight">
-			<h2 class="h5">{displayName(profile.current)}</h2>
+			<h2 class="h5">{displayName(profileData)}</h2>
 			<dl class="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
 				<div>
 					<dt class="caption text-[var(--color-fg-muted)]">Email</dt>
-					<dd class="body-base text-[var(--color-fg)]">{profile.current.email}</dd>
+					<dd class="body-base text-[var(--color-fg)]">{profileData.email}</dd>
 				</div>
 				<div>
 					<dt class="caption text-[var(--color-fg-muted)]">Status</dt>
-					<dd class="body-base text-[var(--color-fg)] capitalize">{profile.current.status}</dd>
+					<dd class="body-base text-[var(--color-fg)] capitalize">{profileData.status}</dd>
 				</div>
 			</dl>
 			<p class="caption text-[var(--color-fg-subtle)]">
@@ -112,8 +115,6 @@
 
 		{#if saveError}
 			<Alert variant="danger">{saveError}</Alert>
-		{:else if saved}
-			<Alert variant="success">Profile updated.</Alert>
 		{/if}
 
 		<div class="cluster">

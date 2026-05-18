@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { Alert, Spinner } from '$ui';
-	import { profile } from '$features/auth/stores/profile.svelte';
-	import { sessions } from '$features/auth/stores/sessions.svelte';
+	import { session } from '$features/auth/stores/session.svelte';
+	import { myProfileQuery } from '$features/auth/queries';
 	import { displayName } from '$features/auth/view-models';
 	import { cn } from '$lib/utils/cn';
 
@@ -11,24 +11,14 @@
 	 * route nav) for /settings/account/* sub-pages. Mirrors the
 	 * /settings/tenant/* pattern.
 	 *
-	 * Load lifecycle: profile.load() + sessions.load() are called
-	 * once on this layout's first $effect run (idle-guarded). Layout
-	 * persists across tab navigation, so subsequent clicks reuse the
-	 * loaded snapshot.
+	 * TanStack Query handles fetch lifecycle — no manual load() call needed.
 	 */
 
 	let { children } = $props();
 
-	$effect(() => {
-		if (profile.status === 'idle') {
-			profile.load().catch(() => {
-				// Store transitions to 'error'; UI handles below.
-			});
-		}
-		if (sessions.status === 'idle') {
-			sessions.load().catch(() => {});
-		}
-	});
+	const membershipId = $derived(session.principal?.membershipId ?? '');
+	const profileQuery = $derived(myProfileQuery(membershipId));
+	const profileData = $derived(profileQuery.data ?? null);
 
 	const tabs: ReadonlyArray<{ href: string; label: string }> = [
 		{ href: '/settings/account/profile', label: 'Profile' },
@@ -48,10 +38,10 @@
 
 <div class="stack stack-relaxed">
 	<header class="stack stack-tight">
-		{#if profile.current}
-			<h1 class="h1">{displayName(profile.current)}</h1>
+		{#if profileData}
+			<h1 class="h1">{displayName(profileData)}</h1>
 			<p class="body-sm text-[var(--color-fg-muted)]">
-				{profile.current.email}
+				{profileData.email}
 			</p>
 		{:else}
 			<h1 class="h1">Account</h1>
@@ -82,15 +72,15 @@
 		</ul>
 	</nav>
 
-	{#if profile.status === 'idle' || profile.status === 'loading'}
+	{#if profileQuery.isPending}
 		<div class="flex justify-center py-16">
 			<Spinner size={32} />
 		</div>
-	{:else if profile.status === 'error'}
+	{:else if profileQuery.isError}
 		<Alert variant="danger" title="Could not load account settings">
 			Refresh the page or try again in a moment. If the problem persists, contact support.
 		</Alert>
-	{:else if profile.current}
+	{:else if profileData}
 		{@render children()}
 	{/if}
 </div>

@@ -1,44 +1,40 @@
 <script lang="ts">
 	import { Alert, Badge, Button, Card } from '$ui';
 	import { Trash2, LogOut, Icon } from '$icons';
-	import { sessions } from '$features/auth/stores/sessions.svelte';
+	import { session } from '$features/auth/stores/session.svelte';
+	import {
+		mySessionsQuery,
+		revokeSessionMutation,
+		revokeOtherSessionsMutation
+	} from '$features/auth/queries';
 	import { isCurrentSession, lastSeenLabel } from '$features/auth/view-models';
 
 	/**
 	 * SessionsList — one Card row per session family.
-	 * Current session is badged + cannot be revoked from this list
-	 * (revoke-all-others does the equivalent for the user). Server
-	 * also rejects deleting the active family at the gateway.
+	 * Current session is badged + cannot be revoked from this list.
+	 * TanStack Query drives fetch + optimistic updates.
 	 */
 
-	let revokeError = $state<string | null>(null);
-	let revokeAllError = $state<string | null>(null);
-	let revokeAllPending = $state(false);
+	const currentFamilyId = $derived(session.activeFamilyId ?? null);
+	const sessionsQuery = mySessionsQuery();
+	const revokeMutation = revokeSessionMutation();
+	const revokeOthersMutation = $derived(revokeOtherSessionsMutation(currentFamilyId));
+
+	const sessionList = $derived(sessionsQuery.data ?? []);
+
 	let revokingFamilyId = $state<string | null>(null);
 
 	async function onRevoke(familyId: string) {
-		revokeError = null;
 		revokingFamilyId = familyId;
-		try {
-			await sessions.revoke(familyId);
-		} catch (err) {
-			revokeError = err instanceof Error ? err.message : 'Failed to revoke session';
-		} finally {
-			revokingFamilyId = null;
-		}
+		revokeMutation.mutate(familyId, {
+			onSettled: () => {
+				revokingFamilyId = null;
+			}
+		});
 	}
 
 	async function onRevokeOthers() {
-		revokeAllError = null;
-		revokeAllPending = true;
-		try {
-			const count = await sessions.revokeOthers();
-			if (count === 0) revokeAllError = 'No other sessions to revoke.';
-		} catch (err) {
-			revokeAllError = err instanceof Error ? err.message : 'Failed to revoke other sessions';
-		} finally {
-			revokeAllPending = false;
-		}
+		revokeOthersMutation.mutate();
 	}
 </script>
 
@@ -53,21 +49,22 @@
 		<Button
 			variant="ghost"
 			onclick={onRevokeOthers}
-			loading={revokeAllPending}
-			disabled={revokeAllPending || sessions.list.length <= 1}
+			loading={revokeOthersMutation.isPending}
+			disabled={revokeOthersMutation.isPending || sessionList.length <= 1}
 		>
 			<Icon icon={LogOut} size="sm" /> Sign out other devices
 		</Button>
 	</header>
 
-	{#if revokeAllError}
-		<Alert variant="warning">{revokeAllError}</Alert>
-	{/if}
-	{#if revokeError}
-		<Alert variant="danger">{revokeError}</Alert>
+	{#if sessionsQuery.isError}
+		<Alert variant="danger"
+			>{sessionsQuery.error instanceof Error
+				? sessionsQuery.error.message
+				: 'Failed to load sessions'}</Alert
+		>
 	{/if}
 
-	{#if sessions.list.length === 0}
+	{#if sessionList.length === 0 && !sessionsQuery.isPending}
 		<Card.Root>
 			<Card.Content class="text-center">
 				<p class="body-base text-[var(--color-fg-muted)]">No active sessions.</p>
@@ -75,8 +72,8 @@
 		</Card.Root>
 	{:else}
 		<ul class="stack stack-tight" aria-label="Active sessions">
-			{#each sessions.list as sess (sess.family_id)}
-				{@const current = isCurrentSession(sess, sessions.activeFamilyId)}
+			{#each sessionList as sess (sess.family_id)}
+				{@const current = isCurrentSession(sess, currentFamilyId)}
 				<li>
 					<Card.Root>
 						<Card.Content class="flex items-center justify-between gap-4">

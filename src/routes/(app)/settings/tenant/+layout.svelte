@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { Alert, Spinner } from '$ui';
-	import { tenant } from '$features/tenant/stores/tenant.svelte';
+	import { session } from '$features/auth/stores/session.svelte';
+	import { tenantSelfQuery } from '$features/tenant/queries';
 	import { tenantDisplayName, tenantStatusBadge } from '$features/tenant/view-models';
 	import { cn } from '$lib/utils/cn';
 
@@ -21,22 +22,15 @@
 	 *     ~3 KB; Statutory does not — only the visited route bundle
 	 *     loads).
 	 *
-	 * Load lifecycle: tenant.load() is called once on the layout's
-	 * first $effect run (idle-guarded). Layout persists across tab
-	 * navigation, so subsequent tab clicks reuse the loaded snapshot.
+	 * TanStack Query handles fetch lifecycle — no manual load() call needed.
 	 */
 
 	let { children } = $props();
 
-	$effect(() => {
-		if (tenant.status === 'idle') {
-			tenant.load().catch(() => {
-				// Store transitions to 'error'; UI handles below.
-			});
-		}
-	});
-
-	const badge = $derived(tenant.current ? tenantStatusBadge(tenant.current.status) : null);
+	const tenantId = $derived(session.principal?.tenantId ?? '');
+	const tenantQuery = $derived(tenantSelfQuery(tenantId));
+	const tenantData = $derived(tenantQuery.data ?? null);
+	const badge = $derived(tenantData ? tenantStatusBadge(tenantData.status) : null);
 
 	const tabs: ReadonlyArray<{ href: string; label: string }> = [
 		{ href: '/settings/tenant/profile', label: 'Profile' },
@@ -57,9 +51,9 @@
 
 <div class="stack stack-relaxed">
 	<header class="stack stack-tight">
-		{#if tenant.current && badge}
+		{#if tenantData && badge}
 			<div class="cluster">
-				<h1 class="h1">{tenantDisplayName(tenant.current)}</h1>
+				<h1 class="h1">{tenantDisplayName(tenantData)}</h1>
 				<span
 					class={cn(
 						'label-small inline-flex items-center rounded-full px-2 py-0.5',
@@ -107,15 +101,15 @@
 		</ul>
 	</nav>
 
-	{#if tenant.status === 'idle' || tenant.status === 'loading'}
+	{#if tenantQuery.isPending}
 		<div class="flex justify-center py-16">
 			<Spinner size={32} />
 		</div>
-	{:else if tenant.status === 'error'}
+	{:else if tenantQuery.isError}
 		<Alert variant="danger" title="Could not load tenant settings">
 			Refresh the page or try again in a moment. If the problem persists, contact support.
 		</Alert>
-	{:else if tenant.current}
+	{:else if tenantData}
 		{@render children()}
 	{/if}
 </div>

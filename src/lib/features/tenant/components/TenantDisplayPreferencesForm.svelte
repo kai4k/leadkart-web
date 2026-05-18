@@ -1,25 +1,23 @@
 <script lang="ts">
-	import { isApiError } from '$api/client';
+	import { ValidationError } from '$api/errors';
 	import { Alert, Button } from '$ui';
 	import { Select, type SelectOption } from '$form';
 	import { updateTenantDisplayPreferencesSchema } from '../schemas';
-	import { tenant as tenantStore } from '../stores/tenant.svelte';
+	import { updateTenantDisplayPreferencesMutation } from '../queries';
 	import type { Tenant } from '../types';
 
 	/**
 	 * TenantDisplayPreferencesForm — locale + IANA timezone + date
 	 * format + ISO 4217 currency. Each field is a curated dropdown
-	 * via the native Select primitive; the leadkart-go aggregate
-	 * accepts arbitrary strings, so the v0.1 catalogue is a practical
-	 * subset suitable for IN-first launch. A search-combobox over the
-	 * full IANA / ISO lists comes when LeadKart expands beyond IN.
+	 * via the native Select primitive.
 	 */
 
 	interface Props {
 		tenant: Tenant;
+		tenantId: string;
 	}
 
-	let { tenant }: Props = $props();
+	let { tenant, tenantId }: Props = $props();
 
 	const localeOptions: ReadonlyArray<SelectOption> = [
 		{ value: 'en-IN', label: 'English (India)' },
@@ -56,9 +54,7 @@
 	let timeZone = $state('');
 	let dateFormat = $state('');
 	let currency = $state('');
-	let saving = $state(false);
 	let formError = $state<string | null>(null);
-	let success = $state(false);
 	let errorRegion: HTMLElement | undefined = $state();
 
 	$effect.pre(() => {
@@ -68,10 +64,11 @@
 		currency = tenant.currency ?? 'INR';
 	});
 
+	const mutation = $derived(updateTenantDisplayPreferencesMutation(tenantId));
+
 	async function onSubmit(e: SubmitEvent) {
 		e.preventDefault();
 		formError = null;
-		success = false;
 
 		const parsed = updateTenantDisplayPreferencesSchema.safeParse({
 			locale,
@@ -84,20 +81,20 @@
 			return;
 		}
 
-		saving = true;
-		try {
-			await tenantStore.updateDisplayPreferences(parsed.data);
-			success = true;
-		} catch (err) {
-			formError =
-				isApiError(err) && err.status === 422
-					? err.message || 'The values entered were rejected by the server.'
-					: 'Could not save changes. Please try again.';
-			queueMicrotask(() => errorRegion?.focus());
-		} finally {
-			saving = false;
-		}
+		mutation.mutate(parsed.data, {
+			onError: (err) => {
+				if (err instanceof ValidationError) {
+					formError = 'Some values were rejected by the server.';
+				} else {
+					formError =
+						err instanceof Error ? err.message : 'Could not save changes. Please try again.';
+				}
+				queueMicrotask(() => errorRegion?.focus());
+			}
+		});
 	}
+
+	const isSaving = $derived(mutation.isPending);
 </script>
 
 <form class="stack" onsubmit={onSubmit} novalidate>
@@ -112,11 +109,9 @@
 		<div bind:this={errorRegion} tabindex="-1">
 			<Alert variant="danger">{formError}</Alert>
 		</div>
-	{:else if success}
-		<Alert variant="success">Display preferences updated.</Alert>
 	{/if}
 
 	<div class="cluster justify-end">
-		<Button type="submit" loading={saving}>Save changes</Button>
+		<Button type="submit" loading={isSaving}>Save changes</Button>
 	</div>
 </form>

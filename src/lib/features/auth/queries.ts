@@ -2,19 +2,27 @@
  * Auth feature query hooks.
  *
  * myCapabilitiesQuery — server-driven capability discovery per ADR 0038 N1.
- * Calls GET /v1/auth/me/capabilities; Zod-parses at the boundary.
+ * myProfileQuery      — caller's own membership profile (GET /v1/users/:id).
+ * mySessionsQuery     — caller's active session families.
+ * updateMyProfileMutation, revokeSessionMutation, revokeOtherSessionsMutation.
  *
  * API note: @tanstack/svelte-query v6 uses Accessor<Options> — options
  * must be wrapped in a function `() => ({ ... })`. Results are Svelte 5
  * reactive state accessed directly (no `$` prefix needed).
  */
-import { createQuery } from '@tanstack/svelte-query';
+import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
+import { toast } from '$ui';
 import * as api from './api';
 import type { Capabilities } from './api';
+import type { UpdateProfileRequest, SessionDto } from './types';
 
 export { type Capabilities };
 
 export const capabilitiesKey = ['me', 'capabilities'] as const;
+const profileKey = (membershipId: string) => ['me', 'profile', membershipId] as const;
+const sessionsKey = ['me', 'sessions'] as const;
+
+// ── Capabilities ───────────────────────────────────────────────────
 
 /**
  * Returns a TanStack Query for the current user's capability set.
@@ -44,4 +52,101 @@ export function hasCapability(caps: Capabilities | undefined, permission: string
 	if (!caps) return false;
 	if (caps.is_super_user) return true;
 	return caps.permissions.includes(permission);
+}
+
+// ── Profile ────────────────────────────────────────────────────────
+
+/**
+ * Caller's own membership profile. membershipId comes from the session
+ * principal (injected by the layout or caller).
+ */
+export function myProfileQuery(membershipId: string) {
+	return createQuery(() => ({
+		queryKey: profileKey(membershipId),
+		queryFn: () => api.getMyProfile(membershipId),
+		enabled: !!membershipId,
+		staleTime: 2 * 60_000
+	}));
+}
+
+/** PATCH the caller's profile and invalidate the cached profile. */
+export function updateMyProfileMutation(membershipId: string) {
+	const qc = useQueryClient();
+	return createMutation(() => ({
+		mutationFn: (patch: UpdateProfileRequest) => api.updateMyProfile(membershipId, patch),
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: profileKey(membershipId) });
+			toast('success', 'Profile updated');
+		}
+	}));
+}
+
+// ── Sessions ───────────────────────────────────────────────────────
+
+/** Caller's active session families. */
+export function mySessionsQuery() {
+	return createQuery(() => ({
+		queryKey: sessionsKey,
+		queryFn: () => api.listSessions(),
+		staleTime: 60_000
+	}));
+}
+
+/** Revoke a single session family. Optimistic: removes from list immediately. */
+export function revokeSessionMutation() {
+	const qc = useQueryClient();
+	return createMutation(() => ({
+		mutationFn: (familyId: string) => api.revokeSession(familyId),
+		onMutate: async (familyId: string) => {
+			await qc.cancelQueries({ queryKey: sessionsKey });
+			const previous = qc.getQueryData<SessionDto[]>(sessionsKey);
+			if (previous) {
+				qc.setQueryData<SessionDto[]>(
+					sessionsKey,
+					previous.filter((s) => s.family_id !== familyId)
+				);
+			}
+			return { previous };
+		},
+		onError: (_err: unknown, _vars: string, ctx: { previous?: SessionDto[] } | undefined) => {
+			if (ctx?.previous) qc.setQueryData<SessionDto[]>(sessionsKey, ctx.previous);
+		},
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: sessionsKey });
+			toast('success', 'Session revoked');
+		}
+	}));
+}
+
+/** Revoke all other session families. Returns the count of revoked sessions. */
+export function revokeOtherSessionsMutation(currentFamilyId: string | null) {
+	const qc = useQueryClient();
+	return createMutation(() => ({
+		mutationFn: () => api.revokeOtherSessions('user_revoked_others'),
+		onMutate: async () => {
+			await qc.cancelQueries({ queryKey: sessionsKey });
+			const previous = qc.getQueryData<SessionDto[]>(sessionsKey);
+			if (previous && currentFamilyId) {
+				qc.setQueryData<SessionDto[]>(
+					sessionsKey,
+					previous.filter((s) => s.family_id === currentFamilyId)
+				);
+			}
+			return { previous };
+		},
+		onError: (_err: unknown, _vars: void, ctx: { previous?: SessionDto[] } | undefined) => {
+			if (ctx?.previous) qc.setQueryData<SessionDto[]>(sessionsKey, ctx.previous);
+		},
+		onSuccess: ({ revoked_count }) => {
+			qc.invalidateQueries({ queryKey: sessionsKey });
+			if (revoked_count > 0) {
+				toast(
+					'success',
+					`Signed out ${revoked_count} other device${revoked_count === 1 ? '' : 's'}`
+				);
+			} else {
+				toast('success', 'No other sessions to revoke');
+			}
+		}
+	}));
 }
