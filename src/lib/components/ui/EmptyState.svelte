@@ -1,10 +1,11 @@
 <script lang="ts">
-	import type { Snippet, Component } from 'svelte';
+	import type { Snippet } from 'svelte';
 	import { Icon } from '$icons';
 	import { cn } from '$lib/utils/cn';
 
 	type Props = {
-		icon?: Component;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		icon?: any;
 		title: string;
 		description?: string;
 		class?: string;
