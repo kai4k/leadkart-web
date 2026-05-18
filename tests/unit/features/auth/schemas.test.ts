@@ -81,8 +81,17 @@ describe('listSessionsResponseSchema', () => {
 describe('updateProfileRequestSchema', () => {
 	it('rejects extra fields (first_name not editable here)', () => {
 		const raw = { designation: 'X', department: 'Y', status_message: '', first_name: 'illegal' };
+		expect(() => updateProfileRequestSchema.parse(raw)).toThrow();
+	});
+
+	it('parses a well-formed request', () => {
+		const raw = {
+			designation: 'Engineer',
+			department: 'Platform',
+			status_message: 'Out for lunch'
+		};
 		const parsed = updateProfileRequestSchema.parse(raw);
-		expect('first_name' in parsed).toBe(false);
+		expect(parsed).toEqual(raw);
 	});
 });
 

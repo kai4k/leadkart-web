@@ -98,11 +98,13 @@ export const listSessionsResponseSchema = z.object({
  * email) are caught at the gateway boundary before reaching the server.
  * Only the three editable fields are accepted.
  */
-export const updateProfileRequestSchema = z.object({
-	designation: z.string().max(120),
-	department: z.string().max(120),
-	status_message: z.string().max(280)
-});
+export const updateProfileRequestSchema = z
+	.object({
+		designation: z.string().max(120),
+		department: z.string().max(120),
+		status_message: z.string().max(280)
+	})
+	.strict();
 
 export type UserDto = z.output<typeof userDtoSchema>;
 export type SessionDto = z.output<typeof sessionDtoSchema>;
