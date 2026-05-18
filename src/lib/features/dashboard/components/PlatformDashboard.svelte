@@ -9,25 +9,25 @@
 		ShoppingBag,
 		UserCog
 	} from 'lucide-svelte';
-	import { Alert, Card } from '$ui';
+	import { Alert, Card, Spinner } from '$ui';
 	import { session } from '$features/auth/stores/session.svelte';
 	import { tierOf } from '$features/auth/tier';
+	import { getPlatformStats } from '$lib/features/operator/dashboard/api';
+	import type { PlatformStatsResponse } from '$lib/features/operator/dashboard/schemas';
 
 	/**
-	 * Platform-tier dashboard skeleton.
+	 * Platform-tier dashboard.
 	 *
 	 * Audience: SuperAdmin + PlatformManager + LeadAgent (LeadKart
-	 * internal staff). Per docs/reference/dotnet-BRD.md §3.1, they
-	 * source/verify/sell pharma leads + manage tenants.
+	 * internal staff). Per docs/reference/dotnet-BRD.md §3.1.
 	 *
-	 * Real data sources (when wired):
-	 *   GET /api/v1/platform/stats           — top-line counts
-	 *   GET /api/v1/platform/tenants         — recent signups + signup feed
-	 *   (Phase 2) GET /api/v1/platform/leads/unverified  — verification queue size
-	 *   (Phase 2) GET /api/v1/platform/leads/marketplace — inventory depth
+	 * Real data sources wired in this commit:
+	 *   GET /api/v1/platform/stats  — tenants_total/active/suspended,
+	 *                                  persons_total, memberships_active
 	 *
-	 * Today's placeholder tiles show em-dash. As Phase 2 ships endpoints,
-	 * each tile gets its own gateway call + view model.
+	 * Future Phase 2 tiles (verification queue, marketplace inventory,
+	 * active impersonation sessions) remain as placeholders until the
+	 * backend endpoints land.
 	 */
 
 	const principal = $derived(session.principal);
@@ -35,17 +35,80 @@
 
 	type TileAccent = 'brand' | 'success' | 'warning' | 'danger';
 
-	const tiles: Array<{
+	// Stats loaded from the API.
+	let stats = $state<PlatformStatsResponse | null>(null);
+	let statsError = $state<string | null>(null);
+	let statsLoading = $state(true);
+
+	$effect(() => {
+		statsLoading = true;
+		statsError = null;
+		getPlatformStats()
+			.then((s) => {
+				stats = s;
+			})
+			.catch((e) => {
+				statsError = e instanceof Error ? e.message : 'Failed to load platform stats';
+			})
+			.finally(() => {
+				statsLoading = false;
+			});
+	});
+
+	// Tiles backed by real stats — show actual number or '—' while loading.
+	type StatTile = {
+		label: string;
+		hint: string;
+		icon: typeof Building2;
+		accent: TileAccent;
+		value: () => string | number;
+	};
+
+	const statTiles: StatTile[] = [
+		{
+			label: 'Tenants total',
+			hint: 'All-time signups',
+			icon: Building2,
+			accent: 'brand',
+			value: () => (stats ? stats.tenants_total : '—')
+		},
+		{
+			label: 'Tenants active',
+			hint: 'status = active',
+			icon: Activity,
+			accent: 'success',
+			value: () => (stats ? stats.tenants_active : '—')
+		},
+		{
+			label: 'Tenants suspended',
+			hint: 'Requires operator action',
+			icon: Ban,
+			accent: 'warning',
+			value: () => (stats ? stats.tenants_suspended : '—')
+		},
+		{
+			label: 'Persons total',
+			hint: 'Across all tenants',
+			icon: Users,
+			accent: 'brand',
+			value: () => (stats ? stats.persons_total : '—')
+		},
+		{
+			label: 'Active memberships',
+			hint: 'Non-deactivated',
+			icon: UserCheck,
+			accent: 'success',
+			value: () => (stats ? stats.memberships_active : '—')
+		}
+	];
+
+	// Phase 2 placeholder tiles (no endpoint yet).
+	const placeholderTiles: Array<{
 		label: string;
 		hint: string;
 		icon: typeof Building2;
 		accent: TileAccent;
 	}> = [
-		{ label: 'Tenants total', hint: 'All-time signups', icon: Building2, accent: 'brand' },
-		{ label: 'Tenants active', hint: 'status = active', icon: Activity, accent: 'success' },
-		{ label: 'Tenants suspended', hint: 'Requires operator action', icon: Ban, accent: 'warning' },
-		{ label: 'Persons total', hint: 'Across all tenants', icon: Users, accent: 'brand' },
-		{ label: 'Active memberships', hint: 'Non-deactivated', icon: UserCheck, accent: 'success' },
 		{
 			label: 'Lead verification queue',
 			hint: 'Unverified contacts pending review',
@@ -90,8 +153,34 @@
 		</p>
 	</header>
 
+	{#if statsError}
+		<Alert variant="danger" title="Stats unavailable">{statsError}</Alert>
+	{/if}
+
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-		{#each tiles as tile (tile.label)}
+		{#each statTiles as tile (tile.label)}
+			{@const Icon = tile.icon}
+			<Card.Root surface="glass" class="lk-dash-tile glass-hover">
+				<Card.Header>
+					<div class="cluster" style="--cluster-gap: var(--spacing-3);">
+						<span class={`lk-dash-tile-icon lk-dash-tile-icon--${tile.accent}`} aria-hidden="true">
+							<Icon size={16} />
+						</span>
+						<Card.Description>{tile.label}</Card.Description>
+					</div>
+				</Card.Header>
+				<Card.Content>
+					{#if statsLoading}
+						<Spinner size="sm" />
+					{:else}
+						<p class="display-2 text-[var(--color-fg)] tabular-nums">{tile.value()}</p>
+					{/if}
+					<p class="caption mt-1 text-[var(--color-fg-subtle)]">{tile.hint}</p>
+				</Card.Content>
+			</Card.Root>
+		{/each}
+
+		{#each placeholderTiles as tile (tile.label)}
 			{@const Icon = tile.icon}
 			<Card.Root surface="glass" class="lk-dash-tile glass-hover">
 				<Card.Header>
@@ -109,12 +198,6 @@
 			</Card.Root>
 		{/each}
 	</div>
-
-	<Alert variant="info" title="Skeleton — real data wires in Phase 2">
-		The Platform module (lead marketplace + verification calls + credits) ships in leadkart-go Phase
-		2 per CLAUDE.md "Up next". This dashboard's tiles get real counts as each endpoint lands. See
-		docs/reference/dotnet-BRD.md §6.2 for the full Platform module spec.
-	</Alert>
 </div>
 
 <style>
