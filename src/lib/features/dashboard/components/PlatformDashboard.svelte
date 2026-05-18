@@ -10,8 +10,7 @@
 		UserCog
 	} from 'lucide-svelte';
 	import { Alert, Card, Spinner } from '$ui';
-	import { session } from '$features/auth/stores/session.svelte';
-	import { tierOf } from '$features/auth/tier';
+	import { myCapabilitiesQuery } from '$features/auth/queries';
 	import { platformStatsQuery } from '$lib/features/operator/dashboard/queries';
 
 	/**
@@ -29,8 +28,8 @@
 	 * backend endpoints land.
 	 */
 
-	const principal = $derived(session.principal);
-	const isSuper = $derived(tierOf(principal) === 'platform-super');
+	const capsQuery = myCapabilitiesQuery();
+	const isSuper = $derived(capsQuery.data?.tier === 'platform-super');
 
 	type TileAccent = 'brand' | 'success' | 'warning' | 'danger';
 

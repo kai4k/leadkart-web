@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { navForTier } from '$lib/config/nav';
-	import { hasPermission, tierOf } from '$features/auth/tier';
-	import { session } from '$features/auth/stores/session.svelte';
+	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 	import { tenantBySlugQuery } from '$features/operator/tenants/queries';
 	import { Building2, Shield, Users, Settings, Activity, UserCog, Icon } from '$icons';
 
@@ -19,20 +18,23 @@
 		return path.startsWith(href + '/');
 	}
 
+	const capsQuery = myCapabilitiesQuery();
+
 	/**
 	 * Tier-scoped nav catalogue + per-item permission filter.
-	 * SuperUser short-circuits everything via hasPermission. Sections
-	 * with no items left after filtering disappear from the rendered
-	 * tree.
+	 * Capabilities come from the server via myCapabilitiesQuery.
+	 * is_super_user short-circuits all permission checks.
+	 * Sections with no items left after filtering disappear.
 	 */
 	const sections = $derived.by(() => {
-		const principal = session.principal;
-		const catalogue = navForTier(tierOf(principal));
+		const caps = capsQuery.data;
+		const tier = caps?.tier ?? 'unknown';
+		const catalogue = navForTier(tier);
 		return catalogue
 			.map((section) => ({
 				...section,
 				items: section.items.filter(
-					(item) => item.requires === null || hasPermission(principal, item.requires)
+					(item) => item.requires === null || hasCapability(caps, item.requires)
 				)
 			}))
 			.filter((section) => section.items.length > 0);

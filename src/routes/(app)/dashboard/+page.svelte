@@ -1,28 +1,20 @@
 <script lang="ts">
-	import { session } from '$features/auth/stores/session.svelte';
-	import { tierOf } from '$features/auth/tier';
+	import { myCapabilitiesQuery } from '$features/auth/queries';
 	import PlatformDashboard from '$features/dashboard/components/PlatformDashboard.svelte';
 	import TenantAdminDashboard from '$features/dashboard/components/TenantAdminDashboard.svelte';
 	import TenantUserDashboard from '$features/dashboard/components/TenantUserDashboard.svelte';
 
 	/**
-	 * /dashboard — router that branches into the appropriate dashboard
-	 * variant for the signed-in principal's tier.
+	 * /dashboard — routes to the appropriate dashboard variant based on
+	 * capabilities from the server (ADR 0038 N1).
 	 *
 	 *   platform-super, platform-staff → PlatformDashboard
 	 *   tenant-admin                   → TenantAdminDashboard
-	 *   tenant-user (and unknown,
-	 *     which shouldn't reach here   → TenantUserDashboard
-	 *     because (app)/+layout.ts
-	 *     gates on isAuthenticated)
-	 *
-	 * Each variant is a self-contained component under
-	 * `lib/features/dashboard/components/`. As Phase 2-5 modules ship,
-	 * tiles inside each variant wire to real endpoints; the router
-	 * itself does not change.
+	 *   tenant-user / unknown          → TenantUserDashboard
 	 */
 
-	const tier = $derived(tierOf(session.principal));
+	const capsQuery = myCapabilitiesQuery();
+	const tier = $derived(capsQuery.data?.tier ?? 'unknown');
 </script>
 
 <svelte:head>
