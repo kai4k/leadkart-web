@@ -96,8 +96,8 @@ export const PLATFORM_NAV: NavSection[] = [
 		title: 'Account',
 		items: [
 			{
-				href: '/settings/account/security',
-				label: 'Account & Security',
+				href: '/settings/account',
+				label: 'Account',
 				icon: ShieldCheck,
 				requires: null
 			}
@@ -151,8 +151,8 @@ export const TENANT_ADMIN_NAV: NavSection[] = [
 		title: 'Account',
 		items: [
 			{
-				href: '/settings/account/security',
-				label: 'Account & Security',
+				href: '/settings/account',
+				label: 'Account',
 				icon: ShieldCheck,
 				requires: null
 			}
@@ -180,8 +180,8 @@ export const TENANT_USER_NAV: NavSection[] = [
 		title: 'Account',
 		items: [
 			{
-				href: '/settings/account/security',
-				label: 'Account & Security',
+				href: '/settings/account',
+				label: 'Account',
 				icon: ShieldCheck,
 				requires: null
 			}
