@@ -45,7 +45,7 @@
 </script>
 
 <script lang="ts" generics="T">
-	import { Spinner, EmptyState } from '$ui';
+	import { Skeleton, EmptyState } from '$ui';
 	import { ChevronUp, ChevronDown, ChevronsUpDown, Icon } from '$icons';
 	import { cn } from '$lib/utils/cn';
 	import Alert from '../Alert.svelte';
@@ -93,8 +93,37 @@
 </script>
 
 {#if state === 'loading'}
-	<div class="flex justify-center py-12">
-		<Spinner size={32} />
+	<div class={cn('overflow-x-auto', className)}>
+		<table class="w-full text-left">
+			<thead>
+				<tr class="border-border border-b">
+					{#each columns as col (col.id)}
+						<th
+							class={cn(
+								'text-fg-muted px-3 py-3 text-xs font-medium tracking-wide uppercase',
+								getHideBreakpoint(col),
+								col.class
+							)}
+						>
+							{col.header}
+						</th>
+					{/each}
+					{#if rowActions}<th class="w-12"></th>{/if}
+				</tr>
+			</thead>
+			<tbody>
+				{#each [0, 1, 2, 3, 4, 5] as i (i)}
+					<tr class="border-border border-b">
+						{#each columns as col (col.id)}
+							<td class={cn('px-3 py-3', getHideBreakpoint(col), col.class)}>
+								<Skeleton class="h-4 w-3/4" />
+							</td>
+						{/each}
+						{#if rowActions}<td class="w-12"></td>{/if}
+					</tr>
+				{/each}
+			</tbody>
+		</table>
 	</div>
 {:else if state === 'error'}
 	<Alert variant="danger" title="Couldn't load">{error ?? 'Unknown error'}</Alert>
