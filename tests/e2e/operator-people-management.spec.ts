@@ -19,7 +19,7 @@ import { fakeLoginResponse, TEST_TENANT_ID, TEST_MEMBERSHIP_ID } from './helpers
  *
  * Principal carries `platform.users.view` + `platform.users.manage`
  * + `identity.users.anonymise` + `is_platform: true` so the
- * /operator/people load guard passes.
+ * /operator/persons load guard passes.
  *
  * a11y scope is restricted to <main> — the AppShell Sidebar has a
  * pre-existing --color-fg-subtle contrast issue on section titles
@@ -118,7 +118,7 @@ async function signInAsPlatformOperator(page: Page): Promise<void> {
 test.describe('Operator people management', () => {
 	test('people list: info banner renders', async ({ page }) => {
 		await signInAsPlatformOperator(page);
-		await page.goto('/operator/people');
+		await page.goto('/operator/persons');
 
 		// Page heading is present
 		await expect(page.getByRole('heading', { name: /platform users/i })).toBeVisible();
@@ -133,7 +133,7 @@ test.describe('Operator people management', () => {
 
 	test('people list: a11y serious/critical clean', async ({ page }) => {
 		await signInAsPlatformOperator(page);
-		await page.goto('/operator/people');
+		await page.goto('/operator/persons');
 
 		// Wait for the info banner to confirm load completed
 		await expect(page.getByText(/person listing endpoint pending on the backend/i)).toBeVisible();
