@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ConfirmDialog, Alert } from '$ui';
-	import { operatorPeople } from '$features/operator/people/stores/operator-people.svelte';
+	import { anonymisePersonMutation } from '$features/operator/people/queries';
 	import type { PersonDto } from '$features/operator/people/types';
 
 	type Props = { open: boolean; person: PersonDto | null; onOpenChange: (open: boolean) => void };
@@ -9,7 +9,9 @@
 	let typedEmail = $state('');
 	let reason = $state('');
 	let error = $state<string | null>(null);
-	const isPending = $derived(operatorPeople.status === 'mutating');
+
+	const mutation = anonymisePersonMutation();
+	const isPending = $derived(mutation.isPending);
 	const canConfirm = $derived(
 		person !== null && typedEmail === person.email && reason.trim().length > 0
 	);
@@ -17,14 +19,17 @@
 	async function onConfirm() {
 		if (!person || !canConfirm) return;
 		error = null;
-		try {
-			await operatorPeople.anonymise(person.id, reason.trim());
-			typedEmail = '';
-			reason = '';
-			onOpenChange(false);
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Anonymisation failed';
-		}
+		mutation.mutate(
+			{ id: person.id, reason: reason.trim() },
+			{
+				onSuccess: () => {
+					typedEmail = '';
+					reason = '';
+					onOpenChange(false);
+				},
+				onError: (err) => (error = err instanceof Error ? err.message : 'Anonymisation failed')
+			}
+		);
 	}
 </script>
 

@@ -1,19 +1,14 @@
 <script lang="ts">
 	import PersonDetail from '$features/operator/people/components/PersonDetail.svelte';
-	import { operatorPeople } from '$features/operator/people/stores/operator-people.svelte';
+	import { personDetailQuery } from '$features/operator/people/queries';
 
 	let { data } = $props();
 
-	$effect(() => {
-		if (data.personId) {
-			operatorPeople.loadDetail(data.personId).catch(() => {});
-		}
-	});
+	const personId = $derived(data.personId);
+	const query = $derived(personDetailQuery(personId));
+	const title = $derived(query.data?.email ?? 'Person');
 </script>
 
-<svelte:head
-	><title>{operatorPeople.current ? operatorPeople.current.email : 'Person'} · LeadKart</title
-	></svelte:head
->
+<svelte:head><title>{title} · LeadKart</title></svelte:head>
 
-<PersonDetail />
+<PersonDetail {personId} />

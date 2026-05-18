@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Drawer, Button, Alert } from '$ui';
 	import { TextField } from '$lib/components/form';
-	import { roles } from '$features/roles/stores/roles.svelte';
+	import { createRoleMutation } from '$features/roles/queries';
 
 	type Props = { open: boolean; onOpenChange: (open: boolean) => void };
 	let { open = $bindable(false), onOpenChange }: Props = $props();
@@ -10,20 +10,27 @@
 	let hierarchyLevel = $state(5);
 	let error = $state<string | null>(null);
 
+	const mutation = createRoleMutation();
+
 	async function onSubmit(e: SubmitEvent) {
 		e.preventDefault();
 		error = null;
-		try {
-			await roles.create({ name: name.trim(), hierarchy_level: hierarchyLevel });
-			name = '';
-			hierarchyLevel = 5;
-			onOpenChange(false);
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to create role';
-		}
+		mutation.mutate(
+			{ name: name.trim(), hierarchy_level: hierarchyLevel },
+			{
+				onSuccess: () => {
+					name = '';
+					hierarchyLevel = 5;
+					onOpenChange(false);
+				},
+				onError: (err) => {
+					error = err instanceof Error ? err.message : 'Failed to create role';
+				}
+			}
+		);
 	}
 
-	const isPending = $derived(roles.status === 'mutating');
+	const isPending = $derived(mutation.isPending);
 </script>
 
 <Drawer.Root bind:open {onOpenChange}>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ConfirmDialog, Alert } from '$ui';
-	import { roles } from '$features/roles/stores/roles.svelte';
+	import { deleteRoleMutation } from '$features/roles/queries';
 	import type { RoleDto } from '$features/roles/types';
 
 	type Props = { open: boolean; role: RoleDto | null; onOpenChange: (open: boolean) => void };
@@ -8,19 +8,23 @@
 
 	let confirmName = $state('');
 	let error = $state<string | null>(null);
-	const isPending = $derived(roles.status === 'mutating');
+
+	const mutation = deleteRoleMutation();
+	const isPending = $derived(mutation.isPending);
 	const canConfirm = $derived(role !== null && confirmName === role.name);
 
 	async function onConfirm() {
 		if (!role || !canConfirm) return;
 		error = null;
-		try {
-			await roles.delete(role.id);
-			confirmName = '';
-			onOpenChange(false);
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to delete role';
-		}
+		mutation.mutate(role.id, {
+			onSuccess: () => {
+				confirmName = '';
+				onOpenChange(false);
+			},
+			onError: (err) => {
+				error = err instanceof Error ? err.message : 'Failed to delete role';
+			}
+		});
 	}
 </script>
 

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Alert, Badge, Button, Card, EmptyState, Pagination, Spinner, Dropdown } from '$ui';
 	import { Plus, Shield, MoreVertical, Trash2, Edit, Icon } from '$icons';
-	import { roles } from '$features/roles/stores/roles.svelte';
+	import { rolesListQuery } from '$features/roles/queries';
 	import { usersListQuery } from '$features/users/queries';
 	import type { RoleDto } from '$features/roles/types';
 	import { roleBadgeVariant, isProtectedRole, roleMemberCount } from '$features/roles/view-models';
@@ -14,12 +14,14 @@
 
 	let page = $state(1);
 	const pageSize = 10;
-	const pageCount = $derived(Math.max(1, Math.ceil(roles.list.length / pageSize)));
-	const paged = $derived(roles.list.slice((page - 1) * pageSize, page * pageSize));
 
-	// Users list query — only to derive member counts per role.
+	const rolesQuery = rolesListQuery();
 	const usersQuery = usersListQuery();
+
+	const roleList = $derived(rolesQuery.data?.roles ?? []);
 	const userList = $derived(usersQuery.data?.users ?? []);
+	const pageCount = $derived(Math.max(1, Math.ceil(roleList.length / pageSize)));
+	const paged = $derived(roleList.slice((page - 1) * pageSize, page * pageSize));
 
 	function onDelete(role: RoleDto) {
 		targetRole = role;
@@ -32,7 +34,7 @@
 		<div class="stack stack-tight">
 			<h1 class="h1">Roles</h1>
 			<p class="caption text-[var(--color-fg-muted)]">
-				{roles.list.length} role{roles.list.length === 1 ? '' : 's'}
+				{roleList.length} role{roleList.length === 1 ? '' : 's'}
 			</p>
 		</div>
 		<Button onclick={() => (createOpen = true)}>
@@ -40,11 +42,11 @@
 		</Button>
 	</header>
 
-	{#if roles.status === 'loading'}
+	{#if rolesQuery.isPending}
 		<div class="flex justify-center py-16"><Spinner size={32} /></div>
-	{:else if roles.status === 'error' && roles.error}
-		<Alert variant="danger" title="Couldn't load roles">{roles.error}</Alert>
-	{:else if roles.list.length === 0}
+	{:else if rolesQuery.isError}
+		<Alert variant="danger" title="Couldn't load roles">{rolesQuery.error?.message}</Alert>
+	{:else if roleList.length === 0}
 		<EmptyState
 			icon={Shield}
 			title="No roles yet"

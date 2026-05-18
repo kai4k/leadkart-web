@@ -2,7 +2,11 @@
 	import { Alert, Badge, Button, Card, Spinner } from '$ui';
 	import { TextField } from '$lib/components/form';
 	import PermissionTree from '$features/roles/components/PermissionTree.svelte';
-	import { roles } from '$features/roles/stores/roles.svelte';
+	import {
+		roleDetailQuery,
+		updateRoleMutation,
+		replaceRolePermissionsMutation
+	} from '$features/roles/queries';
 	import { roleBadgeVariant, isProtectedRole } from '$features/roles/view-models';
 	import { hasPermission } from '$features/auth/tier';
 	import { session } from '$features/auth/stores/session.svelte';
@@ -15,11 +19,17 @@
 	let error = $state<string | null>(null);
 	let saved = $state(false);
 
-	const role = $derived(roles.list.find((r) => r.id === data.roleId) ?? null);
+	const roleId = $derived(data.roleId);
+	const query = $derived(roleDetailQuery(roleId));
+	const role = $derived(query.data ?? null);
 	const protectedRole = $derived(role ? isProtectedRole(role) : false);
 	const canUpdate = $derived(
 		!protectedRole && hasPermission(session.principal, 'identity.roles.update')
 	);
+
+	const updateMutation = $derived(updateRoleMutation());
+	const replacePermsMutation = $derived(replaceRolePermissionsMutation());
+	const isMutating = $derived(updateMutation.isPending || replacePermsMutation.isPending);
 
 	$effect(() => {
 		if (role) {
@@ -29,44 +39,40 @@
 		}
 	});
 
-	$effect(() => {
-		if (roles.status === 'idle') {
-			roles.load().catch(() => {});
-		}
-	});
-
-	const isMutating = $derived(roles.status === 'mutating');
 	const metaDirty = $derived(
 		role !== null && (name !== role.name || hierarchyLevel !== role.hierarchy_level)
 	);
 	const permsDirty = $derived(
 		role !== null &&
 			(selectedPerms.length !== role.permissions.length ||
-				selectedPerms.some((p) => !role.permissions.includes(p)))
+				selectedPerms.some((p) => !role!.permissions.includes(p)))
 	);
 
 	async function saveMeta() {
 		if (!role || !canUpdate) return;
 		error = null;
 		saved = false;
-		try {
-			await roles.update(role.id, { name: name.trim(), hierarchy_level: hierarchyLevel });
-			saved = true;
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to save';
-		}
+		updateMutation.mutate(
+			{ id: role.id, req: { name: name.trim(), hierarchy_level: hierarchyLevel } },
+			{
+				onSuccess: () => (saved = true),
+				onError: (err) => (error = err instanceof Error ? err.message : 'Failed to save')
+			}
+		);
 	}
 
 	async function savePerms() {
 		if (!role || !canUpdate) return;
 		error = null;
 		saved = false;
-		try {
-			await roles.setPermissions(role.id, selectedPerms);
-			saved = true;
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to save permissions';
-		}
+		replacePermsMutation.mutate(
+			{ id: role.id, permissions: selectedPerms },
+			{
+				onSuccess: () => (saved = true),
+				onError: (err) =>
+					(error = err instanceof Error ? err.message : 'Failed to save permissions')
+			}
+		);
 	}
 </script>
 
@@ -80,9 +86,9 @@
 		class="caption text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]">← All roles</a
 	>
 
-	{#if roles.status === 'loading'}
+	{#if query.isPending}
 		<div class="flex justify-center py-16"><Spinner size={32} /></div>
-	{:else if !role}
+	{:else if query.isError || !role}
 		<Alert variant="warning" title="Role not found"
 			>This role doesn't exist or you don't have access.</Alert
 		>

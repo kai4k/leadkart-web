@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ConfirmDialog, Alert } from '$ui';
-	import { operatorPeople } from '$features/operator/people/stores/operator-people.svelte';
+	import { globalSuspendMutation } from '$features/operator/people/queries';
 	import type { PersonDto } from '$features/operator/people/types';
 
 	type Props = { open: boolean; person: PersonDto | null; onOpenChange: (open: boolean) => void };
@@ -8,18 +8,23 @@
 
 	let reason = $state('');
 	let error = $state<string | null>(null);
-	const isPending = $derived(operatorPeople.status === 'mutating');
+
+	const mutation = globalSuspendMutation();
+	const isPending = $derived(mutation.isPending);
 
 	async function onConfirm() {
 		if (!person) return;
 		error = null;
-		try {
-			await operatorPeople.suspend(person.id, reason.trim());
-			reason = '';
-			onOpenChange(false);
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to suspend';
-		}
+		mutation.mutate(
+			{ id: person.id, reason: reason.trim() },
+			{
+				onSuccess: () => {
+					reason = '';
+					onOpenChange(false);
+				},
+				onError: (err) => (error = err instanceof Error ? err.message : 'Failed to suspend')
+			}
+		);
 	}
 </script>
 

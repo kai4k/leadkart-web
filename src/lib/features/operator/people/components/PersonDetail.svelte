@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { Alert, Avatar, Badge, Button, Card, Spinner } from '$ui';
 	import { Pause, Play, UserMinus, Icon } from '$icons';
-	import { operatorPeople } from '$features/operator/people/stores/operator-people.svelte';
+	import {
+		personDetailQuery,
+		personMembershipsQuery,
+		liftGlobalSuspensionMutation
+	} from '$features/operator/people/queries';
 	import {
 		personDisplayName,
 		personLifecycleBadge,
@@ -15,13 +19,28 @@
 	import GlobalSuspendDialog from './GlobalSuspendDialog.svelte';
 	import AnonymiseDialog from './AnonymiseDialog.svelte';
 
+	type Props = { personId: string };
+	let { personId }: Props = $props();
+
 	let suspendOpen = $state(false);
 	let anonymiseOpen = $state(false);
 	let target = $state<PersonDto | null>(null);
 
+	const query = $derived(personDetailQuery(personId));
+	const membershipsQuery = $derived(personMembershipsQuery(personId));
+	const liftMutation = liftGlobalSuspensionMutation();
+
+	const p = $derived(query.data ?? null);
+	const memberships = $derived(membershipsQuery.data?.memberships ?? []);
+	const isLoading = $derived(query.isPending);
+	const isError = $derived(query.isError);
+	const errorMsg = $derived(
+		query.error instanceof Error ? query.error.message : 'Failed to load person'
+	);
+	const isPending = $derived(liftMutation.isPending);
+
 	const canManage = $derived(hasPermission(session.principal, 'platform.users.manage'));
 	const canAnonymiseOp = $derived(hasPermission(session.principal, 'identity.users.anonymise'));
-	const isPending = $derived(operatorPeople.status === 'mutating');
 
 	function initials(name: string): string {
 		const parts = name.trim().split(/\s+/);
@@ -29,25 +48,20 @@
 		return name.slice(0, 2).toUpperCase();
 	}
 
-	async function liftSuspension(personId: string) {
-		try {
-			await operatorPeople.liftSuspension(personId);
-		} catch {
-			/* error surfaced via store */
-		}
+	function liftSuspension(id: string) {
+		liftMutation.mutate(id);
 	}
 </script>
 
-{#if operatorPeople.status === 'loading'}
+{#if isLoading}
 	<div class="flex justify-center py-16"><Spinner size={32} /></div>
-{:else if operatorPeople.status === 'error' && operatorPeople.error}
-	<Alert variant="danger" title="Load failed">{operatorPeople.error}</Alert>
-{:else if !operatorPeople.current}
+{:else if isError}
+	<Alert variant="danger" title="Load failed">{errorMsg}</Alert>
+{:else if !p}
 	<Alert variant="warning" title="Person not found"
 		>No person with that ID, or you don't have access.</Alert
 	>
 {:else}
-	{@const p = operatorPeople.current}
 	{@const badge = personLifecycleBadge(p)}
 	{@const displayName = personDisplayName(p)}
 
@@ -91,7 +105,9 @@
 				<Card.Description>Cross-tenant membership records for this person.</Card.Description>
 			</Card.Header>
 			<Card.Content>
-				{#if operatorPeople.memberships.length === 0}
+				{#if membershipsQuery.isPending}
+					<div class="flex justify-center py-4"><Spinner size={24} /></div>
+				{:else if memberships.length === 0}
 					<p class="body-base text-[var(--color-fg-muted)]">No memberships found.</p>
 				{:else}
 					<div class="overflow-x-auto">
@@ -107,7 +123,7 @@
 								</tr>
 							</thead>
 							<tbody>
-								{#each operatorPeople.memberships as m (m.membership_id)}
+								{#each memberships as m (m.membership_id)}
 									<tr class="border-b border-[var(--color-border-subtle)] last:border-0">
 										<td class="py-2 pr-4">
 											<code class="caption">{m.tenant_id}</code>
