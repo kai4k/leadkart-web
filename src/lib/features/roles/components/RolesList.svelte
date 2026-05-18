@@ -2,7 +2,8 @@
 	import { page as pageStore } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
-	import { Alert, Badge, Button, Card, EmptyState, Pagination, Spinner, Dropdown } from '$ui';
+	import { Badge, Button, DataTable, Dropdown, EmptyState, Pagination } from '$ui';
+	import type { DataTableColumn } from '$ui';
 	import { Plus, Shield, MoreVertical, Trash2, Edit, Icon } from '$icons';
 	import { rolesListQuery } from '$features/roles/queries';
 	import { usersListQuery } from '$features/users/queries';
@@ -37,11 +38,89 @@
 	const pageCount = $derived(Math.max(1, Math.ceil(roleList.length / pageSize)));
 	const paged = $derived(roleList.slice((page - 1) * pageSize, page * pageSize));
 
+	const tableState = $derived(
+		rolesQuery.isPending
+			? 'loading'
+			: rolesQuery.isError
+				? 'error'
+				: paged.length === 0
+					? 'empty'
+					: 'ready'
+	);
+
+	const columns: DataTableColumn<RoleDto>[] = [
+		{
+			id: 'name',
+			header: 'Role',
+			accessor: 'name',
+			cell: nameCell
+		},
+		{
+			id: 'type',
+			header: 'Type',
+			accessor: (r) =>
+				r.is_super_admin ? 'superadmin' : r.is_system_default ? 'system' : 'custom',
+			cell: typeCell
+		},
+		{
+			id: 'members',
+			header: 'Members',
+			accessor: (r) => roleMemberCount(r, userList),
+			hideBelow: 'md'
+		},
+		{
+			id: 'permissions',
+			header: 'Permissions',
+			accessor: (r) => r.permissions.length,
+			hideBelow: 'sm'
+		},
+		{
+			id: 'level',
+			header: 'Hierarchy',
+			accessor: 'hierarchy_level',
+			hideBelow: 'lg'
+		}
+	];
+
 	function onDelete(role: RoleDto) {
 		targetRole = role;
 		deleteOpen = true;
 	}
 </script>
+
+{#snippet nameCell(role: RoleDto)}
+	<a href="/settings/roles/{role.id}" class="text-fg hover:text-primary font-medium hover:underline"
+		>{role.name}</a
+	>
+{/snippet}
+
+{#snippet typeCell(role: RoleDto)}
+	{@const badge = roleBadgeVariant(role)}
+	<Badge variant={badge.variant} style="soft" size="sm">{badge.label}</Badge>
+{/snippet}
+
+{#snippet rowActions(role: RoleDto)}
+	<Dropdown.Root>
+		<Dropdown.Trigger>
+			<Button variant="ghost" size="sm" aria-label="Row actions">
+				<Icon icon={MoreVertical} size="sm" />
+			</Button>
+		</Dropdown.Trigger>
+		<Dropdown.Menu>
+			<Dropdown.Item>
+				<a href="/settings/roles/{role.id}" class="cluster cluster-tight">
+					<Icon icon={Edit} size="sm" /> Edit
+				</a>
+			</Dropdown.Item>
+			{#if !isProtectedRole(role)}
+				<Dropdown.Separator />
+				<Dropdown.Item variant="danger" onSelect={() => onDelete(role)}>
+					<Icon icon={Trash2} size="sm" /> Delete
+				</Dropdown.Item>
+			{/if}
+		</Dropdown.Menu>
+	</Dropdown.Root>
+{/snippet}
 
 <div class="stack stack-relaxed">
 	<header class="cluster cluster-spread">
@@ -56,71 +135,30 @@
 		</Button>
 	</header>
 
-	{#if rolesQuery.isPending}
-		<div class="flex justify-center py-16"><Spinner size={32} /></div>
-	{:else if rolesQuery.isError}
-		<Alert variant="danger" title="Couldn't load roles">{rolesQuery.error?.message}</Alert>
-	{:else if roleList.length === 0}
-		<EmptyState
-			icon={Shield}
-			title="No roles yet"
-			description="Roles bundle permissions for easy assignment to team members."
-		>
-			{#snippet action()}
-				<Button onclick={() => (createOpen = true)}>
-					<Icon icon={Plus} size="sm" /> Create role
-				</Button>
-			{/snippet}
-		</EmptyState>
-	{:else}
-		<ul class="stack stack-tight" aria-label="Roles">
-			{#each paged as role (role.id)}
-				{@const badge = roleBadgeVariant(role)}
-				{@const memberCount = roleMemberCount(role, userList)}
-				<li>
-					<Card.Root>
-						<Card.Content class="grid grid-cols-[1fr_auto_auto] items-center gap-4">
-							<div class="stack stack-tight">
-								<div class="cluster cluster-tight">
-									<a href="/settings/roles/{role.id}" class="h5 text-fg hover:underline"
-										>{role.name}</a
-									>
-									<Badge variant={badge.variant} style="soft" size="sm">{badge.label}</Badge>
-								</div>
-								<p class="caption text-fg-muted">
-									{memberCount} member{memberCount === 1 ? '' : 's'} · {role.permissions.length} permission{role
-										.permissions.length === 1
-										? ''
-										: 's'} · level {role.hierarchy_level}
-								</p>
-							</div>
-							<Dropdown.Root>
-								<Dropdown.Trigger>
-									<Button variant="ghost" size="sm" aria-label="Row actions">
-										<Icon icon={MoreVertical} size="sm" />
-									</Button>
-								</Dropdown.Trigger>
-								<Dropdown.Menu>
-									<Dropdown.Item>
-										<a href="/settings/roles/{role.id}" class="cluster cluster-tight">
-											<Icon icon={Edit} size="sm" /> Edit
-										</a>
-									</Dropdown.Item>
-									{#if !isProtectedRole(role)}
-										<Dropdown.Separator />
-										<Dropdown.Item variant="danger" onSelect={() => onDelete(role)}>
-											<Icon icon={Trash2} size="sm" /> Delete
-										</Dropdown.Item>
-									{/if}
-								</Dropdown.Menu>
-							</Dropdown.Root>
-						</Card.Content>
-					</Card.Root>
-				</li>
-			{/each}
-		</ul>
-		<Pagination {page} {pageCount} onChange={setPage} />
-	{/if}
+	<DataTable.Root
+		{columns}
+		rows={paged}
+		rowKey={(r) => r.id}
+		state={tableState}
+		error={rolesQuery.error?.message}
+		{rowActions}
+	>
+		{#snippet emptyState()}
+			<EmptyState
+				icon={Shield}
+				title="No roles yet"
+				description="Roles bundle permissions for easy assignment to team members."
+			>
+				{#snippet action()}
+					<Button onclick={() => (createOpen = true)}>
+						<Icon icon={Plus} size="sm" /> Create role
+					</Button>
+				{/snippet}
+			</EmptyState>
+		{/snippet}
+	</DataTable.Root>
+
+	<Pagination {page} {pageCount} onChange={setPage} />
 </div>
 
 <CreateRoleDrawer bind:open={createOpen} onOpenChange={(o) => (createOpen = o)} />
