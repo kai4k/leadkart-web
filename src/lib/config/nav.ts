@@ -93,6 +93,17 @@ export const PLATFORM_NAV: NavSection[] = [
 		]
 	},
 	{
+		title: 'Administration',
+		items: [
+			{
+				href: '/operator/tenants',
+				label: 'Tenants',
+				icon: Building2,
+				requires: 'platform.tenants.view'
+			}
+		]
+	},
+	{
 		title: 'Account',
 		items: [
 			{
