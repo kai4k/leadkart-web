@@ -12,8 +12,7 @@
 	import { Alert, Card, Spinner } from '$ui';
 	import { session } from '$features/auth/stores/session.svelte';
 	import { tierOf } from '$features/auth/tier';
-	import { getPlatformStats } from '$lib/features/operator/dashboard/api';
-	import type { PlatformStatsResponse } from '$lib/features/operator/dashboard/schemas';
+	import { platformStatsQuery } from '$lib/features/operator/dashboard/queries';
 
 	/**
 	 * Platform-tier dashboard.
@@ -21,7 +20,7 @@
 	 * Audience: SuperAdmin + PlatformManager + LeadAgent (LeadKart
 	 * internal staff). Per docs/reference/dotnet-BRD.md §3.1.
 	 *
-	 * Real data sources wired in this commit:
+	 * Real data sources wired via TanStack Query (60 s auto-refresh):
 	 *   GET /api/v1/platform/stats  — tenants_total/active/suspended,
 	 *                                  persons_total, memberships_active
 	 *
@@ -35,25 +34,16 @@
 
 	type TileAccent = 'brand' | 'success' | 'warning' | 'danger';
 
-	// Stats loaded from the API.
-	let stats = $state<PlatformStatsResponse | null>(null);
-	let statsError = $state<string | null>(null);
-	let statsLoading = $state(true);
-
-	$effect(() => {
-		statsLoading = true;
-		statsError = null;
-		getPlatformStats()
-			.then((s) => {
-				stats = s;
-			})
-			.catch((e) => {
-				statsError = e instanceof Error ? e.message : 'Failed to load platform stats';
-			})
-			.finally(() => {
-				statsLoading = false;
-			});
-	});
+	const statsQuery = platformStatsQuery();
+	const stats = $derived(statsQuery.data ?? null);
+	const statsLoading = $derived(statsQuery.isPending);
+	const statsError = $derived(
+		statsQuery.isError
+			? statsQuery.error instanceof Error
+				? statsQuery.error.message
+				: 'Failed to load platform stats'
+			: null
+	);
 
 	// Tiles backed by real stats — show actual number or '—' while loading.
 	type StatTile = {
