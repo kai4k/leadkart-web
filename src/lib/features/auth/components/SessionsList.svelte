@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { Alert, Badge, Button } from '$ui';
-	import * as Card from '$ui/card';
+	import { Alert, Badge, Button, Card } from '$ui';
 	import { Trash2, LogOut, Icon } from '$icons';
 	import { sessions } from '$features/auth/stores/sessions.svelte';
 	import { isCurrentSession, lastSeenLabel } from '$features/auth/view-models';

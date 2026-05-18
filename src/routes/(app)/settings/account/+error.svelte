@@ -18,12 +18,12 @@
 </script>
 
 <svelte:head>
-	<title>{status} · Account & Security · LeadKart</title>
+	<title>{status} · Account · LeadKart</title>
 </svelte:head>
 
 <div class="stack stack-relaxed">
 	<header class="stack stack-tight">
-		<h1 class="h1">Account & Security</h1>
+		<h1 class="h1">Account</h1>
 	</header>
 
 	<Alert variant="danger" title={`Error ${status}`}>
