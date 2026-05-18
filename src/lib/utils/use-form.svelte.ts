@@ -89,12 +89,16 @@ export class FormState<TSchema extends AnyObjectSchema> {
 	validateField(field: string): void {
 		if (!this.submitAttempted || this.opts.validateOn !== 'blur') return;
 		const result = this.schema.safeParse(this.values);
-		if (!result.success) {
-			const flat = result.error.flatten().fieldErrors as Record<string, string[] | undefined>;
-			const fieldError = flat[field]?.[0];
-			this.errors = { ...this.errors, [field]: fieldError ?? '' };
-		} else if (this.errors[field]) {
-			// Field is now valid — clear its error.
+		// Extract only this field's error regardless of overall parse outcome.
+		const fieldError = result.success
+			? undefined
+			: (result.error.flatten().fieldErrors as Record<string, string[] | undefined>)[field]?.[0];
+
+		if (fieldError) {
+			// Field still has an error — update it.
+			this.errors = { ...this.errors, [field]: fieldError };
+		} else if (field in this.errors) {
+			// Field is now valid — clear its error (check key presence, not truthiness).
 			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			const { [field]: _, ...rest } = this.errors;
 			this.errors = rest;
