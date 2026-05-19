@@ -176,12 +176,15 @@ test.describe('Operator tenant management', () => {
 		await signInAsPlatformOperator(page);
 		await page.goto('/operator/tenants');
 
-		// Page heading is present
-		await expect(page.getByRole('heading', { name: /tenants/i })).toBeVisible();
+		// Page heading is present (scope to main to avoid breadcrumb duplicate)
+		await expect(
+			page.locator('#main-content').getByRole('heading', { name: 'Tenants', exact: true })
+		).toBeVisible();
 
 		// Tenant cards from the mocked list are rendered
-		await expect(page.getByText('Acme Pharma')).toBeVisible();
-		await expect(page.getByText('Beta Meds')).toBeVisible();
+		// Use .first() — DataTable renders name in multiple cells (name + legal_name columns)
+		await expect(page.getByText('Acme Pharma').first()).toBeVisible();
+		await expect(page.getByText('Beta Meds').first()).toBeVisible();
 
 		// Register tenant button is visible (platform.tenants.create granted)
 		await expect(page.getByRole('button', { name: /register tenant/i })).toBeVisible();
@@ -192,7 +195,7 @@ test.describe('Operator tenant management', () => {
 		await page.goto('/operator/tenants');
 
 		// Wait for the list to load
-		await expect(page.getByText('Acme Pharma')).toBeVisible();
+		await expect(page.getByText('Acme Pharma').first()).toBeVisible();
 
 		const results = await new AxeBuilder({ page })
 			.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'])

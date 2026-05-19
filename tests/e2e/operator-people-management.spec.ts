@@ -131,6 +131,20 @@ async function signInAsPlatformOperator(page: Page): Promise<void> {
 		}
 	});
 
+	// Persons list — PeopleList DataTable fetches this on mount.
+	// Returns empty list to exercise the empty-state rendering path.
+	await page.route('**/api/v1/platform/persons**', async (route: Route) => {
+		if (route.request().method() === 'GET') {
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify({ persons: [], next_cursor: null })
+			});
+		} else {
+			await route.continue();
+		}
+	});
+
 	await page.goto('/signin');
 	await page.getByRole('textbox', { name: 'Email' }).fill('operator@leadkart.io');
 	await page.getByRole('textbox', { name: 'Password' }).fill('correct-horse-battery-staple');
@@ -139,27 +153,28 @@ async function signInAsPlatformOperator(page: Page): Promise<void> {
 }
 
 test.describe('Operator people management', () => {
-	test('people list: info banner renders', async ({ page }) => {
+	test('people list: empty state renders', async ({ page }) => {
 		await signInAsPlatformOperator(page);
 		await page.goto('/operator/persons');
 
 		// Page heading is present
-		await expect(page.getByRole('heading', { name: /platform users/i })).toBeVisible();
+		await expect(
+			page.locator('#main-content').getByRole('heading', { name: /platform users/i })
+		).toBeVisible();
 
-		// Info banner re: missing list endpoint
-		await expect(page.getByText(/person listing endpoint pending on the backend/i)).toBeVisible();
+		// Empty-state renders (mocked list returns no persons)
+		await expect(page.getByText(/no persons found/i)).toBeVisible();
 
-		// Search input and look-up button render
-		await expect(page.getByPlaceholder(/person id/i)).toBeVisible();
-		await expect(page.getByRole('button', { name: /look up/i })).toBeVisible();
+		// Search input renders
+		await expect(page.getByRole('searchbox', { name: /search persons/i })).toBeVisible();
 	});
 
 	test('people list: a11y serious/critical clean', async ({ page }) => {
 		await signInAsPlatformOperator(page);
 		await page.goto('/operator/persons');
 
-		// Wait for the info banner to confirm load completed
-		await expect(page.getByText(/person listing endpoint pending on the backend/i)).toBeVisible();
+		// Wait for the empty-state to confirm load completed (no spinner)
+		await expect(page.getByText(/no persons found/i)).toBeVisible();
 
 		const results = await new AxeBuilder({ page })
 			.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'])

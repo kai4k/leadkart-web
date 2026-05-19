@@ -167,8 +167,8 @@ test.describe('Account self-service', () => {
 		await designation.fill(newValue);
 		await page.getByRole('button', { name: 'Save changes' }).click();
 
-		// Success alert (role=alert; axe best-practice: aria-live=polite)
-		await expect(page.getByRole('alert')).toContainText('Profile updated');
+		// Success toast (role=status; aria-live=polite via Toaster)
+		await expect(page.getByRole('status')).toContainText('Profile updated');
 
 		// Reload — profile.load() is called again; mock returns mutated fixture.
 		await page.reload();

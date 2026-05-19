@@ -193,8 +193,10 @@ test.describe('Tenant user management', () => {
 		await signInAsAdmin(page);
 		await page.goto('/settings/users');
 
-		// Empty-state heading and copy
-		await expect(page.getByRole('heading', { name: /team/i })).toBeVisible();
+		// Empty-state heading and copy (scope to main to avoid breadcrumb duplicate)
+		await expect(
+			page.locator('#main-content').getByRole('heading', { name: 'Team', exact: true })
+		).toBeVisible();
 		await expect(page.getByText(/no team members yet/i)).toBeVisible();
 
 		// Clicking the empty-state "Add member" button opens the Create User drawer

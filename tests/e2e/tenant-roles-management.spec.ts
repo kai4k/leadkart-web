@@ -179,8 +179,10 @@ test.describe('Tenant roles management', () => {
 		await signInAsRolesAdmin(page);
 		await page.goto('/settings/roles');
 
-		// Page heading is present
-		await expect(page.getByRole('heading', { name: /roles/i })).toBeVisible();
+		// Page heading is present (scope to main to avoid breadcrumb duplicate)
+		await expect(
+			page.locator('#main-content').getByRole('heading', { name: 'Roles', exact: true })
+		).toBeVisible();
 
 		// Empty-state copy
 		await expect(page.getByText(/no roles yet/i)).toBeVisible();

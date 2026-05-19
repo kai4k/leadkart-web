@@ -139,6 +139,30 @@ async function signInAsPlatformOperator(page: Page): Promise<void> {
 		}
 	});
 
+	// Tenants list — TenantsList DataTable loads this on mount.
+	// Returns the platform tenant + one customer tenant so the Impersonate button renders.
+	await page.route('**/api/v1/platform/tenants', async (route: Route) => {
+		if (route.request().method() === 'GET') {
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify({
+					tenants: [
+						{
+							...MINIMAL_TENANT,
+							id: TENANT_ID,
+							slug: 'leadkart-platform',
+							display_name: 'LeadKart',
+							legal_name: 'LeadKart Platform Pvt Ltd'
+						}
+					]
+				})
+			});
+		} else {
+			await route.continue();
+		}
+	});
+
 	// Impersonation sessions — GET (reconcile on mount + after start)
 	// Initially returns empty list (no active session); after POST returns the new session.
 	let sessionStarted = false;
@@ -179,14 +203,11 @@ test.describe('Operator impersonation', () => {
 		await signInAsPlatformOperator(page);
 		await page.goto('/operator/tenants');
 
-		// Trigger a tenant lookup so rows appear
-		await page.getByRole('textbox', { name: /tenant id or slug/i }).fill(TENANT_ID);
-		await page.getByRole('button', { name: /look up/i }).click();
+		// TenantsList DataTable auto-loads via mocked GET /platform/tenants.
+		// Wait for the Impersonate button to appear (implies the row is rendered).
+		await expect(page.getByRole('button', { name: /impersonate leadkart/i })).toBeVisible();
 
-		// Wait for the tenant card row to appear
-		await expect(page.getByRole('link', { name: /leadkart/i }).first()).toBeVisible();
-
-		// Click the Impersonate button on the first row
+		// Click the Impersonate button on the first non-platform row
 		await page.getByRole('button', { name: /impersonate leadkart/i }).click();
 
 		// Modal should be open — check for the dialog heading
@@ -218,8 +239,22 @@ test.describe('Operator impersonation', () => {
 	test('operator tenants page with banner: a11y serious/critical clean', async ({ page }) => {
 		await signInAsPlatformOperator(page);
 
-		// Seed localStorage with an active session so the banner renders on load.
-		// We mock the GET /sessions to return the session immediately.
+		// Override the sessions route to always return the active session,
+		// simulating a pre-existing session (e.g. from a previous tab/visit).
+		// This overrides the shared mock set up in signInAsPlatformOperator.
+		await page.route('**/api/v1/platform/impersonation/sessions', async (route: Route) => {
+			if (route.request().method() === 'GET') {
+				await route.fulfill({
+					status: 200,
+					contentType: 'application/json',
+					body: JSON.stringify({ sessions: [IMPERSONATION_SESSION_DTO] })
+				});
+			} else {
+				await route.continue();
+			}
+		});
+
+		// Seed localStorage so reconcile() knows which session to look for.
 		await page.evaluate(({ key, sessionId }) => localStorage.setItem(key, sessionId), {
 			key: 'leadkart-impersonation-session',
 			sessionId: SESSION_ID
@@ -227,7 +262,7 @@ test.describe('Operator impersonation', () => {
 
 		await page.goto('/operator/tenants');
 
-		// Wait for the banner to render (reconcile() will confirm the session via GET)
+		// Wait for the banner to render (reconcile() fires when capsQuery.data resolves)
 		await expect(page.getByRole('status', { name: /active impersonation session/i })).toBeVisible({
 			timeout: 5000
 		});

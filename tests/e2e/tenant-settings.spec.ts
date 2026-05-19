@@ -165,8 +165,8 @@ test.describe('Tenant Settings — happy path', () => {
 		await displayName.fill('Acme Pharmaceuticals');
 		await page.getByRole('button', { name: 'Save changes' }).click();
 
-		// 5. Success Alert appears (role=alert, aria-live=polite).
-		await expect(page.getByRole('alert')).toContainText('Profile updated');
+		// 5. Success toast appears (role=status, aria-live=polite via Toaster).
+		await expect(page.getByRole('status')).toContainText('Profile saved');
 
 		// 6. Header reflects the post-PATCH reload — the store re-GET
 		//    surfaced the fixture's new display_name into the heading.

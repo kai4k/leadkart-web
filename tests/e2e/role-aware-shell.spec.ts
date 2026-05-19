@@ -78,6 +78,26 @@ async function mockLoginAs(
 		});
 	});
 
+	// Platform stats — PlatformDashboard queries this; mock to prevent
+	// network-error state on the dashboard when running without a backend.
+	await page.route('**/api/v1/platform/stats', async (route: Route) => {
+		if (route.request().method() === 'GET') {
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify({
+					tenants_total: 12,
+					tenants_active: 10,
+					tenants_suspended: 2,
+					persons_total: 150,
+					memberships_active: 120
+				})
+			});
+		} else {
+			await route.continue();
+		}
+	});
+
 	// Tenant fetch (Tenant Admin dashboard touches it; mock for all 3
 	// to keep the harness uniform — wasted bytes are cheaper than
 	// per-persona branching).
@@ -134,8 +154,7 @@ test.describe('Role-aware shell', () => {
 		// Sidebar: PLATFORM_NAV entries present
 		const sidebar = page.getByRole('navigation', { name: 'Main navigation' });
 		await expect(sidebar.getByRole('link', { name: 'Tenants' })).toBeVisible();
-		await expect(sidebar.getByRole('link', { name: 'Lead Marketplace' })).toBeVisible();
-		await expect(sidebar.getByRole('link', { name: 'Verification Queue' })).toBeVisible();
+		await expect(sidebar.getByRole('link', { name: 'Activity' })).toBeVisible();
 
 		// Sidebar: tenant-tier entries absent
 		await expect(sidebar.getByRole('link', { name: 'Inventory' })).toHaveCount(0);
