@@ -42,6 +42,16 @@
 		<Alert variant="warning" title="Tenant not found">
 			No tenant with that ID or slug, or you don't have access.
 		</Alert>
+	{:else if tenant === null}
+		<!-- by-slug endpoint not yet available — graceful fallback.
+		     Restore to normal branch once backend ships GET /v1/tenants/by-slug/{slug}
+		     (ADR 0038 A.3). UUID-keyed navigation (/operator/tenants/<uuid>) works now. -->
+		<Alert variant="info" title="Slug lookup pending">
+			Tenant lookup by slug requires backend endpoint
+			<code>GET /v1/tenants/by-slug/{slug}</code>
+			which is not yet available. Operators can navigate via UUID at
+			<code>/operator/tenants/&lt;tenant-uuid&gt;</code> for now.
+		</Alert>
 	{:else if tenant}
 		{@const breadcrumbs: BreadcrumbItem[] = [
 			{ href: '/operator', label: 'Operator' },
