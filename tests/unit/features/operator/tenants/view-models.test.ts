@@ -24,7 +24,6 @@ function makeTenant(status: string): TenantDto {
 		slug: 'acme',
 		legal_name: 'Acme Ltd',
 		display_name: 'Acme',
-		admin_email: 'a@acme.test',
 		status,
 		created_at: '2026-01-01T00:00:00Z',
 		admin_address: {},

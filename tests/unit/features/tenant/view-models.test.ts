@@ -19,7 +19,6 @@ const BASE_TENANT: Tenant = {
 	slug: 'acme',
 	legal_name: 'Acme Pharma Pvt Ltd',
 	display_name: 'Acme',
-	admin_email: 'admin@acme.test',
 	status: 'active',
 	created_at: '2026-01-15T10:30:00Z',
 	admin_address: {},
