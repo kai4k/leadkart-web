@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
-import { fakeAccessToken, TEST_TENANT_ID } from './helpers/fake-jwt';
+import { fakeAccessToken, fakeCapabilitiesResponse, TEST_TENANT_ID } from './helpers/fake-jwt';
 
 /**
  * Tier-aware shell smoke tests.
@@ -54,6 +54,48 @@ async function mockLoginAs(
 				token_type: 'Bearer'
 			})
 		});
+	});
+
+	// Capabilities — Sidebar reads is_platform + is_super_user + permissions
+	// from this endpoint; deriveTier() synthesises the tier client-side.
+	// platform-super needs both is_platform AND is_super_user for deriveTier()
+	// to return 'platform-super'.
+	const isSuperUser = persona === 'platform-super' ? true : (claims.is_super_user ?? false);
+	await page.route('**/api/v1/auth/me/capabilities', async (route: Route) => {
+		await route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify(
+				fakeCapabilitiesResponse({
+					permissions: claims.permission,
+					is_platform: claims.is_platform,
+					is_super_user: isSuperUser,
+					tenant_id: TEST_TENANT_ID,
+					tenant_slug: claims.tenant_slug ?? 'acme',
+					email: 'user@acme.test'
+				})
+			)
+		});
+	});
+
+	// Platform stats — PlatformDashboard queries this; mock to prevent
+	// network-error state on the dashboard when running without a backend.
+	await page.route('**/api/v1/platform/stats', async (route: Route) => {
+		if (route.request().method() === 'GET') {
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify({
+					tenants_total: 12,
+					tenants_active: 10,
+					tenants_suspended: 2,
+					persons_total: 150,
+					memberships_active: 120
+				})
+			});
+		} else {
+			await route.continue();
+		}
 	});
 
 	// Tenant fetch (Tenant Admin dashboard touches it; mock for all 3
@@ -112,8 +154,7 @@ test.describe('Role-aware shell', () => {
 		// Sidebar: PLATFORM_NAV entries present
 		const sidebar = page.getByRole('navigation', { name: 'Main navigation' });
 		await expect(sidebar.getByRole('link', { name: 'Tenants' })).toBeVisible();
-		await expect(sidebar.getByRole('link', { name: 'Lead Marketplace' })).toBeVisible();
-		await expect(sidebar.getByRole('link', { name: 'Verification Queue' })).toBeVisible();
+		await expect(sidebar.getByRole('link', { name: 'Activity' })).toBeVisible();
 
 		// Sidebar: tenant-tier entries absent
 		await expect(sidebar.getByRole('link', { name: 'Inventory' })).toHaveCount(0);

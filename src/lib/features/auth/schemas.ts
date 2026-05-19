@@ -1,6 +1,33 @@
 import { z } from 'zod';
 
 /**
+ * CapabilitiesDto — wire shape of GET /v1/auth/me/capabilities per ADR 0038 N1.
+ * The backend does NOT send a `tier` field — tier is derived client-side via
+ * `deriveTier()` in capabilities.ts from `is_platform`, `is_super_user`, and
+ * `permissions`. permissions drive per-item visibility. is_super_user
+ * short-circuits all permission checks.
+ */
+export const capabilitiesSchema = z.object({
+	person_id: z.string(),
+	membership_id: z.string(),
+	tenant_id: z.string(),
+	tenant_slug: z.string(),
+	email: z.string(),
+	first_name: z.string(),
+	last_name: z.string(),
+	is_platform: z.boolean(),
+	is_super_user: z.boolean(),
+	permissions: z.array(z.string()),
+	roles: z.array(
+		z.object({
+			id: z.string(),
+			name: z.string(),
+			is_super_admin: z.boolean()
+		})
+	)
+});
+
+/**
  * Auth feature Zod schemas — used for both client-side form validation
  * AND runtime API response validation (industry canon: Stripe SDK,
  * tRPC, TanStack Query all do schema-at-the-boundary).
@@ -52,3 +79,56 @@ export type LoginRequest = z.output<typeof loginRequestSchema>;
 export type LoginResponseValidated = z.output<typeof loginResponseSchema>;
 export type RefreshResponseValidated = z.output<typeof refreshResponseSchema>;
 export type ChangePasswordInput = z.input<typeof changePasswordSchema>;
+
+/**
+ * UserDto — wire shape of GET /v1/users/:membership_id.
+ * Mirrors identity/ports/dto.go UserDto exactly.
+ */
+export const userDtoSchema = z.object({
+	membership_id: z.string(),
+	person_id: z.string(),
+	tenant_id: z.string(),
+	email: z.string().email(),
+	first_name: z.string(),
+	last_name: z.string(),
+	status: z.enum(['active', 'inactive', 'pending']),
+	designation: z.string(),
+	department: z.string(),
+	status_message: z.string(),
+	joined_at: z.string(),
+	left_at: z.string().nullable(),
+	reports_to: z.string().nullable(),
+	role_ids: z.array(z.string())
+});
+
+/**
+ * SessionDto — wire shape of a single session entry from
+ * GET /v1/sessions. Mirrors identity/ports/dto.go SessionDto.
+ */
+export const sessionDtoSchema = z.object({
+	family_id: z.string(),
+	tenant_id: z.string(),
+	device_label: z.string(),
+	created_at: z.string(),
+	last_used_at: z.string()
+});
+
+/**
+ * ListSessionsResponse — wire shape of GET /v1/sessions.
+ */
+export const listSessionsResponseSchema = z.object({
+	sessions: z.array(sessionDtoSchema)
+});
+
+/**
+ * UpdateProfileRequest — strict schema so extra fields (e.g. first_name,
+ * email) are caught at the gateway boundary before reaching the server.
+ * Only the three editable fields are accepted.
+ */
+export const updateProfileRequestSchema = z
+	.object({
+		designation: z.string().max(120),
+		department: z.string().max(120),
+		status_message: z.string().max(280)
+	})
+	.strict();

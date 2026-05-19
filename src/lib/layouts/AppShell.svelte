@@ -3,16 +3,44 @@
 	import Topbar from './Topbar.svelte';
 	import Sidebar from './Sidebar.svelte';
 	import Footer from './Footer.svelte';
+	import SettingsModal from './SettingsModal.svelte';
+	import { theme } from '$lib/stores/theme.svelte';
+
+	/**
+	 * AppShell — Linear/Vercel-style canonical layout:
+	 *   Topbar    — position: fixed, top, full-width, h-topbar
+	 *   Sidebar   — position: fixed, top-offset by topbar height,
+	 *               full-height column; width animates between
+	 *               16rem (expanded) and 4.5rem (collapsed) via the
+	 *               --lk-sidebar-width var driven by [data-sidebar-
+	 *               collapsed] on <html>.
+	 *   main      — padding-top: topbar-height; padding-inline-start:
+	 *               sidebar-width on lg+, 0 on mobile.
+	 *
+	 * Hamburger (in Topbar):
+	 *   ≥ lg : toggles theme.sidebarCollapsed (full ⇄ icon-only)
+	 *   < lg : opens the mobile drawer (existing focus-trapped dialog)
+	 *
+	 * The viewport check uses window.matchMedia at click time so a user
+	 * resizing across the breakpoint gets the right action.
+	 */
 
 	let { children } = $props();
 	let sidebarOpen = $state(false);
 	let drawerEl: HTMLElement | undefined = $state();
 	let triggerEl: HTMLElement | null = null;
 
-	function close() {
+	function isDesktop(): boolean {
+		return typeof window !== 'undefined' && window.matchMedia('(min-width: 64rem)').matches;
+	}
+
+	function onHamburger() {
+		if (isDesktop()) theme.toggleSidebarCollapsed();
+		else sidebarOpen = true;
+	}
+
+	function closeDrawer() {
 		sidebarOpen = false;
-		// Return focus to whatever invoked the drawer (canon: WAI-ARIA
-		// dialog / menu / drawer pattern requires focus restore).
 		triggerEl?.focus();
 	}
 
@@ -20,10 +48,9 @@
 		if (!sidebarOpen) return;
 		if (e.key === 'Escape') {
 			e.preventDefault();
-			close();
+			closeDrawer();
 			return;
 		}
-		// Focus trap — Tab cycles within the drawer.
 		if (e.key === 'Tab' && drawerEl) {
 			const focusables = drawerEl.querySelectorAll<HTMLElement>(
 				'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
@@ -41,11 +68,12 @@
 		}
 	}
 
+	let settingsOpen = $state(false);
+
 	$effect(() => {
 		if (sidebarOpen) {
 			triggerEl = document.activeElement as HTMLElement | null;
 			document.body.style.overflow = 'hidden';
-			// Focus the first focusable inside the drawer once mounted.
 			queueMicrotask(() => {
 				const first = drawerEl?.querySelector<HTMLElement>(
 					'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
@@ -63,49 +91,101 @@
 	});
 </script>
 
-<div class="flex h-dvh flex-col">
-	<Topbar onToggleSidebar={() => (sidebarOpen = !sidebarOpen)} />
-	<div class="flex min-h-0 flex-1">
-		<!-- Desktop sidebar — always visible. -->
-		<aside class="hidden lg:block">
-			<Sidebar onNavigate={close} />
-		</aside>
+<div class="lk-app">
+	<Topbar onToggleSidebar={onHamburger} onOpenSettings={() => (settingsOpen = true)} />
 
-		<!-- Mobile sidebar — drawer with focus trap + Escape + scroll lock. -->
-		{#if sidebarOpen}
-			<button
-				type="button"
-				class="fixed inset-0 bg-[var(--color-overlay)] backdrop-blur-sm transition-opacity lg:hidden"
-				style="z-index: var(--z-overlay);"
-				aria-label="Close sidebar"
-				onclick={close}
-			></button>
-			<div
-				bind:this={drawerEl}
-				role="dialog"
-				aria-modal="true"
-				aria-label="Main navigation"
-				class="fixed inset-y-0 left-0 lg:hidden"
-				style="z-index: var(--z-modal); animation: slide-in {`var(--duration-base) var(--ease-out)`};"
-			>
-				<Sidebar onNavigate={close} />
-			</div>
-		{/if}
+	<!-- Desktop fixed sidebar -->
+	<aside class="lk-sidebar-mount hidden lg:block" aria-label="Primary navigation">
+		<Sidebar onNavigate={closeDrawer} />
+	</aside>
 
-		<main
-			id="main-content"
-			class="min-w-0 flex-1 overflow-y-auto bg-[var(--color-bg)]"
-			tabindex="-1"
+	<!-- Mobile drawer -->
+	{#if sidebarOpen}
+		<button
+			type="button"
+			class="is-fixed-overlay--overlay bg-overlay inset-0 backdrop-blur-sm lg:hidden"
+			aria-label="Close sidebar"
+			onclick={closeDrawer}
+		></button>
+		<div
+			bind:this={drawerEl}
+			role="dialog"
+			aria-modal="true"
+			aria-label="Primary navigation"
+			class="lk-drawer fixed inset-y-0 lg:hidden"
+			style="animation: slide-in {`var(--duration-base) var(--ease-out)`};"
 		>
-			<div class="center py-6" style="--center-width: var(--container-2xl);">
-				{@render children()}
-			</div>
-		</main>
-	</div>
+			<Sidebar onNavigate={closeDrawer} />
+		</div>
+	{/if}
+
+	<main id="main-content" class="lk-page-wrapper" tabindex="-1">
+		<div class="lk-page-inner">
+			{@render children()}
+		</div>
+	</main>
+
 	<Footer />
+
+	<SettingsModal bind:open={settingsOpen} />
 </div>
 
 <style>
+	.lk-app {
+		min-height: 100dvh;
+		background: var(--color-bg);
+	}
+
+	/* ─── Page wrapper ────────────────────────────────────────────
+	   Offsets the fixed Topbar (top) + Sidebar (inline-start). Safe-
+	   area-inset baked into every edge via max() so content never
+	   underlaps the home indicator / curved edges. `contain: layout`
+	   isolates wrapper reflow from the surrounding shell — common
+	   FAANG pattern for app shells so child-page repaints don't
+	   bubble to Topbar/Sidebar. */
+	.lk-page-wrapper {
+		min-height: 100dvh;
+		padding-block-start: var(--lk-page-pad-top);
+		padding-block-end: calc(
+			var(--lk-footer-height) + max(var(--lk-shell-gap), var(--safe-bottom)) + var(--lk-shell-gap)
+		);
+		padding-inline-start: max(var(--lk-shell-gap), var(--safe-left));
+		padding-inline-end: max(var(--lk-shell-gap), var(--safe-right));
+		display: flex;
+		flex-direction: column;
+		contain: layout;
+		transition:
+			padding-block-start 0.18s ease-out,
+			padding-block-end 0.18s ease-out,
+			padding-inline-start 0.18s ease-out,
+			padding-inline-end 0.18s ease-out;
+	}
+	@media (min-width: 64rem) {
+		.lk-page-wrapper {
+			padding-inline-start: calc(var(--lk-sidebar-width) + var(--lk-shell-gap));
+		}
+	}
+
+	.lk-page-inner {
+		flex: 1;
+		width: 100%;
+		max-inline-size: var(--lk-content-max-width);
+		margin-inline: auto;
+		padding-block: clamp(1rem, 2.5vw, 1.75rem);
+		padding-inline: clamp(0.75rem, 3vw, 1.75rem);
+	}
+
+	/* ─── Mobile drawer ────────────────────────────────────────────
+	   Width clamps responsively so it's not cramped on tiny phones
+	   nor wastefully wide on tablets. Safe-area-left so the drawer
+	   doesn't sit under a curved edge in landscape. */
+	.lk-drawer {
+		inset-inline-start: 0;
+		inline-size: clamp(17rem, 78vw, 22rem);
+		padding-inline-start: var(--safe-left);
+		z-index: var(--z-modal);
+	}
+
 	@keyframes slide-in {
 		from {
 			transform: translateX(-100%);
@@ -114,7 +194,6 @@
 			transform: translateX(0);
 		}
 	}
-
 	@media (prefers-reduced-motion: reduce) {
 		[role='dialog'] {
 			animation: none !important;

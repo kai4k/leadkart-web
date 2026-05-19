@@ -38,63 +38,58 @@
 			sizes="512x512"
 			href="%sveltekit.assets%/images/favicon/favicon_512x512.png"
 		/>
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta name="color-scheme" content="light dark" />
-		<!-- Mobile browser chrome — navy-violet logo brand. Overridden at
-		     runtime if the user picks an alt primary (theme.svelte.ts). -->
-		<meta name="theme-color" content="#2D2F7E" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+		<meta name="color-scheme" content="light" />
+		<!-- Mobile browser chrome — LeadKart logo purple-violet (#502d81
+		     wordmark base). Overridden at runtime if the user picks an
+		     alt primary (theme.svelte.ts). -->
+		<meta name="theme-color" content="#502d81" />
 		<title>LeadKart</title>
 		<!--
-			Theme prime — runs SYNCHRONOUSLY before first paint to apply
-			the .dark class on <html> if the user has dark theme stored
-			or has system dark + 'system' preference. Without this,
-			users see a flash of light theme on every reload (FOUC).
+			Customiser prime — runs SYNCHRONOUSLY before first paint so
+			the page renders branded on first paint (no FOUC).
 
 			Industry canon: every modern dashboard (Vercel, Linear,
-			GitHub, Stripe Dashboard) ships an inline blocking script
-			for theme priming. The cost is ~200 bytes ungzipped + ~1ms
-			execution; the win is no FOUC ever.
+			GitHub, Stripe Dashboard) ships an inline blocking prime
+			script. The cost is ~200 bytes + ~1ms execution; the win is
+			no flash-of-unbranded-content.
 
-			Tracks `localStorage['leadkart-theme']` written by
-			lib/stores/theme.svelte.ts. Failure-mode tolerant: try/catch
-			swallows errors so a private-mode browser (no localStorage)
-			falls back to light cleanly.
+			Tracks `localStorage['leadkart-primary']` and
+			`leadkart-content-width` written by lib/stores/theme.svelte.ts.
+			data-layout='semibox' is set unconditionally — semibox is
+			the only supported chrome shape (the prior 'default' flat
+			variant + dark sidebar + RTL toggles were removed
+			2026-05-17). Failure-mode tolerant: try/catch swallows
+			errors so a private-mode browser falls back to defaults
+			cleanly.
 		-->
 		<script>
 			(function () {
 				try {
 					var root = document.documentElement;
-					// 1. light/dark mode
-					var t = localStorage.getItem('leadkart-theme') || 'system';
-					var dark =
-						t === 'dark' ||
-						(t === 'system' &&
-							window.matchMedia &&
-							window.matchMedia('(prefers-color-scheme: dark)').matches);
-					if (dark) root.classList.add('dark');
-					// 2. primary colour — apply data-primary BEFORE first paint
-					//    so the brand-coloured panel of the AuthShell renders in
-					//    the user's chosen primary, not the blue default.
-					var p = localStorage.getItem('leadkart-primary');
-					// 'navy' is the default brand — no attr (base tokens.css wins).
-					// 'blue' + the 9 iOS hues set data-primary so base.css overrides
-					// kick in before first paint, preventing flash-of-unbranded-content.
-					if (
-						p &&
-						[
-							'blue',
-							'green',
-							'indigo',
-							'orange',
-							'teal',
-							'purple',
-							'pink',
-							'red',
-							'mint',
-							'cyan'
-						].indexOf(p) >= 0
-					) {
-						root.setAttribute('data-primary', p);
+					root.setAttribute('data-layout', 'semibox');
+
+					function applyIfValid(key, attr, valid) {
+						var v = localStorage.getItem(key);
+						if (v && valid.indexOf(v) >= 0) root.setAttribute(attr, v);
+					}
+
+					applyIfValid('leadkart-primary', 'data-primary', [
+						'blue',
+						'green',
+						'indigo',
+						'orange',
+						'teal',
+						'purple',
+						'pink',
+						'red',
+						'mint',
+						'cyan'
+					]);
+					applyIfValid('leadkart-content-width', 'data-content-width', ['fluid']);
+
+					if (localStorage.getItem('leadkart-sidebar-collapsed') === '1') {
+						root.setAttribute('data-sidebar-collapsed', '');
 					}
 				} catch (e) {
 					/* private-mode: fall back to defaults */

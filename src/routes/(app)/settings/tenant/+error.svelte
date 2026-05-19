@@ -26,7 +26,7 @@
 <div class="stack stack-relaxed">
 	<header class="stack stack-tight">
 		<h1 class="h1">Tenant Settings</h1>
-		<p class="body-sm text-[var(--color-fg-muted)]">
+		<p class="body-sm text-fg-muted">
 			Manage your organisation's profile, statutory IDs, contact details, and platform preferences.
 		</p>
 	</header>

@@ -1,579 +1,775 @@
 <script lang="ts">
 	/**
-	 * AuthShell — two-column auth layout porting the Blazor `AuthLayout`
-	 * (LeadKart.Web.Client/Components/Pages/Auth/Login.razor + Login.razor.css).
+	 * AuthShell — unified auth surface with a viewport-wide particle canvas.
 	 *
-	 * Left column (desktop only) — animated brand panel:
-	 *   - Hero glass pill: "Pharma Lead Management, Simplified."
-	 *   - Tagline glass pill
-	 *   - 3 feature glass pills (security / lead tracking / dispatch)
-	 *   - Product illustration (radial-mask-faded, scoped opacity)
-	 *   - 5 floating product-themed glass cards (vertical bobbing animation)
-	 *   - Mouse-driven parallax on the brand-content / illustration / floats
-	 *   - Background radial glow
+	 * Architecture:
+	 *   One root container (`.lk-auth`) owns the whole viewport. Inside:
+	 *     1. Particle field (three depth layers, mouse-driven parallax) —
+	 *        spans the entire root via absolute positioning.
+	 *     2. Mobile-only brand banner (shown below `lg`).
+	 *     3. Two-column layout grid: brand panel (left) + form panel (right).
+	 *   Both panels are transparent — the particle canvas shows through
+	 *   continuously across the whole page. Decoration is global, not
+	 *   per-half.
 	 *
-	 * Right column — form panel (slot).
-	 * Mobile (< lg) — collapsed brand banner + form panel only.
+	 * Static surfaces, animated canvas:
+	 *   The modal card and brand-side content (hero + tagline + feature
+	 *   pills) are static. Only the particle layers move (drift + parallax).
+	 *   The visual hierarchy reads as "calm content on a living surface."
 	 *
-	 * Animation system:
-	 *   - `lk-float-bob` keyframes: 6-8s vertical translate loop, staggered
-	 *     start delays so the 5 cards feel organic, not synchronised.
-	 *   - Mouse parallax: `mousemove` on the brand panel writes
-	 *     --mouse-x / --mouse-y onto its CSS scope; `.lk-parallax-{slow,
-	 *     medium,fast,reverse}` consume those vars in transform: translate.
-	 *     Throttled via requestAnimationFrame; cleaned up on unmount.
-	 *   - Card entrance + border-glow: keyframes in animations.css scoped
-	 *     to .lk-login-card.
+	 * Brand mark — one per screen (Stripe / Linear / Vercel canon):
+	 *   - Desktop: logo top-left of the brand panel only.
+	 *   - Mobile: logo in the compact banner only.
+	 *   The auth modal carries the page's primary `<h1>` (Sign in) but no
+	 *   separate logo — duplication is brand dilution.
 	 *
-	 * Industry refs:
-	 *   - Apple HIG "Animation" (parallax driven by physical/cursor input)
-	 *   - Material 3 hero parallax patterns
-	 *   - Stripe Atlas marketing pages (mouse-driven brand-side parallax)
-	 *   - Dribbble + Layers design library "auth pages with personality"
+	 * Responsive — no fixed widths:
+	 *   All width caps use `clamp()` / `min()` so the layout fluidly
+	 *   degrades across viewport sizes. Single layout breakpoint at `lg`
+	 *   (64rem) toggles between mobile-stack and desktop-split.
+	 *
+	 * Industry refs (2026):
+	 *   - Antigravity / Vercel marketing — full-viewport particle canvas
+	 *   - Stripe Atlas / Linear / Vercel — single brand mark, decoration
+	 *     spans the canvas not per-half
+	 *   - Apple Liquid Glass (iOS 26) — translucent surfaces over a
+	 *     coloured/animated canvas, content stays static while the canvas
+	 *     moves
 	 *
 	 * Accessibility:
-	 *   - prefers-reduced-motion gates ALL animations (handled globally
-	 *     in base.css §reduce-motion + the parallax effect bails on the
-	 *     same media query).
-	 *   - Floats are aria-hidden — purely decorative.
-	 *   - The illustration is aria-hidden + alt="" — text content carries
-	 *     the brand message (hero pill).
-	 *   - prefers-reduced-transparency falls back to solid surfaces
-	 *     (utilities.css fallback).
+	 *   - Particle field + decorative brand content are `aria-hidden`
+	 *   - Marketing hero copy uses `<p class="display-2">` (not `<h2>`) so
+	 *     SigninForm's `<h1>` stays the page's only true heading
+	 *   - `prefers-reduced-motion` gates particle drift + parallax
+	 *   - `prefers-reduced-transparency` falls back via utilities.css
 	 */
 	import { onMount } from 'svelte';
 	import { Logo } from '$ui';
-	import { ShieldCheck, TrendingUp, Truck, ShoppingCart, Package, LineChart } from 'lucide-svelte';
+	import { ShieldCheck, TrendingUp, Truck } from 'lucide-svelte';
 
 	let { children } = $props();
+	let canvas: HTMLElement | undefined = $state();
 
-	let brandPanel: HTMLElement | undefined = $state();
+	/**
+	 * Scattered pharma-particle field. Random x / y across the viewport,
+	 * random rotation, depth distributed roughly 40% far / 30% mid /
+	 * 30% near (smaller, fainter particles dominate the bg).
+	 *
+	 * Deterministic seeded PRNG → SSR pre-render byte-identical to
+	 * client hydration.
+	 *
+	 * Each particle carries two colour tokens (--c1 / --c2) so pills +
+	 * tracers render as two-tone capsules; tablets + crosses use --c1
+	 * only. Crosses are always medical red (signal colour); tablets
+	 * pick from the branded single-tone palette.
+	 */
+	const { FAR, MID, NEAR } = (() => {
+		let seed = 7919;
+		const rand = () => {
+			seed = (seed * 9301 + 49297) % 233280;
+			return seed / 233280;
+		};
+		const pillPairs: Array<[string, string]> = [
+			['--color-logo-purple', '--color-brand-600'],
+			['--color-brand-600', '--color-logo-green-on-light'],
+			['--color-logo-purple', '--color-logo-green-on-light'],
+			['--color-fg', '--color-logo-purple'],
+			['--color-fg-muted', '--color-brand-600'],
+			['--color-logo-green-on-light', '--color-fg']
+		];
+		const tabletColours = [
+			'--color-logo-purple',
+			'--color-brand-600',
+			'--color-logo-green-on-light',
+			'--color-fg'
+		];
 
+		const all = Array.from({ length: 90 }, () => {
+			const d = rand();
+			const k = rand();
+			const kind = k < 0.15 ? 'cross' : k < 0.3 ? 'tablet' : k < 0.45 ? 'tracer' : 'pill';
+			let c1: string;
+			let c2: string;
+			if (kind === 'cross') {
+				c1 = '--color-medical-red';
+				c2 = c1;
+			} else if (kind === 'tablet') {
+				c1 = tabletColours[Math.floor(rand() * tabletColours.length)];
+				c2 = c1;
+			} else {
+				const pair = pillPairs[Math.floor(rand() * pillPairs.length)];
+				c1 = pair[0];
+				c2 = pair[1];
+			}
+			return {
+				x: rand() * 100,
+				y: rand() * 100,
+				length: 6 + rand() * 8,
+				rotation: rand() * 360,
+				delay: rand() * 2,
+				depth: d < 0.4 ? 'far' : d < 0.7 ? 'mid' : 'near',
+				kind,
+				c1,
+				c2
+			};
+		});
+		return {
+			FAR: all.filter((p) => p.depth === 'far'),
+			MID: all.filter((p) => p.depth === 'mid'),
+			NEAR: all.filter((p) => p.depth === 'near')
+		};
+	})();
+
+	/**
+	 * Disperse-on-mouse-move interaction. Each particle within a
+	 * percent-of-viewport threshold of the cursor gets pushed radially
+	 * outward via `--push-x` / `--push-y` CSS vars (consumed by the
+	 * particle's transform). Smooth return via CSS transition when
+	 * the cursor moves away.
+	 */
 	onMount(() => {
-		if (!brandPanel) return;
+		if (!canvas) return;
 
 		const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 		if (reducedMotion.matches) return;
 
+		const particleEls = canvas.querySelectorAll<HTMLElement>('.lk-particle');
 		let raf = 0;
-		let pendingX = 0;
-		let pendingY = 0;
+		let mx = -1000;
+		let my = -1000;
+		const THRESHOLD = 14; // percent of viewport — disperse radius
+		const MAX_PUSH = 3; // vw — strongest push at distance 0
 
 		function onMove(e: MouseEvent) {
-			if (!brandPanel) return;
-			const rect = brandPanel.getBoundingClientRect();
-			// Normalise to [-1, 1] from the panel centre — the parallax CSS
-			// then multiplies by per-layer rem amounts.
-			pendingX = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
-			pendingY = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+			if (!canvas) return;
+			const rect = canvas.getBoundingClientRect();
+			mx = ((e.clientX - rect.left) / rect.width) * 100;
+			my = ((e.clientY - rect.top) / rect.height) * 100;
 			if (!raf) raf = requestAnimationFrame(commit);
 		}
 
 		function commit() {
 			raf = 0;
-			brandPanel?.style.setProperty('--mouse-x', String(pendingX));
-			brandPanel?.style.setProperty('--mouse-y', String(pendingY));
+			const tSq = THRESHOLD * THRESHOLD;
+			for (let i = 0; i < particleEls.length; i++) {
+				const el = particleEls[i];
+				const px = parseFloat(el.style.getPropertyValue('--x'));
+				const py = parseFloat(el.style.getPropertyValue('--y'));
+				const dx = px - mx;
+				const dy = py - my;
+				const distSq = dx * dx + dy * dy;
+				if (distSq < tSq) {
+					const dist = Math.sqrt(distSq);
+					const safe = Math.max(0.5, dist);
+					const strength = (1 - dist / THRESHOLD) * MAX_PUSH;
+					el.style.setProperty('--push-x', `${((dx / safe) * strength).toFixed(2)}vw`);
+					el.style.setProperty('--push-y', `${((dy / safe) * strength).toFixed(2)}vw`);
+				} else if (el.style.getPropertyValue('--push-x') !== '0vw') {
+					el.style.setProperty('--push-x', '0vw');
+					el.style.setProperty('--push-y', '0vw');
+				}
+			}
 		}
 
 		function onLeave() {
-			pendingX = 0;
-			pendingY = 0;
+			// Park the cursor far off-canvas so every particle exits the
+			// threshold and resets to base position via the transition.
+			mx = -1000;
+			my = -1000;
 			if (!raf) raf = requestAnimationFrame(commit);
 		}
 
-		brandPanel.addEventListener('mousemove', onMove);
-		brandPanel.addEventListener('mouseleave', onLeave);
+		canvas.addEventListener('mousemove', onMove, { passive: true });
+		canvas.addEventListener('mouseleave', onLeave);
 
 		return () => {
-			brandPanel?.removeEventListener('mousemove', onMove);
-			brandPanel?.removeEventListener('mouseleave', onLeave);
+			canvas?.removeEventListener('mousemove', onMove);
+			canvas?.removeEventListener('mouseleave', onLeave);
 			if (raf) cancelAnimationFrame(raf);
 		};
 	});
 </script>
 
-<div class="lk-auth grid min-h-dvh grid-cols-1 lg:grid-cols-2">
-	<!-- Mobile-only compact brand banner. Light brand-50 surface — the
-	     logo's natural backdrop. Wordmark + tagline both render in
-	     brand-700 (the wordmark navy itself), giving ~10:1 contrast
-	     vs the cream-violet bg. No pill chrome needed. -->
-	<header
-		class="flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-brand-50)] px-6 py-4 text-[var(--color-brand-700)] lg:hidden"
-	>
+<div bind:this={canvas} class="lk-auth">
+	<!-- ── Ambient colour blobs — soft, heavily blurred, slow drift.
+	     Logo-palette tints. Sits behind the particle canvas to give
+	     subtle depth + colour movement across the whole viewport. ── -->
+	<div class="lk-auth-blobs" aria-hidden="true">
+		<span class="lk-blob lk-blob--purple"></span>
+		<span class="lk-blob lk-blob--blue"></span>
+		<span class="lk-blob lk-blob--green"></span>
+		<span class="lk-blob lk-blob--purple-sm"></span>
+	</div>
+
+	<!-- ── Viewport-wide particle canvas (decorative, aria-hidden) ── -->
+	<div class="lk-particles lk-particles--far" aria-hidden="true">
+		{#each FAR as p (p.x + '-' + p.y)}
+			<span
+				class="lk-particle lk-particle--{p.kind}"
+				style="--x:{p.x}%;--y:{p.y}%;--len:{p.length}px;--rot:{p.rotation}deg;--delay:{p.delay}s;--c1:var({p.c1});--c2:var({p.c2});"
+			></span>
+		{/each}
+	</div>
+	<div class="lk-particles lk-particles--mid" aria-hidden="true">
+		{#each MID as p (p.x + '-' + p.y)}
+			<span
+				class="lk-particle lk-particle--{p.kind}"
+				style="--x:{p.x}%;--y:{p.y}%;--len:{p.length}px;--rot:{p.rotation}deg;--delay:{p.delay}s;--c1:var({p.c1});--c2:var({p.c2});"
+			></span>
+		{/each}
+	</div>
+	<div class="lk-particles lk-particles--near" aria-hidden="true">
+		{#each NEAR as p (p.x + '-' + p.y)}
+			<span
+				class="lk-particle lk-particle--{p.kind}"
+				style="--x:{p.x}%;--y:{p.y}%;--len:{p.length}px;--rot:{p.rotation}deg;--delay:{p.delay}s;--c1:var({p.c1});--c2:var({p.c2});"
+			></span>
+		{/each}
+	</div>
+
+	<!-- ── Mobile-only compact brand banner ── -->
+	<header class="lk-auth-mobile-banner">
 		<Logo size="md" />
-		<span class="caption font-medium text-[var(--color-brand-700)]">Pharma SaaS</span>
+		<span class="caption">Pharma SaaS</span>
 	</header>
 
-	<!-- ═══ BRAND PANEL (desktop only) — animated hero ═══════════════════ -->
-	<section
-		bind:this={brandPanel}
-		aria-label="LeadKart"
-		class="lk-auth-brand relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-center"
-	>
-		<!-- Background illustration — radial mask only. No white glass
-		     overlay (it was swallowing the image at any reasonable
-		     opacity). The brand-100 panel bg provides enough contrast
-		     against the hero typography on top. -->
-		<div class="lk-auth-illustration lk-parallax-medium" aria-hidden="true">
-			<img src="/images/auth/illustration.png" alt="" class="lk-auth-illustration-img" />
-		</div>
+	<!-- ── Desktop split layout ── -->
+	<div class="lk-auth-layout">
+		<!-- Brand panel (desktop only) — no logo; the modal carries it. -->
+		<section class="lk-auth-brand" aria-label="LeadKart">
+			<!-- Decorative marketing — aria-hidden so screen-reader users
+			     land on the form (the task), not on a feature pitch. -->
+			<div class="lk-auth-brand-content" aria-hidden="true">
+				<div class="lk-auth-content-washes"></div>
 
-		<!-- Page-level logo — bare, no pill chrome. The brand panel bg is
-		     brand-50 (the logo's natural light backdrop), so the wordmark
-		     navy + LK mark green read directly without any containment. -->
-		<div class="lk-auth-page-logo">
-			<Logo size="xl" />
-		</div>
-
-		<!-- Brand text content (3 stacked light-glass pills) -->
-		<div class="lk-auth-brand-content lk-parallax-slow">
-			<div class="lk-auth-pill lk-auth-pill-hero">
-				<p class="display-2 leading-[1.15] text-[var(--color-brand-700)]">
-					Pharma Lead<br />Management,<br />Simplified.
-				</p>
-			</div>
-			<div class="lk-auth-pill mb-8">
-				<p class="body-base text-[var(--color-brand-800)]">
-					End-to-end CRM, orders, inventory &amp; dispatch — built for India's PCD pharma market.
-				</p>
-			</div>
-
-			<div class="lk-auth-features">
-				<div class="lk-auth-feature">
-					<span class="lk-auth-feature-icon" aria-hidden="true">
-						<ShieldCheck size={16} />
-					</span>
-					<span class="body-sm text-[var(--color-brand-800)]">Enterprise-grade security</span>
+				<div class="glass-card lk-glass--hero">
+					<p class="display-2 text-primary leading-[1.05] tracking-tight">
+						Pharma lead management,<br />simplified.
+					</p>
 				</div>
-				<div class="lk-auth-feature">
-					<span class="lk-auth-feature-icon" aria-hidden="true">
-						<TrendingUp size={16} />
-					</span>
-					<span class="body-sm text-[var(--color-brand-800)]">Real-time lead tracking</span>
+
+				<div class="glass-card lk-glass--tagline">
+					<p class="body-base text-fg-muted">
+						End-to-end CRM, orders, inventory &amp; dispatch — built for India's PCD pharma market.
+					</p>
 				</div>
-				<div class="lk-auth-feature">
-					<span class="lk-auth-feature-icon" aria-hidden="true">
-						<Truck size={16} />
-					</span>
-					<span class="body-sm text-[var(--color-brand-800)]">Order-to-dispatch pipeline</span>
-				</div>
+
+				<ul class="lk-auth-features">
+					<li class="glass-card lk-glass--feature lk-glass--purple">
+						<span class="lk-auth-feature-icon lk-auth-feature-icon--purple">
+							<ShieldCheck size={18} />
+						</span>
+						<span class="body-base">Enterprise-grade security</span>
+					</li>
+					<li class="glass-card lk-glass--feature lk-glass--green">
+						<span class="lk-auth-feature-icon lk-auth-feature-icon--green">
+							<TrendingUp size={18} />
+						</span>
+						<span class="body-base">Real-time lead tracking</span>
+					</li>
+					<li class="glass-card lk-glass--feature lk-glass--blue">
+						<span class="lk-auth-feature-icon lk-auth-feature-icon--blue">
+							<Truck size={18} />
+						</span>
+						<span class="body-base">Order-to-dispatch pipeline</span>
+					</li>
+				</ul>
 			</div>
-		</div>
 
-		<!-- Floating product-themed glass cards — staggered bob animation. -->
-		<div class="lk-auth-float lk-auth-float-1 lk-parallax-fast" aria-hidden="true">
-			<span class="lk-auth-float-icon"><ShieldCheck size={14} /></span>
-			<span class="caption">Secure Login</span>
-		</div>
-		<div class="lk-auth-float lk-auth-float-2 lk-parallax-reverse" aria-hidden="true">
-			<span class="lk-auth-float-icon"><LineChart size={14} /></span>
-			<span class="caption">Live Reports</span>
-		</div>
-		<div class="lk-auth-float lk-auth-float-3 lk-parallax-medium" aria-hidden="true">
-			<span class="lk-auth-float-icon"><ShoppingCart size={14} /></span>
-			<span class="caption">Lead Purchase</span>
-		</div>
-		<div class="lk-auth-float lk-auth-float-4 lk-parallax-fast" aria-hidden="true">
-			<span class="lk-auth-float-icon"><Package size={14} /></span>
-			<span class="caption">Inventory</span>
-		</div>
-		<div class="lk-auth-float lk-auth-float-5 lk-parallax-reverse" aria-hidden="true">
-			<span class="lk-auth-float-icon"><TrendingUp size={14} /></span>
-			<span class="caption">Lead Tracking</span>
-		</div>
+			<footer class="lk-auth-brand-footer caption">© LeadKart 2026</footer>
+		</section>
 
-		<!-- Background radial glows are now baked into the brand-panel
-		     bg as layered conic washes (purple top-right, green bottom-
-		     left). The separate floating glow blob was competing with
-		     them — removed. -->
-
-		<!-- Footer copyright -->
-		<div class="lk-auth-footer caption text-[var(--color-brand-700)] opacity-70">
-			© LeadKart 2026
-		</div>
-	</section>
-
-	<!-- ═══ FORM PANEL — full-width on mobile, half on desktop.
-	     Subtle radial wash provides texture for the glass card's backdrop-
-	     filter to actually read as "frosted" — flat bg defeats the effect. -->
-	<main class="lk-auth-form-side flex flex-col items-center justify-center p-6 lg:p-12">
-		<div class="w-full max-w-md">
-			{@render children()}
-		</div>
-	</main>
+		<!-- Form panel — the actual task. SigninForm's <AuthCard> wraps
+		     the children in their own glass surface; the modal-wrap is
+		     just a sizing/centering container (no own background). -->
+		<main class="lk-auth-form-panel">
+			<div class="lk-auth-modal-wrap">
+				{@render children()}
+			</div>
+		</main>
+	</div>
 </div>
 
 <style>
-	/* ── AuthShell-wide THEME LOCK to light values.
-	     Both the brand panel AND the form-side stay in a fixed light
-	     presentation regardless of `<html class="dark">`. Industry canon:
-	     Stripe / Linear / Vercel auth pages don't follow OS theme —
-	     they're brand-identity surfaces, always in their canonical
-	     light treatment. The form-side is a white "modal" surface; the
-	     brand panel is a light-blue marketing surface. AuthCard +
-	     headings + links inside both panels inherit the locked tokens.
-
-	     Locked: surface (bg / bg-subtle / bg-elevated), foreground
-	     (fg / fg-muted / fg-subtle), borders, semantic brand-heading
-	     / brand-link aliases. The brand-* and secondary-* scales never
-	     flipped in the first place, so they're not relocked here. ── */
+	/* ─── Theme tokens — locked to light values regardless of OS theme.
+	     Auth shells are brand-identity surfaces; they stay canonical.
+	     We override existing semantic tokens (--color-bg / -bg-elevated)
+	     rather than mint new ones, so modal + pills + canvas all inherit
+	     the standard surface hierarchy without one-off names. ─── */
 	.lk-auth {
-		/* Surface + foreground tokens locked to light values (auth
-		   shell stays light in both OS themes — Stripe / Linear /
-		   Vercel canon). */
-		--color-bg: oklch(0.99 0 0);
-		--color-bg-subtle: oklch(0.97 0 0);
-		--color-bg-muted: oklch(0.95 0 0);
-		--color-bg-elevated: oklch(1 0 0);
-		--color-fg: oklch(0.2 0.02 256);
-		--color-fg-muted: oklch(0.45 0.02 256);
-		--color-fg-subtle: oklch(0.6 0.02 256);
-		--color-border: oklch(0.9 0.01 256);
-		--color-border-strong: oklch(0.8 0.01 256);
+		/* Brand stops + logo palette + medical-red are now defined
+		   globally in tokens.css (promoted 2026-05-14) so the auth
+		   shell + app shell read as one colour family. No local
+		   overrides needed here — semantic aliases stay below. */
+		/* Brand-text aliases inherit from tokens.css (heading + link both
+		   resolve to --color-primary globally). No local override here. */
 
-		/* Brand stops 600 + 700 pinned to the EXACT colours per the
-		   LeadKart brand spec (user-supplied 2026-05-10):
-		      Sign In button bg  → #00348d ≈ oklch(0.34 0.21 268)
-		      Sign In heading    → #00297d ≈ oklch(0.30 0.20 270)
-		   These are deep indigo-navy, more saturated than the global
-		   brand-600/700 tokens (which are oklch hue 260 navy-violet).
-		   Scoped here so the auth shell renders the canonical brand
-		   colours without re-pivoting the entire token system. */
-		--color-brand-600: oklch(0.34 0.21 268); /* #00348d signin button */
-		--color-brand-700: oklch(0.3 0.2 270); /* #00297d signin text */
-		--color-brand-800: oklch(0.24 0.16 272); /* derived darker stop */
-
-		/* Brand-panel accent washes — derived from the logo's purple
-		   highlights (#a05dce ≈ oklch 0.59 0.18 305) and green glow
-		   (#0ef709 ≈ oklch 0.86 0.30 142). Lightened + low-chroma so
-		   they read as ambient corner tints, not flat blocks. */
-		--color-auth-accent-purple: oklch(0.78 0.12 305);
-		--color-auth-accent-green: oklch(0.85 0.13 142);
-
-		--color-brand-heading: var(--color-brand-700);
-		--color-brand-link: var(--color-brand-600);
-		--color-brand-link-hover: var(--color-brand-700);
+		/* ─── Root container layout ─── */
+		position: relative;
+		min-block-size: 100dvh;
+		overflow: hidden;
+		background: var(--color-bg);
+		color: var(--color-fg);
 	}
 
-	.lk-auth-form-side {
-		/* Pure white in BOTH themes (the AuthShell scope locks
-		   bg-elevated to oklch 1 0 0). The AuthCard's border + shadow
-		   handle visual separation from this surface. */
-		background: var(--color-bg-elevated);
+	/* ─── Mobile-only brand banner. ─── */
+	.lk-auth-mobile-banner {
+		position: relative;
+		z-index: 4;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding-block: 1rem;
+		padding-inline: clamp(1rem, 4vw, 1.5rem);
+		border-block-end: 1px solid var(--color-border);
+		background: var(--color-primary-soft);
+		color: var(--color-primary);
+	}
+	.lk-auth-mobile-banner .caption {
+		color: var(--color-primary);
+		font-weight: 500;
+	}
+	@media (min-width: 64rem) {
+		.lk-auth-mobile-banner {
+			display: none;
+		}
 	}
 
+	/* ─── Two-column layout grid (single col on mobile). z-index 5 keeps
+	     content above the entire decoration stack: blobs (0) + particles
+	     (1-3) + mobile banner (4). ─── */
+	.lk-auth-layout {
+		position: relative;
+		z-index: 5;
+		display: grid;
+		grid-template-columns: 1fr;
+		min-block-size: 100dvh;
+	}
+	@media (min-width: 64rem) {
+		.lk-auth-layout {
+			grid-template-columns: 1fr 1fr;
+		}
+	}
+
+	/* ─── Brand panel — hidden on mobile (banner takes its place).
+	     Content is vertically centred to match the form modal's
+	     vertical centring on the right half; footer is pinned absolute
+	     to the bottom-left corner. ─── */
 	.lk-auth-brand {
-		padding: clamp(3rem, 6vw, 5rem) clamp(2rem, 4vw, 4rem);
-		/* Layered radial washes over the indigo brand-100 base:
-		     - Top-right corner: soft purple from the logo's #a05dce
-		       glass highlight, tinting the upper portion lavender.
-		     - Bottom-left corner: soft green from the logo's #0ef709
-		       inner-K glow, tinting the lower-left wash.
-		     - Base: var(--color-brand-100) indigo.
-		   Each wash kept at ~25% alpha so they read as ambience, not
-		   competing planes. */
-		background:
-			radial-gradient(
-				ellipse 75% 60% at 100% 0%,
-				color-mix(in srgb, var(--color-auth-accent-purple) 35%, transparent) 0%,
-				transparent 55%
-			),
-			radial-gradient(
-				ellipse 70% 55% at 0% 100%,
-				color-mix(in srgb, var(--color-auth-accent-green) 30%, transparent) 0%,
-				transparent 60%
-			),
-			var(--color-brand-100);
-		color: var(--color-brand-800);
+		display: none;
+	}
+	@media (min-width: 64rem) {
+		.lk-auth-brand {
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			padding: clamp(2.5rem, 5vw, 4rem);
+			position: relative;
+		}
 	}
 
-	.lk-auth-page-logo {
-		position: absolute;
-		top: 1.75rem;
-		left: 2rem;
-		z-index: 6;
-	}
-
-	/* ── Brand content stack ── */
 	.lk-auth-brand-content {
 		position: relative;
 		z-index: 4;
-		max-width: 32.5rem;
-		width: 100%;
-	}
-
-	/* ── Glass pill — hero text + tagline wrappers. Much lower white
-	     mix (40% bg-elevated vs prior 70%) so the illustration shows
-	     through behind the text rather than being masked. Backdrop-
-	     filter blur still gives the "frosted glass over photograph"
-	     effect; the border + shadow keep the pill from disappearing
-	     into the wash. ── */
-	.lk-auth-pill {
-		display: block;
-		width: fit-content;
-		max-width: 100%;
-		padding: 1.25em 1.5em;
-		border-radius: 1.5rem;
-		background: color-mix(in srgb, var(--color-bg-elevated) 40%, transparent);
-		border: 1px solid color-mix(in srgb, var(--color-brand-200) 60%, transparent);
-		backdrop-filter: blur(20px) saturate(1.2);
-		-webkit-backdrop-filter: blur(20px) saturate(1.2);
-		position: relative;
-		overflow: hidden;
-		box-shadow: 0 4px 16px color-mix(in srgb, var(--color-brand-900) 10%, transparent);
-	}
-	.lk-auth-pill::before {
-		content: '';
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		height: 50%;
-		background: linear-gradient(
-			180deg,
-			color-mix(in srgb, var(--color-bg-elevated) 50%, transparent) 0%,
-			transparent 100%
-		);
-		border-radius: 1.5rem 1.5rem 0 0;
-		pointer-events: none;
-	}
-	.lk-auth-pill-hero {
-		margin-bottom: clamp(2.5rem, 6vh, 4.5rem);
-	}
-
-	/* ── Feature pills row — same light-glass treatment, tighter. ── */
-	.lk-auth-features {
+		inline-size: 100%;
+		max-inline-size: clamp(20rem, 32vw, 36rem);
+		margin-inline: auto;
 		display: flex;
 		flex-direction: column;
-		gap: 0.625rem;
+		gap: 1.5rem;
 	}
-	.lk-auth-feature {
+
+	.lk-auth-brand-footer {
+		position: absolute;
+		inset-block-end: clamp(2.5rem, 5vw, 4rem);
+		inset-inline-start: clamp(2.5rem, 5vw, 4rem);
+		z-index: 4;
+		color: var(--color-fg-subtle);
+	}
+	.lk-auth-brand-footer.caption {
+		color: var(--color-fg-subtle);
+	}
+
+	/* ─── Form panel — hosts the modal, centred on both axes. ─── */
+	.lk-auth-form-panel {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
-		padding: 0.625rem 1rem;
-		border-radius: 0.875rem;
-		background: color-mix(in srgb, var(--color-bg-elevated) 35%, transparent);
-		border: 1px solid color-mix(in srgb, var(--color-brand-200) 55%, transparent);
-		backdrop-filter: blur(16px) saturate(1.2);
-		-webkit-backdrop-filter: blur(16px) saturate(1.2);
+		justify-content: center;
+		padding: clamp(1.5rem, 4vw, 3rem);
 		position: relative;
-		overflow: hidden;
-		transition:
-			transform 0.2s ease,
-			background 0.2s ease;
 	}
-	@media (hover: hover) {
-		.lk-auth-feature:hover {
-			transform: translateX(0.25rem);
-			background: color-mix(in srgb, var(--color-bg-elevated) 55%, transparent);
+
+	.lk-auth-modal-wrap {
+		inline-size: 100%;
+		max-inline-size: min(28rem, 100%);
+	}
+
+	/* ─── Soft logo-palette washes behind the brand content stack —
+	     gives the Liquid Glass pills colour to refract through. Two
+	     washes only (blue right-side, green bottom-left) — the purple
+	     wash that previously sat behind the hero pill was competing
+	     with the hero text for attention, so it's been removed. ─── */
+	.lk-auth-content-washes {
+		position: absolute;
+		inset: -10% -15%;
+		z-index: -1;
+		pointer-events: none;
+		background:
+			radial-gradient(
+				ellipse 50% 55% at 90% 50%,
+				color-mix(in srgb, var(--color-brand-600) 32%, transparent) 0%,
+				transparent 75%
+			),
+			radial-gradient(
+				ellipse 55% 45% at 20% 100%,
+				color-mix(in srgb, var(--color-logo-green-on-light) 26%, transparent) 0%,
+				transparent 70%
+			);
+		filter: blur(36px);
+	}
+
+	/* ─── Auth-page pill modifiers ─────────────────────────────────
+	   The base material is .glass-card (utilities.css). These modifier
+	   classes ONLY set shape (padding + border-radius) + per-variant
+	   colour tints. The recipe (bg + blur + saturate + brightness +
+	   specular + inner gradient) is single-source in .glass-card. */
+	.lk-glass--hero {
+		padding-block: 1.5rem;
+		padding-inline: 1.75rem;
+	}
+	.lk-glass--tagline {
+		padding-block: 1rem;
+		padding-inline: 1.25rem;
+		border-radius: 1.25rem;
+	}
+	.lk-glass--feature {
+		display: flex;
+		align-items: center;
+		gap: 0.875rem;
+		padding-block: 0.625rem;
+		padding-inline: 1rem 0.625rem;
+		border-radius: 9999px;
+	}
+	/* Coloured variants — brand-tinted overlays on the thick-glass base.
+	   Mix the logo colour into --glass-bg-thick so the variant inherits
+	   the system opacity + the standard inner-gradient curvature. */
+	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+		.lk-glass--purple {
+			background: color-mix(in srgb, var(--color-logo-purple) 22%, var(--glass-bg-thick));
+			border-color: color-mix(in srgb, var(--color-logo-purple) 35%, transparent);
+		}
+		.lk-glass--green {
+			background: color-mix(in srgb, var(--color-logo-green-on-light) 20%, var(--glass-bg-thick));
+			border-color: color-mix(in srgb, var(--color-logo-green-on-light) 35%, transparent);
+		}
+		.lk-glass--blue {
+			background: color-mix(in srgb, var(--color-brand-600) 20%, var(--glass-bg-thick));
+			border-color: color-mix(in srgb, var(--color-brand-600) 35%, transparent);
 		}
 	}
-	.lk-auth-feature::before {
-		content: '';
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		height: 50%;
-		background: linear-gradient(
-			180deg,
-			color-mix(in srgb, var(--color-bg-elevated) 40%, transparent) 0%,
-			transparent 100%
-		);
-		border-radius: 0.875rem 0.875rem 0 0;
-		pointer-events: none;
+
+	.lk-auth-features {
+		list-style: none;
+		padding: 0;
+		margin: 0.5rem 0 0 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.875rem;
 	}
+
 	.lk-auth-feature-icon {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		width: 2rem;
-		height: 2rem;
+		inline-size: 2.25rem;
+		block-size: 2.25rem;
 		border-radius: 0.5rem;
-		background: color-mix(in srgb, var(--color-secondary-100) 80%, transparent);
-		color: var(--color-secondary-700);
 		flex-shrink: 0;
 	}
+	.lk-auth-feature-icon--purple {
+		background: color-mix(in srgb, var(--color-logo-purple) 22%, var(--color-bg-elevated));
+		color: var(--color-logo-purple);
+	}
+	.lk-auth-feature-icon--green {
+		background: color-mix(in srgb, var(--color-logo-green-on-light) 22%, var(--color-bg-elevated));
+		color: var(--color-logo-green-on-light);
+	}
+	.lk-auth-feature-icon--blue {
+		background: color-mix(in srgb, var(--color-brand-600) 20%, var(--color-bg-elevated));
+		color: var(--color-brand-600);
+	}
 
-	/* ── Illustration — full-bleed bg with radial mask + tinted glass ── */
-	.lk-auth-illustration {
+	/* ─── Ambient colour blobs — soft, heavily blurred, slow drift.
+	     Four blobs in logo-palette colours floating slowly across the
+	     canvas. Sits at z-index 0 (deepest decoration), behind particles.
+	     Each blob has its own non-synchronised drift period so the
+	     overall motion never repeats visibly. ─── */
+	.lk-auth-blobs {
 		position: absolute;
 		inset: 0;
-		z-index: 1;
+		z-index: 0;
 		pointer-events: none;
 		overflow: hidden;
 	}
-	.lk-auth-illustration-img {
-		display: block;
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		object-position: center;
-		opacity: 0.5;
-		mask-image: radial-gradient(ellipse at center, black 50%, transparent 95%);
-		-webkit-mask-image: radial-gradient(ellipse at center, black 50%, transparent 95%);
-	}
-	/* Hue-shift tint overlay layered ABOVE the image (sibling pseudo
-	   on the container, not bg on the img — the latter sits behind
-	   the image's opaque pixels and never shows). `mix-blend-mode:
-	   color` keeps the image's luminance (the man, laptop, glow
-	   labels stay readable) while replacing hue + saturation with
-	   the logo-derived purple. Same radial mask so the tint fades
-	   at the corners with the image itself, leaving the panel's
-	   green corner wash intact. */
-	.lk-auth-illustration::after {
-		content: '';
+	.lk-blob {
 		position: absolute;
-		inset: 0;
-		background: var(--color-auth-accent-purple);
-		mix-blend-mode: color;
-		opacity: 0.85;
-		mask-image: radial-gradient(ellipse at center, black 50%, transparent 95%);
-		-webkit-mask-image: radial-gradient(ellipse at center, black 50%, transparent 95%);
-		pointer-events: none;
+		border-radius: 50%;
+		filter: blur(80px);
+		will-change: transform;
+	}
+	.lk-blob--purple {
+		inline-size: 28rem;
+		block-size: 28rem;
+		top: -10%;
+		left: -8%;
+		background: color-mix(in srgb, var(--color-logo-purple) 55%, transparent);
+		animation: lk-blob-drift-a 30s ease-in-out infinite;
+	}
+	.lk-blob--blue {
+		inline-size: 32rem;
+		block-size: 32rem;
+		top: 20%;
+		right: -14%;
+		background: color-mix(in srgb, var(--color-brand-600) 45%, transparent);
+		animation: lk-blob-drift-b 36s ease-in-out infinite;
+	}
+	.lk-blob--green {
+		inline-size: 26rem;
+		block-size: 26rem;
+		bottom: -10%;
+		left: 18%;
+		background: color-mix(in srgb, var(--color-logo-green-on-light) 40%, transparent);
+		animation: lk-blob-drift-c 32s ease-in-out infinite;
+	}
+	.lk-blob--purple-sm {
+		inline-size: 18rem;
+		block-size: 18rem;
+		top: 45%;
+		left: 40%;
+		background: color-mix(in srgb, var(--color-logo-purple) 32%, transparent);
+		animation: lk-blob-drift-d 28s ease-in-out infinite;
 	}
 
-	/* ── Floating glass cards — bobbing animation. Light-glass on the
-	     light brand panel: 70% bg-elevated mix with brand-100 border,
-	     brand-700 typography, secondary-100 icon backdrop for the
-	     green accent. ── */
-	.lk-auth-float {
-		position: absolute;
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.5em 0.875em 0.5em 0.625em;
-		border-radius: 0.75rem;
-		background: color-mix(in srgb, var(--color-bg-elevated) 40%, transparent);
-		border: 1px solid color-mix(in srgb, var(--color-brand-200) 50%, transparent);
-		backdrop-filter: blur(16px) saturate(1.3);
-		-webkit-backdrop-filter: blur(16px) saturate(1.3);
-		white-space: nowrap;
-		z-index: 5;
-		pointer-events: none;
-		box-shadow:
-			0 4px 16px color-mix(in srgb, var(--color-brand-900) 10%, transparent),
-			inset 0 1px 0 color-mix(in srgb, var(--color-bg-elevated) 60%, transparent);
-		overflow: hidden;
-		color: var(--color-brand-700);
-	}
-	.lk-auth-float::before {
-		content: '';
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		height: 50%;
-		background: linear-gradient(
-			180deg,
-			color-mix(in srgb, var(--color-bg-elevated) 35%, transparent) 0%,
-			transparent 100%
-		);
-		border-radius: 0.75rem 0.75rem 0 0;
-		pointer-events: none;
-	}
-	.lk-auth-float-icon {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 1.625rem;
-		height: 1.625rem;
-		border-radius: 0.4375rem;
-		background: color-mix(in srgb, var(--color-secondary-100) 70%, transparent);
-		color: var(--color-secondary-700);
-		flex-shrink: 0;
-	}
-
-	.lk-auth-float-1 {
-		top: 12%;
-		right: 10%;
-		animation: lk-float-bob 6s ease-in-out infinite;
-	}
-	.lk-auth-float-2 {
-		top: 35%;
-		right: 3%;
-		animation: lk-float-bob 7s ease-in-out 1s infinite;
-	}
-	.lk-auth-float-3 {
-		bottom: 38%;
-		right: 6%;
-		animation: lk-float-bob 8s ease-in-out 2s infinite;
-	}
-	.lk-auth-float-4 {
-		bottom: 18%;
-		right: 18%;
-		animation: lk-float-bob 6.5s ease-in-out 0.5s infinite;
-	}
-	.lk-auth-float-5 {
-		bottom: 8%;
-		left: 15%;
-		animation: lk-float-bob 7.5s ease-in-out 3s infinite;
-	}
-
-	@keyframes lk-float-bob {
+	@keyframes lk-blob-drift-a {
 		0%,
 		100% {
 			translate: 0 0;
 		}
 		50% {
-			translate: 0 -0.5rem;
+			translate: 5rem 4rem;
+		}
+	}
+	@keyframes lk-blob-drift-b {
+		0%,
+		100% {
+			translate: 0 0;
+		}
+		50% {
+			translate: -5rem 6rem;
+		}
+	}
+	@keyframes lk-blob-drift-c {
+		0%,
+		100% {
+			translate: 0 0;
+		}
+		50% {
+			translate: 5rem -4rem;
+		}
+	}
+	@keyframes lk-blob-drift-d {
+		0%,
+		100% {
+			translate: 0 0;
+		}
+		50% {
+			translate: 4rem -5rem;
 		}
 	}
 
-	/* ── Mouse-driven parallax layers — consumes --mouse-x / --mouse-y
-	     written by the onMount mousemove handler. translate scales by
-	     per-layer rem amount; reduced-motion users get instant transitions
-	     via the global override in base.css. ── */
-	.lk-parallax-slow {
-		transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-		transform: translate(calc(var(--mouse-x, 0) * 0.75rem), calc(var(--mouse-y, 0) * 0.75rem));
-		will-change: transform;
-		backface-visibility: hidden;
-	}
-	.lk-parallax-medium {
-		transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-		transform: translate(calc(var(--mouse-x, 0) * 1.875rem), calc(var(--mouse-y, 0) * 1.875rem));
-		will-change: transform;
-		backface-visibility: hidden;
-	}
-	.lk-parallax-fast {
-		transition: transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-		transform: translate(calc(var(--mouse-x, 0) * 3.125rem), calc(var(--mouse-y, 0) * 3.125rem));
-		will-change: transform;
-		backface-visibility: hidden;
-	}
-	.lk-parallax-reverse {
-		transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-		transform: translate(calc(var(--mouse-x, 0) * -1.25rem), calc(var(--mouse-y, 0) * -1.25rem));
-		will-change: transform;
-		backface-visibility: hidden;
-	}
-
-	.lk-auth-footer {
+	/* ─── Particle canvas — three depth layers spanning the entire root.
+	     Each layer responds to mouse parallax at a different amplitude;
+	     near layer leads, far layer trails. ─── */
+	.lk-particles {
 		position: absolute;
-		bottom: 1.5rem;
-		left: 50%;
-		transform: translateX(-50%);
-		z-index: 4;
-		opacity: 0.7;
+		inset: 0;
+		pointer-events: none;
+	}
+	/* Depth layers — z-index only (parallax translate replaced by the
+	   bloom spotlight). Particles remain static besides their ambient
+	   drift animation. */
+	.lk-particles--far {
+		z-index: 1;
+	}
+	.lk-particles--mid {
+		z-index: 2;
+	}
+	.lk-particles--near {
+		z-index: 3;
 	}
 
-	/* ── Reduced motion: kill bobbing + parallax. The parallax effect-hook
-	     bails on the same query, but the keyframe-based bob needs an
-	     explicit override. ── */
+	/* ─── Pharma-themed particle shapes ─────────────────────────────
+	     Each particle carries --c1 / --c2 inline (set by the template
+	     from the deterministic PRNG output).
+	       .lk-particle--pill   → two-tone capsule with centre seam +
+	                              top gloss highlight (3D pharma look)
+	       .lk-particle--tracer → longer two-tone capsule with same
+	                              treatment
+	       .lk-particle--cross  → medical plus sign via SVG mask,
+	                              single-coloured from --c1
+	   ─────────────────────────────────────────────────────────── */
+	.lk-particle {
+		position: absolute;
+		left: var(--x);
+		top: var(--y);
+		--scale: 1;
+		--push-x: 0vw;
+		--push-y: 0vw;
+		inline-size: var(--len);
+		block-size: 3.5px;
+		border-radius: 9999px;
+		transform: rotate(var(--rot)) translate(var(--push-x), var(--push-y)) scale(var(--scale));
+		transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+		opacity: 0.85;
+		animation: lk-particle-drift 5s ease-in-out infinite;
+		animation-delay: var(--delay);
+	}
+	.lk-particles--far .lk-particle {
+		--scale: 0.85;
+		opacity: 0.6;
+		block-size: 2.5px;
+	}
+	.lk-particles--near .lk-particle {
+		opacity: 1;
+		block-size: 4.5px;
+	}
+
+	/* Capsule pill — two-tone with a centre seam, like an actual
+	   gelatin capsule. Two halves of different brand colours separated
+	   by a thin dark seam (color-mixed from --color-fg). */
+	.lk-particle--pill,
+	.lk-particle--tracer {
+		background: linear-gradient(
+			90deg,
+			var(--c1) 0%,
+			var(--c1) 49%,
+			color-mix(in srgb, var(--color-fg) 35%, transparent) 49.5%,
+			color-mix(in srgb, var(--color-fg) 35%, transparent) 50.5%,
+			var(--c2) 51%,
+			var(--c2) 100%
+		);
+	}
+
+	/* Gloss highlight — a curved top sheen that sells the 3D capsule
+	   illusion. Pseudo-element inset 0 over the pill, gradient of
+	   bg-elevated fading to transparent. */
+	.lk-particle--pill::after,
+	.lk-particle--tracer::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+		background: linear-gradient(
+			180deg,
+			color-mix(in srgb, var(--color-bg-elevated) 50%, transparent) 0%,
+			color-mix(in srgb, var(--color-bg-elevated) 15%, transparent) 35%,
+			transparent 65%
+		);
+		pointer-events: none;
+	}
+
+	/* Tracer = long capsule — eye-catching streak. */
+	.lk-particle--tracer {
+		inline-size: calc(var(--len) * 2);
+		block-size: 4.5px;
+	}
+	.lk-particles--far .lk-particle--tracer {
+		block-size: 3.5px;
+	}
+	.lk-particles--near .lk-particle--tracer {
+		block-size: 5.5px;
+	}
+
+	/* Medical plus / cross — single-colour, mask-shaped. The bg colour
+	   comes from --c1 (set inline); the SVG mask cuts it to a +. */
+	.lk-particle--cross {
+		inline-size: 9px;
+		block-size: 9px;
+		border-radius: 0;
+		background: var(--c1);
+		mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M4 0h2v4h4v2H6v4H4V6H0V4h4z'/%3E%3C/svg%3E");
+		-webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M4 0h2v4h4v2H6v4H4V6H0V4h4z'/%3E%3C/svg%3E");
+		mask-size: contain;
+		-webkit-mask-size: contain;
+		mask-repeat: no-repeat;
+		-webkit-mask-repeat: no-repeat;
+	}
+	.lk-particles--far .lk-particle--cross {
+		inline-size: 7px;
+		block-size: 7px;
+	}
+	.lk-particles--near .lk-particle--cross {
+		inline-size: 11px;
+		block-size: 11px;
+	}
+
+	/* Tablet = round disc with a centre score line — the classic
+	   pressed-tablet shape. Single-coloured from --c1, with a score
+	   ::before line and a gloss ::after dome highlight. */
+	.lk-particle--tablet {
+		inline-size: 8px;
+		block-size: 8px;
+		border-radius: 50%;
+		background: var(--c1);
+	}
+	.lk-particles--far .lk-particle--tablet {
+		inline-size: 6px;
+		block-size: 6px;
+	}
+	.lk-particles--near .lk-particle--tablet {
+		inline-size: 10px;
+		block-size: 10px;
+	}
+	.lk-particle--tablet::before {
+		content: '';
+		position: absolute;
+		inset-block-start: 50%;
+		inset-inline: 22%;
+		block-size: 1px;
+		background: color-mix(in srgb, var(--color-fg) 40%, transparent);
+		transform: translateY(-50%);
+	}
+	.lk-particle--tablet::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: 50%;
+		background: linear-gradient(
+			180deg,
+			color-mix(in srgb, var(--color-bg-elevated) 50%, transparent) 0%,
+			color-mix(in srgb, var(--color-bg-elevated) 15%, transparent) 35%,
+			transparent 60%
+		);
+		pointer-events: none;
+	}
+
+	@keyframes lk-particle-drift {
+		0%,
+		100% {
+			translate: 0 0;
+		}
+		50% {
+			translate: 0 -6px;
+		}
+	}
+
+	/* ─── Motion-reduced fallback ─── */
 	@media (prefers-reduced-motion: reduce) {
-		.lk-auth-float-1,
-		.lk-auth-float-2,
-		.lk-auth-float-3,
-		.lk-auth-float-4,
-		.lk-auth-float-5 {
+		.lk-particle,
+		.lk-blob {
 			animation: none;
 		}
-		.lk-parallax-slow,
-		.lk-parallax-medium,
-		.lk-parallax-fast,
-		.lk-parallax-reverse {
+		.lk-particles {
 			transform: none;
 		}
 	}

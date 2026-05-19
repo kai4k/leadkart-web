@@ -4,12 +4,13 @@
 
 	let { children } = $props();
 
-	// Apply the effective theme to <html> on mount AND on every change.
-	// `$effect` re-runs when `theme.current` mutates (toggle from
-	// Topbar, system-preference change, etc.) — keeps the DOM in sync.
+	// Reflect customiser state on <html> on mount AND on every change.
+	// The effect re-runs whenever any $state field on the theme store
+	// mutates — touch each so the dep graph picks them up.
 	$effect(() => {
-		// Read theme.effective so the effect's reactive dep graph picks it up.
-		void theme.effective;
+		void theme.primary;
+		void theme.sidebarCollapsed;
+		void theme.contentWidth;
 		theme.applyToDocument();
 	});
 </script>

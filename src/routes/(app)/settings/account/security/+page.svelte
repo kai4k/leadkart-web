@@ -19,7 +19,7 @@
 <div class="stack stack-relaxed">
 	<header class="stack stack-tight">
 		<h1 class="h1">{$_('account.security.title')}</h1>
-		<p class="body-sm text-[var(--color-fg-muted)]">{$_('account.security.subtitle')}</p>
+		<p class="body-sm text-fg-muted">{$_('account.security.subtitle')}</p>
 	</header>
 
 	<Card.Root>

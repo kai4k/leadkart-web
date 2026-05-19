@@ -1,3 +1,39 @@
+<script lang="ts" module>
+	import { cva, type VariantProps } from 'class-variance-authority';
+
+	export const textFieldInputVariants = cva(
+		[
+			'glass-input body-sm block w-full px-3 py-2 text-fg',
+			'placeholder:text-fg-subtle',
+			'focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
+			'disabled:cursor-not-allowed disabled:opacity-60'
+		],
+		{
+			variants: {
+				error: {
+					true: 'border-danger-500 focus-visible:ring-danger-500',
+					false: 'focus-visible:ring-focus-ring'
+				},
+				hasLeading: {
+					true: 'pl-10',
+					false: ''
+				},
+				hasTrailing: {
+					true: 'pr-10',
+					false: ''
+				}
+			},
+			defaultVariants: {
+				error: false,
+				hasLeading: false,
+				hasTrailing: false
+			}
+		}
+	);
+
+	export type TextFieldInputVariants = VariantProps<typeof textFieldInputVariants>;
+</script>
+
 <script lang="ts">
 	import type { HTMLInputAttributes } from 'svelte/elements';
 	import type { Snippet } from 'svelte';
@@ -53,17 +89,14 @@
 </script>
 
 <div class={cn('stack stack-tight', className)}>
-	<label
-		for={fieldId}
-		class={cn('body-sm font-medium text-[var(--color-fg)]', srLabel && 'sr-only')}
-	>
+	<label for={fieldId} class={cn('label text-fg', srLabel && 'sr-only')}>
 		{label}
 	</label>
 
 	<div class="relative">
 		{#if leading}
 			<span
-				class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-[var(--color-fg-subtle)]"
+				class="text-fg-subtle pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
 				aria-hidden="true"
 			>
 				{@render leading()}
@@ -76,15 +109,11 @@
 			aria-invalid={error ? 'true' : undefined}
 			aria-describedby={describedBy}
 			class={cn(
-				'body-sm block w-full rounded-md border bg-[var(--color-bg-elevated)] px-3 py-2 text-[var(--color-fg)]',
-				'placeholder:text-[var(--color-fg-subtle)]',
-				'focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
-				error
-					? 'border-[var(--color-danger-500)] focus-visible:ring-[var(--color-danger-500)]'
-					: 'border-[var(--color-border)] focus-visible:ring-[var(--color-brand-500)]',
-				'disabled:cursor-not-allowed disabled:opacity-60',
-				leading ? 'pl-10' : '',
-				trailing ? 'pr-10' : ''
+				textFieldInputVariants({
+					error: !!error,
+					hasLeading: !!leading,
+					hasTrailing: !!trailing
+				})
 			)}
 			{...rest}
 		/>
@@ -101,10 +130,7 @@
 	{/if}
 
 	{#if error}
-		<p
-			id={errorId}
-			class="body-sm text-[var(--color-danger-700)] dark:text-[var(--color-danger-50)]"
-		>
+		<p id={errorId} class="body-sm text-danger-700">
 			{error}
 		</p>
 	{/if}

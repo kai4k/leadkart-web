@@ -1,37 +1,122 @@
 <script lang="ts">
-	import { Alert, Card } from '$ui';
-	import { session } from '$features/auth/stores/session.svelte';
-	import { tierOf } from '$features/auth/tier';
+	import {
+		Building2,
+		Activity,
+		Ban,
+		Users,
+		UserCheck,
+		ClipboardCheck,
+		ShoppingBag,
+		UserCog
+	} from 'lucide-svelte';
+	import { Alert, Card, Spinner } from '$ui';
+	import { myCapabilitiesQuery } from '$features/auth/queries';
+	import { deriveTier } from '$features/auth/capabilities';
+	import { platformStatsQuery } from '$lib/features/operator/dashboard/queries';
 
 	/**
-	 * Platform-tier dashboard skeleton.
+	 * Platform-tier dashboard.
 	 *
 	 * Audience: SuperAdmin + PlatformManager + LeadAgent (LeadKart
-	 * internal staff). Per docs/reference/dotnet-BRD.md §3.1, they
-	 * source/verify/sell pharma leads + manage tenants.
+	 * internal staff). Per docs/reference/dotnet-BRD.md §3.1.
 	 *
-	 * Real data sources (when wired):
-	 *   GET /api/v1/platform/stats           — top-line counts
-	 *   GET /api/v1/platform/tenants         — recent signups + signup feed
-	 *   (Phase 2) GET /api/v1/platform/leads/unverified  — verification queue size
-	 *   (Phase 2) GET /api/v1/platform/leads/marketplace — inventory depth
+	 * Real data sources wired via TanStack Query (60 s auto-refresh):
+	 *   GET /api/v1/platform/stats  — tenants_total/active/suspended,
+	 *                                  persons_total, memberships_active
 	 *
-	 * Today's placeholder tiles show em-dash. As Phase 2 ships endpoints,
-	 * each tile gets its own gateway call + view model.
+	 * Future Phase 2 tiles (verification queue, marketplace inventory,
+	 * active impersonation sessions) remain as placeholders until the
+	 * backend endpoints land.
 	 */
 
-	const principal = $derived(session.principal);
-	const isSuper = $derived(tierOf(principal) === 'platform-super');
+	const capsQuery = myCapabilitiesQuery();
+	const isSuper = $derived(deriveTier(capsQuery.data) === 'platform-super');
 
-	const tiles = [
-		{ label: 'Tenants total', hint: 'All-time signups' },
-		{ label: 'Tenants active', hint: 'status = active' },
-		{ label: 'Tenants suspended', hint: 'Requires operator action' },
-		{ label: 'Persons total', hint: 'Across all tenants' },
-		{ label: 'Active memberships', hint: 'Non-deactivated' },
-		{ label: 'Lead verification queue', hint: 'Unverified contacts pending review' },
-		{ label: 'Marketplace inventory', hint: 'Verified leads available for purchase' },
-		{ label: 'Active impersonation sessions', hint: 'Operators currently impersonating' }
+	type TileAccent = 'brand' | 'success' | 'warning' | 'danger';
+
+	const statsQuery = platformStatsQuery();
+	const stats = $derived(statsQuery.data ?? null);
+	const statsLoading = $derived(statsQuery.isPending);
+	const statsError = $derived(
+		statsQuery.isError
+			? statsQuery.error instanceof Error
+				? statsQuery.error.message
+				: 'Failed to load platform stats'
+			: null
+	);
+
+	// Tiles backed by real stats — show actual number or '—' while loading.
+	type StatTile = {
+		label: string;
+		hint: string;
+		icon: typeof Building2;
+		accent: TileAccent;
+		value: () => string | number;
+	};
+
+	const statTiles: StatTile[] = [
+		{
+			label: 'Tenants total',
+			hint: 'All-time signups',
+			icon: Building2,
+			accent: 'brand',
+			value: () => (stats ? stats.tenants_total : '—')
+		},
+		{
+			label: 'Tenants active',
+			hint: 'status = active',
+			icon: Activity,
+			accent: 'success',
+			value: () => (stats ? stats.tenants_active : '—')
+		},
+		{
+			label: 'Tenants suspended',
+			hint: 'Requires operator action',
+			icon: Ban,
+			accent: 'warning',
+			value: () => (stats ? stats.tenants_suspended : '—')
+		},
+		{
+			label: 'Persons total',
+			hint: 'Across all tenants',
+			icon: Users,
+			accent: 'brand',
+			value: () => (stats ? stats.persons_total : '—')
+		},
+		{
+			label: 'Active memberships',
+			hint: 'Non-deactivated',
+			icon: UserCheck,
+			accent: 'success',
+			value: () => (stats ? stats.memberships_active : '—')
+		}
+	];
+
+	// Phase 2 placeholder tiles (no endpoint yet).
+	const placeholderTiles: Array<{
+		label: string;
+		hint: string;
+		icon: typeof Building2;
+		accent: TileAccent;
+	}> = [
+		{
+			label: 'Lead verification queue',
+			hint: 'Unverified contacts pending review',
+			icon: ClipboardCheck,
+			accent: 'warning'
+		},
+		{
+			label: 'Marketplace inventory',
+			hint: 'Verified leads available for purchase',
+			icon: ShoppingBag,
+			accent: 'brand'
+		},
+		{
+			label: 'Active impersonation sessions',
+			hint: 'Operators currently impersonating',
+			icon: UserCog,
+			accent: 'danger'
+		}
 	];
 </script>
 
@@ -41,40 +126,94 @@
 			<h1 class="h1">Operator Dashboard</h1>
 			{#if isSuper}
 				<span
-					class="caption inline-flex items-center rounded-full bg-[var(--color-danger-50)] px-2 py-0.5 font-medium text-[var(--color-danger-900)] dark:bg-[var(--color-danger-900)] dark:text-[var(--color-danger-50)]"
+					class="label-small bg-danger-50 text-danger-900 inline-flex items-center rounded-full px-2 py-0.5"
 				>
 					SuperAdmin
 				</span>
 			{:else}
 				<span
-					class="caption inline-flex items-center rounded-full bg-[var(--color-brand-50)] px-2 py-0.5 font-medium text-[var(--color-brand-700)] dark:bg-[var(--color-brand-900)] dark:text-[var(--color-brand-100)]"
+					class="label-small bg-primary-soft text-primary inline-flex items-center rounded-full px-2 py-0.5"
 				>
 					Platform Staff
 				</span>
 			{/if}
 		</div>
-		<p class="body-sm text-[var(--color-fg-muted)]">
+		<p class="body-sm text-fg-muted">
 			Cross-tenant operations: lead verification, tenant management, marketplace ops.
 		</p>
 	</header>
 
+	{#if statsError}
+		<Alert variant="danger" title="Stats unavailable">{statsError}</Alert>
+	{/if}
+
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-		{#each tiles as tile (tile.label)}
-			<Card.Root>
+		{#each statTiles as tile (tile.label)}
+			{@const Icon = tile.icon}
+			<Card.Root surface="glass" class="lk-dash-tile glass-hover">
 				<Card.Header>
-					<Card.Description>{tile.label}</Card.Description>
+					<div class="cluster" style="--cluster-gap: var(--spacing-3);">
+						<span class={`lk-dash-tile-icon lk-dash-tile-icon--${tile.accent}`} aria-hidden="true">
+							<Icon size={16} />
+						</span>
+						<Card.Description>{tile.label}</Card.Description>
+					</div>
 				</Card.Header>
 				<Card.Content>
-					<p class="display-2 tabular-nums">—</p>
-					<p class="caption mt-1 text-[var(--color-fg-subtle)]">{tile.hint}</p>
+					{#if statsLoading}
+						<Spinner size={16} />
+					{:else}
+						<p class="display-2 text-fg tabular-nums">{tile.value()}</p>
+					{/if}
+					<p class="caption text-fg-subtle mt-1">{tile.hint}</p>
+				</Card.Content>
+			</Card.Root>
+		{/each}
+
+		{#each placeholderTiles as tile (tile.label)}
+			{@const Icon = tile.icon}
+			<Card.Root surface="glass" class="lk-dash-tile glass-hover">
+				<Card.Header>
+					<div class="cluster" style="--cluster-gap: var(--spacing-3);">
+						<span class={`lk-dash-tile-icon lk-dash-tile-icon--${tile.accent}`} aria-hidden="true">
+							<Icon size={16} />
+						</span>
+						<Card.Description>{tile.label}</Card.Description>
+					</div>
+				</Card.Header>
+				<Card.Content>
+					<p class="display-2 text-fg-subtle tabular-nums">—</p>
+					<p class="caption text-fg-subtle mt-1">{tile.hint}</p>
 				</Card.Content>
 			</Card.Root>
 		{/each}
 	</div>
-
-	<Alert variant="info" title="Skeleton — real data wires in Phase 2">
-		The Platform module (lead marketplace + verification calls + credits) ships in leadkart-go Phase
-		2 per CLAUDE.md "Up next". This dashboard's tiles get real counts as each endpoint lands. See
-		docs/reference/dotnet-BRD.md §6.2 for the full Platform module spec.
-	</Alert>
 </div>
+
+<style>
+	.lk-dash-tile-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		inline-size: 2rem;
+		block-size: 2rem;
+		border-radius: 0.5rem;
+		flex-shrink: 0;
+	}
+	.lk-dash-tile-icon--brand {
+		background: var(--color-primary-soft);
+		color: var(--color-primary);
+	}
+	.lk-dash-tile-icon--success {
+		background: var(--color-success-50);
+		color: var(--color-success-700);
+	}
+	.lk-dash-tile-icon--warning {
+		background: var(--color-warning-50);
+		color: var(--color-warning-700);
+	}
+	.lk-dash-tile-icon--danger {
+		background: var(--color-danger-50);
+		color: var(--color-danger-700);
+	}
+</style>

@@ -10,6 +10,6 @@
 	let { class: className = '', children, ...rest }: Props = $props();
 </script>
 
-<div class={cn('stack stack-tight border-b border-[var(--color-border)] p-4', className)} {...rest}>
+<div class={cn('stack stack-tight border-border border-b p-4', className)} {...rest}>
 	{#if children}{@render children()}{/if}
 </div>

@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Alert, Spinner } from '$ui';
-	import { tenant } from '$features/tenant/stores/tenant.svelte';
+	import { Alert, Breadcrumbs, Spinner } from '$ui';
+	import type { BreadcrumbItem } from '$ui';
+	import { myCapabilitiesQuery } from '$features/auth/queries';
+	import { tenantSelfQuery } from '$features/tenant/queries';
 	import { tenantDisplayName, tenantStatusBadge } from '$features/tenant/view-models';
 	import { cn } from '$lib/utils/cn';
 
@@ -21,22 +23,16 @@
 	 *     ~3 KB; Statutory does not — only the visited route bundle
 	 *     loads).
 	 *
-	 * Load lifecycle: tenant.load() is called once on the layout's
-	 * first $effect run (idle-guarded). Layout persists across tab
-	 * navigation, so subsequent tab clicks reuse the loaded snapshot.
+	 * TanStack Query handles fetch lifecycle — no manual load() call needed.
 	 */
 
 	let { children } = $props();
 
-	$effect(() => {
-		if (tenant.status === 'idle') {
-			tenant.load().catch(() => {
-				// Store transitions to 'error'; UI handles below.
-			});
-		}
-	});
-
-	const badge = $derived(tenant.current ? tenantStatusBadge(tenant.current.status) : null);
+	const capsQuery = myCapabilitiesQuery();
+	const tenantId = $derived(capsQuery.data?.tenant_id ?? '');
+	const tenantQuery = $derived(tenantSelfQuery(tenantId));
+	const tenantData = $derived(tenantQuery.data ?? null);
+	const badge = $derived(tenantData ? tenantStatusBadge(tenantData.status) : null);
 
 	const tabs: ReadonlyArray<{ href: string; label: string }> = [
 		{ href: '/settings/tenant/profile', label: 'Profile' },
@@ -44,6 +40,13 @@
 		{ href: '/settings/tenant/contact', label: 'Contact' },
 		{ href: '/settings/tenant/preferences', label: 'Preferences' }
 	];
+
+	const activeTab = $derived(tabs.find((t) => isActive(t.href)));
+	const breadcrumbs = $derived<BreadcrumbItem[]>([
+		{ href: '/settings', label: 'Settings' },
+		{ href: '/settings/tenant', label: 'Tenant' },
+		...(activeTab ? [{ label: activeTab.label }] : [])
+	]);
 
 	function isActive(href: string): boolean {
 		const path = page.url.pathname;
@@ -56,21 +59,18 @@
 </svelte:head>
 
 <div class="stack stack-relaxed">
+	<Breadcrumbs items={breadcrumbs} />
 	<header class="stack stack-tight">
-		{#if tenant.current && badge}
+		{#if tenantData && badge}
 			<div class="cluster">
-				<h1 class="h1">{tenantDisplayName(tenant.current)}</h1>
+				<h1 class="h1">{tenantDisplayName(tenantData)}</h1>
 				<span
 					class={cn(
-						'caption inline-flex items-center rounded-full px-2 py-0.5 font-medium',
-						badge.variant === 'success' &&
-							'bg-[var(--color-success-50)] text-[var(--color-success-900)] dark:bg-[var(--color-success-900)] dark:text-[var(--color-success-50)]',
-						badge.variant === 'warning' &&
-							'bg-[var(--color-warning-50)] text-[var(--color-warning-900)] dark:bg-[var(--color-warning-900)] dark:text-[var(--color-warning-50)]',
-						badge.variant === 'danger' &&
-							'bg-[var(--color-danger-50)] text-[var(--color-danger-900)] dark:bg-[var(--color-danger-900)] dark:text-[var(--color-danger-50)]',
-						badge.variant === 'info' &&
-							'bg-[var(--color-info-50)] text-[var(--color-info-900)] dark:bg-[var(--color-info-900)] dark:text-[var(--color-info-50)]'
+						'label-small inline-flex items-center rounded-full px-2 py-0.5',
+						badge.variant === 'success' && 'bg-success-50 text-success-900',
+						badge.variant === 'warning' && 'bg-warning-50 text-warning-900',
+						badge.variant === 'danger' && 'bg-danger-50 text-danger-900',
+						badge.variant === 'info' && 'bg-info-50 text-info-900'
 					)}
 				>
 					{badge.label}
@@ -79,12 +79,12 @@
 		{:else}
 			<h1 class="h1">Tenant Settings</h1>
 		{/if}
-		<p class="body-sm text-[var(--color-fg-muted)]">
+		<p class="body-sm text-fg-muted">
 			Manage your organisation's profile, statutory IDs, contact details, and platform preferences.
 		</p>
 	</header>
 
-	<nav aria-label="Tenant settings sections" class="border-b border-[var(--color-border)]">
+	<nav aria-label="Tenant settings sections" class="border-border border-b">
 		<ul class="cluster gap-0">
 			{#each tabs as tab (tab.href)}
 				{@const active = isActive(tab.href)}
@@ -93,12 +93,12 @@
 						href={tab.href}
 						aria-current={active ? 'page' : undefined}
 						class={cn(
-							'body-sm -mb-px inline-block border-b-2 px-4 py-2 font-medium transition-colors',
+							'label -mb-px inline-block border-b-2 px-4 py-2 transition-colors',
 							'focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
-							'focus-visible:ring-[var(--color-brand-500)]',
+							'focus-visible:ring-focus-ring',
 							active
-								? 'border-[var(--color-brand-600)] text-[var(--color-brand-700)] dark:text-[var(--color-brand-300)]'
-								: 'border-transparent text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]'
+								? 'border-primary text-primary'
+								: 'text-fg-muted hover:text-fg border-transparent'
 						)}
 					>
 						{tab.label}
@@ -108,15 +108,15 @@
 		</ul>
 	</nav>
 
-	{#if tenant.status === 'idle' || tenant.status === 'loading'}
+	{#if tenantQuery.isPending}
 		<div class="flex justify-center py-16">
 			<Spinner size={32} />
 		</div>
-	{:else if tenant.status === 'error'}
+	{:else if tenantQuery.isError}
 		<Alert variant="danger" title="Could not load tenant settings">
 			Refresh the page or try again in a moment. If the problem persists, contact support.
 		</Alert>
-	{:else if tenant.current}
+	{:else if tenantData}
 		{@render children()}
 	{/if}
 </div>

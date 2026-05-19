@@ -1,0 +1,95 @@
+<script lang="ts">
+	import { page } from '$app/state';
+	import { Alert, Breadcrumbs, Spinner } from '$ui';
+	import type { BreadcrumbItem } from '$ui';
+	import { myCapabilitiesQuery, myProfileQuery } from '$features/auth/queries';
+	import { displayName } from '$features/auth/view-models';
+	import { cn } from '$lib/utils/cn';
+
+	/**
+	 * Account Settings layout — owns the shared chrome (header + sub-
+	 * route nav) for /settings/account/* sub-pages. Mirrors the
+	 * /settings/tenant/* pattern.
+	 *
+	 * TanStack Query handles fetch lifecycle — no manual load() call needed.
+	 */
+
+	let { children } = $props();
+
+	const capsQuery = myCapabilitiesQuery();
+	const membershipId = $derived(capsQuery.data?.membership_id ?? '');
+	const profileQuery = $derived(myProfileQuery(membershipId));
+	const profileData = $derived(profileQuery.data ?? null);
+
+	const tabs: ReadonlyArray<{ href: string; label: string }> = [
+		{ href: '/settings/account/profile', label: 'Profile' },
+		{ href: '/settings/account/security', label: 'Security' },
+		{ href: '/settings/account/sessions', label: 'Sessions' }
+	];
+
+	const activeTab = $derived(tabs.find((t) => isActive(t.href)));
+	const breadcrumbs = $derived<BreadcrumbItem[]>([
+		{ href: '/settings', label: 'Settings' },
+		{ href: '/settings/account', label: 'Account' },
+		...(activeTab ? [{ label: activeTab.label }] : [])
+	]);
+
+	function isActive(href: string): boolean {
+		const path = page.url.pathname;
+		return path === href || path.startsWith(href + '/');
+	}
+</script>
+
+<svelte:head>
+	<title>Account · LeadKart</title>
+</svelte:head>
+
+<div class="stack stack-relaxed">
+	<Breadcrumbs items={breadcrumbs} />
+	<header class="stack stack-tight">
+		{#if profileData}
+			<h1 class="h1">{displayName(profileData)}</h1>
+			<p class="body-sm text-fg-muted">
+				{profileData.email}
+			</p>
+		{:else}
+			<h1 class="h1">Account</h1>
+		{/if}
+	</header>
+
+	<nav aria-label="Account settings sections" class="border-border border-b">
+		<ul class="cluster gap-0">
+			{#each tabs as tab (tab.href)}
+				{@const active = isActive(tab.href)}
+				<li>
+					<a
+						href={tab.href}
+						aria-current={active ? 'page' : undefined}
+						class={cn(
+							'label -mb-px inline-block border-b-2 px-4 py-2 transition-colors',
+							'focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
+							'focus-visible:ring-focus-ring',
+							active
+								? 'border-primary text-primary'
+								: 'text-fg-muted hover:text-fg border-transparent'
+						)}
+					>
+						{tab.label}
+					</a>
+				</li>
+			{/each}
+		</ul>
+	</nav>
+
+	{#if profileQuery.isPending}
+		<div class="flex justify-center py-16">
+			<Spinner size={32} />
+		</div>
+	{:else if profileQuery.isError}
+		<Alert variant="danger" title="Could not load account settings">
+			Refresh the page or try again in a moment. If the problem persists, contact support.
+		</Alert>
+	{:else if profileData}
+		{@render children()}
+	{/if}
+</div>

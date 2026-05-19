@@ -41,11 +41,12 @@ import {
 	Bell,
 	Settings,
 	ShieldCheck,
+	Shield,
+	Activity,
 	Building2,
-	UserCheck,
 	type Icon as LucideIcon
 } from 'lucide-svelte';
-import type { PrincipalTier } from '$lib/features/auth/tier';
+import type { PrincipalTier } from '$lib/features/auth/capabilities';
 
 export interface NavItem {
 	href: string;
@@ -68,27 +69,30 @@ export interface NavSection {
 
 export const PLATFORM_NAV: NavSection[] = [
 	{
+		title: 'Operator',
 		items: [
-			{ href: '/dashboard', label: 'Operator Dashboard', icon: LayoutDashboard, requires: null }
-		]
-	},
-	{
-		title: 'Marketplace',
-		items: [
-			{ href: '/platform/leads', label: 'Lead Marketplace', icon: ShoppingCart, requires: null },
-			{ href: '/platform/verify', label: 'Verification Queue', icon: UserCheck, requires: null }
-		]
-	},
-	{
-		title: 'Operators',
-		items: [
-			{ href: '/platform/tenants', label: 'Tenants', icon: Building2, requires: null },
-			{ href: '/platform/persons', label: 'People', icon: Users, requires: null },
+			{ href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, requires: null },
 			{
-				href: '/platform/impersonation',
-				label: 'Impersonation',
-				icon: ShieldCheck,
+				href: '/operator/tenants/platform',
+				label: 'Your platform',
+				icon: Shield,
 				requires: null
+			},
+			{
+				href: '/operator/tenants',
+				label: 'Tenants',
+				icon: Building2,
+				requires: 'platform.tenants.view'
+			},
+			/**
+			 * Activity — placeholder; backend audit-log endpoint (ADR 0038 A.3)
+			 * not yet shipped. Route is a stub empty-state until backend lands.
+			 */
+			{
+				href: '/operator/activity',
+				label: 'Activity',
+				icon: Activity,
+				requires: 'platform.tenants.view'
 			}
 		]
 	},
@@ -96,8 +100,8 @@ export const PLATFORM_NAV: NavSection[] = [
 		title: 'Account',
 		items: [
 			{
-				href: '/settings/account/security',
-				label: 'Account & Security',
+				href: '/settings/account',
+				label: 'Account',
 				icon: ShieldCheck,
 				requires: null
 			}
@@ -151,8 +155,8 @@ export const TENANT_ADMIN_NAV: NavSection[] = [
 		title: 'Account',
 		items: [
 			{
-				href: '/settings/account/security',
-				label: 'Account & Security',
+				href: '/settings/account',
+				label: 'Account',
 				icon: ShieldCheck,
 				requires: null
 			}
@@ -180,8 +184,8 @@ export const TENANT_USER_NAV: NavSection[] = [
 		title: 'Account',
 		items: [
 			{
-				href: '/settings/account/security',
-				label: 'Account & Security',
+				href: '/settings/account',
+				label: 'Account',
 				icon: ShieldCheck,
 				requires: null
 			}
@@ -204,6 +208,7 @@ export function navForTier(tier: PrincipalTier): NavSection[] {
 		case 'tenant-user':
 			return TENANT_USER_NAV;
 		case 'unknown':
+		default:
 			return [];
 	}
 }

@@ -1,34 +1,18 @@
 /**
- * Theme store — Svelte 5 class-based reactive store managing light/
- * dark/system mode + the multi-primary colour picker (10 hue
- * choices ported from the Blazor LeadKart.Web theme customiser
- * per ThemeSettings.cs `PrimaryColors` array).
+ * Theme store — Svelte 5 class-based reactive store for the trimmed
+ * customiser surface: brand colour + content width. The semibox layout
+ * is now the only chrome shape (forced via data-layout='semibox' on
+ * <html> by the FOUC prime in app.html); the previous user-facing
+ * toggles for layout, sidebar theme, and direction were removed
+ * 2026-05-17 — no canonical SaaS dashboard (Linear, Vercel, Stripe
+ * Dashboard, Notion, GitHub) exposes those as customer-facing knobs
+ * either.
  *
- * Industry canon: Svelte 5 stores live as class instances with
- * `$state` fields, NOT module-level `let foo = $state(...)` +
- * function accessors. Class pattern guarantees reactivity across
- * module boundaries — components reading `theme.effective` get
- * re-rendered when `current` mutates. (Joy of Code "Stores in
- * Svelte 5"; Svelte 5 official docs "Universal reactivity"; Rich
- * Harris Svelte Summit 2024 talk.)
+ * Industry canon: Svelte 5 stores are class instances with `$state`
+ * fields, NOT module-level `let foo = $state(...)` + function accessors.
+ * Class pattern guarantees reactivity across module boundaries.
  */
 
-type ThemeMode = 'light' | 'dark' | 'system';
-
-/**
- * Primary colour identifiers — extends the Blazor catalog with `'navy'`
- * (the new LeadKart navy-violet brand, derived from the logo wordmark).
- *
- * `'navy'` is the DEFAULT — leaving the picker untouched yields the
- * brand 11-stop scale baked into tokens.css (no `data-primary` attr).
- *
- * The other 10 entries are alt accents users can pick via the customiser
- * (drawer UI deferred); each maps to a `:root[data-primary='X']` override
- * block in styles/base.css that re-skins the brand 11-stop. Picker
- * `'blue'` = the previous corporate blue (#265A8E) for users who want
- * the old look back; `'green'` = iOS pure green (note: distinct from our
- * --color-secondary-* logo green which always stays).
- */
 export type PrimaryColor =
 	| 'navy'
 	| 'blue'
@@ -42,9 +26,14 @@ export type PrimaryColor =
 	| 'mint'
 	| 'cyan';
 
+/** Content width — `default` caps page-inner at the 2xl container
+ *  (96rem) so wide screens don't sprawl text across half a metre.
+ *  `fluid` removes the cap. Slack / Notion / GitHub all ship this. */
+export type ContentWidth = 'default' | 'fluid';
+
 export const PRIMARY_COLORS: ReadonlyArray<{ id: PrimaryColor; label: string; hex: string }> = [
-	{ id: 'navy', label: 'Navy', hex: '#2D2F7E' }, // default — logo wordmark navy-violet
-	{ id: 'blue', label: 'Blue', hex: '#265A8E' }, // legacy corporate blue
+	{ id: 'navy', label: 'Brand', hex: '#502d81' },
+	{ id: 'blue', label: 'Blue', hex: '#265A8E' },
 	{ id: 'green', label: 'Green', hex: '#34C759' },
 	{ id: 'indigo', label: 'Indigo', hex: '#5856D6' },
 	{ id: 'orange', label: 'Orange', hex: '#FF9500' },
@@ -56,77 +45,94 @@ export const PRIMARY_COLORS: ReadonlyArray<{ id: PrimaryColor; label: string; he
 	{ id: 'cyan', label: 'Cyan', hex: '#32ADE6' }
 ];
 
-const STORAGE_KEY = 'leadkart-theme';
-const PRIMARY_KEY = 'leadkart-primary';
+export const CONTENT_WIDTHS: ReadonlyArray<{ id: ContentWidth; label: string }> = [
+	{ id: 'default', label: 'Boxed' },
+	{ id: 'fluid', label: 'Fluid' }
+];
+
+const STORAGE_KEYS = {
+	primary: 'leadkart-primary',
+	sidebarCollapsed: 'leadkart-sidebar-collapsed',
+	contentWidth: 'leadkart-content-width'
+} as const;
 
 class ThemeStore {
-	current = $state<ThemeMode>(this.readInitialMode());
-	primary = $state<PrimaryColor>(this.readInitialPrimary());
+	primary = $state<PrimaryColor>(
+		this.readInitial<PrimaryColor>(STORAGE_KEYS.primary, 'navy', PRIMARY_COLORS)
+	);
+	sidebarCollapsed = $state<boolean>(this.readBoolean(STORAGE_KEYS.sidebarCollapsed, false));
+	contentWidth = $state<ContentWidth>(
+		this.readInitial<ContentWidth>(STORAGE_KEYS.contentWidth, 'default', CONTENT_WIDTHS)
+	);
 
-	private readInitialMode(): ThemeMode {
-		if (typeof window === 'undefined') return 'system';
-		const stored = window.localStorage.getItem(STORAGE_KEY) as ThemeMode | null;
-		if (stored === 'light' || stored === 'dark' || stored === 'system') return stored;
-		return 'system';
+	private readInitial<T extends string>(
+		key: string,
+		fallback: T,
+		valid: ReadonlyArray<{ id: T }>
+	): T {
+		if (typeof window === 'undefined') return fallback;
+		const stored = window.localStorage.getItem(key);
+		const found = valid.find((c) => c.id === stored);
+		return found?.id ?? fallback;
 	}
 
-	private readInitialPrimary(): PrimaryColor {
-		if (typeof window === 'undefined') return 'navy';
-		const stored = window.localStorage.getItem(PRIMARY_KEY);
-		const valid = PRIMARY_COLORS.find((c) => c.id === stored);
-		return valid?.id ?? 'navy';
+	private readBoolean(key: string, fallback: boolean): boolean {
+		if (typeof window === 'undefined') return fallback;
+		const stored = window.localStorage.getItem(key);
+		if (stored === '1') return true;
+		if (stored === '0') return false;
+		return fallback;
 	}
 
-	/**
-	 * Resolves 'system' to the OS-level preference. Reactive — a
-	 * `$derived` that reads this getter re-runs when `current` flips.
-	 */
-	get effective(): 'light' | 'dark' {
-		if (this.current === 'system') {
-			if (typeof window === 'undefined') return 'light';
-			return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-		}
-		return this.current;
-	}
-
-	/** Sets light/dark/system mode + persists + reflects on <html>. */
-	set(next: ThemeMode) {
-		this.current = next;
-		this.persist(STORAGE_KEY, next);
-		this.applyToDocument();
-	}
-
-	/** Toggles between light + dark (system → resolved opposite). */
-	toggle() {
-		this.set(this.effective === 'dark' ? 'light' : 'dark');
-	}
-
-	/** Picks a primary colour + persists + reflects via data attr. */
 	setPrimary(next: PrimaryColor) {
 		this.primary = next;
-		this.persist(PRIMARY_KEY, next);
+		this.persist(STORAGE_KEYS.primary, next);
+		this.applyToDocument();
+	}
+	toggleSidebarCollapsed() {
+		this.setSidebarCollapsed(!this.sidebarCollapsed);
+	}
+	setSidebarCollapsed(next: boolean) {
+		this.sidebarCollapsed = next;
+		this.persist(STORAGE_KEYS.sidebarCollapsed, next ? '1' : '0');
+		this.applyToDocument();
+	}
+	setContentWidth(next: ContentWidth) {
+		this.contentWidth = next;
+		this.persist(STORAGE_KEYS.contentWidth, next);
 		this.applyToDocument();
 	}
 
+	reset() {
+		this.setPrimary('navy');
+		this.setSidebarCollapsed(false);
+		this.setContentWidth('default');
+	}
+
 	/**
-	 * Reflects the effective theme (`<html class="dark">`) AND the
-	 * primary colour (`<html data-primary="X">`) on the root element.
-	 * Idempotent. Called by `set` / `setPrimary` / `toggle`; the root
-	 * +layout calls it inside `$effect` so external state mutations
-	 * also propagate to the DOM.
+	 * Reflects state on <html>:
+	 *   data-primary           — colour token override
+	 *   data-content-width     — boxed | fluid page-inner cap
+	 *   data-sidebar-collapsed — boolean attribute, sidebar width
+	 *
+	 * data-layout='semibox' is set unconditionally by the FOUC prime
+	 * in app.html and never touched at runtime — semibox is the only
+	 * supported chrome shape.
 	 */
 	applyToDocument() {
 		if (typeof document === 'undefined') return;
 		const root = document.documentElement;
-		if (this.effective === 'dark') root.classList.add('dark');
-		else root.classList.remove('dark');
-		// Default primary ('navy') doesn't need an attribute — base
-		// tokens.css already encodes the navy-violet logo brand. Other
-		// primaries set data-primary so the override CSS rules in
-		// base.css activate (re-skinning the brand 11-stop only;
-		// secondary/semantic palettes stay constant).
-		if (this.primary === 'navy') root.removeAttribute('data-primary');
-		else root.setAttribute('data-primary', this.primary);
+
+		this.setAttr(root, 'data-primary', this.primary, 'navy');
+		this.setAttr(root, 'data-content-width', this.contentWidth, 'default');
+
+		if (this.sidebarCollapsed) root.setAttribute('data-sidebar-collapsed', '');
+		else root.removeAttribute('data-sidebar-collapsed');
+	}
+
+	private setAttr(el: Element, name: string, value: string, defaultValue: string) {
+		if (value === defaultValue) el.removeAttribute(name);
+		else el.setAttribute(name, value);
 	}
 
 	private persist(key: string, value: string) {

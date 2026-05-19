@@ -208,6 +208,22 @@
 	}
 }
 
+/* Glass border-glow — subtle 4s pulse cycling border-color toward
+ * --color-brand-400 at 45% mix. Originally on AuthCard only as a
+ * focal-CTA highlight; promoted here for use across any glass surface
+ * that should "breathe" attention (login modal, chrome surfaces).
+ * Applied via the .glass-border-glow utility class (defined below in
+ * the components @layer). */
+@keyframes glass-border-glow {
+	0%,
+	100% {
+		border-color: color-mix(in srgb, var(--color-fg) 8%, transparent);
+	}
+	50% {
+		border-color: color-mix(in srgb, var(--color-brand-400) 45%, transparent);
+	}
+}
+
 @layer components {
 	.animate-fade-in {
 		animation: fade-in var(--duration-base) var(--ease-out);
@@ -275,6 +291,15 @@
 
 	.animate-brand-glow {
 		animation: brand-glow 2.4s var(--ease-in-out) infinite;
+	}
+
+	/* Border-glow — slow 4s pulse cycling border-color toward
+	 * brand-400 and back. Use on glass surfaces that should subtly
+	 * "breathe" to draw the eye (focal call-to-action modals, chrome
+	 * surfaces with one-edge borders). Plays well with .glass-card
+	 * since it animates only border-color, not other border longhands. */
+	.glass-border-glow {
+		animation: glass-border-glow 4s ease-in-out 1s infinite;
 	}
 
 	/* Hover-sheen overlay — composable on any glass surface or .interactive

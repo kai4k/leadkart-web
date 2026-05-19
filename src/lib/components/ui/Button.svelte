@@ -17,17 +17,21 @@
 			// Composes with .interactive utility (transform/shadow/bg/filter transitions).
 			// `link` variant overrides scale via :where() in its own variant string.
 			'interactive',
-			'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-500)] focus-visible:ring-offset-2',
+			'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2',
 			'disabled:cursor-not-allowed disabled:opacity-60 disabled:!transform-none',
 			'motion-reduce:!transition-none motion-reduce:!transform-none motion-reduce:hover:!transform-none'
 		],
 		{
 			variants: {
 				variant: {
-					// Primary — navy-violet brand gradient + brand-halo glow + sheen sweep.
-					// `relative overflow-hidden` enables the .glass-sheen ::after overlay.
+					// Primary — solid --color-primary with Material 3 state-layer
+					// hover/active (computed from primary via color-mix in
+					// tokens.css). Single token, no two-stop gradient: changing
+					// --color-primary rebuilds rest + hover + active automatically.
+					// The `brand-halo` + `glass-sheen` overlays carry visual depth
+					// so the surface stays rich without needing a gradient fill.
 					primary:
-						'relative overflow-hidden bg-gradient-to-b from-[var(--color-brand-500)] to-[var(--color-brand-700)] text-[var(--color-fg-on-brand)] hover:from-[var(--color-brand-400)] hover:to-[var(--color-brand-600)] brand-halo glass-sheen',
+						'relative overflow-hidden bg-primary text-primary-fg hover:bg-primary-hover active:bg-primary-active brand-halo glass-sheen',
 					// Secondary — vibrant logo green for "growth" CTAs (purchase lead,
 					// confirm conversion). Gradient from-700 → to-900 with white text
 					// keeps WCAG 2.2 AA on both stops:
@@ -36,20 +40,19 @@
 					// Hover lifts to from-600 → to-800 (still AA-safe).
 					// Earlier from-400 → to-600 failed AA on the lighter stop (~2.8:1).
 					secondary:
-						'bg-gradient-to-b from-[var(--color-secondary-700)] to-[var(--color-secondary-900)] text-white hover:from-[var(--color-secondary-600)] hover:to-[var(--color-secondary-800)] shadow-[var(--shadow-secondary)]',
+						'bg-gradient-to-b from-secondary-700 to-secondary-900 text-white hover:from-secondary-600 hover:to-secondary-800 shadow-[var(--shadow-secondary)]',
 					// Tonal — quiet neutral, secondary actions on a busy page.
-					tonal:
-						'bg-[var(--color-bg-muted)] text-[var(--color-fg)] hover:bg-[var(--color-bg-subtle)] border border-[var(--color-border)]',
+					tonal: 'bg-bg-muted text-fg hover:bg-bg-subtle border border-border',
 					// Ghost — text-only with hover bg, lowest emphasis.
-					ghost: 'text-[var(--color-fg)] hover:bg-[var(--color-bg-muted)]',
+					ghost: 'text-fg hover:bg-bg-muted',
 					// Danger — system red, for destructive confirms.
 					danger:
-						'bg-gradient-to-b from-[var(--color-danger-500)] to-[var(--color-danger-700)] text-[var(--color-fg-on-brand)] hover:from-[var(--color-danger-400)] hover:to-[var(--color-danger-600)] shadow-[var(--shadow-danger)]',
+						'bg-gradient-to-b from-danger-500 to-danger-700 text-fg-on-brand hover:from-danger-400 hover:to-danger-600 shadow-[var(--shadow-danger)]',
 					// Glass — frosted iOS-style button on top of imagery / hero panels.
 					glass:
-						'relative overflow-hidden glass-popover glass-sheen text-[var(--color-fg)] hover:text-[var(--color-brand-700)]',
+						'relative overflow-hidden glass-popover glass-sheen text-fg hover:text-primary-hover',
 					// Link — pure text, no transform on hover/press (overrides .interactive).
-					link: '!transform-none hover:!transform-none active:!transform-none text-[var(--color-brand-600)] underline-offset-4 hover:underline hover:text-[var(--color-brand-700)] p-0 h-auto'
+					link: '!transform-none hover:!transform-none active:!transform-none text-primary underline-offset-4 hover:underline hover:text-primary-hover p-0 h-auto'
 				},
 				// Touch targets — Apple HIG floor 44px for primary tap surfaces,
 				// Material 3 floor 48px. md=h-11 (44px) hits Apple; lg=h-12 (48px)

@@ -7,8 +7,26 @@
  * exported as namespaces under their own subfolder index.
  */
 export { default as Alert } from './Alert.svelte';
+export { default as Breadcrumbs } from './Breadcrumbs.svelte';
+export type { BreadcrumbItem } from './Breadcrumbs.svelte';
+export { default as CopyButton } from './CopyButton.svelte';
 export { default as AuthCard } from './AuthCard.svelte';
+export { default as Avatar } from './Avatar.svelte';
+export { default as Badge } from './Badge.svelte';
 export { default as Button } from './Button.svelte';
-export { default as Logo } from './Logo.svelte';
-export { default as Spinner } from './Spinner.svelte';
 export * as Card from './card';
+export { default as ConfirmDialog } from './ConfirmDialog.svelte';
+export * as Dialog from './dialog';
+export * as Drawer from './drawer';
+export * as Dropdown from './dropdown';
+export { default as EmptyState } from './EmptyState.svelte';
+export { default as Logo } from './Logo.svelte';
+export { default as Pagination } from './Pagination.svelte';
+export { default as Skeleton } from './Skeleton.svelte';
+export type { SkeletonVariants } from './Skeleton.svelte';
+export { default as Spinner } from './Spinner.svelte';
+export * as Tooltip from './tooltip';
+export { toast, dismiss } from './Toaster.svelte';
+export type { ToastAction } from './Toaster.svelte';
+export * as DataTable from './data-table';
+export type { DataTableColumn, DataTableProps } from './data-table';

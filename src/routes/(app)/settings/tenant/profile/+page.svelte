@@ -1,17 +1,16 @@
 <script lang="ts">
 	import { Card } from '$ui';
 	import TenantProfileForm from '$features/tenant/components/TenantProfileForm.svelte';
-	import { tenant } from '$features/tenant/stores/tenant.svelte';
+	import { tenantSelfQuery } from '$features/tenant/queries';
+	import { myCapabilitiesQuery } from '$features/auth/queries';
 
-	/**
-	 * /settings/tenant/profile — Profile section. The parent layout
-	 * guards on `tenant.current` before rendering children, but the
-	 * `{#if}` here keeps TypeScript narrowing in scope (the compiler
-	 * can't follow guard logic across component boundaries).
-	 */
+	const capsQuery = myCapabilitiesQuery();
+	const tenantId = $derived(capsQuery.data?.tenant_id ?? '');
+	const tenantQuery = $derived(tenantSelfQuery(tenantId));
+	const tenantData = $derived(tenantQuery.data ?? null);
 </script>
 
-{#if tenant.current}
+{#if tenantData}
 	<Card.Root>
 		<Card.Header>
 			<Card.Title>Profile</Card.Title>
@@ -21,7 +20,7 @@
 			</Card.Description>
 		</Card.Header>
 		<Card.Content>
-			<TenantProfileForm tenant={tenant.current} />
+			<TenantProfileForm tenant={tenantData} {tenantId} />
 		</Card.Content>
 	</Card.Root>
 {/if}

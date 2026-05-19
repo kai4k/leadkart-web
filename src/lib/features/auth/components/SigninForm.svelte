@@ -7,7 +7,7 @@
 	import { loginRequestSchema } from '../schemas';
 	import { session } from '../stores/session.svelte';
 	import { isApiError } from '$api/client';
-	import { Alert, AuthCard, Button } from '$lib/components/ui';
+	import { Alert, AuthCard, Button, Logo } from '$lib/components/ui';
 	import { TextField, PasswordField } from '$lib/components/form';
 
 	/**
@@ -66,9 +66,12 @@
 </script>
 
 <AuthCard>
-	<div class="stack stack-tight text-center">
-		<h1 class="h1 text-[var(--color-brand-heading)]">{$_('auth.signin.title')}</h1>
-		<p class="body-sm text-[var(--color-fg-muted)]">{$_('auth.signin.subtitle')}</p>
+	<div class="flex flex-col items-center gap-6">
+		<Logo size="2xl" />
+		<div class="stack stack-tight text-center">
+			<h1 class="h1 text-brand-heading">{$_('auth.signin.title')}</h1>
+			<p class="body-sm text-fg-muted">{$_('auth.signin.subtitle')}</p>
+		</div>
 	</div>
 
 	<form class="stack" onsubmit={onSubmit} novalidate>
@@ -101,7 +104,7 @@
 
 	<!-- Security trust badge — "256-bit SSL encrypted" microcopy with shield -->
 	<div
-		class="flex items-center justify-center gap-2 border-t border-[var(--color-border)] pt-4 text-[var(--color-fg-subtle)]"
+		class="border-border text-fg-subtle flex flex-col items-center gap-2 border-t pt-4 sm:flex-row sm:justify-center"
 	>
 		<Lock size={14} aria-hidden="true" />
 		<span class="caption">256-bit SSL encrypted</span>

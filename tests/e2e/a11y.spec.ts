@@ -1,6 +1,12 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { fakeLoginResponse, TEST_TENANT_ID } from './helpers/fake-jwt';
+import {
+	fakeLoginResponse,
+	fakeCapabilitiesResponse,
+	fakeUserDto,
+	TEST_TENANT_ID,
+	TEST_MEMBERSHIP_ID
+} from './helpers/fake-jwt';
 
 /**
  * Accessibility tests via axe-core. Industry canon for a11y in CI:
@@ -56,23 +62,62 @@ const TENANT_FIXTURE = {
 
 /**
  * Mocks the leadkart-go endpoints needed for a signed-in journey
- * through the (app) routes — login + GET tenant. Mutators are not
- * needed for a11y scans (we only render the form chrome, not submit).
+ * through the (app) routes — login + capabilities + GET tenant.
+ * Mutators are not needed for a11y scans (we only render the form
+ * chrome, not submit).
  */
 async function setupAuthedTenantMocks(page: Page): Promise<void> {
 	await page.route('**/api/v1/auth/login', async (route: Route) => {
 		await route.fulfill({
 			status: 200,
 			contentType: 'application/json',
-			body: JSON.stringify(fakeLoginResponse())
+			body: JSON.stringify(fakeLoginResponse({ permission: ['tenant.admin'] }))
 		});
 	});
+
+	// Capabilities — Sidebar + UserMenu query this on every (app) route.
+	await page.route('**/api/v1/auth/me/capabilities', async (route: Route) => {
+		await route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify(
+				fakeCapabilitiesResponse({
+					permissions: ['tenant.admin'],
+					tenant_id: TENANT_ID,
+					tenant_slug: 'acme-pharma',
+					email: 'admin@acme.test'
+				})
+			)
+		});
+	});
+
 	await page.route(`**/api/v1/tenants/${TENANT_ID}`, async (route: Route) => {
 		if (route.request().method() === 'GET') {
 			await route.fulfill({
 				status: 200,
 				contentType: 'application/json',
 				body: JSON.stringify(TENANT_FIXTURE)
+			});
+		} else {
+			await route.continue();
+		}
+	});
+
+	// Own profile — account layout (settings/account/*) needs this to render children.
+	await page.route(`**/api/v1/users/${TEST_MEMBERSHIP_ID}`, async (route: Route) => {
+		if (route.request().method() === 'GET') {
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify(
+					fakeUserDto({
+						membership_id: TEST_MEMBERSHIP_ID,
+						tenant_id: TENANT_ID,
+						email: 'admin@acme.test',
+						first_name: 'Admin',
+						last_name: 'Tester'
+					})
+				)
 			});
 		} else {
 			await route.continue();
@@ -183,9 +228,9 @@ test.describe('A11y — WCAG 2.2 AA via axe-core', () => {
 
 		test('Security page', async ({ page }) => {
 			await page.goto('/settings/account/security');
-			await expect(
-				page.getByRole('heading', { level: 1, name: 'Account & Security' })
-			).toBeVisible();
+			// The account layout h1 shows the user's display name from profileData.
+			// Wait for the Change password card title (h3) to confirm the route rendered.
+			await expect(page.getByRole('heading', { level: 3, name: 'Change password' })).toBeVisible();
 			await expectNoSeriousOrCriticalViolations(page, 'main');
 		});
 	});

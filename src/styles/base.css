@@ -3,7 +3,12 @@
  *
  * Tailwind 4's preflight (auto-included via @import 'tailwindcss')
  * covers most resets. This file adds LeadKart-specific defaults
- * + the dark theme override + accessibility globals.
+ * + the customiser overrides (primary colour + layout style) +
+ * accessibility globals.
+ *
+ * Dark mode removed 2026-05-12 — LeadKart is intentionally light-only
+ * (pharma B2B canon). The customiser exposes colour + layout-style
+ * options via data-attributes on <html> instead.
  *
  * Industry refs: Andy Bell "Modern CSS Reset", Josh Comeau "CSS Reset"
  * (joshwcomeau.com/css/custom-css-reset/), Tailwind Preflight,
@@ -11,44 +16,43 @@
  * Visible).
  * ───────────────────────────────────────────────────────────────────── */
 
-/* ═══ DARK THEME OVERRIDE
- * Activated by <html class="dark"> via lib/stores/theme.svelte.ts +
- * the FOUC-prevention inline script in app.html (runs synchronously
- * before first paint).
+/* ═══ RESPONSIVE BREAKPOINT LADDER (mobile-first) ═══════════════
+ * Every component authors its base styles for the smallest viewport
+ * then layers `min-width` enhancements upward. Single source of truth
+ * for the breakpoint values:
  *
- * Surface + foreground tokens flip; brand + semantic stay constant
- * (picking light/dark variants at component level is simpler than
- * maintaining 11×2 dark equivalents that 95% of UIs never use).
- * ───────────────────────────────────────────────────────────────── */
-:root.dark {
-	--color-bg: oklch(0.16 0.02 256);
-	--color-bg-subtle: oklch(0.2 0.02 256);
-	--color-bg-muted: oklch(0.24 0.02 256);
-	--color-bg-elevated: oklch(0.22 0.02 256);
+ *   --bp-sm  : 40rem    ( 640px)  — large phones / phablets landscape
+ *   --bp-md  : 48rem    ( 768px)  — small tablets / portrait
+ *   --bp-lg  : 64rem    (1024px)  — laptops / desktops (sidebar reveals)
+ *   --bp-xl  : 80rem    (1280px)  — wide desktops
+ *
+ * NB: CSS @media rules can't read custom properties — the literal rem
+ * values must be used in queries. These vars exist as documentation
+ * + for JS / container-query consumption (window.matchMedia).
+ *
+ * Industry refs: Apple HIG (44pt minimum touch target), Material 3
+ * (48dp minimum), WCAG 2.5.5 AAA (target size).
+ * ────────────────────────────────────────────────────────────── */
+:root {
+	--bp-sm: 40rem;
+	--bp-md: 48rem;
+	--bp-lg: 64rem;
+	--bp-xl: 80rem;
 
-	--color-fg: oklch(0.96 0.01 256);
-	--color-fg-muted: oklch(0.7 0.02 256);
-	--color-fg-subtle: oklch(0.55 0.02 256);
+	/* Minimum touch-target dimension on coarse pointers (touch screens).
+	   2.75rem = 44px — Apple HIG / WCAG 2.5.5 AAA. Components apply
+	   this conditionally via @media (pointer: coarse). */
+	--lk-touch-target-min: 2.75rem;
 
-	--color-border: oklch(0.3 0.02 256);
-	--color-border-strong: oklch(0.4 0.02 256);
-
-	/* Semantic brand-text aliases flip to lighter brand stops so navy
-	   typography reads against the dark surfaces. */
-	--color-brand-heading: var(--color-brand-300);
-	--color-brand-link: var(--color-brand-400);
-	--color-brand-link-hover: var(--color-brand-300);
-
-	--color-overlay: oklch(0.05 0.01 256 / 0.7);
-	--color-overlay-strong: oklch(0.05 0.01 256 / 0.85);
-
-	--shadow-xs: 0 1px 2px 0 oklch(0 0 0 / 0.3);
-	--shadow-sm: 0 1px 3px 0 oklch(0 0 0 / 0.4), 0 1px 2px -1px oklch(0 0 0 / 0.4);
-	--shadow: 0 4px 6px -1px oklch(0 0 0 / 0.4), 0 2px 4px -2px oklch(0 0 0 / 0.4);
-	--shadow-md: 0 10px 15px -3px oklch(0 0 0 / 0.5), 0 4px 6px -4px oklch(0 0 0 / 0.5);
-	--shadow-lg: 0 20px 25px -5px oklch(0 0 0 / 0.6), 0 8px 10px -6px oklch(0 0 0 / 0.6);
-	--shadow-xl: 0 25px 50px -12px oklch(0 0 0 / 0.7);
-	--shadow-focus: 0 0 0 3px var(--color-brand-700);
+	/* Safe-area-inset shorthand vars — populated by the browser on
+	   notched / home-indicator iOS + Android devices. Components
+	   consume `max(value, var(--safe-*))` for fixed-position edge
+	   offsets so content never sits under the notch or the home bar.
+	   No-op (0px) on non-mobile / non-notched devices. */
+	--safe-top: env(safe-area-inset-top, 0px);
+	--safe-right: env(safe-area-inset-right, 0px);
+	--safe-bottom: env(safe-area-inset-bottom, 0px);
+	--safe-left: env(safe-area-inset-left, 0px);
 }
 
 /* ═══ PRIMARY COLOUR PICKER — multi-hue theme switching
@@ -58,8 +62,8 @@
  * consistent. Components consuming `var(--color-brand-{N})` re-skin
  * automatically — no per-component changes.
  *
- * Default (no data-primary attr) = navy-violet logo brand from tokens.css
- * (≈ #2D2F7E, hue 260). Picker alternatives:
+ * Default (no data-primary attr) = purple-violet logo brand from
+ * tokens.css (#502d81 wordmark base, hue ≈ 296). Picker alternatives:
  *   blue    #265A8E   (hue ≈ 245)  — legacy corporate blue
  *   green   #34C759   (hue ≈ 145)  — iOS pure green
  *   indigo  #5856D6   (hue ≈ 285)
@@ -76,9 +80,9 @@
  * ───────────────────────────────────────────────────────────── */
 
 :root[data-primary='blue'] {
-	/* Legacy corporate blue (#265A8E, hue 245). Provided as a picker alt
+	/* Legacy corporate blue (#265A8E, hue 245). Customiser picker alt
 	 * for users who prefer the older Blazor-side identity over the
-	 * navy-violet logo brand. */
+	 * purple-violet logo brand (default). */
 	--color-brand-50: oklch(0.96 0.02 245);
 	--color-brand-100: oklch(0.92 0.04 245);
 	--color-brand-200: oklch(0.85 0.06 245);
@@ -218,10 +222,140 @@
 	--color-brand-950: oklch(0.2 0.05 230);
 }
 
-/* ═══ DARK-MODE VARIANT — Tailwind 4 syntax
- * Lets utility classes like `dark:bg-bg-elevated` activate when
- * <html class="dark">. Without this, the `dark:` prefix is inert. */
-@variant dark (&:where(.dark, .dark *));
+/* ═══ LAYOUT CUSTOMISER — Linear/Vercel pattern
+ * One shell, sidebar collapses via hamburger. The customiser exposes
+ * three legitimate axes:
+ *
+ *   data-primary           — brand colour (re-skins the 11-stop brand
+ *                            palette to a different hue)
+ *   data-sidebar-collapsed — desktop collapsed state (boolean attr)
+ *   dir                    — LTR | RTL
+ *
+ * Removed 2026-05-13 (Domiex theme-marketplace gimmicks no real SaaS
+ * product ships as a user toggle): layout mode, sidebar size, nav type,
+ * content width. The shell is now a single canonical layout.
+ * ───────────────────────────────────────────────────────────── */
+:root {
+	/* Topbar height — fixed across the product. Real SaaS dashboards
+	   use a stable 56–64px bar; LeadKart uses 60px (3.75rem) so the
+	   Linear/Vercel-style minimal topbar feels native. */
+	--lk-topbar-height: 3.75rem;
+
+	/* Footer height — slim status bar pinned to the viewport bottom.
+	   Same fixed-glass treatment as the topbar; consumed by AppShell
+	   for the page-wrapper's padding-block-end. */
+	--lk-footer-height: 2.5rem;
+
+	/* Sidebar widths — binary expanded/collapsed. 16rem = 256px is the
+	   Linear / Vercel canonical width; 4.5rem = 72px the icon-only
+	   collapsed state. Single var, single transition. */
+	--lk-sidebar-width: 16rem;
+	--lk-sidebar-width-collapsed: 4.5rem;
+
+	/* Sidebar uses THICK material (85%) — matches topbar / footer /
+	   content cards / login modal so the whole product reads as ONE
+	   consistent Liquid-Glass surface. User direction over Apple's
+	   thin-chrome canon — visual consistency wins over per-surface
+	   density variation. */
+	--lk-sidebar-bg: var(--glass-bg-thick);
+	--lk-sidebar-bg-solid: var(--color-bg-elevated); /* fallback for reduced-transparency */
+	--lk-sidebar-fg: var(--color-fg);
+	--lk-sidebar-fg-muted: var(--color-fg-muted);
+	/* Hover state — SUBTLE DARKEN (fg-tinted) against the white-
+	   tinted sidebar chrome. iOS Mail / Music / Finder canon: hover
+	   over white-glass chrome is a 5-8% black overlay (a direction
+	   shift toward fg), NOT another layer of white. The ring uses
+	   the same direction (fg-alpha) so the pill edge stays crisp. */
+	--lk-sidebar-hover-bg: var(--glass-pill-bg);
+	--lk-sidebar-hover-ring: color-mix(in srgb, var(--color-fg) 8%, transparent);
+	/* Active state — light brand-tint over glass-pill. 10% primary
+	   mix (was 16%) keeps the active state reading as GLASS with a
+	   primary hint rather than as a solid paint patch — Apple Music
+	   selected-item canon. The ring + tinted shadow carry the brand
+	   weight so the bg fill can stay glass-like. */
+	--lk-sidebar-active-bg: color-mix(in srgb, var(--color-primary) 10%, var(--glass-pill-bg));
+	--lk-sidebar-active-fg: var(--color-primary);
+	--lk-sidebar-active-ring: color-mix(in srgb, var(--color-primary) 22%, transparent);
+	--lk-sidebar-border: color-mix(in srgb, var(--color-bg-elevated) 40%, transparent);
+	--lk-sidebar-specular: var(--glass-specular);
+
+	/* Page content max-width — soft cap so wide screens don't sprawl.
+	   No user toggle (Vercel / Linear ship a single width). */
+	--lk-content-max-width: var(--container-2xl);
+
+	/* ── Layout-mode shell vars (Apple / Notion canon) ───────────
+	   In every mode the sidebar runs FULL-HEIGHT from top:0 and the
+	   topbar starts AFTER the sidebar horizontally (Apple Music,
+	   macOS Finder, Notion, iCloud.com pattern). This produces the
+	   "left rail + right column with top toolbar" visual that
+	   Liquid Glass design language targets.
+	     Default mode  : flat, full-bleed; sidebar 16rem + topbar
+	                     starts at left = 16rem on lg+.
+	     Semibox mode  : 0.75rem gap on all sides; sidebar floats with
+	                     border + radius; topbar starts at left =
+	                     16rem + 1.5rem (two gaps) on lg+.
+	   Mobile (< lg): sidebar hidden behind drawer; topbar spans full
+	   width since there's no sidebar consuming the inline-start. */
+	--lk-shell-gap: 0px;
+	--lk-shell-radius: 0px;
+	--lk-shell-shadow: 0 0 transparent;
+	--lk-sidebar-top: 0px; /* full-height sidebar in every mode */
+	--lk-sidebar-bottom: 0px;
+	--lk-topbar-inline-start: 0px; /* mobile fallback (no sidebar) */
+	--lk-page-pad-top: var(--lk-topbar-height);
+}
+
+/* On lg+ desktops the default-mode topbar starts after the sidebar
+   so the sidebar can occupy the full-height column on its left. */
+@media (min-width: 64rem) {
+	:root {
+		--lk-topbar-inline-start: var(--lk-sidebar-width);
+	}
+}
+
+/* ── Sidebar collapsed (desktop) ──────────────────────────────
+   Boolean attribute set by ThemeStore.toggleSidebarCollapsed().
+   On mobile the sidebar is a drawer and this attr is ignored.  */
+:root[data-sidebar-collapsed] {
+	--lk-sidebar-width: var(--lk-sidebar-width-collapsed);
+}
+
+/* ── Content width ───────────────────────────────────────────
+   `default` caps page-inner at the 2xl container (96rem) so wide
+   screens don't sprawl text across half a metre. `fluid` removes
+   the cap — content fills the full content area minus padding.
+   Slack / Notion / GitHub all ship this toggle. */
+:root[data-content-width='fluid'] {
+	--lk-content-max-width: none;
+}
+
+/* ── Semibox layout (Domiex parity) ───────────────────────────
+   Verbatim values from Domiex semibox.js:
+     spacing.3 = 0.75rem    — gap on all sides + between panes
+     rounded-md = 0.375rem  — pane radius
+     topbar left (lg+) = sidebar-width + 2 * spacing.3
+     content margin-left (lg+) = sidebar-width + spacing.3
+     content padding-top = topbar-height + ~2 * spacing.3
+   The gap + radius apply on mobile too; only the side-by-side
+   topbar positioning is desktop-only (mobile topbar fills the gap
+   so the drawer can slide in). */
+:root[data-layout='semibox'] {
+	--lk-shell-gap: 0.75rem;
+	--lk-shell-radius: 0.5rem;
+	--lk-shell-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.04);
+	--lk-sidebar-top: var(--lk-shell-gap);
+	--lk-sidebar-bottom: var(--lk-shell-gap);
+	--lk-topbar-inline-start: var(--lk-shell-gap); /* mobile (drawer hidden) */
+	--lk-page-pad-top: calc(var(--lk-topbar-height) + var(--lk-shell-gap) * 2);
+}
+@media (min-width: 64rem) {
+	:root[data-layout='semibox'] {
+		/* Topbar sits to the right of the floating sidebar (sidebar
+		   takes inline-start: gap + width: sidebar-width; gap on the
+		   right of the sidebar separates it from the topbar). */
+		--lk-topbar-inline-start: calc(var(--lk-sidebar-width) + var(--lk-shell-gap) * 2);
+	}
+}
 
 @layer base {
 	html {
@@ -237,7 +371,33 @@
 
 	body {
 		min-height: 100dvh;
-		background: var(--color-bg);
+		/* Canvas + a barely-perceptible static ambient wash. Two soft
+		   radial gradients (~6% peak alpha) — brand-200 top-start,
+		   bg-subtle bottom-end — give the backdrop-filter on glass
+		   surfaces something to refract so they read as glass and not
+		   flat tinted paint. No animation, no decoration; this is
+		   purely "depth substrate" — the kind of subtle canvas-tint
+		   variation Apple ships on every surface that hosts material.
+		   background-attachment: fixed anchors the wash so it doesn't
+		   shift with content scroll. */
+		background:
+			radial-gradient(
+				ellipse 80% 60% at 0% 0%,
+				color-mix(in srgb, var(--color-brand-200) 90%, transparent),
+				transparent 65%
+			),
+			radial-gradient(
+				ellipse 70% 70% at 100% 100%,
+				color-mix(in srgb, var(--color-secondary-100) 85%, transparent),
+				transparent 70%
+			),
+			radial-gradient(
+				ellipse 60% 50% at 50% 0%,
+				color-mix(in srgb, var(--color-brand-100) 60%, transparent),
+				transparent 60%
+			),
+			var(--color-bg);
+		background-attachment: fixed;
 		color: var(--color-fg);
 		font-size: var(--text-base);
 		line-height: var(--text-base--line-height);
@@ -245,9 +405,11 @@
 
 	/* Default focus ring — keyboard-only via :focus-visible.
 	 * Industry canon since 2021 (W3C focus-visible spec). NEVER
-	 * suppress focus globally — accessibility violation. */
+	 * suppress focus globally — accessibility violation.
+	 * Uses --color-focus-ring semantic alias so the focus visual can
+	 * be retargeted in one place. */
 	:focus-visible {
-		outline: var(--border-medium) solid var(--color-brand-500);
+		outline: var(--border-medium) solid var(--color-focus-ring);
 		outline-offset: var(--border-medium);
 	}
 
@@ -267,6 +429,30 @@
 			animation-iteration-count: 1 !important;
 			transition-duration: 0.01ms !important;
 			scroll-behavior: auto !important;
+		}
+	}
+
+	/* Reduced-transparency respect — iOS / macOS Accessibility setting
+	 * (and Windows "Transparency effects: Off"). When the user has
+	 * disabled material translucency, fall back to the solid surface
+	 * tokens (--lk-sidebar-bg-solid, --color-bg-elevated) and skip the
+	 * backdrop-filter cost. Liquid Glass surfaces consult the
+	 * `--glass-bg*` vars normally; the override below substitutes
+	 * opaque values so the visual remains legible. */
+	@media (prefers-reduced-transparency: reduce) {
+		:root {
+			--glass-bg-thin: var(--color-bg-elevated);
+			--glass-bg: var(--color-bg-elevated);
+			--glass-bg-elevated: var(--color-bg-elevated);
+			--glass-bg-thick: var(--color-bg-elevated);
+			--glass-bg-dark: oklch(0.22 0.015 256);
+			--glass-pill-bg: var(--color-bg-muted);
+			--glass-pill-bg-dark: oklch(0.32 0.04 260);
+			--glass-blur: 0px;
+			--glass-blur-strong: 0px;
+			--glass-saturate: 100%;
+			--glass-brightness: 1;
+			--glass-inner-gradient: none;
 		}
 	}
 }

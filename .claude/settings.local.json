@@ -1,0 +1,27 @@
+{
+	"permissions": {
+		"allow": [
+			"Bash(grep -rEn \"permission.*Names|TenantPermissions|PlatformPermissions\" \"d:/Development/leadkart-go/internal/identity/domain/permission\" 2>/dev/null | head -30)",
+			"Read(//d/Development/leadkart-go/internal/identity/domain/permission/**)",
+			"Bash(find \"d:/Development/leadkart-go/internal/identity/domain/permission\" -type f -name \"*.go\" | head -5; echo \"---\"; find \"d:/Development/leadkart-go/internal\" -name \"permissions.go\" -o -name \"permission_names*.go\" 2>/dev/null | head -5)",
+			"Read(//d/Development/leadkart-go/internal/**)",
+			"Bash(grep -rE \"\\\\\"identity\\\\\\\\.|\\\\\"platform\\\\\\\\.|\\\\\"tenant\\\\\\\\.\" \"d:/Development/leadkart-go/internal\")",
+			"Bash(grep -E \"permission|Names\\\\\\\\.|=.*\\\\\\\\.users|=.*\\\\\\\\.roles|=.*\\\\\\\\.tenants|=.*\\\\\\\\.people\")",
+			"Bash(grep -EnA 30 \"handleRegisterTenant|handleCreateUser\" \"d:/Development/leadkart-go/internal/identity/ports/tenant_http.go\" \"d:/Development/leadkart-go/internal/identity/ports/users_http.go\")",
+			"Bash(grep -EnA 12 \"type CreateUserRequest|type RegisterTenantRequest|type RegisterTenantResponse|type CreateUserResponse\" \"d:/Development/leadkart-go/internal/identity/ports/dto.go\")",
+			"Bash(find \"d:/Development/Domiex-svelte-ts-admin/Svelte/Admin/src/routes\" -type d 2>/dev/null | grep -iE \"user|team|role|account|tenant|member|organi|staff|employee|permission\" | head -40)",
+			"Read(//d/Development/Domiex-svelte-ts-admin/Svelte/Admin/src/routes/**)",
+			"Bash(find \"d:/Development/Domiex-svelte-ts-admin/Svelte/Admin/src/lib\" -type d 2>/dev/null | grep -iE \"user|team|role|account|tenant|member|setting\" | head -30)",
+			"Read(//d/Development/Domiex-svelte-ts-admin/Svelte/Admin/src/lib/**)",
+			"Bash(test -d docs/superpowers/specs && echo exists || mkdir -p docs/superpowers/specs)",
+			"Bash(git add *)",
+			"Bash(git commit -m ' *)",
+			"Skill(superpowers:subagent-driven-development)",
+			"Skill(superpowers:subagent-driven-development:*)",
+			"Bash(npx vitest *)",
+			"Bash(git -C \"d:\\\\Development\\\\leadkart-web\" log --oneline -8)",
+			"Bash(git -C \"d:\\\\Development\\\\leadkart-web\" show dace658 --stat)"
+		],
+		"additionalDirectories": ["D:\\Development\\leadkart-web\\docs\\superpowers"]
+	}
+}

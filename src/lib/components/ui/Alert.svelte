@@ -4,13 +4,10 @@
 	export const alertVariants = cva(['rounded-md border p-4 body-sm'], {
 		variants: {
 			variant: {
-				info: 'bg-[var(--color-info-50)] border-[var(--color-info-100)] text-[var(--color-info-900)] dark:bg-[var(--color-info-900)] dark:border-[var(--color-info-700)] dark:text-[var(--color-info-50)]',
-				success:
-					'bg-[var(--color-success-50)] border-[var(--color-success-100)] text-[var(--color-success-900)] dark:bg-[var(--color-success-900)] dark:border-[var(--color-success-700)] dark:text-[var(--color-success-50)]',
-				warning:
-					'bg-[var(--color-warning-50)] border-[var(--color-warning-100)] text-[var(--color-warning-900)] dark:bg-[var(--color-warning-900)] dark:border-[var(--color-warning-700)] dark:text-[var(--color-warning-50)]',
-				danger:
-					'bg-[var(--color-danger-50)] border-[var(--color-danger-100)] text-[var(--color-danger-900)] dark:bg-[var(--color-danger-900)] dark:border-[var(--color-danger-700)] dark:text-[var(--color-danger-50)]'
+				info: 'bg-info-50 border-info-100 text-info-900',
+				success: 'bg-success-50 border-success-100 text-success-900',
+				warning: 'bg-warning-50 border-warning-100 text-warning-900',
+				danger: 'bg-danger-50 border-danger-100 text-danger-900'
 			}
 		},
 		defaultVariants: { variant: 'info' }
@@ -66,7 +63,7 @@
 		{#if dismissible}
 			<button
 				type="button"
-				class="rounded-sm p-0.5 hover:bg-black/5 dark:hover:bg-white/10"
+				class="rounded-sm p-0.5 hover:bg-[color-mix(in_srgb,var(--color-fg)_5%,transparent)]"
 				aria-label="Dismiss"
 				onclick={() => onDismiss?.()}
 			>

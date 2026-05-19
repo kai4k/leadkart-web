@@ -1,5 +1,5 @@
 import { expect, test, type Route } from '@playwright/test';
-import { fakeLoginResponse, TEST_TENANT_ID } from './helpers/fake-jwt';
+import { fakeLoginResponse, fakeCapabilitiesResponse, TEST_TENANT_ID } from './helpers/fake-jwt';
 
 /**
  * End-to-end happy path for the Tenant Settings feature.
@@ -49,6 +49,20 @@ test.describe('Tenant Settings — happy path', () => {
 		// post-mutation reload picks up the new values.
 		let tenantState = { ...BASE_TENANT };
 
+		// Debug: capture console errors + failed requests + all API requests
+		page.on('console', (msg) => {
+			console.log(`[PAGE ${msg.type().toUpperCase()}]`, msg.text());
+		});
+		page.on('requestfailed', (req) => {
+			console.log('[REQUEST FAILED]', req.url(), req.failure()?.errorText);
+		});
+		page.on('request', (req) => {
+			if (req.url().includes('/api/')) console.log('[API REQUEST]', req.method(), req.url());
+		});
+		page.on('response', (res) => {
+			if (res.url().includes('/api/')) console.log('[API RESPONSE]', res.status(), res.url());
+		});
+
 		await page.route('**/api/v1/auth/login', async (route: Route) => {
 			await route.fulfill({
 				status: 200,
@@ -57,6 +71,23 @@ test.describe('Tenant Settings — happy path', () => {
 				// is gated on the `tenant.admin` permission claim after
 				// feat/role-aware-shell.
 				body: JSON.stringify(fakeLoginResponse({ permission: ['tenant.admin'] }))
+			});
+		});
+
+		// Capabilities — Sidebar + UserMenu query this on every (app) route.
+		await page.route('**/api/v1/auth/me/capabilities', async (route: Route) => {
+			console.log('[MOCK HIT] capabilities endpoint intercepted');
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify(
+					fakeCapabilitiesResponse({
+						permissions: ['tenant.admin'],
+						tenant_id: TENANT_ID,
+						tenant_slug: 'acme-pharma',
+						email: 'admin@acme.test'
+					})
+				)
 			});
 		});
 
@@ -91,9 +122,31 @@ test.describe('Tenant Settings — happy path', () => {
 
 		// 1. Sign in
 		await page.goto('/signin');
+		// Debug: inject a console.log into the page
+		await page.evaluate(() => console.log('[TEST] Page loaded, about to sign in'));
 		await page.getByRole('textbox', { name: 'Email' }).fill('admin@acme.test');
 		await page.getByRole('textbox', { name: 'Password' }).fill('correct-horse-battery-staple');
 		await page.getByRole('button', { name: 'Sign in' }).click();
+
+		// Debug: wait and check what happened
+		await page.waitForTimeout(3000);
+		await page.evaluate(() => {
+			console.log('[TEST] URL after 3s:', window.location.href);
+			console.log(
+				'[TEST] Session in LS:',
+				localStorage.getItem('leadkart-session') ? 'SET' : 'NULL'
+			);
+			// Check if the sidebar nav is present (indicates AppShell is mounted)
+			const nav = document.querySelector('[aria-label="Main navigation"]');
+			console.log('[TEST] Sidebar nav present:', nav ? 'YES' : 'NO');
+			// Check for any sidebar links
+			const links = nav ? nav.querySelectorAll('a') : null;
+			console.log('[TEST] Sidebar links count:', links ? links.length : 0);
+			// Check page body structure
+			const h1s = document.querySelectorAll('h1');
+			h1s.forEach((h) => console.log('[TEST] H1 found:', h.textContent));
+			console.log('[TEST] Body text (first 500):', document.body.innerText.substring(0, 500));
+		});
 
 		// 2. Land on dashboard, then navigate to Tenant Settings via the
 		//    sidebar nav. Sidebar.svelte renders the entry under the
@@ -112,8 +165,8 @@ test.describe('Tenant Settings — happy path', () => {
 		await displayName.fill('Acme Pharmaceuticals');
 		await page.getByRole('button', { name: 'Save changes' }).click();
 
-		// 5. Success Alert appears (role=alert, aria-live=polite).
-		await expect(page.getByRole('alert')).toContainText('Profile updated');
+		// 5. Success toast appears (role=status, aria-live=polite via Toaster).
+		await expect(page.getByRole('status')).toContainText('Profile saved');
 
 		// 6. Header reflects the post-PATCH reload — the store re-GET
 		//    surfaced the fixture's new display_name into the heading.
