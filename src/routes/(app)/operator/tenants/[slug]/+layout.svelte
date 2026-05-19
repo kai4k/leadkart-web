@@ -92,9 +92,9 @@
 				{/each}
 			</ul>
 		</nav>
-	{/if}
 
-	{@render children()}
+		{@render children()}
+	{/if}
 </div>
 
 <style>

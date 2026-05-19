@@ -20,19 +20,19 @@
 	 * @theme --z-* tokens) when the element is already positioned by
 	 * bits-ui / Floating UI (dropdown menus, popovers). */
 	.is-fixed-overlay--modal {
-		position: fixed;
+		position: fixed !important;
 		z-index: var(--z-modal);
 	}
 	.is-fixed-overlay--overlay {
-		position: fixed;
+		position: fixed !important;
 		z-index: var(--z-overlay);
 	}
 	.is-fixed-overlay--dropdown {
-		position: fixed;
+		position: fixed !important;
 		z-index: var(--z-dropdown);
 	}
 	.is-fixed-overlay--tooltip {
-		position: fixed;
+		position: fixed !important;
 		z-index: var(--z-tooltip);
 	}
 	.is-fixed-overlay--sticky-top {
