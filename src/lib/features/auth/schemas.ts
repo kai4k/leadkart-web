@@ -92,12 +92,12 @@ export const userDtoSchema = z.object({
 	first_name: z.string(),
 	last_name: z.string(),
 	status: z.enum(['active', 'inactive', 'pending']),
-	designation: z.string(),
-	department: z.string(),
-	status_message: z.string(),
+	designation: z.string().optional().default(''),
+	department: z.string().optional().default(''),
+	status_message: z.string().optional().default(''),
 	joined_at: z.string(),
-	left_at: z.string().nullable(),
-	reports_to: z.string().nullable(),
+	left_at: z.string().nullable().optional(),
+	reports_to: z.string().nullable().optional(),
 	role_ids: z.array(z.string())
 });
 

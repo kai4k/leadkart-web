@@ -11,8 +11,7 @@ export const roleDtoSchema = z.object({
 	is_super_admin: z.boolean(),
 	hierarchy_level: z.number().int(),
 	permissions: z.array(z.string()),
-	created_at: z.string(),
-	updated_at: z.string()
+	created_at: z.string()
 });
 
 export const listRolesResponseSchema = z.object({ roles: z.array(roleDtoSchema) });
