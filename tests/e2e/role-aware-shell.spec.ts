@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
-import { fakeAccessToken, TEST_TENANT_ID } from './helpers/fake-jwt';
+import { fakeAccessToken, fakeCapabilitiesResponse, TEST_TENANT_ID } from './helpers/fake-jwt';
 
 /**
  * Tier-aware shell smoke tests.
@@ -53,6 +53,28 @@ async function mockLoginAs(
 				access_token_expires_at: new Date(Date.now() + 3_600_000).toISOString(),
 				token_type: 'Bearer'
 			})
+		});
+	});
+
+	// Capabilities — Sidebar reads is_platform + is_super_user + permissions
+	// from this endpoint; deriveTier() synthesises the tier client-side.
+	// platform-super needs both is_platform AND is_super_user for deriveTier()
+	// to return 'platform-super'.
+	const isSuperUser = persona === 'platform-super' ? true : (claims.is_super_user ?? false);
+	await page.route('**/api/v1/auth/me/capabilities', async (route: Route) => {
+		await route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify(
+				fakeCapabilitiesResponse({
+					permissions: claims.permission,
+					is_platform: claims.is_platform,
+					is_super_user: isSuperUser,
+					tenant_id: TEST_TENANT_ID,
+					tenant_slug: claims.tenant_slug ?? 'acme',
+					email: 'user@acme.test'
+				})
+			)
 		});
 	});
 

@@ -1,6 +1,11 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { fakeLoginResponse, TEST_TENANT_ID, TEST_MEMBERSHIP_ID } from './helpers/fake-jwt';
+import {
+	fakeLoginResponse,
+	fakeCapabilitiesResponse,
+	TEST_TENANT_ID,
+	TEST_MEMBERSHIP_ID
+} from './helpers/fake-jwt';
 
 /**
  * Operator people management e2e — slice 5 acceptance gate.
@@ -77,6 +82,24 @@ async function signInAsPlatformOperator(page: Page): Promise<void> {
 				fakeLoginResponse({
 					is_platform: true,
 					permission: ['platform.users.view', 'platform.users.manage', 'identity.users.anonymise']
+				})
+			)
+		});
+	});
+
+	// Capabilities — Sidebar + UserMenu query this on every (app) route.
+	await page.route('**/api/v1/auth/me/capabilities', async (route: Route) => {
+		await route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify(
+				fakeCapabilitiesResponse({
+					permissions: ['platform.users.view', 'platform.users.manage', 'identity.users.anonymise'],
+					is_platform: true,
+					is_super_user: true,
+					tenant_id: TENANT_ID,
+					tenant_slug: 'leadkart-platform',
+					email: 'operator@leadkart.io'
 				})
 			)
 		});

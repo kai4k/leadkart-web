@@ -2,6 +2,7 @@ import { expect, test, type Page, type Route } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {
 	fakeLoginResponse,
+	fakeCapabilitiesResponse,
 	TEST_TENANT_ID,
 	TEST_MEMBERSHIP_ID,
 	TEST_FAMILY_ID
@@ -95,6 +96,24 @@ async function mockTenantFetch(page: Page): Promise<void> {
 	});
 }
 
+async function mockCapabilities(page: Page): Promise<void> {
+	await page.route('**/api/v1/auth/me/capabilities', async (route: Route) => {
+		await route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify(
+				fakeCapabilitiesResponse({
+					permissions: ['tenant.admin'],
+					membership_id: MEMBERSHIP_ID,
+					tenant_id: TENANT_ID,
+					tenant_slug: 'acme',
+					email: 'user@acme.test'
+				})
+			)
+		});
+	});
+}
+
 test.describe('Account self-service', () => {
 	test('profile round-trip: edit designation, save, reload, persists', async ({ page }) => {
 		// Mutable fixture — the PATCH handler updates it so the
@@ -109,6 +128,7 @@ test.describe('Account self-service', () => {
 			});
 		});
 
+		await mockCapabilities(page);
 		await mockTenantFetch(page);
 
 		await page.route(`**/api/v1/users/${MEMBERSHIP_ID}`, async (route: Route) => {
@@ -164,6 +184,7 @@ test.describe('Account self-service', () => {
 			});
 		});
 
+		await mockCapabilities(page);
 		await mockTenantFetch(page);
 
 		await page.route(`**/api/v1/users/${MEMBERSHIP_ID}`, async (route: Route) => {
@@ -220,6 +241,7 @@ test.describe('Account self-service', () => {
 			});
 		});
 
+		await mockCapabilities(page);
 		await mockTenantFetch(page);
 
 		await page.route(`**/api/v1/users/${MEMBERSHIP_ID}`, async (route: Route) => {

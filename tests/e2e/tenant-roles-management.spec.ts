@@ -1,6 +1,11 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { fakeLoginResponse, TEST_TENANT_ID, TEST_MEMBERSHIP_ID } from './helpers/fake-jwt';
+import {
+	fakeLoginResponse,
+	fakeCapabilitiesResponse,
+	TEST_TENANT_ID,
+	TEST_MEMBERSHIP_ID
+} from './helpers/fake-jwt';
 
 /**
  * Tenant roles management e2e — slice 3 acceptance gate.
@@ -83,6 +88,28 @@ async function signInAsRolesAdmin(page: Page): Promise<void> {
 						'identity.roles.update',
 						'identity.roles.delete'
 					]
+				})
+			)
+		});
+	});
+
+	// Capabilities — Sidebar + UserMenu query this on every (app) route.
+	await page.route('**/api/v1/auth/me/capabilities', async (route: Route) => {
+		await route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify(
+				fakeCapabilitiesResponse({
+					permissions: [
+						'identity.roles.view',
+						'identity.roles.create',
+						'identity.roles.update',
+						'identity.roles.delete'
+					],
+					membership_id: MEMBERSHIP_ID,
+					tenant_id: TENANT_ID,
+					tenant_slug: 'acme',
+					email: 'admin@acme.test'
 				})
 			)
 		});

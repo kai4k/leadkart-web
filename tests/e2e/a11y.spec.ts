@@ -1,6 +1,6 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { fakeLoginResponse, TEST_TENANT_ID } from './helpers/fake-jwt';
+import { fakeLoginResponse, fakeCapabilitiesResponse, TEST_TENANT_ID } from './helpers/fake-jwt';
 
 /**
  * Accessibility tests via axe-core. Industry canon for a11y in CI:
@@ -56,17 +56,35 @@ const TENANT_FIXTURE = {
 
 /**
  * Mocks the leadkart-go endpoints needed for a signed-in journey
- * through the (app) routes — login + GET tenant. Mutators are not
- * needed for a11y scans (we only render the form chrome, not submit).
+ * through the (app) routes — login + capabilities + GET tenant.
+ * Mutators are not needed for a11y scans (we only render the form
+ * chrome, not submit).
  */
 async function setupAuthedTenantMocks(page: Page): Promise<void> {
 	await page.route('**/api/v1/auth/login', async (route: Route) => {
 		await route.fulfill({
 			status: 200,
 			contentType: 'application/json',
-			body: JSON.stringify(fakeLoginResponse())
+			body: JSON.stringify(fakeLoginResponse({ permission: ['tenant.admin'] }))
 		});
 	});
+
+	// Capabilities — Sidebar + UserMenu query this on every (app) route.
+	await page.route('**/api/v1/auth/me/capabilities', async (route: Route) => {
+		await route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify(
+				fakeCapabilitiesResponse({
+					permissions: ['tenant.admin'],
+					tenant_id: TENANT_ID,
+					tenant_slug: 'acme-pharma',
+					email: 'admin@acme.test'
+				})
+			)
+		});
+	});
+
 	await page.route(`**/api/v1/tenants/${TENANT_ID}`, async (route: Route) => {
 		if (route.request().method() === 'GET') {
 			await route.fulfill({
