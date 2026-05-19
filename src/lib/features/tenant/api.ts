@@ -27,7 +27,7 @@
  * Auth is handled by the cross-cutting client (`$api/client`) which
  * injects the bearer token + handles 401-silent-refresh.
  */
-import { api } from '$api/client';
+import { api, parseResponse } from '$api/client';
 import { tenantSchema } from './schemas';
 import type {
 	Tenant,
@@ -44,7 +44,7 @@ function tenantPath(tenantId: string, suffix = ''): string {
 
 export async function getTenant(tenantId: string): Promise<Tenant> {
 	const raw = await api.get<unknown>(tenantPath(tenantId));
-	return tenantSchema.parse(raw);
+	return parseResponse(tenantSchema, raw);
 }
 
 export function updateTenantProfile(

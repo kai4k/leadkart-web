@@ -14,6 +14,7 @@
  */
 
 import { ApiError, isApiError, type ApiErrorBody } from './errors';
+import { z } from 'zod';
 
 /**
  * Auth integration hooks — injected at runtime by the session store.
@@ -184,3 +185,33 @@ export function withTenant(tenantId: string): typeof api {
 }
 
 export { isApiError };
+
+/**
+ * Parse a raw API response through a Zod schema.
+ *
+ * On success: returns the validated, typed result.
+ * On ZodError: throws a user-facing Error with a clear reload message,
+ *   but preserves the original `zodIssues` array on the error object so
+ *   devtools-savvy engineers can inspect the exact path mismatch.
+ *
+ * Use this in every gateway instead of bare `schema.parse(raw)` so that
+ * a backend/frontend deploy mismatch surfaces as a friendly message in
+ * the UI rather than a raw Zod error array.
+ *
+ * @example
+ *   return parseResponse(tenantSchema, raw);
+ */
+export function parseResponse<S extends z.ZodTypeAny>(schema: S, raw: unknown): z.output<S> {
+	try {
+		return schema.parse(raw);
+	} catch (err) {
+		if (err instanceof z.ZodError) {
+			const fields = err.issues.map((i) => i.path.join('.')).join(', ');
+			const message = `Server response shape unexpected at: ${fields}. This is likely a backend deploy mismatch — please refresh.`;
+			const wrapped = new Error(message);
+			(wrapped as Error & { zodIssues: z.ZodIssue[] }).zodIssues = err.issues;
+			throw wrapped;
+		}
+		throw err;
+	}
+}

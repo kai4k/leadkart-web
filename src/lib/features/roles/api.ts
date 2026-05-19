@@ -1,4 +1,4 @@
-import { api, withTenant } from '$api/client';
+import { api, withTenant, parseResponse } from '$api/client';
 import { listRolesResponseSchema, roleDtoSchema, createRoleResponseSchema } from './schemas';
 import type {
 	ListRolesResponse,
@@ -12,28 +12,28 @@ import type {
 
 export async function listRoles(): Promise<ListRolesResponse> {
 	const raw = await api.get<unknown>('/v1/roles');
-	return listRolesResponseSchema.parse(raw);
+	return parseResponse(listRolesResponseSchema, raw);
 }
 
 /** Operator-scope variant — fetches roles of any tenant by injecting X-Tenant-Id. */
 export async function listRolesScoped(tenantId: string): Promise<ListRolesResponse> {
 	const raw = await withTenant(tenantId).get<unknown>('/v1/roles');
-	return listRolesResponseSchema.parse(raw);
+	return parseResponse(listRolesResponseSchema, raw);
 }
 
 export async function getRole(roleId: string): Promise<RoleDto> {
 	const raw = await api.get<unknown>(`/v1/roles/${roleId}`);
-	return roleDtoSchema.parse(raw);
+	return parseResponse(roleDtoSchema, raw);
 }
 
 export async function createRole(req: CreateRoleRequest): Promise<CreateRoleResponse> {
 	const raw = await api.post<unknown>('/v1/roles', req);
-	return createRoleResponseSchema.parse(raw);
+	return parseResponse(createRoleResponseSchema, raw);
 }
 
 export async function updateRole(roleId: string, req: UpdateRoleRequest): Promise<RoleDto> {
 	const raw = await api.patch<unknown>(`/v1/roles/${roleId}`, req);
-	return roleDtoSchema.parse(raw);
+	return parseResponse(roleDtoSchema, raw);
 }
 
 export async function replaceRolePermissions(

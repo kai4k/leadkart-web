@@ -26,7 +26,7 @@
  * `request-email-change`, `confirm-email-change` still exist on
  * leadkart-go but are not exposed in this SPA.
  */
-import { api } from '$api/client';
+import { api, parseResponse } from '$api/client';
 import {
 	loginResponseSchema,
 	refreshResponseSchema,
@@ -49,12 +49,12 @@ export type Capabilities = z.output<typeof capabilitiesSchema>;
 
 export async function login(body: LoginRequest): Promise<LoginResponse> {
 	const raw = await api.post<unknown>('/v1/auth/login', body, { auth: false });
-	return loginResponseSchema.parse(raw);
+	return parseResponse(loginResponseSchema, raw);
 }
 
 export async function refresh(body: RefreshRequest): Promise<RefreshResponse> {
 	const raw = await api.post<unknown>('/v1/auth/refresh', body, { auth: false });
-	return refreshResponseSchema.parse(raw);
+	return parseResponse(refreshResponseSchema, raw);
 }
 
 export function logout(refreshToken: string): Promise<void> {
@@ -68,7 +68,7 @@ export function logout(refreshToken: string): Promise<void> {
  */
 export async function getMyCapabilities(): Promise<Capabilities> {
 	const raw = await api.get<unknown>('/v1/auth/me/capabilities');
-	return capabilitiesSchema.parse(raw);
+	return parseResponse(capabilitiesSchema, raw);
 }
 
 /**
@@ -95,7 +95,7 @@ export function changePassword(body: {
  */
 export async function getMyProfile(membershipId: string): Promise<UserDto> {
 	const raw = await api.get<unknown>(`/v1/users/${membershipId}`);
-	return userDtoSchema.parse(raw);
+	return parseResponse(userDtoSchema, raw);
 }
 
 /**
@@ -114,7 +114,7 @@ export async function updateMyProfile(
  */
 export async function listSessions(): Promise<SessionDto[]> {
 	const raw = await api.get<unknown>('/v1/auth/sessions');
-	return listSessionsResponseSchema.parse(raw).sessions;
+	return parseResponse(listSessionsResponseSchema, raw).sessions;
 }
 
 /**
@@ -132,5 +132,5 @@ export async function revokeOtherSessions(reason?: string): Promise<{ revoked_co
 	const body: { except_current: true; reason?: string } = { except_current: true };
 	if (reason) body.reason = reason;
 	const raw = await api.delete<unknown>('/v1/auth/sessions', body);
-	return z.object({ revoked_count: z.number().int().nonnegative() }).parse(raw);
+	return parseResponse(z.object({ revoked_count: z.number().int().nonnegative() }), raw);
 }
