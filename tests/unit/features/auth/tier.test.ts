@@ -1,24 +1,27 @@
 /**
  * Capability / permission-check tests. These cover the hasCapability helper
- * that replaced the deleted tier.ts module. The function is the UX-hint gate
- * components use to show/hide actions — drift here means buttons appear for
- * users who can't take the action. Pin every branch.
+ * and the deriveTier helper. hasCapability is the UX-hint gate components use
+ * to show/hide actions — drift here means buttons appear for users who can't
+ * take the action. deriveTier drives sidebar catalogue selection and dashboard
+ * variant routing. Pin every branch.
  */
 import { describe, expect, it } from 'vitest';
-import { hasCapability } from '$lib/features/auth/capabilities';
+import { hasCapability, deriveTier } from '$lib/features/auth/capabilities';
 import type { Capabilities } from '$lib/features/auth/capabilities';
 
 function caps(overrides: Partial<Capabilities> = {}): Capabilities {
 	return {
-		tier: 'tenant-user',
+		person_id: 'per-1',
+		membership_id: 'mid-1',
 		tenant_id: 'tid-1',
 		tenant_slug: 'acme',
-		membership_id: 'mid-1',
 		email: 'user@acme.test',
+		first_name: 'Test',
+		last_name: 'User',
 		is_platform: false,
 		is_super_user: false,
 		permissions: [],
-		features: [],
+		roles: [],
 		...overrides
 	};
 }
@@ -51,12 +54,12 @@ describe('hasCapability', () => {
 	});
 
 	it('returns true for platform-super user on any permission', () => {
-		const c = caps({ is_platform: true, is_super_user: true, tier: 'platform-super' });
+		const c = caps({ is_platform: true, is_super_user: true });
 		expect(hasCapability(c, 'platform.tenants.delete')).toBe(true);
 	});
 
 	it('returns false for platform-staff without the specific permission', () => {
-		const c = caps({ is_platform: true, is_super_user: false, tier: 'platform-staff' });
+		const c = caps({ is_platform: true, is_super_user: false });
 		expect(hasCapability(c, 'platform.tenants.manage')).toBe(false);
 	});
 
@@ -64,9 +67,38 @@ describe('hasCapability', () => {
 		const c = caps({
 			is_platform: true,
 			is_super_user: false,
-			tier: 'platform-staff',
 			permissions: ['platform.tenants.view']
 		});
 		expect(hasCapability(c, 'platform.tenants.view')).toBe(true);
+	});
+});
+
+describe('deriveTier', () => {
+	it('returns unknown when caps is undefined', () => {
+		expect(deriveTier(undefined)).toBe('unknown');
+	});
+
+	it('returns platform-super for is_platform + is_super_user', () => {
+		expect(deriveTier(caps({ is_platform: true, is_super_user: true }))).toBe('platform-super');
+	});
+
+	it('returns platform-staff for is_platform without is_super_user', () => {
+		expect(deriveTier(caps({ is_platform: true, is_super_user: false }))).toBe('platform-staff');
+	});
+
+	it('returns tenant-admin for is_super_user without is_platform', () => {
+		expect(deriveTier(caps({ is_platform: false, is_super_user: true }))).toBe('tenant-admin');
+	});
+
+	it('returns tenant-admin for tenant.admin permission', () => {
+		expect(deriveTier(caps({ permissions: ['tenant.admin'] }))).toBe('tenant-admin');
+	});
+
+	it('returns tenant-user for regular user with no special flags', () => {
+		expect(deriveTier(caps({ permissions: ['crm.leads.view'] }))).toBe('tenant-user');
+	});
+
+	it('returns tenant-user for empty permissions', () => {
+		expect(deriveTier(caps())).toBe('tenant-user');
 	});
 });

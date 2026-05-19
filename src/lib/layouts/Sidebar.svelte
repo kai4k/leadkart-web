@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import { navForTier } from '$lib/config/nav';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
+	import { deriveTier } from '$features/auth/capabilities';
 	import { tenantBySlugQuery } from '$features/operator/tenants/queries';
 	import { Building2, Shield, Users, Settings, Activity, UserCog, Icon } from '$icons';
 
@@ -28,7 +29,7 @@
 	 */
 	const sections = $derived.by(() => {
 		const caps = capsQuery.data;
-		const tier = caps?.tier ?? 'unknown';
+		const tier = deriveTier(caps);
 		const catalogue = navForTier(tier);
 		return catalogue
 			.map((section) => ({

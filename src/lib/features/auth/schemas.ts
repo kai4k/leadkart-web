@@ -2,19 +2,29 @@ import { z } from 'zod';
 
 /**
  * CapabilitiesDto — wire shape of GET /v1/auth/me/capabilities per ADR 0038 N1.
- * The tier field drives sidebar catalogue selection; permissions drive per-item
- * visibility. is_super_user short-circuits all permission checks.
+ * The backend does NOT send a `tier` field — tier is derived client-side via
+ * `deriveTier()` in capabilities.ts from `is_platform`, `is_super_user`, and
+ * `permissions`. permissions drive per-item visibility. is_super_user
+ * short-circuits all permission checks.
  */
 export const capabilitiesSchema = z.object({
-	tier: z.enum(['platform-super', 'platform-staff', 'tenant-admin', 'tenant-user', 'unknown']),
-	tenant_id: z.string().nullable(),
-	tenant_slug: z.string().nullable(),
-	membership_id: z.string().nullable(),
-	email: z.string().nullable(),
+	person_id: z.string(),
+	membership_id: z.string(),
+	tenant_id: z.string(),
+	tenant_slug: z.string(),
+	email: z.string(),
+	first_name: z.string(),
+	last_name: z.string(),
 	is_platform: z.boolean(),
 	is_super_user: z.boolean(),
 	permissions: z.array(z.string()),
-	features: z.array(z.string()).optional().default([])
+	roles: z.array(
+		z.object({
+			id: z.string(),
+			name: z.string(),
+			is_super_admin: z.boolean()
+		})
+	)
 });
 
 /**

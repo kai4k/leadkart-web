@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { myCapabilitiesQuery } from '$features/auth/queries';
+	import { deriveTier } from '$features/auth/capabilities';
 	import PlatformDashboard from '$features/dashboard/components/PlatformDashboard.svelte';
 	import TenantAdminDashboard from '$features/dashboard/components/TenantAdminDashboard.svelte';
 	import TenantUserDashboard from '$features/dashboard/components/TenantUserDashboard.svelte';
@@ -14,7 +15,7 @@
 	 */
 
 	const capsQuery = myCapabilitiesQuery();
-	const tier = $derived(capsQuery.data?.tier ?? 'unknown');
+	const tier = $derived(deriveTier(capsQuery.data));
 </script>
 
 <svelte:head>

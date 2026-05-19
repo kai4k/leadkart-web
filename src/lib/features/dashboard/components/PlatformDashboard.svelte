@@ -11,6 +11,7 @@
 	} from 'lucide-svelte';
 	import { Alert, Card, Spinner } from '$ui';
 	import { myCapabilitiesQuery } from '$features/auth/queries';
+	import { deriveTier } from '$features/auth/capabilities';
 	import { platformStatsQuery } from '$lib/features/operator/dashboard/queries';
 
 	/**
@@ -29,7 +30,7 @@
 	 */
 
 	const capsQuery = myCapabilitiesQuery();
-	const isSuper = $derived(capsQuery.data?.tier === 'platform-super');
+	const isSuper = $derived(deriveTier(capsQuery.data) === 'platform-super');
 
 	type TileAccent = 'brand' | 'success' | 'warning' | 'danger';
 
