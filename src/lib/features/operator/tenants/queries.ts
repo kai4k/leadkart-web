@@ -16,8 +16,11 @@
  */
 import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 import * as api from './api';
+import { NotFoundError } from '$lib/api/errors';
 import { toast } from '$ui';
 import type { RegisterTenantRequest, TenantDto } from './types';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // ── Query key factory ──────────────────────────────────────────────────
 
@@ -56,14 +59,39 @@ export function tenantDetailQuery(tenantId: string) {
 }
 
 /**
- * Single tenant by slug — canonical route lookup per ADR 0038 A.3.
- * The [slug]/ route hierarchy uses this instead of the UUID lookup.
+ * Single tenant by slug OR UUID — canonical route lookup per ADR 0038 A.3.
+ *
+ * Discriminates at call time:
+ *   - UUID input  → calls GET /v1/tenants/{id} directly (stable endpoint).
+ *   - Slug input  → calls GET /v1/tenants/by-slug/{slug} (ADR 0038 A.3);
+ *                   if backend hasn't shipped that endpoint yet (404),
+ *                   returns null instead of throwing so the layout can
+ *                   render a graceful "endpoint pending" fallback.
+ *
+ * `retry: false` — avoids hammering a not-yet-shipped endpoint.
  */
-export function tenantBySlugQuery(slug: string) {
+export function tenantBySlugQuery(key: string) {
+	const isUuid = UUID_RE.test(key);
 	return createQuery(() => ({
-		queryKey: tenantsKeys.detailBySlug(slug),
-		queryFn: () => api.getTenantBySlug(slug),
-		enabled: !!slug
+		queryKey: tenantsKeys.detailBySlug(key),
+		queryFn: async (): Promise<TenantDto | null> => {
+			if (isUuid) {
+				return await api.getTenant(key);
+			}
+			try {
+				return await api.getTenantBySlug(key);
+			} catch (err) {
+				if (err instanceof NotFoundError) {
+					// Slug-lookup endpoint not yet shipped (ADR 0038 A.3 pending),
+					// OR the slug genuinely doesn't match any tenant.
+					// Return null so the layout renders a graceful fallback.
+					return null;
+				}
+				throw err;
+			}
+		},
+		enabled: !!key,
+		retry: false
 	}));
 }
 
