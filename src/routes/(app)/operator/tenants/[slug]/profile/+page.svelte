@@ -64,10 +64,6 @@
 						<dd class="body-base text-fg">{tenant.admin_phone || '—'}</dd>
 					</div>
 					<div>
-						<dt class="caption text-fg-muted">Admin email</dt>
-						<dd class="body-base text-fg">{tenant.admin_email || '—'}</dd>
-					</div>
-					<div>
 						<dt class="caption text-fg-muted">Slug</dt>
 						<dd class="cluster cluster-tight">
 							<code class="caption text-fg-subtle">{tenant.slug}</code>
