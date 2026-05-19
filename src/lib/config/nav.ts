@@ -41,7 +41,6 @@ import {
 	Bell,
 	Settings,
 	ShieldCheck,
-	Shield,
 	Activity,
 	Building2,
 	type Icon as LucideIcon
@@ -72,12 +71,10 @@ export const PLATFORM_NAV: NavSection[] = [
 		title: 'Operator',
 		items: [
 			{ href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, requires: null },
-			{
-				href: '/operator/tenants/platform',
-				label: 'Your platform',
-				icon: Shield,
-				requires: null
-			},
+			// "Your platform" shortcut removed 2026-05-20: depends on
+			// GET /v1/tenants/by-slug/{slug} which backend hasn't shipped yet
+			// (ADR 0038 A.3 pending). Restore when backend ships the endpoint:
+			// { href: '/operator/tenants/platform', label: 'Your platform', icon: Shield, requires: null },
 			{
 				href: '/operator/tenants',
 				label: 'Tenants',
