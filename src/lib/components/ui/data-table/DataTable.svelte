@@ -177,7 +177,6 @@
 							onRowClick && 'cursor-pointer'
 						)}
 						onclick={onRowClick ? () => onRowClick!(row) : undefined}
-						role={onRowClick ? 'button' : undefined}
 						tabindex={onRowClick ? 0 : undefined}
 						onkeydown={onRowClick
 							? (e) => {

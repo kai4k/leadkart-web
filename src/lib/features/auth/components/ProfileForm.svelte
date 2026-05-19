@@ -70,7 +70,7 @@
 					<dd class="body-base text-fg capitalize">{profileData.status}</dd>
 				</div>
 			</dl>
-			<p class="caption text-fg-subtle">
+			<p class="caption text-fg-muted">
 				Name + email are managed by your tenant administrator. To change them, ask your admin.
 			</p>
 		</section>
