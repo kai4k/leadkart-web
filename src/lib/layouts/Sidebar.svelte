@@ -2,8 +2,6 @@
 	import { page } from '$app/state';
 	import { navForTier } from '$lib/config/nav';
 	import { session } from '$features/auth/stores/session.svelte';
-	import { tenantBySlugQuery } from '$features/operator/tenants/queries';
-	import { Building2, Shield, Users, Settings, Activity, UserCog, Icon } from '$icons';
 	import type { PrincipalTier } from '$features/auth/capabilities';
 
 	let { onNavigate } = $props<{ onNavigate?: () => void }>();
@@ -20,19 +18,14 @@
 	}
 
 	/**
-	 * Tier-scoped nav catalogue. Tier derives SYNCHRONOUSLY from JWT
-	 * claims on session.principal — no async query, no loading state,
-	 * no pop-in. session.principal is derived from $page.data.capabilities
-	 * which is SSR-bootstrapped at the root layout server load — populated
-	 * before this component mounts.
+	 * Tier-scoped nav catalogue. Tier derives SYNCHRONOUSLY from
+	 * session.principal — itself a $derived projection over
+	 * page.data.capabilities (SSR-bootstrapped at the root layout
+	 * server load). No async query, no skeleton, no first-paint pop-in.
 	 *
-	 * Items are shown AS-IS — no permission filtering at the nav layer.
-	 * Pages inside check fine-grained perms at action invocation
-	 * (Stripe / AWS / GitHub / Linear / Vercel canon).
-	 *
-	 * The async myCapabilitiesQuery() is for ENRICHMENT (display name,
-	 * avatar, full roles[]) — it does NOT drive nav rendering. Nav is
-	 * stable shell, populated on first paint, never blocked by network.
+	 * Items render AS-IS — no permission filtering at the nav layer.
+	 * Pages enforce fine-grained perms at action time. Stripe / AWS /
+	 * GitHub / Linear / Vercel all do this.
 	 */
 	const tier = $derived.by((): PrincipalTier => {
 		const p = session.principal;
@@ -45,47 +38,9 @@
 	});
 
 	const sections = $derived(navForTier(tier));
-
-	/**
-	 * Contextual sidebar section — shown when the route matches
-	 * /operator/tenants/[slug]/... so the operator can quickly jump
-	 * between the tenant's sub-pages without leaving the sidebar.
-	 */
-	const tenantSlug = $derived(
-		page.url.pathname.startsWith('/operator/tenants/') ? (page.params.slug ?? null) : null
-	);
-
-	// Reactive query — only fetches when tenantSlug is non-null (enabled: !!tenantSlug).
-	const contextTenantQuery = $derived(tenantSlug ? tenantBySlugQuery(tenantSlug) : null);
-	const contextTenant = $derived(contextTenantQuery?.data ?? null);
-
-	const contextualLinks = $derived(
-		tenantSlug
-			? [
-					{ href: `/operator/tenants/${tenantSlug}/profile`, label: 'Profile', icon: Building2 },
-					{ href: `/operator/tenants/${tenantSlug}/members`, label: 'Members', icon: Users },
-					{ href: `/operator/tenants/${tenantSlug}/roles`, label: 'Roles', icon: UserCog },
-					{
-						href: `/operator/tenants/${tenantSlug}/activity`,
-						label: 'Activity',
-						icon: Activity
-					},
-					{
-						href: `/operator/tenants/${tenantSlug}/settings`,
-						label: 'Settings',
-						icon: Settings
-					}
-				]
-			: []
-	);
 </script>
 
 <nav class="lk-sidebar glass-card glass-border-glow" aria-label="Main navigation">
-	<!-- Brand block — wordmark when expanded, icon mark when collapsed.
-	     The wordmark image scales to fill the inner container via
-	     object-fit: contain, so the visible artwork stays centred
-	     regardless of the PNG asset's internal whitespace. Container
-	     gives explicit height so the image has a frame to scale into. -->
 	<a href="/dashboard" class="lk-sidebar-brand" aria-label="LeadKart home">
 		<span class="lk-sidebar-brand-full" aria-hidden="true">
 			<img src="/images/favicon/favicon_512x512.png" alt="LeadKart" class="lk-sidebar-brand-img" />
@@ -99,52 +54,6 @@
 	</a>
 
 	<div class="lk-sidebar-scroll">
-		<!-- Contextual section: only visible inside /operator/tenants/[slug]/* -->
-		{#if tenantSlug && contextualLinks.length > 0}
-			<div class="lk-sidebar-group lk-sidebar-ctx-group">
-				<div class="lk-sidebar-ctx-header">
-					{#if contextTenant?.slug === 'platform'}
-						<Icon icon={Shield} size="xs" class="lk-sidebar-ctx-icon" />
-					{:else}
-						<Icon icon={Building2} size="xs" class="lk-sidebar-ctx-icon" />
-					{/if}
-					<p class="lk-sidebar-section-title lk-sidebar-ctx-title overline">
-						{contextTenant?.display_name ?? tenantSlug}
-					</p>
-				</div>
-				<ul class="lk-sidebar-list">
-					{#each contextualLinks as link (link.href)}
-						{@const active = isActive(link.href)}
-						<li>
-							<a
-								href={link.href}
-								aria-current={active ? 'page' : undefined}
-								aria-label={link.label}
-								onclick={() => onNavigate?.()}
-								title={link.label}
-								class={['lk-sidebar-link', active && 'lk-sidebar-link--active']}
-							>
-								<link.icon size={18} aria-hidden="true" />
-								<span class="lk-sidebar-label">{link.label}</span>
-							</a>
-						</li>
-					{/each}
-					<li>
-						<a
-							href="/operator/tenants"
-							class="lk-sidebar-link lk-sidebar-ctx-exit"
-							onclick={() => onNavigate?.()}
-							title="Exit tenant context"
-						>
-							<span class="lk-sidebar-label">← Exit tenant</span>
-						</a>
-					</li>
-				</ul>
-			</div>
-			<!-- Divider between context section and regular nav -->
-			<div class="lk-sidebar-ctx-divider" aria-hidden="true"></div>
-		{/if}
-
 		{#each sections as section, i (section.title ?? i)}
 			{#if section.items.length > 0}
 				<div class="lk-sidebar-group">
@@ -177,10 +86,6 @@
 </nav>
 
 <style>
-	/* ─── Sidebar layout + chrome geometry ─────────────────────────
-	   Composes the universal `.glass-card` material. This block
-	   handles sidebar-specific GEOMETRY (edge-anchored full-height
-	   column, right-edge border only, zero radius at viewport edges). */
 	.lk-sidebar {
 		position: fixed;
 		inset-block-start: max(var(--lk-sidebar-top), var(--safe-top));
@@ -193,7 +98,6 @@
 		color: var(--lk-sidebar-fg);
 		display: flex;
 		flex-direction: column;
-		/* Override .glass-card defaults for edge-anchored chrome */
 		border: 0;
 		border-inline-end: 1px solid var(--lk-sidebar-border);
 		border-radius: 0;
@@ -208,16 +112,11 @@
 		z-index: var(--z-sticky);
 	}
 
-	/* Semibox — sidebar floats; restore .glass-card full ring + radius. */
 	:global(:root[data-layout='semibox']) .lk-sidebar {
 		border: var(--glass-border);
 		border-radius: var(--lk-shell-radius);
 	}
 
-	/* Mobile drawer override: render in normal flow with no top-offset
-	   or floating border. Strips the .glass-card backdrop-filter to
-	   solid bg — the drawer slides over an overlay with nothing
-	   meaningful to refract, so glass here would look murky. */
 	:global([role='dialog']) .lk-sidebar {
 		position: relative;
 		inset: 0;
@@ -235,16 +134,6 @@
 		display: none;
 	}
 
-	/* ─── Brand block ──────────────────────────────────────────
-	   Cart-icon brand mark (favicon asset) shown at natural 1:1
-	   aspect, centred. The asset is a square chemist-bag icon
-	   with the LK monogram — stretching a square mark across the
-	   full sidebar width would either distort it or, with
-	   object-fit: cover, crop it to an unreadable horizontal
-	   strip. Industry canon (Notion, Linear, Vercel sidebars)
-	   keeps brand marks at natural aspect so the shape stays
-	   legible; the 5rem block-size gives it presence without
-	   forcing a stretch. */
 	.lk-sidebar-brand {
 		display: flex;
 		align-items: center;
@@ -278,8 +167,6 @@
 		object-fit: contain;
 		box-shadow: var(--glass-specular);
 	}
-	/* Collapsed: hide wordmark, show mark + center it. Drawer always
-	   uses the full wordmark. */
 	:global(:root[data-sidebar-collapsed]) .lk-sidebar-brand {
 		justify-content: center;
 		padding-inline: 0.5rem;
@@ -291,11 +178,6 @@
 		display: block;
 	}
 
-	/* ── Scroll region + groups ──────────────────────────────────
-	   padding-block-start: 1rem creates breathing room between the
-	   brand divider and the first nav item (Apple HIG §"List Spacing"
-	   recommends ≥ 16px between dividers and content). Inline-padding
-	   0.5rem leaves room for the OS scrollbar without clipping links. */
 	.lk-sidebar-scroll {
 		flex: 1;
 		overflow-y: auto;
@@ -328,27 +210,6 @@
 		gap: 0.125rem;
 	}
 
-	/* ─── Link ────────────────────────────────────────────────────
-	   Default ≥ 36px tall (matches design density on laptops). On
-	   coarse pointers (touch screens), bump to 44px (Apple HIG /
-	   WCAG 2.5.5 AAA) and widen the rest area so taps don't miss. */
-	/* Premium Liquid-Glass pill — composed of FOUR visual layers
-	   activated on hover/active:
-	     1. Background fill   — semi-transparent white (or brand-tinted
-	                            for active) via --lk-sidebar-{hover,
-	                            active}-bg
-	     2. Inset top specular — catches "light from above" (white edge
-	                            highlight on the rounded top inside)
-	     3. Inset hairline ring — 1px alpha border tracing the pill's
-	                            interior — gives it crisp glass edges
-	                            without competing with the parent
-	                            sidebar's border
-	     4. Soft outer drop    — 1px tinted shadow grounds the pill
-	                            against the sidebar surface so it
-	                            feels physically lifted
-	   At rest, all four shadow layers collapse to `none` — the link
-	   is invisible chrome. Spring-eased transition (180ms) for the
-	   premium "snap" feel. Apple Music sidebar / Finder canon. */
 	.lk-sidebar-link {
 		display: flex;
 		align-items: center;
@@ -366,8 +227,6 @@
 			box-shadow 0.18s cubic-bezier(0.22, 1, 0.36, 1),
 			color 0.15s ease-out;
 	}
-	/* Brand-tinted icon stroke — single --color-primary token, state
-	   variants via the primary-hover/-active state-layer tokens. */
 	.lk-sidebar-link :global(svg) {
 		flex-shrink: 0;
 		color: var(--color-primary);
@@ -382,17 +241,10 @@
 			color: var(--color-primary-hover);
 		}
 	}
-	/* Inset focus ring — the link has its own glass-pill background
-	   when focused/hovered, so the outline sits INSIDE the pill edge
-	   rather than offsetting outward (which would clip into adjacent
-	   links). Inset offset is a legitimate override of the global. */
 	.lk-sidebar-link:focus-visible {
 		outline: var(--border-medium) solid var(--color-focus-ring);
 		outline-offset: calc(var(--border-medium) * -1);
 	}
-	/* Active (committed): brand-tinted glass pill — inset ring +
-	   specular only, NO outer drop-shadow. iOS Music selected-row
-	   canon: the row is embedded in the chrome, not floating above. */
 	.lk-sidebar-link:active,
 	.lk-sidebar-link--active {
 		background: var(--lk-sidebar-active-bg);
@@ -401,8 +253,6 @@
 			var(--lk-sidebar-specular),
 			inset 0 0 0 1px var(--lk-sidebar-active-ring);
 	}
-	/* Hover (ambient lift): SUBTLE darken pill — inset ring + specular
-	   only, NO outer drop. iOS Mail/Music sidebar hover canon. */
 	@media (hover: hover) and (pointer: fine) {
 		.lk-sidebar-link:hover {
 			background: var(--lk-sidebar-hover-bg);
@@ -419,44 +269,6 @@
 		}
 	}
 
-	/* ── Contextual tenant section ──────────────────────────────────
-	   Surfaced inside /operator/tenants/[slug]/* only. A subtle tinted
-	   background distinguishes the context block from the main nav so
-	   the operator knows they are scoped. Exit link is intentionally
-	   muted — it's a navigation aid, not a primary action. */
-	.lk-sidebar-ctx-group {
-		background: var(--color-bg-muted);
-		border-radius: 0.5rem;
-		padding: 0.5rem 0.25rem;
-	}
-	.lk-sidebar-ctx-header {
-		display: flex;
-		align-items: center;
-		gap: 0.25rem;
-		padding-inline: 0.75rem;
-		padding-block-end: 0.25rem;
-	}
-	.lk-sidebar-ctx-title {
-		padding: 0;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	:global(.lk-sidebar-ctx-icon) {
-		color: var(--color-primary);
-		flex-shrink: 0;
-	}
-	.lk-sidebar-ctx-exit {
-		color: var(--color-fg-subtle);
-		font-size: var(--text-xs);
-	}
-	.lk-sidebar-ctx-divider {
-		block-size: 1px;
-		background: var(--color-border-subtle, var(--glass-border-color, oklch(50% 0 0 / 0.1)));
-		margin-block: 0.25rem;
-	}
-
-	/* Collapsed: hide labels + section titles, center icons. The native
-	   `title` attribute on each link provides the OS tooltip. */
 	:global(:root[data-sidebar-collapsed]) .lk-sidebar-label {
 		display: none;
 	}
@@ -469,8 +281,6 @@
 		justify-content: center;
 		padding-inline: 0.5rem;
 	}
-	/* Drawer (mobile): always show labels even if root is marked
-	   collapsed — the collapsed state is desktop-only. */
 	:global([role='dialog']) .lk-sidebar-label {
 		display: inline;
 	}

@@ -20,18 +20,8 @@
  */
 
 import { ApiError, isApiError, type ApiErrorBody } from './errors';
+import { getCsrfToken } from './csrf';
 import { z } from 'zod';
-
-/**
- * Reads the non-httpOnly lk_csrf cookie so we can echo it as
- * X-CSRF-Token on mutations (double-submit-cookie CSRF protection).
- * Returns null on server-side rendering (document not available).
- */
-function readCsrfToken(): string | null {
-	if (typeof document === 'undefined') return null;
-	const match = document.cookie.match(/(?:^|; )lk_csrf=([^;]+)/);
-	return match ? decodeURIComponent(match[1]) : null;
-}
 
 function resolveBaseUrl(): string {
 	// All API calls go through the BFF proxy at /api/*.
@@ -42,16 +32,6 @@ function resolveBaseUrl(): string {
 export interface RequestOptions extends Omit<RequestInit, 'body'> {
 	/** Serialised as JSON body if defined. */
 	json?: unknown;
-	/**
-	 * Operator scope override — injects `X-Tenant-Id: <uuid>` on this
-	 * request only. Used by operator routes that need to read/mutate
-	 * data within a specific tenant's context without switching the
-	 * caller's own session tenant.
-	 *
-	 * The header is ONLY sent when this option is explicitly set — all
-	 * existing unauthenticated and tenant-scoped calls are unaffected.
-	 */
-	tenantId?: string;
 }
 
 const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -64,7 +44,7 @@ const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
  * already failed — surface directly to the caller.
  */
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-	const { json, headers, tenantId, ...rest } = options;
+	const { json, headers, ...rest } = options;
 	const url = resolveBaseUrl() + (path.startsWith('/') ? path : '/' + path);
 
 	const finalHeaders = new Headers(headers);
@@ -77,13 +57,8 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 	// on mutations so the BFF proxy can validate the double-submit.
 	const method = (rest.method ?? 'GET').toUpperCase();
 	if (MUTATING.has(method)) {
-		const csrf = readCsrfToken();
+		const csrf = getCsrfToken();
 		if (csrf) finalHeaders.set('X-CSRF-Token', csrf);
-	}
-
-	// Operator scope override — only injected when explicitly opted-in.
-	if (tenantId) {
-		finalHeaders.set('X-Tenant-Id', tenantId);
 	}
 
 	let response: Response;
@@ -128,30 +103,6 @@ export const api = {
 	delete: <T>(path: string, json?: unknown, options?: RequestOptions) =>
 		request<T>(path, { ...options, method: 'DELETE', json })
 };
-
-/**
- * Returns a scoped client that injects `X-Tenant-Id: <tenantId>` on
- * every request. Used by operator gateway functions that need to act
- * on behalf of a specific tenant.
- *
- * The returned object has the same shape as `api` — swap one for the
- * other at the call site.
- */
-export function withTenant(tenantId: string): typeof api {
-	const opts = (base?: RequestOptions): RequestOptions => ({ ...base, tenantId });
-	return {
-		get: <T>(path: string, options?: RequestOptions) =>
-			request<T>(path, { ...opts(options), method: 'GET' }),
-		post: <T>(path: string, json?: unknown, options?: RequestOptions) =>
-			request<T>(path, { ...opts(options), method: 'POST', json }),
-		put: <T>(path: string, json?: unknown, options?: RequestOptions) =>
-			request<T>(path, { ...opts(options), method: 'PUT', json }),
-		patch: <T>(path: string, json?: unknown, options?: RequestOptions) =>
-			request<T>(path, { ...opts(options), method: 'PATCH', json }),
-		delete: <T>(path: string, json?: unknown, options?: RequestOptions) =>
-			request<T>(path, { ...opts(options), method: 'DELETE', json })
-	};
-}
 
 export { isApiError };
 

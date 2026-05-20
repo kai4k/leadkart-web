@@ -7,16 +7,15 @@
 	import { useForm } from '$lib/utils/use-form.svelte';
 
 	type Props = {
-		tenantId?: string;
 		open: boolean;
 		onOpenChange: (open: boolean) => void;
 	};
 
-	let { tenantId, open = $bindable(false), onOpenChange }: Props = $props();
+	let { open = $bindable(false), onOpenChange }: Props = $props();
 
 	let success = $state<{ membershipId: string; personExisted: boolean } | null>(null);
 
-	const mutation = $derived(createUserMutation(tenantId));
+	const mutation = createUserMutation();
 	const form = useForm(
 		createUserRequestSchema,
 		{

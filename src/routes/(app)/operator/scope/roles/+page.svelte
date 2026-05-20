@@ -1,28 +1,20 @@
 <script lang="ts">
-	import { tenantBySlugQuery } from '$features/operator/tenants/queries';
-	import { rolesScopedListQuery } from '$features/roles/queries';
+	import { rolesListQuery } from '$features/roles/queries';
 	import { Badge, Card, EmptyState, Spinner, Alert } from '$ui';
 	import { Shield } from '$icons';
+	import type { LayoutData } from '../$types';
 
-	let { data } = $props();
+	let { data }: { data: LayoutData } = $props();
 
-	const slug = $derived(data.slug);
-	const tenantQuery = $derived(tenantBySlugQuery(slug));
-	const tenantId = $derived(tenantQuery.data?.id ?? '');
-
-	const rolesQuery = $derived(tenantId ? rolesScopedListQuery(tenantId) : null);
-	const roles = $derived(rolesQuery?.data?.roles ?? []);
+	const rolesQuery = rolesListQuery();
+	const roles = $derived(rolesQuery.data?.roles ?? []);
 </script>
 
-<svelte:head><title>Roles · LeadKart</title></svelte:head>
+<svelte:head><title>Roles · {data.tenant.display_name} · LeadKart</title></svelte:head>
 
-{#if tenantQuery.isPending}
+{#if rolesQuery.isPending}
 	<div class="flex justify-center py-8"><Spinner size={28} /></div>
-{:else if tenantQuery.isError || !tenantId}
-	<Alert variant="warning" title="Tenant not found">Could not load tenant context.</Alert>
-{:else if rolesQuery?.isPending}
-	<div class="flex justify-center py-8"><Spinner size={28} /></div>
-{:else if rolesQuery?.isError}
+{:else if rolesQuery.isError}
 	<Alert variant="danger" title="Failed to load roles">
 		{rolesQuery.error instanceof Error ? rolesQuery.error.message : 'Unknown error'}
 	</Alert>

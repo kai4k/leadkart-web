@@ -4,28 +4,30 @@
  * the httpOnly __Host-lk_access cookie.
  *
  * Responsibilities:
- *   1. CSRF validation on mutating methods (POST/PUT/PATCH/DELETE)
- *   2. Bearer token injection for server-to-server calls to Go
- *   3. Transparent 401 → refresh → retry (once) before surfacing to browser
- *   4. Pass-through of request body, query params, content-type, accept
+ *   1. CSRF validation on mutating methods (POST/PUT/PATCH/DELETE) using
+ *      constant-time comparison (timingSafeEqual).
+ *   2. Bearer token injection for server-to-server calls to Go.
+ *   3. Operator scope: auto-inject X-Tenant-Id from the lk_op_tenant
+ *      cookie when present. The browser NEVER ships an X-Tenant-Id
+ *      header — the BFF is the only writer.
+ *   4. Transparent 401 → refresh → retry (once).
+ *   5. Pass-through of request body, query params, content-type, accept.
  *
- * The browser never reads a JWT. Cookies are the auth transport; this
- * module is the only code that touches the raw token values.
+ * The browser never reads a JWT, never knows the active tenant UUID,
+ * never sees a slug in a URL path it didn't choose to type. The proxy
+ * is the only code that touches raw token values OR operator scope state.
  *
  * Per ADR: docs/superpowers/specs/2026-05-20-bff-cookie-auth-adr.md
  */
 
 import type { RequestEvent } from './$types';
 import { env } from '$env/dynamic/private';
-import { setAuthCookies, clearAuthCookies } from '$lib/server/cookies';
+import { setAuthCookies, clearAuthCookies, ACCESS_COOKIE } from '$lib/server/cookies';
+import { getOperatorScope } from '$lib/server/scope';
+import { timingSafeEqualString } from '$lib/server/csrf';
 
 const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
-/**
- * Attempts a silent token refresh using the lk_refresh cookie.
- * On success: rotates all three cookies and returns true.
- * On failure: clears cookies and returns false (caller should surface 401).
- */
 async function tryRefresh(event: RequestEvent): Promise<boolean> {
 	const refresh = event.cookies.get('lk_refresh');
 	if (!refresh) return false;
@@ -38,7 +40,6 @@ async function tryRefresh(event: RequestEvent): Promise<boolean> {
 			body: JSON.stringify({ refresh_token: refresh })
 		});
 	} catch {
-		// Network error reaching Go — cannot refresh
 		return false;
 	}
 
@@ -52,20 +53,14 @@ async function tryRefresh(event: RequestEvent): Promise<boolean> {
 	return true;
 }
 
-/**
- * Core proxy logic. `attempt` is 1 on first try, 2 on the post-refresh
- * retry — prevents infinite loops if refresh returns 401 too.
- */
 async function proxy(event: RequestEvent, attempt = 1): Promise<Response> {
 	const { cookies, request, params } = event;
-	// params.path is the catch-all rest segment (everything after /api/)
 	const path = params.path;
 
-	// ── CSRF gate on mutations ──────────────────────────────────────────
 	if (MUTATING.has(request.method)) {
 		const headerCsrf = request.headers.get('x-csrf-token');
 		const cookieCsrf = cookies.get('lk_csrf');
-		if (!headerCsrf || !cookieCsrf || headerCsrf !== cookieCsrf) {
+		if (!headerCsrf || !cookieCsrf || !timingSafeEqualString(headerCsrf, cookieCsrf)) {
 			return new Response(
 				JSON.stringify({ error: 'csrf_mismatch', message: 'CSRF token missing or invalid' }),
 				{ status: 403, headers: { 'content-type': 'application/json' } }
@@ -73,20 +68,21 @@ async function proxy(event: RequestEvent, attempt = 1): Promise<Response> {
 		}
 	}
 
-	// ── Build upstream request ──────────────────────────────────────────
 	const upstreamUrl = `${env.GO_API_URL}/api/${path}${new URL(request.url).search}`;
 	const upstreamHeaders = new Headers();
 
-	const access = cookies.get('__Host-lk_access');
+	const access = cookies.get(ACCESS_COOKIE());
 	if (access) upstreamHeaders.set('authorization', `Bearer ${access}`);
 
 	const ct = request.headers.get('content-type');
 	if (ct) upstreamHeaders.set('content-type', ct);
 	upstreamHeaders.set('accept', 'application/json');
 
-	// Forward X-Tenant-Id if browser sent it (operator scope override)
-	const tenantId = request.headers.get('x-tenant-id');
-	if (tenantId) upstreamHeaders.set('x-tenant-id', tenantId);
+	// Operator-scope tenant override is ONLY trusted from the cookie.
+	// We deliberately ignore any X-Tenant-Id header sent by the browser
+	// — the BFF is authoritative for scope.
+	const scope = getOperatorScope(cookies);
+	if (scope) upstreamHeaders.set('x-tenant-id', scope.id);
 
 	let body: ArrayBuffer | undefined;
 	if (MUTATING.has(request.method)) {
@@ -107,14 +103,11 @@ async function proxy(event: RequestEvent, attempt = 1): Promise<Response> {
 		);
 	}
 
-	// ── 401 → refresh + single retry ───────────────────────────────────
 	if (upstream.status === 401 && attempt === 1) {
 		const refreshed = await tryRefresh(event);
 		if (refreshed) return proxy(event, 2);
-		// Refresh failed — clear cookies, let browser handle redirect
 	}
 
-	// ── Stream response back to browser ────────────────────────────────
 	const responseBody = await upstream.arrayBuffer();
 	const responseHeaders = new Headers();
 	const upstreamCt = upstream.headers.get('content-type');
@@ -123,7 +116,6 @@ async function proxy(event: RequestEvent, attempt = 1): Promise<Response> {
 	return new Response(responseBody, { status: upstream.status, headers: responseHeaders });
 }
 
-// SvelteKit requires named exports for each HTTP method
 export const GET = (e: RequestEvent) => proxy(e);
 export const POST = (e: RequestEvent) => proxy(e);
 export const PUT = (e: RequestEvent) => proxy(e);

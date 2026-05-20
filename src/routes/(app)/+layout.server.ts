@@ -15,7 +15,7 @@
 
 import { redirect } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
-import { setAuthCookies, clearAuthCookies } from '$lib/server/cookies';
+import { setAuthCookies, clearAuthCookies, ACCESS_COOKIE } from '$lib/server/cookies';
 import type { LayoutServerLoad } from './$types';
 import type { Capabilities } from '$lib/features/auth/api';
 
@@ -52,7 +52,7 @@ async function tryRefreshServerSide(
 }
 
 export const load: LayoutServerLoad = async ({ cookies, url }) => {
-	let access = cookies.get('__Host-lk_access');
+	let access = cookies.get(ACCESS_COOKIE());
 
 	if (!access) {
 		const next = encodeURIComponent(url.pathname + url.search);

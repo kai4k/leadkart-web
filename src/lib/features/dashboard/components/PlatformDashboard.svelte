@@ -50,7 +50,6 @@
 	// whenever the error reference changes — won't spam the console.
 	$effect(() => {
 		if (statsQuery.isError) {
-			 
 			console.error('[PlatformDashboard] platformStatsQuery failed:', statsQuery.error);
 		}
 	});
@@ -173,7 +172,7 @@
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 		{#each statTiles as tile (tile.label)}
 			{@const Icon = tile.icon}
-			<Card.Root surface="glass" class="lk-dash-tile glass-hover">
+			<Card.Root surface="glass" class="glass-hover">
 				<Card.Header>
 					<div class="cluster" style="--cluster-gap: var(--spacing-3);">
 						<span class={`lk-dash-tile-icon lk-dash-tile-icon--${tile.accent}`} aria-hidden="true">
@@ -195,7 +194,7 @@
 
 		{#each placeholderTiles as tile (tile.label)}
 			{@const Icon = tile.icon}
-			<Card.Root surface="glass" class="lk-dash-tile glass-hover">
+			<Card.Root surface="glass" class="glass-hover">
 				<Card.Header>
 					<div class="cluster" style="--cluster-gap: var(--spacing-3);">
 						<span class={`lk-dash-tile-icon lk-dash-tile-icon--${tile.accent}`} aria-hidden="true">

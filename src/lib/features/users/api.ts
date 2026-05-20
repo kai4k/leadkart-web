@@ -3,7 +3,7 @@
  * at the boundary per CLAUDE.md. Tenant scope is the caller's JWT
  * tenant_id — no tenant_id parameter on any call.
  */
-import { api, withTenant, parseResponse } from '$api/client';
+import { api, parseResponse } from '$api/client';
 import { listUsersResponseSchema, createUserResponseSchema, userDtoSchema } from './schemas';
 import type {
 	ListUsersResponse,
@@ -18,16 +18,6 @@ import type {
 
 export async function listUsers(): Promise<ListUsersResponse> {
 	const raw = await api.get<unknown>('/v1/users');
-	return parseResponse(listUsersResponseSchema, raw);
-}
-
-/**
- * Operator-scope variant — fetches members of any tenant by injecting
- * X-Tenant-Id. Used by the operator/tenants/[slug]/members route via
- * tenantMembersQuery.
- */
-export async function listUsersScoped(tenantId: string): Promise<ListUsersResponse> {
-	const raw = await withTenant(tenantId).get<unknown>('/v1/users');
 	return parseResponse(listUsersResponseSchema, raw);
 }
 

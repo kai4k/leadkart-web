@@ -1,0 +1,69 @@
+/**
+ * Operator-scope BFF endpoint.
+ *
+ *   POST   /api/operator/scope  { slug }   → resolve slug→UUID server-side,
+ *                                            store {id, slug, display_name}
+ *                                            in httpOnly cookie. Returns 204.
+ *   DELETE /api/operator/scope             → clear cookie. Returns 204.
+ *
+ * No tenant identifier ever appears in the URL. Subsequent API calls
+ * under /api/* automatically receive X-Tenant-Id from the cookie via
+ * the catch-all proxy.
+ *
+ * CSRF: enforced (double-submit cookie pattern, same shape as the
+ * /api/[...path] proxy).
+ */
+
+import { json, type RequestEvent } from '@sveltejs/kit';
+import { env } from '$env/dynamic/private';
+import { setOperatorScope, clearOperatorScope } from '$lib/server/scope';
+import { timingSafeEqualString } from '$lib/server/csrf';
+import { ACCESS_COOKIE } from '$lib/server/cookies';
+
+function checkCsrf(event: RequestEvent): Response | null {
+	const headerCsrf = event.request.headers.get('x-csrf-token');
+	const cookieCsrf = event.cookies.get('lk_csrf');
+	if (!headerCsrf || !cookieCsrf || !timingSafeEqualString(headerCsrf, cookieCsrf)) {
+		return json({ error: 'csrf_mismatch' }, { status: 403 });
+	}
+	return null;
+}
+
+export async function POST(event: RequestEvent): Promise<Response> {
+	const csrfFail = checkCsrf(event);
+	if (csrfFail) return csrfFail;
+
+	const access = event.cookies.get(ACCESS_COOKIE());
+	if (!access) return json({ error: 'unauthenticated' }, { status: 401 });
+
+	let body: { slug?: string };
+	try {
+		body = await event.request.json();
+	} catch {
+		return json({ error: 'invalid_body' }, { status: 400 });
+	}
+	const slug = typeof body.slug === 'string' ? body.slug.trim() : '';
+	if (!slug) return json({ error: 'missing_slug' }, { status: 400 });
+
+	const resp = await fetch(`${env.GO_API_URL}/api/v1/tenants/by-slug/${encodeURIComponent(slug)}`, {
+		headers: { authorization: `Bearer ${access}` }
+	});
+	if (!resp.ok) {
+		return json({ error: 'tenant_lookup_failed' }, { status: resp.status === 404 ? 404 : 502 });
+	}
+	const tenant = (await resp.json()) as { id: string; slug: string; display_name: string };
+
+	setOperatorScope(event.cookies, {
+		id: tenant.id,
+		slug: tenant.slug,
+		display_name: tenant.display_name
+	});
+	return new Response(null, { status: 204 });
+}
+
+export async function DELETE(event: RequestEvent): Promise<Response> {
+	const csrfFail = checkCsrf(event);
+	if (csrfFail) return csrfFail;
+	clearOperatorScope(event.cookies);
+	return new Response(null, { status: 204 });
+}

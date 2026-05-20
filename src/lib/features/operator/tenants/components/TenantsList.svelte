@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page as pageStore } from '$app/stores';
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
+	import { useQueryClient } from '@tanstack/svelte-query';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { Alert, Badge, Button, DataTable, EmptyState } from '$ui';
 	import type { DataTableColumn } from '$ui';
@@ -9,6 +10,8 @@
 	import { tenantLifecycleBadge } from '$features/operator/tenants/view-models';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 	import { NetworkError } from '$lib/api/errors';
+	import { getCsrfToken } from '$lib/api/csrf';
+	import { toast } from '$ui';
 	import CreateTenantDrawer from './CreateTenantDrawer.svelte';
 	import ImpersonateModal from '$features/operator/impersonation/components/ImpersonateModal.svelte';
 	import type { TenantDto } from '$features/operator/tenants/types';
@@ -18,29 +21,23 @@
 	let createOpen = $state(false);
 	let impersonateOpen = $state(false);
 	let impersonateTarget = $state<TenantDto | null>(null);
+	let openingScope = $state(false);
 
-	// URL-driven filter state — read from searchParams, write back via goto.
 	const search = $derived($pageStore.url.searchParams.get('q') ?? '');
 	const page = $derived(Number($pageStore.url.searchParams.get('page') ?? '1') || 1);
 
 	function setSearch(value: string) {
 		const params = new SvelteURLSearchParams($pageStore.url.searchParams.toString());
-		if (value) {
-			params.set('q', value);
-		} else {
-			params.delete('q');
-		}
-		params.delete('page'); // reset pagination on new search
+		if (value) params.set('q', value);
+		else params.delete('q');
+		params.delete('page');
 		goto(`?${params}`, { replaceState: true, keepFocus: true });
 	}
 
 	function setPage(p: number) {
 		const params = new SvelteURLSearchParams($pageStore.url.searchParams.toString());
-		if (p > 1) {
-			params.set('page', String(p));
-		} else {
-			params.delete('page');
-		}
+		if (p > 1) params.set('page', String(p));
+		else params.delete('page');
 		goto(`?${params}`, { replaceState: true });
 	}
 
@@ -48,14 +45,9 @@
 	const canCreate = $derived(hasCapability(capsQuery.data, 'platform.tenants.create'));
 	const canView = $derived(hasCapability(capsQuery.data, 'platform.tenants.view'));
 
-	// TanStack Query v6 (Svelte 5): result is Svelte 5 reactive state, accessed directly.
 	const query = tenantsListQuery();
+	const qc = useQueryClient();
 
-	/**
-	 * Client-side search + platform-pin.
-	 * Platform tenant (slug === 'platform') is always first — Stripe
-	 * Connect / Auth0 tenant-list pattern.
-	 */
 	const filtered = $derived.by(() => {
 		const all = query.data?.tenants ?? [];
 		const q = search.trim().toLowerCase();
@@ -80,12 +72,7 @@
 	);
 
 	const columns: DataTableColumn<TenantDto>[] = [
-		{
-			id: 'name',
-			header: 'Tenant',
-			accessor: (t) => t.display_name,
-			cell: nameCell
-		},
+		{ id: 'name', header: 'Tenant', accessor: (t) => t.display_name, cell: nameCell },
 		{
 			id: 'slug',
 			header: 'Slug',
@@ -93,18 +80,8 @@
 			hideBelow: 'md',
 			class: 'text-fg-muted font-mono text-xs'
 		},
-		{
-			id: 'status',
-			header: 'Status',
-			accessor: (t) => t.status,
-			cell: statusCell
-		},
-		{
-			id: 'legal',
-			header: 'Legal name',
-			accessor: 'legal_name',
-			hideBelow: 'lg'
-		}
+		{ id: 'status', header: 'Status', accessor: (t) => t.status, cell: statusCell },
+		{ id: 'legal', header: 'Legal name', accessor: 'legal_name', hideBelow: 'lg' }
 	];
 
 	function openImpersonate(tenant: TenantDto) {
@@ -112,8 +89,33 @@
 		impersonateOpen = true;
 	}
 
-	function onRowClick(tenant: TenantDto) {
-		goto(`/operator/tenants/${tenant.slug ?? tenant.id}`);
+	/**
+	 * Enter tenant context. POSTs the slug to the BFF, which resolves
+	 * it server-side, stores the tenant identifier in the lk_op_tenant
+	 * httpOnly cookie, and returns 204. Then we clear the TanStack cache
+	 * (previous scope's data is no longer authoritative) and navigate
+	 * to /operator/scope/profile — the URL never reveals which tenant
+	 * the operator is acting on.
+	 */
+	async function enterScope(tenant: TenantDto) {
+		if (openingScope) return;
+		openingScope = true;
+		try {
+			const resp = await fetch('/api/operator/scope', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json', 'x-csrf-token': getCsrfToken() },
+				body: JSON.stringify({ slug: tenant.slug })
+			});
+			if (!resp.ok) {
+				toast('danger', 'Could not open tenant');
+				return;
+			}
+			qc.clear();
+			await invalidateAll();
+			goto('/operator/scope/profile');
+		} finally {
+			openingScope = false;
+		}
 	}
 </script>
 
@@ -185,7 +187,7 @@
 		rowKey={(t) => t.id}
 		state={tableState}
 		error={query.error?.message}
-		{onRowClick}
+		onRowClick={enterScope}
 		{rowActions}
 	>
 		{#snippet emptyState()}
@@ -200,7 +202,7 @@
 					</Alert>
 				{:else}
 					<Alert variant="danger" title="Failed to load tenants">
-						{err.message}
+						{err?.message ?? 'Unknown error'}
 						<Button variant="ghost" size="sm" onclick={() => query.refetch()} class="mt-2"
 							>Retry</Button
 						>

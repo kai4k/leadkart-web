@@ -7,19 +7,18 @@
 	import { displayName } from '$features/auth/view-models';
 
 	type Props = {
-		tenantId?: string;
 		roleList: RoleDto[];
 		open: boolean;
 		user: UserDto | null;
 		onOpenChange: (open: boolean) => void;
 	};
 
-	let { tenantId, roleList, open = $bindable(false), user, onOpenChange }: Props = $props();
+	let { roleList, open = $bindable(false), user, onOpenChange }: Props = $props();
 
 	let error = $state<string | null>(null);
 
-	const assignMutation = $derived(assignRoleMutation(tenantId));
-	const revokeMutation = $derived(revokeRoleMutation(tenantId));
+	const assignMutation = assignRoleMutation();
+	const revokeMutation = revokeRoleMutation();
 
 	async function onAssign(roleId: string) {
 		if (!user) return;
