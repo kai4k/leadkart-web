@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { navForTier } from '$lib/config/nav';
-	import { myCapabilitiesQuery } from '$features/auth/queries';
-	import { deriveTier } from '$features/auth/capabilities';
+	import { session } from '$features/auth/stores/session.svelte';
 	import { tenantBySlugQuery } from '$features/operator/tenants/queries';
 	import { Building2, Shield, Users, Settings, Activity, UserCog, Icon } from '$icons';
+	import type { PrincipalTier } from '$features/auth/capabilities';
 
 	let { onNavigate } = $props<{ onNavigate?: () => void }>();
 
@@ -19,29 +19,32 @@
 		return path.startsWith(href + '/');
 	}
 
-	const capsQuery = myCapabilitiesQuery();
-
 	/**
-	 * Tier-scoped nav catalogue. Tier comes from JWT claims via
-	 * deriveTier(caps). Items are shown AS-IS — no permission filtering
-	 * at the nav layer.
+	 * Tier-scoped nav catalogue. Tier derives SYNCHRONOUSLY from JWT
+	 * claims on session.principal — no async query, no loading state,
+	 * no pop-in. session.principal is hydrated from localStorage at
+	 * module-import time, so by the time this component mounts it's
+	 * already populated for a signed-in user.
 	 *
-	 * Why no permission filter:
-	 *   - FAANG canon (Stripe Dashboard / AWS Console / GitHub / Linear /
-	 *     Vercel) renders ALL tier-appropriate items; pages inside check
-	 *     fine-grained perms at action invocation.
-	 *   - Hiding nav items based on async permission state produces
-	 *     pop-in/pop-out UX and breaks discoverability — operators are
-	 *     blind to tools they should know exist (then later request).
-	 *   - The server's RequirePermission middleware is the actual gate.
-	 *     If a user clicks a link they can't action, the page either
-	 *     surfaces "no access" or the API returns 403; either is
-	 *     recoverable. Hiding the link without explanation is not.
+	 * Items are shown AS-IS — no permission filtering at the nav layer.
+	 * Pages inside check fine-grained perms at action invocation
+	 * (Stripe / AWS / GitHub / Linear / Vercel canon).
+	 *
+	 * The async myCapabilitiesQuery() is for ENRICHMENT (display name,
+	 * avatar, full roles[]) — it does NOT drive nav rendering. Nav is
+	 * stable shell, populated on first paint, never blocked by network.
 	 */
-	const sections = $derived.by(() => {
-		const tier = deriveTier(capsQuery.data);
-		return navForTier(tier);
+	const tier = $derived.by((): PrincipalTier => {
+		const p = session.principal;
+		if (!p) return 'unknown';
+		if (p.isPlatform && p.isSuperUser) return 'platform-super';
+		if (p.isPlatform) return 'platform-staff';
+		if (p.isSuperUser) return 'tenant-admin';
+		if (p.permissions?.includes('tenant.admin')) return 'tenant-admin';
+		return 'tenant-user';
 	});
+
+	const sections = $derived(navForTier(tier));
 
 	/**
 	 * Contextual sidebar section — shown when the route matches
