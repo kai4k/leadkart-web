@@ -1,27 +1,32 @@
-/**
- * Unified sign-in helper for e2e specs.
- *
- * signInAsTier() wires ALL the baseline mocks that every (app) route
- * needs after the Phase D/E/F migration:
- *
- *   POST /v1/auth/login                    → LoginResponse (tokens)
- *   GET  /v1/auth/me/capabilities          → CapabilitiesDto   ← CRITICAL: Sidebar + UserMenu
- *   GET  /v1/users/:membership_id          → UserDto           (own profile)
- *   GET  /v1/auth/sessions                 → { sessions: [...] }
- *   GET  /v1/tenants/:tenant_id            → TenantDto         (by ID)
- *   GET  /v1/tenants/by-slug/:slug         → TenantDto         (by slug — operator layout)
- *
- * Per-test resource mocks (list endpoints, mutations, activity logs,
- * cross-tenant lookups) are still the caller's responsibility.
- *
- * Architectural note: mocks must zod-parse cleanly. Shapes are
- * derived from src/lib/features/auth/schemas.ts.
- */
+// Unified sign-in helper for e2e specs.
+//
+// BFF MIGRATION NOTE (2026-05-20):
+// The auth architecture has migrated to a BFF model. The SvelteKit Node
+// server now acts as the BFF — browser calls POST /auth/login (BFF) which
+// makes a server-to-server fetch to Go and sets httpOnly cookies.
+//
+// Playwright's page.route() only intercepts browser-context requests.
+// Server-side fetch calls (BFF to Go) are NOT interceptable by page.route().
+// This means the previous approach of mocking /api/v1/auth/login via
+// page.route() no longer works.
+//
+// REQUIRED FIX (tracked, not yet implemented):
+// E2e tests need a mock Go API server that the BFF can call server-to-server.
+// Recommended approach: run a lightweight HTTP mock server (e.g. msw/node)
+// on GO_API_URL before tests start. Set GO_API_URL=http://localhost:9999
+// in the playwright webServer env. The mock server returns fixture responses.
+//
+// CURRENT STATUS: e2e tests will fail because the BFF calls Go internally
+// and there is no mock Go server. All e2e specs that relied on mocking
+// /api/v1/auth/login or /api/v1/* via page.route() need to be rewritten
+// to use a server-side mock. This is tracked work, not part of this PR.
+//
+// The BFF endpoint /auth/login itself IS mockable at the browser level
+// since the BROWSER calls it directly (page.route('**/auth/login', ...)).
+// However, the BFF's subsequent capabilities SSR fetch is still server-side.
 
 import type { Page } from '@playwright/test';
 import {
-	fakeAccessToken,
-	fakeRefreshToken,
 	fakeCapabilitiesResponse,
 	fakeUserDto,
 	fakeSessionDto,
@@ -30,7 +35,6 @@ import {
 	TEST_TENANT_SLUG,
 	TEST_MEMBERSHIP_ID,
 	TEST_PERSON_ID,
-	TEST_FAMILY_ID,
 	type Tier,
 	type Permission
 } from './fake-jwt';
@@ -47,10 +51,12 @@ export interface SignInOpts {
 }
 
 /**
- * Sign in as the given tier + permission set and set up the baseline
- * auth + capabilities + own-profile + own-sessions + own-tenant mocks.
- * Navigates to /signin, fills credentials, clicks Sign in, and waits
- * for /dashboard.
+ * Sign in as the given tier + permission set and set up baseline mocks.
+ *
+ * PARTIAL IMPLEMENTATION — see file-level note above.
+ * This helper mocks browser-visible BFF endpoints but cannot mock
+ * the BFF's server-to-server Go API calls. Tests will fail until a
+ * mock Go server is wired into the playwright webServer config.
  */
 export async function signInAsTier(page: Page, opts: SignInOpts): Promise<void> {
 	const tenantId = opts.tenant_id ?? TEST_TENANT_ID;
@@ -62,31 +68,24 @@ export async function signInAsTier(page: Page, opts: SignInOpts): Promise<void> 
 	const isSuperUser = opts.is_super_user ?? opts.tier === 'platform-super';
 	const permissions = opts.permissions ?? [];
 
-	// ── Login ────────────────────────────────────────────────────────
-	await page.route('**/api/v1/auth/login', async (route) => {
+	// Mock the browser-visible BFF login endpoint
+	await page.route('**/auth/login', async (route) => {
+		if (route.request().method() !== 'POST') {
+			await route.continue();
+			return;
+		}
 		await route.fulfill({
 			status: 200,
 			contentType: 'application/json',
-			body: JSON.stringify({
-				access_token: fakeAccessToken({
-					sub: personId,
-					tenant_id: tenantId,
-					tenant_slug: tenantSlug,
-					membership_id: membershipId,
-					is_platform: isPlatform,
-					is_super_user: isSuperUser,
-					permission: permissions
-				}),
-				refresh_token: fakeRefreshToken(TEST_FAMILY_ID),
-				access_token_expires_at: new Date(Date.now() + 3_600_000).toISOString(),
-				token_type: 'Bearer'
-			})
+			body: JSON.stringify({ ok: true })
 		});
 	});
 
-	// ── Capabilities — MUST be present; Sidebar + UserMenu query this ─
-	// NOTE: `tier` is not a backend field — deriveTier() synthesises it
-	// client-side from is_platform + is_super_user + permissions.
+	// NOTE: The routes below use page.route on /api/v1/* URLs.
+	// These go through the BFF proxy which calls Go server-to-server.
+	// page.route() cannot intercept server-side fetch — these mocks
+	// will NOT work without a mock Go server at GO_API_URL.
+
 	await page.route('**/api/v1/auth/me/capabilities', async (route) => {
 		await route.fulfill({
 			status: 200,
@@ -105,7 +104,6 @@ export async function signInAsTier(page: Page, opts: SignInOpts): Promise<void> 
 		});
 	});
 
-	// ── Own profile (membership_id-keyed) ────────────────────────────
 	await page.route(`**/api/v1/users/${membershipId}`, async (route) => {
 		if (route.request().method() === 'GET') {
 			await route.fulfill({
@@ -125,7 +123,6 @@ export async function signInAsTier(page: Page, opts: SignInOpts): Promise<void> 
 		}
 	});
 
-	// ── Own sessions ─────────────────────────────────────────────────
 	await page.route('**/api/v1/auth/sessions', async (route) => {
 		if (route.request().method() === 'GET') {
 			await route.fulfill({
@@ -140,7 +137,6 @@ export async function signInAsTier(page: Page, opts: SignInOpts): Promise<void> 
 		}
 	});
 
-	// ── Own tenant (by ID) ───────────────────────────────────────────
 	await page.route(`**/api/v1/tenants/${tenantId}`, async (route) => {
 		if (route.request().method() === 'GET') {
 			await route.fulfill({
@@ -153,7 +149,6 @@ export async function signInAsTier(page: Page, opts: SignInOpts): Promise<void> 
 		}
 	});
 
-	// ── Own tenant (by slug) — operator context layout uses /by-slug ──
 	await page.route(`**/api/v1/tenants/by-slug/${tenantSlug}`, async (route) => {
 		await route.fulfill({
 			status: 200,
@@ -162,7 +157,7 @@ export async function signInAsTier(page: Page, opts: SignInOpts): Promise<void> 
 		});
 	});
 
-	// ── Execute the sign-in flow ─────────────────────────────────────
+	// Navigate and sign in
 	await page.goto('/signin');
 	await page.getByRole('textbox', { name: /email/i }).fill(email);
 	await page.getByRole('textbox', { name: /password/i }).fill('Test1234!');
