@@ -17,54 +17,9 @@
 
 import type { RequestEvent } from './$types';
 import { env } from '$env/dynamic/private';
+import { setAuthCookies, clearAuthCookies } from '$lib/server/cookies';
 
 const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-
-/**
- * Issues the three auth cookies (__Host-lk_access, lk_refresh, lk_csrf).
- * Shared by the proxy (on refresh) and the /auth/login endpoint.
- *
- * secure flag: true in production (HTTPS). In Vite dev (HTTP), cookies
- * with secure:true are silently rejected by the browser. Set false when
- * NODE_ENV !== 'production' so local dev works.
- */
-export function setAuthCookies(event: RequestEvent, access: string, refresh: string): void {
-	const secure = env.NODE_ENV === 'production';
-
-	event.cookies.set('__Host-lk_access', access, {
-		path: '/',
-		httpOnly: true,
-		secure,
-		sameSite: 'strict',
-		maxAge: 900 // 15 min
-	});
-	event.cookies.set('lk_refresh', refresh, {
-		path: '/auth/refresh',
-		httpOnly: true,
-		secure,
-		sameSite: 'strict',
-		maxAge: 30 * 24 * 3600 // 30 days
-	});
-	// CSRF: random 32-byte base64url. Non-httpOnly so JS can read + echo
-	// it as X-CSRF-Token header on mutations (double-submit-cookie pattern).
-	const csrf = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url');
-	event.cookies.set('lk_csrf', csrf, {
-		path: '/',
-		httpOnly: false,
-		secure,
-		sameSite: 'strict',
-		maxAge: 900 // matches access token TTL
-	});
-}
-
-/**
- * Clears all auth cookies. Called when refresh fails — forces re-login.
- */
-function clearAuthCookies(event: RequestEvent): void {
-	event.cookies.delete('__Host-lk_access', { path: '/' });
-	event.cookies.delete('lk_refresh', { path: '/auth/refresh' });
-	event.cookies.delete('lk_csrf', { path: '/' });
-}
 
 /**
  * Attempts a silent token refresh using the lk_refresh cookie.
@@ -88,12 +43,12 @@ async function tryRefresh(event: RequestEvent): Promise<boolean> {
 	}
 
 	if (!resp.ok) {
-		clearAuthCookies(event);
+		clearAuthCookies(event.cookies);
 		return false;
 	}
 
 	const tokens = (await resp.json()) as { access_token: string; refresh_token: string };
-	setAuthCookies(event, tokens.access_token, tokens.refresh_token);
+	setAuthCookies(event.cookies, tokens.access_token, tokens.refresh_token);
 	return true;
 }
 
@@ -104,7 +59,7 @@ async function tryRefresh(event: RequestEvent): Promise<boolean> {
 async function proxy(event: RequestEvent, attempt = 1): Promise<Response> {
 	const { cookies, request, params } = event;
 	// params.path is the catch-all rest segment (everything after /api/)
-	const path = (params as { path: string }).path;
+	const path = params.path;
 
 	// ── CSRF gate on mutations ──────────────────────────────────────────
 	if (MUTATING.has(request.method)) {

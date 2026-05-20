@@ -8,63 +8,93 @@
  * tRPC, TanStack Query). Schema mismatch surfaces here, not deep in
  * the call stack.
  *
- * Surface covers authenticated-user flows: login, silent refresh,
- * logout, change-password, plus the v0.2 expansion — profile read/
- * update and session list/revoke. Per the LeadKart auth model:
+ * BFF auth model: login/logout POST to BFF endpoints (/auth/login,
+ * /auth/logout) which handle cookie management. All other API calls
+ * go through /api/[...path] proxy which injects Bearer from cookie.
+ * The browser never sees access_token or refresh_token.
  *
- *   - Self-serve registration is DISABLED. SuperAdmin creates tenants;
- *     TenantOwner / TenantAdmin / SuperAdmin create users within
- *     tenants. No `/register` route exists.
- *   - Forgot-password email-link flow is DISABLED. Users who forget
- *     their password ask their admin to reset it (admin-tier endpoint
- *     to be added later). The only self-service password update is
- *     `changePassword` (requires current password).
- *   - Self-service email change is DISABLED. Email changes happen via
- *     admin tooling only (admin-tier endpoint to be added later).
+ * Surface covers authenticated-user flows: login, logout,
+ * change-password, plus profile read/update and session list/revoke.
  *
- * Backend endpoints `request-password-reset`, `reset-password`,
- * `request-email-change`, `confirm-email-change` still exist on
- * leadkart-go but are not exposed in this SPA.
+ *   - Self-serve registration is DISABLED.
+ *   - Forgot-password flow is DISABLED.
+ *   - Self-service email change is DISABLED.
  */
 import { api, parseResponse } from '$api/client';
 import {
-	loginResponseSchema,
-	refreshResponseSchema,
+	loginRequestSchema,
 	userDtoSchema,
 	listSessionsResponseSchema,
 	capabilitiesSchema
 } from './schemas';
-import type {
-	LoginRequest,
-	LoginResponse,
-	RefreshRequest,
-	RefreshResponse,
-	UserDto,
-	SessionDto,
-	UpdateProfileRequest
-} from './types';
+import type { LoginRequest, UserDto, SessionDto, UpdateProfileRequest } from './types';
 import { z } from 'zod';
 
 export type Capabilities = z.output<typeof capabilitiesSchema>;
 
-export async function login(body: LoginRequest): Promise<LoginResponse> {
-	const raw = await api.post<unknown>('/v1/auth/login', body, { auth: false });
-	return parseResponse(loginResponseSchema, raw);
+/**
+ * BFF login — POSTs credentials to /auth/login (SvelteKit BFF endpoint,
+ * not Go directly). The BFF forwards to Go and sets httpOnly cookies.
+ * Returns { ok: true } on success; browser never sees tokens.
+ *
+ * Validates the request shape client-side before sending so Zod errors
+ * surface immediately (don't require a round-trip).
+ */
+export async function login(body: LoginRequest): Promise<{ ok: true }> {
+	// Validate locally first — catches blank fields before the network call
+	loginRequestSchema.parse(body);
+
+	const raw = await fetch('/auth/login', {
+		method: 'POST',
+		headers: { 'content-type': 'application/json' },
+		credentials: 'same-origin',
+		body: JSON.stringify(body)
+	});
+	if (!raw.ok) {
+		// Re-throw as a plain error so the SigninForm catch block handles it.
+		// The BFF forwards Go's ProblemDetails body verbatim.
+		const text = await raw.text();
+		let parsed: { code?: string; message?: string } = {};
+		try {
+			parsed = JSON.parse(text);
+		} catch {
+			/* non-JSON */
+		}
+		const err = new Error(parsed.message ?? 'Login failed');
+		(err as Error & { status: number; code?: string }).status = raw.status;
+		(err as Error & { status: number; code?: string }).code = parsed.code;
+		throw err;
+	}
+	return { ok: true };
 }
 
-export async function refresh(body: RefreshRequest): Promise<RefreshResponse> {
-	const raw = await api.post<unknown>('/v1/auth/refresh', body, { auth: false });
-	return parseResponse(refreshResponseSchema, raw);
-}
-
-export function logout(refreshToken: string): Promise<void> {
-	return api.post<void>('/v1/auth/logout', { refresh_token: refreshToken });
+/**
+ * BFF logout — POSTs to /auth/logout (BFF) which revokes server-side
+ * and clears all three cookies. After this returns, the browser has
+ * no auth state.
+ */
+export async function logout(): Promise<void> {
+	// Read CSRF token from the non-httpOnly cookie for the mutation header
+	const csrf =
+		typeof document !== 'undefined'
+			? (document.cookie.match(/(?:^|; )lk_csrf=([^;]+)/)?.[1] ?? '')
+			: '';
+	await fetch('/auth/logout', {
+		method: 'POST',
+		headers: {
+			'content-type': 'application/json',
+			...(csrf ? { 'x-csrf-token': csrf } : {})
+		},
+		credentials: 'same-origin'
+	});
 }
 
 /**
  * Authenticated. Returns the caller's capability set — tier, permissions,
  * features — synthesized from JWT claims server-side per ADR 0038 N1.
  * staleTime 5 min in the query layer; gcTime 30 min.
+ *
+ * Goes through /api/[...path] BFF proxy which injects Bearer from cookie.
  */
 export async function getMyCapabilities(): Promise<Capabilities> {
 	const raw = await api.get<unknown>('/v1/auth/me/capabilities');
@@ -75,11 +105,6 @@ export async function getMyCapabilities(): Promise<Capabilities> {
  * Authenticated. The server verifies current_password even with a
  * valid bearer (per security.md "Password change") so a stolen access
  * token can't permanently take over an account.
- *   401 incorrect_current_password   — wrong current_password (also
- *                                      collapses with "user disabled"
- *                                      for timing safety)
- *   422 password_breached
- *   422 password_same_as_current
  */
 export function changePassword(body: {
 	current_password: string;
@@ -90,8 +115,7 @@ export function changePassword(body: {
 
 /**
  * Authenticated. Server scopes to the caller's own membership when
- * `membershipId` matches the JWT's `membership_id` claim. Backend
- * returns 403 if a non-admin tries to read another membership.
+ * `membershipId` matches the JWT's `membership_id` claim.
  */
 export async function getMyProfile(membershipId: string): Promise<UserDto> {
 	const raw = await api.get<unknown>(`/v1/users/${membershipId}`);
@@ -100,7 +124,6 @@ export async function getMyProfile(membershipId: string): Promise<UserDto> {
 
 /**
  * PATCH the caller's own designation / department / status_message.
- * Server returns 204; no body to parse.
  */
 export async function updateMyProfile(
 	membershipId: string,

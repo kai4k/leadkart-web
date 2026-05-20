@@ -2,7 +2,6 @@
 	import { LogOut, User, Icon } from '$icons';
 	import { goto } from '$app/navigation';
 	import { session } from '$features/auth/stores/session.svelte';
-	import { logout } from '$features/auth/api';
 	import { myCapabilitiesQuery } from '$features/auth/queries';
 
 	let open = $state(false);
@@ -35,17 +34,13 @@
 	});
 
 	async function handleSignOut() {
-		const refreshToken = session.refreshToken;
-		if (refreshToken) {
-			try {
-				await logout(refreshToken);
-			} catch {
-				/* ignore — user signed out locally regardless */
-			}
+		try {
+			await session.logout();
+		} catch {
+			/* ignore — BFF clears cookies regardless; navigate anyway */
+			await goto('/signin');
 		}
-		session.clear();
 		open = false;
-		await goto('/signin');
 	}
 
 	const capsQuery = myCapabilitiesQuery();
