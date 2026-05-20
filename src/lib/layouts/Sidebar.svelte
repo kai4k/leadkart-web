@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { navForTier } from '$lib/config/nav';
-	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
+	import { myCapabilitiesQuery } from '$features/auth/queries';
 	import { deriveTier } from '$features/auth/capabilities';
 	import { tenantBySlugQuery } from '$features/operator/tenants/queries';
 	import { Building2, Shield, Users, Settings, Activity, UserCog, Icon } from '$icons';
@@ -22,23 +22,25 @@
 	const capsQuery = myCapabilitiesQuery();
 
 	/**
-	 * Tier-scoped nav catalogue + per-item permission filter.
-	 * Capabilities come from the server via myCapabilitiesQuery.
-	 * is_super_user short-circuits all permission checks.
-	 * Sections with no items left after filtering disappear.
+	 * Tier-scoped nav catalogue. Tier comes from JWT claims via
+	 * deriveTier(caps). Items are shown AS-IS — no permission filtering
+	 * at the nav layer.
+	 *
+	 * Why no permission filter:
+	 *   - FAANG canon (Stripe Dashboard / AWS Console / GitHub / Linear /
+	 *     Vercel) renders ALL tier-appropriate items; pages inside check
+	 *     fine-grained perms at action invocation.
+	 *   - Hiding nav items based on async permission state produces
+	 *     pop-in/pop-out UX and breaks discoverability — operators are
+	 *     blind to tools they should know exist (then later request).
+	 *   - The server's RequirePermission middleware is the actual gate.
+	 *     If a user clicks a link they can't action, the page either
+	 *     surfaces "no access" or the API returns 403; either is
+	 *     recoverable. Hiding the link without explanation is not.
 	 */
 	const sections = $derived.by(() => {
-		const caps = capsQuery.data;
-		const tier = deriveTier(caps);
-		const catalogue = navForTier(tier);
-		return catalogue
-			.map((section) => ({
-				...section,
-				items: section.items.filter(
-					(item) => item.requires === null || hasCapability(caps, item.requires)
-				)
-			}))
-			.filter((section) => section.items.length > 0);
+		const tier = deriveTier(capsQuery.data);
+		return navForTier(tier);
 	});
 
 	/**
