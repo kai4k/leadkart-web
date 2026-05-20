@@ -22,9 +22,9 @@
 	/**
 	 * Tier-scoped nav catalogue. Tier derives SYNCHRONOUSLY from JWT
 	 * claims on session.principal — no async query, no loading state,
-	 * no pop-in. session.principal is hydrated from localStorage at
-	 * module-import time, so by the time this component mounts it's
-	 * already populated for a signed-in user.
+	 * no pop-in. session.principal is derived from $page.data.capabilities
+	 * which is SSR-bootstrapped at the root layout server load — populated
+	 * before this component mounts.
 	 *
 	 * Items are shown AS-IS — no permission filtering at the nav layer.
 	 * Pages inside check fine-grained perms at action invocation
