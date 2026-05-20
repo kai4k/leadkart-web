@@ -17,7 +17,7 @@ import type {
  *  created records; the seed-admin credentials are the caller's input
  *  and must be conveyed out-of-band (UI surfaces them post-201). */
 export async function registerTenant(req: RegisterTenantRequest): Promise<RegisterTenantResponse> {
-	const raw = await api.post<unknown>('/v1/tenants', req, { auth: false });
+	const raw = await api.post<unknown>('/v1/tenants', req);
 	return parseResponse(registerTenantResponseSchema, raw);
 }
 
