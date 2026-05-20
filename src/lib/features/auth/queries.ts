@@ -11,40 +11,13 @@
  * reactive state accessed directly (no `$` prefix needed).
  */
 import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
+import { page } from '$app/state';
 import { toast } from '$ui';
 import * as api from './api';
-import type { UpdateProfileRequest, SessionDto, SessionPrincipal } from './types';
-import { session } from './stores/session.svelte';
+import type { UpdateProfileRequest, SessionDto } from './types';
 import type { Capabilities } from './capabilities';
 // Pure helpers — re-exported so components can import from one place
 export { hasCapability, type Capabilities } from './capabilities';
-
-/**
- * Synthesise a Capabilities snapshot from JWT claims already in the
- * session store. This is the SOURCE-OF-TRUTH fallback for nav / route-
- * guard rendering — capabilities-endpoint enrichment (first_name,
- * last_name, full roles[]) is a CONVENIENCE on top, not a prerequisite.
- *
- * Pattern source: Auth0, Stripe, Linear all derive client-side gating
- * from JWT claims; the management API call merely enriches. If the
- * network call fails, the JWT-derived caps still drive the UI.
- */
-function capabilitiesFromPrincipal(p: SessionPrincipal | null): Capabilities | undefined {
-	if (!p) return undefined;
-	return {
-		person_id: p.personId,
-		membership_id: p.membershipId,
-		tenant_id: p.tenantId,
-		tenant_slug: p.tenantSlug ?? '',
-		email: p.email,
-		first_name: '',
-		last_name: '',
-		is_platform: p.isPlatform ?? false,
-		is_super_user: p.isSuperUser ?? false,
-		permissions: p.permissions ?? [],
-		roles: []
-	};
-}
 
 export const capabilitiesKey = ['me', 'capabilities'] as const;
 const profileKey = (membershipId: string) => ['me', 'profile', membershipId] as const;
@@ -63,22 +36,15 @@ export function myCapabilitiesQuery() {
 	return createQuery(() => ({
 		queryKey: capabilitiesKey,
 		queryFn: () => api.getMyCapabilities(),
-		// JWT-derived caps render the nav / route guards INSTANTLY,
-		// before the network call resolves. If the call fails, this
-		// fallback stays in place so the UI never breaks because of a
-		// missing or slow capabilities endpoint.
-		initialData: () => capabilitiesFromPrincipal(session.principal),
-		// `initialData` populates the cache as if it were fetched at the
-		// epoch (initialDataUpdatedAt = 0), so a stale check on first
-		// render triggers the real fetch to refine the data.
+		// SSR-bootstrapped initial data from the (app) root layout server load.
+		// On first render this is baked into the page HTML — no loading skeleton,
+		// no network call needed before the nav renders. TanStack treats
+		// initialDataUpdatedAt=0 as stale and fires a background refetch to
+		// pick up any permission changes that happened mid-session.
+		initialData: () => (page.data as { capabilities?: Capabilities }).capabilities,
 		initialDataUpdatedAt: 0,
-		// Same staleTime as before — caps rarely change mid-session.
 		staleTime: 5 * 60_000,
 		gcTime: 30 * 60_000,
-		// If the network call fails, fall back to JWT-derived caps
-		// rather than removing the user's nav. The query's `data` stays
-		// the initialData snapshot; `isError` is still true so
-		// components that care can show a quiet "couldn't refresh" hint.
 		retry: 1
 	}));
 }
