@@ -9,7 +9,7 @@ The Svelte SPA frontend for LeadKart's pharma SaaS. Targets the `leadkart-go` JS
 ## Hard architectural rules
 
 1. **Industry-canonical SvelteKit 2 layout.** Feature-first under `lib/features/`. Cross-feature primitives under `lib/components/{ui,form,feedback,data}/`. Layout shell under `lib/layouts/`. Route groups `(auth)` and `(app)` for layout-different sections. NEVER type-first dumps like `lib/components/{common,layout-components,...}/`.
-2. **Pure SPA via adapter-static.** No SSR. No server endpoints. The leadkart-go API is the backend; this repo ships static assets to a CDN.
+2. **BFF via adapter-node.** SvelteKit's Node server is the auth-context owner: httpOnly cookies live at the SvelteKit ↔ browser boundary; SvelteKit talks server-to-server to the Go API with Bearer tokens. Browser never sees a token, never talks to Go directly. SPA UX preserved via client-side routing on top of an SSR-rendered first paint. Cookie names + CSRF token shape locked in `docs/superpowers/specs/2026-05-20-bff-cookie-auth-adr.md`.
 3. **TypeScript everywhere.** No `.js` source except generated types and config files.
 4. **Svelte 5 runes only.** `$state`, `$props`, `$derived`, `$effect`, `$bindable`. Stores in `*.svelte.ts` files (canonical extension), CLASS-based with `$state` fields (not module-level `let foo = $state(...)` — that pattern silently breaks reactivity across module boundaries).
 5. **One icon library.** lucide-svelte via `$icons` registry. No remixicon, boxicons, line-awesome — they bloat the bundle.
