@@ -337,45 +337,62 @@ export const queryClient = new QueryClient({
 
 ```ts
 // lib/features/operator/tenants/queries.ts
+//
+// Cache discipline (as shipped, revised 2026-05-21):
+//   - Mutations invalidate; let auto-refetch repopulate.
+//   - No manual cross-query setQueryData seeding.
+//   - No optimistic rollback dance — invalidate + refetch is simpler.
+//   - Toasts in the mutation hook, not in the calling component.
+//
+// Active-tenant resolution is server-side (SSR layout reads cookie,
+// fetches canonical TenantDto, exposes via page.data.tenant). There
+// is no client-side tenantBySlugQuery — slug never enters the browser
+// path layer.
 import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 import * as api from './api';
+import { toast } from '$ui';
 
 export const tenantsKeys = {
 	all: ['tenants'] as const,
-	list: (filters: TenantListFilters) => [...tenantsKeys.all, 'list', filters] as const,
-	detail: (slug: string) => [...tenantsKeys.all, 'detail', slug] as const,
-	stats: (slug: string) => [...tenantsKeys.all, 'stats', slug] as const,
-	activity: (slug: string, cursor?: string) =>
-		[...tenantsKeys.all, 'activity', slug, cursor] as const
+	list: () => [...tenantsKeys.all, 'list'] as const,
+	detail: (id: string) => [...tenantsKeys.all, 'detail', id] as const
 };
 
-export function tenantsListQuery(filters: TenantListFilters) {
-	return createQuery({
-		queryKey: tenantsKeys.list(filters),
-		queryFn: () => api.listTenants(filters)
-	});
+export function tenantsListQuery() {
+	return createQuery(() => ({
+		queryKey: tenantsKeys.list(),
+		queryFn: () => api.listTenants()
+	}));
 }
 
-export function tenantDetailQuery(slug: string) {
-	return createQuery({
-		queryKey: tenantsKeys.detail(slug),
-		queryFn: () => api.getTenantBySlug(slug),
-		enabled: !!slug
-	});
+export function tenantDetailQuery(tenantId: string) {
+	return createQuery(() => ({
+		queryKey: tenantsKeys.detail(tenantId),
+		queryFn: () => api.getTenant(tenantId),
+		enabled: !!tenantId
+	}));
 }
 
 export function suspendTenantMutation() {
 	const qc = useQueryClient();
-	return createMutation({
+	return createMutation(() => ({
 		mutationFn: ({ id, reason }: { id: string; reason: string }) =>
 			api.suspendTenant(id, { reason }),
-		onSuccess: (_, { id }) => {
-			// Invalidate the list AND the detail; next read fetches fresh
+		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: tenantsKeys.all });
+			toast('success', 'Tenant suspended');
 		}
-	});
+	}));
 }
 ```
+
+**Revisions from the earlier draft (recorded 2026-05-21):**
+
+- `tenantBySlugQuery` removed. Slug → UUID resolution is now done by the BFF on `POST /api/operator/scope`; the active-tenant DTO is fetched by `+layout.server.ts` and exposed via `page.data.tenant`.
+- Cache keys use UUIDs not slugs (matches the underlying API path).
+- Cross-query cache seeding (`qc.setQueryData(detail, …)` on list fetch, manual detail updates on mutation) is gone — TanStack canon is invalidate + auto-refetch.
+- Optimistic rollback (`onMutate` + manual `setQueryData` rollback on error) is gone — simpler invalidate.
+- Toasts live in the mutation hook (`onSuccess`), not in the calling dialog. Uniform behaviour regardless of caller.
 
 The class-store `OperatorTenantsStore` is gone. Components consume queries directly:
 
@@ -511,35 +528,74 @@ Lists encode their filter state in the URL so links are shareable and back-butto
 </script>
 ```
 
-#### B.1.4 Slug-based routing for tenants
+#### B.1.4 Operator-scope routing — cookie-driven, slug-agnostic URL (revised 2026-05-21)
 
-Once backend supports `GET /v1/tenants/by-slug/{slug}` (A.1.1), routes change:
+**Earlier draft proposed slug-in-URL (`/operator/tenants/acme-pharma/...`). Shipped implementation moved one step further: tenant identifier never appears in the browser URL at all.**
+
+Routes:
 
 ```
-Before:                                  After:
-/operator/tenants/[id]                   /operator/tenants/[slug]
-/operator/tenants/019e3a27-...           /operator/tenants/acme-pharma
+/operator/tenants                              list page (no scope)
+/operator/scope/profile                        active-tenant profile tab
+/operator/scope/members                        active-tenant members tab
+/operator/scope/roles                          active-tenant roles tab
+/operator/scope/activity                       active-tenant audit log
+/operator/scope/settings                       active-tenant lifecycle actions
 ```
 
-Person routes stay UUID-only (no slug exists; email isn't a URL-safe canonical key for people in operator scope — emails can collide across deactivated identities). Use UUIDs as opaque deep-link tokens, but the operator never SEES them — they navigate to person detail via tenant → user roster → click.
+How scope is entered: clicking a tenant row POSTs `{slug}` to `/api/operator/scope`. The SvelteKit BFF resolves slug → UUID via `GET /v1/tenants/by-slug/{slug}` (server-to-server), then stores `{id, slug, display_name}` in the `lk_op_tenant` httpOnly cookie. The client clears the TanStack cache, runs `invalidateAll()`, and navigates to `/operator/scope/profile`. The cookie is the single source of truth for active scope; the BFF auto-injects `X-Tenant-Id: <scope.id>` on every upstream Go call.
 
-#### B.1.5 Server-driven nav
+Exit: `DELETE /api/operator/scope` clears the cookie; client clears cache; navigates back to `/operator/tenants`.
+
+Pattern reference: Stripe "Test Mode" toggle, Linear "Switch workspace", GitHub Enterprise "Switch enterprise" — all use server-side state, never URL state, for the acting-on context.
+
+Why this is stronger than slug-in-URL:
+
+- Tenant identifier never leaks via browser history, Referer headers, screen recordings, or shared links
+- Server access logs no longer record per-tenant browsing patterns by an operator
+- Browser DevTools Network tab still shows tenant UUIDs in `/api/v1/tenants/{id}/activity`-style paths; that is acceptable (DevTools is engineer-only) and a backend follow-up can migrate those to header-scoped paths (`/api/v1/activity` reading `X-Tenant-Id`)
+
+Person routes stay UUID-only in URL today (e.g. `/operator/persons/{id}`). Same threat model as scope-cookie applies if/when the team decides person identifiers are sensitive — same pattern (cookie + scope routes) is the migration path. Out of scope for the tenant-context work shipped 2026-05-21.
+
+Implementation reference: `docs/superpowers/specs/2026-05-20-bff-cookie-auth-adr.md` § "Operator Scope Flow".
+
+#### B.1.5 Nav rendering — tier-dispatched, no per-item permission filter (shipped 2026-05-21)
+
+**Earlier draft proposed server-driven nav (backend ships a `data.nav` payload that the Sidebar renders verbatim). Shipped implementation went the opposite direction: nav is a static tier catalogue rendered synchronously from the SSR-bootstrapped capabilities.**
+
+How it works:
 
 ```ts
-// lib/api/me-capabilities.ts (depends on backend A.6)
-export function meCapabilitiesQuery() {
-	return createQuery({
-		queryKey: ['me', 'capabilities'],
-		queryFn: api.getMyCapabilities,
-		staleTime: 5 * 60_000,
-		gcTime: 30 * 60_000
-	});
-}
+// src/lib/config/nav.ts
+export const PLATFORM_NAV: NavSection[] = [
+	{ title: 'Operator', items: [{ href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }, ...] },
+	...
+];
+export const TENANT_ADMIN_NAV: NavSection[] = [...];
+export const TENANT_USER_NAV: NavSection[] = [...];
+
+export function navForTier(tier: PrincipalTier): NavSection[] { ... }
 ```
 
-`Sidebar.svelte` reads from `$meCapabilities.data.nav` instead of the hardcoded `lib/config/nav.ts`. The capability list also gates buttons inside pages.
+```svelte
+<!-- src/lib/layouts/Sidebar.svelte -->
+const tier = $derived.by((): PrincipalTier => {
+	const p = session.principal;        // derived from page.data.capabilities
+	if (!p) return 'unknown';
+	if (p.isPlatform && p.isSuperUser) return 'platform-super';
+	...
+});
 
-Until backend ships A.6, keep `nav.ts` as today but treat it as "frontend defaults" — the moment backend ships, frontend cuts over with a one-line swap.
+const sections = $derived(navForTier(tier));
+```
+
+`page.data.capabilities` is baked into the first paint by `(app)/+layout.server.ts`. The Sidebar renders on the first frame — no skeleton, no async fallback, no nav pop-in.
+
+**No per-item permission filtering.** Items in the tier catalogue are rendered as-is. The page each link goes to enforces fine-grained permissions at action time. This matches Stripe, AWS Console, GitHub, Linear, Vercel: nav is a stable shell, not a permission audit. Hiding nav links because the JWT didn't ship one specific perm produces broken UX ("I know the menu used to be here") that's worse than the user landing on a 403 page they can rationalise.
+
+**Nav items must correspond to existing routes.** Roadmap destinations (Leads, Orders, Inventory, Dispatch) live in the roadmap doc, not in `nav.ts`. Dead links erode trust in the nav — they ship with their routes, never before.
+
+Why this differs from the earlier server-driven-nav draft: backend `A.6 me-capabilities` shipped only the capability claims, not a nav-item list. The frontend chose to keep nav as a frontend concern — the backend has no business knowing about the UI's link structure, and tying nav to a backend payload meant every UI menu change required a backend deploy. The tier-catalogue approach localises nav drift to the frontend.
 
 #### B.1.6 Toast system (transient feedback)
 
@@ -641,21 +697,28 @@ For each, the goal: replace today's duct-tape with the canonical pattern. Auth h
 - platform-staff (`platform.tenants.view` only) sees the list read-only; mutation buttons hidden
 - tenant-admin / tenant-user never see this surface (their `/dashboard` redirects)
 
-**URL structure:**
+**URL structure (revised 2026-05-21):**
 
 ```
 /operator/tenants                           list page
-/operator/tenants?q=acme&status=active      list filtered (URL state)
-/operator/tenants/new                       drawer-or-page for register
-/operator/tenants/[slug]                    detail (default: profile tab)
-/operator/tenants/[slug]/profile            profile tab
-/operator/tenants/[slug]/members            members tab
-/operator/tenants/[slug]/roles              roles tab (cross-tenant view of roles in that tenant)
-/operator/tenants/[slug]/activity           audit-log tab
-/operator/tenants/[slug]/settings           lifecycle actions (suspend / mark-for-deletion / restore)
+/operator/tenants?q=acme&status=active      list filtered (URL state — filter terms only, no identifiers)
+/operator/tenants/new                       drawer for register (in-list slide-over)
+/operator/scope/profile                     active-tenant profile tab
+/operator/scope/members                     active-tenant members tab
+/operator/scope/roles                       active-tenant roles tab
+/operator/scope/activity                    active-tenant audit log
+/operator/scope/settings                    active-tenant lifecycle actions
 ```
 
-Slug-keyed. UUID never appears in URL. When backend A.1.1 ships, the route file at `[slug]` calls `getTenantBySlug(params.slug)`.
+The tenant identifier (slug or UUID) does not appear in any URL above. The active-context is stored in the `lk_op_tenant` httpOnly cookie set by `POST /api/operator/scope`. See §B.1.4 for the full flow.
+
+Rationale for hiding the slug too (not just the UUID):
+
+- A slug like `acme-pharma` is a customer identity that should not leak through browser history, Referer headers to third-party assets, or shared URLs
+- Server access logs no longer record which tenants an operator inspected
+- Exit-scope semantics are explicit: an operator who clicks "Exit context" actually leaves the scope (cookie cleared) rather than just navigating away from a slug-URL while the next request silently still carried scope state
+
+The trade-off accepted: URL-shareability inside operator scope is lost. Operators share data via the tenants list, not by sending `/operator/scope/...` links. This matches Stripe Test Mode, Linear workspace switcher, and GitHub Enterprise context switch — none of those expose deep-links into a switched context.
 
 **List page layout:**
 
