@@ -9,7 +9,27 @@
 			"subtitle": "Welcome back. Enter your credentials to continue.",
 			"email": "Email",
 			"password": "Password",
-			"submit": "Sign in"
+			"submit": "Sign in",
+			"forgotPassword": "Forgot password?"
+		},
+		"resetPassword": {
+			"title": "Reset password",
+			"subtitle": "Enter your email and current password, then choose a new one.",
+			"email": "Email",
+			"oldPassword": "Current password",
+			"newPassword": "New password",
+			"newPasswordHint": "At least 8 characters. Must differ from your current password.",
+			"confirmPassword": "Confirm new password",
+			"submit": "Reset password",
+			"success": "Password reset. Redirecting you to sign in…",
+			"backToSignin": "Remembered it?",
+			"errors": {
+				"invalidCredentials": "Email or current password is incorrect.",
+				"mismatch": "Passwords don't match.",
+				"breached": "This password appears in known breach lists — choose a different one.",
+				"same": "New password must differ from the current one.",
+				"rateLimited": "Too many attempts. Wait a minute and try again."
+			}
 		},
 		"errors": {
 			"invalidCredentials": "Email or password is incorrect.",

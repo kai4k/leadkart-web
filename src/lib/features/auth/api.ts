@@ -15,19 +15,29 @@
  *
  * Surface covers authenticated-user flows: login, logout,
  * change-password, plus profile read/update and session list/revoke.
+ * Public reset-with-old-password (see `resetWithOldPassword` below) is
+ * the self-serve recovery path — chosen over email-link reset to avoid
+ * the transactional-email dependency for v0.5.
  *
  *   - Self-serve registration is DISABLED.
- *   - Forgot-password flow is DISABLED.
+ *   - Email-link forgot-password is DISABLED (use reset-with-old).
  *   - Self-service email change is DISABLED.
  */
 import { api, parseResponse } from '$api/client';
 import {
 	loginRequestSchema,
+	resetWithOldPasswordSchema,
 	userDtoSchema,
 	listSessionsResponseSchema,
 	capabilitiesSchema
 } from './schemas';
-import type { LoginRequest, UserDto, SessionDto, UpdateProfileRequest } from './types';
+import type {
+	LoginRequest,
+	UserDto,
+	SessionDto,
+	UpdateProfileRequest,
+	ResetWithOldPasswordRequest
+} from './types';
 import { z } from 'zod';
 
 export type Capabilities = z.output<typeof capabilitiesSchema>;
@@ -111,6 +121,42 @@ export function changePassword(body: {
 	new_password: string;
 }): Promise<void> {
 	return api.post<void>('/v1/auth/change-password', body);
+}
+
+/**
+ * Public — no auth required. Mirrors the login bootstrap pattern: hits
+ * the dedicated SvelteKit BFF endpoint at /auth/reset-with-old-password
+ * (NOT the catch-all proxy, which requires a CSRF cookie the un-signed
+ * user doesn't have yet). The BFF forwards to Go; 204 on success.
+ *
+ * Validates locally first so blank inputs don't round-trip.
+ *
+ * Failure modes (server-mapped — caller switches on err.status + err.code):
+ *   401 invalid_credentials   — email + old password don't match
+ *   422 password_breached     — new password fails HIBP check
+ *   422 password_same         — new == old
+ *   429 rate_limited          — too many attempts (account or IP)
+ */
+export async function resetWithOldPassword(body: ResetWithOldPasswordRequest): Promise<void> {
+	resetWithOldPasswordSchema.parse(body);
+	const resp = await fetch('/auth/reset-with-old-password', {
+		method: 'POST',
+		headers: { 'content-type': 'application/json' },
+		credentials: 'same-origin',
+		body: JSON.stringify(body)
+	});
+	if (resp.ok) return;
+	const text = await resp.text();
+	let parsed: { code?: string; message?: string; error?: string } = {};
+	try {
+		parsed = JSON.parse(text);
+	} catch {
+		/* non-JSON */
+	}
+	const err = new Error(parsed.message ?? parsed.error ?? 'Reset failed');
+	(err as Error & { status: number; code?: string }).status = resp.status;
+	(err as Error & { status: number; code?: string }).code = parsed.code ?? parsed.error;
+	throw err;
 }
 
 /**

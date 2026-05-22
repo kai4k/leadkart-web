@@ -32,15 +32,34 @@ export const capabilitiesSchema = z.object({
  * AND runtime API response validation (industry canon: Stripe SDK,
  * tRPC, TanStack Query all do schema-at-the-boundary).
  *
- * Surface intentionally minimal: login + refresh response shapes +
- * change-password input. Self-serve register / forgot / reset /
- * email-change flows are NOT exposed in this SPA (admin tooling
- * only — see api.ts header for the auth-model rationale).
+ * Surfaces shipped:
+ *   - login              (request + ack)
+ *   - change password    (authenticated, requires current password)
+ *   - reset password     (public, requires old password + email)
+ *
+ * Self-serve registration + email-link reset + email-change remain
+ * disabled — see api.ts header.
  */
 
 export const loginRequestSchema = z.object({
 	email: z.string().min(1, 'Email is required').email('Invalid email format'),
 	password: z.string().min(1, 'Password is required')
+});
+
+/**
+ * Reset password (public, no auth) — user proves identity by knowing
+ * their email + old password, then sets a new one. Surfaced at
+ * /reset-password so users who skipped change-password buried in
+ * settings can self-serve from the signin page.
+ *
+ * The server still enforces password policy (length, breach checks,
+ * "must differ from current") — this schema just catches blank inputs
+ * before the round-trip.
+ */
+export const resetWithOldPasswordSchema = z.object({
+	email: z.string().min(1, 'Email is required').email('Invalid email format'),
+	old_password: z.string().min(1, 'Old password is required'),
+	new_password: z.string().min(8, 'Password must be at least 8 characters')
 });
 
 /**
@@ -62,6 +81,8 @@ export const changePasswordSchema = z.object({
 export type LoginRequestInput = z.input<typeof loginRequestSchema>;
 export type LoginRequest = z.output<typeof loginRequestSchema>;
 export type ChangePasswordInput = z.input<typeof changePasswordSchema>;
+export type ResetWithOldPasswordInput = z.input<typeof resetWithOldPasswordSchema>;
+export type ResetWithOldPasswordRequest = z.output<typeof resetWithOldPasswordSchema>;
 
 /**
  * UserDto — wire shape of GET /v1/users/:membership_id.

@@ -58,12 +58,20 @@ export class ApiError extends Error {
 	 */
 	readonly status: number | undefined;
 	readonly traceId: string | undefined;
+	/**
+	 * Wire-level error code from the response body (legacy `code` or
+	 * RFC 9457 `code`). Subclasses already discriminate by HTTP status;
+	 * this field preserves the finer-grained reason so callers can
+	 * pattern-match on it (e.g. 422 → 'password_breached' vs 'password_same').
+	 */
+	code: string | undefined;
 
-	constructor(status?: number, traceId?: string) {
+	constructor(status?: number, traceId?: string, code?: string) {
 		super('An unexpected error occurred.');
 		this.name = 'ApiError';
 		this.status = status;
 		this.traceId = traceId;
+		this.code = code;
 	}
 
 	// ── Factory: maps HTTP response → typed subclass ──────────────────────
@@ -71,33 +79,40 @@ export class ApiError extends Error {
 	static fromResponse(response: Response, body: ApiErrorBody | null): ApiError {
 		const b = body as (ProblemDetails & LegacyApiErrorBody) | null;
 		const traceId = b?.trace_id;
+		const code = b?.code ?? b?.error;
 
+		let err: ApiError;
 		switch (response.status) {
 			case 401:
-				return new AuthError(401, traceId);
+				err = new AuthError(401, traceId);
+				break;
 			case 403:
-				return new AuthError(403, traceId);
+				err = new AuthError(403, traceId);
+				break;
 			case 404:
-				return new NotFoundError(response.url ?? 'unknown resource', traceId);
+				err = new NotFoundError(response.url ?? 'unknown resource', traceId);
+				break;
 			case 409: {
 				const detail = b?.detail ?? b?.message ?? 'Conflict';
-				return new ConflictError(detail, traceId);
+				err = new ConflictError(detail, traceId);
+				break;
 			}
 			case 422:
 			case 400: {
 				const fields: Record<string, string> = b?.fields ?? {};
-				return new ValidationError(fields, response.status as 400 | 422, traceId);
+				err = new ValidationError(fields, response.status as 400 | 422, traceId);
+				break;
 			}
+			default:
+				if (response.status >= 500) {
+					err = new ServerError(response.status, body, traceId);
+				} else {
+					err = new ApiError(response.status, traceId);
+					err.message =
+						b?.message ?? b?.detail ?? b?.title ?? response.statusText ?? 'Request failed';
+				}
 		}
-
-		if (response.status >= 500) {
-			return new ServerError(response.status, body, traceId);
-		}
-
-		// Generic 4xx or unclassified
-		const err = new ApiError(response.status, traceId);
-		const msg = b?.message ?? b?.detail ?? b?.title ?? response.statusText ?? 'Request failed';
-		err.message = msg;
+		if (code) err.code = code;
 		return err;
 	}
 

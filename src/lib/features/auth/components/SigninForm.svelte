@@ -97,6 +97,12 @@
 		<Button type="submit" {loading} fullWidth size="lg">
 			{loading ? $_('common.loading') : $_('auth.signin.submit')}
 		</Button>
+
+		<p class="caption text-fg-muted text-center">
+			<a href="/reset-password" class="text-primary hover:underline"
+				>{$_('auth.signin.forgotPassword')}</a
+			>
+		</p>
 	</form>
 
 	<!-- Security trust badge — "256-bit SSL encrypted" microcopy with shield -->
