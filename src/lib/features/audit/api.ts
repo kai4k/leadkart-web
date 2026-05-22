@@ -2,7 +2,7 @@
  * Gateway for audit activity endpoints per ADR 0038 N2.
  * Each resource that exposes activity uses the same cursor-paginated shape.
  */
-import { api } from '$api/client';
+import { api, parseResponse } from '$api/client';
 import { activityListResponseSchema } from './schemas';
 import type { ActivityListResponse } from './schemas';
 
@@ -30,7 +30,7 @@ export async function listTenantActivity(
 	params?: ActivityParams
 ): Promise<ActivityListResponse> {
 	const raw = await api.get<unknown>(buildQuery(`/v1/tenants/${tenantId}/activity`, params));
-	return activityListResponseSchema.parse(raw);
+	return parseResponse(activityListResponseSchema, raw);
 }
 
 /** GET /v1/platform/persons/{id}/activity — operator-scoped (platform.users.view). */
@@ -41,11 +41,11 @@ export async function listPersonActivity(
 	const raw = await api.get<unknown>(
 		buildQuery(`/v1/platform/persons/${personId}/activity`, params)
 	);
-	return activityListResponseSchema.parse(raw);
+	return parseResponse(activityListResponseSchema, raw);
 }
 
 /** GET /v1/auth/me/activity — caller's own activity. */
 export async function listMyActivity(params?: ActivityParams): Promise<ActivityListResponse> {
 	const raw = await api.get<unknown>(buildQuery('/v1/auth/me/activity', params));
-	return activityListResponseSchema.parse(raw);
+	return parseResponse(activityListResponseSchema, raw);
 }

@@ -5,13 +5,12 @@
 	import { displayName } from '$features/auth/view-models';
 
 	type Props = {
-		tenantId?: string;
 		open: boolean;
 		user: UserDto | null;
 		onOpenChange: (open: boolean) => void;
 	};
 
-	let { tenantId, open = $bindable(false), user, onOpenChange }: Props = $props();
+	let { open = $bindable(false), user, onOpenChange }: Props = $props();
 
 	let granted = $state<string[]>([]);
 	let revoked = $state<string[]>([]);
@@ -28,7 +27,7 @@
 	let newGrant = $state('');
 	let newRevoke = $state('');
 
-	const mutation = $derived(replacePermissionOverridesMutation(tenantId));
+	const mutation = replacePermissionOverridesMutation();
 	const isPending = $derived(mutation.isPending);
 
 	function addGrant() {

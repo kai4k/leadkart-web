@@ -33,8 +33,7 @@ const role: RoleDto = {
 	is_super_admin: false,
 	hierarchy_level: 3,
 	permissions: [],
-	created_at: '2026-01-01T00:00:00Z',
-	updated_at: '2026-01-01T00:00:00Z'
+	created_at: '2026-01-01T00:00:00Z'
 };
 
 describe('userStatusBadge', () => {

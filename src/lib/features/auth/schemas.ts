@@ -44,25 +44,10 @@ export const loginRequestSchema = z.object({
 });
 
 /**
- * Wire shape of /v1/auth/login + /v1/auth/refresh. leadkart-go does
- * NOT return person_id / tenant_id / membership_id in the body —
- * those come from the JWT's custom claims (decoded via
- * `lib/api/jwt.ts`). Schema mirrors LoginResponse in
- * `internal/identity/ports/dto.go` exactly.
+ * BFF login success acknowledgement — browser-visible login response.
+ * Tokens are set as httpOnly cookies by the BFF; the browser only sees ok:true.
  */
-export const loginResponseSchema = z.object({
-	access_token: z.string(),
-	refresh_token: z.string(),
-	access_token_expires_at: z.string(),
-	token_type: z.string()
-});
-
-export const refreshResponseSchema = z.object({
-	access_token: z.string(),
-	refresh_token: z.string(),
-	access_token_expires_at: z.string(),
-	token_type: z.string()
-});
+export const loginOkSchema = z.object({ ok: z.literal(true) });
 
 /**
  * Change password (authenticated) — both current + new are required.
@@ -76,8 +61,6 @@ export const changePasswordSchema = z.object({
 
 export type LoginRequestInput = z.input<typeof loginRequestSchema>;
 export type LoginRequest = z.output<typeof loginRequestSchema>;
-export type LoginResponseValidated = z.output<typeof loginResponseSchema>;
-export type RefreshResponseValidated = z.output<typeof refreshResponseSchema>;
 export type ChangePasswordInput = z.input<typeof changePasswordSchema>;
 
 /**
@@ -92,12 +75,12 @@ export const userDtoSchema = z.object({
 	first_name: z.string(),
 	last_name: z.string(),
 	status: z.enum(['active', 'inactive', 'pending']),
-	designation: z.string(),
-	department: z.string(),
-	status_message: z.string(),
+	designation: z.string().optional().default(''),
+	department: z.string().optional().default(''),
+	status_message: z.string().optional().default(''),
 	joined_at: z.string(),
-	left_at: z.string().nullable(),
-	reports_to: z.string().nullable(),
+	left_at: z.string().nullable().optional(),
+	reports_to: z.string().nullable().optional(),
 	role_ids: z.array(z.string())
 });
 

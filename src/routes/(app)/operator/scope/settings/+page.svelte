@@ -1,20 +1,17 @@
 <script lang="ts">
-	import { Alert, Spinner } from '$ui';
-	import { tenantBySlugQuery } from '$features/operator/tenants/queries';
 	import TenantActionPanel from '$features/operator/tenants/components/TenantActionPanel.svelte';
 	import SuspendDialog from '$features/operator/tenants/components/SuspendDialog.svelte';
 	import MarkForDeletionDialog from '$features/operator/tenants/components/MarkForDeletionDialog.svelte';
 	import type { TenantDto } from '$features/operator/tenants/types';
+	import type { LayoutData } from '../$types';
 
-	let { data } = $props();
+	let { data }: { data: LayoutData } = $props();
 
 	let suspendOpen = $state(false);
 	let markOpen = $state(false);
 	let target = $state<TenantDto | null>(null);
 
-	const slug = $derived(data.slug);
-	const query = $derived(tenantBySlugQuery(slug));
-	const tenant = $derived(query.data ?? null);
+	const tenant = $derived(data.tenant);
 
 	function onAction(action: 'suspend' | 'mark', t: TenantDto) {
 		target = t;
@@ -23,15 +20,9 @@
 	}
 </script>
 
-<svelte:head><title>Settings · LeadKart</title></svelte:head>
+<svelte:head><title>Settings · {tenant.display_name} · LeadKart</title></svelte:head>
 
-{#if query.isPending}
-	<div class="flex justify-center py-8"><Spinner size={28} /></div>
-{:else if query.isError || !tenant}
-	<Alert variant="warning" title="Tenant not found">Could not load tenant context.</Alert>
-{:else}
-	<TenantActionPanel {tenant} {onAction} />
-{/if}
+<TenantActionPanel {tenant} {onAction} />
 
 <SuspendDialog bind:open={suspendOpen} tenant={target} onOpenChange={(o) => (suspendOpen = o)} />
 <MarkForDeletionDialog bind:open={markOpen} tenant={target} onOpenChange={(o) => (markOpen = o)} />

@@ -58,18 +58,19 @@ describe('hasCapability', () => {
 		expect(hasCapability(c, 'platform.tenants.delete')).toBe(true);
 	});
 
-	it('returns false for platform-staff without the specific permission', () => {
+	// Platform-tier users (is_platform=true) implicitly hold platform.*
+	// permissions — see capabilities.ts comment. The server's
+	// RequirePermission middleware is the actual gate; the client treats
+	// the coarse claim as sufficient for UI affordances.
+	it('returns true for platform-staff on any platform.* permission (coarse-claim implies fine)', () => {
 		const c = caps({ is_platform: true, is_super_user: false });
-		expect(hasCapability(c, 'platform.tenants.manage')).toBe(false);
+		expect(hasCapability(c, 'platform.tenants.manage')).toBe(true);
+		expect(hasCapability(c, 'platform.tenants.view')).toBe(true);
 	});
 
-	it('returns true for platform-staff with the specific permission', () => {
-		const c = caps({
-			is_platform: true,
-			is_super_user: false,
-			permissions: ['platform.tenants.view']
-		});
-		expect(hasCapability(c, 'platform.tenants.view')).toBe(true);
+	it('returns false for platform-staff on a non-platform.* permission they lack', () => {
+		const c = caps({ is_platform: true, is_super_user: false });
+		expect(hasCapability(c, 'crm.leads.delete')).toBe(false);
 	});
 });
 

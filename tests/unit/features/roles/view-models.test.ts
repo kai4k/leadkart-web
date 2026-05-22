@@ -15,8 +15,7 @@ const base: RoleDto = {
 	is_super_admin: false,
 	hierarchy_level: 3,
 	permissions: ['identity.users.view', 'identity.roles.view'],
-	created_at: '2026-01-01T00:00:00Z',
-	updated_at: '2026-01-01T00:00:00Z'
+	created_at: '2026-01-01T00:00:00Z'
 };
 
 const systemRole: RoleDto = { ...base, id: 'r2', name: 'Admin', is_system_default: true };

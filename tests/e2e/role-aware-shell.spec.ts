@@ -1,203 +1,96 @@
-import { expect, test, type Page, type Route } from '@playwright/test';
-import { fakeAccessToken, fakeCapabilitiesResponse, TEST_TENANT_ID } from './helpers/fake-jwt';
+import { expect, test } from '@playwright/test';
+import { signInAsTier } from './helpers/sign-in';
+import { resetMock, registerMock } from './helpers/mock';
+import { TEST_TENANT_ID } from './helpers/fake-jwt';
 
 /**
  * Tier-aware shell smoke tests.
  *
- * Verifies that the /dashboard router + the Sidebar nav filter
- * branch correctly on the principal claims (`is_platform`,
- * `is_super_user`, `permission[]`) decoded from the access token.
+ * Verifies the (app) layout server load picks the right tier from
+ * capabilities and the Sidebar renders the matching nav catalogue
+ * from src/lib/config/nav.ts.
  *
- * Three personas exercised:
+ * Three personas exercised against the locked nav surface:
  *
- *   - Platform SuperAdmin   — is_platform + is_super_user
- *   - Tenant Admin          — permission ['tenant.admin']
- *   - Tenant User (default) — no special claims
+ *   Platform tier  → Dashboard, Tenants, Account
+ *   Tenant admin   → Dashboard, Tenant Settings, Team, Roles, Account
+ *   Tenant user    → Dashboard, Account
  *
- * Each test mounts /signin, mocks /api/v1/auth/login to return a JWT
- * carrying the persona's claims, signs in, and asserts the rendered
- * /dashboard variant + a couple of distinctive sidebar entries.
+ * The nav config is intentionally narrow — items only ship once their
+ * routes exist (no dead links). When v0.4/v0.5 add Leads/Orders/etc.,
+ * extend these assertions.
  */
-
-async function mockLoginAs(
-	page: Page,
-	persona: 'platform-super' | 'tenant-admin' | 'tenant-user'
-): Promise<void> {
-	const claims = (() => {
-		switch (persona) {
-			case 'platform-super':
-				return {
-					is_platform: true,
-					is_super_user: true,
-					tenant_slug: 'platform',
-					permission: []
-				};
-			case 'tenant-admin':
-				return { is_platform: false, is_super_user: false, permission: ['tenant.admin'] };
-			case 'tenant-user':
-				return {
-					is_platform: false,
-					is_super_user: false,
-					permission: ['crm.leads.view']
-				};
-		}
-	})();
-
-	await page.route('**/api/v1/auth/login', async (route: Route) => {
-		await route.fulfill({
-			status: 200,
-			contentType: 'application/json',
-			body: JSON.stringify({
-				access_token: fakeAccessToken(claims),
-				refresh_token: 'fake-refresh-token',
-				access_token_expires_at: new Date(Date.now() + 3_600_000).toISOString(),
-				token_type: 'Bearer'
-			})
-		});
-	});
-
-	// Capabilities — Sidebar reads is_platform + is_super_user + permissions
-	// from this endpoint; deriveTier() synthesises the tier client-side.
-	// platform-super needs both is_platform AND is_super_user for deriveTier()
-	// to return 'platform-super'.
-	const isSuperUser = persona === 'platform-super' ? true : (claims.is_super_user ?? false);
-	await page.route('**/api/v1/auth/me/capabilities', async (route: Route) => {
-		await route.fulfill({
-			status: 200,
-			contentType: 'application/json',
-			body: JSON.stringify(
-				fakeCapabilitiesResponse({
-					permissions: claims.permission,
-					is_platform: claims.is_platform,
-					is_super_user: isSuperUser,
-					tenant_id: TEST_TENANT_ID,
-					tenant_slug: claims.tenant_slug ?? 'acme',
-					email: 'user@acme.test'
-				})
-			)
-		});
-	});
-
-	// Platform stats — PlatformDashboard queries this; mock to prevent
-	// network-error state on the dashboard when running without a backend.
-	await page.route('**/api/v1/platform/stats', async (route: Route) => {
-		if (route.request().method() === 'GET') {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify({
-					tenants_total: 12,
-					tenants_active: 10,
-					tenants_suspended: 2,
-					persons_total: 150,
-					memberships_active: 120
-				})
-			});
-		} else {
-			await route.continue();
-		}
-	});
-
-	// Tenant fetch (Tenant Admin dashboard touches it; mock for all 3
-	// to keep the harness uniform — wasted bytes are cheaper than
-	// per-persona branching).
-	await page.route(`**/api/v1/tenants/${TEST_TENANT_ID}`, async (route: Route) => {
-		if (route.request().method() === 'GET') {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify({
-					id: TEST_TENANT_ID,
-					slug: 'acme',
-					legal_name: 'Acme',
-					display_name: 'Acme',
-					admin_email: 'admin@acme.test',
-					status: 'active',
-					created_at: '2026-01-15T10:30:00Z',
-					admin_address: {},
-					password_policy: {
-						min_length: 8,
-						require_uppercase: false,
-						require_lowercase: false,
-						require_digit: false,
-						require_symbol: false,
-						max_failed_attempts: 5,
-						lockout_minutes: 15
-					}
-				})
-			});
-		} else {
-			await route.continue();
-		}
-	});
-}
-
-async function signIn(page: Page): Promise<void> {
-	await page.goto('/signin');
-	await page.getByRole('textbox', { name: 'Email' }).fill('user@acme.test');
-	await page.getByRole('textbox', { name: 'Password' }).fill('correct-horse-battery-staple');
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/dashboard$/);
-}
-
 test.describe('Role-aware shell', () => {
-	test('Platform SuperAdmin sees Operator Dashboard + platform sidebar', async ({ page }) => {
-		await mockLoginAs(page, 'platform-super');
-		await signIn(page);
+	test.beforeEach(async () => {
+		await resetMock();
+	});
 
-		// Dashboard variant
+	test('Platform SuperAdmin sees Operator Dashboard + platform nav', async ({ page }) => {
+		// Platform-stats endpoint that PlatformDashboard hits — register
+		// before sign-in so the dashboard renders cleanly on first paint.
+		await registerMock({
+			method: 'GET',
+			path: '/api/v1/platform/stats',
+			status: 200,
+			body: {
+				tenants_total: 12,
+				tenants_active: 10,
+				tenants_suspended: 2,
+				persons_total: 150,
+				memberships_active: 120
+			}
+		});
+
+		await signInAsTier(page, { tier: 'platform-super' });
+
 		await expect(page.getByRole('heading', { level: 1, name: 'Operator Dashboard' })).toBeVisible();
 		await expect(page.getByText('SuperAdmin', { exact: false })).toBeVisible();
 		await expect(page.getByText('Tenants total')).toBeVisible();
-		await expect(page.getByText('Lead verification queue')).toBeVisible();
 
-		// Sidebar: PLATFORM_NAV entries present
 		const sidebar = page.getByRole('navigation', { name: 'Main navigation' });
 		await expect(sidebar.getByRole('link', { name: 'Tenants' })).toBeVisible();
-		await expect(sidebar.getByRole('link', { name: 'Activity' })).toBeVisible();
-
-		// Sidebar: tenant-tier entries absent
-		await expect(sidebar.getByRole('link', { name: 'Inventory' })).toHaveCount(0);
+		await expect(sidebar.getByRole('link', { name: 'Account' })).toBeVisible();
 		await expect(sidebar.getByRole('link', { name: 'Tenant Settings' })).toHaveCount(0);
 	});
 
-	test('Tenant Admin sees Tenant Dashboard + admin sidebar', async ({ page }) => {
-		await mockLoginAs(page, 'tenant-admin');
-		await signIn(page);
+	test('Tenant Admin sees Tenant Dashboard + admin nav', async ({ page }) => {
+		await signInAsTier(page, { tier: 'tenant-admin', permissions: ['tenant.admin'] });
 
 		await expect(page.getByRole('heading', { level: 1, name: 'Tenant Dashboard' })).toBeVisible();
-		// The "Admin" pill in the dashboard header (not the sidebar's
-		// "Administration" section title — use exact match to disambiguate).
-		await expect(page.getByText('Admin', { exact: true })).toBeVisible();
-		await expect(page.getByText('Lead credits')).toBeVisible();
-		await expect(page.getByText('Team active')).toBeVisible();
 
 		const sidebar = page.getByRole('navigation', { name: 'Main navigation' });
 		await expect(sidebar.getByRole('link', { name: 'Tenant Settings' })).toBeVisible();
-		// Admin has tenant.admin perm; sees the admin section. crm.leads.view
-		// not granted → Leads entry hidden.
-		await expect(sidebar.getByRole('link', { name: 'Leads' })).toHaveCount(0);
-
-		// Sidebar: platform-tier entries absent
+		await expect(sidebar.getByRole('link', { name: 'Team' })).toBeVisible();
+		await expect(sidebar.getByRole('link', { name: 'Roles' })).toBeVisible();
 		await expect(sidebar.getByRole('link', { name: 'Tenants' })).toHaveCount(0);
-		await expect(sidebar.getByRole('link', { name: 'Verification Queue' })).toHaveCount(0);
 	});
 
-	test('Tenant User sees My Dashboard + minimal sidebar', async ({ page }) => {
-		await mockLoginAs(page, 'tenant-user');
-		await signIn(page);
+	test('Tenant User sees My Dashboard + minimal nav', async ({ page }) => {
+		await signInAsTier(page, { tier: 'tenant-user' });
 
 		await expect(page.getByRole('heading', { level: 1, name: 'My Dashboard' })).toBeVisible();
-		await expect(page.getByText('My active leads')).toBeVisible();
 
 		const sidebar = page.getByRole('navigation', { name: 'Main navigation' });
-		await expect(sidebar.getByRole('link', { name: 'My Leads' })).toBeVisible();
-		await expect(sidebar.getByRole('link', { name: 'My Tasks' })).toBeVisible();
-
-		// No tenant-admin entries
+		await expect(sidebar.getByRole('link', { name: 'Account' })).toBeVisible();
 		await expect(sidebar.getByRole('link', { name: 'Tenant Settings' })).toHaveCount(0);
-		await expect(sidebar.getByRole('link', { name: 'Team' })).toHaveCount(0);
-		// No platform entries
 		await expect(sidebar.getByRole('link', { name: 'Tenants' })).toHaveCount(0);
+	});
+
+	test('First-paint capabilities: no skeleton, nav renders immediately', async ({ page }) => {
+		// The (app)/+layout.server.ts bakes capabilities into the HTML.
+		// On navigation to /dashboard, the sidebar tier-dispatch should
+		// fire on the first frame — never show a fallback nav or skeleton.
+		await signInAsTier(page, { tier: 'platform-super' });
+		const sidebar = page.getByRole('navigation', { name: 'Main navigation' });
+		await expect(sidebar.getByRole('link', { name: 'Tenants' })).toBeVisible({ timeout: 100 });
+	});
+
+	// Verify the principal's tenant_id is never exposed in the page URL —
+	// the user is on /dashboard, not /dashboard?tenant=<id>.
+	test('No tenant identifier in user-facing URL after sign-in', async ({ page }) => {
+		await signInAsTier(page, { tier: 'tenant-admin', permissions: ['tenant.admin'] });
+		expect(page.url()).not.toContain(TEST_TENANT_ID);
+		expect(page.url()).not.toContain('acme');
+		expect(new URL(page.url()).pathname).toBe('/dashboard');
 	});
 });

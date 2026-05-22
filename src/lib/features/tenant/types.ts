@@ -35,7 +35,6 @@ export interface Tenant {
 	slug: string;
 	legal_name: string;
 	display_name: string;
-	admin_email: string;
 	status: string;
 	created_at: string;
 	activated_at?: string;

@@ -1,4 +1,4 @@
-import { api } from '$api/client';
+import { api, parseResponse } from '$api/client';
 import {
 	personDtoSchema,
 	listPersonMembershipsResponseSchema,
@@ -43,19 +43,19 @@ function buildPersonListQuery(params?: PersonListParams): string {
 /** List persons with optional email/name search — operator-scoped (platform.users.view). */
 export async function listPersons(params?: PersonListParams): Promise<PersonListResponse> {
 	const raw = await api.get<unknown>(buildPersonListQuery(params));
-	return personListResponseSchema.parse(raw);
+	return parseResponse(personListResponseSchema, raw);
 }
 
 /** Look up a single person by email — operator-scoped (platform.users.view). */
 export async function getPersonByEmail(email: string): Promise<PersonDto> {
 	const raw = await api.get<unknown>(`/v1/platform/persons/by-email/${encodeURIComponent(email)}`);
-	return personDtoSchema.parse(raw);
+	return parseResponse(personDtoSchema, raw);
 }
 
 /** Read a Person by ID — operator-scoped (platform.users.view). */
 export async function getPerson(personId: string): Promise<PersonDto> {
 	const raw = await api.get<unknown>(`/v1/platform/persons/${personId}`);
-	return personDtoSchema.parse(raw);
+	return parseResponse(personDtoSchema, raw);
 }
 
 /** List all Memberships (across tenants) for a Person — operator-scoped
@@ -64,7 +64,7 @@ export async function listPersonMemberships(
 	personId: string
 ): Promise<ListPersonMembershipsResponse> {
 	const raw = await api.get<unknown>(`/v1/platform/persons/${personId}/memberships`);
-	return listPersonMembershipsResponseSchema.parse(raw);
+	return parseResponse(listPersonMembershipsResponseSchema, raw);
 }
 
 /** Update a Person's first_name / last_name — operator-scoped

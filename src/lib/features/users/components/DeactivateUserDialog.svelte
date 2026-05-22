@@ -6,18 +6,17 @@
 	import { displayName } from '$features/auth/view-models';
 
 	type Props = {
-		tenantId?: string;
 		open: boolean;
 		user: UserDto | null;
 		onOpenChange: (open: boolean) => void;
 	};
 
-	let { tenantId, open = $bindable(false), user, onOpenChange }: Props = $props();
+	let { open = $bindable(false), user, onOpenChange }: Props = $props();
 
 	let reason = $state('');
 	let error = $state<string | null>(null);
 
-	const mutation = $derived(deactivateUserMutation(tenantId));
+	const mutation = deactivateUserMutation();
 	const isPending = $derived(mutation.isPending);
 
 	async function onConfirm() {

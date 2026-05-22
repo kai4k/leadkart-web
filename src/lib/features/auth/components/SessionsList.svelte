@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Alert, Badge, Button, Card } from '$ui';
 	import { Trash2, LogOut, Icon } from '$icons';
-	import { session } from '$features/auth/stores/session.svelte';
 	import {
 		mySessionsQuery,
 		revokeSessionMutation,
@@ -15,7 +14,10 @@
 	 * TanStack Query drives fetch + optimistic updates.
 	 */
 
-	const currentFamilyId = $derived(session.activeFamilyId ?? null);
+	// BFF model: refresh token is httpOnly — the browser can no longer decode
+	// the `fam` claim from it. currentFamilyId degrades to null; "This device"
+	// badge is suppressed until the backend adds family_id to capabilities.
+	const currentFamilyId: string | null = null;
 	const sessionsQuery = mySessionsQuery();
 	const revokeMutation = revokeSessionMutation();
 	const revokeOthersMutation = $derived(revokeOtherSessionsMutation(currentFamilyId));

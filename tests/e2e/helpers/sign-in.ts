@@ -1,21 +1,20 @@
 /**
- * Unified sign-in helper for e2e specs.
+ * Sign-in helper for e2e specs.
  *
- * signInAsTier() wires ALL the baseline mocks that every (app) route
- * needs after the Phase D/E/F migration:
+ * Pushes fixtures to the Go mock for the auth flow + baseline (app)
+ * loads, then drives the signin form. After this returns the user is
+ * on /dashboard with cookies set and capabilities baked into the page.
  *
- *   POST /v1/auth/login                    → LoginResponse (tokens)
- *   GET  /v1/auth/me/capabilities          → CapabilitiesDto   ← CRITICAL: Sidebar + UserMenu
- *   GET  /v1/users/:membership_id          → UserDto           (own profile)
- *   GET  /v1/auth/sessions                 → { sessions: [...] }
- *   GET  /v1/tenants/:tenant_id            → TenantDto         (by ID)
- *   GET  /v1/tenants/by-slug/:slug         → TenantDto         (by slug — operator layout)
+ * Usage pattern in specs:
  *
- * Per-test resource mocks (list endpoints, mutations, activity logs,
- * cross-tenant lookups) are still the caller's responsibility.
+ *   test.beforeEach(async () => { await resetMock(); });
  *
- * Architectural note: mocks must zod-parse cleanly. Shapes are
- * derived from src/lib/features/auth/schemas.ts.
+ *   test('something', async ({ page }) => {
+ *     await signInAsTier(page, { tier: 'platform-super', permissions: [...] });
+ *     // register additional fixtures specific to this test here:
+ *     await registerMock({ method: 'GET', path: '/api/v1/...', status: 200, body: ... });
+ *     await page.goto('/...');
+ *   });
  */
 
 import type { Page } from '@playwright/test';
@@ -30,10 +29,10 @@ import {
 	TEST_TENANT_SLUG,
 	TEST_MEMBERSHIP_ID,
 	TEST_PERSON_ID,
-	TEST_FAMILY_ID,
 	type Tier,
 	type Permission
 } from './fake-jwt';
+import { registerMocks } from './mock';
 
 export interface SignInOpts {
 	tier: Tier;
@@ -46,12 +45,6 @@ export interface SignInOpts {
 	email?: string;
 }
 
-/**
- * Sign in as the given tier + permission set and set up the baseline
- * auth + capabilities + own-profile + own-sessions + own-tenant mocks.
- * Navigates to /signin, fills credentials, clicks Sign in, and waits
- * for /dashboard.
- */
 export async function signInAsTier(page: Page, opts: SignInOpts): Promise<void> {
 	const tenantId = opts.tenant_id ?? TEST_TENANT_ID;
 	const tenantSlug = opts.tenant_slug ?? TEST_TENANT_SLUG;
@@ -62,107 +55,55 @@ export async function signInAsTier(page: Page, opts: SignInOpts): Promise<void> 
 	const isSuperUser = opts.is_super_user ?? opts.tier === 'platform-super';
 	const permissions = opts.permissions ?? [];
 
-	// ── Login ────────────────────────────────────────────────────────
-	await page.route('**/api/v1/auth/login', async (route) => {
-		await route.fulfill({
+	const claimOverrides = {
+		is_platform: isPlatform,
+		is_super_user: isSuperUser,
+		tenant_id: tenantId,
+		tenant_slug: tenantSlug,
+		membership_id: membershipId,
+		sub: personId,
+		permission: permissions
+	};
+
+	const capabilities = fakeCapabilitiesResponse({
+		permissions,
+		is_platform: isPlatform,
+		is_super_user: isSuperUser,
+		tenant_id: tenantId,
+		tenant_slug: tenantSlug,
+		membership_id: membershipId,
+		person_id: personId,
+		email
+	});
+
+	const user = fakeUserDto({
+		membership_id: membershipId,
+		person_id: personId,
+		tenant_id: tenantId,
+		email
+	});
+	const tenant = fakeTenantDto({ id: tenantId, slug: tenantSlug });
+	const session = fakeSessionDto({ tenant_id: tenantId });
+
+	await registerMocks([
+		{
+			method: 'POST',
+			path: '/api/v1/auth/login',
 			status: 200,
-			contentType: 'application/json',
-			body: JSON.stringify({
-				access_token: fakeAccessToken({
-					sub: personId,
-					tenant_id: tenantId,
-					tenant_slug: tenantSlug,
-					membership_id: membershipId,
-					is_platform: isPlatform,
-					is_super_user: isSuperUser,
-					permission: permissions
-				}),
-				refresh_token: fakeRefreshToken(TEST_FAMILY_ID),
+			body: {
+				access_token: fakeAccessToken(claimOverrides),
+				refresh_token: fakeRefreshToken(),
 				access_token_expires_at: new Date(Date.now() + 3_600_000).toISOString(),
 				token_type: 'Bearer'
-			})
-		});
-	});
+			}
+		},
+		{ method: 'GET', path: '/api/v1/auth/me/capabilities', status: 200, body: capabilities },
+		{ method: 'GET', path: `/api/v1/users/${membershipId}`, status: 200, body: user },
+		{ method: 'GET', path: '/api/v1/auth/sessions', status: 200, body: { sessions: [session] } },
+		{ method: 'GET', path: `/api/v1/tenants/${tenantId}`, status: 200, body: tenant },
+		{ method: 'GET', path: `/api/v1/tenants/by-slug/${tenantSlug}`, status: 200, body: tenant }
+	]);
 
-	// ── Capabilities — MUST be present; Sidebar + UserMenu query this ─
-	// NOTE: `tier` is not a backend field — deriveTier() synthesises it
-	// client-side from is_platform + is_super_user + permissions.
-	await page.route('**/api/v1/auth/me/capabilities', async (route) => {
-		await route.fulfill({
-			status: 200,
-			contentType: 'application/json',
-			body: JSON.stringify(
-				fakeCapabilitiesResponse({
-					permissions,
-					is_platform: isPlatform,
-					is_super_user: isSuperUser,
-					tenant_id: tenantId,
-					tenant_slug: tenantSlug,
-					membership_id: membershipId,
-					email
-				})
-			)
-		});
-	});
-
-	// ── Own profile (membership_id-keyed) ────────────────────────────
-	await page.route(`**/api/v1/users/${membershipId}`, async (route) => {
-		if (route.request().method() === 'GET') {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify(
-					fakeUserDto({
-						membership_id: membershipId,
-						person_id: personId,
-						tenant_id: tenantId,
-						email
-					})
-				)
-			});
-		} else {
-			await route.continue();
-		}
-	});
-
-	// ── Own sessions ─────────────────────────────────────────────────
-	await page.route('**/api/v1/auth/sessions', async (route) => {
-		if (route.request().method() === 'GET') {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify({
-					sessions: [fakeSessionDto({ tenant_id: tenantId })]
-				})
-			});
-		} else {
-			await route.continue();
-		}
-	});
-
-	// ── Own tenant (by ID) ───────────────────────────────────────────
-	await page.route(`**/api/v1/tenants/${tenantId}`, async (route) => {
-		if (route.request().method() === 'GET') {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify(fakeTenantDto({ id: tenantId, slug: tenantSlug }))
-			});
-		} else {
-			await route.continue();
-		}
-	});
-
-	// ── Own tenant (by slug) — operator context layout uses /by-slug ──
-	await page.route(`**/api/v1/tenants/by-slug/${tenantSlug}`, async (route) => {
-		await route.fulfill({
-			status: 200,
-			contentType: 'application/json',
-			body: JSON.stringify(fakeTenantDto({ id: tenantId, slug: tenantSlug }))
-		});
-	});
-
-	// ── Execute the sign-in flow ─────────────────────────────────────
 	await page.goto('/signin');
 	await page.getByRole('textbox', { name: /email/i }).fill(email);
 	await page.getByRole('textbox', { name: /password/i }).fill('Test1234!');

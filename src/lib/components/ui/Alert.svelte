@@ -63,7 +63,7 @@
 		{#if dismissible}
 			<button
 				type="button"
-				class="rounded-sm p-0.5 hover:bg-[color-mix(in_srgb,var(--color-fg)_5%,transparent)]"
+				class="hover:bg-bg-muted rounded-sm p-0.5"
 				aria-label="Dismiss"
 				onclick={() => onDismiss?.()}
 			>

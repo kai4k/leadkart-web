@@ -45,6 +45,15 @@
 			: null
 	);
 
+	// Surface the raw error in DevTools so engineers can inspect the
+	// failure (network 4xx/5xx body, zod parse path, etc.). Re-runs
+	// whenever the error reference changes — won't spam the console.
+	$effect(() => {
+		if (statsQuery.isError) {
+			console.error('[PlatformDashboard] platformStatsQuery failed:', statsQuery.error);
+		}
+	});
+
 	// Tiles backed by real stats — show actual number or '—' while loading.
 	type StatTile = {
 		label: string;
@@ -144,13 +153,26 @@
 	</header>
 
 	{#if statsError}
-		<Alert variant="danger" title="Stats unavailable">{statsError}</Alert>
+		<Alert variant="danger" title="Stats unavailable">
+			<p>{statsError}</p>
+			<p class="caption text-fg-muted mt-2">
+				Check DevTools console for the raw error + Network tab for the
+				<code>/v1/platform/stats</code> response.
+			</p>
+			<button
+				type="button"
+				class="label-small text-primary hover:text-primary-hover mt-3 underline"
+				onclick={() => statsQuery.refetch()}
+			>
+				Retry
+			</button>
+		</Alert>
 	{/if}
 
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 		{#each statTiles as tile (tile.label)}
 			{@const Icon = tile.icon}
-			<Card.Root surface="glass" class="lk-dash-tile glass-hover">
+			<Card.Root surface="glass" class="glass-hover">
 				<Card.Header>
 					<div class="cluster" style="--cluster-gap: var(--spacing-3);">
 						<span class={`lk-dash-tile-icon lk-dash-tile-icon--${tile.accent}`} aria-hidden="true">
@@ -172,7 +194,7 @@
 
 		{#each placeholderTiles as tile (tile.label)}
 			{@const Icon = tile.icon}
-			<Card.Root surface="glass" class="lk-dash-tile glass-hover">
+			<Card.Root surface="glass" class="glass-hover">
 				<Card.Header>
 					<div class="cluster" style="--cluster-gap: var(--spacing-3);">
 						<span class={`lk-dash-tile-icon lk-dash-tile-icon--${tile.accent}`} aria-hidden="true">

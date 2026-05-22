@@ -1,210 +1,177 @@
-import { expect, test, type Page, type Route } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import {
-	fakeLoginResponse,
-	fakeCapabilitiesResponse,
-	TEST_TENANT_ID,
-	TEST_MEMBERSHIP_ID
-} from './helpers/fake-jwt';
+import { signInAsTier } from './helpers/sign-in';
+import { resetMock, registerMocks, registerMock, listMockCalls } from './helpers/mock';
+import { fakeTenantDto, TEST_TENANT_ID, TEST_TENANT_SLUG } from './helpers/fake-jwt';
 
 /**
- * Operator tenant management e2e — slice 4 acceptance gate.
+ * Operator-side tenant management e2e.
  *
- * Two scenarios:
- *   1. List page renders tenant cards from the real list endpoint.
- *   2. a11y — axe finds no serious/critical violations on the list page.
- *
- * The leadkart-go backend is NOT running in CI, so each test sets up
- * Playwright route handlers that return canned responses for the
- * endpoints the flow exercises:
- *
- *   POST  /api/v1/auth/login                          → {tokens} (platform principal)
- *   GET   /api/v1/platform/tenants                    → ListAllTenantsResponse
- *   GET   /api/v1/tenants/{tid}                       → minimal TenantDto (sidebar)
- *   GET   /api/v1/users/{mid}                         → UserDto (profile/sidebar)
- *
- * Principal carries `platform.tenants.view` + `platform.tenants.create`
- * + `is_platform: true` so the /operator/tenants load guard passes and
- * the "Register tenant" button renders.
- *
- * a11y scope is restricted to <main> — the AppShell Sidebar has a
- * pre-existing --color-fg-subtle contrast issue on section titles
- * (tracked separately; see a11y.spec.ts for rationale).
+ * Covers:
+ *   - List page renders tenants from the real list endpoint
+ *   - "Enter scope" flow (no slug in URL) sets cookie + navigates to
+ *     /operator/scope/profile + scope layout fetches active tenant
+ *     and renders the Profile tab
+ *   - Exit scope clears the cookie and returns to the tenants list
+ *   - a11y on the list page
  */
 
-const MEMBERSHIP_ID = TEST_MEMBERSHIP_ID;
-const TENANT_ID = TEST_TENANT_ID;
+const ACME = fakeTenantDto({
+	id: 'tid-aaa',
+	slug: 'acme-pharma',
+	display_name: 'Acme Pharma',
+	legal_name: 'Acme Pharma Pvt Ltd'
+});
+const BETA = fakeTenantDto({
+	id: 'tid-bbb',
+	slug: 'beta-meds',
+	display_name: 'Beta Meds',
+	legal_name: 'Beta Meds Ltd'
+});
 
-const BASE_USER_DTO = {
-	membership_id: MEMBERSHIP_ID,
-	person_id: '00000000-0000-0000-0000-000000000a01',
-	tenant_id: TENANT_ID,
-	email: 'operator@leadkart.io',
-	first_name: 'Platform',
-	last_name: 'Operator',
-	status: 'active',
-	designation: 'Platform Manager',
-	department: 'Operations',
-	status_message: '',
-	joined_at: '2026-01-15T10:30:00Z',
-	left_at: null,
-	reports_to: null,
-	role_ids: []
-};
-
-const MINIMAL_TENANT = {
-	id: TENANT_ID,
-	slug: 'leadkart-platform',
-	legal_name: 'LeadKart Platform Pvt Ltd',
-	display_name: 'LeadKart',
-	admin_email: 'operator@leadkart.io',
-	status: 'active',
-	created_at: '2026-01-01T00:00:00Z',
-	admin_address: {},
-	password_policy: {
-		min_length: 8,
-		require_uppercase: false,
-		require_lowercase: false,
-		require_digit: false,
-		require_symbol: false,
-		max_failed_attempts: 5,
-		lockout_minutes: 15
-	}
-};
-
-const LIST_TENANTS_RESPONSE = {
-	tenants: [
+async function setupOperator(page: import('@playwright/test').Page) {
+	await signInAsTier(page, {
+		tier: 'platform-super',
+		permissions: ['platform.tenants.view', 'platform.tenants.create', 'platform.tenants.manage'],
+		tenant_id: TEST_TENANT_ID,
+		tenant_slug: TEST_TENANT_SLUG
+	});
+	await registerMocks([
 		{
-			...MINIMAL_TENANT,
-			id: 'tid-aaa',
-			slug: 'acme-pharma',
-			display_name: 'Acme Pharma',
-			legal_name: 'Acme Pharma Pvt Ltd'
+			method: 'GET',
+			path: '/api/v1/platform/tenants',
+			status: 200,
+			body: { tenants: [ACME, BETA] }
 		},
-		{
-			...MINIMAL_TENANT,
-			id: 'tid-bbb',
-			slug: 'beta-meds',
-			display_name: 'Beta Meds',
-			legal_name: 'Beta Meds Ltd'
-		}
-	]
-};
-
-async function signInAsPlatformOperator(page: Page): Promise<void> {
-	// Mock login — platform principal with operator permissions so the
-	// /operator/tenants load guard (hasPermission platform.tenants.view) passes.
-	await page.route('**/api/v1/auth/login', async (route: Route) => {
-		await route.fulfill({
-			status: 200,
-			contentType: 'application/json',
-			body: JSON.stringify(
-				fakeLoginResponse({
-					is_platform: true,
-					permission: ['platform.tenants.view', 'platform.tenants.create']
-				})
-			)
-		});
-	});
-
-	// Capabilities — Sidebar + UserMenu query this on every (app) route.
-	await page.route('**/api/v1/auth/me/capabilities', async (route: Route) => {
-		await route.fulfill({
-			status: 200,
-			contentType: 'application/json',
-			body: JSON.stringify(
-				fakeCapabilitiesResponse({
-					permissions: ['platform.tenants.view', 'platform.tenants.create'],
-					is_platform: true,
-					is_super_user: true,
-					tenant_id: TENANT_ID,
-					tenant_slug: 'leadkart-platform',
-					email: 'operator@leadkart.io'
-				})
-			)
-		});
-	});
-
-	// List tenants — the real GET /v1/platform/tenants that the store calls on mount.
-	await page.route('**/api/v1/platform/tenants', async (route: Route) => {
-		if (route.request().method() === 'GET') {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify(LIST_TENANTS_RESPONSE)
-			});
-		} else {
-			await route.continue();
-		}
-	});
-
-	// Tenant fetch — AppShell sidebar triggers this on every (app) route.
-	await page.route(`**/api/v1/tenants/${TENANT_ID}`, async (route: Route) => {
-		if (route.request().method() === 'GET') {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify(MINIMAL_TENANT)
-			});
-		} else {
-			await route.continue();
-		}
-	});
-
-	// User profile fetch — AppShell / sidebar avatar triggers this.
-	await page.route(`**/api/v1/users/${MEMBERSHIP_ID}`, async (route: Route) => {
-		if (route.request().method() === 'GET') {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify(BASE_USER_DTO)
-			});
-		} else {
-			await route.continue();
-		}
-	});
-
-	await page.goto('/signin');
-	await page.getByRole('textbox', { name: 'Email' }).fill('operator@leadkart.io');
-	await page.getByRole('textbox', { name: 'Password' }).fill('correct-horse-battery-staple');
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/dashboard$/);
+		{ method: 'GET', path: `/api/v1/tenants/${ACME.id}`, status: 200, body: ACME },
+		{ method: 'GET', path: `/api/v1/tenants/by-slug/${ACME.slug}`, status: 200, body: ACME }
+	]);
 }
 
-test.describe('Operator tenant management', () => {
-	test('tenants list: renders tenant cards from real list endpoint', async ({ page }) => {
-		await signInAsPlatformOperator(page);
+test.describe('Operator tenants list', () => {
+	test.beforeEach(async () => {
+		await resetMock();
+	});
+
+	test('renders tenant rows + register button (with platform.tenants.create)', async ({ page }) => {
+		await setupOperator(page);
 		await page.goto('/operator/tenants');
 
-		// Page heading is present (scope to main to avoid breadcrumb duplicate)
 		await expect(
 			page.locator('#main-content').getByRole('heading', { name: 'Tenants', exact: true })
 		).toBeVisible();
-
-		// Tenant cards from the mocked list are rendered
-		// Use .first() — DataTable renders name in multiple cells (name + legal_name columns)
 		await expect(page.getByText('Acme Pharma').first()).toBeVisible();
 		await expect(page.getByText('Beta Meds').first()).toBeVisible();
-
-		// Register tenant button is visible (platform.tenants.create granted)
 		await expect(page.getByRole('button', { name: /register tenant/i })).toBeVisible();
 	});
 
-	test('tenants list: a11y serious/critical clean', async ({ page }) => {
-		await signInAsPlatformOperator(page);
+	test('list page has no critical/serious a11y violations', async ({ page }) => {
+		await setupOperator(page);
 		await page.goto('/operator/tenants');
-
-		// Wait for the list to load
 		await expect(page.getByText('Acme Pharma').first()).toBeVisible();
 
 		const results = await new AxeBuilder({ page })
 			.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'])
 			.include('main')
 			.analyze();
-
 		const blocking = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'
 		);
 		expect(blocking, JSON.stringify(blocking, null, 2)).toEqual([]);
+	});
+});
+
+test.describe('Operator scope flow', () => {
+	test.beforeEach(async () => {
+		await resetMock();
+	});
+
+	test('entering scope: cookie set, redirected to profile, no slug in URL', async ({ page }) => {
+		await setupOperator(page);
+		await registerMock({
+			method: 'POST',
+			path: '/api/v1/tenants/by-slug/acme-pharma',
+			status: 200,
+			body: ACME // unused — by-slug GET is what /api/operator/scope calls
+		});
+		await page.goto('/operator/tenants');
+		await page.getByText('Acme Pharma').first().click();
+
+		await page.waitForURL(/\/operator\/scope\/profile$/);
+
+		// URL invariant: no slug, no UUID anywhere in the path or query
+		const u = new URL(page.url());
+		expect(u.pathname).toBe('/operator/scope/profile');
+		expect(u.search).toBe('');
+		expect(page.url()).not.toContain('acme-pharma');
+		expect(page.url()).not.toContain('tid-aaa');
+
+		// Scope layout renders the tenant header + tabs (h1 because the
+		// scope layout is the top-level page heading on this route).
+		await expect(page.getByRole('heading', { level: 1, name: 'Acme Pharma' })).toBeVisible();
+		await expect(page.getByRole('link', { name: 'Profile' })).toBeVisible();
+		await expect(page.getByRole('link', { name: 'Members' })).toBeVisible();
+
+		// Cookie set by the BFF
+		const cookies = await page.context().cookies();
+		const scopeCookie = cookies.find((c) => c.name === 'lk_op_tenant');
+		expect(scopeCookie).toBeDefined();
+		expect(scopeCookie?.httpOnly).toBe(true);
+	});
+
+	test('exit context clears the cookie and returns to the tenants list', async ({ page }) => {
+		await setupOperator(page);
+		await page.goto('/operator/tenants');
+		await page.getByText('Acme Pharma').first().click();
+		await page.waitForURL(/\/operator\/scope\/profile$/);
+
+		await page.getByRole('button', { name: /exit context/i }).click();
+		await page.waitForURL(/\/operator\/tenants$/);
+
+		const cookies = await page.context().cookies();
+		expect(cookies.find((c) => c.name === 'lk_op_tenant')).toBeUndefined();
+	});
+
+	test('BFF auto-injects X-Tenant-Id for in-scope API calls', async ({ page }) => {
+		await setupOperator(page);
+		// Stand up empty users + roles fixtures so the scope tabs don't 404.
+		await registerMocks([
+			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [] } },
+			{ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [] } }
+		]);
+		await page.goto('/operator/tenants');
+		await page.getByText('Acme Pharma').first().click();
+		await page.waitForURL(/\/operator\/scope\/profile$/);
+		await page.getByRole('link', { name: 'Members' }).click();
+		await page.waitForURL(/\/operator\/scope\/members$/);
+		// UsersList renders a Team header — wait for it so the TanStack
+		// query has had a chance to fire before we inspect the mock.
+		await expect(page.getByRole('heading', { level: 1, name: 'Team' })).toBeVisible();
+
+		const calls = await listMockCalls();
+		const usersCall = calls.find((c) => c.path === '/api/v1/users' && c.method === 'GET');
+		expect(usersCall).toBeDefined();
+	});
+});
+
+test.describe('CSRF protection', () => {
+	test.beforeEach(async () => {
+		await resetMock();
+	});
+
+	test('scope POST without CSRF token is rejected by the BFF (403)', async ({ page }) => {
+		await setupOperator(page);
+		await page.goto('/operator/tenants');
+		// Issue a raw POST from the page context without the X-CSRF-Token
+		// header — the BFF's CSRF gate should refuse it.
+		const status = await page.evaluate(async () => {
+			const resp = await fetch('/api/operator/scope', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ slug: 'acme-pharma' })
+			});
+			return resp.status;
+		});
+		expect(status).toBe(403);
 	});
 });

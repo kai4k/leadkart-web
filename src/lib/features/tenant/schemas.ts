@@ -38,7 +38,6 @@ export const tenantSchema = z.object({
 	slug: z.string(),
 	legal_name: z.string(),
 	display_name: z.string(),
-	admin_email: z.string(),
 	status: z.string(),
 	created_at: z.string(),
 	activated_at: z.string().optional(),

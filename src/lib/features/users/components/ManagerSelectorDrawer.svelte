@@ -6,14 +6,13 @@
 	import { displayName } from '$features/auth/view-models';
 
 	type Props = {
-		tenantId?: string;
 		userList: UserDto[];
 		open: boolean;
 		user: UserDto | null;
 		onOpenChange: (open: boolean) => void;
 	};
 
-	let { tenantId, userList, open = $bindable(false), user, onOpenChange }: Props = $props();
+	let { userList, open = $bindable(false), user, onOpenChange }: Props = $props();
 
 	let selectedManager = $state<string>('');
 	let error = $state<string | null>(null);
@@ -28,8 +27,8 @@
 			: []
 	);
 
-	const assignMutation = $derived(assignManagerMutation(tenantId));
-	const removeMutation = $derived(removeManagerMutation(tenantId));
+	const assignMutation = assignManagerMutation();
+	const removeMutation = removeManagerMutation();
 
 	const isPending = $derived(assignMutation.isPending || removeMutation.isPending);
 

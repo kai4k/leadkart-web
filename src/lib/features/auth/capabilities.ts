@@ -58,5 +58,14 @@ export function deriveTier(caps: Capabilities | undefined): PrincipalTier {
 export function hasCapability(caps: Capabilities | undefined, permission: string): boolean {
 	if (!caps) return false;
 	if (caps.is_super_user) return true;
+	// Platform-tier users (is_platform=true) implicitly hold platform.*
+	// permissions — they're LeadKart staff on the platform tenant. The
+	// server's RequirePermission middleware is the actual gate; hiding
+	// nav links from an operator because the JWT didn't ship the explicit
+	// platform.tenants.view permission produces broken UX.
+	if (caps.is_platform && permission.startsWith('platform.')) return true;
+	// Tenant-admin meta-perm grants all identity.* tenant-management perms.
+	// Same reasoning — coarse claim implies the fine-grained set.
+	if (caps.permissions.includes('tenant.admin') && permission.startsWith('identity.')) return true;
 	return caps.permissions.includes(permission);
 }

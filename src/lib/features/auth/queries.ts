@@ -11,9 +11,11 @@
  * reactive state accessed directly (no `$` prefix needed).
  */
 import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
+import { page } from '$app/state';
 import { toast } from '$ui';
 import * as api from './api';
 import type { UpdateProfileRequest, SessionDto } from './types';
+import type { Capabilities } from './capabilities';
 // Pure helpers — re-exported so components can import from one place
 export { hasCapability, type Capabilities } from './capabilities';
 
@@ -34,8 +36,16 @@ export function myCapabilitiesQuery() {
 	return createQuery(() => ({
 		queryKey: capabilitiesKey,
 		queryFn: () => api.getMyCapabilities(),
+		// SSR-bootstrapped initial data from the (app) root layout server load.
+		// On first render this is baked into the page HTML — no loading skeleton,
+		// no network call needed before the nav renders. TanStack treats
+		// initialDataUpdatedAt=0 as stale and fires a background refetch to
+		// pick up any permission changes that happened mid-session.
+		initialData: () => (page.data as { capabilities?: Capabilities }).capabilities,
+		initialDataUpdatedAt: 0,
 		staleTime: 5 * 60_000,
-		gcTime: 30 * 60_000
+		gcTime: 30 * 60_000,
+		retry: 1
 	}));
 }
 

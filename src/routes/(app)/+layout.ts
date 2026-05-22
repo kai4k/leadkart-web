@@ -1,16 +1,14 @@
 /**
- * Auth guard for the (app) route group: signed-out users redirect
- * to /signin with the original path captured in `?next=` so they
- * land back where they tried to go after login.
+ * (app) route group client-side layout load.
+ *
+ * The auth guard + capabilities bootstrap now runs server-side in
+ * +layout.server.ts. This client load simply passes data through.
+ * LayoutLoad still needs to exist for SvelteKit to pick up the server
+ * data correctly on client-side navigation.
  */
-import { redirect } from '@sveltejs/kit';
-import { session } from '$lib/features/auth/stores/session.svelte';
 import type { LayoutLoad } from './$types';
 
-export const load: LayoutLoad = ({ url }) => {
-	if (!session.isAuthenticated) {
-		const next = encodeURIComponent(url.pathname + url.search);
-		throw redirect(307, `/signin?next=${next}`);
-	}
-	return {};
+export const load: LayoutLoad = ({ data }) => {
+	// capabilities is already in data from +layout.server.ts
+	return data;
 };

@@ -3,7 +3,7 @@
  * at the boundary per CLAUDE.md. Tenant scope is the caller's JWT
  * tenant_id — no tenant_id parameter on any call.
  */
-import { api, withTenant } from '$api/client';
+import { api, parseResponse } from '$api/client';
 import { listUsersResponseSchema, createUserResponseSchema, userDtoSchema } from './schemas';
 import type {
 	ListUsersResponse,
@@ -18,27 +18,17 @@ import type {
 
 export async function listUsers(): Promise<ListUsersResponse> {
 	const raw = await api.get<unknown>('/v1/users');
-	return listUsersResponseSchema.parse(raw);
-}
-
-/**
- * Operator-scope variant — fetches members of any tenant by injecting
- * X-Tenant-Id. Used by the operator/tenants/[slug]/members route via
- * tenantMembersQuery.
- */
-export async function listUsersScoped(tenantId: string): Promise<ListUsersResponse> {
-	const raw = await withTenant(tenantId).get<unknown>('/v1/users');
-	return listUsersResponseSchema.parse(raw);
+	return parseResponse(listUsersResponseSchema, raw);
 }
 
 export async function getUser(membershipId: string): Promise<UserDto> {
 	const raw = await api.get<unknown>(`/v1/users/${membershipId}`);
-	return userDtoSchema.parse(raw);
+	return parseResponse(userDtoSchema, raw);
 }
 
 export async function createUser(req: CreateUserRequest): Promise<CreateUserResponse> {
 	const raw = await api.post<unknown>('/v1/users', req);
-	return createUserResponseSchema.parse(raw);
+	return parseResponse(createUserResponseSchema, raw);
 }
 
 export async function deactivateUser(
@@ -46,17 +36,17 @@ export async function deactivateUser(
 	body: DeactivateUserRequest
 ): Promise<UserDto> {
 	const raw = await api.post<unknown>(`/v1/users/${membershipId}/deactivate`, body);
-	return userDtoSchema.parse(raw);
+	return parseResponse(userDtoSchema, raw);
 }
 
 export async function reactivateUser(membershipId: string): Promise<UserDto> {
 	const raw = await api.post<unknown>(`/v1/users/${membershipId}/reactivate`);
-	return userDtoSchema.parse(raw);
+	return parseResponse(userDtoSchema, raw);
 }
 
 export async function unlockUser(membershipId: string): Promise<UserDto> {
 	const raw = await api.post<unknown>(`/v1/users/${membershipId}/unlock`);
-	return userDtoSchema.parse(raw);
+	return parseResponse(userDtoSchema, raw);
 }
 
 export async function assignRole(membershipId: string, body: AssignUserRoleRequest): Promise<void> {

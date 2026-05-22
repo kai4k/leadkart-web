@@ -32,13 +32,12 @@
 	import PermissionOverridesPanel from './PermissionOverridesPanel.svelte';
 
 	/**
-	 * When tenantId is set, all queries and mutations inject X-Tenant-Id
-	 * (operator-context member view). When absent, uses the caller's JWT
-	 * tenant (tenant-admin self-view at /settings/users).
+	 * Tenant scope is set by the BFF via the lk_op_tenant cookie. When
+	 * an operator is inside /operator/scope/*, the cookie is present and
+	 * the proxy auto-injects X-Tenant-Id for every API call. When absent,
+	 * the caller's JWT tenant scope applies (tenant-admin /settings/users).
+	 * The frontend never sees, sends, or knows the tenant identifier.
 	 */
-	type Props = { tenantId?: string };
-	let { tenantId }: Props = $props();
-
 	let createOpen = $state(false);
 	let deactivateOpen = $state(false);
 	let rolesOpen = $state(false);
@@ -72,10 +71,10 @@
 		goto(`?${params}`, { replaceState: true });
 	}
 
-	const listQuery = $derived(usersListQuery(tenantId));
-	const rolesQuery = $derived(rolesCatalogQuery(tenantId));
-	const reactivate = $derived(reactivateUserMutation(tenantId));
-	const unlock = $derived(unlockUserMutation(tenantId));
+	const listQuery = usersListQuery();
+	const rolesQuery = rolesCatalogQuery();
+	const reactivate = reactivateUserMutation();
+	const unlock = unlockUserMutation();
 
 	const userList = $derived(listQuery.data?.users ?? []);
 	const roleList = $derived(rolesQuery.data?.roles ?? []);
@@ -278,29 +277,25 @@
 	<Pagination {page} {pageCount} onChange={setPage} />
 </div>
 
-<CreateUserDrawer {tenantId} bind:open={createOpen} onOpenChange={(o) => (createOpen = o)} />
+<CreateUserDrawer bind:open={createOpen} onOpenChange={(o) => (createOpen = o)} />
 <DeactivateUserDialog
-	{tenantId}
 	bind:open={deactivateOpen}
 	user={targetUser}
 	onOpenChange={(o) => (deactivateOpen = o)}
 />
 <RoleAssignmentDrawer
-	{tenantId}
 	{roleList}
 	bind:open={rolesOpen}
 	user={targetUser}
 	onOpenChange={(o) => (rolesOpen = o)}
 />
 <ManagerSelectorDrawer
-	{tenantId}
 	{userList}
 	bind:open={managerOpen}
 	user={targetUser}
 	onOpenChange={(o) => (managerOpen = o)}
 />
 <PermissionOverridesPanel
-	{tenantId}
 	bind:open={permsOpen}
 	user={targetUser}
 	onOpenChange={(o) => (permsOpen = o)}

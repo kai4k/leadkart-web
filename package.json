@@ -10,7 +10,8 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
-		"preview": "serve build -l 4173 -s --no-clipboard",
+		"preview": "ORIGIN=http://localhost:4173 PORT=4173 node build/index.js",
+		"test:mock-server": "node tests/e2e/mock-server/server.mjs",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"format": "prettier --write .",
@@ -25,21 +26,24 @@
 	"size-limit": [
 		{
 			"name": "Total JS bundle (gzip)",
-			"path": "build/_app/immutable/**/*.js",
+			"path": "build/client/_app/immutable/**/*.js",
 			"limit": "350 KB",
-			"gzip": true
+			"gzip": true,
+			"running": false
 		},
 		{
 			"name": "Total CSS bundle (gzip)",
-			"path": "build/_app/immutable/**/*.css",
+			"path": "build/client/_app/immutable/**/*.css",
 			"limit": "60 KB",
-			"gzip": true
+			"gzip": true,
+			"running": false
 		},
 		{
 			"name": "Initial route entry (signin)",
-			"path": "build/_app/immutable/entry/**/*.js",
+			"path": "build/client/_app/immutable/entry/**/*.js",
 			"limit": "60 KB",
-			"gzip": true
+			"gzip": true,
+			"running": false
 		}
 	],
 	"devDependencies": {
@@ -49,7 +53,6 @@
 		"@playwright/test": "^1.49.0",
 		"@size-limit/preset-app": "^12.1.0",
 		"@sveltejs/adapter-auto": "^7.0.1",
-		"@sveltejs/adapter-static": "^3.0.8",
 		"@sveltejs/kit": "^2.16.0",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
 		"@tailwindcss/vite": "^4.0.0",
@@ -80,6 +83,7 @@
 	},
 	"dependencies": {
 		"@fontsource-variable/jetbrains-mono": "^5.2.8",
+		"@sveltejs/adapter-node": "^5.5.4",
 		"@tanstack/svelte-query": "^6.1.29",
 		"bits-ui": "^2.18.1",
 		"class-variance-authority": "^0.7.1",

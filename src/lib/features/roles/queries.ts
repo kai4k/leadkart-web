@@ -1,15 +1,17 @@
 /**
  * TanStack Query hooks for the roles feature.
  *
- * Mirrors the pattern from operator/tenants/queries.ts and users/queries.ts.
- * All server-state for roles flows through these hooks.
+ * Scope: the BFF auto-injects X-Tenant-Id from the lk_op_tenant cookie
+ * when the operator is inside /operator/scope/*. The frontend never
+ * sees or passes the tenant identifier.
+ *
+ * Cache discipline: mutations invalidate; auto-refetch repopulates.
+ * No cross-query manual seeding, no optimistic rollback dance.
  */
 import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 import * as api from './api';
 import { toast } from '$ui';
-import type { CreateRoleRequest, UpdateRoleRequest, RoleDto } from './types';
-
-// ── Query key factory ──────────────────────────────────────────────
+import type { CreateRoleRequest, UpdateRoleRequest } from './types';
 
 export const rolesKeys = {
 	all: ['roles'] as const,
@@ -17,9 +19,6 @@ export const rolesKeys = {
 	detail: (id: string) => [...rolesKeys.all, 'detail', id] as const
 };
 
-// ── Query hooks ────────────────────────────────────────────────────
-
-/** Full role list for the caller's tenant. */
 export function rolesListQuery() {
 	return createQuery(() => ({
 		queryKey: rolesKeys.list(),
@@ -27,16 +26,6 @@ export function rolesListQuery() {
 	}));
 }
 
-/** Full role list for another tenant — operator scope (X-Tenant-Id injection). */
-export function rolesScopedListQuery(tenantId: string) {
-	return createQuery(() => ({
-		queryKey: [...rolesKeys.list(), tenantId],
-		queryFn: () => api.listRolesScoped(tenantId),
-		enabled: !!tenantId
-	}));
-}
-
-/** Single role by ID. */
 export function roleDetailQuery(roleId: string) {
 	return createQuery(() => ({
 		queryKey: rolesKeys.detail(roleId),
@@ -45,9 +34,6 @@ export function roleDetailQuery(roleId: string) {
 	}));
 }
 
-// ── Mutation hooks ─────────────────────────────────────────────────
-
-/** Create a new role. Invalidates the list on success. */
 export function createRoleMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
@@ -59,20 +45,17 @@ export function createRoleMutation() {
 	}));
 }
 
-/** Update a role's name / hierarchy level. Server returns 200+RoleDto per ADR 0038 E4. */
 export function updateRoleMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: ({ id, req }: { id: string; req: UpdateRoleRequest }) => api.updateRole(id, req),
-		onSuccess: (data: RoleDto, vars: { id: string; req: UpdateRoleRequest }) => {
-			qc.setQueryData<RoleDto>(rolesKeys.detail(vars.id), data);
-			qc.invalidateQueries({ queryKey: rolesKeys.list() });
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: rolesKeys.all });
 			toast('success', 'Role updated');
 		}
 	}));
 }
 
-/** Replace all permissions on a role. */
 export function replaceRolePermissionsMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
@@ -85,7 +68,6 @@ export function replaceRolePermissionsMutation() {
 	}));
 }
 
-/** Grant a single permission to a role. */
 export function grantRolePermissionMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
@@ -98,7 +80,6 @@ export function grantRolePermissionMutation() {
 	}));
 }
 
-/** Revoke a single permission from a role. */
 export function revokeRolePermissionMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
@@ -111,7 +92,6 @@ export function revokeRolePermissionMutation() {
 	}));
 }
 
-/** Delete a role. Invalidates the list on success. */
 export function deleteRoleMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({

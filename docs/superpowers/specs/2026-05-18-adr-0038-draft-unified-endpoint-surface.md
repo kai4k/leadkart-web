@@ -1,12 +1,14 @@
 # ADR 0038 (DRAFT for `leadkart-go` repo) — Unified endpoint surface with identity-driven scoping
 
-**Status:** Proposed
-**Date:** 2026-05-18
+**Status:** Proposed (revised 2026-05-21: frontend implementation shipped; X-Tenant-Id is now BFF-injected, not browser-injected)
+**Date:** 2026-05-18 (revised 2026-05-21)
 **Deciders:** Backend + Frontend leads
 **Supersedes:** None
-**Related:** ADR 0036 (permission model), security.md "Login flow", multi-tenancy.md "SuperUser god-mode", `docs/specs/2026-05-18-backend-endpoints-corrected.md` (frontend repo)
+**Related:** ADR 0036 (permission model), `docs/superpowers/specs/2026-05-20-bff-cookie-auth-adr.md` (BFF cookie + scope contract — implementation reference for §2 + §A.1.1 below), security.md "Login flow", multi-tenancy.md "SuperUser god-mode", `docs/specs/2026-05-18-backend-endpoints-corrected.md` (frontend repo)
 
 > **Frontend authors note:** This is a DRAFT of the ADR text for the leadkart-go repo. Copy into `leadkart-go/docs/adr/0038-unified-endpoint-surface.md`. The ADR locks the architectural decision so a future contributor doesn't accidentally reintroduce a `/v1/platform/{resource}` parallel hierarchy.
+>
+> **2026-05-21 revision:** Frontend has shipped the cookie-driven operator scope (see related BFF ADR). The X-Tenant-Id header is **set by the SvelteKit BFF only** — extracted from the `lk_op_tenant` httpOnly cookie that the BFF writes when the operator enters scope. The browser does not send X-Tenant-Id, and any value it does send must be ignored by the BFF. Go can keep its existing JWT-bridge logic unchanged; the source of X-Tenant-Id is now the BFF, not the browser. The slug never appears in the browser URL bar — `GET /v1/tenants/by-slug/{slug}` is still required, but it is called by the BFF (via `POST /api/operator/scope`), not by client-side JavaScript.
 
 ---
 
@@ -62,7 +64,7 @@ LeadKart's HTTP API will use a **single unified resource hierarchy** with **iden
 
 The JWT's `tenant_id` claim pins the caller to their tenant. RLS enforces isolation. Default behavior.
 
-### 2. `X-Tenant-Id` header — read-side scope override
+### 2. `X-Tenant-Id` header — read-side scope override (BFF-authoritative)
 
 For read-only operator queries on another tenant:
 
@@ -77,6 +79,10 @@ The JWT-bridge middleware reads `X-Tenant-Id`, validates against `is_platform`, 
 - If `JWT.is_platform=false`: header silently ignored; JWT-pinned scope stays in effect
 - If `JWT.is_platform=true`: header honored; RLS scopes to target tenant
 - Header carries UUID only; slug → UUID resolution is a dedicated endpoint (see lookup section)
+
+**Source of `X-Tenant-Id` (revised 2026-05-21):** The header is set by the **SvelteKit BFF**, never by the browser. The BFF reads the `lk_op_tenant` httpOnly cookie (written when the operator entered scope via `POST /api/operator/scope`) and injects the resulting UUID on every upstream call. Any `X-Tenant-Id` header that the browser sends is dropped at the BFF — the cookie is the single source of truth for operator scope.
+
+This means Go's defense-in-depth validation (does `is_platform` allow this header?) is still useful, but in practice Go will never see a forged header on this leg — the BFF won't forward one. Go's job is to confirm the JWT's claims authorize the requested scope; the frontend's job is to never let a non-authoritative writer touch the header.
 
 Header choice over query param is intentional — see ADR §Rationale below.
 
@@ -203,6 +209,8 @@ Stripe's `Stripe-Account` header is the most-used implementation of this exact p
 4. **Performance** — UUID lookup is a primary-key hit; slug lookup is an indexed-secondary lookup. Different cost models, separate logging.
 
 GitHub's `/users/{username}` + `/user/{id}` (numeric ID) split is the most-used implementation. ~20 years of production at scale.
+
+**Note (2026-05-21):** The slug-based endpoint is called by the SvelteKit BFF (`POST /api/operator/scope` resolves slug → UUID, stores result in cookie). It is **not** called from client-side JavaScript any more — the slug is treated as customer-identifying data that should not leak through browser history, Referer headers, or shared URLs. See the BFF ADR for the full operator-scope flow.
 
 ### Why scoped JWT (not just `X-Impersonation-Session-Id` header) for impersonation
 

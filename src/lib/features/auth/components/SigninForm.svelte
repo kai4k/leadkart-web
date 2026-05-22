@@ -5,8 +5,6 @@
 	import { Lock } from 'lucide-svelte';
 	import { login } from '../api';
 	import { loginRequestSchema } from '../schemas';
-	import { session } from '../stores/session.svelte';
-	import { isApiError } from '$api/client';
 	import { Alert, AuthCard, Button, Logo } from '$lib/components/ui';
 	import { TextField, PasswordField } from '$lib/components/form';
 
@@ -43,16 +41,15 @@
 
 		loading = true;
 		try {
-			const resp = await login(parsed.data);
-			// Email captured from the form input — server doesn't echo it
-			// in the LoginResponse body. UserMenu + audit-log surfaces
-			// reference it.
-			session.setFromLogin(resp, parsed.data.email);
+			// BFF login: POSTs to /auth/login (SvelteKit endpoint) which sets
+			// httpOnly cookies and returns { ok: true }. No token in the response.
+			await login(parsed.data);
 			const next = page.url.searchParams.get('next');
 			const target = next && next.startsWith('/') ? decodeURIComponent(next) : '/dashboard';
 			await goto(target);
 		} catch (err) {
-			if (isApiError(err) && err.status === 401) {
+			const status = (err as { status?: number }).status;
+			if (status === 401) {
 				formError = $_('auth.errors.invalidCredentials');
 			} else {
 				formError = $_('auth.errors.unexpected');

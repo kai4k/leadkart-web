@@ -1,18 +1,20 @@
 /**
- * Test helper — mints a base64url-encoded JWT with the leadkart-go
- * principal-claim shape so e2e specs can mock /v1/auth/login without
- * a real backend. The token is structurally valid (3 dot-separated
- * base64url segments, decodable JSON payload, required claims
- * present) so `lib/api/jwt.ts` decodeJwtPrincipal() accepts it. The
- * signature is a placeholder — the SPA never verifies signatures
- * client-side (the server already did).
+ * Test helper — mints JWT fixtures and DTO fakes for e2e and unit tests.
  *
- * Without this, every e2e mockLogin call ships
- * `access_token: 'fake-access-token'` which fails JWT decode → the
- * SigninForm catch block → /dashboard redirect never fires → every
- * subsequent step in the test suite times out.
+ * BFF model (2026-05-20): the browser no longer decodes JWTs. However,
+ * these helpers are still needed because:
+ *   1. The BFF proxy makes server-to-server calls to Go using Bearer JWTs.
+ *      A mock Go server (for e2e) needs to return structurally valid tokens.
+ *   2. Unit tests for lib/api/jwt.ts (the decoder used server-side) still
+ *      need fakeAccessToken() to produce valid inputs.
+ *   3. fakeCapabilitiesResponse(), fakeUserDto(), etc. are the canonical
+ *      DTO fakes used everywhere — independent of the auth transport.
  *
- * Also exports DTO fakes for the canonical Phase D/E/F endpoints:
+ * Note: fakeRefreshToken() is kept because the mock Go server needs to
+ * return a refresh token that the BFF can forward back to Go on refresh.
+ * The browser no longer decodes the refresh token (it's httpOnly).
+ *
+ * DTO fakes for the canonical Phase D/E/F endpoints:
  *   GET /v1/auth/me/capabilities  → fakeCapabilitiesResponse()
  *   GET /v1/users/:id             → fakeUserDto()
  *   GET /v1/auth/sessions         → fakeSessionDto()
@@ -26,7 +28,7 @@ export const TEST_TENANT_ID = '00000000-0000-0000-0000-000000000001';
 export const TEST_PERSON_ID = '00000000-0000-0000-0000-000000000a01';
 export const TEST_MEMBERSHIP_ID = '00000000-0000-0000-0000-000000000b01';
 export const TEST_TENANT_SLUG = 'acme';
-/** Fake refresh-token family ID — used by SessionsStore.activeFamilyId to badge "This device". */
+/** Fake refresh-token family ID — used to populate fake session DTOs. */
 export const TEST_FAMILY_ID = 'test-family-id';
 
 // ── Tier / Permission types ────────────────────────────────────────

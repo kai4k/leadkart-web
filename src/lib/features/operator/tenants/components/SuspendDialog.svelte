@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { ConfirmDialog, Alert } from '$ui';
-	import { toast } from '$ui';
 	import { suspendTenantMutation } from '$features/operator/tenants/queries';
 	import type { TenantDto } from '$features/operator/tenants/types';
 
@@ -21,7 +20,6 @@
 			{ id: tenant.id, reason: reason.trim() },
 			{
 				onSuccess: () => {
-					toast('success', `${tenant!.display_name} suspended`);
 					reason = '';
 					onOpenChange(false);
 				},
