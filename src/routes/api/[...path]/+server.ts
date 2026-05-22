@@ -21,7 +21,7 @@
  */
 
 import type { RequestEvent } from './$types';
-import { env } from '$env/dynamic/private';
+import { config } from '$lib/server/config';
 import { setAuthCookies, clearAuthCookies, ACCESS_COOKIE } from '$lib/server/cookies';
 import { getOperatorScope } from '$lib/server/scope';
 import { timingSafeEqualString } from '$lib/server/csrf';
@@ -34,7 +34,7 @@ async function tryRefresh(event: RequestEvent): Promise<boolean> {
 
 	let resp: Response;
 	try {
-		resp = await fetch(`${env.GO_API_URL}/api/v1/auth/refresh`, {
+		resp = await fetch(`${config.GO_API_URL}/api/v1/auth/refresh`, {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ refresh_token: refresh })
@@ -68,7 +68,7 @@ async function proxy(event: RequestEvent, attempt = 1): Promise<Response> {
 		}
 	}
 
-	const upstreamUrl = `${env.GO_API_URL}/api/${path}${new URL(request.url).search}`;
+	const upstreamUrl = `${config.GO_API_URL}/api/${path}${new URL(request.url).search}`;
 	const upstreamHeaders = new Headers();
 
 	const access = cookies.get(ACCESS_COOKIE());

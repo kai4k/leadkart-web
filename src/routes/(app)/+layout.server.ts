@@ -14,7 +14,7 @@
  */
 
 import { redirect } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
+import { config } from '$lib/server/config';
 import { setAuthCookies, clearAuthCookies, ACCESS_COOKIE } from '$lib/server/cookies';
 import type { LayoutServerLoad } from './$types';
 import type { Capabilities } from '$lib/features/auth/api';
@@ -32,7 +32,7 @@ async function tryRefreshServerSide(
 
 	let resp: Response;
 	try {
-		resp = await fetch(`${env.GO_API_URL}/api/v1/auth/refresh`, {
+		resp = await fetch(`${config.GO_API_URL}/api/v1/auth/refresh`, {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ refresh_token: refresh })
@@ -60,7 +60,7 @@ export const load: LayoutServerLoad = async ({ cookies, url }) => {
 	}
 
 	// Fetch capabilities server-to-server — baked into the initial HTML.
-	let resp = await fetch(`${env.GO_API_URL}/api/v1/auth/me/capabilities`, {
+	let resp = await fetch(`${config.GO_API_URL}/api/v1/auth/me/capabilities`, {
 		headers: { authorization: `Bearer ${access}` }
 	});
 
@@ -72,7 +72,7 @@ export const load: LayoutServerLoad = async ({ cookies, url }) => {
 			throw redirect(303, `/signin?next=${next}`);
 		}
 		access = newAccess;
-		resp = await fetch(`${env.GO_API_URL}/api/v1/auth/me/capabilities`, {
+		resp = await fetch(`${config.GO_API_URL}/api/v1/auth/me/capabilities`, {
 			headers: { authorization: `Bearer ${access}` }
 		});
 	}

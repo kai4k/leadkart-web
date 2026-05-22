@@ -12,7 +12,7 @@
  */
 
 import { redirect, error } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
+import { config } from '$lib/server/config';
 import { clearOperatorScope, getOperatorScope } from '$lib/server/scope';
 import { ACCESS_COOKIE } from '$lib/server/cookies';
 import type { LayoutServerLoad } from './$types';
@@ -25,7 +25,7 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
 	const access = cookies.get(ACCESS_COOKIE());
 	if (!access) throw redirect(303, '/signin');
 
-	const resp = await fetch(`${env.GO_API_URL}/api/v1/tenants/${scope.id}`, {
+	const resp = await fetch(`${config.GO_API_URL}/api/v1/tenants/${scope.id}`, {
 		headers: {
 			authorization: `Bearer ${access}`,
 			'x-tenant-id': scope.id
