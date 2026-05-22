@@ -15,7 +15,7 @@
  */
 
 import { json, type RequestEvent } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
+import { config } from '$lib/server/config';
 import { setOperatorScope, clearOperatorScope } from '$lib/server/scope';
 import { timingSafeEqualString } from '$lib/server/csrf';
 import { ACCESS_COOKIE } from '$lib/server/cookies';
@@ -45,9 +45,12 @@ export async function POST(event: RequestEvent): Promise<Response> {
 	const slug = typeof body.slug === 'string' ? body.slug.trim() : '';
 	if (!slug) return json({ error: 'missing_slug' }, { status: 400 });
 
-	const resp = await fetch(`${env.GO_API_URL}/api/v1/tenants/by-slug/${encodeURIComponent(slug)}`, {
-		headers: { authorization: `Bearer ${access}` }
-	});
+	const resp = await fetch(
+		`${config.GO_API_URL}/api/v1/tenants/by-slug/${encodeURIComponent(slug)}`,
+		{
+			headers: { authorization: `Bearer ${access}` }
+		}
+	);
 	if (!resp.ok) {
 		return json({ error: 'tenant_lookup_failed' }, { status: resp.status === 404 ? 404 : 502 });
 	}

@@ -10,7 +10,7 @@
  */
 
 import type { Cookies } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
+import { isProd } from './config';
 
 export const OP_TENANT_COOKIE = 'lk_op_tenant';
 
@@ -23,7 +23,7 @@ export interface OperatorScope {
 }
 
 export function setOperatorScope(cookies: Cookies, scope: OperatorScope): void {
-	const secure = env.NODE_ENV === 'production';
+	const secure = isProd();
 	cookies.set(OP_TENANT_COOKIE, JSON.stringify(scope), {
 		path: '/',
 		httpOnly: true,

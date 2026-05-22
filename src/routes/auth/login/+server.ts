@@ -10,7 +10,7 @@
  */
 
 import type { RequestHandler } from './$types';
-import { env } from '$env/dynamic/private';
+import { config } from '$lib/server/config';
 import { setAuthCookies } from '$lib/server/cookies';
 import { json } from '@sveltejs/kit';
 
@@ -27,7 +27,7 @@ export const POST: RequestHandler = async (event) => {
 
 	let resp: Response;
 	try {
-		resp = await fetch(`${env.GO_API_URL}/api/v1/auth/login`, {
+		resp = await fetch(`${config.GO_API_URL}/api/v1/auth/login`, {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify(body)

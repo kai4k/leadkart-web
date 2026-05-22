@@ -11,7 +11,7 @@
  */
 
 import type { RequestHandler } from './$types';
-import { env } from '$env/dynamic/private';
+import { config } from '$lib/server/config';
 import { clearAuthCookies } from '$lib/server/cookies';
 import { clearOperatorScope } from '$lib/server/scope';
 import { timingSafeEqualString } from '$lib/server/csrf';
@@ -26,7 +26,7 @@ export const POST: RequestHandler = async (event) => {
 
 	const refresh = event.cookies.get('lk_refresh');
 	if (refresh) {
-		await fetch(`${env.GO_API_URL}/api/v1/auth/logout`, {
+		await fetch(`${config.GO_API_URL}/api/v1/auth/logout`, {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ refresh_token: refresh })

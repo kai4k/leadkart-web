@@ -15,9 +15,7 @@
  */
 
 import type { Cookies } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
-
-const isProd = (): boolean => env.NODE_ENV === 'production';
+import { isProd } from './config';
 
 export const ACCESS_COOKIE = (): string => (isProd() ? '__Host-lk_access' : 'lk_access');
 export const REFRESH_COOKIE = 'lk_refresh';
