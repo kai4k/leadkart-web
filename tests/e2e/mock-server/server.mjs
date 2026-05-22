@@ -25,8 +25,13 @@ const fixtures = [];
 const calls = [];
 
 function findFixture(method, pathname) {
-	const exact = fixtures.find((f) => f.method === method && f.path === pathname);
-	if (exact) return exact;
+	// Last-match-wins: tests can override the sign-in helper's defaults
+	// by registering the same path again. Scan reverse so the most recent
+	// fixture for a given (method, path) takes effect.
+	for (let i = fixtures.length - 1; i >= 0; i--) {
+		const f = fixtures[i];
+		if (f.method === method && f.path === pathname) return f;
+	}
 	const wildcards = fixtures
 		.filter((f) => f.method === method && f.path.endsWith('*'))
 		.map((f) => ({ f, prefix: f.path.slice(0, -1) }))
