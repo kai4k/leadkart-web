@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page as pageStore } from '$app/stores';
+	import { page } from '$app/state';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
@@ -25,11 +25,11 @@
 	 *  row spinner and disables further row clicks while in flight. */
 	let openingScopeSlug = $state<string | null>(null);
 
-	const search = $derived($pageStore.url.searchParams.get('q') ?? '');
-	const page = $derived(Number($pageStore.url.searchParams.get('page') ?? '1') || 1);
+	const search = $derived(page.url.searchParams.get('q') ?? '');
+	const currentPage = $derived(Number(page.url.searchParams.get('page') ?? '1') || 1);
 
 	function setSearch(value: string) {
-		const params = new SvelteURLSearchParams($pageStore.url.searchParams.toString());
+		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
 		if (value) params.set('q', value);
 		else params.delete('q');
 		params.delete('page');
@@ -37,7 +37,7 @@
 	}
 
 	function setPage(p: number) {
-		const params = new SvelteURLSearchParams($pageStore.url.searchParams.toString());
+		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
 		if (p > 1) params.set('page', String(p));
 		else params.delete('page');
 		goto(`?${params}`, { replaceState: true });
@@ -67,7 +67,7 @@
 	});
 
 	const totalPages = $derived(Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)));
-	const paged = $derived(filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE));
+	const paged = $derived(filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE));
 
 	const tableState = $derived(
 		query.isPending ? 'loading' : query.isError ? 'error' : paged.length === 0 ? 'empty' : 'ready'
@@ -239,24 +239,24 @@
 	{#if totalPages > 1}
 		<nav class="cluster cluster-spread" aria-label="Tenant list pagination">
 			<p class="caption text-fg-muted">
-				{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+				{(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length}
 			</p>
 			<div class="cluster cluster-tight">
 				<Button
 					variant="ghost"
 					size="sm"
-					disabled={page <= 1}
-					onclick={() => setPage(page - 1)}
+					disabled={currentPage <= 1}
+					onclick={() => setPage(currentPage - 1)}
 					aria-label="Previous page"
 				>
 					← Prev
 				</Button>
-				<span class="caption">Page {page} / {totalPages}</span>
+				<span class="caption">Page {currentPage} / {totalPages}</span>
 				<Button
 					variant="ghost"
 					size="sm"
-					disabled={page >= totalPages}
-					onclick={() => setPage(page + 1)}
+					disabled={currentPage >= totalPages}
+					onclick={() => setPage(currentPage + 1)}
 					aria-label="Next page"
 				>
 					Next →

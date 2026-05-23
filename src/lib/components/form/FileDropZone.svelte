@@ -12,7 +12,7 @@
 </script>
 
 <script lang="ts">
-	import { UploadCloud, X } from 'lucide-svelte';
+	import { Icon, UploadCloud, X } from '$lib/icons';
 	import { cn } from '$lib/utils/cn';
 
 	type Props = {
@@ -168,7 +168,7 @@
 				(error || localError) && 'border-danger-500'
 			)}
 		>
-			<UploadCloud size={20} class="text-primary mt-0.5 flex-shrink-0" aria-hidden="true" />
+			<Icon icon={UploadCloud} size="md" class="text-primary mt-0.5 flex-shrink-0" />
 			<div class="stack stack-tight flex-1">
 				{#each files as f, i (`${f.name}-${i}`)}
 					<div class="flex items-center justify-between gap-2">
@@ -195,7 +195,7 @@
 					onclick={clearFiles}
 					{disabled}
 				>
-					<X size={16} aria-hidden="true" />
+					<Icon icon={X} size="sm" />
 				</button>
 			</div>
 		</div>
@@ -220,10 +220,10 @@
 			ondragleave={onDragLeave}
 			{disabled}
 		>
-			<UploadCloud
-				size={32}
+			<Icon
+				icon={UploadCloud}
+				size="xl"
 				class={cn(isDragOver ? 'text-primary' : 'text-fg-subtle')}
-				aria-hidden="true"
 			/>
 			<p class="body-sm text-fg font-medium">{placeholder}</p>
 			{#if hint}

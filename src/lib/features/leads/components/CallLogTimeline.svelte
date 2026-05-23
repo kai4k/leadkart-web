@@ -7,8 +7,7 @@
 	 * view-models so we don't render two different visual hierarchies.
 	 */
 	import { Timeline, Skeleton, EmptyState } from '$ui';
-	import { Phone } from 'lucide-svelte';
-	import { Icon, Inbox } from '$icons';
+	import { Icon, Inbox, Phone } from '$icons';
 	import type { CallLogDto } from '../schemas';
 	import { CALL_OUTCOME_ACCENT, CALL_OUTCOME_LABEL, relativeTime } from '../view-models';
 

@@ -18,32 +18,39 @@
 	 */
 	let visible = $state(false);
 	let progress = $state(0);
-	let showTimer: ReturnType<typeof setTimeout> | undefined;
-	let progressTimer: ReturnType<typeof setTimeout> | undefined;
 
 	$effect(() => {
+		// Track every timer this $effect run schedules so the cleanup
+		// returned to Svelte can clear them on re-run / teardown. Without
+		// this, three setTimeout handles (show, progress-ramp, fade-out)
+		// could leak across re-runs and fire stale state updates.
+		const timers: ReturnType<typeof setTimeout>[] = [];
+
 		if (navigating.to) {
 			// Delay the bar by 200ms — most nav completes inside that window.
-			clearTimeout(showTimer);
-			showTimer = setTimeout(() => {
-				visible = true;
-				progress = 0;
-				// Ramp to 70% quickly, then ease — feels responsive without
-				// promising completion before the network finishes.
-				progressTimer = setTimeout(() => (progress = 70), 16);
-			}, 200);
-		} else {
-			clearTimeout(showTimer);
-			clearTimeout(progressTimer);
+			timers.push(
+				setTimeout(() => {
+					visible = true;
+					progress = 0;
+					// Ramp to 70% quickly, then ease — feels responsive without
+					// promising completion before the network finishes.
+					timers.push(setTimeout(() => (progress = 70), 16));
+				}, 200)
+			);
+		} else if (visible) {
 			// On navigation end: jump to 100, then fade.
-			if (visible) {
-				progress = 100;
+			progress = 100;
+			timers.push(
 				setTimeout(() => {
 					visible = false;
 					progress = 0;
-				}, 250);
-			}
+				}, 250)
+			);
 		}
+
+		return () => {
+			for (const t of timers) clearTimeout(t);
+		};
 	});
 </script>
 

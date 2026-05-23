@@ -23,7 +23,7 @@
 
 <script lang="ts">
 	import type { HTMLSelectAttributes } from 'svelte/elements';
-	import { ChevronDown } from 'lucide-svelte';
+	import { ChevronDown, Icon } from '$lib/icons';
 	import { cn } from '$lib/utils/cn';
 
 	/**
@@ -111,7 +111,7 @@
 			class="text-fg-subtle pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"
 			aria-hidden="true"
 		>
-			<ChevronDown size={16} />
+			<Icon icon={ChevronDown} size="sm" />
 		</span>
 	</div>
 

@@ -2,7 +2,7 @@
 	import { _ } from 'svelte-i18n';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { Lock } from 'lucide-svelte';
+	import { Icon, Lock } from '$lib/icons';
 	import { login, LoginError } from '../api';
 	import { loginRequestSchema } from '../schemas';
 	import { Alert, AuthCard, Button, Logo } from '$lib/components/ui';
@@ -123,7 +123,7 @@
 	<div
 		class="border-border text-fg-subtle flex flex-col items-center gap-2 border-t pt-4 sm:flex-row sm:justify-center"
 	>
-		<Lock size={14} aria-hidden="true" />
+		<Icon icon={Lock} size="xs" />
 		<span class="caption">256-bit SSL encrypted</span>
 	</div>
 </AuthCard>

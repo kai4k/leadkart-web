@@ -41,5 +41,27 @@ export default ts.config(
 				svelteConfig
 			}
 		}
+	},
+	// Icon-registry gate. Direct `lucide-svelte` imports are banned outside
+	// the registry — everything goes through `$icons` (= src/lib/icons/) so
+	// the icon library stays swappable and the icon-size token wrapper is
+	// the single point of size-decision. See CLAUDE.md rule 5.
+	{
+		files: ['src/**/*.{ts,svelte}'],
+		ignores: ['src/lib/icons/**'],
+		rules: {
+			'no-restricted-imports': [
+				'error',
+				{
+					paths: [
+						{
+							name: 'lucide-svelte',
+							message:
+								"Import icons from '$icons' (the registry) instead. Add new icons to src/lib/icons/index.ts."
+						}
+					]
+				}
+			]
+		}
 	}
 );

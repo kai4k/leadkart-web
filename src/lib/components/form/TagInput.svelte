@@ -14,7 +14,7 @@
 </script>
 
 <script lang="ts">
-	import { X } from 'lucide-svelte';
+	import { Icon, X } from '$lib/icons';
 	import { cn } from '$lib/utils/cn';
 
 	type Props = {
@@ -165,7 +165,7 @@
 						}}
 						{disabled}
 					>
-						<X size={12} aria-hidden="true" />
+						<Icon icon={X} size="xs" />
 					</button>
 				</span>
 			{/each}

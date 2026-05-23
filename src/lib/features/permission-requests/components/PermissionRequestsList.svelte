@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page as pageStore } from '$app/stores';
+	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { Badge, Button, DataTable, EmptyState } from '$ui';
@@ -18,14 +18,14 @@
 	 */
 
 	const role = $derived<ListRole>(
-		($pageStore.url.searchParams.get('role') as ListRole | null) ?? 'requester'
+		(page.url.searchParams.get('role') as ListRole | null) ?? 'requester'
 	);
 	const query = $derived(permissionRequestsListQuery(role));
 
 	let createOpen = $state(false);
 
 	function setRole(next: ListRole) {
-		const params = new SvelteURLSearchParams($pageStore.url.searchParams.toString());
+		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
 		if (next === 'requester') params.delete('role');
 		else params.set('role', next);
 		goto(`?${params}`, { replaceState: true, keepFocus: true });

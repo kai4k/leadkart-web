@@ -15,7 +15,7 @@
 </script>
 
 <script lang="ts">
-	import { Minus, Plus } from 'lucide-svelte';
+	import { Icon, Minus, Plus } from '$lib/icons';
 	import { cn } from '$lib/utils/cn';
 
 	type Props = {
@@ -143,7 +143,7 @@
 			onclick={() => nudge(-step)}
 			tabindex="-1"
 		>
-			<Minus size={16} aria-hidden="true" />
+			<Icon icon={Minus} size="sm" />
 		</button>
 
 		<div class="relative flex-1">
@@ -210,7 +210,7 @@
 			onclick={() => nudge(step)}
 			tabindex="-1"
 		>
-			<Plus size={16} aria-hidden="true" />
+			<Icon icon={Plus} size="sm" />
 		</button>
 	</div>
 

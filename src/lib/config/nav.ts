@@ -26,16 +26,16 @@
  */
 
 import {
-	LayoutDashboard,
-	Users,
-	Settings,
-	ShieldCheck,
-	ShoppingCart,
 	Boxes,
 	Building2,
 	Inbox,
-	type Icon as LucideIcon
-} from 'lucide-svelte';
+	LayoutDashboard,
+	type LucideIcon,
+	Settings,
+	ShieldCheck,
+	ShoppingCart,
+	Users
+} from '$lib/icons';
 import type { PrincipalTier } from '$lib/features/auth/capabilities';
 
 export interface NavItem {

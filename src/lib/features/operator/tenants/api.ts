@@ -1,4 +1,5 @@
 import { api, parseResponse } from '$api/client';
+import { NotFoundError } from '$api/errors';
 import {
 	tenantDtoSchema,
 	registerTenantResponseSchema,
@@ -42,9 +43,7 @@ export async function getTenantBySlug(slug: string): Promise<TenantDto> {
 	const list = parseResponse(listAllTenantsResponseSchema, raw);
 	const tenant = list.tenants[0];
 	if (!tenant) {
-		const err = new Error(`Tenant not found: ${slug}`);
-		(err as Error & { status: number }).status = 404;
-		throw err;
+		throw new NotFoundError(`Tenant ${slug}`);
 	}
 	return tenant;
 }

@@ -68,7 +68,7 @@
 </script>
 
 <script lang="ts">
-	import { ChevronDown, Check } from 'lucide-svelte';
+	import { Check, ChevronDown, Icon } from '$lib/icons';
 	import { cn } from '$lib/utils/cn';
 	import Badge from './Badge.svelte';
 	import * as Dropdown from './dropdown';
@@ -104,7 +104,7 @@
 			<Badge variant={currentVariant} style="soft">
 				<span class="inline-flex items-center gap-1">
 					<span>{currentLabel}</span>
-					<ChevronDown size={12} aria-hidden="true" />
+					<Icon icon={ChevronDown} size="xs" />
 				</span>
 			</Badge>
 		</Dropdown.Trigger>
@@ -117,7 +117,7 @@
 						</Badge>
 					</span>
 					{#if opt.value === value}
-						<Check size={14} class="text-primary" aria-hidden="true" />
+						<Icon icon={Check} size="xs" class="text-primary" />
 					{/if}
 				</Dropdown.Item>
 			{/each}

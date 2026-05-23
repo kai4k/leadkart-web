@@ -18,7 +18,7 @@
 <script lang="ts">
 	import { DatePicker as BitsDatePicker, type SegmentPart } from 'bits-ui';
 	import type { DateValue } from '@internationalized/date';
-	import { Calendar, ChevronLeft, ChevronRight } from '$lib/icons';
+	import { Calendar, ChevronLeft, ChevronRight, Icon } from '$lib/icons';
 	import { cn } from '$lib/utils/cn';
 
 	type Props = {
@@ -129,7 +129,7 @@
 				)}
 				aria-label="Open calendar"
 			>
-				<Calendar size={16} />
+				<Icon icon={Calendar} size="sm" />
 			</BitsDatePicker.Trigger>
 		</div>
 
@@ -153,7 +153,7 @@
 							)}
 							aria-label="Previous month"
 						>
-							<ChevronLeft size={16} />
+							<Icon icon={ChevronLeft} size="sm" />
 						</BitsDatePicker.PrevButton>
 						<BitsDatePicker.Heading class="body-sm text-fg font-medium" />
 						<BitsDatePicker.NextButton
@@ -164,7 +164,7 @@
 							)}
 							aria-label="Next month"
 						>
-							<ChevronRight size={16} />
+							<Icon icon={ChevronRight} size="sm" />
 						</BitsDatePicker.NextButton>
 					</BitsDatePicker.Header>
 					{#each months as month (month.value)}

@@ -2,7 +2,7 @@
 	import { _ } from 'svelte-i18n';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { Lock } from 'lucide-svelte';
+	import { Icon, Lock } from '$lib/icons';
 	import { z } from 'zod';
 	import { resetPassword } from '../api';
 	import { Alert, AuthCard, Button, Logo } from '$lib/components/ui';
@@ -131,7 +131,7 @@
 		<div
 			class="border-border text-fg-subtle flex flex-col items-center gap-2 border-t pt-4 sm:flex-row sm:justify-center"
 		>
-			<Lock size={14} aria-hidden="true" />
+			<Icon icon={Lock} size="xs" />
 			<span class="caption"
 				>{$_('auth.resetPassword.backToSignin')}
 				<a href="/signin" class="text-primary hover:underline">{$_('auth.signin.title')}</a></span

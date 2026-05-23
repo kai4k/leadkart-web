@@ -17,7 +17,7 @@
 -->
 <script lang="ts">
 	import { Combobox as BitsCombobox } from 'bits-ui';
-	import { ChevronDown, Check } from '$lib/icons';
+	import { Check, ChevronDown, Icon } from '$lib/icons';
 	import { cn } from '$lib/utils/cn';
 
 	export interface ComboboxOption {
@@ -151,7 +151,7 @@
 				)}
 				aria-label="Toggle options"
 			>
-				<ChevronDown size={16} />
+				<Icon icon={ChevronDown} size="sm" />
 			</BitsCombobox.Trigger>
 		</div>
 
@@ -187,7 +187,7 @@
 							{#snippet children({ selected }: { selected: boolean })}
 								<span class="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center">
 									{#if selected}
-										<Check size={14} class="text-primary" aria-hidden="true" />
+										<Icon icon={Check} size="xs" class="text-primary" />
 									{/if}
 								</span>
 								<span class="flex min-w-0 flex-col">

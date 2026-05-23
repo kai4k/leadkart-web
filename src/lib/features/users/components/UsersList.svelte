@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page as pageStore } from '$app/stores';
+	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { Avatar, Badge, Button, DataTable, Dropdown, EmptyState, Pagination } from '$ui';
@@ -44,12 +44,12 @@
 	let targetUser = $state<UserDto | null>(null);
 
 	// URL-driven filter state.
-	const search = $derived($pageStore.url.searchParams.get('q') ?? '');
-	const page = $derived(Number($pageStore.url.searchParams.get('page') ?? '1') || 1);
+	const search = $derived(page.url.searchParams.get('q') ?? '');
+	const currentPage = $derived(Number(page.url.searchParams.get('page') ?? '1') || 1);
 	const pageSize = 10;
 
 	function setSearch(value: string) {
-		const params = new SvelteURLSearchParams($pageStore.url.searchParams.toString());
+		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
 		if (value) {
 			params.set('q', value);
 		} else {
@@ -60,7 +60,7 @@
 	}
 
 	function setPage(p: number) {
-		const params = new SvelteURLSearchParams($pageStore.url.searchParams.toString());
+		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
 		if (p > 1) {
 			params.set('page', String(p));
 		} else {
@@ -90,7 +90,7 @@
 	});
 
 	const pageCount = $derived(Math.max(1, Math.ceil(filtered.length / pageSize)));
-	const paged = $derived(filtered.slice((page - 1) * pageSize, page * pageSize));
+	const paged = $derived(filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize));
 
 	const tableState = $derived(
 		listQuery.isPending
@@ -265,7 +265,7 @@
 		{/snippet}
 	</DataTable.Root>
 
-	<Pagination {page} {pageCount} onChange={setPage} />
+	<Pagination page={currentPage} {pageCount} onChange={setPage} />
 </div>
 
 <CreateUserDrawer bind:open={createOpen} onOpenChange={(o) => (createOpen = o)} />

@@ -45,7 +45,7 @@
 	 */
 	import { onMount } from 'svelte';
 	import { Logo } from '$ui';
-	import { ShieldCheck, TrendingUp, Truck } from 'lucide-svelte';
+	import { Icon, ShieldCheck, TrendingUp, Truck } from '$lib/icons';
 
 	let { children } = $props();
 	let canvas: HTMLElement | undefined = $state();
@@ -257,19 +257,19 @@
 				<ul class="lk-auth-features">
 					<li class="glass-card lk-glass--feature lk-glass--purple">
 						<span class="lk-auth-feature-icon lk-auth-feature-icon--purple">
-							<ShieldCheck size={18} />
+							<Icon icon={ShieldCheck} size="md" />
 						</span>
 						<span class="body-base">Enterprise-grade security</span>
 					</li>
 					<li class="glass-card lk-glass--feature lk-glass--green">
 						<span class="lk-auth-feature-icon lk-auth-feature-icon--green">
-							<TrendingUp size={18} />
+							<Icon icon={TrendingUp} size="md" />
 						</span>
 						<span class="body-base">Real-time lead tracking</span>
 					</li>
 					<li class="glass-card lk-glass--feature lk-glass--blue">
 						<span class="lk-auth-feature-icon lk-auth-feature-icon--blue">
-							<Truck size={18} />
+							<Icon icon={Truck} size="md" />
 						</span>
 						<span class="body-base">Order-to-dispatch pipeline</span>
 					</li>

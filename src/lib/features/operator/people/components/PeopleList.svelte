@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page as pageStore } from '$app/stores';
+	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { Avatar, Badge, DataTable, EmptyState } from '$ui';
@@ -12,7 +12,7 @@
 	const DEBOUNCE_MS = 300;
 
 	// URL is the single source of truth for search state.
-	const urlSearch = $derived($pageStore.url.searchParams.get('q') ?? '');
+	const urlSearch = $derived(page.url.searchParams.get('q') ?? '');
 
 	let debounceHandle: ReturnType<typeof setTimeout> | undefined;
 
@@ -20,7 +20,7 @@
 		const value = (e.currentTarget as HTMLInputElement).value;
 		clearTimeout(debounceHandle);
 		debounceHandle = setTimeout(() => {
-			const next = new SvelteURLSearchParams($pageStore.url.searchParams.toString());
+			const next = new SvelteURLSearchParams(page.url.searchParams.toString());
 			if (value.trim()) {
 				next.set('q', value.trim());
 			} else {

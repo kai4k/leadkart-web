@@ -1,14 +1,15 @@
 <script lang="ts">
 	import {
-		Coins,
-		Users,
-		UserPlus,
-		TrendingUp,
-		PackageCheck,
-		Truck,
 		AlertTriangle,
-		ClipboardList
-	} from 'lucide-svelte';
+		ClipboardList,
+		Coins,
+		Icon,
+		PackageCheck,
+		TrendingUp,
+		Truck,
+		UserPlus,
+		Users
+	} from '$lib/icons';
 	import { Alert, Card } from '$ui';
 	import { myCapabilitiesQuery } from '$features/auth/queries';
 
@@ -101,12 +102,11 @@
 
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 		{#each tiles as tile (tile.label)}
-			{@const Icon = tile.icon}
 			<Card.Root surface="glass" class="glass-hover">
 				<Card.Header>
 					<div class="cluster" style="--cluster-gap: var(--spacing-3);">
 						<span class={`lk-dash-tile-icon lk-dash-tile-icon--${tile.accent}`} aria-hidden="true">
-							<Icon size={16} />
+							<Icon icon={tile.icon} size="sm" />
 						</span>
 						<Card.Description>{tile.label}</Card.Description>
 					</div>

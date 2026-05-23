@@ -29,7 +29,7 @@
 </script>
 
 <script lang="ts">
-	import { ArrowDown, ArrowUp } from 'lucide-svelte';
+	import { ArrowDown, ArrowUp, Icon, iconSize } from '$lib/icons';
 	import { cn } from '$lib/utils/cn';
 	import * as Card from './card';
 	import Skeleton from './Skeleton.svelte';
@@ -83,9 +83,9 @@
 					)}
 				>
 					{#if deltaPositive}
-						<ArrowUp size={12} aria-hidden="true" />
+						<Icon icon={ArrowUp} size="xs" />
 					{:else if deltaNegative}
-						<ArrowDown size={12} aria-hidden="true" />
+						<Icon icon={ArrowDown} size="xs" />
 					{/if}
 					<span class="tabular-nums">{deltaFormatted}</span>
 					<span class="text-fg-muted">{delta.period}</span>
@@ -102,7 +102,10 @@
 				)}
 				aria-hidden="true"
 			>
-				<IconComp size={20} />
+				<!-- IconComp is caller-supplied (typed `any`); pass the token-
+				     mapped pixel size so even consumer-provided icons honour
+				     the icon-size scale. -->
+				<IconComp size={iconSize('md')} />
 			</span>
 		{/if}
 	</div>

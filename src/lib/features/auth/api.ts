@@ -24,6 +24,7 @@
  *   - Self-service email change is DISABLED.
  */
 import { api, parseResponse } from '$api/client';
+import { ApiError, type ApiErrorBody } from '$api/errors';
 import {
 	loginRequestSchema,
 	userDtoSchema,
@@ -162,7 +163,7 @@ export async function confirmEmailChange(body: { token: string }): Promise<void>
 		body: JSON.stringify(body)
 	});
 	if (resp.ok) return;
-	throw await readBffError(resp, 'Email change confirmation failed');
+	throw await readBffError(resp);
 }
 
 /**
@@ -192,7 +193,7 @@ export async function requestPasswordReset(body: { email: string }): Promise<voi
 		body: JSON.stringify(body)
 	});
 	if (resp.ok) return;
-	throw await readBffError(resp, 'Could not send reset email');
+	throw await readBffError(resp);
 }
 
 /**
@@ -213,21 +214,29 @@ export async function resetPassword(body: { token: string; new_password: string 
 		body: JSON.stringify(body)
 	});
 	if (resp.ok) return;
-	throw await readBffError(resp, 'Reset failed');
+	throw await readBffError(resp);
 }
 
-async function readBffError(resp: Response, fallback: string): Promise<Error> {
+/**
+ * Read a non-OK BFF response and surface it as a typed `ApiError`
+ * subclass (AuthError / ValidationError / ConflictError / ServerError /
+ * NotFoundError / generic ApiError). The factory does the discriminated-
+ * union dispatch on `resp.status` + parsed body; callers pattern-match
+ * on `instanceof <Subclass>` rather than poking at monkey-patched fields.
+ *
+ * Message resolution is owned by `ApiError.fromResponse` — RFC 9457
+ * `detail` / `title` → legacy `message` → `statusText` fallback — so
+ * the gateway no longer needs to inject a per-endpoint fallback string.
+ */
+async function readBffError(resp: Response): Promise<ApiError> {
 	const text = await resp.text();
-	let parsed: { code?: string; message?: string; error?: string } = {};
+	let parsed: ApiErrorBody | null = null;
 	try {
-		parsed = JSON.parse(text);
+		parsed = text.length > 0 ? (JSON.parse(text) as ApiErrorBody) : null;
 	} catch {
 		/* non-JSON */
 	}
-	const err = new Error(parsed.message ?? parsed.error ?? fallback);
-	(err as Error & { status: number; code?: string }).status = resp.status;
-	(err as Error & { status: number; code?: string }).code = parsed.code ?? parsed.error;
-	return err;
+	return ApiError.fromResponse(resp, parsed);
 }
 
 /**

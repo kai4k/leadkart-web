@@ -17,7 +17,7 @@
 	 */
 	import { Button, Card, Alert } from '$lib/components/ui';
 	import { PRIMARY_COLORS, theme } from '$lib/hooks/use-theme.svelte';
-	import { Plus } from 'lucide-svelte';
+	import { Icon, Plus } from '$lib/icons';
 
 	const buttonVariants = [
 		'primary',
@@ -209,7 +209,7 @@
 		<div class="flex flex-wrap items-center gap-3">
 			{#each buttonVariants.filter((v) => v !== 'link') as variant (variant)}
 				<Button {variant} size="icon" aria-label="{variant} icon">
-					<Plus size={18} aria-hidden="true" />
+					<Icon icon={Plus} size="md" />
 				</Button>
 			{/each}
 		</div>

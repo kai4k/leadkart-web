@@ -13,7 +13,7 @@
 </script>
 
 <script lang="ts">
-	import { Edit } from 'lucide-svelte';
+	import { Edit, Icon } from '$lib/icons';
 	import { tick } from 'svelte';
 	import { cn } from '$lib/utils/cn';
 
@@ -148,10 +148,10 @@
 			onclick={() => void enter()}
 		>
 			<span class="truncate-1">{displayText}</span>
-			<Edit
-				size={12}
+			<Icon
+				icon={Edit}
+				size="xs"
 				class="text-fg-subtle flex-shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-				aria-hidden="true"
 			/>
 		</button>
 	{/if}

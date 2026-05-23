@@ -10,7 +10,7 @@
 	 * collapses (or moves to parent — handled by parent recursion);
 	 * Space/Enter triggers onClick.
 	 */
-	import { ChevronRight } from 'lucide-svelte';
+	import { ChevronRight, Icon, iconSize } from '$lib/icons';
 	import type { Snippet } from 'svelte';
 	import { cn } from '$lib/utils/cn';
 
@@ -100,10 +100,10 @@
 					toggle();
 				}}
 			>
-				<ChevronRight
-					size={14}
+				<Icon
+					icon={ChevronRight}
+					size="xs"
 					class={cn('transition-transform duration-150', expanded && 'rotate-90')}
-					aria-hidden="true"
 				/>
 			</button>
 		{:else}
@@ -112,7 +112,9 @@
 
 		{#if IconComp}
 			<span class="text-fg-muted flex-shrink-0" aria-hidden="true">
-				<IconComp size={16} />
+				<!-- IconComp is caller-supplied (typed `any`); pass the token-
+				     mapped pixel size so consumer icons honour the scale. -->
+				<IconComp size={iconSize('sm')} />
 			</span>
 		{/if}
 
