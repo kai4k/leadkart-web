@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Alert, Badge, Breadcrumbs, Button, Card, CopyButton, Spinner } from '$ui';
+	import { Alert, Badge, Breadcrumbs, Button, Card, CopyButton, Skeleton } from '$ui';
 	import type { BreadcrumbItem } from '$ui';
 	import { TextField } from '$lib/components/form';
 	import PermissionTree from '$features/roles/components/PermissionTree.svelte';
@@ -98,7 +98,20 @@
 	<Breadcrumbs items={breadcrumbs} />
 
 	{#if query.isPending}
-		<div class="flex justify-center py-16"><Spinner size={32} /></div>
+		<div class="stack stack-relaxed" aria-busy="true" aria-label="Loading role">
+			<Skeleton class="h-7 w-1/3" />
+			<Skeleton class="h-3 w-1/4" />
+			<Card.Root>
+				<Card.Content>
+					<Skeleton class="h-40 w-full rounded-md" />
+				</Card.Content>
+			</Card.Root>
+			<Card.Root>
+				<Card.Content>
+					<Skeleton class="h-64 w-full rounded-md" />
+				</Card.Content>
+			</Card.Root>
+		</div>
 	{:else if query.isError || !role}
 		<Alert variant="warning" title="Role not found"
 			>This role doesn't exist or you don't have access.</Alert

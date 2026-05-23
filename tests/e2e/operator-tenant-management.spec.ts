@@ -166,6 +166,27 @@ test.describe('Register tenant — form validation', () => {
 
 		// Form-level banner appears with the server message
 		await expect(page.getByText(/slug.*exists/i).first()).toBeVisible({ timeout: 5000 });
+		// Global mutation-error toast also surfaces (role=status from Toaster).
+		// Default behaviour: every mutation error → toast unless the mutation
+		// hook opts out via meta. The form's inline banner is additional.
+		await expect(page.locator('[role="status"]').first()).toBeVisible({ timeout: 5000 });
+	});
+});
+
+test.describe('Loading + feedback canon', () => {
+	test.beforeEach(async () => {
+		await resetMock();
+	});
+
+	test('skeleton renders while settings layout fetches tenant', async ({ page }) => {
+		await signInAsTier(page, {
+			tier: 'tenant-admin',
+			permissions: ['tenant.admin']
+		});
+		// Don't register a tenant fetch — the layout's pending state should
+		// surface the skeleton (aria-busy="true").
+		await page.goto('/settings/tenant/profile');
+		await expect(page.locator('[aria-busy="true"]').first()).toBeVisible({ timeout: 3000 });
 	});
 });
 

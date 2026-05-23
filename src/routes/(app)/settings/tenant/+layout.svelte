@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Alert, Breadcrumbs, Spinner } from '$ui';
+	import { Alert, Breadcrumbs, Skeleton } from '$ui';
 	import type { BreadcrumbItem } from '$ui';
 	import { myCapabilitiesQuery } from '$features/auth/queries';
 	import { tenantSelfQuery } from '$features/tenant/queries';
@@ -109,8 +109,9 @@
 	</nav>
 
 	{#if tenantQuery.isPending}
-		<div class="flex justify-center py-16">
-			<Spinner size={32} />
+		<div class="stack stack-relaxed" aria-busy="true" aria-label="Loading tenant settings">
+			<Skeleton class="h-6 w-1/3" />
+			<Skeleton class="h-40 w-full rounded-md" />
 		</div>
 	{:else if tenantQuery.isError}
 		<Alert variant="danger" title="Could not load tenant settings">

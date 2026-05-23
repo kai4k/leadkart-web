@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Alert, Avatar, Badge, Button, Card, CopyButton, Spinner } from '$ui';
+	import { Alert, Avatar, Badge, Button, Card, CopyButton, Skeleton } from '$ui';
 	import { Pause, Play, UserMinus, Icon } from '$icons';
 	import {
 		personDetailQuery,
@@ -58,7 +58,25 @@
 </script>
 
 {#if isLoading}
-	<div class="flex justify-center py-16"><Spinner size={32} /></div>
+	<div class="stack stack-relaxed" aria-busy="true" aria-label="Loading person">
+		<Card.Root>
+			<Card.Content>
+				<div class="flex flex-col gap-4 sm:flex-row sm:items-start">
+					<Skeleton shape="circle" class="h-16 w-16" />
+					<div class="stack stack-tight min-w-0 flex-1">
+						<Skeleton class="h-6 w-1/2" />
+						<Skeleton class="h-4 w-2/3" />
+						<Skeleton class="h-3 w-1/3" />
+					</div>
+				</div>
+			</Card.Content>
+		</Card.Root>
+		<Card.Root>
+			<Card.Content>
+				<Skeleton class="h-24 w-full rounded-md" />
+			</Card.Content>
+		</Card.Root>
+	</div>
 {:else if isError}
 	<Alert variant="danger" title="Load failed">{errorMsg}</Alert>
 {:else if !p}
@@ -113,7 +131,11 @@
 			</Card.Header>
 			<Card.Content>
 				{#if membershipsQuery.isPending}
-					<div class="flex justify-center py-4"><Spinner size={24} /></div>
+					<div class="stack stack-tight" aria-busy="true">
+						{#each [0, 1, 2] as i (i)}
+							<Skeleton class="h-8 w-full rounded-md" />
+						{/each}
+					</div>
 				{:else if memberships.length === 0}
 					<p class="body-base text-fg-muted">No memberships found.</p>
 				{:else}

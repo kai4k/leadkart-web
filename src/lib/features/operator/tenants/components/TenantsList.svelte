@@ -3,7 +3,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
-	import { Alert, Badge, Button, DataTable, EmptyState } from '$ui';
+	import { Alert, Badge, Button, DataTable, EmptyState, Spinner } from '$ui';
 	import type { DataTableColumn } from '$ui';
 	import { Building2, Eye, Plus, Search, Shield, Icon } from '$icons';
 	import { tenantsListQuery } from '$features/operator/tenants/queries';
@@ -21,7 +21,9 @@
 	let createOpen = $state(false);
 	let impersonateOpen = $state(false);
 	let impersonateTarget = $state<TenantDto | null>(null);
-	let openingScope = $state(false);
+	/** Slug of the tenant currently being opened — drives the inline
+	 *  row spinner and disables further row clicks while in flight. */
+	let openingScopeSlug = $state<string | null>(null);
 
 	const search = $derived($pageStore.url.searchParams.get('q') ?? '');
 	const page = $derived(Number($pageStore.url.searchParams.get('page') ?? '1') || 1);
@@ -98,8 +100,8 @@
 	 * the operator is acting on.
 	 */
 	async function enterScope(tenant: TenantDto) {
-		if (openingScope) return;
-		openingScope = true;
+		if (openingScopeSlug !== null) return; // a row is already in-flight
+		openingScopeSlug = tenant.slug;
 		try {
 			const resp = await fetch('/api/operator/scope', {
 				method: 'POST',
@@ -114,7 +116,7 @@
 			await invalidateAll();
 			goto('/operator/scope/profile');
 		} finally {
-			openingScope = false;
+			openingScopeSlug = null;
 		}
 	}
 </script>
@@ -137,10 +139,16 @@
 {/snippet}
 
 {#snippet rowActions(tenant: TenantDto)}
-	{#if canView && tenant.slug !== 'platform'}
+	{#if openingScopeSlug === tenant.slug}
+		<div class="cluster cluster-tight" aria-label="Opening {tenant.display_name}">
+			<Spinner size={14} />
+			<span class="caption text-fg-muted">Opening…</span>
+		</div>
+	{:else if canView && tenant.slug !== 'platform'}
 		<Button
 			variant="ghost"
 			size="sm"
+			disabled={openingScopeSlug !== null}
 			onclick={(e) => {
 				e.stopPropagation();
 				openImpersonate(tenant);

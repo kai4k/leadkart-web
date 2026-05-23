@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Alert, Breadcrumbs, Spinner } from '$ui';
+	import { Alert, Breadcrumbs, Skeleton } from '$ui';
 	import type { BreadcrumbItem } from '$ui';
 	import { myCapabilitiesQuery, myProfileQuery } from '$features/auth/queries';
 	import { displayName } from '$features/auth/view-models';
@@ -82,8 +82,10 @@
 	</nav>
 
 	{#if profileQuery.isPending}
-		<div class="flex justify-center py-16">
-			<Spinner size={32} />
+		<div class="stack stack-relaxed" aria-busy="true" aria-label="Loading account">
+			<Skeleton class="h-6 w-1/2" />
+			<Skeleton class="h-4 w-1/3" />
+			<Skeleton class="h-32 w-full rounded-md" />
 		</div>
 	{:else if profileQuery.isError}
 		<Alert variant="danger" title="Could not load account settings">
