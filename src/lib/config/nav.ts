@@ -31,6 +31,7 @@ import {
 	Settings,
 	ShieldCheck,
 	Building2,
+	Inbox,
 	type Icon as LucideIcon
 } from 'lucide-svelte';
 import type { PrincipalTier } from '$lib/features/auth/capabilities';
@@ -69,7 +70,8 @@ export const TENANT_ADMIN_NAV: NavSection[] = [
 		items: [
 			{ href: '/settings/tenant', label: 'Tenant Settings', icon: Settings },
 			{ href: '/settings/users', label: 'Team', icon: Users },
-			{ href: '/settings/roles', label: 'Roles', icon: ShieldCheck }
+			{ href: '/settings/roles', label: 'Roles', icon: ShieldCheck },
+			{ href: '/permission-requests', label: 'Permission requests', icon: Inbox }
 		]
 	},
 	{
@@ -81,6 +83,10 @@ export const TENANT_ADMIN_NAV: NavSection[] = [
 export const TENANT_USER_NAV: NavSection[] = [
 	{
 		items: [{ href: '/dashboard', label: 'My Dashboard', icon: LayoutDashboard }]
+	},
+	{
+		title: 'My Work',
+		items: [{ href: '/permission-requests', label: 'Permission requests', icon: Inbox }]
 	},
 	{
 		title: 'Account',

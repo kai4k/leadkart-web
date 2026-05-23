@@ -101,7 +101,10 @@ export async function signInAsTier(page: Page, opts: SignInOpts): Promise<void> 
 		{ method: 'GET', path: `/api/v1/users/${membershipId}`, status: 200, body: user },
 		{ method: 'GET', path: '/api/v1/auth/sessions', status: 200, body: { sessions: [session] } },
 		{ method: 'GET', path: `/api/v1/tenants/${tenantId}`, status: 200, body: tenant },
-		{ method: 'GET', path: `/api/v1/tenants/by-slug/${tenantSlug}`, status: 200, body: tenant }
+		// Slug lookup is now the canonical filter form `GET /v1/tenants?slug=…`
+		// (ADR 0052) returning ListTenantsResponse. The mock-server matches on
+		// pathname only — both the bare GET and the slug-filter GET land here.
+		{ method: 'GET', path: '/api/v1/tenants', status: 200, body: { tenants: [tenant] } }
 	]);
 
 	await page.goto('/signin');

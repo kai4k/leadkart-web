@@ -44,11 +44,6 @@ export async function reactivateUser(membershipId: string): Promise<UserDto> {
 	return parseResponse(userDtoSchema, raw);
 }
 
-export async function unlockUser(membershipId: string): Promise<UserDto> {
-	const raw = await api.post<unknown>(`/v1/users/${membershipId}/unlock`);
-	return parseResponse(userDtoSchema, raw);
-}
-
 export async function assignRole(membershipId: string, body: AssignUserRoleRequest): Promise<void> {
 	await api.post<void>(`/v1/users/${membershipId}/roles`, body);
 }

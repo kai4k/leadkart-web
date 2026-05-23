@@ -54,3 +54,21 @@ export async function revokeRolePermission(
 export async function deleteRole(roleId: string): Promise<void> {
 	await api.delete<void>(`/v1/roles/${roleId}`);
 }
+
+/**
+ * Set or clear the role's parent (single-parent organisational hierarchy
+ * per ADR 0054 Option A / Wave 9.1d). Pass `parent_role_id: null` to
+ * detach. Returns the updated role.
+ *
+ * Server-enforced invariants:
+ *   - No cycles
+ *   - parent must be in the same tenant
+ *   - Protected roles (super_admin, system_default) cannot be parented
+ */
+export async function setRoleParent(
+	roleId: string,
+	body: { parent_role_id: string | null }
+): Promise<RoleDto> {
+	const raw = await api.patch<unknown>(`/v1/roles/${roleId}/parent`, body);
+	return parseResponse(roleDtoSchema, raw);
+}

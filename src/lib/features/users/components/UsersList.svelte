@@ -13,14 +13,12 @@
 		Users as UsersIcon,
 		Users,
 		Lock,
-		Unlock,
 		Icon
 	} from '$icons';
 	import {
 		usersListQuery,
 		rolesCatalogQuery,
-		reactivateUserMutation,
-		unlockUserMutation
+		reactivateUserMutation
 	} from '$features/users/queries';
 	import { userStatusBadge, userRoleBadges, canDeactivate } from '$features/users/view-models';
 	import { displayName, initials } from '$features/auth/view-models';
@@ -74,7 +72,6 @@
 	const listQuery = usersListQuery();
 	const rolesQuery = rolesCatalogQuery();
 	const reactivate = reactivateUserMutation();
-	const unlock = unlockUserMutation();
 
 	const userList = $derived(listQuery.data?.users ?? []);
 	const roleList = $derived(rolesQuery.data?.roles ?? []);
@@ -134,7 +131,7 @@
 	];
 
 	function onAction(
-		action: 'deactivate' | 'reactivate' | 'roles' | 'manager' | 'permissions' | 'unlock',
+		action: 'deactivate' | 'reactivate' | 'roles' | 'manager' | 'permissions',
 		user: UserDto
 	) {
 		targetUser = user;
@@ -144,9 +141,6 @@
 				break;
 			case 'reactivate':
 				reactivate.mutate(user.membership_id);
-				break;
-			case 'unlock':
-				unlock.mutate(user.membership_id);
 				break;
 			case 'roles':
 				rolesOpen = true;
@@ -209,9 +203,6 @@
 				<Icon icon={Lock} size="sm" /> Permission overrides
 			</Dropdown.Item>
 			<Dropdown.Separator />
-			<Dropdown.Item onclick={() => onAction('unlock', user)}>
-				<Icon icon={Unlock} size="sm" /> Unlock
-			</Dropdown.Item>
 			{#if canDeactivate(user)}
 				<Dropdown.Item variant="danger" onclick={() => onAction('deactivate', user)}>
 					<Icon icon={UserMinus} size="sm" /> Deactivate

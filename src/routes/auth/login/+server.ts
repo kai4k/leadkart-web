@@ -1,10 +1,15 @@
 /**
  * BFF login endpoint — POST /auth/login
  *
- * Receives {email, password} from the browser, forwards to Go's
- * /api/v1/auth/login, and sets the three auth cookies on success.
- * The browser NEVER receives access_token or refresh_token in the
- * response body — they are confined to httpOnly cookies.
+ * 1. Forwards {email, password} to Go's /api/v1/auth/login.
+ * 2. On 200: sets the three auth cookies (access, refresh, csrf) and
+ *    returns `{ ok: true, must_change_password: boolean }` so the
+ *    browser can route to the force-change-password page when needed.
+ *    Tokens stay opaque to JS.
+ * 3. On 423 (account locked): forwards the Retry-After header so the
+ *    signin form can render "try again in N seconds" per ADR 0053 +
+ *    NIST 800-63B §5.2.2.
+ * 4. On other 4xx: forwards Go's ProblemDetails body verbatim.
  *
  * Per ADR: docs/superpowers/specs/2026-05-20-bff-cookie-auth-adr.md
  */
@@ -40,17 +45,24 @@ export const POST: RequestHandler = async (event) => {
 	}
 
 	if (!resp.ok) {
-		// Forward Go's error body verbatim so the client can parse ProblemDetails
 		const errorBody = await resp.text();
-		return new Response(errorBody, {
-			status: resp.status,
-			headers: { 'content-type': resp.headers.get('content-type') ?? 'application/json' }
+		const headers = new Headers({
+			'content-type': resp.headers.get('content-type') ?? 'application/json'
 		});
+		// 423 carries Retry-After (delta-seconds) — forward to the browser
+		// so the form can render a useful countdown.
+		const retryAfter = resp.headers.get('retry-after');
+		if (retryAfter) headers.set('retry-after', retryAfter);
+		return new Response(errorBody, { status: resp.status, headers });
 	}
 
-	const tokens = (await resp.json()) as { access_token: string; refresh_token: string };
+	const tokens = (await resp.json()) as {
+		access_token: string;
+		refresh_token: string;
+		must_change_password?: boolean;
+	};
 	setAuthCookies(event.cookies, tokens.access_token, tokens.refresh_token);
 
-	// Return only a success acknowledgement — tokens are in cookies, not the body
-	return json({ ok: true });
+	// Browser sees only acknowledgement + the force-change hint.
+	return json({ ok: true, must_change_password: tokens.must_change_password ?? false });
 };

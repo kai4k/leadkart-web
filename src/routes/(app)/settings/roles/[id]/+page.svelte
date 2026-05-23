@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { Alert, Badge, Breadcrumbs, Button, Card, CopyButton, Skeleton } from '$ui';
 	import type { BreadcrumbItem } from '$ui';
-	import { TextField } from '$lib/components/form';
+	import { Select, TextField } from '$lib/components/form';
 	import PermissionTree from '$features/roles/components/PermissionTree.svelte';
 	import {
 		roleDetailQuery,
+		rolesListQuery,
 		updateRoleMutation,
-		replaceRolePermissionsMutation
+		replaceRolePermissionsMutation,
+		setRoleParentMutation
 	} from '$features/roles/queries';
 	import { goto } from '$app/navigation';
 	import { roleBadgeVariant, isProtectedRole } from '$features/roles/view-models';
@@ -43,7 +45,40 @@
 
 	const updateMutation = $derived(updateRoleMutation());
 	const replacePermsMutation = $derived(replaceRolePermissionsMutation());
-	const isMutating = $derived(updateMutation.isPending || replacePermsMutation.isPending);
+	const parentMutation = $derived(setRoleParentMutation());
+	const isMutating = $derived(
+		updateMutation.isPending || replacePermsMutation.isPending || parentMutation.isPending
+	);
+
+	// All roles in the tenant — for the parent picker. Exclude self and
+	// protected roles (server rejects parenting either way).
+	const rolesQuery = rolesListQuery();
+	const parentCandidates = $derived(
+		(rolesQuery.data?.roles ?? []).filter(
+			(r) => r.id !== roleId && !r.is_system_default && !r.is_super_admin
+		)
+	);
+
+	let selectedParent = $state('');
+	$effect(() => {
+		if (role) selectedParent = role.parent_role_id ?? '';
+	});
+
+	const parentDirty = $derived(role !== null && selectedParent !== (role.parent_role_id ?? ''));
+
+	function saveParent() {
+		if (!role || !canUpdate) return;
+		error = null;
+		saved = false;
+		parentMutation.mutate(
+			{ id: role.id, parent_role_id: selectedParent || null },
+			{
+				onSuccess: () => (saved = true),
+				onError: (err: unknown) =>
+					(error = err instanceof Error ? err.message : 'Failed to update parent')
+			}
+		);
+	}
 
 	$effect(() => {
 		if (role) {
@@ -170,6 +205,35 @@
 					disabled={!canUpdate || !metaDirty || isMutating}
 					loading={isMutating}
 					onclick={saveMeta}>Save properties</Button
+				>
+			</Card.Footer>
+		</Card.Root>
+
+		<Card.Root>
+			<Card.Header>
+				<Card.Title>Organizational hierarchy</Card.Title>
+				<Card.Description
+					>Optional parent role for the org-tree (single-parent per ADR 0054). Used by
+					hierarchy-scoped lists + permission inheritance audits.</Card.Description
+				>
+			</Card.Header>
+			<Card.Content class="stack stack-relaxed">
+				<Select
+					label="Parent role"
+					name="parent_role_id"
+					bind:value={selectedParent}
+					disabled={!canUpdate}
+					options={[
+						{ value: '', label: '— No parent —' },
+						...parentCandidates.map((r) => ({ value: r.id, label: r.name }))
+					]}
+				/>
+			</Card.Content>
+			<Card.Footer>
+				<Button
+					disabled={!canUpdate || !parentDirty || isMutating}
+					loading={parentMutation.isPending}
+					onclick={saveParent}>Save parent</Button
 				>
 			</Card.Footer>
 		</Card.Root>

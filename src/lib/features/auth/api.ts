@@ -26,32 +26,53 @@
 import { api, parseResponse } from '$api/client';
 import {
 	loginRequestSchema,
-	resetWithOldPasswordSchema,
 	userDtoSchema,
 	listSessionsResponseSchema,
 	capabilitiesSchema
 } from './schemas';
-import type {
-	LoginRequest,
-	UserDto,
-	SessionDto,
-	UpdateProfileRequest,
-	ResetWithOldPasswordRequest
-} from './types';
+import type { LoginRequest, UserDto, SessionDto, UpdateProfileRequest } from './types';
 import { z } from 'zod';
 
 export type Capabilities = z.output<typeof capabilitiesSchema>;
 
 /**
+ * Browser-visible login result. `must_change_password` is set when the
+ * user's account requires a fresh password before any other operation
+ * (ADR 0053: invite-issued passwords, expired credentials, admin force).
+ * Caller redirects to /must-change-password when true.
+ */
+export interface LoginResult {
+	ok: true;
+	must_change_password: boolean;
+}
+
+/**
+ * Login error subclass — carries the Retry-After header from 423
+ * responses so the signin form can render a countdown.
+ */
+export class LoginError extends Error {
+	status: number;
+	code?: string;
+	retryAfterSeconds?: number;
+	constructor(message: string, status: number, code?: string, retryAfterSeconds?: number) {
+		super(message);
+		this.status = status;
+		this.code = code;
+		this.retryAfterSeconds = retryAfterSeconds;
+	}
+}
+
+/**
  * BFF login — POSTs credentials to /auth/login (SvelteKit BFF endpoint,
  * not Go directly). The BFF forwards to Go and sets httpOnly cookies.
- * Returns { ok: true } on success; browser never sees tokens.
+ * Returns `{ ok, must_change_password }` on success; browser never sees
+ * tokens.
  *
- * Validates the request shape client-side before sending so Zod errors
- * surface immediately (don't require a round-trip).
+ * On 423 (account locked per ADR 0053), the BFF forwards Go's
+ * Retry-After header — surfaced on the thrown LoginError so the form
+ * can render "try again in N seconds".
  */
-export async function login(body: LoginRequest): Promise<{ ok: true }> {
-	// Validate locally first — catches blank fields before the network call
+export async function login(body: LoginRequest): Promise<LoginResult> {
 	loginRequestSchema.parse(body);
 
 	const raw = await fetch('/auth/login', {
@@ -61,8 +82,6 @@ export async function login(body: LoginRequest): Promise<{ ok: true }> {
 		body: JSON.stringify(body)
 	});
 	if (!raw.ok) {
-		// Re-throw as a plain error so the SigninForm catch block handles it.
-		// The BFF forwards Go's ProblemDetails body verbatim.
 		const text = await raw.text();
 		let parsed: { code?: string; message?: string } = {};
 		try {
@@ -70,12 +89,18 @@ export async function login(body: LoginRequest): Promise<{ ok: true }> {
 		} catch {
 			/* non-JSON */
 		}
-		const err = new Error(parsed.message ?? 'Login failed');
-		(err as Error & { status: number; code?: string }).status = raw.status;
-		(err as Error & { status: number; code?: string }).code = parsed.code;
-		throw err;
+		const retryAfterRaw = raw.headers.get('retry-after');
+		const retryAfterSeconds =
+			retryAfterRaw && !Number.isNaN(Number(retryAfterRaw)) ? Number(retryAfterRaw) : undefined;
+		throw new LoginError(
+			parsed.message ?? 'Login failed',
+			raw.status,
+			parsed.code,
+			retryAfterSeconds
+		);
 	}
-	return { ok: true };
+	const result = (await raw.json()) as { ok: true; must_change_password?: boolean };
+	return { ok: true, must_change_password: result.must_change_password ?? false };
 }
 
 /**
@@ -112,6 +137,35 @@ export async function getMyCapabilities(): Promise<Capabilities> {
 }
 
 /**
+ * Authenticated. Initiates an email change. Go emails a one-shot
+ * confirmation link to the NEW address; the change does not apply until
+ * the user clicks the link (handled by confirmEmailChange below). Returns
+ * 204 on success; backend may emit 409 if the new email is already in use.
+ */
+export async function requestEmailChange(body: { new_email: string }): Promise<void> {
+	await api.post<void>('/v1/auth/request-email-change', body);
+}
+
+/**
+ * Public — no auth required. Confirms the email change using the token
+ * Go emailed. Single-use, time-boxed server-side. 204 on success.
+ *
+ * Failure modes (server-mapped — caller switches on err.status):
+ *   400 invalid_token / token_consumed / token_expired → top banner
+ *   409 email_in_use → top banner
+ */
+export async function confirmEmailChange(body: { token: string }): Promise<void> {
+	const resp = await fetch('/auth/confirm-email-change', {
+		method: 'POST',
+		headers: { 'content-type': 'application/json' },
+		credentials: 'same-origin',
+		body: JSON.stringify(body)
+	});
+	if (resp.ok) return;
+	throw await readBffError(resp, 'Email change confirmation failed');
+}
+
+/**
  * Authenticated. The server verifies current_password even with a
  * valid bearer (per security.md "Password change") so a stolen access
  * token can't permanently take over an account.
@@ -124,28 +178,45 @@ export function changePassword(body: {
 }
 
 /**
- * Public — no auth required. Mirrors the login bootstrap pattern: hits
- * the dedicated SvelteKit BFF endpoint at /auth/reset-with-old-password
- * (NOT the catch-all proxy, which requires a CSRF cookie the un-signed
- * user doesn't have yet). The BFF forwards to Go; 204 on success.
- *
- * Validates locally first so blank inputs don't round-trip.
- *
- * Failure modes (server-mapped — caller switches on err.status + err.code):
- *   401 invalid_credentials   — email + old password don't match
- *   422 password_breached     — new password fails HIBP check
- *   422 password_same         — new == old
- *   429 rate_limited          — too many attempts (account or IP)
+ * Public — no auth required. Forwards to Go's POST /api/v1/auth/request-password-reset.
+ * Go always returns 204 regardless of whether the email is registered
+ * (Auth0/Okta canon — defeats account enumeration). The caller cannot
+ * distinguish "email valid" from "email unknown" and must show identical
+ * success copy either way.
  */
-export async function resetWithOldPassword(body: ResetWithOldPasswordRequest): Promise<void> {
-	resetWithOldPasswordSchema.parse(body);
-	const resp = await fetch('/auth/reset-with-old-password', {
+export async function requestPasswordReset(body: { email: string }): Promise<void> {
+	const resp = await fetch('/auth/request-password-reset', {
 		method: 'POST',
 		headers: { 'content-type': 'application/json' },
 		credentials: 'same-origin',
 		body: JSON.stringify(body)
 	});
 	if (resp.ok) return;
+	throw await readBffError(resp, 'Could not send reset email');
+}
+
+/**
+ * Public — no auth required. Confirms a password reset using the signed
+ * token Go emailed. Token is single-use and time-boxed server-side.
+ *
+ * Failure modes (server-mapped — caller switches on err.status + err.code):
+ *   400 invalid_token / token_consumed / token_expired → top banner
+ *   422 password_breached → field error on new_password
+ *   422 password_same     → field error on new_password
+ *   422 weak_password     → field error on new_password
+ */
+export async function resetPassword(body: { token: string; new_password: string }): Promise<void> {
+	const resp = await fetch('/auth/reset-password', {
+		method: 'POST',
+		headers: { 'content-type': 'application/json' },
+		credentials: 'same-origin',
+		body: JSON.stringify(body)
+	});
+	if (resp.ok) return;
+	throw await readBffError(resp, 'Reset failed');
+}
+
+async function readBffError(resp: Response, fallback: string): Promise<Error> {
 	const text = await resp.text();
 	let parsed: { code?: string; message?: string; error?: string } = {};
 	try {
@@ -153,10 +224,10 @@ export async function resetWithOldPassword(body: ResetWithOldPasswordRequest): P
 	} catch {
 		/* non-JSON */
 	}
-	const err = new Error(parsed.message ?? parsed.error ?? 'Reset failed');
+	const err = new Error(parsed.message ?? parsed.error ?? fallback);
 	(err as Error & { status: number; code?: string }).status = resp.status;
 	(err as Error & { status: number; code?: string }).code = parsed.code ?? parsed.error;
-	throw err;
+	return err;
 }
 
 /**

@@ -41,6 +41,7 @@ export {
 	Edit,
 	Eye,
 	EyeOff,
+	Inbox,
 	Info,
 	LayoutDashboard,
 	ListTodo,

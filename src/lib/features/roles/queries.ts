@@ -102,3 +102,16 @@ export function deleteRoleMutation() {
 		}
 	}));
 }
+
+export function setRoleParentMutation() {
+	const qc = useQueryClient();
+	return createMutation(() => ({
+		mutationFn: ({ id, parent_role_id }: { id: string; parent_role_id: string | null }) =>
+			api.setRoleParent(id, { parent_role_id }),
+		onSuccess: (_, vars) => {
+			qc.invalidateQueries({ queryKey: rolesKeys.all });
+			qc.invalidateQueries({ queryKey: rolesKeys.detail(vars.id) });
+			toast('success', vars.parent_role_id ? 'Parent role set' : 'Parent role cleared');
+		}
+	}));
+}

@@ -1,15 +1,14 @@
 /**
- * BFF reset-password endpoint — POST /auth/reset-with-old-password
+ * BFF — POST /auth/confirm-email-change
  *
- * Public route (no auth required). User submits email + old password +
- * new password. The BFF forwards to Go which verifies the old password
- * and rotates the credential. Returns 204 on success.
+ * Public route. User clicks the link emailed by Go (token is in the URL).
+ * Forwards { token } to Go's POST /api/v1/auth/confirm-email-change.
  *
- * No CSRF gate — same as /auth/login. The user has no session cookies
- * yet; double-submit CSRF only protects authenticated mutations under
- * the catch-all proxy.
+ * No CSRF gate — pre-auth-style bootstrap (the token itself is the secret).
+ * The user MAY already be signed in (typical case), but no auth cookie is
+ * required to consume the token.
  *
- * Per ADR: docs/superpowers/specs/2026-05-20-bff-cookie-auth-adr.md
+ * Per backend ADR 0050 + spec.
  */
 
 import type { RequestHandler } from './$types';
@@ -29,7 +28,7 @@ export const POST: RequestHandler = async (event) => {
 
 	let resp: Response;
 	try {
-		resp = await fetch(`${config.GO_API_URL}/api/v1/auth/reset-with-old-password`, {
+		resp = await fetch(`${config.GO_API_URL}/api/v1/auth/confirm-email-change`, {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify(body)
@@ -42,7 +41,6 @@ export const POST: RequestHandler = async (event) => {
 	}
 
 	if (!resp.ok) {
-		// Forward Go's error body verbatim so the client can parse code + message
 		const errorBody = await resp.text();
 		return new Response(errorBody, {
 			status: resp.status,
@@ -50,6 +48,5 @@ export const POST: RequestHandler = async (event) => {
 		});
 	}
 
-	// 204 No Content — Response constructor rejects body on 204, so use null
 	return new Response(null, { status: 204 });
 };

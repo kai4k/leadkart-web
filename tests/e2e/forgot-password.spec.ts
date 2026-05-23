@@ -2,23 +2,23 @@ import { expect, test } from '@playwright/test';
 import { resetMock, registerMock } from './helpers/mock';
 
 /**
- * Forgot password (reset-with-old-password) e2e — /reset-password
+ * Forgot password (email-link reset) e2e.
  *
- *   Positive:
- *     Signin page surfaces "Forgot password?" link → navigates to /reset-password
- *     Form renders all four fields + back-to-signin link
- *     Submit happy path: 204 → success alert + redirect to /signin
+ *   /forgot-password  — user enters email, BFF POSTs to Go's
+ *                       /api/v1/auth/request-password-reset. Go ALWAYS
+ *                       returns 204 (Auth0/Okta canon — defeats account
+ *                       enumeration).
+ *   /reset-password   — user lands here from the email link with ?token=…;
+ *                       enters new password + confirm; BFF POSTs to Go's
+ *                       /api/v1/auth/reset-password.
  *
- *   Negative:
- *     Mismatched confirm: inline cross-field error, no POST fires
- *     Weak new_password (<8 chars): Zod field error, no POST fires
- *     Wrong old password (401): top banner with invalid-credentials message
- *     Breached new password (422 password_breached): inline field error
- *     New == old (422 password_same): inline field error
- *     Rate-limited (429): top banner with throttle notice
- *
- *   Flow:
- *     Public route — no auth required. Anonymous visitor can reach it.
+ * Coverage:
+ *   Discovery: signin link → /forgot-password; both pages public.
+ *   Forgot (positive): 204 → identical success copy regardless of whether
+ *     the email was registered.
+ *   Reset (positive): valid token + matching passwords → 204 → /signin.
+ *   Reset (negative): missing token, mismatched confirm, weak new password,
+ *     400 invalid_token, 422 password_breached, 422 password_same.
  */
 
 test.describe('Forgot password — discovery', () => {
@@ -26,170 +26,167 @@ test.describe('Forgot password — discovery', () => {
 		await resetMock();
 	});
 
-	test('Signin page links to /reset-password', async ({ page }) => {
+	test('Signin page links to /forgot-password', async ({ page }) => {
 		await page.goto('/signin');
 		const link = page.getByRole('link', { name: /forgot password/i });
 		await expect(link).toBeVisible();
 		await link.click();
-		await page.waitForURL(/\/reset-password$/);
-		await expect(page.getByRole('heading', { level: 1, name: 'Reset password' })).toBeVisible();
+		await page.waitForURL(/\/forgot-password$/);
+		await expect(
+			page.getByRole('heading', { level: 1, name: /forgot your password/i })
+		).toBeVisible();
 	});
 
-	test('Reset page is public — accessible without auth', async ({ page }) => {
-		await page.goto('/reset-password');
-		await expect(page).toHaveURL(/\/reset-password$/);
-		// Form fields present
-		await expect(page.getByLabel(/^email/i)).toBeVisible();
-		await expect(page.getByLabel(/^current password/i)).toBeVisible();
-		await expect(page.getByLabel(/^new password/i)).toBeVisible();
+	test('Forgot page is public — accessible without auth', async ({ page }) => {
+		await page.goto('/forgot-password');
+		await expect(page).toHaveURL(/\/forgot-password$/);
+		await expect(page.getByLabel(/email/i)).toBeVisible();
+	});
+
+	test('Reset page is public — accessible with token', async ({ page }) => {
+		await page.goto('/reset-password?token=any');
+		await expect(page).toHaveURL(/\/reset-password/);
+		await expect(page.getByLabel(/new password/i).first()).toBeVisible();
 		await expect(page.getByLabel(/confirm/i)).toBeVisible();
-		// Back-to-signin link present
-		await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible();
 	});
 });
 
-test.describe('Forgot password — positive', () => {
+test.describe('Forgot password — request', () => {
 	test.beforeEach(async () => {
 		await resetMock();
 	});
 
-	test('happy path: 204 → success alert + redirects to /signin', async ({ page }) => {
+	test('happy path: 204 → success alert', async ({ page }) => {
 		await registerMock({
 			method: 'POST',
-			path: '/api/v1/auth/reset-with-old-password',
+			path: '/api/v1/auth/request-password-reset',
 			status: 204
 		});
-
-		await page.goto('/reset-password');
-		await page.getByLabel(/^email/i).fill('user@acme.test');
-		await page.getByLabel(/^current password/i).fill('Old.Password!1');
-		await page.getByLabel(/^new password/i).fill('Sh1ny.NewOne!');
-		await page.getByLabel(/confirm/i).fill('Sh1ny.NewOne!');
-		await page.getByRole('button', { name: /reset password/i }).click();
-
-		// Success alert appears
-		await expect(page.getByText(/password reset/i)).toBeVisible({ timeout: 5000 });
-		// Then redirects to /signin (2s setTimeout)
-		await page.waitForURL(/\/signin$/, { timeout: 5000 });
-	});
-});
-
-test.describe('Forgot password — negative', () => {
-	test.beforeEach(async () => {
-		await resetMock();
+		await page.goto('/forgot-password');
+		await page.getByLabel(/email/i).fill('user@acme.test');
+		await page.getByRole('button', { name: /send reset link/i }).click();
+		await expect(
+			page.getByText(/we've sent a password-reset link|that email is registered/i)
+		).toBeVisible({ timeout: 5000 });
 	});
 
-	test('mismatched confirm: cross-field error, no POST fires', async ({ page }) => {
-		await page.goto('/reset-password');
-		await page.getByLabel(/^email/i).fill('user@acme.test');
-		await page.getByLabel(/^current password/i).fill('Old.Password!1');
-		await page.getByLabel(/^new password/i).fill('Sh1ny.NewOne!');
-		await page.getByLabel(/confirm/i).fill('TypoIn.Confirm!1');
-		await page.getByRole('button', { name: /reset password/i }).click();
-
-		// The confirm field surfaces an error; form stays on the page
-		await expect(page.getByText(/passwords don't match/i)).toBeVisible({ timeout: 3000 });
-		await expect(page).toHaveURL(/\/reset-password$/);
-	});
-
-	test('weak new password (<8 chars): Zod field error, no POST', async ({ page }) => {
-		await page.goto('/reset-password');
-		await page.getByLabel(/^email/i).fill('user@acme.test');
-		await page.getByLabel(/^current password/i).fill('Old.Password!1');
-		await page.getByLabel(/^new password/i).fill('short');
-		await page.getByLabel(/confirm/i).fill('short');
-		await page.getByRole('button', { name: /reset password/i }).click();
-
-		// Zod schema rejects new_password length — field error renders
+	test('invalid email format: client-side field error, no POST fires', async ({ page }) => {
+		await page.goto('/forgot-password');
+		await page.getByLabel(/email/i).fill('not-an-email');
+		await page.getByRole('button', { name: /send reset link/i }).click();
 		await expect(page.locator('input[aria-invalid="true"]').first()).toBeVisible({
 			timeout: 3000
 		});
-		await expect(page).toHaveURL(/\/reset-password$/);
+	});
+});
+
+test.describe('Reset password — confirm', () => {
+	test.beforeEach(async () => {
+		await resetMock();
 	});
 
-	test('401 invalid_credentials: top banner with email/password message', async ({ page }) => {
+	test('happy path: token + strong password → 204 → redirect to /signin', async ({ page }) => {
 		await registerMock({
 			method: 'POST',
-			path: '/api/v1/auth/reset-with-old-password',
-			status: 401,
-			body: {
-				code: 'invalid_credentials',
-				message: 'Email or current password is incorrect'
-			}
+			path: '/api/v1/auth/reset-password',
+			status: 204
 		});
-		await page.goto('/reset-password');
-		await page.getByLabel(/^email/i).fill('user@acme.test');
-		await page.getByLabel(/^current password/i).fill('WrongOld!');
-		await page.getByLabel(/^new password/i).fill('Sh1ny.NewOne!');
-		await page.getByLabel(/confirm/i).fill('Sh1ny.NewOne!');
+		await page.goto('/reset-password?token=valid-token-here');
+		await page
+			.getByLabel(/new password/i)
+			.first()
+			.fill('Sh1ny.NewOne.Strong!');
+		await page.getByLabel(/confirm/i).fill('Sh1ny.NewOne.Strong!');
 		await page.getByRole('button', { name: /reset password/i }).click();
 
-		// Banner alert surfaces — stays on page
+		await expect(page.getByText(/password reset/i)).toBeVisible({ timeout: 5000 });
+		await page.waitForURL(/\/signin$/, { timeout: 5000 });
+	});
+
+	test('missing token: surfaces "request a new one" instead of form', async ({ page }) => {
+		await page.goto('/reset-password');
+		await expect(
+			page.getByText(/expects a reset token|use the link from your email/i)
+		).toBeVisible();
+		await expect(page.getByRole('link', { name: /request a new reset link/i })).toBeVisible();
+	});
+
+	test('mismatched confirm: cross-field error, no POST', async ({ page }) => {
+		await page.goto('/reset-password?token=t');
+		await page
+			.getByLabel(/new password/i)
+			.first()
+			.fill('Sh1ny.NewOne.Strong!');
+		await page.getByLabel(/confirm/i).fill('Different.One.Strong!');
+		await page.getByRole('button', { name: /reset password/i }).click();
+		await expect(page.getByText(/passwords don't match/i)).toBeVisible({ timeout: 3000 });
+	});
+
+	test('weak new password (<12 chars): Zod field error, no POST', async ({ page }) => {
+		await page.goto('/reset-password?token=t');
+		await page
+			.getByLabel(/new password/i)
+			.first()
+			.fill('shortpw');
+		await page.getByLabel(/confirm/i).fill('shortpw');
+		await page.getByRole('button', { name: /reset password/i }).click();
+		await expect(page.locator('input[aria-invalid="true"]').first()).toBeVisible({
+			timeout: 3000
+		});
+	});
+
+	test('400 invalid_token: top banner', async ({ page }) => {
+		await registerMock({
+			method: 'POST',
+			path: '/api/v1/auth/reset-password',
+			status: 400,
+			body: { code: 'invalid_token', message: 'Token is invalid' }
+		});
+		await page.goto('/reset-password?token=expired');
+		await page
+			.getByLabel(/new password/i)
+			.first()
+			.fill('Sh1ny.NewOne.Strong!');
+		await page.getByLabel(/confirm/i).fill('Sh1ny.NewOne.Strong!');
+		await page.getByRole('button', { name: /reset password/i }).click();
+
 		await expect(page.locator('[role="alert"]').first()).toBeVisible({ timeout: 5000 });
-		await expect(page).toHaveURL(/\/reset-password$/);
+		await expect(page).toHaveURL(/\/reset-password/);
 	});
 
 	test('422 password_breached: inline new-password field error', async ({ page }) => {
 		await registerMock({
 			method: 'POST',
-			path: '/api/v1/auth/reset-with-old-password',
+			path: '/api/v1/auth/reset-password',
 			status: 422,
-			body: {
-				code: 'password_breached',
-				message: 'Password appears in HIBP'
-			}
+			body: { code: 'password_breached', message: 'Password appears in HIBP' }
 		});
-		await page.goto('/reset-password');
-		await page.getByLabel(/^email/i).fill('user@acme.test');
-		await page.getByLabel(/^current password/i).fill('Old.Password!1');
-		await page.getByLabel(/^new password/i).fill('PasswordIn.HIBP!');
-		await page.getByLabel(/confirm/i).fill('PasswordIn.HIBP!');
+		await page.goto('/reset-password?token=t');
+		await page
+			.getByLabel(/new password/i)
+			.first()
+			.fill('PasswordInHIBP.Long!');
+		await page.getByLabel(/confirm/i).fill('PasswordInHIBP.Long!');
 		await page.getByRole('button', { name: /reset password/i }).click();
 
-		// Inline field error under New password
 		await expect(page.getByText(/breach lists/i)).toBeVisible({ timeout: 5000 });
-		await expect(page).toHaveURL(/\/reset-password$/);
 	});
 
 	test('422 password_same: inline new-password field error', async ({ page }) => {
 		await registerMock({
 			method: 'POST',
-			path: '/api/v1/auth/reset-with-old-password',
+			path: '/api/v1/auth/reset-password',
 			status: 422,
-			body: {
-				code: 'password_same',
-				message: 'New password must differ from current'
-			}
+			body: { code: 'password_same', message: 'New password must differ' }
 		});
-		await page.goto('/reset-password');
-		await page.getByLabel(/^email/i).fill('user@acme.test');
-		await page.getByLabel(/^current password/i).fill('Old.Password!1');
-		await page.getByLabel(/^new password/i).fill('Old.Password!1');
-		await page.getByLabel(/confirm/i).fill('Old.Password!1');
+		await page.goto('/reset-password?token=t');
+		await page
+			.getByLabel(/new password/i)
+			.first()
+			.fill('Old.Password.Long!');
+		await page.getByLabel(/confirm/i).fill('Old.Password.Long!');
 		await page.getByRole('button', { name: /reset password/i }).click();
 
 		await expect(page.getByText(/must differ/i)).toBeVisible({ timeout: 5000 });
-		await expect(page).toHaveURL(/\/reset-password$/);
-	});
-
-	test('429 rate_limited: top banner with throttle notice', async ({ page }) => {
-		await registerMock({
-			method: 'POST',
-			path: '/api/v1/auth/reset-with-old-password',
-			status: 429,
-			body: {
-				code: 'rate_limited',
-				message: 'Too many attempts'
-			}
-		});
-		await page.goto('/reset-password');
-		await page.getByLabel(/^email/i).fill('user@acme.test');
-		await page.getByLabel(/^current password/i).fill('Old.Password!1');
-		await page.getByLabel(/^new password/i).fill('Sh1ny.NewOne!');
-		await page.getByLabel(/confirm/i).fill('Sh1ny.NewOne!');
-		await page.getByRole('button', { name: /reset password/i }).click();
-
-		await expect(page.getByText(/too many attempts/i)).toBeVisible({ timeout: 5000 });
-		await expect(page).toHaveURL(/\/reset-password$/);
 	});
 });

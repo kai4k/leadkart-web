@@ -47,22 +47,6 @@ export const loginRequestSchema = z.object({
 });
 
 /**
- * Reset password (public, no auth) — user proves identity by knowing
- * their email + old password, then sets a new one. Surfaced at
- * /reset-password so users who skipped change-password buried in
- * settings can self-serve from the signin page.
- *
- * The server still enforces password policy (length, breach checks,
- * "must differ from current") — this schema just catches blank inputs
- * before the round-trip.
- */
-export const resetWithOldPasswordSchema = z.object({
-	email: z.string().min(1, 'Email is required').email('Invalid email format'),
-	old_password: z.string().min(1, 'Old password is required'),
-	new_password: z.string().min(8, 'Password must be at least 8 characters')
-});
-
-/**
  * BFF login success acknowledgement — browser-visible login response.
  * Tokens are set as httpOnly cookies by the BFF; the browser only sees ok:true.
  */
@@ -81,8 +65,6 @@ export const changePasswordSchema = z.object({
 export type LoginRequestInput = z.input<typeof loginRequestSchema>;
 export type LoginRequest = z.output<typeof loginRequestSchema>;
 export type ChangePasswordInput = z.input<typeof changePasswordSchema>;
-export type ResetWithOldPasswordInput = z.input<typeof resetWithOldPasswordSchema>;
-export type ResetWithOldPasswordRequest = z.output<typeof resetWithOldPasswordSchema>;
 
 /**
  * UserDto — wire shape of GET /v1/users/:membership_id.

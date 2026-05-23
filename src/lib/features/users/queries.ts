@@ -72,17 +72,6 @@ export function reactivateUserMutation() {
 	}));
 }
 
-export function unlockUserMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: (id: string) => api.unlockUser(id),
-		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: usersKeys.all });
-			toast('success', 'Account unlocked');
-		}
-	}));
-}
-
 export function assignRoleMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({

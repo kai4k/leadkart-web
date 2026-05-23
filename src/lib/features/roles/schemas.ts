@@ -11,7 +11,10 @@ export const roleDtoSchema = z.object({
 	is_super_admin: z.boolean(),
 	hierarchy_level: z.number().int(),
 	permissions: z.array(z.string()),
-	created_at: z.string()
+	created_at: z.string(),
+	/** Optional single-parent hierarchy per ADR 0054 / Wave 9.1d.
+	 *  Server-validated; client accepts any string for boundary consistency. */
+	parent_role_id: z.string().optional()
 });
 
 export const listRolesResponseSchema = z.object({ roles: z.array(roleDtoSchema) });

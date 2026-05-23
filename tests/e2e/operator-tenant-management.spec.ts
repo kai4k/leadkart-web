@@ -56,7 +56,10 @@ async function setupOperator(page: Page, opts?: { canManage?: boolean }) {
 			body: { tenants: [ACME, BETA] }
 		},
 		{ method: 'GET', path: `/api/v1/tenants/${ACME.id}`, status: 200, body: ACME },
-		{ method: 'GET', path: `/api/v1/tenants/by-slug/${ACME.slug}`, status: 200, body: ACME }
+		// Slug lookup is now `GET /v1/tenants?slug=…` returning ListTenantsResponse.
+		// The mock-server matches pathname only, so this fixture covers both
+		// the slug-filter call (BFF scope endpoint) and any bare GET /v1/tenants.
+		{ method: 'GET', path: '/api/v1/tenants', status: 200, body: { tenants: [ACME] } }
 	]);
 }
 
@@ -322,11 +325,12 @@ test.describe('Lifecycle: platform-tenant guard', () => {
 				body: { tenants: [PLATFORM] }
 			},
 			{ method: 'GET', path: `/api/v1/tenants/${PLATFORM.id}`, status: 200, body: PLATFORM },
+			// Slug lookup → `GET /v1/tenants?slug=…` returning ListTenantsResponse.
 			{
 				method: 'GET',
-				path: `/api/v1/tenants/by-slug/${PLATFORM.slug}`,
+				path: '/api/v1/tenants',
 				status: 200,
-				body: PLATFORM
+				body: { tenants: [PLATFORM] }
 			}
 		]);
 		await page.goto('/operator/tenants');
