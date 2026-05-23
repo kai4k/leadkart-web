@@ -4,7 +4,7 @@
 	import { Copy, Icon } from '$icons';
 	import { registerTenantMutation } from '$features/operator/tenants/queries';
 	import { registerTenantRequestSchema } from '$features/operator/tenants/schemas';
-	import { useForm } from '$lib/utils/use-form.svelte';
+	import { useForm } from '$lib/hooks/use-form.svelte';
 	import type { RegisterTenantResponse } from '$features/operator/tenants/types';
 
 	type Props = { open: boolean; onOpenChange: (open: boolean) => void };

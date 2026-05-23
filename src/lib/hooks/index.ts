@@ -38,3 +38,13 @@ export {
 } from './use-optimistic-mutation.svelte';
 
 export { UseBulkSelection, type SelectableItem } from './use-bulk-selection.svelte';
+
+export { useForm, FormState, type FormOpts, type FieldErrors } from './use-form.svelte';
+
+export {
+	theme,
+	PRIMARY_COLORS,
+	CONTENT_WIDTHS,
+	type PrimaryColor,
+	type ContentWidth
+} from './use-theme.svelte';

@@ -7,7 +7,7 @@
 		updateMyProfileMutation
 	} from '$features/auth/queries';
 	import { updateProfileRequestSchema } from '$features/auth/schemas';
-	import { useForm } from '$lib/utils/use-form.svelte';
+	import { useForm } from '$lib/hooks/use-form.svelte';
 	import { displayName } from '$features/auth/view-models';
 
 	/**

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Dialog, Button, Alert } from '$ui';
 	import { Select, type SelectOption } from '$form';
-	import { useForm } from '$lib/utils/use-form.svelte';
+	import { useForm } from '$lib/hooks/use-form.svelte';
 	import { adjustStockMutation } from '$features/inventory/queries';
 	import {
 		adjustStockSchema,

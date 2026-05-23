@@ -4,7 +4,7 @@
 	import Sidebar from './Sidebar.svelte';
 	import Footer from './Footer.svelte';
 	import SettingsModal from './SettingsModal.svelte';
-	import { theme } from '$lib/stores/theme.svelte';
+	import { theme } from '$lib/hooks/use-theme.svelte';
 
 	/**
 	 * AppShell — Linear/Vercel-style canonical layout:

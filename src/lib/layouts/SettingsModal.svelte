@@ -7,7 +7,7 @@
 		CONTENT_WIDTHS,
 		type PrimaryColor,
 		type ContentWidth
-	} from '$lib/stores/theme.svelte';
+	} from '$lib/hooks/use-theme.svelte';
 
 	/**
 	 * SettingsModal — right-side drawer. Two legitimate axes that real

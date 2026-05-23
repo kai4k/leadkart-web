@@ -16,7 +16,7 @@
 	 * variant a11y silently rots whenever a new variant ships under-tested.
 	 */
 	import { Button, Card, Alert } from '$lib/components/ui';
-	import { PRIMARY_COLORS, theme } from '$lib/stores/theme.svelte';
+	import { PRIMARY_COLORS, theme } from '$lib/hooks/use-theme.svelte';
 	import { Plus } from 'lucide-svelte';
 
 	const buttonVariants = [

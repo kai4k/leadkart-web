@@ -1,6 +1,6 @@
 <script lang="ts">
 	import '../app.css';
-	import { theme } from '$lib/stores/theme.svelte';
+	import { theme } from '$lib/hooks/use-theme.svelte';
 
 	let { children } = $props();
 

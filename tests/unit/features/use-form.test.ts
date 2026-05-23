@@ -5,7 +5,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { FormState, useForm } from '$lib/utils/use-form.svelte';
+import { FormState, useForm } from '$lib/hooks/use-form.svelte';
 import { ValidationError } from '$lib/api/errors';
 
 const testSchema = z.object({

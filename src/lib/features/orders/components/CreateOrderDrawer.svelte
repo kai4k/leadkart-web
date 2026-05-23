@@ -5,7 +5,7 @@
 	import { createOrderMutation } from '$features/orders/queries';
 	import { createOrderRequestSchema } from '$features/orders/schemas';
 	import { computeOrderTotals, formatMoney } from '$features/orders/view-models';
-	import { useForm } from '$lib/utils/use-form.svelte';
+	import { useForm } from '$lib/hooks/use-form.svelte';
 
 	type Props = { open: boolean; onOpenChange: (open: boolean) => void };
 	let { open = $bindable(false), onOpenChange }: Props = $props();

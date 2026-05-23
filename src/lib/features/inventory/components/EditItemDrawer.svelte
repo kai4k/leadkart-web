@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Drawer, Button, Alert } from '$ui';
 	import { TextField, Select, type SelectOption } from '$form';
-	import { useForm } from '$lib/utils/use-form.svelte';
+	import { useForm } from '$lib/hooks/use-form.svelte';
 	import { updateInventoryItemMutation } from '$features/inventory/queries';
 	import {
 		updateInventoryItemSchema,

@@ -9,7 +9,7 @@
 		type OrderDto
 	} from '$features/orders/schemas';
 	import { computeOrderTotals, formatMoney } from '$features/orders/view-models';
-	import { useForm } from '$lib/utils/use-form.svelte';
+	import { useForm } from '$lib/hooks/use-form.svelte';
 
 	type Props = {
 		open: boolean;
