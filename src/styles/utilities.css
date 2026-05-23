@@ -347,6 +347,28 @@
 		}
 	}
 
+	/* ═══ Timeline guide line — vertical rule connecting milestone icons.
+	 * Used by <Timeline> + <TimelineItem>. The line sits behind each
+	 * item's icon-circle (icon has ring-2 ring-bg-elevated to "punch
+	 * through" the line), giving the GitHub PR / Linear activity-stream
+	 * vertical guide effect without per-item border tricks. */
+	.timeline {
+		position: relative;
+	}
+	.timeline > li {
+		position: relative;
+	}
+	.timeline > li:not(:last-child)::before {
+		content: '';
+		position: absolute;
+		left: 1rem; /* aligns with the 32px icon-circle centre (0.5rem from edge + (32px/2)) */
+		top: 2rem;
+		bottom: 0;
+		width: 2px;
+		background: var(--color-border);
+		z-index: 0;
+	}
+
 	/* ═══ Reduced-transparency fallback — WCAG 2.2 §1.4.3 + Apple HIG.
 	 * Some users (vestibular sensitivity, low-end GPUs) opt out of
 	 * translucent surfaces via the OS setting. Glass surfaces fall
