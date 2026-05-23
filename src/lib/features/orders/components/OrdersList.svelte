@@ -149,6 +149,12 @@
 
 	// ── Table columns ────────────────────────────────────────────────
 	const columns: DataTableColumn<OrderDto>[] = [
+		{
+			id: 'select',
+			header: '',
+			class: 'w-10',
+			selectLabel: (o) => `Select ${o.order_number}`
+		},
 		{ id: 'order_number', header: 'Order #', accessor: 'order_number', sortBy: 'order_number' },
 		{
 			id: 'placed_at',
@@ -238,6 +244,7 @@
 		state={orders.length === 0 && tableState === 'ready' ? 'empty' : tableState}
 		error={listQuery.error?.message ?? null}
 		onRowClick={openDetail}
+		{selection}
 		{sort}
 		{onSortChange}
 		{emptyState}

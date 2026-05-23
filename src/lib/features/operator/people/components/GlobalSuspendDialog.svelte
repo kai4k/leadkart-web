@@ -33,7 +33,7 @@
 	title="Globally suspend {person?.email ?? 'person'}"
 	description="The person will be unable to sign in to any tenant until the suspension is lifted. Active sessions are revoked server-side."
 	confirmLabel="Suspend globally"
-	variant="danger"
+	variant="warning"
 	loading={isPending}
 	{onOpenChange}
 	{onConfirm}

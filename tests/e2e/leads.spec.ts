@@ -262,7 +262,14 @@ test.describe('CRM Leads — bulk select + bulk actions', () => {
 
 		await page.getByLabel('Select Lead A').check();
 		await page.getByLabel('Select Lead B').check();
-		await page.getByRole('button', { name: /^change stage$/i }).click();
+		// "Change stage" is now a Dropdown.Trigger — open it, pick "Contacted".
+		// The trigger button carries `aria-haspopup="menu"` so we filter on
+		// that to disambiguate from any literal "Change stage" labels.
+		await page
+			.locator('button[aria-haspopup="menu"]')
+			.filter({ hasText: /change stage/i })
+			.click();
+		await page.getByRole('menuitem', { name: /^contacted$/i }).click();
 		await expect(page.getByText(/2 leads updated/i)).toBeVisible({ timeout: 5000 });
 	});
 });
@@ -385,7 +392,8 @@ test.describe('CRM Leads — detail page tabs', () => {
 		await page.getByRole('button', { name: /reassign/i }).click();
 		await expect(page.getByRole('heading', { name: 'Reassign lead' })).toBeVisible();
 
-		// Submit with empty membership id — Zod blocks the POST.
+		// Submit with empty membership id — Zod blocks the POST. The Combobox
+		// keeps `to_membership_id` empty until an option is selected.
 		await page.locator('button[type="submit"][form="reassign-lead-form"]').click();
 		await expect(page.getByText(/pick the new owner/i)).toBeVisible({ timeout: 3000 });
 	});
@@ -415,6 +423,22 @@ test.describe('CRM Leads — detail page tabs', () => {
 				body: { items: [], has_more: false }
 			},
 			{
+				method: 'GET',
+				path: '/api/v1/identity/memberships',
+				status: 200,
+				body: {
+					memberships: [
+						{
+							id: NEW_OWNER,
+							person_id: '00000000-0000-4000-8000-0000000000dd',
+							first_name: 'Asha',
+							last_name: 'Verma',
+							email: 'asha@example.com'
+						}
+					]
+				}
+			},
+			{
 				method: 'POST',
 				path: `/api/v1/crm/leads/${lead.id}/reassign`,
 				status: 200,
@@ -423,8 +447,21 @@ test.describe('CRM Leads — detail page tabs', () => {
 		]);
 
 		await page.goto(`/leads/${lead.id}`);
-		await page.getByRole('button', { name: /reassign/i }).click();
-		await page.locator('input[name="to_membership_id"]').fill(NEW_OWNER);
+		await page.getByRole('button', { name: /^reassign/i }).click();
+		await expect(page.getByRole('heading', { name: 'Reassign lead' })).toBeVisible();
+
+		// Combobox: focus the typeahead input and type two+ characters to
+		// trigger the membership search query (gated by q.length >= 2).
+		const newOwnerInput = page.getByRole('combobox', { name: 'New owner' });
+		await newOwnerInput.focus();
+		await newOwnerInput.pressSequentially('Asha', { delay: 30 });
+		await expect(page.getByRole('option').filter({ hasText: /Asha Verma/ })).toBeVisible({
+			timeout: 5000
+		});
+		await page
+			.getByRole('option')
+			.filter({ hasText: /Asha Verma/ })
+			.click();
 		await page.locator('button[type="submit"][form="reassign-lead-form"]').click();
 		await expect(page.getByText(/lead reassigned/i)).toBeVisible({ timeout: 5000 });
 	});

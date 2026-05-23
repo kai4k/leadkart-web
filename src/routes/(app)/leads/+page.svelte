@@ -34,6 +34,7 @@
 	import LeadsKanban from '$features/leads/components/LeadsKanban.svelte';
 	import LeadsTable from '$features/leads/components/LeadsTable.svelte';
 	import EditLeadDrawer from '$features/leads/components/EditLeadDrawer.svelte';
+	import { STAGE_META, TEMPERATURE_META } from '$features/leads/view-models';
 	import type {
 		CrmLeadDto,
 		LeadStage,
@@ -145,13 +146,32 @@
 	// ── Bulk actions ─────────────────────────────────────────────────
 	const bulkMut = bulkLeadActionMutation();
 
+	function applyStage(stage: LeadStage) {
+		bulkMut.mutate({
+			ids: [...selection.selected],
+			action: 'change_stage',
+			stage
+		});
+		selection.clear();
+	}
+
+	function applyTemperature(temperature: LeadTemperature) {
+		bulkMut.mutate({
+			ids: [...selection.selected],
+			action: 'change_temperature',
+			temperature
+		});
+		selection.clear();
+	}
+
 	const bulkActions: BulkAction[] = [
 		{
 			id: 'reassign',
 			label: 'Reassign',
+			// Bulk-reassign membership picker ships in a follow-up slice;
+			// v1 fires the canonical bulk endpoint without a target so the
+			// server records intent and surfaces a contract error.
 			onClick: () => {
-				// Bulk reassign would open a chooser; mark as no-op for v1.
-				// Surface the future path via a toast: not wired this slice.
 				bulkMut.mutate({
 					ids: [...selection.selected],
 					action: 'reassign'
@@ -162,26 +182,20 @@
 		{
 			id: 'change-stage',
 			label: 'Change stage',
-			onClick: () => {
-				bulkMut.mutate({
-					ids: [...selection.selected],
-					action: 'change_stage',
-					stage: 'contacted'
-				});
-				selection.clear();
-			}
+			subActions: STAGE_META.map((m) => ({
+				id: `stage-${m.value}`,
+				label: m.label,
+				onClick: () => applyStage(m.value)
+			}))
 		},
 		{
 			id: 'change-temperature',
 			label: 'Change temperature',
-			onClick: () => {
-				bulkMut.mutate({
-					ids: [...selection.selected],
-					action: 'change_temperature',
-					temperature: 'warm'
-				});
-				selection.clear();
-			}
+			subActions: TEMPERATURE_META.map((m) => ({
+				id: `temp-${m.value}`,
+				label: m.label,
+				onClick: () => applyTemperature(m.value)
+			}))
 		}
 	];
 

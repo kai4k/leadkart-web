@@ -21,8 +21,29 @@ export const usersKeys = {
 	all: ['users'] as const,
 	list: () => [...usersKeys.all, 'list'] as const,
 	detail: (id: string) => [...usersKeys.all, 'detail', id] as const,
-	roles: () => ['roles', 'catalog'] as const
+	roles: () => ['roles', 'catalog'] as const,
+	membershipSearch: (q: string) => [...usersKeys.all, 'membership-search', q] as const
 };
+
+/**
+ * Typeahead search for memberships in the current tenant. Used by the
+ * lead reassignment Combobox. Gated by `q.length >= 2` so the picker
+ * doesn't blast the API on every keystroke. TanStack's stale-time
+ * cache + `placeholderData: keepPreviousData` deliver the implicit
+ * debounce — re-issuing the same key while typing returns instantly
+ * from cache and only the trailing distinct query lands a request.
+ */
+export function membershipSearchQuery(getQuery: () => string) {
+	return createQuery(() => {
+		const q = getQuery().trim();
+		return {
+			queryKey: usersKeys.membershipSearch(q),
+			queryFn: () => api.searchMemberships(q),
+			enabled: q.length >= 2,
+			staleTime: 30_000
+		};
+	});
+}
 
 export function usersListQuery() {
 	return createQuery(() => ({

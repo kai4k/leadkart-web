@@ -657,6 +657,61 @@ test.describe('Inventory — create product', () => {
 	});
 });
 
+test.describe('Inventory — keyboard nav (j/k/Enter/x)', () => {
+	test.beforeEach(async () => {
+		await resetMock();
+		await registerReferenceData();
+	});
+
+	test('j moves focus to next row; Enter opens detail; x toggles selection', async ({ page }) => {
+		await signInAsTier(page, { tier: 'tenant-admin', permissions: INVENTORY_PERMISSIONS });
+		await registerMocks([
+			{
+				method: 'GET',
+				path: '/api/v1/inventory/products',
+				status: 200,
+				body: { items: [productIn, productLow], has_more: false }
+			},
+			{
+				method: 'GET',
+				path: `/api/v1/inventory/products/${productIn.id}`,
+				status: 200,
+				body: productIn
+			},
+			{
+				method: 'GET',
+				path: `/api/v1/inventory/products/${productIn.id}/batches`,
+				status: 200,
+				body: { items: [], has_more: false }
+			},
+			{
+				method: 'GET',
+				path: `/api/v1/inventory/products/${productIn.id}/movements`,
+				status: 200,
+				body: { items: [], has_more: false }
+			}
+		]);
+		await page.goto('/inventory');
+		await expect(page.getByText('Crocin Advance').first()).toBeVisible();
+
+		// Drop focus from any input the page-load may have parked on, so the
+		// keyboard-nav guard against typing targets is satisfied.
+		await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+
+		// `j` from initial state advances the focused index by one, landing
+		// on the SECOND row (per UseKeyboardListNav semantics — `k` walks
+		// back). Pressing `k` once after that focuses the first row.
+		await page.keyboard.press('j');
+		await page.keyboard.press('k');
+		await page.keyboard.press('x');
+		await expect(page.getByTestId(`row-checkbox-${productIn.id}`)).toBeChecked();
+
+		// Enter on the focused row navigates to /inventory/{id}.
+		await page.keyboard.press('Enter');
+		await page.waitForURL(new RegExp(`/inventory/${productIn.id}$`));
+	});
+});
+
 test.describe('Inventory — bulk actions', () => {
 	test.beforeEach(async () => {
 		await resetMock();

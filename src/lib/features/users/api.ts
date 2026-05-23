@@ -4,7 +4,13 @@
  * tenant_id — no tenant_id parameter on any call.
  */
 import { api, parseResponse } from '$api/client';
-import { listUsersResponseSchema, createUserResponseSchema, userDtoSchema } from './schemas';
+import {
+	listUsersResponseSchema,
+	createUserResponseSchema,
+	userDtoSchema,
+	searchMembershipsResponseSchema,
+	type SearchMembershipsResponse
+} from './schemas';
 import type {
 	ListUsersResponse,
 	CreateUserRequest,
@@ -68,6 +74,20 @@ export async function assignManager(
 
 export async function removeManager(membershipId: string): Promise<void> {
 	await api.delete<void>(`/v1/users/${membershipId}/manager`);
+}
+
+/**
+ * Search memberships in the current tenant by free-text query. Backs
+ * the lead-reassignment Combobox typeahead. The Go endpoint is planned
+ * (see CRM contracts §reassignment); the BFF proxy already forwards
+ * `/api/v1/identity/memberships?q=…` untouched. Returns up to ~20
+ * matches keyed on first/last name + email substring.
+ */
+export async function searchMemberships(q: string): Promise<SearchMembershipsResponse> {
+	const qs = new URLSearchParams();
+	qs.set('q', q);
+	const raw = await api.get<unknown>(`/v1/identity/memberships?${qs.toString()}`);
+	return parseResponse(searchMembershipsResponseSchema, raw);
 }
 
 export { listRoles } from '$features/roles/api';

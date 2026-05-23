@@ -30,7 +30,7 @@
 		title="Quarantine batch?"
 		description={`Batch ${batch.batch_number} will be held back from sale (${batch.quantity_available} units). You can lift the quarantine later.`}
 		confirmLabel="Quarantine"
-		variant="default"
+		variant="warning"
 		loading={mutation.isPending}
 		onConfirm={doQuarantine}
 		{onOpenChange}

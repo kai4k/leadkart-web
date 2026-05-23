@@ -36,7 +36,7 @@
 	title="Suspend {tenant?.display_name ?? 'tenant'}"
 	description="All tenant users will be unable to sign in until the tenant is reactivated. Active sessions are revoked server-side."
 	confirmLabel="Suspend tenant"
-	variant="danger"
+	variant="warning"
 	loading={isPending}
 	{onOpenChange}
 	{onConfirm}

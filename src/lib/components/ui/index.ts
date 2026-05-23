@@ -18,6 +18,7 @@ export { default as Badge } from './Badge.svelte';
 export { default as Button } from './Button.svelte';
 export * as Card from './card';
 export { default as ConfirmDialog } from './ConfirmDialog.svelte';
+export type { ConfirmDialogVariant } from './ConfirmDialog.svelte';
 export * as Dialog from './dialog';
 export * as Drawer from './drawer';
 export * as Dropdown from './dropdown';

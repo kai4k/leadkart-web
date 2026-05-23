@@ -1,9 +1,15 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Badge, Button, EmptyState, Skeleton } from '$ui';
+	import { Badge, Button, DataTable, EmptyState, type DataTableColumn } from '$ui';
 	import { ResourceListPage, type ResourceListAction, type BulkAction } from '$lib/components/data';
 	import { Icon, Plus, Package, UploadCloud, Pause, Check, Trash2 } from '$icons';
-	import { UseBulkSelection, UseSavedViews, UseUrlFilters, type SavedView } from '$lib/hooks';
+	import {
+		UseBulkSelection,
+		UseKeyboardListNav,
+		UseSavedViews,
+		UseUrlFilters,
+		type SavedView
+	} from '$lib/hooks';
 	import {
 		productsInfiniteQuery,
 		bulkProductActionMutation,
@@ -29,9 +35,12 @@
 	 *
 	 * Composes ResourceListPage: title row + saved-view tabs + filter
 	 * bar + bulk-action bar + body. URL is the single source of truth
-	 * for filters (via UseUrlFilters). Body is a custom table since
-	 * pharma rows have a wide column set (brand, generic, category,
-	 * schedule pill, stock pill, expiry pill, price, status).
+	 * for filters (via UseUrlFilters). Body uses `<DataTable.Root>`
+	 * with a `'select'` column wired to the shared `UseBulkSelection`.
+	 *
+	 * Linear-style keyboard nav (j/k row focus, Enter detail, x toggle
+	 * selection) is provided via `UseKeyboardListNav` and the focused
+	 * row gets a primary border-l accent.
 	 */
 
 	const filters = new UseUrlFilters<ProductFilters>({
@@ -100,7 +109,6 @@
 
 	// ── Bulk selection ────────────────────────────────────────────────
 	const selection = new UseBulkSelection<ProductDto>();
-	const allVisibleSelected = $derived(selection.areAllVisibleSelected(products));
 
 	const bulkMut = bulkProductActionMutation();
 
@@ -166,11 +174,144 @@
 		goto(`/inventory/${p.id}`);
 	}
 
-	function toggleSelectAll() {
-		if (allVisibleSelected) selection.deselectAllVisible(products);
-		else selection.selectAllVisible(products);
-	}
+	// ── Keyboard nav (Linear / Superhuman convention) ─────────────────
+	const nav = new UseKeyboardListNav<ProductDto>({
+		isAnyOverlayOpen: () => createOpen || bulkUploadOpen,
+		onSelect: (p) => openDetail(p),
+		onToggleSelect: (p) => selection.toggle(p.id)
+	});
+
+	$effect(() => {
+		nav.setItems(products);
+	});
+
+	// Direct window keydown wiring. We attach to `window` from a $effect
+	// rather than `<svelte:window>` because the parent ResourceListPage
+	// shell's own portals (Drawer/Dialog) can intercept the synthetic
+	// handler ordering otherwise.
+	$effect(() => {
+		const handler = nav.bindWindow();
+		window.addEventListener('keydown', handler);
+		return () => window.removeEventListener('keydown', handler);
+	});
+
+	// ── DataTable column config ───────────────────────────────────────
+	const columns: DataTableColumn<ProductDto>[] = [
+		{
+			id: 'select',
+			header: '',
+			class: 'w-10',
+			selectLabel: (p) => `Select ${p.brand_name}`
+		},
+		{ id: 'brand', header: 'Brand', accessor: 'brand_name', cell: brandCell },
+		{
+			id: 'category',
+			header: 'Category',
+			accessor: 'product_category',
+			hideBelow: 'md'
+		},
+		{
+			id: 'schedule',
+			header: 'Schedule',
+			accessor: (p) => p.drug_schedule,
+			cell: scheduleCell,
+			hideBelow: 'md'
+		},
+		{
+			id: 'stock',
+			header: 'Stock',
+			accessor: (p) => p.total_quantity_available,
+			cell: stockCell
+		},
+		{
+			id: 'expiry',
+			header: 'Expiry',
+			accessor: (p) => p.earliest_expiry_at ?? '—',
+			cell: expiryCell,
+			hideBelow: 'lg'
+		},
+		{
+			id: 'mrp',
+			header: 'MRP',
+			accessor: (p) => p.mrp,
+			cell: mrpCell,
+			class: 'tabular-nums',
+			hideBelow: 'lg'
+		},
+		{
+			id: 'status',
+			header: 'Status',
+			accessor: (p) => activeBadge(p).label,
+			cell: statusCell,
+			hideBelow: 'lg'
+		}
+	];
+
+	const tableState = $derived(
+		query.isError ? 'error' : query.isPending ? 'loading' : isEmpty ? 'empty' : 'ready'
+	);
 </script>
+
+{#snippet brandCell(product: ProductDto)}
+	<div class="stack stack-tight">
+		<span class="body-base text-fg truncate font-medium">{product.brand_name}</span>
+		{#if product.generic_name}
+			<span class="caption text-fg-muted truncate">{product.generic_name}</span>
+		{/if}
+	</div>
+{/snippet}
+
+{#snippet scheduleCell(product: ProductDto)}
+	{@const sched = drugScheduleBadge(product.drug_schedule)}
+	<Badge variant={sched.variant} style="soft" size="sm">{sched.label}</Badge>
+{/snippet}
+
+{#snippet stockCell(product: ProductDto)}
+	{@const stock = stockLevelBadge(product)}
+	<div class="cluster cluster-tight">
+		<Badge variant={stock.variant} style="soft" size="sm">{stock.label}</Badge>
+		<span class="caption text-fg-muted tabular-nums">{product.total_quantity_available}</span>
+	</div>
+{/snippet}
+
+{#snippet expiryCell(product: ProductDto)}
+	{@const expiry = expiryStatus(product.earliest_expiry_at)}
+	{#if expiry}
+		<Badge variant={expiry.variant} style="soft" size="sm">{expiry.label}</Badge>
+	{:else}
+		<span class="caption text-fg-subtle">—</span>
+	{/if}
+{/snippet}
+
+{#snippet mrpCell(product: ProductDto)}
+	<span class="body-base text-fg">{formatPrice(product.mrp)}</span>
+{/snippet}
+
+{#snippet statusCell(product: ProductDto)}
+	{@const active = activeBadge(product)}
+	<Badge variant={active.variant} style="soft" size="sm">{active.label}</Badge>
+{/snippet}
+
+{#snippet emptyStateSlot()}
+	<EmptyState
+		icon={Package}
+		title={filters.hasActive ? 'No matching products' : 'No products yet'}
+		description={filters.hasActive
+			? 'Try a different filter or clear all.'
+			: 'Add your first pharma product, or bulk upload a CSV.'}
+	>
+		{#snippet action()}
+			<div class="cluster cluster-tight">
+				<Button onclick={() => (createOpen = true)} data-testid="empty-create-product">
+					<Icon icon={Plus} size="sm" /> Create product
+				</Button>
+				<Button variant="tonal" onclick={() => (bulkUploadOpen = true)}>
+					<Icon icon={UploadCloud} size="sm" /> Bulk upload
+				</Button>
+			</div>
+		{/snippet}
+	</EmptyState>
+{/snippet}
 
 <ResourceListPage
 	title="Inventory"
@@ -188,163 +329,18 @@
 		>
 			Couldn't load products. {query.error?.message ?? ''}
 		</div>
-	{:else if isEmpty}
-		<EmptyState
-			icon={Package}
-			title={filters.hasActive ? 'No matching products' : 'No products yet'}
-			description={filters.hasActive
-				? 'Try a different filter or clear all.'
-				: 'Add your first pharma product, or bulk upload a CSV.'}
-		>
-			{#snippet action()}
-				<div class="cluster cluster-tight">
-					<Button onclick={() => (createOpen = true)} data-testid="empty-create-product">
-						<Icon icon={Plus} size="sm" /> Create product
-					</Button>
-					<Button variant="tonal" onclick={() => (bulkUploadOpen = true)}>
-						<Icon icon={UploadCloud} size="sm" /> Bulk upload
-					</Button>
-				</div>
-			{/snippet}
-		</EmptyState>
 	{:else}
-		<div class="overflow-x-auto">
-			<table class="w-full text-left" data-testid="products-table">
-				<thead>
-					<tr class="border-border border-b">
-						<th class="w-10 px-3 py-3">
-							<input
-								type="checkbox"
-								aria-label="Select all"
-								checked={allVisibleSelected}
-								onchange={toggleSelectAll}
-								data-testid="select-all"
-							/>
-						</th>
-						<th class="text-fg-muted px-3 py-3 text-xs font-medium tracking-wide uppercase">
-							Brand
-						</th>
-						<th
-							class="text-fg-muted hidden px-3 py-3 text-xs font-medium tracking-wide uppercase md:table-cell"
-						>
-							Category
-						</th>
-						<th
-							class="text-fg-muted hidden px-3 py-3 text-xs font-medium tracking-wide uppercase md:table-cell"
-						>
-							Schedule
-						</th>
-						<th class="text-fg-muted px-3 py-3 text-xs font-medium tracking-wide uppercase">
-							Stock
-						</th>
-						<th
-							class="text-fg-muted hidden px-3 py-3 text-xs font-medium tracking-wide uppercase lg:table-cell"
-						>
-							Expiry
-						</th>
-						<th
-							class="text-fg-muted hidden px-3 py-3 text-xs font-medium tracking-wide uppercase lg:table-cell"
-						>
-							MRP
-						</th>
-						<th
-							class="text-fg-muted hidden px-3 py-3 text-xs font-medium tracking-wide uppercase lg:table-cell"
-						>
-							Status
-						</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#if query.isPending}
-						{#each [0, 1, 2, 3, 4] as i (i)}
-							<tr class="border-border border-b">
-								<td class="px-3 py-3"><Skeleton class="h-4 w-4" /></td>
-								<td class="px-3 py-3"><Skeleton class="h-4 w-40" /></td>
-								<td class="hidden px-3 py-3 md:table-cell"><Skeleton class="h-4 w-20" /></td>
-								<td class="hidden px-3 py-3 md:table-cell"
-									><Skeleton class="h-5 w-16 rounded-full" /></td
-								>
-								<td class="px-3 py-3"><Skeleton class="h-5 w-16 rounded-full" /></td>
-								<td class="hidden px-3 py-3 lg:table-cell"><Skeleton class="h-4 w-16" /></td>
-								<td class="hidden px-3 py-3 lg:table-cell"><Skeleton class="h-4 w-12" /></td>
-								<td class="hidden px-3 py-3 lg:table-cell"
-									><Skeleton class="h-5 w-16 rounded-full" /></td
-								>
-							</tr>
-						{/each}
-					{:else}
-						{#each products as product (product.id)}
-							{@const stock = stockLevelBadge(product)}
-							{@const sched = drugScheduleBadge(product.drug_schedule)}
-							{@const expiry = expiryStatus(product.earliest_expiry_at)}
-							{@const active = activeBadge(product)}
-							{@const isSel = selection.isSelected(product.id)}
-							<tr
-								class={[
-									'border-border hover:bg-bg-muted cursor-pointer border-b transition-colors',
-									'focus-visible:ring-focus-ring outline-none focus-visible:ring-2',
-									isSel && 'bg-primary-soft/30'
-								]}
-								tabindex="0"
-								data-testid="product-row"
-								data-product-id={product.id}
-								onclick={() => openDetail(product)}
-								onkeydown={(e) => {
-									if (e.key === 'Enter' || e.key === ' ') {
-										e.preventDefault();
-										openDetail(product);
-									}
-								}}
-							>
-								<td class="px-3 py-3" onclick={(e) => e.stopPropagation()} role="cell">
-									<input
-										type="checkbox"
-										aria-label={`Select ${product.brand_name}`}
-										checked={isSel}
-										onchange={() => selection.toggle(product.id)}
-										data-testid={`row-checkbox-${product.id}`}
-									/>
-								</td>
-								<td class="px-3 py-3">
-									<div class="stack stack-tight">
-										<span class="body-base text-fg truncate font-medium">{product.brand_name}</span>
-										{#if product.generic_name}
-											<span class="caption text-fg-muted truncate">{product.generic_name}</span>
-										{/if}
-									</div>
-								</td>
-								<td class="hidden px-3 py-3 md:table-cell">
-									<span class="caption text-fg-muted">{product.product_category}</span>
-								</td>
-								<td class="hidden px-3 py-3 md:table-cell">
-									<Badge variant={sched.variant} style="soft" size="sm">{sched.label}</Badge>
-								</td>
-								<td class="px-3 py-3">
-									<div class="cluster cluster-tight">
-										<Badge variant={stock.variant} style="soft" size="sm">{stock.label}</Badge>
-										<span class="caption text-fg-muted tabular-nums"
-											>{product.total_quantity_available}</span
-										>
-									</div>
-								</td>
-								<td class="hidden px-3 py-3 lg:table-cell">
-									{#if expiry}
-										<Badge variant={expiry.variant} style="soft" size="sm">{expiry.label}</Badge>
-									{:else}
-										<span class="caption text-fg-subtle">—</span>
-									{/if}
-								</td>
-								<td class="hidden px-3 py-3 tabular-nums lg:table-cell">
-									<span class="body-base text-fg">{formatPrice(product.mrp)}</span>
-								</td>
-								<td class="hidden px-3 py-3 lg:table-cell">
-									<Badge variant={active.variant} style="soft" size="sm">{active.label}</Badge>
-								</td>
-							</tr>
-						{/each}
-					{/if}
-				</tbody>
-			</table>
+		<div data-testid="products-table">
+			<DataTable.Root
+				{columns}
+				rows={products}
+				rowKey={(p: ProductDto) => p.id}
+				state={tableState}
+				error={null}
+				onRowClick={openDetail}
+				{selection}
+				emptyState={emptyStateSlot}
+			/>
 		</div>
 
 		{#if query.isFetchingNextPage}

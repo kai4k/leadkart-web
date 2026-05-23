@@ -2,17 +2,23 @@
 	/**
 	 * ReassignDialog — confirm-style dialog for moving a lead's ownership.
 	 *
-	 * NOTE on `to_membership_id` input: the contract calls for a typeahead
-	 * Combobox backed by a `/v1/identity/memberships?q=` search endpoint
-	 * that ships later this sprint. Until then we accept a raw membership
-	 * UUID via TextField — operators paste it from the membership page.
-	 * Swap to `<Combobox onInput=…>` when the backend search lands.
+	 * Typeahead Combobox backed by `GET /v1/identity/memberships?q=` —
+	 * the operator types two characters and picks a teammate from the
+	 * dropdown. The membership UUID is the value that's POSTed; the
+	 * label combines firstname + lastname and the description carries
+	 * the email so two teammates with the same surname are still
+	 * distinguishable at a glance.
+	 *
+	 * Backend endpoint is documented in the CRM contracts spec; the BFF
+	 * proxy forwards the request untouched, and the test suite mocks
+	 * the response inline.
 	 */
 	import { Dialog, Button, Alert } from '$ui';
-	import { TextField } from '$form';
+	import { Combobox, type ComboboxOption } from '$form';
 	import { reassignLeadSchema } from '../schemas';
 	import { useForm } from '$lib/hooks/use-form.svelte';
 	import { reassignLeadMutation } from '../queries';
+	import { membershipSearchQuery } from '$features/users/queries';
 
 	type Props = {
 		leadId: string;
@@ -29,6 +35,17 @@
 		{ validateOn: 'blur' }
 	);
 
+	let memberQuery = $state('');
+	const search = membershipSearchQuery(() => memberQuery);
+
+	const memberOptions = $derived<ComboboxOption[]>(
+		(search.data?.memberships ?? []).map((m) => ({
+			value: m.id,
+			label: `${m.first_name} ${m.last_name}`.trim() || m.email,
+			description: m.email
+		}))
+	);
+
 	async function onSubmit(e: SubmitEvent) {
 		await form.submit(e, async (values) => {
 			await new Promise<void>((resolve, reject) => {
@@ -37,6 +54,7 @@
 					{
 						onSuccess: () => {
 							form.reset();
+							memberQuery = '';
 							onOpenChange(false);
 							resolve();
 						},
@@ -61,14 +79,24 @@
 
 		<Dialog.Body>
 			<form id="reassign-lead-form" class="stack stack-relaxed" onsubmit={onSubmit} novalidate>
-				<TextField
-					label="New owner (membership ID)"
+				<Combobox
+					label="New owner"
 					name="to_membership_id"
-					bind:value={form.values.to_membership_id}
-					placeholder="00000000-0000-0000-0000-000000000000"
+					placeholder="Type a name or email…"
+					options={memberOptions}
+					value={form.values.to_membership_id}
+					onValueChange={(v) => {
+						form.values.to_membership_id = v;
+						form.validateField('to_membership_id');
+					}}
+					onInput={(q) => (memberQuery = q)}
+					loading={search.isFetching}
+					emptyState={memberQuery.length < 2
+						? 'Type at least two characters'
+						: 'No memberships match'}
 					required
 					error={form.errors.to_membership_id}
-					onblur={() => form.validateField('to_membership_id')}
+					hint="Search by first name, last name, or email."
 				/>
 
 				<label class="stack stack-tight">

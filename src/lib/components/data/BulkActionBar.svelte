@@ -2,16 +2,35 @@
 <script lang="ts" module>
 	import type { Component } from 'svelte';
 
+	export interface BulkActionSubItem {
+		id: string;
+		label: string;
+		onClick: () => void | Promise<void>;
+	}
+
 	export interface BulkAction {
 		id: string;
 		label: string;
 		icon?: Component;
 		variant?: 'default' | 'danger';
-		onClick: () => void | Promise<void>;
+		/**
+		 * Direct action. Mutually exclusive with `subActions` — supplying
+		 * both is a programmer error and surfaces a runtime warning. The
+		 * action renders as a simple button when `onClick` is set.
+		 */
+		onClick?: () => void | Promise<void>;
+		/**
+		 * Sub-action dropdown (Linear bulk-bar canon). When present the
+		 * action renders as a Dropdown.Trigger button; clicking opens a
+		 * menu listing each sub-item, and selecting a sub-item fires its
+		 * own `onClick`. Sub-action items do NOT carry their own confirm
+		 * — wrap with a confirm dialog in the sub-item handler if needed.
+		 */
+		subActions?: ReadonlyArray<BulkActionSubItem>;
 		/**
 		 * Optional confirm dialog gate. When set the action button
 		 * opens a `<ConfirmDialog>` whose Confirm wires through to
-		 * `onClick`.
+		 * `onClick`. Ignored when `subActions` is set.
 		 */
 		confirm?: { title: string; description?: string; confirmLabel?: string };
 		/** Disable the action while another mutation is in flight. */
@@ -21,8 +40,8 @@
 
 <script lang="ts" generics="TItem extends import('$lib/hooks').SelectableItem">
 	import type { UseBulkSelection } from '$lib/hooks';
-	import { Button, ConfirmDialog } from '$ui';
-	import { Icon } from '$icons';
+	import { Button, ConfirmDialog, Dropdown } from '$ui';
+	import { Icon, ChevronDown } from '$icons';
 	import { cn } from '$lib/utils/cn';
 
 	/**
@@ -47,11 +66,24 @@
 	let pendingConfirm: BulkAction | null = $state(null);
 	let runningId: string | null = $state(null);
 
+	// Validate at construction time — a misconfigured action should be
+	// surfaced early in dev (silent in prod via dead-code elimination).
+	$effect(() => {
+		for (const a of actions) {
+			if (a.subActions && a.onClick) {
+				console.warn(
+					`[BulkActionBar] action "${a.id}" sets both onClick and subActions — subActions wins. Drop onClick to silence.`
+				);
+			}
+		}
+	});
+
 	async function runAction(action: BulkAction) {
 		if (action.confirm) {
 			pendingConfirm = action;
 			return;
 		}
+		if (!action.onClick) return;
 		runningId = action.id;
 		try {
 			await action.onClick();
@@ -60,9 +92,18 @@
 		}
 	}
 
+	async function runSubAction(parentId: string, sub: BulkActionSubItem) {
+		runningId = parentId;
+		try {
+			await sub.onClick();
+		} finally {
+			runningId = null;
+		}
+	}
+
 	async function confirmCurrent() {
 		const a = pendingConfirm;
-		if (!a) return;
+		if (!a || !a.onClick) return;
 		runningId = a.id;
 		try {
 			await a.onClick();
@@ -87,18 +128,44 @@
 
 		<div class="cluster cluster-tight">
 			{#each actions as action (action.id)}
-				<Button
-					size="sm"
-					variant={action.variant === 'danger' ? 'danger' : 'secondary'}
-					loading={runningId === action.id}
-					disabled={action.disabled || runningId !== null}
-					onclick={() => runAction(action)}
-				>
-					{#if action.icon}
-						<Icon icon={action.icon} size="sm" />
-					{/if}
-					{action.label}
-				</Button>
+				{#if action.subActions && action.subActions.length > 0}
+					<Dropdown.Root>
+						<Dropdown.Trigger>
+							<Button
+								size="sm"
+								variant={action.variant === 'danger' ? 'danger' : 'secondary'}
+								loading={runningId === action.id}
+								disabled={action.disabled || runningId !== null}
+							>
+								{#if action.icon}
+									<Icon icon={action.icon} size="sm" />
+								{/if}
+								{action.label}
+								<Icon icon={ChevronDown} size="xs" />
+							</Button>
+						</Dropdown.Trigger>
+						<Dropdown.Menu align="end">
+							{#each action.subActions as sub (sub.id)}
+								<Dropdown.Item onSelect={() => runSubAction(action.id, sub)}>
+									{sub.label}
+								</Dropdown.Item>
+							{/each}
+						</Dropdown.Menu>
+					</Dropdown.Root>
+				{:else}
+					<Button
+						size="sm"
+						variant={action.variant === 'danger' ? 'danger' : 'secondary'}
+						loading={runningId === action.id}
+						disabled={action.disabled || runningId !== null}
+						onclick={() => runAction(action)}
+					>
+						{#if action.icon}
+							<Icon icon={action.icon} size="sm" />
+						{/if}
+						{action.label}
+					</Button>
+				{/if}
 			{/each}
 		</div>
 
