@@ -30,6 +30,8 @@ import {
 	Users,
 	Settings,
 	ShieldCheck,
+	ShoppingCart,
+	Boxes,
 	Building2,
 	Inbox,
 	type Icon as LucideIcon
@@ -75,6 +77,14 @@ export const TENANT_ADMIN_NAV: NavSection[] = [
 		]
 	},
 	{
+		title: 'CRM',
+		items: [
+			{ href: '/leads', label: 'Leads', icon: Users },
+			{ href: '/orders', label: 'Orders', icon: ShoppingCart },
+			{ href: '/inventory', label: 'Inventory', icon: Boxes }
+		]
+	},
+	{
 		title: 'Account',
 		items: [{ href: '/settings/account', label: 'Account', icon: ShieldCheck }]
 	}
@@ -86,7 +96,12 @@ export const TENANT_USER_NAV: NavSection[] = [
 	},
 	{
 		title: 'My Work',
-		items: [{ href: '/permission-requests', label: 'Permission requests', icon: Inbox }]
+		items: [
+			{ href: '/leads', label: 'Leads', icon: Users },
+			{ href: '/orders', label: 'Orders', icon: ShoppingCart },
+			{ href: '/inventory', label: 'Inventory', icon: Boxes },
+			{ href: '/permission-requests', label: 'Permission requests', icon: Inbox }
+		]
 	},
 	{
 		title: 'Account',
