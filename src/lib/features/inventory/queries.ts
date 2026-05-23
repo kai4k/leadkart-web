@@ -2,19 +2,15 @@
  * TanStack Query hooks for inventory.
  *
  * Patterns:
- *   - List uses createInfiniteQuery — cursor-based pagination per
- *     ADR 0038. Pages are flattened by the consumer via `data.pages`.
- *   - Detail uses createQuery.
- *   - Adjustments history uses createInfiniteQuery.
- *   - adjustStockMutation is optimistic — patches the detail cache so
- *     the badge + stock cell update before the round-trip resolves.
- *     Rollback on error via onError(ctx.previous).
- *
- * The toast for adjust-stock includes Undo: clicking it posts the
- * inverse delta with reason 'correction'. The history will end up
- * showing both the original adjustment and the undo — that's the
- * audit-correct behaviour (you cannot retroactively erase a stock
- * movement; you record a compensating one).
+ *   - Product list uses createInfiniteQuery — cursor-based per ADR 0038.
+ *   - Detail, batches, computed-prices use createQuery.
+ *   - Movements history uses createInfiniteQuery.
+ *   - Reference data (categories, types, gst-defaults) has long staleTime
+ *     — these change rarely and many components query them.
+ *   - adjustStockMutation is OPTIMISTIC: bumps the product's
+ *     total_quantity_available immediately, rollback on error.
+ *     The toast carries an Undo button that posts the inverse delta
+ *     with reason 'correction'.
  */
 import {
 	createInfiniteQuery,
@@ -24,34 +20,50 @@ import {
 } from '@tanstack/svelte-query';
 import { toast } from '$ui';
 import * as api from './api';
-import type { ListInventoryParams, ListAdjustmentsParams } from './api';
+import type { ListBatchesParams, ListMovementsParams, ListProductsParams } from './api';
+import { movementReasonLabel } from './view-models';
 import type {
-	AdjustStockRequest,
-	BulkInventoryActionRequest,
-	CreateInventoryItemRequest,
-	InventoryItemDto,
-	UpdateInventoryItemRequest
+	BulkProductActionRequest,
+	CreateBatchRequest,
+	CreateMovementRequest,
+	CreateProductRequest,
+	ProductDto,
+	UpdateProductRequest,
+	WriteOffBatchRequest
 } from './schemas';
 
 export const inventoryKeys = {
 	all: ['inventory'] as const,
-	lists: () => [...inventoryKeys.all, 'list'] as const,
-	list: (params: ListInventoryParams) => [...inventoryKeys.lists(), params] as const,
-	details: () => [...inventoryKeys.all, 'detail'] as const,
-	detail: (id: string) => [...inventoryKeys.details(), id] as const,
-	adjustments: (id: string) => [...inventoryKeys.all, 'adjustments', id] as const
+
+	productLists: () => [...inventoryKeys.all, 'products', 'list'] as const,
+	productList: (params: ListProductsParams) => [...inventoryKeys.productLists(), params] as const,
+	productDetails: () => [...inventoryKeys.all, 'products', 'detail'] as const,
+	productDetail: (id: string) => [...inventoryKeys.productDetails(), id] as const,
+
+	batches: (productId: string) => [...inventoryKeys.all, 'batches', productId] as const,
+	movements: (productId: string) => [...inventoryKeys.all, 'movements', productId] as const,
+
+	computedPrices: (productId: string) =>
+		[...inventoryKeys.all, 'computed-prices', productId] as const,
+
+	categories: () => [...inventoryKeys.all, 'categories'] as const,
+	types: () => [...inventoryKeys.all, 'types'] as const,
+	gstDefaults: () => [...inventoryKeys.all, 'gst-defaults'] as const
 };
 
-const DEFAULT_LIMIT = 50;
-const ADJUSTMENTS_LIMIT = 20;
+const PRODUCT_PAGE_SIZE = 50;
+const MOVEMENT_PAGE_SIZE = 20;
+const REFERENCE_STALE_MS = 10 * 60 * 1000; // 10m
 
-export function inventoryListQuery(params: ListInventoryParams = {}) {
+// ── Products ─────────────────────────────────────────────────────────
+
+export function productsInfiniteQuery(params: ListProductsParams = {}) {
 	return createInfiniteQuery(() => ({
-		queryKey: inventoryKeys.list(params),
+		queryKey: inventoryKeys.productList(params),
 		queryFn: ({ pageParam }) =>
-			api.listInventoryItems({
+			api.listProducts({
 				...params,
-				limit: params.limit ?? DEFAULT_LIMIT,
+				limit: params.limit ?? PRODUCT_PAGE_SIZE,
 				cursor: pageParam as string | undefined
 			}),
 		initialPageParam: undefined as string | undefined,
@@ -59,117 +71,197 @@ export function inventoryListQuery(params: ListInventoryParams = {}) {
 	}));
 }
 
-export function inventoryItemQuery(id: string) {
+export function productDetailQuery(id: string) {
 	return createQuery(() => ({
-		queryKey: inventoryKeys.detail(id),
-		queryFn: () => api.getInventoryItem(id),
+		queryKey: inventoryKeys.productDetail(id),
+		queryFn: () => api.getProduct(id),
 		enabled: !!id
 	}));
 }
 
-export function stockAdjustmentsQuery(id: string, params: ListAdjustmentsParams = {}) {
+export function createProductMutation() {
+	const qc = useQueryClient();
+	return createMutation(() => ({
+		mutationFn: (body: CreateProductRequest) => api.createProduct(body),
+		meta: { skipErrorToast: true },
+		onSuccess: (product) => {
+			qc.setQueryData(inventoryKeys.productDetail(product.id), product);
+			qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
+			toast('success', 'Product created');
+		}
+	}));
+}
+
+export function updateProductMutation() {
+	const qc = useQueryClient();
+	return createMutation(() => ({
+		mutationFn: ({ id, body }: { id: string; body: UpdateProductRequest }) =>
+			api.updateProduct(id, body),
+		meta: { skipErrorToast: true },
+		onSuccess: (product) => {
+			qc.setQueryData(inventoryKeys.productDetail(product.id), product);
+			qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
+			toast('success', 'Product updated');
+		}
+	}));
+}
+
+export function deleteProductMutation() {
+	const qc = useQueryClient();
+	return createMutation(() => ({
+		mutationFn: (id: string) => api.deleteProduct(id),
+		onSuccess: (product) => {
+			qc.setQueryData(inventoryKeys.productDetail(product.id), product);
+			qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
+			toast('success', 'Product deleted');
+		}
+	}));
+}
+
+export function bulkProductActionMutation() {
+	const qc = useQueryClient();
+	return createMutation(() => ({
+		mutationFn: (body: BulkProductActionRequest) => api.bulkProductAction(body),
+		onSuccess: (result) => {
+			qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
+			toast('success', `${result.affected} product${result.affected === 1 ? '' : 's'} updated`);
+		}
+	}));
+}
+
+// ── Batches ──────────────────────────────────────────────────────────
+
+export function batchesQuery(productId: string, params: ListBatchesParams = {}) {
+	return createQuery(() => ({
+		queryKey: [...inventoryKeys.batches(productId), params],
+		queryFn: () => api.listBatches(productId, params),
+		enabled: !!productId
+	}));
+}
+
+export function addBatchMutation() {
+	const qc = useQueryClient();
+	return createMutation(() => ({
+		mutationFn: ({ productId, body }: { productId: string; body: CreateBatchRequest }) =>
+			api.createBatch(productId, body),
+		meta: { skipErrorToast: true },
+		onSuccess: (_batch, vars) => {
+			qc.invalidateQueries({ queryKey: inventoryKeys.batches(vars.productId) });
+			qc.invalidateQueries({ queryKey: inventoryKeys.productDetail(vars.productId) });
+			qc.invalidateQueries({ queryKey: inventoryKeys.movements(vars.productId) });
+			qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
+			toast('success', 'Batch added');
+		}
+	}));
+}
+
+export function writeOffBatchMutation() {
+	const qc = useQueryClient();
+	return createMutation(() => ({
+		mutationFn: ({
+			batchId,
+			body
+		}: {
+			productId: string;
+			batchId: string;
+			body: WriteOffBatchRequest;
+		}) => api.writeOffBatch(batchId, body),
+		meta: { skipErrorToast: true },
+		onSuccess: (_batch, vars) => {
+			qc.invalidateQueries({ queryKey: inventoryKeys.batches(vars.productId) });
+			qc.invalidateQueries({ queryKey: inventoryKeys.productDetail(vars.productId) });
+			toast('success', 'Batch written off');
+		}
+	}));
+}
+
+export function quarantineBatchMutation() {
+	const qc = useQueryClient();
+	return createMutation(() => ({
+		mutationFn: ({ batchId }: { productId: string; batchId: string }) =>
+			api.quarantineBatch(batchId),
+		onSuccess: (_batch, vars) => {
+			qc.invalidateQueries({ queryKey: inventoryKeys.batches(vars.productId) });
+			qc.invalidateQueries({ queryKey: inventoryKeys.productDetail(vars.productId) });
+			toast('success', 'Batch quarantined');
+		}
+	}));
+}
+
+// ── Movements ────────────────────────────────────────────────────────
+
+export function movementsInfiniteQuery(productId: string, params: ListMovementsParams = {}) {
 	return createInfiniteQuery(() => ({
-		queryKey: [...inventoryKeys.adjustments(id), params],
+		queryKey: [...inventoryKeys.movements(productId), params],
 		queryFn: ({ pageParam }) =>
-			api.listStockAdjustments(id, {
+			api.listMovements(productId, {
 				...params,
-				limit: params.limit ?? ADJUSTMENTS_LIMIT,
+				limit: params.limit ?? MOVEMENT_PAGE_SIZE,
 				cursor: pageParam as string | undefined
 			}),
-		enabled: !!id,
+		enabled: !!productId,
 		initialPageParam: undefined as string | undefined,
 		getNextPageParam: (last) => (last.has_more ? (last.next_cursor ?? undefined) : undefined)
 	}));
 }
 
-export function createInventoryItemMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: (body: CreateInventoryItemRequest) => api.createInventoryItem(body),
-		// Errors surface inline in the create drawer's banner; suppress the
-		// global mutation-toast that would otherwise duplicate the message.
-		meta: { skipErrorToast: true },
-		onSuccess: (item) => {
-			qc.invalidateQueries({ queryKey: inventoryKeys.lists() });
-			qc.setQueryData(inventoryKeys.detail(item.id), item);
-			toast('success', 'Item created');
-		}
-	}));
-}
-
-export function updateInventoryItemMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: ({ id, body }: { id: string; body: UpdateInventoryItemRequest }) =>
-			api.updateInventoryItem(id, body),
-		meta: { skipErrorToast: true },
-		onSuccess: (item) => {
-			qc.setQueryData(inventoryKeys.detail(item.id), item);
-			qc.invalidateQueries({ queryKey: inventoryKeys.lists() });
-			toast('success', 'Item updated');
-		}
-	}));
-}
-
-export function deleteInventoryItemMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: (id: string) => api.deleteInventoryItem(id),
-		onSuccess: (item) => {
-			qc.setQueryData(inventoryKeys.detail(item.id), item);
-			qc.invalidateQueries({ queryKey: inventoryKeys.lists() });
-			toast('success', 'Item deleted');
-		}
-	}));
-}
-
 /**
- * Optimistic adjust-stock mutation. The detail cache is patched
- * before the round-trip resolves; the row in the list refreshes
- * via invalidate on settled.
+ * Adjust stock — optimistic.
  *
- * Toast includes Undo — posts the inverse delta with reason 'correction'.
+ * onMutate patches the product detail cache (bumps total_quantity_available)
+ * + rolls back on error. onSuccess invalidates batches + movements + lists.
+ * The toast carries an Undo button that posts the inverse delta with reason
+ * 'correction' — the original movement isn't erased (audit trail intact),
+ * a compensating movement is recorded.
  */
 export function adjustStockMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
-		mutationFn: ({ id, body }: { id: string; body: AdjustStockRequest }) =>
-			api.adjustStock(id, body),
+		mutationFn: ({ productId, body }: { productId: string; body: CreateMovementRequest }) =>
+			api.createMovement(productId, body),
 		meta: { skipErrorToast: true },
-		onMutate: async ({ id, body }) => {
-			await qc.cancelQueries({ queryKey: inventoryKeys.detail(id) });
-			const previous = qc.getQueryData<InventoryItemDto>(inventoryKeys.detail(id));
+		onMutate: async ({ productId, body }) => {
+			await qc.cancelQueries({ queryKey: inventoryKeys.productDetail(productId) });
+			const previous = qc.getQueryData<ProductDto>(inventoryKeys.productDetail(productId));
 			if (previous) {
-				qc.setQueryData<InventoryItemDto>(inventoryKeys.detail(id), {
+				qc.setQueryData<ProductDto>(inventoryKeys.productDetail(productId), {
 					...previous,
-					current_stock: Math.max(0, previous.current_stock + body.delta)
+					total_quantity_available: Math.max(0, previous.total_quantity_available + body.delta)
 				});
 			}
-			return { previous, id };
+			return { previous, productId };
 		},
 		onError: (_err, _vars, ctx) => {
-			if (ctx?.previous) qc.setQueryData(inventoryKeys.detail(ctx.id), ctx.previous);
+			if (ctx?.previous) qc.setQueryData(inventoryKeys.productDetail(ctx.productId), ctx.previous);
 		},
-		onSuccess: ({ item, adjustment }) => {
-			qc.setQueryData(inventoryKeys.detail(item.id), item);
-			qc.invalidateQueries({ queryKey: inventoryKeys.lists() });
-			qc.invalidateQueries({ queryKey: inventoryKeys.adjustments(item.id) });
-			const sign = adjustment.delta > 0 ? '+' : '';
-			toast('success', `${sign}${adjustment.delta} to ${item.sku}`, {
+		onSuccess: (movement, vars) => {
+			qc.invalidateQueries({ queryKey: inventoryKeys.productDetail(vars.productId) });
+			qc.invalidateQueries({ queryKey: inventoryKeys.batches(vars.productId) });
+			qc.invalidateQueries({ queryKey: inventoryKeys.movements(vars.productId) });
+			qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
+
+			const sign = movement.delta > 0 ? '+' : '';
+			const reasonLabel = movementReasonLabel(movement.reason);
+			toast('success', `${sign}${movement.delta} (${reasonLabel})`, {
 				duration: 10_000,
 				action: {
 					label: 'Undo',
 					onClick: () =>
 						api
-							.adjustStock(item.id, {
-								delta: -adjustment.delta,
+							.createMovement(vars.productId, {
+								batch_id: vars.body.batch_id,
+								delta: -movement.delta,
 								reason: 'correction',
-								note: `Undo of ${adjustment.id}`
+								note: `Undo of ${movement.id}`
 							})
-							.then(({ item: undoneItem }) => {
-								qc.setQueryData(inventoryKeys.detail(undoneItem.id), undoneItem);
-								qc.invalidateQueries({ queryKey: inventoryKeys.lists() });
-								qc.invalidateQueries({ queryKey: inventoryKeys.adjustments(undoneItem.id) });
+							.then(() => {
+								qc.invalidateQueries({
+									queryKey: inventoryKeys.productDetail(vars.productId)
+								});
+								qc.invalidateQueries({ queryKey: inventoryKeys.batches(vars.productId) });
+								qc.invalidateQueries({
+									queryKey: inventoryKeys.movements(vars.productId)
+								});
 								toast('success', 'Adjustment undone');
 							})
 				}
@@ -178,16 +270,41 @@ export function adjustStockMutation() {
 	}));
 }
 
-export function bulkInventoryActionMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: (body: BulkInventoryActionRequest) => api.bulkAction(body),
-		onSuccess: (result) => {
-			qc.invalidateQueries({ queryKey: inventoryKeys.lists() });
-			toast('success', `${result.affected} item${result.affected === 1 ? '' : 's'} updated`);
-		}
+// ── Reference data ───────────────────────────────────────────────────
+
+export function categoriesQuery() {
+	return createQuery(() => ({
+		queryKey: inventoryKeys.categories(),
+		queryFn: () => api.listCategories(),
+		staleTime: REFERENCE_STALE_MS
 	}));
 }
+
+export function typesQuery() {
+	return createQuery(() => ({
+		queryKey: inventoryKeys.types(),
+		queryFn: () => api.listTypes(),
+		staleTime: REFERENCE_STALE_MS
+	}));
+}
+
+export function gstDefaultsQuery() {
+	return createQuery(() => ({
+		queryKey: inventoryKeys.gstDefaults(),
+		queryFn: () => api.getGstDefaults(),
+		staleTime: REFERENCE_STALE_MS
+	}));
+}
+
+export function computedPricesQuery(productId: string) {
+	return createQuery(() => ({
+		queryKey: inventoryKeys.computedPrices(productId),
+		queryFn: () => api.getComputedPrices(productId),
+		enabled: !!productId
+	}));
+}
+
+// ── Bulk upload ──────────────────────────────────────────────────────
 
 export function bulkUploadPreviewMutation() {
 	return createMutation(() => ({
@@ -198,10 +315,10 @@ export function bulkUploadPreviewMutation() {
 export function bulkUploadCommitMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
-		mutationFn: ({ file, upsert_by }: { file: File; upsert_by?: 'sku' | 'none' }) =>
+		mutationFn: ({ file, upsert_by }: { file: File; upsert_by?: 'product_key' | 'none' }) =>
 			api.bulkUploadCommit(file, { upsert_by }),
 		onSuccess: (result) => {
-			qc.invalidateQueries({ queryKey: inventoryKeys.lists() });
+			qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
 			toast(
 				'success',
 				`Inserted ${result.inserted}, updated ${result.updated}` +

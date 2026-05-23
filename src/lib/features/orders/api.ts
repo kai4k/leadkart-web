@@ -1,31 +1,43 @@
 /**
- * Gateway for CRM orders (per
- * `docs/superpowers/specs/2026-05-23-crm-modules-contracts.md`).
+ * Gateway for CRM orders (see
+ * `docs/superpowers/specs/2026-05-23-crm-modules-contracts.md` Module 2).
  *
  * All responses are Zod-parsed at the boundary via `parseResponse`.
  * Components NEVER call `fetch` directly — they call into this module
- * (CLAUDE.md rule 6).
+ * (CLAUDE.md rule 6). State transitions are surfaced as one named
+ * function per backend endpoint so callers compose intent, not URLs.
  */
 import { api, parseResponse } from '$api/client';
-import { getCsrfToken } from '$api/csrf';
-import { ApiError } from '$api/errors';
 import {
 	bulkOrderActionResultSchema,
-	bulkUploadPreviewSchema,
-	bulkUploadResultSchema,
+	cancelOrderRequestSchema,
+	creditNoteDtoSchema,
+	invoiceDtoSchema,
+	listCreditNotesResponseSchema,
 	listOrdersResponseSchema,
+	listPaymentsResponseSchema,
+	listRevisionsResponseSchema,
 	orderDtoSchema,
+	paymentDtoSchema,
+	type ApproveQuotationRequest,
 	type BulkOrderActionRequest,
 	type BulkOrderActionResult,
-	type BulkUploadPreview,
-	type BulkUploadResult,
 	type CancelOrderRequest,
-	type CreateOrderRequest,
+	type CreateQuotationRequest,
+	type CreditNoteDto,
+	type DispatchRequest,
+	type InvoiceDto,
+	type ListCreditNotesResponse,
 	type ListOrdersResponse,
+	type ListPaymentsResponse,
+	type ListRevisionsResponse,
+	type MarkDeliveredRequest,
+	type MarkPackedRequest,
 	type OrderDto,
 	type OrderStatus,
-	type RefundOrderRequest,
-	type ShipOrderRequest,
+	type PaymentDto,
+	type RecordPaymentRequest,
+	type ReviseQuotationRequest,
 	type UpdateOrderRequest
 } from './schemas';
 
@@ -67,14 +79,37 @@ export async function listOrders(params?: ListOrdersParams): Promise<ListOrdersR
 	return parseResponse(listOrdersResponseSchema, raw);
 }
 
-// ── CRUD ─────────────────────────────────────────────────────────────
+// ── Detail + sub-resources ───────────────────────────────────────────
 
 export async function getOrder(id: string): Promise<OrderDto> {
 	const raw = await api.get<unknown>(`/v1/orders/${id}`);
 	return parseResponse(orderDtoSchema, raw);
 }
 
-export async function createOrder(req: CreateOrderRequest): Promise<OrderDto> {
+export async function getOrderRevisions(id: string): Promise<ListRevisionsResponse> {
+	const raw = await api.get<unknown>(`/v1/orders/${id}/revisions`);
+	return parseResponse(listRevisionsResponseSchema, raw);
+}
+
+export async function getOrderPayments(id: string): Promise<ListPaymentsResponse> {
+	const raw = await api.get<unknown>(`/v1/orders/${id}/payments`);
+	return parseResponse(listPaymentsResponseSchema, raw);
+}
+
+export async function getOrderInvoice(id: string): Promise<InvoiceDto | null> {
+	const raw = await api.get<unknown>(`/v1/orders/${id}/invoice`);
+	if (raw == null) return null;
+	return parseResponse(invoiceDtoSchema, raw);
+}
+
+export async function getOrderCreditNotes(id: string): Promise<ListCreditNotesResponse> {
+	const raw = await api.get<unknown>(`/v1/orders/${id}/credit-notes`);
+	return parseResponse(listCreditNotesResponseSchema, raw);
+}
+
+// ── CRUD ─────────────────────────────────────────────────────────────
+
+export async function createQuotation(req: CreateQuotationRequest): Promise<OrderDto> {
 	const raw = await api.post<unknown>('/v1/orders', req);
 	return parseResponse(orderDtoSchema, raw);
 }
@@ -89,30 +124,59 @@ export async function deleteOrder(id: string): Promise<OrderDto> {
 	return parseResponse(orderDtoSchema, raw);
 }
 
-// ── Status transitions ───────────────────────────────────────────────
+// ── State transitions (one POST per transition) ──────────────────────
+
+export async function reviseQuotation(id: string, req: ReviseQuotationRequest): Promise<OrderDto> {
+	const raw = await api.post<unknown>(`/v1/orders/${id}/revise`, req);
+	return parseResponse(orderDtoSchema, raw);
+}
+
+export async function approveQuotation(
+	id: string,
+	req: ApproveQuotationRequest = {}
+): Promise<OrderDto> {
+	const raw = await api.post<unknown>(`/v1/orders/${id}/approve-quotation`, req);
+	return parseResponse(orderDtoSchema, raw);
+}
+
+export async function recordPayment(id: string, req: RecordPaymentRequest): Promise<PaymentDto> {
+	const raw = await api.post<unknown>(`/v1/orders/${id}/payments`, req);
+	return parseResponse(paymentDtoSchema, raw);
+}
 
 export async function confirmOrder(id: string): Promise<OrderDto> {
 	const raw = await api.post<unknown>(`/v1/orders/${id}/confirm`, {});
 	return parseResponse(orderDtoSchema, raw);
 }
 
-export async function shipOrder(id: string, req: ShipOrderRequest = {}): Promise<OrderDto> {
-	const raw = await api.post<unknown>(`/v1/orders/${id}/ship`, req);
+export async function markPacked(id: string, req: MarkPackedRequest): Promise<OrderDto> {
+	const raw = await api.post<unknown>(`/v1/orders/${id}/mark-packed`, req);
 	return parseResponse(orderDtoSchema, raw);
 }
 
-export async function deliverOrder(id: string): Promise<OrderDto> {
-	const raw = await api.post<unknown>(`/v1/orders/${id}/deliver`, {});
+export async function generateInvoice(id: string): Promise<OrderDto> {
+	const raw = await api.post<unknown>(`/v1/orders/${id}/generate-invoice`, {});
+	return parseResponse(orderDtoSchema, raw);
+}
+
+export async function dispatchOrder(id: string, req: DispatchRequest = {}): Promise<OrderDto> {
+	const raw = await api.post<unknown>(`/v1/orders/${id}/dispatch`, req);
+	return parseResponse(orderDtoSchema, raw);
+}
+
+export async function markDelivered(id: string, req: MarkDeliveredRequest = {}): Promise<OrderDto> {
+	const raw = await api.post<unknown>(`/v1/orders/${id}/mark-delivered`, req);
+	return parseResponse(orderDtoSchema, raw);
+}
+
+export async function completeOrder(id: string): Promise<OrderDto> {
+	const raw = await api.post<unknown>(`/v1/orders/${id}/complete`, {});
 	return parseResponse(orderDtoSchema, raw);
 }
 
 export async function cancelOrder(id: string, req: CancelOrderRequest): Promise<OrderDto> {
+	cancelOrderRequestSchema.parse(req);
 	const raw = await api.post<unknown>(`/v1/orders/${id}/cancel`, req);
-	return parseResponse(orderDtoSchema, raw);
-}
-
-export async function refundOrder(id: string, req: RefundOrderRequest): Promise<OrderDto> {
-	const raw = await api.post<unknown>(`/v1/orders/${id}/refund`, req);
 	return parseResponse(orderDtoSchema, raw);
 }
 
@@ -123,88 +187,9 @@ export async function bulkOrderAction(req: BulkOrderActionRequest): Promise<Bulk
 	return parseResponse(bulkOrderActionResultSchema, raw);
 }
 
-// ── Bulk upload (multipart) ──────────────────────────────────────────
+// ── Credit notes detail (per ID, used to refresh single CN cards) ────
 
-/**
- * Multipart upload bypasses the JSON client helpers — we do a raw
- * `fetch` to the BFF proxy. The BFF reads the upstream Content-Type
- * verbatim, so a boundary'd multipart/form-data round-trips correctly.
- * CSRF token is still required (BFF enforces it on every mutation).
- */
-async function postMultipart<T>(path: string, form: FormData): Promise<T> {
-	const headers = new Headers();
-	// Read the non-httpOnly CSRF cookie + echo as header (double-submit).
-	const csrf = getCsrfToken();
-	if (csrf) headers.set('X-CSRF-Token', csrf);
-	headers.set('Accept', 'application/json');
-
-	let resp: Response;
-	try {
-		resp = await fetch(`/api${path.startsWith('/') ? path : '/' + path}`, {
-			method: 'POST',
-			credentials: 'same-origin',
-			headers,
-			body: form
-		});
-	} catch (cause) {
-		throw ApiError.transport(cause);
-	}
-	const text = await resp.text();
-	const parsed: unknown = text ? safeJsonParse(text) : null;
-	if (!resp.ok) {
-		throw ApiError.fromResponse(resp, parsed as Parameters<typeof ApiError.fromResponse>[1]);
-	}
-	return parsed as T;
-}
-
-function safeJsonParse(text: string): unknown {
-	try {
-		return JSON.parse(text);
-	} catch {
-		return null;
-	}
-}
-
-export async function previewBulkUpload(file: File): Promise<BulkUploadPreview> {
-	const form = new FormData();
-	form.append('file', file);
-	const raw = await postMultipart<unknown>('/v1/orders/bulk-upload/preview', form);
-	return parseResponse(bulkUploadPreviewSchema, raw);
-}
-
-export async function commitBulkUpload(
-	file: File,
-	opts: { upsert_by?: 'order_external_id' | 'none' } = {}
-): Promise<BulkUploadResult> {
-	const form = new FormData();
-	form.append('file', file);
-	form.append('upsert_by', opts.upsert_by ?? 'none');
-	const raw = await postMultipart<unknown>('/v1/orders/bulk-upload/commit', form);
-	return parseResponse(bulkUploadResultSchema, raw);
-}
-
-// ── Export ───────────────────────────────────────────────────────────
-
-/**
- * Returns the CSV export as a Blob — callers should pipe to an
- * `<a download>` synthetic click. Goes through the BFF proxy.
- */
-export async function exportOrdersCsv(params?: ListOrdersParams): Promise<Blob> {
-	const qs = buildListQuery(params).replace('/v1/orders', '/v1/orders/export');
-	let resp: Response;
-	try {
-		resp = await fetch(`/api${qs}`, {
-			method: 'GET',
-			credentials: 'same-origin',
-			headers: { Accept: 'text/csv' }
-		});
-	} catch (cause) {
-		throw ApiError.transport(cause);
-	}
-	if (!resp.ok) {
-		const text = await resp.text();
-		const parsed: unknown = text ? safeJsonParse(text) : null;
-		throw ApiError.fromResponse(resp, parsed as Parameters<typeof ApiError.fromResponse>[1]);
-	}
-	return resp.blob();
+export async function getCreditNote(id: string, creditNoteId: string): Promise<CreditNoteDto> {
+	const raw = await api.get<unknown>(`/v1/orders/${id}/credit-notes/${creditNoteId}`);
+	return parseResponse(creditNoteDtoSchema, raw);
 }

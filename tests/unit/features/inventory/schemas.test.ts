@@ -1,213 +1,304 @@
 import { describe, expect, it } from 'vitest';
 import {
-	skuSchema,
-	unitOfMeasureSchema,
-	adjustmentReasonSchema,
-	createInventoryItemSchema,
-	updateInventoryItemSchema,
-	adjustStockSchema,
-	inventoryItemDtoSchema,
-	stockAdjustmentDtoSchema,
-	listInventoryItemsResponseSchema,
-	bulkInventoryActionSchema,
+	hsnCodeSchema,
+	drugScheduleSchema,
+	stockMovementReasonSchema,
+	productDtoSchema,
+	batchDtoSchema,
+	stockMovementDtoSchema,
+	createProductRequestSchema,
+	updateProductRequestSchema,
+	createBatchRequestSchema,
+	createMovementRequestSchema,
+	writeOffBatchRequestSchema,
+	bulkProductActionRequestSchema,
 	bulkUploadPreviewSchema,
-	bulkUploadResultSchema
+	bulkUploadResultSchema,
+	gstDefaultsResponseSchema,
+	computedPricesResponseSchema
 } from '$lib/features/inventory/schemas';
 
-describe('skuSchema', () => {
-	it('accepts uppercase letters, digits, hyphens, underscores', () => {
-		expect(skuSchema.parse('WIDGET-001')).toBe('WIDGET-001');
-		expect(skuSchema.parse('A_B-1')).toBe('A_B-1');
-		expect(skuSchema.parse('SKU123')).toBe('SKU123');
+describe('hsnCodeSchema', () => {
+	it('accepts 4 to 8 digits', () => {
+		expect(hsnCodeSchema.parse('3004')).toBe('3004');
+		expect(hsnCodeSchema.parse('30049099')).toBe('30049099');
 	});
-	it('rejects lowercase letters', () => {
-		const r = skuSchema.safeParse('abc');
-		expect(r.success).toBe(false);
-		if (!r.success) expect(r.error.issues[0]?.message).toMatch(/uppercase letters, digits/);
+	it('rejects fewer than 4 digits', () => {
+		expect(hsnCodeSchema.safeParse('123').success).toBe(false);
 	});
-	it('rejects whitespace', () => {
-		expect(skuSchema.safeParse('FOO BAR').success).toBe(false);
+	it('rejects more than 8 digits', () => {
+		expect(hsnCodeSchema.safeParse('123456789').success).toBe(false);
 	});
-	it('rejects empty', () => {
-		expect(skuSchema.safeParse('').success).toBe(false);
+	it('rejects non-numeric', () => {
+		expect(hsnCodeSchema.safeParse('AB12').success).toBe(false);
 	});
-	it('rejects >64 chars', () => {
-		expect(skuSchema.safeParse('A'.repeat(65)).success).toBe(false);
+	it('rejects lowercase / mixed', () => {
+		expect(hsnCodeSchema.safeParse('3004a').success).toBe(false);
 	});
 });
 
-describe('unitOfMeasureSchema', () => {
-	it('accepts known UoM values', () => {
+describe('drugScheduleSchema', () => {
+	it('accepts the six known values', () => {
 		for (const v of [
-			'each',
-			'kg',
-			'g',
-			'lb',
-			'oz',
-			'l',
-			'ml',
-			'm',
-			'cm',
-			'ft',
-			'in',
-			'box',
-			'pack',
-			'pallet'
+			'otc',
+			'schedule_h',
+			'schedule_h1',
+			'schedule_x',
+			'schedule_c',
+			'not_applicable'
 		]) {
-			expect(unitOfMeasureSchema.parse(v)).toBe(v);
+			expect(drugScheduleSchema.parse(v)).toBe(v);
 		}
 	});
-	it('rejects unknown UoM', () => {
-		expect(unitOfMeasureSchema.safeParse('gallon').success).toBe(false);
+	it('rejects unknown schedule', () => {
+		expect(drugScheduleSchema.safeParse('schedule_z').success).toBe(false);
 	});
 });
 
-describe('adjustmentReasonSchema', () => {
-	it('accepts the 7 enum values', () => {
-		for (const v of ['purchase', 'sale', 'return', 'damage', 'correction', 'transfer', 'other']) {
-			expect(adjustmentReasonSchema.parse(v)).toBe(v);
+describe('stockMovementReasonSchema', () => {
+	it('accepts the nine known reasons', () => {
+		for (const v of [
+			'inward',
+			'sale',
+			'sale_cancelled',
+			'damage',
+			'expired',
+			'transfer_in',
+			'transfer_out',
+			'correction',
+			'opening_balance'
+		]) {
+			expect(stockMovementReasonSchema.parse(v)).toBe(v);
 		}
 	});
 	it('rejects unknown reason', () => {
-		expect(adjustmentReasonSchema.safeParse('lost').success).toBe(false);
+		expect(stockMovementReasonSchema.safeParse('purchase').success).toBe(false);
 	});
 });
 
-describe('createInventoryItemSchema', () => {
-	it('parses a minimal valid payload', () => {
-		const out = createInventoryItemSchema.parse({
-			sku: 'WIDGET-1',
-			name: 'Widget',
-			unit_of_measure: 'each',
-			unit_price: 9.99,
-			currency: 'USD'
-		});
-		expect(out.sku).toBe('WIDGET-1');
-		expect(out.current_stock).toBe(0); // default
+describe('createProductRequestSchema', () => {
+	const valid = {
+		brand_name: 'Crocin',
+		product_category: 'Pain relief',
+		product_type: 'Tablet',
+		drug_schedule: 'otc' as const,
+		units_per_pack: 10,
+		mrp: 50,
+		purchase_rate: 30,
+		sale_rate: 45,
+		gst_percentage: 12,
+		hsn_code: '30049099',
+		shelf_life_months: 24
+	};
+
+	it('parses minimal valid payload', () => {
+		const out = createProductRequestSchema.parse(valid);
+		expect(out.brand_name).toBe('Crocin');
 	});
+
+	it('rejects empty brand_name', () => {
+		expect(createProductRequestSchema.safeParse({ ...valid, brand_name: '' }).success).toBe(false);
+	});
+
+	it('rejects bad HSN', () => {
+		expect(createProductRequestSchema.safeParse({ ...valid, hsn_code: 'abc' }).success).toBe(false);
+	});
+
+	it('rejects negative MRP', () => {
+		expect(createProductRequestSchema.safeParse({ ...valid, mrp: -1 }).success).toBe(false);
+	});
+
+	it('rejects GST > 100', () => {
+		expect(createProductRequestSchema.safeParse({ ...valid, gst_percentage: 101 }).success).toBe(
+			false
+		);
+	});
+
 	it('rejects extras (.strict)', () => {
-		expect(() =>
-			createInventoryItemSchema.parse({
-				sku: 'WIDGET-1',
-				name: 'Widget',
-				unit_of_measure: 'each',
-				unit_price: 9.99,
-				currency: 'USD',
-				sneaky: 'x'
-			})
-		).toThrow();
+		expect(() => createProductRequestSchema.parse({ ...valid, sneaky: 'x' })).toThrow();
 	});
-	it('rejects negative unit_price', () => {
+});
+
+describe('updateProductRequestSchema', () => {
+	it('parses partial payloads', () => {
+		expect(updateProductRequestSchema.parse({ brand_name: 'New' }).brand_name).toBe('New');
+	});
+	it('rejects extras', () => {
+		expect(() => updateProductRequestSchema.parse({ sneaky: 1 })).toThrow();
+	});
+});
+
+describe('createBatchRequestSchema', () => {
+	it('accepts manufactured_at < expires_at', () => {
+		const r = createBatchRequestSchema.safeParse({
+			batch_number: 'B-1',
+			manufactured_at: '2026-01-01',
+			expires_at: '2028-01-01',
+			quantity_received: 100,
+			purchase_rate: 50
+		});
+		expect(r.success).toBe(true);
+	});
+
+	it('rejects when expires_at is BEFORE manufactured_at', () => {
+		const r = createBatchRequestSchema.safeParse({
+			batch_number: 'B-1',
+			manufactured_at: '2026-06-01',
+			expires_at: '2026-01-01',
+			quantity_received: 100,
+			purchase_rate: 50
+		});
+		expect(r.success).toBe(false);
+		if (!r.success) {
+			expect(r.error.issues.some((i) => i.message.match(/Expiry must be after/))).toBe(true);
+		}
+	});
+
+	it('rejects zero quantity', () => {
 		expect(
-			createInventoryItemSchema.safeParse({
-				sku: 'X',
-				name: 'Y',
-				unit_of_measure: 'each',
-				unit_price: -1,
-				currency: 'USD'
+			createBatchRequestSchema.safeParse({
+				batch_number: 'B-1',
+				manufactured_at: '2026-01-01',
+				expires_at: '2028-01-01',
+				quantity_received: 0,
+				purchase_rate: 50
 			}).success
 		).toBe(false);
 	});
-	it('rejects bad currency code', () => {
-		const r = createInventoryItemSchema.safeParse({
-			sku: 'X',
-			name: 'Y',
-			unit_of_measure: 'each',
-			unit_price: 1,
-			currency: 'usd'
-		});
-		expect(r.success).toBe(false);
-	});
 });
 
-describe('updateInventoryItemSchema', () => {
-	it('parses partial payloads', () => {
-		expect(updateInventoryItemSchema.parse({ name: 'New name' }).name).toBe('New name');
-	});
-	it('still rejects extras (.strict via .partial)', () => {
-		expect(() => updateInventoryItemSchema.parse({ sneaky: 1 })).toThrow();
-	});
-});
-
-describe('adjustStockSchema', () => {
-	it('parses a valid adjust', () => {
-		expect(adjustStockSchema.parse({ delta: 5, reason: 'purchase' })).toEqual({
+describe('createMovementRequestSchema', () => {
+	it('parses a valid adjustment', () => {
+		const r = createMovementRequestSchema.parse({
 			delta: 5,
-			reason: 'purchase'
+			reason: 'correction'
 		});
+		expect(r.delta).toBe(5);
 	});
 	it('rejects zero delta', () => {
-		const r = adjustStockSchema.safeParse({ delta: 0, reason: 'purchase' });
+		const r = createMovementRequestSchema.safeParse({ delta: 0, reason: 'correction' });
 		expect(r.success).toBe(false);
 		if (!r.success) expect(r.error.issues[0]?.message).toMatch(/cannot be zero/);
 	});
 	it('rejects non-integer delta', () => {
-		expect(adjustStockSchema.safeParse({ delta: 1.5, reason: 'purchase' }).success).toBe(false);
+		expect(
+			createMovementRequestSchema.safeParse({ delta: 1.5, reason: 'correction' }).success
+		).toBe(false);
 	});
 });
 
-describe('inventoryItemDtoSchema', () => {
+describe('writeOffBatchRequestSchema', () => {
+	it('requires reason', () => {
+		expect(writeOffBatchRequestSchema.safeParse({ reason: '' }).success).toBe(false);
+	});
+	it('parses with non-empty reason', () => {
+		expect(writeOffBatchRequestSchema.parse({ reason: 'damaged' }).reason).toBe('damaged');
+	});
+});
+
+describe('bulkProductActionRequestSchema', () => {
+	it('accepts action + ids', () => {
+		expect(
+			bulkProductActionRequestSchema.parse({ ids: ['p-1'], action: 'deactivate' }).action
+		).toBe('deactivate');
+	});
+	it('rejects empty ids', () => {
+		expect(bulkProductActionRequestSchema.safeParse({ ids: [], action: 'delete' }).success).toBe(
+			false
+		);
+	});
+});
+
+describe('productDtoSchema', () => {
 	it('parses a complete DTO', () => {
 		const dto = {
-			id: 'item-1',
-			tenant_id: 'tenant-1',
-			sku: 'X-1',
-			name: 'X',
-			unit_of_measure: 'each',
-			unit_price: 1,
-			currency: 'USD',
-			current_stock: 0,
-			reorder_point: 0,
-			reorder_quantity: 0,
-			tags: [],
+			id: 'p-1',
+			tenant_id: 't-1',
+			brand_name: 'Crocin',
+			generic_name: 'Paracetamol',
+			manufacturer_name: 'GSK',
+			product_category: 'Pain relief',
+			product_type: 'Tablet',
+			drug_schedule: 'otc' as const,
+			pack_size: '10x10',
+			pack_type: 'Strip',
+			units_per_pack: 10,
+			mrp: 50,
+			purchase_rate: 30,
+			sale_rate: 45,
+			gst_percentage: 12,
+			hsn_code: '30049099',
+			shelf_life_months: 24,
+			total_quantity_available: 100,
+			total_quantity_reserved: 0,
 			is_active: true,
 			created_at: '2026-01-01T00:00:00Z',
 			updated_at: '2026-01-01T00:00:00Z'
 		};
-		expect(inventoryItemDtoSchema.parse(dto).id).toBe('item-1');
+		expect(productDtoSchema.parse(dto).id).toBe('p-1');
 	});
 });
 
-describe('stockAdjustmentDtoSchema', () => {
-	it('parses an adjustment', () => {
+describe('batchDtoSchema', () => {
+	it('parses a complete batch', () => {
 		const dto = {
-			id: 'adj-1',
-			item_id: 'item-1',
-			delta: 5,
-			reason: 'purchase' as const,
-			new_stock: 10,
-			created_at: '2026-01-01T00:00:00Z',
-			created_by_membership_id: 'm-1'
+			id: 'b-1',
+			product_id: 'p-1',
+			batch_number: 'BN-001',
+			manufactured_at: '2026-01-01',
+			expires_at: '2028-01-01',
+			quantity_received: 100,
+			quantity_available: 90,
+			quantity_reserved: 10,
+			purchase_rate: 30,
+			gst_percentage: 12,
+			inward_date: '2026-01-01',
+			is_quarantined: false,
+			is_written_off: false
 		};
-		expect(stockAdjustmentDtoSchema.parse(dto).delta).toBe(5);
+		expect(batchDtoSchema.parse(dto).batch_number).toBe('BN-001');
 	});
 });
 
-describe('listInventoryItemsResponseSchema', () => {
-	it('parses an empty list', () => {
-		expect(listInventoryItemsResponseSchema.parse({ items: [], has_more: false }).items).toEqual(
-			[]
-		);
+describe('stockMovementDtoSchema', () => {
+	it('parses a movement', () => {
+		const dto = {
+			id: 'm-1',
+			product_id: 'p-1',
+			batch_id: 'b-1',
+			delta: 5,
+			reason: 'correction' as const,
+			balance_after: 105,
+			occurred_at: '2026-05-20T10:00:00Z',
+			recorded_by_membership_id: 'mem-1'
+		};
+		expect(stockMovementDtoSchema.parse(dto).delta).toBe(5);
 	});
 });
 
-describe('bulkInventoryActionSchema', () => {
-	it('parses a bulk action', () => {
-		expect(bulkInventoryActionSchema.parse({ ids: ['a'], action: 'deactivate' })).toEqual({
-			ids: ['a'],
-			action: 'deactivate'
+describe('gstDefaultsResponseSchema', () => {
+	it('parses a defaults map', () => {
+		const out = gstDefaultsResponseSchema.parse({
+			defaults: { 'Pain relief': 12, Ortho: 18 }
 		});
+		expect(out.defaults['Pain relief']).toBe(12);
 	});
-	it('rejects empty ids', () => {
-		expect(bulkInventoryActionSchema.safeParse({ ids: [], action: 'delete' }).success).toBe(false);
+});
+
+describe('computedPricesResponseSchema', () => {
+	it('parses computed prices', () => {
+		const out = computedPricesResponseSchema.parse({
+			purchase_rate_with_gst: 33.6,
+			sale_rate_with_gst: 50.4
+		});
+		expect(out.purchase_rate_with_gst).toBe(33.6);
 	});
 });
 
 describe('bulkUploadPreviewSchema', () => {
-	it('parses', () => {
-		expect(bulkUploadPreviewSchema.parse({ total_rows: 0, rows: [], errors: [] }).total_rows).toBe(
-			0
-		);
+	it('parses a preview', () => {
+		const r = bulkUploadPreviewSchema.parse({ total_rows: 0, rows: [], errors: [] });
+		expect(r.total_rows).toBe(0);
 	});
 });
 

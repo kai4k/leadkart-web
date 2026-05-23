@@ -1,91 +1,176 @@
 /**
- * Pure view-model helpers for the Leads CRM module.
+ * Pure view-model helpers for the CRM Leads module.
  *
  * Layer rule (CLAUDE.md): view-models are pure, async-free, side-effect
  * free transforms from DTOs to render-ready shapes. No fetch, no DOM,
  * no stores — just data shaping.
  */
-import type { LeadDto, LeadStage, LeadSource } from './schemas';
+import type {
+	BusinessType,
+	BuyTimeline,
+	CallOutcome,
+	CrmLeadDto,
+	LeadStage,
+	LeadTemperature,
+	MedicineSystem,
+	OrderValueBand,
+	ReminderKind,
+	ReminderStatus
+} from './schemas';
+import type { StatusPillOption } from '$ui';
+import type { KanbanColumnAccent, TimelineItemAccent } from '$ui';
 
-export interface StageBadgeMeta {
+// ── Stage ───────────────────────────────────────────────────────────
+
+export interface StageMeta {
+	value: LeadStage;
 	label: string;
-	variant: 'success' | 'danger' | 'warning' | 'neutral' | 'info' | 'brand';
+	variant: StatusPillOption['variant'];
+	accent: KanbanColumnAccent;
 }
 
-const STAGE_BADGES: Record<LeadStage, StageBadgeMeta> = {
-	new: { label: 'New', variant: 'info' },
-	contacted: { label: 'Contacted', variant: 'brand' },
-	qualified: { label: 'Qualified', variant: 'warning' },
-	proposal: { label: 'Proposal', variant: 'warning' },
-	won: { label: 'Won', variant: 'success' },
-	lost: { label: 'Lost', variant: 'danger' }
-};
-
-export function stageBadge(stage: LeadStage): StageBadgeMeta {
-	return STAGE_BADGES[stage] ?? { label: stage, variant: 'neutral' };
-}
-
-export const STAGE_OPTIONS: ReadonlyArray<{ value: LeadStage; label: string }> = [
-	{ value: 'new', label: 'New' },
-	{ value: 'contacted', label: 'Contacted' },
-	{ value: 'qualified', label: 'Qualified' },
-	{ value: 'proposal', label: 'Proposal' },
-	{ value: 'won', label: 'Won' },
-	{ value: 'lost', label: 'Lost' }
+export const STAGE_META: ReadonlyArray<StageMeta> = [
+	{ value: 'new', label: 'New', variant: 'info', accent: 'info' },
+	{ value: 'contacted', label: 'Contacted', variant: 'brand', accent: 'primary' },
+	{ value: 'interested', label: 'Interested', variant: 'warning', accent: 'warning' },
+	{ value: 'negotiation', label: 'Negotiation', variant: 'warning', accent: 'warning' },
+	{ value: 'converted', label: 'Converted', variant: 'success', accent: 'success' },
+	{ value: 'lost', label: 'Lost', variant: 'danger', accent: 'danger' }
 ];
 
-export const SOURCE_OPTIONS: ReadonlyArray<{ value: LeadSource; label: string }> = [
-	{ value: 'website', label: 'Website' },
-	{ value: 'referral', label: 'Referral' },
-	{ value: 'ads', label: 'Ads' },
-	{ value: 'marketplace', label: 'Marketplace' },
-	{ value: 'manual', label: 'Manual' },
-	{ value: 'import', label: 'Import' },
-	{ value: 'other', label: 'Other' }
-];
-
-const SOURCE_LABELS: Record<LeadSource, string> = SOURCE_OPTIONS.reduce(
-	(acc, o) => {
-		acc[o.value] = o.label;
+const STAGE_INDEX: Record<LeadStage, StageMeta> = STAGE_META.reduce(
+	(acc, m) => {
+		acc[m.value] = m;
 		return acc;
 	},
-	{} as Record<LeadSource, string>
+	{} as Record<LeadStage, StageMeta>
 );
 
-export function sourceLabel(source: LeadSource): string {
-	return SOURCE_LABELS[source] ?? source;
+export function stageMeta(stage: LeadStage): StageMeta {
+	return STAGE_INDEX[stage];
 }
 
+export const STAGE_OPTIONS: ReadonlyArray<StatusPillOption> = STAGE_META.map((m) => ({
+	value: m.value,
+	label: m.label,
+	variant: m.variant
+}));
+
+// ── Temperature ─────────────────────────────────────────────────────
+
+export interface TemperatureMeta {
+	value: LeadTemperature;
+	label: string;
+	variant: StatusPillOption['variant'];
+}
+
+export const TEMPERATURE_META: ReadonlyArray<TemperatureMeta> = [
+	{ value: 'hot', label: 'Hot', variant: 'danger' },
+	{ value: 'warm', label: 'Warm', variant: 'warning' },
+	{ value: 'cold', label: 'Cold', variant: 'info' },
+	{ value: 'dead', label: 'Dead', variant: 'neutral' }
+];
+
+const TEMP_INDEX: Record<LeadTemperature, TemperatureMeta> = TEMPERATURE_META.reduce(
+	(acc, m) => {
+		acc[m.value] = m;
+		return acc;
+	},
+	{} as Record<LeadTemperature, TemperatureMeta>
+);
+
+export function temperatureMeta(t: LeadTemperature): TemperatureMeta {
+	return TEMP_INDEX[t];
+}
+
+export const TEMPERATURE_OPTIONS: ReadonlyArray<StatusPillOption> = TEMPERATURE_META.map((m) => ({
+	value: m.value,
+	label: m.label,
+	variant: m.variant
+}));
+
+// ── Static enum labels ──────────────────────────────────────────────
+
+export const BUSINESS_TYPE_LABEL: Record<BusinessType, string> = {
+	pcd: 'PCD',
+	third_party: 'Third-party'
+};
+
+export const MEDICINE_SYSTEM_LABEL: Record<MedicineSystem, string> = {
+	allopathic: 'Allopathic',
+	ayurvedic: 'Ayurvedic'
+};
+
+export const ORDER_VALUE_BAND_LABEL: Record<OrderValueBand, string> = {
+	below_5000: 'Below ₹5,000',
+	upto_25000: 'Up to ₹25,000',
+	upto_50000: 'Up to ₹50,000',
+	above_50000: 'Above ₹50,000'
+};
+
+export const BUY_TIMELINE_LABEL: Record<BuyTimeline, string> = {
+	within_week: 'Within a week',
+	within_15_days: 'Within 15 days',
+	within_month: 'Within a month'
+};
+
+export const CALL_OUTCOME_LABEL: Record<CallOutcome, string> = {
+	connected: 'Connected',
+	busy: 'Busy',
+	no_answer: 'No answer',
+	switched_off: 'Switched off',
+	wrong_number: 'Wrong number',
+	do_not_call: 'Do not call'
+};
+
+export const CALL_OUTCOME_ACCENT: Record<CallOutcome, TimelineItemAccent> = {
+	connected: 'success',
+	busy: 'warning',
+	no_answer: 'warning',
+	switched_off: 'neutral',
+	wrong_number: 'danger',
+	do_not_call: 'danger'
+};
+
+export const REMINDER_KIND_LABEL: Record<ReminderKind, string> = {
+	callback: 'Callback',
+	three_month_mature: '3-month mature',
+	manual: 'Manual'
+};
+
+export const REMINDER_STATUS_LABEL: Record<ReminderStatus, string> = {
+	pending: 'Pending',
+	snoozed: 'Snoozed',
+	completed: 'Completed',
+	dismissed: 'Dismissed'
+};
+
+// ── Display helpers ─────────────────────────────────────────────────
+
 /**
- * Money formatter — locale aware, defers to the lead's currency.
- * Returns an em-dash placeholder when value is missing.
+ * Composite location label — "City, State" with PIN trailing when both
+ * city + state are present. Falls back to PIN-only when address is partial.
  */
-export function formatValue(value: number | null | undefined, currency = 'USD'): string {
-	if (value == null) return '—';
-	try {
-		return new Intl.NumberFormat(undefined, {
-			style: 'currency',
-			currency,
-			maximumFractionDigits: value % 1 === 0 ? 0 : 2
-		}).format(value);
-	} catch {
-		return `${currency} ${value.toFixed(2)}`;
-	}
+export function locationLabel(lead: CrmLeadDto): string {
+	const a = lead.address;
+	const parts = [a.city, a.state].filter((s) => !!s && s.length > 0);
+	if (parts.length === 0) return a.pin_code;
+	return `${parts.join(', ')} · ${a.pin_code}`;
 }
 
 /**
  * "Stale" = no contact in 7+ days AND lead is still in an open stage.
- * Used by the "Stale leads" saved view and by the row dot indicator.
+ * Used by the "Stale leads" saved view and by the table-row dot indicator.
  */
 const STALE_DAYS = 7;
 const OPEN_STAGES: ReadonlySet<LeadStage> = new Set<LeadStage>([
 	'new',
 	'contacted',
-	'qualified',
-	'proposal'
+	'interested',
+	'negotiation'
 ]);
 
-export function isStale(lead: LeadDto, now: Date = new Date()): boolean {
+export function isStale(lead: CrmLeadDto, now: Date = new Date()): boolean {
 	if (!OPEN_STAGES.has(lead.stage)) return false;
 	const reference = lead.last_contacted_at ?? lead.created_at;
 	const refDate = new Date(reference);
@@ -116,38 +201,31 @@ export function relativeTime(iso: string | null | undefined, now: Date = new Dat
 	return d.toLocaleDateString();
 }
 
-/**
- * Saved-view presets (v1) — frontend-only, no backend persistence yet.
- * Each preset is a partial filter-set that gets merged into the URL.
- */
-export interface SavedView {
-	id: string;
+// ── Kanban column shape (stage groups) ──────────────────────────────
+
+export interface KanbanColumn {
+	id: LeadStage;
 	label: string;
-	stage?: LeadStage[];
-	owner_membership_id?: string;
-	sort?: string;
-	/** Marker so the LeadsList can apply the stale-filter after fetch. */
-	staleOnly?: boolean;
+	accent: KanbanColumnAccent;
+	cards: CrmLeadDto[];
+	count: number;
 }
 
-export function savedViews(callerMembershipId: string): SavedView[] {
-	return [
-		{ id: 'all', label: 'All leads' },
-		{
-			id: 'mine',
-			label: 'My leads',
-			owner_membership_id: callerMembershipId
-		},
-		{
-			id: 'hot',
-			label: 'Hot leads',
-			stage: ['qualified', 'proposal']
-		},
-		{
-			id: 'stale',
-			label: 'Stale (7d+)',
-			stage: ['new', 'contacted', 'qualified', 'proposal'],
-			staleOnly: true
-		}
-	];
+export function groupByStage(leads: CrmLeadDto[]): KanbanColumn[] {
+	const buckets: Record<LeadStage, CrmLeadDto[]> = {
+		new: [],
+		contacted: [],
+		interested: [],
+		negotiation: [],
+		converted: [],
+		lost: []
+	};
+	for (const l of leads) buckets[l.stage].push(l);
+	return STAGE_META.map((m) => ({
+		id: m.value,
+		label: m.label,
+		accent: m.accent,
+		cards: buckets[m.value],
+		count: buckets[m.value].length
+	}));
 }

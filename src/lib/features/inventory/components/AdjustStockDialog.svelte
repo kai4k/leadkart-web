@@ -1,81 +1,74 @@
 <script lang="ts">
 	import { Dialog, Button, Alert } from '$ui';
-	import { Select, type SelectOption } from '$form';
+	import { NumberInput, RadioGroup, RadioItem } from '$form';
 	import { useForm } from '$lib/hooks/use-form.svelte';
 	import { adjustStockMutation } from '$features/inventory/queries';
 	import {
-		adjustStockSchema,
-		adjustmentReasonSchema,
-		type AdjustmentReason,
-		type InventoryItemDto
+		createMovementRequestSchema,
+		type BatchDto,
+		type CreateMovementRequest,
+		type StockMovementReason
 	} from '$features/inventory/schemas';
 	import {
-		adjustmentReasonLabel,
-		previewNewStock,
+		MANUAL_ADJUSTMENT_REASONS,
+		previewNewBalance,
 		willGoNegative
 	} from '$features/inventory/view-models';
 
 	/**
-	 * Adjust Stock dialog — opened from the list row dropdown, detail
-	 * page CTA, or by clicking the stock cell inline.
+	 * AdjustStockDialog — manual correction scoped to a specific batch.
 	 *
 	 * UX:
-	 *   - current stock readonly
-	 *   - delta input (signed integer, placeholder shows `+` or `−`)
-	 *   - reason dropdown (7 enum values)
-	 *   - optional note (textarea)
-	 *   - live "New stock will be: X" preview
-	 *   - inline warning if delta would drive stock negative
+	 *   - Current available (readonly)
+	 *   - Delta (signed integer)
+	 *   - Reason (RadioGroup, only manual reasons — `inward` / `sale`
+	 *     are server-driven, not user-pickable)
+	 *   - Note (optional, max 1000 chars)
+	 *   - Live "New balance: X" preview
+	 *   - Inline warning if delta would drive negative
 	 *
-	 * The mutation is optimistic — the dialog closes on submit and the
-	 * stock-count update is patched into the cache immediately.
+	 * Mutation is optimistic (see adjustStockMutation in queries.ts).
+	 * 422 negative_stock_disallowed flows into the form's bannerError.
 	 */
 
 	type Props = {
 		open: boolean;
-		item: InventoryItemDto | null;
+		productId: string;
+		batch: BatchDto | null;
 		onOpenChange: (open: boolean) => void;
 	};
-	let { open = $bindable(false), item, onOpenChange }: Props = $props();
+	let { open = $bindable(false), productId, batch, onOpenChange }: Props = $props();
 
 	const mutation = adjustStockMutation();
 
-	const form = useForm(
-		adjustStockSchema,
-		{
-			delta: 0,
-			reason: 'purchase' as AdjustmentReason,
-			note: ''
-		},
-		{ validateOn: 'blur' }
-	);
+	const initial: CreateMovementRequest = {
+		batch_id: undefined,
+		delta: 0,
+		reason: 'correction' as StockMovementReason,
+		note: ''
+	};
 
-	// Reset form when the dialog opens or the item changes.
+	const form = useForm(createMovementRequestSchema, initial, { validateOn: 'blur' });
+
 	$effect(() => {
-		if (open && item) {
-			form.values = { delta: 0, reason: 'purchase', note: '' };
+		if (open && batch) {
+			form.values = { batch_id: batch.id, delta: 0, reason: 'correction', note: '' };
 			form.clearErrors();
 		}
 	});
 
-	const REASON_OPTIONS: SelectOption[] = adjustmentReasonSchema.options.map((r) => ({
-		value: r,
-		label: adjustmentReasonLabel(r)
-	}));
-
-	const newStock = $derived(item ? previewNewStock(item.current_stock, form.values.delta || 0) : 0);
-	const willNegative = $derived(
-		item ? willGoNegative(item.current_stock, form.values.delta || 0) : false
-	);
+	const currentAvailable = $derived(batch?.quantity_available ?? 0);
+	const newBalance = $derived(previewNewBalance(currentAvailable, form.values.delta || 0));
+	const willNegative = $derived(willGoNegative(currentAvailable, form.values.delta || 0));
 
 	async function onSubmit(e: SubmitEvent) {
-		if (!item) return;
+		if (!batch) return;
 		await form.submit(e, async (values) => {
-			const cleaned: typeof values = { ...values };
+			const cleaned: CreateMovementRequest = { ...values, batch_id: batch.id };
 			if (cleaned.note === '') cleaned.note = undefined;
 			await new Promise<void>((resolve, reject) => {
 				mutation.mutate(
-					{ id: item.id, body: cleaned },
+					{ productId, body: cleaned },
 					{
 						onSuccess: () => {
 							onOpenChange(false);
@@ -94,9 +87,9 @@
 		<Dialog.Header>
 			<div class="stack stack-tight">
 				<h2 class="h5">Adjust stock</h2>
-				{#if item}
+				{#if batch}
 					<p class="caption text-fg-muted">
-						<code>{item.sku}</code> &middot; {item.name}
+						Batch <code>{batch.batch_number}</code>
 					</p>
 				{/if}
 			</div>
@@ -105,62 +98,57 @@
 			<form id="adjust-stock-form" class="stack stack-relaxed" onsubmit={onSubmit} novalidate>
 				<div class="grid gap-3 sm:grid-cols-2">
 					<label class="stack stack-tight">
-						<span class="label">Current stock</span>
+						<span class="label text-fg">Current available</span>
 						<input
 							type="number"
 							readonly
-							value={item?.current_stock ?? 0}
-							class="glass-input bg-bg-muted rounded-md px-3 py-2 text-sm"
-							aria-label="Current stock"
+							value={currentAvailable}
+							class="glass-input body-sm text-fg bg-bg-muted rounded-md px-3 py-2"
+							aria-label="Current available"
 						/>
 					</label>
-					<label class="stack stack-tight">
-						<span class="label">Delta</span>
-						<input
-							type="number"
-							name="delta"
-							placeholder="+10 or −5"
-							bind:value={form.values.delta}
-							class="glass-input rounded-md px-3 py-2 text-sm"
-							data-testid="adjust-delta"
-							required
-						/>
-						{#if form.errors.delta}
-							<span class="caption text-danger-700">{form.errors.delta}</span>
-						{/if}
-					</label>
+					<NumberInput
+						label="Delta"
+						bind:value={form.values.delta}
+						step={1}
+						placeholder="+5 or -10"
+						error={form.errors.delta}
+					/>
 				</div>
 
-				<Select
+				<RadioGroup
 					label="Reason"
-					name="reason"
-					options={REASON_OPTIONS}
 					bind:value={form.values.reason}
+					orientation="horizontal"
 					error={form.errors.reason}
-				/>
+				>
+					{#each MANUAL_ADJUSTMENT_REASONS as r (r.value)}
+						<RadioItem value={r.value} label={r.label} />
+					{/each}
+				</RadioGroup>
 
 				<label class="stack stack-tight">
-					<span class="label">Note (optional)</span>
+					<span class="label text-fg">Note (optional)</span>
 					<textarea
 						bind:value={form.values.note}
-						maxlength={2000}
+						maxlength={1000}
 						rows={2}
-						placeholder="Anything worth remembering for the audit log…"
-						class="glass-input w-full rounded-md px-3 py-2 text-sm"
+						placeholder="Anything worth remembering for the audit trail…"
+						class="glass-input body-sm text-fg w-full rounded-md px-3 py-2"
 					></textarea>
 				</label>
 
 				<div class="border-border bg-bg-muted rounded-md border px-3 py-2">
 					<p class="caption text-fg-muted">
-						New stock will be: <strong class="text-fg" data-testid="new-stock-preview"
-							>{newStock}</strong
+						New balance: <strong class="text-fg" data-testid="new-balance-preview"
+							>{newBalance}</strong
 						>
 					</p>
 				</div>
 
 				{#if willNegative}
 					<Alert variant="warning">
-						This delta would drive stock below zero. The server may reject it.
+						This delta would drive the batch below zero. The server may reject it.
 					</Alert>
 				{/if}
 
