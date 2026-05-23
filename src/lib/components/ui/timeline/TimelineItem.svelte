@@ -34,6 +34,8 @@
 		icon?: any;
 		iconAccent?: TimelineItemAccent;
 		time?: string;
+		/** Machine-readable ISO 8601 datetime — emitted as the <time datetime=…> attr for AT parseability. */
+		datetime?: string;
 		title: string;
 		description?: string;
 		class?: string;
@@ -44,6 +46,7 @@
 		icon: IconComp,
 		iconAccent = 'neutral',
 		time,
+		datetime,
 		title,
 		description,
 		class: className = '',
@@ -75,7 +78,9 @@
 			<div class="flex flex-wrap items-baseline justify-between gap-2">
 				<p class="body-sm text-fg font-medium">{title}</p>
 				{#if time}
-					<time class="caption text-fg-muted tabular-nums">{time}</time>
+					<time class="caption text-fg-muted tabular-nums" datetime={datetime ?? undefined}
+						>{time}</time
+					>
 				{/if}
 			</div>
 			{#if description}

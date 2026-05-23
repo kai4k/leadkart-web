@@ -30,7 +30,8 @@
 	lang="ts"
 	generics="TPreview extends BulkUploadPreviewShape, TResult extends BulkUploadResultShape"
 >
-	import { Drawer, Button, Alert, Badge } from '$ui';
+	import { Drawer, Button, Alert, Badge, Stepper } from '$ui';
+	import type { StepperState } from '$ui';
 	import { Icon, Upload, CheckCircle2, X, Trash2 } from '$icons';
 
 	/**
@@ -42,11 +43,6 @@
 	 * narrow the rendered fields (e.g. extra "inserted-as-deduped"
 	 * column on the result page) by passing typed `previewFn` and
 	 * `commitFn` callbacks.
-	 *
-	 * Stepper note: until Batch B ships a dedicated `<Stepper>`
-	 * primitive this renders the inline Badge-row stepper from the
-	 * existing leads drawer. The shape will swap to `<Stepper>` 1:1
-	 * when available.
 	 */
 
 	type Step = 'upload' | 'preview' | 'result';
@@ -204,14 +200,16 @@
 		</Drawer.Header>
 
 		<Drawer.Body>
-			<ol class="cluster cluster-tight mb-6" aria-label="Upload progress">
-				{#each [{ k: 'upload' as Step, label: '1. Upload' }, { k: 'preview' as Step, label: '2. Preview' }, { k: 'result' as Step, label: '3. Result' }] as s (s.k)}
-					{@const active = step === s.k}
-					<li>
-						<Badge variant={active ? 'brand' : 'neutral'} style="soft" size="sm">{s.label}</Badge>
-					</li>
-				{/each}
-			</ol>
+			{@const stepIndex = step === 'upload' ? 0 : step === 'preview' ? 1 : 2}
+			{@const stepState = (i: number): StepperState =>
+				i < stepIndex ? 'complete' : i === stepIndex ? 'current' : 'pending'}
+			<div class="mb-6">
+				<Stepper.Root ariaLabel="Upload progress">
+					<Stepper.Step index={1} label="Upload" state={stepState(0)} />
+					<Stepper.Step index={2} label="Preview" state={stepState(1)} />
+					<Stepper.Step index={3} label="Result" state={stepState(2)} last />
+				</Stepper.Root>
+			</div>
 
 			{#if step === 'upload'}
 				<div class="stack stack-relaxed">

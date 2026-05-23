@@ -26,7 +26,7 @@
 	let { title, search, actions, tabs, class: className = '' }: Props = $props();
 </script>
 
-<div role="toolbar" aria-label="Page actions" class={cn('stack stack-tight', className)}>
+<div class={cn('stack stack-tight', className)}>
 	<div class="cluster cluster-spread items-center gap-4">
 		{#if title}
 			<div class="min-w-0 flex-1">{@render title()}</div>

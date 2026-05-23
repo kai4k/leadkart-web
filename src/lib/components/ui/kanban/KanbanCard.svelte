@@ -73,7 +73,7 @@
 	function neighbourColumn(direction: 1 | -1): string | null {
 		const from = nearestColumnId();
 		if (!from) return null;
-		const board = cardEl?.closest('[role="list"]');
+		const board = cardEl?.closest('[data-kanban-board]');
 		if (!board) return null;
 		const cols = Array.from(board.querySelectorAll<HTMLElement>('[data-kanban-column]')).map(
 			(el) => el.dataset.kanbanColumn ?? ''

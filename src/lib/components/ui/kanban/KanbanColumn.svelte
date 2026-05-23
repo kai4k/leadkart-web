@@ -114,11 +114,7 @@
 		{/if}
 	</header>
 
-	<ul
-		role="list"
-		aria-label={`${label} cards`}
-		class="stack stack-tight flex-1 overflow-y-auto px-1 pb-1"
-	>
+	<ul aria-label={`${label} cards`} class="stack stack-tight flex-1 overflow-y-auto px-1 pb-1">
 		{#if children}{@render children()}{/if}
 	</ul>
 </section>

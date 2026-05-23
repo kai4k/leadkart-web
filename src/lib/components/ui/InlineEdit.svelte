@@ -124,7 +124,9 @@
 				value={draft}
 				disabled={saving}
 				oninput={(e) => (draft = e.currentTarget.value)}
-				onblur={() => void save()}
+				onblur={() => {
+					if (editing) void save();
+				}}
 				onkeydown={onKeyDown}
 			/>
 			{#if error}

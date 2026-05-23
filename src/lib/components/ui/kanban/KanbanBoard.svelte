@@ -61,6 +61,7 @@
 <div
 	class={cn('flex gap-4 overflow-x-auto pb-4', 'snap-x snap-mandatory scroll-px-4', className)}
 	role="list"
+	data-kanban-board
 	aria-label={ariaLabel}
 >
 	{@render children()}

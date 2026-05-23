@@ -3,7 +3,7 @@
 </script>
 
 <script lang="ts">
-	import { Check, AlertTriangle } from 'lucide-svelte';
+	import { Check, AlertTriangle } from '$icons';
 	import { cn } from '$lib/utils/cn';
 
 	type Props = {

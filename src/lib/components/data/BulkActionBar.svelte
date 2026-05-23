@@ -75,15 +75,13 @@
 
 {#if selection.count > 0}
 	<div
-		role="status"
-		aria-live="polite"
 		class={cn(
 			'glass-card sticky bottom-4 z-10 mx-auto w-full max-w-3xl',
 			'cluster cluster-spread items-center gap-4 px-4 py-3',
 			className
 		)}
 	>
-		<p class="label text-fg">
+		<p class="label text-fg" role="status" aria-live="polite">
 			<span class="font-semibold">{selection.count}</span> selected
 		</p>
 
