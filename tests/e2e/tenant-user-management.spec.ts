@@ -207,7 +207,9 @@ test.describe('Tenant user management — negative', () => {
 			body: { code: 'internal_error', message: 'user list lookup failed' }
 		});
 		await page.goto('/settings/users');
-		// DataTable surfaces error state via aria role="alert" or table error message
-		await expect(page.getByText(/failed|error/i).first()).toBeVisible({ timeout: 5000 });
+		// DataTable surfaces canonical "Something went wrong" copy via the
+		// typed listErrorCopy $derived; server message strings are not
+		// rendered (CLAUDE.md rule 12 — pattern-match on ApiError subclass).
+		await expect(page.getByText(/something went wrong/i).first()).toBeVisible({ timeout: 5000 });
 	});
 });

@@ -268,6 +268,66 @@ test.describe('Inventory — detail page', () => {
 		await expect(page.getByRole('tab', { name: 'Pricing' })).toBeVisible();
 	});
 
+	test('deep link ?tab=pricing preselects the Pricing tab', async ({ page }) => {
+		await signInAsTier(page, { tier: 'tenant-admin', permissions: INVENTORY_PERMISSIONS });
+		await registerMocks([
+			{
+				method: 'GET',
+				path: `/api/v1/inventory/products/${productIn.id}`,
+				status: 200,
+				body: productIn
+			},
+			{
+				method: 'GET',
+				path: `/api/v1/inventory/products/${productIn.id}/batches`,
+				status: 200,
+				body: { items: [], has_more: false }
+			},
+			{
+				method: 'GET',
+				path: `/api/v1/inventory/products/${productIn.id}/movements`,
+				status: 200,
+				body: { items: [], has_more: false }
+			}
+		]);
+		await page.goto(`/inventory/${productIn.id}?tab=pricing`);
+		await expect(page.getByRole('tab', { name: 'Pricing' })).toHaveAttribute(
+			'aria-selected',
+			'true'
+		);
+		await expect(page.getByTestId('purchase-with-gst')).toBeVisible();
+	});
+
+	test('clicking a tab writes ?tab= into the URL', async ({ page }) => {
+		await signInAsTier(page, { tier: 'tenant-admin', permissions: INVENTORY_PERMISSIONS });
+		await registerMocks([
+			{
+				method: 'GET',
+				path: `/api/v1/inventory/products/${productIn.id}`,
+				status: 200,
+				body: productIn
+			},
+			{
+				method: 'GET',
+				path: `/api/v1/inventory/products/${productIn.id}/batches`,
+				status: 200,
+				body: { items: [], has_more: false }
+			},
+			{
+				method: 'GET',
+				path: `/api/v1/inventory/products/${productIn.id}/movements`,
+				status: 200,
+				body: { items: [], has_more: false }
+			}
+		]);
+		await page.goto(`/inventory/${productIn.id}`);
+		expect(new URL(page.url()).searchParams.get('tab')).toBeNull();
+		await page.getByRole('tab', { name: /Stock movements/ }).click();
+		await expect.poll(() => new URL(page.url()).searchParams.get('tab')).toBe('movements');
+		await page.getByRole('tab', { name: 'Batches' }).click();
+		await expect.poll(() => new URL(page.url()).searchParams.get('tab')).toBeNull();
+	});
+
 	test('Pricing tab shows computed-with-GST values', async ({ page }) => {
 		await signInAsTier(page, { tier: 'tenant-admin', permissions: INVENTORY_PERMISSIONS });
 		await registerMocks([
@@ -694,13 +754,14 @@ test.describe('Inventory — keyboard nav (j/k/Enter/x)', () => {
 		await page.goto('/inventory');
 		await expect(page.getByText('Crocin Advance').first()).toBeVisible();
 
-		// Drop focus from any input the page-load may have parked on, so the
-		// keyboard-nav guard against typing targets is satisfied.
-		await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+		// Roving-tabindex: focus the first row (the only row with
+		// tabindex=0) so keydown events route to the table's tbody
+		// handler rather than the page.
+		await page.locator('[data-roving-root] tbody tr[tabindex="0"]').first().focus();
 
-		// `j` from initial state advances the focused index by one, landing
-		// on the SECOND row (per UseKeyboardListNav semantics — `k` walks
-		// back). Pressing `k` once after that focuses the first row.
+		// `j` advances focus from the first row to the second.
+		// `k` walks it back to the first. `x` toggles selection on
+		// the focused (first) row.
 		await page.keyboard.press('j');
 		await page.keyboard.press('k');
 		await page.keyboard.press('x');

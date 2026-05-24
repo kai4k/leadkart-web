@@ -29,6 +29,8 @@ export {
 	type UseKeyboardListNavOptions
 } from './use-keyboard-list-nav.svelte';
 
+export { useUrlTab, type UseUrlTab } from './use-url-tab.svelte';
+
 export { UseSavedViews, type SavedView } from './use-saved-views.svelte';
 
 export {

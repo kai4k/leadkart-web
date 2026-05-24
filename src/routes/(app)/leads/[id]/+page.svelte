@@ -10,6 +10,7 @@
 	import { Tabs, Skeleton } from '$ui';
 	import { Button } from '$ui';
 	import { Icon, Plus } from '$icons';
+	import { useUrlTab } from '$lib/hooks';
 	import {
 		leadDetailQuery,
 		leadCallsQuery,
@@ -50,7 +51,10 @@
 	let editOpen = $state(false);
 	let reassignOpen = $state(false);
 	let logCallOpen = $state(false);
-	let activeTab = $state('profile');
+
+	// URL-synced tab — `?tab=activity` deep-links into the call log, and
+	// the browser back button restores the prior tab without a remount.
+	const tab = useUrlTab('profile', ['profile', 'activity', 'reminders', 'history']);
 
 	const detailErrorCopy = $derived.by(() => {
 		const err = detail.error;
@@ -85,7 +89,7 @@
 			onReassign={() => (reassignOpen = true)}
 		/>
 
-		<Tabs.Root bind:value={activeTab}>
+		<Tabs.Root value={tab.value} onValueChange={tab.set}>
 			<Tabs.List>
 				<Tabs.Trigger value="profile">Profile</Tabs.Trigger>
 				<Tabs.Trigger value="activity">Activity</Tabs.Trigger>

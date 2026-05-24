@@ -214,6 +214,29 @@ test.describe('Orders — detail page', () => {
 		await expect(page.getByTestId('action-approve')).toBeVisible();
 	});
 
+	test('deep link ?tab=payments preselects the Payments tab', async ({ page }) => {
+		await signInAsTier(page, { tier: 'tenant-admin', permissions: PERMS });
+		const draft = makeOrder({ id: ORDER_DRAFT, status: 'quotation_draft' });
+		await detailFixtures(ORDER_DRAFT, draft);
+		await page.goto(`/orders/${ORDER_DRAFT}?tab=payments`);
+		await expect(page.getByRole('tab', { name: /^payments/i })).toHaveAttribute(
+			'aria-selected',
+			'true'
+		);
+	});
+
+	test('clicking a tab updates ?tab= in the URL', async ({ page }) => {
+		await signInAsTier(page, { tier: 'tenant-admin', permissions: PERMS });
+		const draft = makeOrder({ id: ORDER_DRAFT, status: 'quotation_draft' });
+		await detailFixtures(ORDER_DRAFT, draft);
+		await page.goto(`/orders/${ORDER_DRAFT}`);
+		expect(new URL(page.url()).searchParams.get('tab')).toBeNull();
+		await page.getByRole('tab', { name: /^payments/i }).click();
+		await expect.poll(() => new URL(page.url()).searchParams.get('tab')).toBe('payments');
+		await page.getByRole('tab', { name: /^items$/i }).click();
+		await expect.poll(() => new URL(page.url()).searchParams.get('tab')).toBeNull();
+	});
+
 	test('approve quotation flips to quotation_approved + record-token button appears', async ({
 		page
 	}) => {

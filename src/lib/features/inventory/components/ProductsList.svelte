@@ -176,24 +176,18 @@
 	}
 
 	// ── Keyboard nav (Linear / Superhuman convention) ─────────────────
+	// Roving-tabindex pattern: DataTable wires onkeydown/focusin/focusout
+	// from the <tbody> to the nav store and registers per-row refs so
+	// `j`/`k` move DOM focus. When a drawer (Create / Bulk upload) is
+	// open it owns focus, so keys naturally bubble through the portal
+	// boundary without polluting the row list.
 	const nav = new UseKeyboardListNav<ProductDto>({
-		isAnyOverlayOpen: () => createOpen || bulkUploadOpen,
 		onSelect: (p) => openDetail(p),
 		onToggleSelect: (p) => selection.toggle(p.id)
 	});
 
 	$effect(() => {
 		nav.setItems(products);
-	});
-
-	// Direct window keydown wiring. We attach to `window` from a $effect
-	// rather than `<svelte:window>` because the parent ResourceListPage
-	// shell's own portals (Drawer/Dialog) can intercept the synthetic
-	// handler ordering otherwise.
-	$effect(() => {
-		const handler = nav.bindWindow();
-		window.addEventListener('keydown', handler);
-		return () => window.removeEventListener('keydown', handler);
 	});
 
 	// ── DataTable column config ───────────────────────────────────────
@@ -351,6 +345,7 @@
 				error={null}
 				onRowClick={openDetail}
 				{selection}
+				{nav}
 				emptyState={emptyStateSlot}
 			/>
 		</div>

@@ -58,6 +58,17 @@
 		 */
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		selection?: import('$lib/hooks').UseBulkSelection<any>;
+		/**
+		 * Roving-tabindex keyboard nav store. When set, the table forwards
+		 * `onkeydown` / `onfocusin` / `onfocusout` from the `<tbody>` to
+		 * the nav store, sets `data-roving-root` on the table wrapper,
+		 * sets per-row `tabindex` via {@link UseKeyboardListNav.tabindexFor},
+		 * and registers each row's element under its `rowKey` so j/k/Home/
+		 * End move DOM focus. Pair with `nav.setItems(rows)` in a parent
+		 * `$effect`.
+		 */
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		nav?: import('$lib/hooks').UseKeyboardListNav<any>;
 		/** Optional class on the wrapping element. */
 		class?: string;
 	};
@@ -81,6 +92,7 @@
 		sort = null,
 		onSortChange,
 		selection,
+		nav,
 		class: className = ''
 	}: DataTableProps<T> = $props();
 
@@ -192,7 +204,7 @@
 		<EmptyState title="No results" />
 	{/if}
 {:else}
-	<div class={cn('overflow-x-auto', className)}>
+	<div class={cn('overflow-x-auto', className)} data-roving-root={nav ? '' : undefined}>
 		<table class="w-full text-left">
 			<thead>
 				<tr class="border-border border-b">
@@ -239,16 +251,30 @@
 					{/if}
 				</tr>
 			</thead>
-			<tbody>
-				{#each rows as row (rowKey(row))}
+			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+			<tbody
+				onkeydown={nav ? (e) => nav.handleKey(e) : undefined}
+				onfocusin={nav ? () => nav.onFocusIn() : undefined}
+				onfocusout={nav ? (e) => nav.onFocusOut(e) : undefined}
+			>
+				{#each rows as row, rowIdx (rowKey(row))}
+					{@const navTabIndex = nav ? nav.tabindexFor(rowIdx) : undefined}
+					{@const focused = nav ? nav.hasFocus && nav.focusedIdx === rowIdx : false}
+					{@const navKey = nav ? rowKey(row) : ''}
 					<tr
 						class={cn(
 							'border-border hover:bg-bg-muted border-b transition-colors',
-							onRowClick && 'cursor-pointer'
+							onRowClick && 'cursor-pointer',
+							focused && 'bg-bg-muted border-l-primary border-l-4'
 						)}
 						onclick={onRowClick ? () => onRowClick!(row) : undefined}
-						tabindex={onRowClick ? 0 : undefined}
-						onkeydown={onRowClick
+						tabindex={nav ? navTabIndex : onRowClick ? 0 : undefined}
+						{@attach (el) => {
+							if (!nav) return;
+							nav.registerRef(navKey, el as HTMLElement);
+							return () => nav.registerRef(navKey, null);
+						}}
+						onkeydown={onRowClick && !nav
 							? (e) => {
 									if (e.key === 'Enter' || e.key === ' ') {
 										e.preventDefault();

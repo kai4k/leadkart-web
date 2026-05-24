@@ -124,9 +124,15 @@
 					</th>
 				</tr>
 			</thead>
-			<tbody>
+			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+			<tbody
+				data-roving-root
+				onkeydown={(e) => nav.handleKey(e)}
+				onfocusin={() => nav.onFocusIn()}
+				onfocusout={(e) => nav.onFocusOut(e)}
+			>
 				{#each rows as lead, i (lead.id)}
-					{@const focused = nav.focusedIndex === i}
+					{@const focused = nav.hasFocus && nav.focusedIdx === i}
 					{@const stale = isStale(lead)}
 					<tr
 						data-testid="lead-row"
@@ -137,9 +143,13 @@
 							focused && 'border-l-primary border-l-4'
 						]}
 						onclick={() => openDetail(lead)}
-						tabindex={0}
+						tabindex={nav.tabindexFor(i)}
+						{@attach (el) => {
+							nav.registerRef(lead.id, el as HTMLElement);
+							return () => nav.registerRef(lead.id, null);
+						}}
 						onkeydown={(e) => {
-							if (e.key === 'Enter' || e.key === ' ') {
+							if (e.key === ' ') {
 								e.preventDefault();
 								openDetail(lead);
 							}

@@ -8,7 +8,11 @@
 	import { untrack } from 'svelte';
 	import { Alert, Button, Drawer } from '$ui';
 	import { TextField } from '$form';
-	import { reviseQuotationRequestSchema } from '$features/orders/schemas';
+	import { useForm } from '$lib/hooks';
+	import {
+		reviseQuotationRequestSchema,
+		type ReviseQuotationRequest
+	} from '$features/orders/schemas';
 	import { reviseQuotationMutation } from '$features/orders/queries';
 	import OrderItemsEditor, {
 		type BatchCatalogueEntry,
@@ -50,79 +54,88 @@
 		}));
 	}
 
-	let draftItems: DraftItem[] = $state(untrack(() => seedRows()));
-	let notes = $state('');
-	let bannerError: string | null = $state(null);
-	let itemsError: string | null = $state(null);
-	let isSubmitting = $state(false);
+	const form = useForm(reviseQuotationRequestSchema, {
+		items: untrack(() => seedRows()),
+		notes: ''
+	});
 
-	// Seed the editor whenever the drawer opens with a fresh order.
+	/**
+	 * `OrderItemsEditor` requires `DraftItem[]` (discount_percentage:
+	 * number, non-optional). The form's input type tracks the schema's
+	 * Zod *input* shape where `.default(0)` makes discount_percentage
+	 * optional. Runtime values always carry a number — `seedRows` fills
+	 * `?? 0` and the editor itself only ever sets numbers — so the
+	 * narrowing is safe. We use a paired get/set binding so the editor
+	 * still mutates `form.values.items` in place.
+	 */
+	const itemsBinding = {
+		get items(): DraftItem[] {
+			return form.values.items as DraftItem[];
+		},
+		set items(next: DraftItem[]) {
+			form.values.items = next;
+		}
+	};
+
+	// Re-seed the form whenever the drawer opens with a fresh order.
 	$effect(() => {
 		if (open) {
-			draftItems = seedRows();
-			notes = '';
-			bannerError = null;
-			itemsError = null;
+			form.values.items = seedRows();
+			form.values.notes = '';
+			form.clearErrors();
 		}
 	});
 
-	async function handleSubmit(e: SubmitEvent) {
-		e.preventDefault();
-		bannerError = null;
-		itemsError = null;
+	/**
+	 * Items-level error surface — extracted from `form.errors` because
+	 * Zod's flattened fieldErrors keys array failures under `items` (or
+	 * `items.0.unit_price` for row-level), but the items editor is a
+	 * single composite widget so a single Alert above the editor is the
+	 * canonical UX.
+	 */
+	const itemsError = $derived.by(() => {
+		const direct = form.errors.items;
+		if (direct) return direct;
+		const rowEntry = Object.entries(form.errors).find(([k]) => k.startsWith('items'));
+		return rowEntry?.[1] ?? null;
+	});
 
-		const result = reviseQuotationRequestSchema.safeParse({
-			items: draftItems,
-			notes: notes || undefined
-		});
-		if (!result.success) {
-			const flat = result.error.flatten();
-			const fieldErrors = flat.fieldErrors as Record<string, string[] | undefined>;
-			itemsError = fieldErrors.items?.[0] ?? null;
-			if (!itemsError) bannerError = flat.formErrors[0] ?? 'Invalid revision';
-			return;
-		}
-
-		isSubmitting = true;
-		await new Promise<void>((resolve) => {
-			reviseM.mutate(result.data, {
-				onSuccess: () => {
-					onOpenChange(false);
-					resolve();
-				},
-				onError: (err) => {
-					if (err instanceof ValidationError) {
-						// Try mapping field errors to the items array; otherwise
-						// fall back to a banner with a generic message.
-						const itemsField =
-							err.fields.items ??
-							Object.entries(err.fields).find(([k]) => k.startsWith('items'))?.[1];
-						if (itemsField) {
-							itemsError = itemsField;
-							bannerError = null;
+	async function onSubmit(e: SubmitEvent) {
+		await form.submit(e, async (values: ReviseQuotationRequest) => {
+			await new Promise<void>((resolve, reject) => {
+				reviseM.mutate(values, {
+					onSuccess: () => {
+						onOpenChange(false);
+						resolve();
+					},
+					onError: (err) => {
+						// ValidationError → form.errors (handled by useForm).
+						// Map every other typed subclass to a human banner.
+						if (err instanceof ValidationError) {
+							reject(err);
+						} else if (err instanceof ConflictError) {
+							reject(
+								new Error(
+									err.detail || 'This order was revised by someone else — reload and try again.'
+								)
+							);
+						} else if (err instanceof AuthError) {
+							reject(
+								new Error(
+									err.status === 403
+										? "You don't have permission to revise quotations."
+										: 'Your session expired. Sign in again.'
+								)
+							);
+						} else if (err instanceof NotFoundError) {
+							reject(new Error('This order was deleted or moved.'));
+						} else if (err instanceof NetworkError) {
+							reject(new Error('Check your network connection and try again.'));
 						} else {
-							bannerError = 'The server rejected the revision.';
+							reject(new Error('Failed to revise. Please try again.'));
 						}
-					} else if (err instanceof ConflictError) {
-						bannerError =
-							err.detail || 'This order was revised by someone else — reload and try again.';
-					} else if (err instanceof AuthError) {
-						bannerError =
-							err.status === 403
-								? "You don't have permission to revise quotations."
-								: 'Your session expired. Sign in again.';
-					} else if (err instanceof NotFoundError) {
-						bannerError = 'This order was deleted or moved.';
-					} else if (err instanceof NetworkError) {
-						bannerError = 'Check your network connection and try again.';
-					} else {
-						bannerError = 'Failed to revise. Please try again.';
 					}
-					resolve();
-				},
-				onSettled: () => {
-					isSubmitting = false;
-				}
+				});
 			});
 		});
 	}
@@ -136,10 +149,10 @@
 				Edits create a new revision; previous revisions remain on file.
 			</p>
 		</Drawer.Header>
-		<form id="revise-quotation-form" onsubmit={handleSubmit}>
+		<form id="revise-quotation-form" onsubmit={onSubmit}>
 			<Drawer.Body>
-				{#if bannerError}
-					<Alert variant="danger" title="Failed to revise">{bannerError}</Alert>
+				{#if form.bannerError}
+					<Alert variant="danger" title="Failed to revise">{form.bannerError}</Alert>
 				{/if}
 
 				{#if itemsError}
@@ -148,7 +161,7 @@
 
 				<div class="stack stack-relaxed">
 					<OrderItemsEditor
-						bind:items={draftItems}
+						bind:items={itemsBinding.items}
 						{catalogue}
 						currency={order.currency}
 						onSearch={onSearchCatalogue}
@@ -157,7 +170,7 @@
 					<TextField
 						label="Notes (optional)"
 						name="notes"
-						bind:value={notes}
+						bind:value={form.values.notes}
 						placeholder="Explain why the revision was needed."
 						data-testid="revise-notes"
 					/>
@@ -165,12 +178,12 @@
 			</Drawer.Body>
 			<Drawer.Footer>
 				<Drawer.Close>
-					<Button variant="ghost" disabled={isSubmitting}>Cancel</Button>
+					<Button variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
 				</Drawer.Close>
 				<Button
 					type="submit"
 					form="revise-quotation-form"
-					loading={isSubmitting}
+					loading={form.isSubmitting}
 					data-testid="revise-submit"
 				>
 					Save revision

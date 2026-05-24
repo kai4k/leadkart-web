@@ -313,6 +313,71 @@ test.describe('CRM Leads — detail page tabs', () => {
 		}
 	});
 
+	test('deep link ?tab=activity preselects the Activity tab', async ({ page }) => {
+		const lead = makeLead();
+		await signInAsTier(page, { tier: 'tenant-admin', permissions: LEAD_PERMS });
+		await registerMocks([
+			{ method: 'GET', path: `/api/v1/crm/leads/${lead.id}`, status: 200, body: lead },
+			{
+				method: 'GET',
+				path: `/api/v1/crm/leads/${lead.id}/calls`,
+				status: 200,
+				body: { items: [], has_more: false }
+			},
+			{
+				method: 'GET',
+				path: `/api/v1/crm/leads/${lead.id}/reminders`,
+				status: 200,
+				body: { items: [], has_more: false }
+			},
+			{
+				method: 'GET',
+				path: `/api/v1/crm/leads/${lead.id}/history`,
+				status: 200,
+				body: { items: [], has_more: false }
+			}
+		]);
+		await page.goto(`/leads/${lead.id}?tab=activity`);
+		const activityTab = page.getByRole('tab', { name: 'Activity' });
+		await expect(activityTab).toHaveAttribute('aria-selected', 'true');
+		// Activity panel body — the "Log call" button is unique to that tab.
+		await expect(page.getByRole('button', { name: /log call/i })).toBeVisible();
+	});
+
+	test('clicking a tab updates the URL with ?tab=<value>', async ({ page }) => {
+		const lead = makeLead();
+		await signInAsTier(page, { tier: 'tenant-admin', permissions: LEAD_PERMS });
+		await registerMocks([
+			{ method: 'GET', path: `/api/v1/crm/leads/${lead.id}`, status: 200, body: lead },
+			{
+				method: 'GET',
+				path: `/api/v1/crm/leads/${lead.id}/calls`,
+				status: 200,
+				body: { items: [], has_more: false }
+			},
+			{
+				method: 'GET',
+				path: `/api/v1/crm/leads/${lead.id}/reminders`,
+				status: 200,
+				body: { items: [], has_more: false }
+			},
+			{
+				method: 'GET',
+				path: `/api/v1/crm/leads/${lead.id}/history`,
+				status: 200,
+				body: { items: [], has_more: false }
+			}
+		]);
+		await page.goto(`/leads/${lead.id}`);
+		// Default tab is profile — no ?tab= in URL.
+		expect(new URL(page.url()).searchParams.get('tab')).toBeNull();
+		await page.getByRole('tab', { name: 'Reminders' }).click();
+		await expect.poll(() => new URL(page.url()).searchParams.get('tab')).toBe('reminders');
+		// Going back to default clears the param.
+		await page.getByRole('tab', { name: 'Profile' }).click();
+		await expect.poll(() => new URL(page.url()).searchParams.get('tab')).toBeNull();
+	});
+
 	test('LogCallDialog submit POSTs /calls + shows toast', async ({ page }) => {
 		const lead = makeLead();
 		await signInAsTier(page, { tier: 'tenant-admin', permissions: LEAD_PERMS });

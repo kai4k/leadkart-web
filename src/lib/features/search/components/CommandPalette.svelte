@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { Search, Building2, User, Icon } from '$icons';
 	import { omniSearchQuery } from '$features/search/queries';
-	import { getCsrfToken } from '$lib/api/csrf';
+	import { enterScope } from '$features/operator/scope';
 	import type { SearchPersonHit, SearchTenantHit } from '$features/search/schemas';
 
 	/**
@@ -37,12 +37,7 @@
 	async function enterTenantScope(slug: string) {
 		// Reuse the BFF scope endpoint — same flow as the tenants-list row click.
 		try {
-			const resp = await fetch('/api/operator/scope', {
-				method: 'POST',
-				headers: { 'content-type': 'application/json', 'x-csrf-token': getCsrfToken() },
-				body: JSON.stringify({ slug })
-			});
-			if (!resp.ok) return;
+			await enterScope({ slug });
 			onOpenChange(false);
 			goto('/operator/scope/profile');
 		} catch {

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Alert, Skeleton, Tabs, ConfirmDialog } from '$ui';
+	import { useUrlTab } from '$lib/hooks';
 	import { productDetailQuery, deleteProductMutation } from '$features/inventory/queries';
 	import { computePriceWithGst, formatPrice } from '$features/inventory/view-models';
 	import { AuthError, NetworkError, NotFoundError } from '$api/errors';
@@ -22,7 +23,9 @@
 	const query = $derived(productDetailQuery(id));
 	const product = $derived(query.data ?? null);
 
-	let activeTab: string = $state('batches');
+	// URL-synced tab — `?tab=movements` deep-links into the stock-
+	// movement timeline; back-button restores the prior view.
+	const tab = useUrlTab('batches', ['batches', 'movements', 'pricing', 'activity']);
 	let editOpen = $state(false);
 	let confirmDeleteOpen = $state(false);
 
@@ -87,7 +90,7 @@
 			<ProductRegulatoryCard {product} />
 		</div>
 
-		<Tabs.Root bind:value={activeTab}>
+		<Tabs.Root value={tab.value} onValueChange={tab.set}>
 			<Tabs.List>
 				<Tabs.Trigger value="batches">Batches</Tabs.Trigger>
 				<Tabs.Trigger value="movements">Stock movements</Tabs.Trigger>

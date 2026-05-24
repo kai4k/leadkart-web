@@ -107,11 +107,13 @@ test.describe('Operator tenants list', () => {
 			body: { code: 'internal_error', message: 'tenant list lookup failed' }
 		});
 		await page.goto('/operator/tenants');
-		// DataTable surfaces the error.message via its `error` prop
+		// DataTable surfaces canonical "Something went wrong" copy via its
+		// `error` prop — typed listErrorCopy derives from the ApiError
+		// subclass, not server message strings (CLAUDE.md rule 12).
 		await expect(
 			page
 				.locator('#main-content')
-				.getByText(/failed|error/i)
+				.getByText(/something went wrong/i)
 				.first()
 		).toBeVisible({
 			timeout: 5000

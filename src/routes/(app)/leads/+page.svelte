@@ -129,8 +129,10 @@
 	let editOpen = $state(false);
 	let bulkUploadOpen = $state(false);
 
+	// Roving-tabindex keyboard nav. Drawers (Edit / Bulk upload) own
+	// focus when open, so j/k bubble naturally out of the row list
+	// instead of needing an `isAnyOverlayOpen` guard.
 	const nav = new UseKeyboardListNav<CrmLeadDto>({
-		isAnyOverlayOpen: () => editOpen || bulkUploadOpen,
 		onSelect: (lead) => goto(`/leads/${lead.id}`),
 		onEdit: (lead) => {
 			editingLead = lead;

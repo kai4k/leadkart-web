@@ -64,7 +64,16 @@
 			setTimeout(() => goto('/signin'), 2000);
 		} catch (err) {
 			if (err instanceof ValidationError) {
-				if (err.code === 'password_breached') {
+				// Token-lifecycle 400 codes surface as a top banner (the token
+				// is the problem, not the password); other ValidationErrors
+				// route to the password field.
+				if (
+					err.code === 'invalid_token' ||
+					err.code === 'token_consumed' ||
+					err.code === 'token_expired'
+				) {
+					formError = $_('auth.resetPassword.errors.invalidToken');
+				} else if (err.code === 'password_breached') {
 					fieldErrors = { new_password: $_('auth.resetPassword.errors.breached') };
 				} else if (err.code === 'password_same') {
 					fieldErrors = { new_password: $_('auth.resetPassword.errors.same') };

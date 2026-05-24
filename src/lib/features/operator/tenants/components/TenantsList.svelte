@@ -10,7 +10,7 @@
 	import { tenantLifecycleBadge } from '$features/operator/tenants/view-models';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 	import { AuthError, NetworkError, NotFoundError } from '$lib/api/errors';
-	import { getCsrfToken } from '$lib/api/csrf';
+	import { enterScope as enterScopeApi } from '$features/operator/scope';
 	import { toast } from '$ui';
 	import CreateTenantDrawer from './CreateTenantDrawer.svelte';
 	import ImpersonateModal from '$features/operator/impersonation/components/ImpersonateModal.svelte';
@@ -115,18 +115,25 @@
 		if (openingScopeSlug !== null) return; // a row is already in-flight
 		openingScopeSlug = tenant.slug;
 		try {
-			const resp = await fetch('/api/operator/scope', {
-				method: 'POST',
-				headers: { 'content-type': 'application/json', 'x-csrf-token': getCsrfToken() },
-				body: JSON.stringify({ slug: tenant.slug })
-			});
-			if (!resp.ok) {
-				toast('danger', 'Could not open tenant');
-				return;
-			}
+			await enterScopeApi({ slug: tenant.slug });
 			qc.clear();
 			await invalidateAll();
 			goto('/operator/scope/profile');
+		} catch (err) {
+			if (err instanceof NetworkError) {
+				toast('danger', 'Check your network connection and try again.');
+			} else if (err instanceof AuthError) {
+				toast(
+					'danger',
+					err.status === 403
+						? "You don't have permission to open this tenant."
+						: 'Your session expired. Sign in again.'
+				);
+			} else if (err instanceof NotFoundError) {
+				toast('danger', 'This tenant was deleted or moved.');
+			} else {
+				toast('danger', 'Could not open tenant');
+			}
 		} finally {
 			openingScopeSlug = null;
 		}

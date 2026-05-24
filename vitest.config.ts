@@ -25,7 +25,13 @@ export default defineConfig({
 			$icons: resolve(root, 'lib/icons'),
 			'$icons/*': resolve(root, 'lib/icons/*'),
 			$api: resolve(root, 'lib/api'),
-			'$api/*': resolve(root, 'lib/api/*')
+			'$api/*': resolve(root, 'lib/api/*'),
+			// SvelteKit virtual modules — stubbed via `vi.mock(...)` in
+			// individual tests but vite still needs a resolvable alias
+			// during import-analysis. Empty stubs at known paths satisfy
+			// that without affecting test behaviour.
+			'$app/navigation': resolve(__dirname, 'tests/unit/stubs/app-navigation.ts'),
+			'$app/state': resolve(__dirname, 'tests/unit/stubs/app-state.ts')
 		}
 	},
 	test: {

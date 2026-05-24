@@ -6,6 +6,7 @@
 <script lang="ts">
 	import { Alert, Card, Skeleton, Tabs } from '$ui';
 	import { Icon, ChevronLeft } from '$icons';
+	import { useUrlTab } from '$lib/hooks';
 	import {
 		orderCreditNotesQuery,
 		orderDetailQuery,
@@ -44,7 +45,16 @@
 	let dispatchOpen = $state(false);
 	let cancelOpen = $state(false);
 
-	let activeTab = $state('items');
+	// URL-synced tab — `?tab=payments` deep-links into the payments
+	// list, and the browser back button restores the prior tab.
+	const tab = useUrlTab('items', [
+		'items',
+		'revisions',
+		'payments',
+		'invoice',
+		'credit_notes',
+		'activity'
+	]);
 
 	/**
 	 * Catalogue seed — derived from the order's existing items so the
@@ -91,7 +101,7 @@
 			onCancel={() => (cancelOpen = true)}
 		/>
 
-		<Tabs.Root bind:value={activeTab}>
+		<Tabs.Root value={tab.value} onValueChange={tab.set}>
 			<Tabs.List>
 				<Tabs.Trigger value="items">Items</Tabs.Trigger>
 				<Tabs.Trigger value="revisions">Revisions ({order.revisions.length})</Tabs.Trigger>

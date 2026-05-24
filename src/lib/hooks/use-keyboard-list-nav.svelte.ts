@@ -1,10 +1,17 @@
 /**
- * `useKeyboardListNav` — j/k/Enter/Esc/E/X keyboard navigation for
- * resource list pages, matching the Linear / Superhuman convention.
+ * `useRovingNav` — WAI-ARIA APG roving-tabindex keyboard nav for
+ * resource list pages, matching the Linear / Notion / GitHub canon.
  *
- * The consumer:
+ * Roving tabindex: exactly ONE row owns `tabindex=0` (the focused
+ * row); every other row carries `tabindex=-1`. Arrow / j / k keys
+ * move the focus AND the `tabindex=0` ownership in lockstep, so
+ * Tab from anywhere on the page lands the user back on the row
+ * they were last viewing — the WCAG 2.2 expectation for grid /
+ * listbox patterns.
+ *
+ * Consumer pattern:
+ *
  *   const nav = new UseKeyboardListNav<MyItem>({
- *     isAnyOverlayOpen: () => createOpen || drawerOpen,
  *     onSelect: (it) => goto(`/leads/${it.id}`),
  *     onEdit:   (it) => openEditDrawer(it),
  *     onToggleSelect: (it) => bulk.toggle(it.id)
@@ -12,37 +19,58 @@
  *
  *   $effect(() => nav.setItems(list.items));
  *
- *   <svelte:window onkeydown={nav.bindWindow()} />
+ *   <tbody
+ *     data-roving-root
+ *     onkeydown={(e) => nav.handleKey(e)}
+ *     onfocusin={() => nav.onFocusIn()}
+ *     onfocusout={(e) => nav.onFocusOut(e)}
+ *   >
+ *     {#each rows as item, i (item.id)}
+ *       <tr
+ *         tabindex={nav.tabindexFor(i)}
+ *         bind:this={refs[item.id]}
+ *         ...
+ *       />
+ *     {/each}
+ *   </tbody>
  *
  * Guards baked in:
- *   - any focused input/textarea/select/[contenteditable] → return
- *     (so typing in the search bar doesn't jump rows)
- *   - any overlay open (consumer-supplied predicate) → return
- *     (drawer/dialog/dropdown captures keyboard)
- *   - meta/ctrl held → return (browser shortcuts win)
+ *   - target is `<input>`/`<textarea>`/`<select>`/[contenteditable]
+ *     → bail (typing in the search bar doesn't jump rows)
+ *   - meta/ctrl/alt held → bail (browser shortcuts + Cmd+K win)
+ *
+ * `focusedIdx` starts at `0` (NOT `-1`) so consumers never branch
+ * on a sentinel. When the list is empty the index stays at `0`
+ * but `focusRow` short-circuits; `hasFocus` reports whether the
+ * list currently owns DOM focus so consumers can gate the
+ * "active row" accent without flashing on initial mount.
  */
+import { SvelteMap } from 'svelte/reactivity';
 
 export type KeyableItem = { id: string };
 
 export interface UseKeyboardListNavOptions<TItem extends KeyableItem> {
 	/** Invoked on Enter while a row is focused. */
 	onSelect?: (item: TItem) => void;
-	/** Invoked on `E` while a row is focused. */
+	/** Invoked on `e` while a row is focused. */
 	onEdit?: (item: TItem) => void;
-	/** Invoked on `X` while a row is focused — typically toggles bulk selection. */
+	/** Invoked on `x` while a row is focused — typically toggles bulk selection. */
 	onToggleSelect?: (item: TItem) => void;
-	/**
-	 * Consumer reports whether any modal/drawer/popover is currently
-	 * showing. When true, the hook returns early so the overlay can
-	 * own the keyboard.
-	 */
-	isAnyOverlayOpen?: () => boolean;
 }
 
 export class UseKeyboardListNav<TItem extends KeyableItem> {
-	focusedIndex: number = $state(-1);
+	/**
+	 * Index of the currently focused row. Starts at `0` — consumers
+	 * gate on `items.length > 0` to render the accent, never on a
+	 * `< 0` sentinel.
+	 */
+	focusedIdx: number = $state(0);
+
+	/** True while the list itself owns DOM focus. */
+	hasFocus: boolean = $state(false);
 
 	private items: TItem[] = $state([]);
+	private readonly refs: SvelteMap<string, HTMLElement> = new SvelteMap();
 	private readonly options: UseKeyboardListNavOptions<TItem>;
 
 	constructor(options: UseKeyboardListNavOptions<TItem> = {}) {
@@ -50,103 +78,144 @@ export class UseKeyboardListNav<TItem extends KeyableItem> {
 	}
 
 	/**
-	 * Update the navigable set. Keeps the focused index in range —
-	 * collapses to -1 when the list empties.
+	 * Update the navigable set. Keeps `focusedIdx` in range when the
+	 * list shrinks; clamps to the last row when needed.
 	 */
 	setItems(items: TItem[]): void {
 		this.items = items;
-		if (items.length === 0) {
-			this.focusedIndex = -1;
-		} else if (this.focusedIndex >= items.length) {
-			this.focusedIndex = items.length - 1;
+		if (this.focusedIdx >= items.length) {
+			this.focusedIdx = Math.max(0, items.length - 1);
 		}
 	}
 
-	clearFocus(): void {
-		this.focusedIndex = -1;
-	}
-
-	/** Currently-focused item (or null). */
-	get focusedItem(): TItem | null {
-		const i = this.focusedIndex;
-		if (i < 0 || i >= this.items.length) return null;
-		return this.items[i];
+	/**
+	 * Register a row's DOM element under its id. Pass `null` to
+	 * unregister — re-renders that swap a row's DOM node should call
+	 * `registerRef(id, null)` from the cleanup phase of the `$effect`.
+	 */
+	registerRef(id: string, el: HTMLElement | null): void {
+		if (el) this.refs.set(id, el);
+		else this.refs.delete(id);
 	}
 
 	/**
-	 * Returns a keydown handler bound to this instance. Pass to
-	 * `<svelte:window onkeydown={nav.bindWindow()} />` once per page.
+	 * Returns the tabindex value for a given row index. Exactly one
+	 * row has `tabindex=0` (the focused one); every other row carries
+	 * `tabindex=-1`. This is the roving-tabindex contract per
+	 * WAI-ARIA APG (grid + listbox patterns).
 	 */
-	bindWindow(): (event: KeyboardEvent) => void {
-		return (event: KeyboardEvent) => this.handle(event);
+	tabindexFor(idx: number): 0 | -1 {
+		return idx === this.focusedIdx ? 0 : -1;
 	}
 
-	// ── internal ───────────────────────────────────────────────────────
+	/**
+	 * Move focus (DOM + index) to a row. Scrolls the row into view
+	 * with `block: 'nearest'` so j/k navigation never overshoots the
+	 * viewport. No-op when the target index is out of range.
+	 */
+	focusRow(idx: number): void {
+		if (idx < 0 || idx >= this.items.length) return;
+		this.focusedIdx = idx;
+		const id = this.items[idx]?.id;
+		const el = id ? this.refs.get(id) : null;
+		if (!el) return;
+		el.focus();
+		// jsdom doesn't implement scrollIntoView — guard so unit tests
+		// don't trip over it. Real browsers always have the method.
+		if (typeof el.scrollIntoView === 'function') {
+			el.scrollIntoView({ block: 'nearest' });
+		}
+	}
 
-	private handle(event: KeyboardEvent): void {
+	/**
+	 * Attach to the list/table container's `onkeydown` (NOT window).
+	 * Returns the bound handler that interprets j/k/ArrowUp/ArrowDown
+	 * for movement, Enter for select, e for edit, x for toggle-select,
+	 * Home/End for jumping to bounds.
+	 */
+	handleKey(event: KeyboardEvent): void {
 		if (event.metaKey || event.ctrlKey || event.altKey) return;
-		if (this.options.isAnyOverlayOpen?.()) return;
-		if (this.isTypingTarget(event.target)) return;
+		const target = event.target as HTMLElement | null;
+		if (this.isTypingTarget(target)) return;
 
-		const k = event.key;
-		switch (k) {
+		switch (event.key) {
 			case 'j':
 			case 'ArrowDown':
-				this.moveNext();
-				event.preventDefault();
+				if (this.focusedIdx < this.items.length - 1) {
+					event.preventDefault();
+					this.focusRow(this.focusedIdx + 1);
+				}
 				return;
 			case 'k':
 			case 'ArrowUp':
-				this.movePrev();
-				event.preventDefault();
+				if (this.focusedIdx > 0) {
+					event.preventDefault();
+					this.focusRow(this.focusedIdx - 1);
+				}
 				return;
 			case 'Enter': {
-				const it = this.focusedItem;
-				if (it && this.options.onSelect) {
-					this.options.onSelect(it);
+				const item = this.items[this.focusedIdx];
+				if (item && this.options.onSelect) {
 					event.preventDefault();
+					this.options.onSelect(item);
 				}
 				return;
 			}
 			case 'e':
 			case 'E': {
-				const it = this.focusedItem;
-				if (it && this.options.onEdit) {
-					this.options.onEdit(it);
+				const item = this.items[this.focusedIdx];
+				if (item && this.options.onEdit) {
 					event.preventDefault();
+					this.options.onEdit(item);
 				}
 				return;
 			}
 			case 'x':
 			case 'X': {
-				const it = this.focusedItem;
-				if (it && this.options.onToggleSelect) {
-					this.options.onToggleSelect(it);
+				const item = this.items[this.focusedIdx];
+				if (item && this.options.onToggleSelect) {
 					event.preventDefault();
+					this.options.onToggleSelect(item);
 				}
 				return;
 			}
-			case 'Escape':
-				if (this.focusedIndex !== -1) {
-					this.clearFocus();
-					event.preventDefault();
-				}
+			case 'Home':
+				event.preventDefault();
+				this.focusRow(0);
+				return;
+			case 'End':
+				event.preventDefault();
+				this.focusRow(this.items.length - 1);
 				return;
 			default:
 				return;
 		}
 	}
 
-	private moveNext(): void {
-		if (this.items.length === 0) return;
-		this.focusedIndex = Math.min(this.items.length - 1, Math.max(0, this.focusedIndex) + 1);
-		if (this.focusedIndex < 0) this.focusedIndex = 0;
+	/** Container `onfocusin` — flips `hasFocus` on. */
+	onFocusIn(): void {
+		this.hasFocus = true;
 	}
 
-	private movePrev(): void {
-		if (this.items.length === 0) return;
-		const next = this.focusedIndex < 0 ? 0 : this.focusedIndex - 1;
-		this.focusedIndex = Math.max(0, next);
+	/**
+	 * Container `onfocusout` — flips `hasFocus` off ONLY when focus is
+	 * leaving the list entirely. Row-to-row focus moves inside the
+	 * same `data-roving-root` ancestor keep the active-row accent
+	 * lit. The host element MUST declare `data-roving-root` on the
+	 * `<table>`/`<tbody>`/`<ul>` for this boundary check to work.
+	 */
+	onFocusOut(event: FocusEvent): void {
+		const next = event.relatedTarget as HTMLElement | null;
+		if (!next) {
+			this.hasFocus = false;
+			return;
+		}
+		let walk: HTMLElement | null = next;
+		while (walk) {
+			if (walk.hasAttribute('data-roving-root')) return;
+			walk = walk.parentElement;
+		}
+		this.hasFocus = false;
 	}
 
 	private isTypingTarget(target: EventTarget | null): boolean {
