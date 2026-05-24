@@ -3,6 +3,13 @@
 	import { replacePermissionOverridesMutation } from '$features/users/queries';
 	import type { UserDto } from '$features/users/types';
 	import { displayName } from '$features/auth/view-models';
+	import {
+		ValidationError,
+		ConflictError,
+		AuthError,
+		NotFoundError,
+		NetworkError
+	} from '$api/errors';
 
 	type Props = {
 		open: boolean;
@@ -14,7 +21,9 @@
 
 	let granted = $state<string[]>([]);
 	let revoked = $state<string[]>([]);
-	let error = $state<string | null>(null);
+	let bannerError = $state<string | null>(null);
+	let grantedError = $state<string | null>(null);
+	let revokedError = $state<string | null>(null);
 
 	$effect(() => {
 		// V1: no backend endpoint returns the existing overrides per
@@ -52,12 +61,34 @@
 
 	async function onSave() {
 		if (!user) return;
-		error = null;
+		bannerError = null;
+		grantedError = null;
+		revokedError = null;
 		mutation.mutate(
 			{ id: user.membership_id, body: { granted, revoked } },
 			{
 				onSuccess: () => onOpenChange(false),
-				onError: (err) => (error = err instanceof Error ? err.message : 'Failed to save overrides')
+				onError: (err) => {
+					if (err instanceof ValidationError) {
+						grantedError = err.fields.granted ?? null;
+						revokedError = err.fields.revoked ?? null;
+						bannerError =
+							grantedError || revokedError ? null : 'One or more permission names are invalid.';
+					} else if (err instanceof ConflictError) {
+						bannerError = err.detail || 'These overrides conflict with the current role set.';
+					} else if (err instanceof AuthError) {
+						bannerError =
+							err.status === 403
+								? "You don't have permission to manage permission overrides."
+								: 'Your session expired. Sign in again.';
+					} else if (err instanceof NotFoundError) {
+						bannerError = 'This user was deleted or moved.';
+					} else if (err instanceof NetworkError) {
+						bannerError = 'Check your network connection and try again.';
+					} else {
+						bannerError = 'Failed to save overrides. Please try again.';
+					}
+				}
 			}
 		);
 	}
@@ -86,10 +117,12 @@
 					<input
 						class="glass-input flex-1 rounded-md px-3 py-2 text-sm"
 						placeholder="e.g. crm.leads.reassign"
+						aria-invalid={grantedError ? 'true' : undefined}
 						bind:value={newGrant}
 					/>
 					<Button variant="ghost" onclick={addGrant}>Add</Button>
 				</div>
+				{#if grantedError}<span class="body-sm text-danger-700">{grantedError}</span>{/if}
 				{#if granted.length > 0}
 					<ul class="cluster" aria-label="Granted permissions">
 						{#each granted as p (p)}
@@ -109,10 +142,12 @@
 					<input
 						class="glass-input flex-1 rounded-md px-3 py-2 text-sm"
 						placeholder="e.g. crm.leads.delete"
+						aria-invalid={revokedError ? 'true' : undefined}
 						bind:value={newRevoke}
 					/>
 					<Button variant="ghost" onclick={addRevoke}>Add</Button>
 				</div>
+				{#if revokedError}<span class="body-sm text-danger-700">{revokedError}</span>{/if}
 				{#if revoked.length > 0}
 					<ul class="cluster" aria-label="Revoked permissions">
 						{#each revoked as p (p)}
@@ -127,7 +162,7 @@
 					</ul>
 				{/if}
 			</section>
-			{#if error}<Alert class="mt-4" variant="danger">{error}</Alert>{/if}
+			{#if bannerError}<Alert class="mt-4" variant="danger">{bannerError}</Alert>{/if}
 		</Drawer.Body>
 		<Drawer.Footer>
 			<Drawer.Close>

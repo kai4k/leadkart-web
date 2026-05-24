@@ -23,6 +23,7 @@
 	import { userStatusBadge, userRoleBadges, canDeactivate } from '$features/users/view-models';
 	import { displayName, initials } from '$features/auth/view-models';
 	import type { UserDto } from '$features/users/types';
+	import { AuthError, NetworkError } from '$api/errors';
 	import CreateUserDrawer from './CreateUserDrawer.svelte';
 	import DeactivateUserDialog from './DeactivateUserDialog.svelte';
 	import RoleAssignmentDrawer from './RoleAssignmentDrawer.svelte';
@@ -101,6 +102,17 @@
 					? 'empty'
 					: 'ready'
 	);
+
+	const listErrorCopy = $derived.by(() => {
+		const err = listQuery.error;
+		if (!err) return null;
+		if (err instanceof NetworkError) return 'Check your network connection and try again.';
+		if (err instanceof AuthError)
+			return err.status === 403
+				? "You don't have permission to view users."
+				: 'Your session expired. Sign in again.';
+		return 'Something went wrong. Please try again.';
+	});
 
 	const columns: DataTableColumn<UserDto>[] = [
 		{
@@ -243,7 +255,7 @@
 		rows={paged}
 		rowKey={(u) => u.membership_id}
 		state={tableState}
-		error={listQuery.error?.message}
+		error={listErrorCopy}
 		{rowActions}
 	>
 		{#snippet emptyState()}

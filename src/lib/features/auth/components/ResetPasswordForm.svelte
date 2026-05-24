@@ -7,6 +7,7 @@
 	import { resetPassword } from '../api';
 	import { Alert, AuthCard, Button, Logo } from '$lib/components/ui';
 	import { PasswordField } from '$lib/components/form';
+	import { ValidationError, NetworkError, ApiError } from '$api/errors';
 
 	/**
 	 * ResetPasswordForm — public reset confirmation step (email-link flow).
@@ -62,16 +63,18 @@
 			success = true;
 			setTimeout(() => goto('/signin'), 2000);
 		} catch (err) {
-			const status = (err as { status?: number }).status;
-			const code = (err as { code?: string }).code;
-			if (status === 400) {
+			if (err instanceof ValidationError) {
+				if (err.code === 'password_breached') {
+					fieldErrors = { new_password: $_('auth.resetPassword.errors.breached') };
+				} else if (err.code === 'password_same') {
+					fieldErrors = { new_password: $_('auth.resetPassword.errors.same') };
+				} else {
+					fieldErrors = { new_password: $_('auth.resetPassword.errors.weak') };
+				}
+			} else if (err instanceof NetworkError) {
+				formError = 'Check your network connection and try again.';
+			} else if (err instanceof ApiError && err.status === 400) {
 				formError = $_('auth.resetPassword.errors.invalidToken');
-			} else if (status === 422 && code === 'password_breached') {
-				fieldErrors = { new_password: $_('auth.resetPassword.errors.breached') };
-			} else if (status === 422 && code === 'password_same') {
-				fieldErrors = { new_password: $_('auth.resetPassword.errors.same') };
-			} else if (status === 422) {
-				fieldErrors = { new_password: $_('auth.resetPassword.errors.weak') };
 			} else {
 				formError = $_('auth.errors.unexpected');
 			}

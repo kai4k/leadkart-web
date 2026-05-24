@@ -3,6 +3,7 @@
 	import { Alert, Skeleton, Tabs, ConfirmDialog } from '$ui';
 	import { productDetailQuery, deleteProductMutation } from '$features/inventory/queries';
 	import { computePriceWithGst, formatPrice } from '$features/inventory/view-models';
+	import { AuthError, NetworkError, NotFoundError } from '$api/errors';
 	import ProductDetailHeader from './ProductDetailHeader.svelte';
 	import ProductIdentityCard from './ProductIdentityCard.svelte';
 	import ProductCommercialCard from './ProductCommercialCard.svelte';
@@ -49,6 +50,18 @@
 	const saleWithGst = $derived(
 		product ? computePriceWithGst(product.sale_rate, product.gst_percentage) : 0
 	);
+
+	const errorCopy = $derived.by(() => {
+		const err = query.error;
+		if (!err) return 'Unknown error';
+		if (err instanceof NetworkError) return 'Check your network connection and try again.';
+		if (err instanceof AuthError)
+			return err.status === 403
+				? "You don't have permission to view this product."
+				: 'Your session expired. Sign in again.';
+		if (err instanceof NotFoundError) return 'This product was deleted or moved.';
+		return 'Something went wrong. Please try again.';
+	});
 </script>
 
 {#if query.isPending}
@@ -62,7 +75,7 @@
 	</div>
 {:else if query.isError}
 	<Alert variant="danger" title="Couldn't load product">
-		{query.error?.message ?? 'Unknown error'}
+		{errorCopy}
 	</Alert>
 {:else if product}
 	<div class="stack stack-relaxed">

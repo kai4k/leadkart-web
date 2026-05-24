@@ -25,6 +25,7 @@
 	import ReassignmentHistory from '$features/leads/components/ReassignmentHistory.svelte';
 	import EditLeadDrawer from '$features/leads/components/EditLeadDrawer.svelte';
 	import ReassignDialog from '$features/leads/components/ReassignDialog.svelte';
+	import { AuthError, NetworkError, NotFoundError } from '$api/errors';
 
 	const id = $derived(page.params.id ?? '');
 	const detail = $derived(leadDetailQuery(id));
@@ -50,6 +51,18 @@
 	let reassignOpen = $state(false);
 	let logCallOpen = $state(false);
 	let activeTab = $state('profile');
+
+	const detailErrorCopy = $derived.by(() => {
+		const err = detail.error;
+		if (!err) return '';
+		if (err instanceof NetworkError) return 'Check your network connection and try again.';
+		if (err instanceof AuthError)
+			return err.status === 403
+				? "You don't have permission to view this lead."
+				: 'Your session expired. Sign in again.';
+		if (err instanceof NotFoundError) return 'This lead was deleted or moved.';
+		return 'Something went wrong. Please try again.';
+	});
 </script>
 
 <svelte:head><title>Lead · LeadKart</title></svelte:head>
@@ -62,7 +75,7 @@
 		</div>
 	{:else if detail.isError}
 		<div class="bg-danger-50 text-danger-900 border-danger-500 rounded-md border-l-4 p-4">
-			<p class="label">Couldn't load lead. {detail.error?.message ?? ''}</p>
+			<p class="label">Couldn't load lead. {detailErrorCopy}</p>
 		</div>
 	{:else if detail.data}
 		{@const lead = detail.data}

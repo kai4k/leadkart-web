@@ -4,6 +4,7 @@
 	import { batchesQuery } from '$features/inventory/queries';
 	import { expiryStatus, fefoSort, formatPrice } from '$features/inventory/view-models';
 	import type { BatchDto } from '$features/inventory/schemas';
+	import { AuthError, NetworkError, NotFoundError } from '$api/errors';
 	import AddBatchDrawer from './AddBatchDrawer.svelte';
 	import AdjustStockDialog from './AdjustStockDialog.svelte';
 	import WriteOffBatchDialog from './WriteOffBatchDialog.svelte';
@@ -42,6 +43,18 @@
 	}
 
 	const isEmpty = $derived(!query.isPending && !query.isError && batches.length === 0);
+
+	const errorCopy = $derived.by(() => {
+		const err = query.error;
+		if (!err) return '';
+		if (err instanceof NetworkError) return 'Check your network connection and try again.';
+		if (err instanceof AuthError)
+			return err.status === 403
+				? "You don't have permission to view batches."
+				: 'Your session expired. Sign in again.';
+		if (err instanceof NotFoundError) return 'This product was deleted or moved.';
+		return 'Something went wrong. Please try again.';
+	});
 </script>
 
 <div class="stack stack-relaxed">
@@ -57,7 +70,7 @@
 
 	{#if query.isError}
 		<div class="border-danger-500 text-danger-700 rounded-md border p-4">
-			Couldn't load batches. {query.error?.message ?? ''}
+			Couldn't load batches. {errorCopy}
 		</div>
 	{:else if isEmpty}
 		<EmptyState

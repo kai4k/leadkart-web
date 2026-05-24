@@ -26,6 +26,7 @@
 	import type { ProductDto, DrugSchedule } from '$features/inventory/schemas';
 	import { drugScheduleSchema } from '$features/inventory/schemas';
 	import type { ListProductsParams, ProductSort } from '$features/inventory/api';
+	import { AuthError, NetworkError } from '$api/errors';
 	import { buildProductFilterConfig, type ProductFilters } from './ProductFilters.svelte';
 	import CreateProductDrawer from './CreateProductDrawer.svelte';
 	import ProductBulkUploadDrawer from './ProductBulkUploadDrawer.svelte';
@@ -250,6 +251,17 @@
 	const tableState = $derived(
 		query.isError ? 'error' : query.isPending ? 'loading' : isEmpty ? 'empty' : 'ready'
 	);
+
+	const errorCopy = $derived.by(() => {
+		const err = query.error;
+		if (!err) return '';
+		if (err instanceof NetworkError) return 'Check your network connection and try again.';
+		if (err instanceof AuthError)
+			return err.status === 403
+				? "You don't have permission to view products."
+				: 'Your session expired. Sign in again.';
+		return 'Something went wrong. Please try again.';
+	});
 </script>
 
 {#snippet brandCell(product: ProductDto)}
@@ -327,7 +339,7 @@
 			class="border-danger-500 text-danger-700 rounded-md border p-4"
 			data-testid="products-error"
 		>
-			Couldn't load products. {query.error?.message ?? ''}
+			Couldn't load products. {errorCopy}
 		</div>
 	{:else}
 		<div data-testid="products-table">

@@ -2,12 +2,20 @@
 	import { ConfirmDialog, Alert } from '$ui';
 	import { suspendTenantMutation } from '$features/operator/tenants/queries';
 	import type { TenantDto } from '$features/operator/tenants/types';
+	import {
+		ValidationError,
+		ConflictError,
+		AuthError,
+		NotFoundError,
+		NetworkError
+	} from '$api/errors';
 
 	type Props = { open: boolean; tenant: TenantDto | null; onOpenChange: (open: boolean) => void };
 	let { open = $bindable(false), tenant, onOpenChange }: Props = $props();
 
 	let reason = $state('');
-	let formError = $state<string | null>(null);
+	let reasonError = $state<string | null>(null);
+	let bannerError = $state<string | null>(null);
 
 	// TanStack Query v6 (Svelte 5): result is Svelte 5 reactive state, accessed directly.
 	const suspendMutation = suspendTenantMutation();
@@ -15,7 +23,8 @@
 
 	async function onConfirm() {
 		if (!tenant) return;
-		formError = null;
+		reasonError = null;
+		bannerError = null;
 		suspendMutation.mutate(
 			{ id: tenant.id, reason: reason.trim() },
 			{
@@ -24,7 +33,23 @@
 					onOpenChange(false);
 				},
 				onError: (err: unknown) => {
-					formError = err instanceof Error ? err.message : 'Failed to suspend';
+					if (err instanceof ValidationError) {
+						reasonError = err.fields.reason ?? null;
+						bannerError = reasonError ? null : 'The server rejected this request.';
+					} else if (err instanceof ConflictError) {
+						bannerError = err.detail || 'This tenant is already suspended.';
+					} else if (err instanceof AuthError) {
+						bannerError =
+							err.status === 403
+								? "You don't have permission to suspend tenants."
+								: 'Your session expired. Sign in again.';
+					} else if (err instanceof NotFoundError) {
+						bannerError = 'This tenant was deleted or moved.';
+					} else if (err instanceof NetworkError) {
+						bannerError = 'Check your network connection and try again.';
+					} else {
+						bannerError = 'Failed to suspend. Please try again.';
+					}
 				}
 			}
 		);
@@ -50,9 +75,11 @@
 				minlength={1}
 				maxlength={500}
 				rows={3}
+				aria-invalid={reasonError ? 'true' : undefined}
 				class="glass-input w-full rounded-md px-3 py-2 text-sm"
 			></textarea>
+			{#if reasonError}<span class="body-sm text-danger-700">{reasonError}</span>{/if}
 		</label>
-		{#if formError}<Alert variant="danger">{formError}</Alert>{/if}
+		{#if bannerError}<Alert variant="danger">{bannerError}</Alert>{/if}
 	{/snippet}
 </ConfirmDialog>

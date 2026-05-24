@@ -6,6 +6,7 @@
 	import { changePassword } from '$features/auth/api';
 	import { Alert, Button, Card } from '$ui';
 	import { PasswordField } from '$lib/components/form';
+	import { AuthError, ValidationError, NetworkError } from '$api/errors';
 
 	/**
 	 * /must-change-password — forced password rotation per ADR 0053.
@@ -60,16 +61,18 @@
 			const target = nextParam && nextParam.startsWith('/') ? nextParam : '/dashboard';
 			await goto(target);
 		} catch (err) {
-			const status = (err as { status?: number }).status;
-			const code = (err as { code?: string }).code;
-			if (status === 401) {
+			if (err instanceof AuthError && err.status === 401) {
 				fieldErrors = { current: $_('account.security.changePassword.errors.incorrectCurrent') };
-			} else if (status === 422 && code === 'password_breached') {
-				fieldErrors = { new: $_('auth.resetPassword.errors.breached') };
-			} else if (status === 422 && code === 'password_same') {
-				fieldErrors = { new: $_('auth.resetPassword.errors.same') };
-			} else if (status === 422) {
-				fieldErrors = { new: $_('auth.resetPassword.errors.weak') };
+			} else if (err instanceof ValidationError) {
+				if (err.code === 'password_breached') {
+					fieldErrors = { new: $_('auth.resetPassword.errors.breached') };
+				} else if (err.code === 'password_same') {
+					fieldErrors = { new: $_('auth.resetPassword.errors.same') };
+				} else {
+					fieldErrors = { new: $_('auth.resetPassword.errors.weak') };
+				}
+			} else if (err instanceof NetworkError) {
+				formError = 'Check your network connection and try again.';
 			} else {
 				formError = $_('auth.errors.unexpected');
 			}

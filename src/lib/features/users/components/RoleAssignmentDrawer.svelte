@@ -5,6 +5,13 @@
 	import type { UserDto, RoleDto } from '$features/users/types';
 	import { canRevokeRole } from '$features/users/view-models';
 	import { displayName } from '$features/auth/view-models';
+	import {
+		ValidationError,
+		ConflictError,
+		AuthError,
+		NotFoundError,
+		NetworkError
+	} from '$api/errors';
 
 	type Props = {
 		roleList: RoleDto[];
@@ -15,26 +22,50 @@
 
 	let { roleList, open = $bindable(false), user, onOpenChange }: Props = $props();
 
-	let error = $state<string | null>(null);
+	let bannerError = $state<string | null>(null);
 
 	const assignMutation = assignRoleMutation();
 	const revokeMutation = revokeRoleMutation();
 
+	function handleError(err: unknown, mode: 'assign' | 'revoke'): void {
+		const verbing = mode === 'assign' ? 'assign' : 'revoke';
+		if (err instanceof ValidationError) {
+			bannerError = `Couldn't ${verbing} the role — server rejected the request.`;
+		} else if (err instanceof ConflictError) {
+			bannerError =
+				err.detail ||
+				(mode === 'assign'
+					? 'This role is already assigned.'
+					: "This role can't be revoked while it's the user's last permission source.");
+		} else if (err instanceof AuthError) {
+			bannerError =
+				err.status === 403
+					? `You don't have permission to ${verbing} roles.`
+					: 'Your session expired. Sign in again.';
+		} else if (err instanceof NotFoundError) {
+			bannerError = 'This role or user no longer exists.';
+		} else if (err instanceof NetworkError) {
+			bannerError = 'Check your network connection and try again.';
+		} else {
+			bannerError = `Failed to ${verbing} role. Please try again.`;
+		}
+	}
+
 	async function onAssign(roleId: string) {
 		if (!user) return;
-		error = null;
+		bannerError = null;
 		assignMutation.mutate(
 			{ id: user.membership_id, roleId },
-			{ onError: (err) => (error = err instanceof Error ? err.message : 'Failed to assign role') }
+			{ onError: (err) => handleError(err, 'assign') }
 		);
 	}
 
 	async function onRevoke(roleId: string) {
 		if (!user) return;
-		error = null;
+		bannerError = null;
 		revokeMutation.mutate(
 			{ id: user.membership_id, roleId },
-			{ onError: (err) => (error = err instanceof Error ? err.message : 'Failed to revoke role') }
+			{ onError: (err) => handleError(err, 'revoke') }
 		);
 	}
 
@@ -104,7 +135,7 @@
 					</ul>
 				{/if}
 			</section>
-			{#if error}<Alert class="mt-4" variant="danger">{error}</Alert>{/if}
+			{#if bannerError}<Alert class="mt-4" variant="danger">{bannerError}</Alert>{/if}
 		</Drawer.Body>
 		<Drawer.Footer>
 			<Drawer.Close>

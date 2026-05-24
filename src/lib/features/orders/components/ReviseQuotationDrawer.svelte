@@ -15,6 +15,13 @@
 		type DraftItem
 	} from './OrderItemsEditor.svelte';
 	import type { OrderDto } from '$features/orders/schemas';
+	import {
+		ValidationError,
+		ConflictError,
+		AuthError,
+		NotFoundError,
+		NetworkError
+	} from '$api/errors';
 
 	type Props = {
 		order: OrderDto;
@@ -84,7 +91,33 @@
 					resolve();
 				},
 				onError: (err) => {
-					bannerError = err instanceof Error ? err.message : 'Failed to revise';
+					if (err instanceof ValidationError) {
+						// Try mapping field errors to the items array; otherwise
+						// fall back to a banner with a generic message.
+						const itemsField =
+							err.fields.items ??
+							Object.entries(err.fields).find(([k]) => k.startsWith('items'))?.[1];
+						if (itemsField) {
+							itemsError = itemsField;
+							bannerError = null;
+						} else {
+							bannerError = 'The server rejected the revision.';
+						}
+					} else if (err instanceof ConflictError) {
+						bannerError =
+							err.detail || 'This order was revised by someone else — reload and try again.';
+					} else if (err instanceof AuthError) {
+						bannerError =
+							err.status === 403
+								? "You don't have permission to revise quotations."
+								: 'Your session expired. Sign in again.';
+					} else if (err instanceof NotFoundError) {
+						bannerError = 'This order was deleted or moved.';
+					} else if (err instanceof NetworkError) {
+						bannerError = 'Check your network connection and try again.';
+					} else {
+						bannerError = 'Failed to revise. Please try again.';
+					}
 					resolve();
 				},
 				onSettled: () => {

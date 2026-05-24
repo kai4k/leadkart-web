@@ -9,6 +9,7 @@
 	import { usersListQuery } from '$features/users/queries';
 	import type { RoleDto } from '$features/roles/types';
 	import { roleBadgeVariant, isProtectedRole, roleMemberCount } from '$features/roles/view-models';
+	import { AuthError, NetworkError } from '$api/errors';
 	import CreateRoleDrawer from './CreateRoleDrawer.svelte';
 	import DeleteRoleDialog from './DeleteRoleDialog.svelte';
 
@@ -47,6 +48,17 @@
 					? 'empty'
 					: 'ready'
 	);
+
+	const listErrorCopy = $derived.by(() => {
+		const err = rolesQuery.error;
+		if (!err) return null;
+		if (err instanceof NetworkError) return 'Check your network connection and try again.';
+		if (err instanceof AuthError)
+			return err.status === 403
+				? "You don't have permission to view roles."
+				: 'Your session expired. Sign in again.';
+		return 'Something went wrong. Please try again.';
+	});
 
 	const columns: DataTableColumn<RoleDto>[] = [
 		{
@@ -140,7 +152,7 @@
 		rows={paged}
 		rowKey={(r) => r.id}
 		state={tableState}
-		error={rolesQuery.error?.message}
+		error={listErrorCopy}
 		{rowActions}
 	>
 		{#snippet emptyState()}

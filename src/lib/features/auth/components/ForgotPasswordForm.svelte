@@ -5,6 +5,7 @@
 	import { requestPasswordReset } from '../api';
 	import { Alert, AuthCard, Button, Logo } from '$lib/components/ui';
 	import { TextField } from '$lib/components/form';
+	import { ValidationError, NetworkError } from '$api/errors';
 
 	/**
 	 * ForgotPasswordForm — public email-input step.
@@ -43,7 +44,13 @@
 			await requestPasswordReset({ email: parsed.data });
 			submitted = true;
 		} catch (err) {
-			formError = (err as Error).message ?? $_('auth.errors.unexpected');
+			if (err instanceof ValidationError) {
+				fieldError = err.fields.email ?? 'Invalid email format.';
+			} else if (err instanceof NetworkError) {
+				formError = 'Check your network connection and try again.';
+			} else {
+				formError = $_('auth.errors.unexpected');
+			}
 		} finally {
 			loading = false;
 		}

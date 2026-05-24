@@ -9,7 +9,7 @@
 	import { tenantsListQuery } from '$features/operator/tenants/queries';
 	import { tenantLifecycleBadge } from '$features/operator/tenants/view-models';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
-	import { NetworkError } from '$lib/api/errors';
+	import { AuthError, NetworkError, NotFoundError } from '$lib/api/errors';
 	import { getCsrfToken } from '$lib/api/csrf';
 	import { toast } from '$ui';
 	import CreateTenantDrawer from './CreateTenantDrawer.svelte';
@@ -72,6 +72,18 @@
 	const tableState = $derived(
 		query.isPending ? 'loading' : query.isError ? 'error' : paged.length === 0 ? 'empty' : 'ready'
 	);
+
+	const listErrorCopy = $derived.by(() => {
+		const err = query.error;
+		if (!err) return null;
+		if (err instanceof NetworkError) return 'Check your network connection and try again.';
+		if (err instanceof AuthError)
+			return err.status === 403
+				? "You don't have permission to view tenants."
+				: 'Your session expired. Sign in again.';
+		if (err instanceof NotFoundError) return 'This resource was deleted or moved.';
+		return 'Something went wrong. Please try again.';
+	});
 
 	const columns: DataTableColumn<TenantDto>[] = [
 		{ id: 'name', header: 'Tenant', accessor: (t) => t.display_name, cell: nameCell },
@@ -194,7 +206,7 @@
 		rows={paged}
 		rowKey={(t) => t.id}
 		state={tableState}
-		error={query.error?.message}
+		error={listErrorCopy}
 		onRowClick={enterScope}
 		{rowActions}
 	>
@@ -210,7 +222,15 @@
 					</Alert>
 				{:else}
 					<Alert variant="danger" title="Failed to load tenants">
-						{err?.message ?? 'Unknown error'}
+						{#if err instanceof AuthError}
+							{err.status === 403
+								? "You don't have permission to view tenants."
+								: 'Your session expired. Sign in again.'}
+						{:else if err instanceof NotFoundError}
+							This resource was deleted or moved.
+						{:else}
+							Something went wrong. Please try again.
+						{/if}
 						<Button variant="ghost" size="sm" onclick={() => query.refetch()} class="mt-2"
 							>Retry</Button
 						>

@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import { Alert, AuthCard, Logo, Spinner } from '$ui';
 	import { confirmEmailChange } from '../api';
+	import { NetworkError } from '$api/errors';
 
 	/**
 	 * ConfirmEmailChangeView — public confirmation step.
@@ -28,9 +29,14 @@
 			.then(() => {
 				phase = 'success';
 			})
-			.catch((err) => {
+			.catch((err: unknown) => {
 				phase = 'invalid';
-				errorMessage = (err as Error).message;
+				if (err instanceof NetworkError) {
+					errorMessage = 'Check your network connection and try again.';
+				} else {
+					// 400 invalid/expired/consumed token — surface the canonical copy.
+					errorMessage = null;
+				}
 			});
 	});
 </script>

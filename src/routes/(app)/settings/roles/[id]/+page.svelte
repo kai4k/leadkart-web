@@ -13,6 +13,13 @@
 	import { goto } from '$app/navigation';
 	import { roleBadgeVariant, isProtectedRole } from '$features/roles/view-models';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
+	import {
+		ValidationError,
+		ConflictError,
+		AuthError,
+		NotFoundError,
+		NetworkError
+	} from '$api/errors';
 
 	let { data } = $props();
 
@@ -21,6 +28,22 @@
 	let selectedPerms = $state<string[]>([]);
 	let error = $state<string | null>(null);
 	let saved = $state(false);
+
+	function describeError(err: unknown, fallback: string): string {
+		if (err instanceof ValidationError) {
+			// Surface the first per-field message in this composite form.
+			const first = Object.values(err.fields)[0];
+			return first ?? fallback;
+		}
+		if (err instanceof ConflictError) return err.detail || 'Conflicts with the current state.';
+		if (err instanceof AuthError)
+			return err.status === 403
+				? "You don't have permission for this action."
+				: 'Your session expired. Sign in again.';
+		if (err instanceof NotFoundError) return 'This role was deleted or moved.';
+		if (err instanceof NetworkError) return 'Check your network connection and try again.';
+		return fallback;
+	}
 
 	const roleId = $derived(data.roleId);
 	const query = $derived(roleDetailQuery(roleId));
@@ -74,8 +97,7 @@
 			{ id: role.id, parent_role_id: selectedParent || null },
 			{
 				onSuccess: () => (saved = true),
-				onError: (err: unknown) =>
-					(error = err instanceof Error ? err.message : 'Failed to update parent')
+				onError: (err: unknown) => (error = describeError(err, 'Failed to update parent.'))
 			}
 		);
 	}
@@ -105,7 +127,7 @@
 			{ id: role.id, req: { name: name.trim(), hierarchy_level: hierarchyLevel } },
 			{
 				onSuccess: () => (saved = true),
-				onError: (err) => (error = err instanceof Error ? err.message : 'Failed to save')
+				onError: (err) => (error = describeError(err, 'Failed to save.'))
 			}
 		);
 	}
@@ -118,8 +140,7 @@
 			{ id: role.id, permissions: selectedPerms },
 			{
 				onSuccess: () => (saved = true),
-				onError: (err) =>
-					(error = err instanceof Error ? err.message : 'Failed to save permissions')
+				onError: (err) => (error = describeError(err, 'Failed to save permissions.'))
 			}
 		);
 	}

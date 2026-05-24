@@ -28,6 +28,7 @@
 	import { orderFilterFields, type OrderListFilters } from './OrderFilters.svelte';
 	import OrderStatusBadge from './OrderStatusBadge.svelte';
 	import type { OrderDto } from '$features/orders/schemas';
+	import { AuthError, NetworkError } from '$api/errors';
 
 	// ── URL state ────────────────────────────────────────────────────
 	const urlFilters = new UseUrlFilters<OrderListFilters>({
@@ -202,6 +203,17 @@
 
 	// ── Filter config ────────────────────────────────────────────────
 	const filterConfig: FilterBarField[] = orderFilterFields;
+
+	const listErrorCopy = $derived.by(() => {
+		const err = listQuery.error;
+		if (!err) return null;
+		if (err instanceof NetworkError) return 'Check your network connection and try again.';
+		if (err instanceof AuthError)
+			return err.status === 403
+				? "You don't have permission to view orders."
+				: 'Your session expired. Sign in again.';
+		return 'Something went wrong. Please try again.';
+	});
 </script>
 
 {#snippet statusCell(row: OrderDto)}
@@ -242,7 +254,7 @@
 		rows={orders}
 		rowKey={(r: OrderDto) => r.id}
 		state={orders.length === 0 && tableState === 'ready' ? 'empty' : tableState}
-		error={listQuery.error?.message ?? null}
+		error={listErrorCopy}
 		onRowClick={openDetail}
 		{selection}
 		{sort}

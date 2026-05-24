@@ -7,6 +7,7 @@
 		movementReasonAccent,
 		movementReasonLabel
 	} from '$features/inventory/view-models';
+	import { AuthError, NetworkError, NotFoundError } from '$api/errors';
 
 	/**
 	 * StockMovementsTimeline — cursor-paginated audit log of every
@@ -24,6 +25,18 @@
 	});
 
 	const isEmpty = $derived(!query.isPending && !query.isError && movements.length === 0);
+
+	const errorCopy = $derived.by(() => {
+		const err = query.error;
+		if (!err) return '';
+		if (err instanceof NetworkError) return 'Check your network connection and try again.';
+		if (err instanceof AuthError)
+			return err.status === 403
+				? "You don't have permission to view stock movements."
+				: 'Your session expired. Sign in again.';
+		if (err instanceof NotFoundError) return 'This product was deleted or moved.';
+		return 'Something went wrong. Please try again.';
+	});
 </script>
 
 <div class="stack stack-relaxed">
@@ -34,7 +47,7 @@
 
 	{#if query.isError}
 		<div class="border-danger-500 text-danger-700 rounded-md border p-4">
-			Couldn't load movements. {query.error?.message ?? ''}
+			Couldn't load movements. {errorCopy}
 		</div>
 	{:else if query.isPending}
 		<div class="stack stack-tight">
