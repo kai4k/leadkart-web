@@ -42,7 +42,7 @@
 		class: className = ''
 	}: Props = $props();
 
-	const hasChildren = $derived(!!children);
+	const hasChildren = $derived(Boolean(children));
 
 	function toggle() {
 		if (disabled) return;
@@ -75,7 +75,7 @@
 		role="button"
 		tabindex={disabled ? -1 : 0}
 		class={cn(
-			'flex items-center gap-1.5 rounded-md py-1.5 pr-2',
+			'flex items-center gap-1.5 rounded-md py-1.5 pe-2',
 			'focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:outline-none',
 			selected ? 'bg-primary-soft text-primary' : 'text-fg hover:bg-bg-muted',
 			disabled && 'is-disabled',

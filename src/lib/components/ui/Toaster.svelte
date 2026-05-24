@@ -32,7 +32,7 @@
 		duration: number;
 	};
 
-	export const toastVariants = cva('border-l-4', {
+	export const toastVariants = cva('border-s-4', {
 		variants: {
 			variant: {
 				success: 'border-success-500',
@@ -91,7 +91,7 @@
 </script>
 
 <div
-	class="pointer-events-none fixed right-4 bottom-4 z-[var(--z-toast)] flex flex-col gap-2"
+	class="pointer-events-none fixed end-4 bottom-4 z-[var(--z-toast)] flex flex-col gap-2"
 	aria-live="polite"
 	aria-atomic="false"
 >
@@ -106,15 +106,16 @@
 			<div class="flex items-start justify-between gap-3">
 				<p class="label text-fg">{t.message}</p>
 				{#if t.action}
+					{@const action = t.action}
 					<button
 						type="button"
 						class="label-small text-primary focus-visible:ring-focus-ring flex-shrink-0 hover:underline focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
 						onclick={async () => {
-							await t.action!.onClick();
+							await action.onClick();
 							dismiss(t.id);
 						}}
 					>
-						{t.action.label}
+						{action.label}
 					</button>
 				{/if}
 			</div>

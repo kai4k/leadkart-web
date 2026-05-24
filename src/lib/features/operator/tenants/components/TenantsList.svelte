@@ -194,7 +194,7 @@
 
 	<div class="cluster">
 		<div class="relative flex-1">
-			<span class="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+			<span class="pointer-events-none absolute inset-y-0 start-3 flex items-center">
 				<Icon icon={Search} size="sm" class="text-fg-subtle" />
 			</span>
 			<input
@@ -202,7 +202,7 @@
 				placeholder="Filter by name, slug, or legal name"
 				value={search}
 				oninput={(e) => setSearch((e.currentTarget as HTMLInputElement).value)}
-				class="glass-input w-full rounded-md py-2 pr-3 pl-9 text-sm"
+				class="glass-input w-full rounded-md py-2 ps-9 pe-3 text-sm"
 				aria-label="Filter tenants"
 			/>
 		</div>

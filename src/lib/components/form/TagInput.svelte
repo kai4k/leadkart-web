@@ -141,7 +141,7 @@
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class={cn(
-				'glass-input body-sm flex w-full flex-wrap items-center gap-2 px-2 py-1.5 text-left',
+				'glass-input body-sm flex w-full flex-wrap items-center gap-2 px-2 py-1.5 text-start',
 				'focus-within:ring-2 focus-within:ring-offset-1 focus-within:outline-none',
 				disabled && 'is-disabled',
 				error || localError
@@ -199,7 +199,7 @@
 				id={listboxId}
 				role="listbox"
 				class={cn(
-					'glass-card z-dropdown absolute top-full right-0 left-0 mt-1 max-h-60 overflow-auto p-1'
+					'glass-card z-dropdown absolute start-0 end-0 top-full mt-1 max-h-60 overflow-auto p-1'
 				)}
 			>
 				{#each filteredSuggestions as suggestion, i (suggestion)}

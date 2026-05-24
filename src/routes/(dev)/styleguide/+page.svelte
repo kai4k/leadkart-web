@@ -192,6 +192,8 @@
 			class="relative h-64 overflow-hidden rounded-lg"
 			style="background: linear-gradient(135deg, var(--color-brand-500), var(--color-secondary-500));"
 		>
+			<!-- rtl-allow: centered glass demo in styleguide catalog — physical
+				center-positioning is the visual demonstration. -->
 			<div
 				class="glass-popover glass-sheen absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg p-6"
 			>

@@ -10,5 +10,6 @@
 		"sourceMap": true,
 		"strict": true,
 		"moduleResolution": "bundler"
-	}
+	},
+	"exclude": ["**/*.stories.ts", "**/*.stories.svelte", ".storybook/**", "storybook-static/**"]
 }

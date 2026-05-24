@@ -141,7 +141,7 @@
 		<button
 			type="button"
 			class={cn(
-				'group body-sm inline-flex max-w-full items-center gap-1 rounded px-1.5 py-0.5 text-left',
+				'group body-sm inline-flex max-w-full items-center gap-1 rounded px-1.5 py-0.5 text-start',
 				'hover:bg-bg-muted',
 				'focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:outline-none',
 				'disabled:cursor-not-allowed disabled:opacity-60',

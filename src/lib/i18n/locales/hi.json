@@ -95,5 +95,10 @@
 		"loading": "लोड हो रहा है…",
 		"cancel": "रद्द करें",
 		"save": "सेव करें"
+	},
+	"orders": {
+		"quotation": {
+			"revisionLineSummary": "{lineCount, plural, one {# पंक्ति} other {# पंक्तियाँ}} · उप-योग {subtotal} · GST {gstTotal}"
+		}
 	}
 }

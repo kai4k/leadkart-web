@@ -36,7 +36,12 @@ const config: KnipConfig = {
 		'src/lib/icons/index.ts!',
 		'src/lib/hooks/index.ts!',
 		'src/lib/api/errors.ts!',
-		'src/lib/api/client.ts!'
+		'src/lib/api/client.ts!',
+		// Storybook stories — entries consumed by Storybook's filesystem
+		// loader (.storybook/main.ts globs them). knip can't see that wire.
+		'src/lib/**/*.stories.@(ts|svelte)!',
+		'.storybook/main.ts!',
+		'.storybook/preview.ts!'
 	],
 	project: ['src/**/*.{ts,svelte,svelte.ts}', 'scripts/**/*.{ts,js,mjs,cjs}'],
 	ignore: [
@@ -67,7 +72,14 @@ const config: KnipConfig = {
 		// Fontsource referenced via @import in tokens.css
 		'@fontsource-variable/jetbrains-mono',
 		// postcss-html consumed by stylelint customSyntax declaration
-		'postcss-html'
+		'postcss-html',
+		// Stylelint plugin loaded by plugin name in .stylelintrc.cjs
+		'stylelint-plugin-logical-css',
+		// Storybook 10 framework + addons (auto-discovered by storybook CLI)
+		'storybook',
+		'@storybook/svelte',
+		'@storybook/sveltekit',
+		'@storybook/addon-essentials'
 	]
 };
 

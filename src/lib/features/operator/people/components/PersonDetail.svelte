@@ -144,18 +144,18 @@
 						<table class="w-full text-sm">
 							<thead>
 								<tr class="border-border border-b">
-									<th class="caption text-fg-muted py-2 pr-4 text-left">Tenant ID</th>
-									<th class="caption text-fg-muted py-2 pr-4 text-left">Designation</th>
-									<th class="caption text-fg-muted py-2 text-left">Status</th>
+									<th class="caption text-fg-muted py-2 pe-4 text-start">Tenant ID</th>
+									<th class="caption text-fg-muted py-2 pe-4 text-start">Designation</th>
+									<th class="caption text-fg-muted py-2 text-start">Status</th>
 								</tr>
 							</thead>
 							<tbody>
 								{#each memberships as m (m.membership_id)}
 									<tr class="border-border border-b last:border-0">
-										<td class="py-2 pr-4">
+										<td class="py-2 pe-4">
 											<code class="caption">{m.tenant_id}</code>
 										</td>
-										<td class="text-fg py-2 pr-4">{m.designation || '—'}</td>
+										<td class="text-fg py-2 pe-4">{m.designation || '—'}</td>
 										<td class="py-2">
 											<Badge
 												variant={m.status === 'active' ? 'success' : 'warning'}

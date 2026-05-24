@@ -33,7 +33,14 @@ export default ts.config(
 			'build/**',
 			'coverage/**',
 			'playwright-report/**',
-			'test-results/**'
+			'test-results/**',
+			'storybook-static/**',
+			// Storybook stories — Storybook 10 + Svelte 5 typing isn't
+			// fully ergonomic yet for inline string children. Stories
+			// type-check inside Storybook's own pipeline (storybook build).
+			'**/*.stories.ts',
+			'**/*.stories.svelte',
+			'.storybook/**'
 		]
 	},
 	js.configs.recommended,

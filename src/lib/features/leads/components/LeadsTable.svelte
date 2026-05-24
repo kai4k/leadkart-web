@@ -71,7 +71,7 @@
 		{/each}
 	</div>
 {:else if list.state === 'error'}
-	<div class="bg-danger-50 text-danger-900 border-danger-500 rounded-md border-l-4 p-4">
+	<div class="bg-danger-50 text-danger-900 border-danger-500 rounded-md border-s-4 p-4">
 		<p class="label">Couldn't load leads. {list.error ?? ''}</p>
 	</div>
 {:else if list.state === 'empty'}
@@ -82,7 +82,7 @@
 	/>
 {:else}
 	<div class="overflow-x-auto" data-testid="leads-table">
-		<table class="w-full text-left">
+		<table class="w-full text-start">
 			<thead>
 				<tr class="border-border border-b">
 					<th class="w-10 px-3 py-3">
@@ -140,7 +140,7 @@
 						class={[
 							'border-border hover:bg-bg-muted cursor-pointer border-b transition-colors',
 							focused && 'bg-bg-muted',
-							focused && 'border-l-primary border-l-4'
+							focused && 'border-l-primary border-s-4'
 						]}
 						onclick={() => openDetail(lead)}
 						tabindex={nav.tabindexFor(i)}

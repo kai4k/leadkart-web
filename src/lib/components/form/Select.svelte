@@ -3,7 +3,7 @@
 
 	export const selectVariants = cva(
 		[
-			'glass-input body-sm block w-full appearance-none px-3 py-2 pr-10 text-fg',
+			'glass-input body-sm block w-full appearance-none px-3 py-2 pe-10 text-fg',
 			'focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
 			'disabled:cursor-not-allowed disabled:opacity-60'
 		],
@@ -96,7 +96,7 @@
 			bind:value
 			aria-invalid={error ? 'true' : undefined}
 			aria-describedby={describedBy}
-			class={cn(selectVariants({ error: !!error }))}
+			class={cn(selectVariants({ error: Boolean(error) }))}
 			{...rest}
 		>
 			{#if placeholder}
@@ -108,7 +108,7 @@
 		</select>
 
 		<span
-			class="text-fg-subtle pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"
+			class="text-fg-subtle pointer-events-none absolute inset-y-0 end-0 flex items-center pe-3"
 			aria-hidden="true"
 		>
 			<Icon icon={ChevronDown} size="sm" />

@@ -29,7 +29,7 @@
 <BitsAccordion.Header {level}>
 	<BitsAccordion.Trigger
 		class={cn(
-			'group/trigger flex w-full items-center justify-between gap-3 py-4 text-left',
+			'group/trigger flex w-full items-center justify-between gap-3 py-4 text-start',
 			'body-base text-fg font-medium',
 			'transition-colors duration-[var(--duration-fast)]',
 			'hover:text-primary',

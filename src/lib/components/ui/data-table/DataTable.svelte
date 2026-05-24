@@ -157,7 +157,7 @@
 
 {#if state === 'loading'}
 	<div class={cn('overflow-x-auto', className)}>
-		<table class="w-full text-left">
+		<table class="w-full text-start">
 			<thead>
 				<tr class="border-border border-b">
 					{#each columns as col (col.id)}
@@ -205,7 +205,7 @@
 	{/if}
 {:else}
 	<div class={cn('overflow-x-auto', className)} data-roving-root={nav ? '' : undefined}>
-		<table class="w-full text-left">
+		<table class="w-full text-start">
 			<thead>
 				<tr class="border-border border-b">
 					{#each columns as col (col.id)}
@@ -265,9 +265,9 @@
 						class={cn(
 							'border-border hover:bg-bg-muted border-b transition-colors',
 							onRowClick && 'cursor-pointer',
-							focused && 'bg-bg-muted border-l-primary border-l-4'
+							focused && 'bg-bg-muted border-l-primary border-s-4'
 						)}
-						onclick={onRowClick ? () => onRowClick!(row) : undefined}
+						onclick={onRowClick ? () => onRowClick(row) : undefined}
 						tabindex={nav ? navTabIndex : onRowClick ? 0 : undefined}
 						{@attach (el) => {
 							if (!nav) return;
@@ -278,7 +278,7 @@
 							? (e) => {
 									if (e.key === 'Enter' || e.key === ' ') {
 										e.preventDefault();
-										onRowClick!(row);
+										onRowClick(row);
 									}
 								}
 							: undefined}
@@ -310,7 +310,7 @@
 							</td>
 						{/each}
 						{#if rowActions}
-							<td class="w-12 px-3 text-right" onclick={(e) => e.stopPropagation()} role="cell">
+							<td class="w-12 px-3 text-end" onclick={(e) => e.stopPropagation()} role="cell">
 								{@render rowActions(row)}
 							</td>
 						{/if}

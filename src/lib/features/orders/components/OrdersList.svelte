@@ -180,7 +180,7 @@
 			header: 'Total',
 			accessor: (r) => formatMoney(r.current_total, r.currency),
 			sortBy: 'current_total',
-			class: 'text-right tabular-nums'
+			class: 'text-end tabular-nums'
 		},
 		{
 			id: 'status',

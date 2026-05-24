@@ -86,7 +86,7 @@
 		</EmptyState>
 	{:else}
 		<div class="overflow-x-auto">
-			<table class="w-full text-left" data-testid="batches-table">
+			<table class="w-full text-start" data-testid="batches-table">
 				<thead>
 					<tr class="border-border border-b">
 						<th class="text-fg-muted px-3 py-3 text-xs font-medium tracking-wide uppercase">
@@ -187,7 +187,7 @@
 										{/if}
 									</div>
 								</td>
-								<td class="w-12 px-3 py-3 text-right">
+								<td class="w-12 px-3 py-3 text-end">
 									<Dropdown.Root>
 										<Dropdown.Trigger>
 											<Button

@@ -135,7 +135,7 @@
 				aria-invalid={error ? 'true' : undefined}
 				aria-describedby={describedBy}
 				class={cn(
-					'glass-input body-sm text-fg block w-full py-2 pr-10 pl-3',
+					'glass-input body-sm text-fg block w-full py-2 ps-3 pe-10',
 					'placeholder:text-fg-subtle',
 					'focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
 					'disabled:cursor-not-allowed disabled:opacity-60',
@@ -146,7 +146,7 @@
 			/>
 			<BitsCombobox.Trigger
 				class={cn(
-					'text-fg-subtle absolute inset-y-0 right-0 flex items-center pr-3',
+					'text-fg-subtle absolute inset-y-0 end-0 flex items-center pe-3',
 					'focus-visible:outline-none'
 				)}
 				aria-label="Toggle options"

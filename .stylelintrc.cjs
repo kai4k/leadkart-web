@@ -18,7 +18,7 @@
 module.exports = {
 	extends: ['stylelint-config-standard'],
 	customSyntax: 'postcss-html',
-	plugins: ['stylelint-declaration-strict-value'],
+	plugins: ['stylelint-declaration-strict-value', 'stylelint-plugin-logical-css'],
 	overrides: [
 		{
 			files: ['**/*.svelte'],
@@ -42,11 +42,14 @@ module.exports = {
 			// for the same reason) and for reduced-motion overrides which
 			// MUST defeat author styles. Deprecated `clip` is also canon for
 			// the .sr-only pattern (paired with modern clip-path: inset(50%)
-			// for newer browsers).
+			// for newer browsers). Physical layout utilities are
+			// authored locale-aware here (consumers can opt in to a logical
+			// version), so the logical-css plugin doesn't apply.
 			files: ['src/styles/*.css'],
 			rules: {
 				'declaration-no-important': null,
-				'property-no-deprecated': null
+				'property-no-deprecated': null,
+				'logical-css/require-logical-keywords': null
 			}
 		}
 	],
@@ -99,6 +102,25 @@ module.exports = {
 
 		// ─── Architectural bans ─────────────────────────────────────
 		'declaration-no-important': true,
+
+		// ─── RTL safety (arch test #245) ────────────────────────────
+		// Bans physical values that CAN'T be mirrored (text-align: left,
+		// float: right, etc.) in <style> blocks. Logical-keywords plugin
+		// catches them — paired with scripts/arch/check-rtl-safety.mjs
+		// which covers Tailwind utility class drift in template markup.
+		//
+		// We don't enforce `require-logical-properties` (height → block-size,
+		// width → inline-size) because LeadKart targets horizontal writing
+		// modes only (LTR + RTL). In horizontal mode, height === block-size
+		// and width === inline-size visually; the migration is academic.
+		// If vertical-rl writing modes become a requirement, flip this on.
+		'logical-css/require-logical-keywords': true,
+		// require-logical-units bans physical viewport units (vh / vw) in
+		// favour of vi (viewport-inline) / vb (viewport-block). LeadKart
+		// targets horizontal writing modes only — vh/vw are already mirror-
+		// safe in our scope, so this rule is disabled. Flip on if vertical-
+		// rl support becomes a requirement.
+		'logical-css/require-logical-units': null,
 
 		// ─── Function allowlist (Tailwind 4 + native CSS color spaces) ─
 		'function-no-unknown': [

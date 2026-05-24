@@ -97,7 +97,7 @@
 	>
 		<div
 			class={cn(
-				'glass-input text-fg relative flex w-full items-center gap-1 px-3 py-2 pr-10',
+				'glass-input text-fg relative flex w-full items-center gap-1 px-3 py-2 pe-10',
 				'body-sm focus-within:ring-focus-ring focus-within:ring-2 focus-within:ring-offset-1',
 				'disabled:cursor-not-allowed disabled:opacity-60',
 				error && 'border-danger-500 focus-within:ring-danger-500'
@@ -138,7 +138,7 @@
 			<BitsDateRangePicker.Trigger
 				id={fieldId}
 				class={cn(
-					'text-fg-subtle absolute inset-y-0 right-0 flex items-center pr-3',
+					'text-fg-subtle absolute inset-y-0 end-0 flex items-center pe-3',
 					'hover:text-fg transition-colors',
 					'focus-visible:outline-none'
 				)}

@@ -62,6 +62,9 @@
 	     slide-in-left) via tailwind-merge inside cn(). Follow-up:
 	     promote a `position="left"` prop into the Drawer primitive. -->
 	<Drawer.Root bind:open={sidebarOpen} onOpenChange={(o) => (sidebarOpen = o)}>
+		<!-- rtl-allow: left-edge mobile drawer is a fixed design choice
+			(matches Sidebar position in LTR + RTL — opening from the same
+			edge keeps spatial memory consistent for users switching locales). -->
 		<Drawer.Content
 			class="lk-mobile-drawer animate-slide-in-left right-auto left-0 border-r border-l-0 lg:hidden"
 		>

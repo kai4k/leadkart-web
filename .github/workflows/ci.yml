@@ -82,7 +82,11 @@ jobs:
       - name: Lint — dependency-cruiser (layering boundaries)
         run: npm run lint:deps
 
-      - name: Architecture gate — custom static checks
+      - name: Architecture gate — custom static checks (13 checks)
+        # Component inventory, token completeness, WCAG contrast, locale
+        # parity, RTL safety, i18n coverage, route +error.svelte pages,
+        # feature structure, fetch placement, Svelte-5 purity, LOC budgets,
+        # /v1/platform path scope, mutate-then-refetch ban.
         run: npm run arch:check
 
       - name: Type check (svelte-check + tsc)

@@ -14,7 +14,7 @@
 	function isActive(href: string): boolean {
 		const path = page.url.pathname;
 		if (path === href) return true;
-		return path.startsWith(`${href  }/`);
+		return path.startsWith(`${href}/`);
 	}
 
 	/**

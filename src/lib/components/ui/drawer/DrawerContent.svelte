@@ -24,8 +24,8 @@
 	<BitsDialog.Overlay class="is-fixed-overlay--overlay bg-overlay inset-0 backdrop-blur-sm" />
 	<BitsDialog.Content
 		class={cn(
-			'glass-card is-fixed-overlay--modal inset-y-0 right-0 flex w-full max-w-md flex-col',
-			'rounded-none border-0 border-l border-[var(--glass-border-subtle)]',
+			'glass-card is-fixed-overlay--modal inset-y-0 end-0 flex w-full max-w-md flex-col',
+			'rounded-none border-0 border-s border-[var(--glass-border-subtle)]',
 			'animate-slide-in-right',
 			className
 		)}

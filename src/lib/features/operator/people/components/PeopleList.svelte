@@ -100,7 +100,7 @@
 
 	<div class="flex flex-col gap-3 md:flex-row md:items-center">
 		<div class="relative flex-1">
-			<span class="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+			<span class="pointer-events-none absolute inset-y-0 start-3 flex items-center">
 				<Icon icon={Search} size="sm" class="text-fg-subtle" />
 			</span>
 			<input
@@ -108,7 +108,7 @@
 				placeholder="Search by email or name"
 				value={urlSearch}
 				oninput={onSearchInput}
-				class="glass-input w-full rounded-md py-2 pr-3 pl-9 text-sm"
+				class="glass-input w-full rounded-md py-2 ps-9 pe-3 text-sm"
 				aria-label="Search persons by email or name"
 			/>
 		</div>

@@ -48,7 +48,7 @@
 		{/each}
 	</div>
 {:else if state === 'error'}
-	<div class="bg-danger-50 text-danger-900 border-danger-500 rounded-md border-l-4 p-4">
+	<div class="bg-danger-50 text-danger-900 border-danger-500 rounded-md border-s-4 p-4">
 		<p class="label">Couldn't load leads. {error ?? ''}</p>
 	</div>
 {:else if state === 'empty'}

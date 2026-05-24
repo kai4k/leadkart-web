@@ -95,5 +95,10 @@
 		"loading": "Loading…",
 		"cancel": "Cancel",
 		"save": "Save"
+	},
+	"orders": {
+		"quotation": {
+			"revisionLineSummary": "{lineCount, plural, one {# line} other {# lines}} · subtotal {subtotal} · GST {gstTotal}"
+		}
 	}
 }

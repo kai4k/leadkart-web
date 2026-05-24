@@ -91,7 +91,7 @@
 			<BitsDatePicker.Input
 				{name}
 				class={cn(
-					'glass-input body-sm text-fg flex w-full items-center gap-px px-3 py-2 pr-10',
+					'glass-input body-sm text-fg flex w-full items-center gap-px px-3 py-2 pe-10',
 					'focus-visible:outline-none',
 					'disabled:cursor-not-allowed disabled:opacity-60',
 					'data-[invalid]:border-danger-500',
@@ -123,7 +123,7 @@
 			<BitsDatePicker.Trigger
 				id={fieldId}
 				class={cn(
-					'text-fg-subtle absolute inset-y-0 right-0 flex items-center pr-3',
+					'text-fg-subtle absolute inset-y-0 end-0 flex items-center pe-3',
 					'hover:text-fg transition-colors',
 					'focus-visible:outline-none'
 				)}

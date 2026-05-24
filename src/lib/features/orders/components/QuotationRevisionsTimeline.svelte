@@ -4,6 +4,7 @@
 	number, total, optional notes, and `revised_at` timestamp.
 -->
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { Timeline } from '$ui';
 	import { Edit } from '$icons';
 	import { formatMoney, longDate } from '$features/orders/view-models';
@@ -32,10 +33,13 @@
 			>
 				<div class="stack stack-tight">
 					<p class="caption text-fg-muted tabular-nums">
-						{rev.items.length} line{rev.items.length === 1 ? '' : 's'} · subtotal {formatMoney(
-							rev.subtotal,
-							currency
-						)} · GST {formatMoney(rev.gst_total, currency)}
+						{$_('orders.quotation.revisionLineSummary', {
+							values: {
+								lineCount: rev.items.length,
+								subtotal: formatMoney(rev.subtotal, currency),
+								gstTotal: formatMoney(rev.gst_total, currency)
+							}
+						})}
 					</p>
 					{#if rev.notes}
 						<p class="body-sm text-fg whitespace-pre-wrap">{rev.notes}</p>

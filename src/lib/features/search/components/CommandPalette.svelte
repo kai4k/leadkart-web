@@ -57,7 +57,7 @@
 			class="is-fixed-overlay--overlay animate-fade-in bg-overlay inset-0 backdrop-blur-sm"
 		/>
 		<BitsDialog.Content
-			class="is-fixed-overlay--modal glass-card animate-pop-in z-modal fixed top-[12vh] left-1/2 flex w-full max-w-xl -translate-x-1/2 flex-col rounded-xl border border-[var(--glass-border-subtle)]"
+			class="is-fixed-overlay--modal glass-card animate-pop-in z-modal fixed start-1/2 top-[12vh] flex w-full max-w-xl -translate-x-1/2 flex-col rounded-xl border border-[var(--glass-border-subtle)]"
 		>
 			<BitsDialog.Title class="sr-only">Search tenants and people</BitsDialog.Title>
 			<div class="border-border-subtle border-b">
@@ -91,7 +91,7 @@
 										<button
 											type="button"
 											onclick={() => enterTenantScope(t.slug)}
-											class="hover:bg-bg-muted focus-visible:bg-bg-muted w-full rounded-md px-3 py-2 text-left focus-visible:outline-none"
+											class="hover:bg-bg-muted focus-visible:bg-bg-muted w-full rounded-md px-3 py-2 text-start focus-visible:outline-none"
 										>
 											<div class="cluster cluster-tight">
 												<Icon icon={Building2} size="sm" class="text-fg-muted" />
@@ -117,7 +117,7 @@
 										<button
 											type="button"
 											onclick={() => openPerson(p.id)}
-											class="hover:bg-bg-muted focus-visible:bg-bg-muted w-full rounded-md px-3 py-2 text-left focus-visible:outline-none"
+											class="hover:bg-bg-muted focus-visible:bg-bg-muted w-full rounded-md px-3 py-2 text-start focus-visible:outline-none"
 										>
 											<div class="cluster cluster-tight">
 												<Icon icon={User} size="sm" class="text-fg-muted" />

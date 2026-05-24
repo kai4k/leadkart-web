@@ -41,7 +41,7 @@
 	 *
 	 * Linear-style keyboard nav (j/k row focus, Enter detail, x toggle
 	 * selection) is provided via `UseKeyboardListNav` and the focused
-	 * row gets a primary border-l accent.
+	 * row gets a primary border-s accent.
 	 */
 
 	const filters = new UseUrlFilters<ProductFilters>({

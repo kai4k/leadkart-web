@@ -34,11 +34,11 @@
 	<p class="caption text-fg-muted py-4">No payments recorded yet.</p>
 {:else}
 	<div class="overflow-x-auto">
-		<table class="w-full text-left text-sm" data-testid="payments-list">
+		<table class="w-full text-start text-sm" data-testid="payments-list">
 			<thead>
 				<tr class="border-border text-fg-muted border-b">
 					<th class="px-2 py-2 text-xs uppercase">Kind</th>
-					<th class="px-2 py-2 text-right text-xs uppercase">Amount</th>
+					<th class="px-2 py-2 text-end text-xs uppercase">Amount</th>
 					<th class="px-2 py-2 text-xs uppercase">Method</th>
 					<th class="px-2 py-2 text-xs uppercase">Reference</th>
 					<th class="px-2 py-2 text-xs uppercase">Received</th>
@@ -52,7 +52,7 @@
 								{p.kind === 'token' ? 'Token' : 'Full'}
 							</Badge>
 						</td>
-						<td class="px-2 py-2 text-right tabular-nums">
+						<td class="px-2 py-2 text-end tabular-nums">
 							{formatMoney(p.amount, currency)}
 						</td>
 						<td class="px-2 py-2">{methodLabel[p.method]}</td>

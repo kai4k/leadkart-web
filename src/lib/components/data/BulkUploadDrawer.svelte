@@ -180,7 +180,7 @@
 		preview ? Math.max(0, preview.total_rows - preview.errors.length) : 0
 	);
 	const previewAllInvalid = $derived(
-		Boolean(preview) && preview.total_rows > 0 && preview.errors.length >= preview.total_rows
+		preview !== null && preview.total_rows > 0 && preview.errors.length >= preview.total_rows
 	);
 </script>
 
@@ -301,7 +301,7 @@
 
 					{#if preview.errors.length > 0}
 						<div class="border-border max-h-64 overflow-auto rounded-md border">
-							<table class="w-full text-left">
+							<table class="w-full text-start">
 								<thead class="bg-bg-muted">
 									<tr>
 										<th class="caption text-fg-muted px-3 py-2">Row</th>
@@ -355,8 +355,8 @@
 						{/if}
 					</div>
 					{#if result.errors.length > 0}
-						<div class="border-border max-h-64 overflow-auto rounded-md border text-left">
-							<table class="w-full text-left">
+						<div class="border-border max-h-64 overflow-auto rounded-md border text-start">
+							<table class="w-full text-start">
 								<thead class="bg-bg-muted">
 									<tr>
 										<th class="caption text-fg-muted px-3 py-2">Row</th>

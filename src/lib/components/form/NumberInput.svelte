@@ -149,7 +149,7 @@
 		<div class="relative flex-1">
 			{#if prefix}
 				<span
-					class="text-fg-subtle body-sm pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
+					class="text-fg-subtle body-sm pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3"
 					aria-hidden="true"
 				>
 					{prefix}
@@ -182,14 +182,14 @@
 					error
 						? 'border-danger-500 focus-visible:ring-danger-500'
 						: 'focus-visible:ring-focus-ring',
-					prefix && 'pl-7',
-					suffix && 'pr-7'
+					prefix && 'ps-7',
+					suffix && 'pe-7'
 				)}
 			/>
 
 			{#if suffix}
 				<span
-					class="text-fg-subtle body-sm pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"
+					class="text-fg-subtle body-sm pointer-events-none absolute inset-y-0 end-0 flex items-center pe-3"
 					aria-hidden="true"
 				>
 					{suffix}

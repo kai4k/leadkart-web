@@ -26,7 +26,7 @@
 	/>
 	<BitsDialog.Content
 		class={cn(
-			'glass-card is-fixed-overlay--modal top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2',
+			'glass-card is-fixed-overlay--modal start-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2',
 			'flex w-full max-w-lg flex-col',
 			'rounded-xl border border-[var(--glass-border-subtle)]',
 			'animate-pop-in',

@@ -131,7 +131,7 @@
 									>{p}
 									<button
 										type="button"
-										class="ml-1"
+										class="ms-1"
 										onclick={() => removeGrant(p)}
 										aria-label="Remove">×</button
 									>
@@ -161,7 +161,7 @@
 									>{p}
 									<button
 										type="button"
-										class="ml-1"
+										class="ms-1"
 										onclick={() => removeRevoke(p)}
 										aria-label="Remove">×</button
 									>

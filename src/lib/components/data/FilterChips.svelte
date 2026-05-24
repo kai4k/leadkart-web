@@ -32,7 +32,7 @@
 				<span class="label">{chip.value}</span>
 				<button
 					type="button"
-					class="text-fg-muted hover:text-fg focus-visible:ring-focus-ring -mr-1 inline-flex h-4 w-4 items-center justify-center rounded focus-visible:ring-2 focus-visible:outline-none"
+					class="text-fg-muted hover:text-fg focus-visible:ring-focus-ring -me-1 inline-flex h-4 w-4 items-center justify-center rounded focus-visible:ring-2 focus-visible:outline-none"
 					aria-label="Remove {chip.label} filter: {chip.value}"
 					onclick={() => urlFilters.clearValue(chip.key as keyof TFilters & string, chip.value)}
 				>
@@ -44,7 +44,7 @@
 		{#if urlFilters.activeChips.length >= 2}
 			<button
 				type="button"
-				class="label text-fg-muted hover:text-fg ml-1 hover:underline"
+				class="label text-fg-muted hover:text-fg ms-1 hover:underline"
 				onclick={() => urlFilters.clearAll()}
 			>
 				Clear all
