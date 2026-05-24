@@ -108,7 +108,7 @@
 
 {#snippet typeCell(role: RoleDto)}
 	{@const badge = roleBadgeVariant(role)}
-	<Badge variant={badge.variant} style="soft" size="sm">{badge.label}</Badge>
+	<Badge variant={badge.variant} appearance="soft" size="sm">{badge.label}</Badge>
 {/snippet}
 
 {#snippet rowActions(role: RoleDto)}

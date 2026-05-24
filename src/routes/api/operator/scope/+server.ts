@@ -70,6 +70,7 @@ export async function POST(event: RequestEvent): Promise<Response> {
 	return new Response(null, { status: 204 });
 }
 
+// eslint-disable-next-line @typescript-eslint/require-await -- SvelteKit handler signature is async by contract
 export async function DELETE(event: RequestEvent): Promise<Response> {
 	const csrfFail = checkCsrf(event);
 	if (csrfFail) return csrfFail;

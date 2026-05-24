@@ -22,11 +22,11 @@
  *     a dialog shows an inline Alert and a toast would be duplicative.
  */
 import { QueryClient, QueryCache, MutationCache } from '@tanstack/svelte-query';
-import { NetworkError, ServerError, AuthError } from './errors';
+import { ApiError, NetworkError, ServerError, AuthError } from './errors';
 import { toast } from '$lib/components/ui/Toaster.svelte';
 
 function describeError(err: unknown): string {
-	if (err instanceof Error) return err.message;
+	if (err instanceof ApiError) return err.message;
 	return 'Something went wrong';
 }
 

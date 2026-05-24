@@ -2,6 +2,7 @@
 	import { Alert, Skeleton } from '$ui';
 	import SessionsList from '$features/auth/components/SessionsList.svelte';
 	import { mySessionsQuery } from '$features/auth/queries';
+	import { ApiError } from '$api/errors';
 
 	const sessionsQuery = mySessionsQuery();
 </script>
@@ -14,7 +15,7 @@
 	</div>
 {:else if sessionsQuery.isError}
 	<Alert variant="danger"
-		>{sessionsQuery.error instanceof Error
+		>{sessionsQuery.error instanceof ApiError
 			? sessionsQuery.error.message
 			: 'Failed to load sessions'}</Alert
 	>

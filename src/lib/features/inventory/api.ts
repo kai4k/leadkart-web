@@ -227,7 +227,7 @@ async function postMultipart<T>(path: string, form: FormData): Promise<T> {
 
 	let resp: Response;
 	try {
-		resp = await fetch(`/api${path.startsWith('/') ? path : '/' + path}`, {
+		resp = await fetch(`/api${path.startsWith('/') ? path : `/${path}`}`, {
 			method: 'POST',
 			credentials: 'same-origin',
 			headers,

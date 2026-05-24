@@ -33,6 +33,7 @@
 	import { Drawer, Button, Alert, Badge, Stepper } from '$ui';
 	import type { StepperState } from '$ui';
 	import { Icon, Upload, CheckCircle2, X, Trash2 } from '$icons';
+	import { ApiError } from '$api/errors';
 
 	/**
 	 * BulkUploadDrawer — generic three-step (upload → preview → commit)
@@ -142,7 +143,7 @@
 			preview = p;
 			step = 'preview';
 		} catch (err) {
-			previewError = err instanceof Error ? err.message : 'Preview failed.';
+			previewError = err instanceof ApiError ? err.message : 'Preview failed.';
 		} finally {
 			previewLoading = false;
 		}
@@ -159,7 +160,7 @@
 			step = 'result';
 			onComplete?.(r);
 		} catch (err) {
-			commitError = err instanceof Error ? err.message : 'Commit failed.';
+			commitError = err instanceof ApiError ? err.message : 'Commit failed.';
 		} finally {
 			commitLoading = false;
 		}
@@ -179,7 +180,7 @@
 		preview ? Math.max(0, preview.total_rows - preview.errors.length) : 0
 	);
 	const previewAllInvalid = $derived(
-		!!preview && preview.total_rows > 0 && preview.errors.length >= preview.total_rows
+		Boolean(preview) && preview.total_rows > 0 && preview.errors.length >= preview.total_rows
 	);
 </script>
 
@@ -291,10 +292,10 @@
 			{:else if step === 'preview' && preview}
 				<div class="stack stack-relaxed">
 					<div class="cluster cluster-tight">
-						<Badge variant="info" style="soft">{preview.total_rows} total</Badge>
-						<Badge variant="success" style="soft">{previewValidCount} valid</Badge>
+						<Badge variant="info" appearance="soft">{preview.total_rows} total</Badge>
+						<Badge variant="success" appearance="soft">{previewValidCount} valid</Badge>
 						{#if preview.errors.length > 0}
-							<Badge variant="danger" style="soft">{preview.errors.length} errors</Badge>
+							<Badge variant="danger" appearance="soft">{preview.errors.length} errors</Badge>
 						{/if}
 					</div>
 
@@ -347,10 +348,10 @@
 					</div>
 					<h3 class="h5">Upload complete</h3>
 					<div class="cluster cluster-tight justify-center">
-						<Badge variant="success" style="soft">{result.inserted} inserted</Badge>
-						<Badge variant="info" style="soft">{result.updated} updated</Badge>
+						<Badge variant="success" appearance="soft">{result.inserted} inserted</Badge>
+						<Badge variant="info" appearance="soft">{result.updated} updated</Badge>
 						{#if result.failed > 0}
-							<Badge variant="danger" style="soft">{result.failed} failed</Badge>
+							<Badge variant="danger" appearance="soft">{result.failed} failed</Badge>
 						{/if}
 					</div>
 					{#if result.errors.length > 0}

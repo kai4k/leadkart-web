@@ -269,13 +269,13 @@
 
 {#snippet scheduleCell(product: ProductDto)}
 	{@const sched = drugScheduleBadge(product.drug_schedule)}
-	<Badge variant={sched.variant} style="soft" size="sm">{sched.label}</Badge>
+	<Badge variant={sched.variant} appearance="soft" size="sm">{sched.label}</Badge>
 {/snippet}
 
 {#snippet stockCell(product: ProductDto)}
 	{@const stock = stockLevelBadge(product)}
 	<div class="cluster cluster-tight">
-		<Badge variant={stock.variant} style="soft" size="sm">{stock.label}</Badge>
+		<Badge variant={stock.variant} appearance="soft" size="sm">{stock.label}</Badge>
 		<span class="caption text-fg-muted tabular-nums">{product.total_quantity_available}</span>
 	</div>
 {/snippet}
@@ -283,7 +283,7 @@
 {#snippet expiryCell(product: ProductDto)}
 	{@const expiry = expiryStatus(product.earliest_expiry_at)}
 	{#if expiry}
-		<Badge variant={expiry.variant} style="soft" size="sm">{expiry.label}</Badge>
+		<Badge variant={expiry.variant} appearance="soft" size="sm">{expiry.label}</Badge>
 	{:else}
 		<span class="caption text-fg-subtle">—</span>
 	{/if}
@@ -295,7 +295,7 @@
 
 {#snippet statusCell(product: ProductDto)}
 	{@const active = activeBadge(product)}
-	<Badge variant={active.variant} style="soft" size="sm">{active.label}</Badge>
+	<Badge variant={active.variant} appearance="soft" size="sm">{active.label}</Badge>
 {/snippet}
 
 {#snippet emptyStateSlot()}

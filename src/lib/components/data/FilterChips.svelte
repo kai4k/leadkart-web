@@ -21,7 +21,7 @@
 
 {#if urlFilters.activeChips.length > 0}
 	<div class={cn('cluster cluster-tight items-center', className)}>
-		{#each urlFilters.activeChips as chip (chip.key + ':' + chip.value)}
+		{#each urlFilters.activeChips as chip (`${chip.key}:${chip.value}`)}
 			<span
 				class={cn(
 					'cluster cluster-tight items-center',

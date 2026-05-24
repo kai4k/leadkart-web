@@ -33,7 +33,7 @@
 			</tr>
 		</thead>
 		<tbody>
-			{#each items as item, idx (item.batch_id + ':' + idx)}
+			{#each items as item, idx (`${item.batch_id}:${idx}`)}
 				<tr class="border-border border-b">
 					<td class="px-2 py-2">
 						<div class="stack stack-tight">

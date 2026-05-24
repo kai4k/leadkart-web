@@ -70,7 +70,7 @@
 				<div class="stack stack-tight">
 					<div class="cluster cluster-tight">
 						<h4 class="label text-fg">{group.label}</h4>
-						<Badge variant={group.variant} style="soft" size="sm">{g[group.key].length}</Badge>
+						<Badge variant={group.variant} appearance="soft" size="sm">{g[group.key].length}</Badge>
 					</div>
 					{#each g[group.key] as r (r.id)}
 						<Card.Root>

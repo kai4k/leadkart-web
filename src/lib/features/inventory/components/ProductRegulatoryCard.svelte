@@ -18,7 +18,7 @@
 			<div class="stack stack-tight">
 				<dt class="caption text-fg-muted">Drug schedule</dt>
 				<dd>
-					<Badge variant={sched.variant} style="soft">{sched.label}</Badge>
+					<Badge variant={sched.variant} appearance="soft">{sched.label}</Badge>
 				</dd>
 			</div>
 			<div class="stack stack-tight">

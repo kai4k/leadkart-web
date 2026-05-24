@@ -3,6 +3,7 @@ import {
 	endImpersonation,
 	listImpersonationSessions
 } from '$features/operator/impersonation/api';
+import { ApiError } from '$api/errors';
 import type {
 	ImpersonationSessionDto,
 	CreateImpersonationSessionRequest
@@ -53,7 +54,7 @@ export class ImpersonationStore {
 			}
 		} catch (e) {
 			this.status = 'error';
-			this.error = e instanceof Error ? e.message : 'Failed to load impersonation sessions';
+			this.error = e instanceof ApiError ? e.message : 'Failed to load impersonation sessions';
 		}
 	}
 
@@ -68,7 +69,7 @@ export class ImpersonationStore {
 			await this.reconcile();
 		} catch (e) {
 			this.status = 'error';
-			this.error = e instanceof Error ? e.message : 'Failed to start impersonation';
+			this.error = e instanceof ApiError ? e.message : 'Failed to start impersonation';
 			throw e;
 		}
 	}
@@ -84,7 +85,7 @@ export class ImpersonationStore {
 			this.status = 'idle';
 		} catch (e) {
 			this.status = 'error';
-			this.error = e instanceof Error ? e.message : 'Failed to end impersonation';
+			this.error = e instanceof ApiError ? e.message : 'Failed to end impersonation';
 			throw e;
 		}
 	}

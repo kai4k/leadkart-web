@@ -102,7 +102,7 @@
 							<li class="cluster cluster-spread border-border rounded-md border px-3 py-2">
 								<div class="stack stack-tight">
 									<span class="label">{role.name}</span>
-									{#if role.is_system_default}<Badge variant="info" style="soft" size="sm"
+									{#if role.is_system_default}<Badge variant="info" appearance="soft" size="sm"
 											>System</Badge
 										>{/if}
 								</div>
@@ -111,7 +111,7 @@
 										<Icon icon={X} size="sm" /> Revoke
 									</Button>
 								{:else}
-									<Badge variant="warning" style="soft" size="sm">Protected</Badge>
+									<Badge variant="warning" appearance="soft" size="sm">Protected</Badge>
 								{/if}
 							</li>
 						{/each}

@@ -113,13 +113,14 @@
 	const metaDirty = $derived(
 		role !== null && (name !== role.name || hierarchyLevel !== role.hierarchy_level)
 	);
-	const permsDirty = $derived(
-		role !== null &&
-			(selectedPerms.length !== role.permissions.length ||
-				selectedPerms.some((p) => !role!.permissions.includes(p)))
-	);
+	const permsDirty = $derived.by(() => {
+		const r = role;
+		if (r === null) return false;
+		if (selectedPerms.length !== r.permissions.length) return true;
+		return selectedPerms.some((p) => !r.permissions.includes(p));
+	});
 
-	async function saveMeta() {
+	function saveMeta() {
 		if (!role || !canUpdate) return;
 		error = null;
 		saved = false;
@@ -132,7 +133,7 @@
 		);
 	}
 
-	async function savePerms() {
+	function savePerms() {
 		if (!role || !canUpdate) return;
 		error = null;
 		saved = false;
@@ -178,7 +179,7 @@
 			<div class="stack stack-tight">
 				<div class="cluster cluster-tight">
 					<h1 class="h1">{role.name}</h1>
-					<Badge variant={badge.variant} style="soft" size="sm">{badge.label}</Badge>
+					<Badge variant={badge.variant} appearance="soft" size="sm">{badge.label}</Badge>
 				</div>
 				<p class="caption text-fg-muted">Hierarchy level {role.hierarchy_level}</p>
 				<div class="cluster cluster-tight">

@@ -147,14 +147,14 @@
 		{/if}
 		<span class="text-fg font-medium">{tenant.display_name}</span>
 		{#if tenant.slug === 'platform'}
-			<Badge variant="brand" style="soft" size="sm">Platform</Badge>
+			<Badge variant="brand" appearance="soft" size="sm">Platform</Badge>
 		{/if}
 	</div>
 {/snippet}
 
 {#snippet statusCell(tenant: TenantDto)}
 	{@const badge = tenantLifecycleBadge(tenant)}
-	<Badge variant={badge.variant} style="soft" size="sm">{badge.label}</Badge>
+	<Badge variant={badge.variant} appearance="soft" size="sm">{badge.label}</Badge>
 {/snippet}
 
 {#snippet rowActions(tenant: TenantDto)}

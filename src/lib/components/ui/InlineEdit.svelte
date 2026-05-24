@@ -84,8 +84,12 @@
 			await onSave(next);
 			editing = false;
 			error = null;
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Could not save';
+		} catch {
+			// Primitives don't introspect error shape — the consumer's
+			// onSave is responsible for typed-error handling. We surface
+			// a generic message so the inline-edit UI doesn't leak wire
+			// detail to end users.
+			error = 'Could not save';
 		} finally {
 			saving = false;
 		}

@@ -14,7 +14,7 @@
 	function isActive(href: string): boolean {
 		const path = page.url.pathname;
 		if (path === href) return true;
-		return path.startsWith(href + '/');
+		return path.startsWith(`${href  }/`);
 	}
 
 	/**
@@ -293,7 +293,12 @@
 		justify-content: flex-start;
 		padding-inline: 0.75rem;
 	}
+	/* Sidebar brand-mark must hide INSIDE a Dialog overlay (e.g. mobile
+	   drawer). The dialog is portaled, so the brand-mark class lives in
+	   a different DOM tree from the override class. !important is the
+	   only mechanism that escapes the cascade in that scenario. */
 	:global([role='dialog']) .lk-sidebar-brand-mark {
+		/* stylelint-disable-next-line declaration-no-important */
 		display: none !important;
 	}
 </style>

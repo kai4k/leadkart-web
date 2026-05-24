@@ -149,7 +149,9 @@
 								</td>
 								<td class="px-3 py-3">
 									{#if expiry}
-										<Badge variant={expiry.variant} style="soft" size="sm">{expiry.label}</Badge>
+										<Badge variant={expiry.variant} appearance="soft" size="sm"
+											>{expiry.label}</Badge
+										>
 									{:else}
 										<span class="caption text-fg-subtle">—</span>
 									{/if}
@@ -177,11 +179,11 @@
 								<td class="px-3 py-3">
 									<div class="cluster cluster-tight">
 										{#if batch.is_written_off}
-											<Badge variant="danger" style="soft" size="sm">Written off</Badge>
+											<Badge variant="danger" appearance="soft" size="sm">Written off</Badge>
 										{:else if batch.is_quarantined}
-											<Badge variant="warning" style="soft" size="sm">Quarantined</Badge>
+											<Badge variant="warning" appearance="soft" size="sm">Quarantined</Badge>
 										{:else}
-											<Badge variant="success" style="soft" size="sm">Active</Badge>
+											<Badge variant="success" appearance="soft" size="sm">Active</Badge>
 										{/if}
 									</div>
 								</td>

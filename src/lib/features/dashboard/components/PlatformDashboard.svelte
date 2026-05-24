@@ -13,6 +13,7 @@
 	import { Alert, Card, Spinner } from '$ui';
 	import { myCapabilitiesQuery } from '$features/auth/queries';
 	import { deriveTier } from '$features/auth/capabilities';
+	import { ApiError } from '$api/errors';
 	import { platformStatsQuery } from '$lib/features/operator/dashboard/queries';
 
 	/**
@@ -40,7 +41,7 @@
 	const statsLoading = $derived(statsQuery.isPending);
 	const statsError = $derived(
 		statsQuery.isError
-			? statsQuery.error instanceof Error
+			? statsQuery.error instanceof ApiError
 				? statsQuery.error.message
 				: 'Failed to load platform stats'
 			: null

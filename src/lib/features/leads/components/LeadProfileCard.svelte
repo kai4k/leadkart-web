@@ -48,7 +48,7 @@
 				<dt class="caption text-fg-muted">Product ranges</dt>
 				<dd class="cluster cluster-tight flex-wrap">
 					{#each lead.product_ranges as range (range)}
-						<Badge variant="brand" style="soft" size="sm">{range}</Badge>
+						<Badge variant="brand" appearance="soft" size="sm">{range}</Badge>
 					{:else}
 						<span class="caption text-fg-subtle">—</span>
 					{/each}
@@ -59,7 +59,7 @@
 				<dt class="caption text-fg-muted">Dosage forms</dt>
 				<dd class="cluster cluster-tight flex-wrap">
 					{#each lead.dosage_forms as form (form)}
-						<Badge variant="neutral" style="soft" size="sm">{form}</Badge>
+						<Badge variant="neutral" appearance="soft" size="sm">{form}</Badge>
 					{:else}
 						<span class="caption text-fg-subtle">—</span>
 					{/each}

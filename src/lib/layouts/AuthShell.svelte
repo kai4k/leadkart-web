@@ -203,7 +203,7 @@
 
 	<!-- ── Viewport-wide particle canvas (decorative, aria-hidden) ── -->
 	<div class="lk-particles lk-particles--far" aria-hidden="true">
-		{#each FAR as p (p.x + '-' + p.y)}
+		{#each FAR as p (`${p.x}-${p.y}`)}
 			<span
 				class="lk-particle lk-particle--{p.kind}"
 				style="--x:{p.x}%;--y:{p.y}%;--len:{p.length}px;--rot:{p.rotation}deg;--delay:{p.delay}s;--c1:var({p.c1});--c2:var({p.c2});"
@@ -211,7 +211,7 @@
 		{/each}
 	</div>
 	<div class="lk-particles lk-particles--mid" aria-hidden="true">
-		{#each MID as p (p.x + '-' + p.y)}
+		{#each MID as p (`${p.x}-${p.y}`)}
 			<span
 				class="lk-particle lk-particle--{p.kind}"
 				style="--x:{p.x}%;--y:{p.y}%;--len:{p.length}px;--rot:{p.rotation}deg;--delay:{p.delay}s;--c1:var({p.c1});--c2:var({p.c2});"
@@ -219,7 +219,7 @@
 		{/each}
 	</div>
 	<div class="lk-particles lk-particles--near" aria-hidden="true">
-		{#each NEAR as p (p.x + '-' + p.y)}
+		{#each NEAR as p (`${p.x}-${p.y}`)}
 			<span
 				class="lk-particle lk-particle--{p.kind}"
 				style="--x:{p.x}%;--y:{p.y}%;--len:{p.length}px;--rot:{p.rotation}deg;--delay:{p.delay}s;--c1:var({p.c1});--c2:var({p.c2});"

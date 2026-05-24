@@ -8,6 +8,7 @@
 	import { personsListQuery } from '$features/operator/people/queries';
 	import { personDisplayName, personLifecycleBadge } from '$features/operator/people/view-models';
 	import type { PersonDto } from '$features/operator/people/types';
+	import { ApiError } from '$api/errors';
 
 	const DEBOUNCE_MS = 300;
 
@@ -84,7 +85,7 @@
 
 {#snippet statusCell(p: PersonDto)}
 	{@const badge = personLifecycleBadge(p)}
-	<Badge variant={badge.variant} style="soft" size="sm">{badge.label}</Badge>
+	<Badge variant={badge.variant} appearance="soft" size="sm">{badge.label}</Badge>
 {/snippet}
 
 {#snippet dateCell(p: PersonDto)}
@@ -118,7 +119,7 @@
 		rows={persons}
 		rowKey={(p) => p.id}
 		state={tableState}
-		error={query.error instanceof Error ? query.error.message : null}
+		error={query.error instanceof ApiError ? query.error.message : null}
 	>
 		{#snippet emptyState()}
 			<EmptyState

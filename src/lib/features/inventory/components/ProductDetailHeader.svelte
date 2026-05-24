@@ -39,12 +39,12 @@
 				<p class="body-base text-fg-muted truncate">{product.generic_name}</p>
 			{/if}
 			<div class="cluster cluster-tight pt-2">
-				<Badge variant="info" style="soft">{product.product_category}</Badge>
-				<Badge variant="neutral" style="soft">{product.product_type}</Badge>
+				<Badge variant="info" appearance="soft">{product.product_category}</Badge>
+				<Badge variant="neutral" appearance="soft">{product.product_type}</Badge>
 				<span data-testid="drug-schedule-pill">
-					<Badge variant={sched.variant} style="soft">{sched.label}</Badge>
+					<Badge variant={sched.variant} appearance="soft">{sched.label}</Badge>
 				</span>
-				<Badge variant={active.variant} style="soft">{active.label}</Badge>
+				<Badge variant={active.variant} appearance="soft">{active.label}</Badge>
 			</div>
 		</div>
 
@@ -52,7 +52,7 @@
 			<div class="stack stack-tight items-end">
 				<div class="cluster cluster-tight">
 					<span data-testid="stock-pill">
-						<Badge variant={stock.variant} style="soft">{stock.label}</Badge>
+						<Badge variant={stock.variant} appearance="soft">{stock.label}</Badge>
 					</span>
 					<span class="body-base text-fg tabular-nums" data-testid="stock-count">
 						{product.total_quantity_available} units
@@ -60,7 +60,7 @@
 				</div>
 				{#if expiry}
 					<span data-testid="expiry-pill">
-						<Badge variant={expiry.variant} style="soft">{expiry.label}</Badge>
+						<Badge variant={expiry.variant} appearance="soft">{expiry.label}</Badge>
 					</span>
 				{/if}
 			</div>

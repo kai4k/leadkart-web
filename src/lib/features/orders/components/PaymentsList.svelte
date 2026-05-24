@@ -15,7 +15,9 @@
 	let { payments, currency = 'INR' }: Props = $props();
 
 	const sorted = $derived(
-		[...payments].sort((a, b) => +new Date(b.received_at) - +new Date(a.received_at))
+		[...payments].sort(
+			(a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime()
+		)
 	);
 
 	const methodLabel: Record<PaymentDto['method'], string> = {
@@ -46,7 +48,7 @@
 				{#each sorted as p (p.id)}
 					<tr class="border-border border-b">
 						<td class="px-2 py-2">
-							<Badge variant={p.kind === 'token' ? 'info' : 'success'} style="soft" size="sm">
+							<Badge variant={p.kind === 'token' ? 'info' : 'success'} appearance="soft" size="sm">
 								{p.kind === 'token' ? 'Token' : 'Full'}
 							</Badge>
 						</td>

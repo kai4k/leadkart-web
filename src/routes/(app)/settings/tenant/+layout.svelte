@@ -50,7 +50,7 @@
 
 	function isActive(href: string): boolean {
 		const path = page.url.pathname;
-		return path === href || path.startsWith(href + '/');
+		return path === href || path.startsWith(`${href}/`);
 	}
 </script>
 

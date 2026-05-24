@@ -24,13 +24,13 @@
 				<dt class="label text-fg-muted">Drug licence</dt>
 				<dd>
 					{#if lead.has_drug_licence}
-						<Badge variant="success" style="soft" size="sm">
+						<Badge variant="success" appearance="soft" size="sm">
 							<span class="cluster cluster-tight items-center"
 								><Icon icon={Check} size="xs" /> Yes</span
 							>
 						</Badge>
 					{:else}
-						<Badge variant="neutral" style="soft" size="sm">
+						<Badge variant="neutral" appearance="soft" size="sm">
 							<span class="cluster cluster-tight items-center"><Icon icon={X} size="xs" /> No</span>
 						</Badge>
 					{/if}
@@ -43,12 +43,12 @@
 					{#if lead.has_gst}
 						<code class="caption text-fg">{lead.gst_number ?? '—'}</code>
 						{#if lead.gst_verified}
-							<Badge variant="success" style="soft" size="sm">Verified</Badge>
+							<Badge variant="success" appearance="soft" size="sm">Verified</Badge>
 						{:else}
-							<Badge variant="warning" style="soft" size="sm">Unverified</Badge>
+							<Badge variant="warning" appearance="soft" size="sm">Unverified</Badge>
 						{/if}
 					{:else}
-						<Badge variant="neutral" style="soft" size="sm">Not registered</Badge>
+						<Badge variant="neutral" appearance="soft" size="sm">Not registered</Badge>
 					{/if}
 				</dd>
 			</div>
@@ -59,7 +59,7 @@
 					{#if lead.has_pan}
 						<code class="caption text-fg">{lead.pan_number ?? '—'}</code>
 					{:else}
-						<Badge variant="neutral" style="soft" size="sm">Not provided</Badge>
+						<Badge variant="neutral" appearance="soft" size="sm">Not provided</Badge>
 					{/if}
 				</dd>
 			</div>

@@ -73,11 +73,27 @@ jobs:
         # vulnerable deps introduced by the PR itself.
         run: npm audit --omit=dev --audit-level=high
 
-      - name: Lint (prettier + eslint)
+      - name: Lint — prettier + eslint
         run: npm run lint
+
+      - name: Lint — stylelint (design-token discipline)
+        run: npm run lint:css
+
+      - name: Lint — dependency-cruiser (layering boundaries)
+        run: npm run lint:deps
+
+      - name: Architecture gate — custom static checks
+        run: npm run arch:check
 
       - name: Type check (svelte-check + tsc)
         run: npm run check
+
+      - name: Lint — knip (dead code + unused exports)
+        # Knip surfaces unused exports + files. Currently runs as a
+        # non-blocking advisory because the feature barrels expose
+        # types that aren't consumed yet by route code. Promote to a
+        # hard gate once the consumer surface stabilises.
+        run: npm run lint:dead -- --no-exit-code || true
 
       - name: Unit tests with coverage
         run: npm run test:coverage

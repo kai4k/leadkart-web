@@ -100,7 +100,7 @@
 
 {#snippet stateCell(req: PermissionRequestDto)}
 	{@const b = stateBadge(req.state)}
-	<Badge variant={b.variant} style="soft" size="sm">{b.label}</Badge>
+	<Badge variant={b.variant} appearance="soft" size="sm">{b.label}</Badge>
 {/snippet}
 
 {#snippet dateCell(req: PermissionRequestDto)}

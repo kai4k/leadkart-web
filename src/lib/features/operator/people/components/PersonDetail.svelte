@@ -19,6 +19,7 @@
 	import AnonymiseDialog from './AnonymiseDialog.svelte';
 	import { personActivityQuery } from '$lib/features/audit/queries';
 	import ActivityTimeline from '$lib/features/audit/components/ActivityTimeline.svelte';
+	import { ApiError } from '$api/errors';
 
 	type Props = { personId: string };
 	let { personId }: Props = $props();
@@ -36,7 +37,7 @@
 	const isLoading = $derived(query.isPending);
 	const isError = $derived(query.isError);
 	const errorMsg = $derived(
-		query.error instanceof Error ? query.error.message : 'Failed to load person'
+		query.error instanceof ApiError ? query.error.message : 'Failed to load person'
 	);
 	const isPending = $derived(liftMutation.isPending);
 
@@ -99,7 +100,7 @@
 					<div class="stack stack-tight min-w-0">
 						<div class="flex flex-wrap items-center gap-2">
 							<span class="h2">{displayName}</span>
-							<Badge variant={badge.variant} style="soft" size="sm">{badge.label}</Badge>
+							<Badge variant={badge.variant} appearance="soft" size="sm">{badge.label}</Badge>
 						</div>
 						<div class="cluster cluster-tight flex-wrap">
 							<p class="body-base text-fg-muted break-all">{p.email}</p>
@@ -150,7 +151,7 @@
 							</thead>
 							<tbody>
 								{#each memberships as m (m.membership_id)}
-									<tr class="border-b border-[var(--color-border-subtle)] last:border-0">
+									<tr class="border-border border-b last:border-0">
 										<td class="py-2 pr-4">
 											<code class="caption">{m.tenant_id}</code>
 										</td>
@@ -158,7 +159,7 @@
 										<td class="py-2">
 											<Badge
 												variant={m.status === 'active' ? 'success' : 'warning'}
-												style="soft"
+												appearance="soft"
 												size="sm">{m.status}</Badge
 											>
 										</td>
@@ -182,7 +183,7 @@
 					data={activityQuery?.data ?? null}
 					isPending={activityQuery?.isPending ?? true}
 					isError={activityQuery?.isError ?? false}
-					errorMessage={activityQuery?.error instanceof Error
+					errorMessage={activityQuery?.error instanceof ApiError
 						? activityQuery.error.message
 						: 'Failed to load activity'}
 				/>

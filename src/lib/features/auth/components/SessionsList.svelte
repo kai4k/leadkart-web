@@ -7,6 +7,7 @@
 		revokeOtherSessionsMutation
 	} from '$features/auth/queries';
 	import { isCurrentSession, lastSeenLabel } from '$features/auth/view-models';
+	import { ApiError } from '$api/errors';
 
 	/**
 	 * SessionsList — one Card row per session family.
@@ -60,7 +61,7 @@
 
 	{#if sessionsQuery.isError}
 		<Alert variant="danger"
-			>{sessionsQuery.error instanceof Error
+			>{sessionsQuery.error instanceof ApiError
 				? sessionsQuery.error.message
 				: 'Failed to load sessions'}</Alert
 		>
@@ -87,7 +88,7 @@
 										{sess.device_label || 'Unknown device'}
 									</p>
 									{#if current}
-										<Badge variant="success" style="soft" size="sm">This device</Badge>
+										<Badge variant="success" appearance="soft" size="sm">This device</Badge>
 									{/if}
 								</div>
 								<p class="caption text-fg-muted">

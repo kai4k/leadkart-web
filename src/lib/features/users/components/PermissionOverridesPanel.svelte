@@ -127,9 +127,14 @@
 					<ul class="cluster" aria-label="Granted permissions">
 						{#each granted as p (p)}
 							<li>
-								<Badge variant="success" style="soft" size="sm"
+								<Badge variant="success" appearance="soft" size="sm"
 									>{p}
-									<button class="ml-1" onclick={() => removeGrant(p)} aria-label="Remove">×</button>
+									<button
+										type="button"
+										class="ml-1"
+										onclick={() => removeGrant(p)}
+										aria-label="Remove">×</button
+									>
 								</Badge>
 							</li>
 						{/each}
@@ -152,9 +157,13 @@
 					<ul class="cluster" aria-label="Revoked permissions">
 						{#each revoked as p (p)}
 							<li>
-								<Badge variant="danger" style="soft" size="sm"
+								<Badge variant="danger" appearance="soft" size="sm"
 									>{p}
-									<button class="ml-1" onclick={() => removeRevoke(p)} aria-label="Remove">×</button
+									<button
+										type="button"
+										class="ml-1"
+										onclick={() => removeRevoke(p)}
+										aria-label="Remove">×</button
 									>
 								</Badge>
 							</li>

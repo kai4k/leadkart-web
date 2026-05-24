@@ -45,7 +45,7 @@ const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
  */
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
 	const { json, headers, ...rest } = options;
-	const url = resolveBaseUrl() + (path.startsWith('/') ? path : '/' + path);
+	const url = `${resolveBaseUrl()}${path.startsWith('/') ? path : `/${path}`}`;
 
 	const finalHeaders = new Headers(headers);
 	if (json !== undefined) {

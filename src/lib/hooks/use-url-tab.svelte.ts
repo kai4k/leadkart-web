@@ -31,11 +31,7 @@ export interface UseUrlTab {
  * @param valid — optional whitelist of accepted tab values
  * @param param — search-param name (default `'tab'`)
  */
-export function useUrlTab(
-	defaultTab: string,
-	valid?: readonly string[],
-	param: string = 'tab'
-): UseUrlTab {
+export function useUrlTab(defaultTab: string, valid?: readonly string[], param = 'tab'): UseUrlTab {
 	function set(next: string): void {
 		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
 		if (next === defaultTab) params.delete(param);
