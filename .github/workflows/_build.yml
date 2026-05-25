@@ -1,0 +1,48 @@
+name: _build
+# Reusable workflow — vite build + size-limit budget check. Called by
+# ci.yml. Uploads the build/ directory as an artifact so the downstream
+# e2e shards can download it rather than rebuilding from source
+# (~10s × 4 shards = ~40s saved).
+
+on:
+  workflow_call:
+    outputs:
+      build-artifact-name:
+        description: 'Name of the uploaded build artifact (used by downstream e2e shards)'
+        value: ${{ jobs.build.outputs.artifact-name }}
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    outputs:
+      artifact-name: build-${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/setup
+
+      - name: Restore Vite build cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            node_modules/.vite
+            .svelte-kit/output
+          key: vite-${{ runner.os }}-${{ hashFiles('package-lock.json', 'svelte.config.js', 'vite.config.ts') }}-${{ github.sha }}
+          restore-keys: |
+            vite-${{ runner.os }}-${{ hashFiles('package-lock.json', 'svelte.config.js', 'vite.config.ts') }}-
+
+      - name: Vite build
+        run: npm run build
+
+      - name: Bundle-size budget check
+        run: npx size-limit
+
+      - name: Upload build artifact for e2e shards
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-${{ github.sha }}
+          path: build/
+          retention-days: 1
+          if-no-files-found: error
