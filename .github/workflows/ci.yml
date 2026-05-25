@@ -63,7 +63,12 @@ jobs:
         # tolerating cross-platform variance. Lock determinism is still
         # enforced at PR-review time via committed package-lock.json
         # + Dependabot.
-        run: npm install --no-audit --no-fund --prefer-offline
+        #
+        # .npmrc sets legacy-peer-deps=true (TypeScript 6 + Storybook 10
+        # + culori + colord ahead of ecosystem peer ranges; integration
+        # works, only npm's strict check is the blocker). Pinning to the
+        # lockfile keeps the actual versions canonical.
+        run: npm install
 
       - name: Security audit (high+ severity blocks)
         # Cheap (~5s with cached registry); runs early so a vulnerable
