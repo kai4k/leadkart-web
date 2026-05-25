@@ -15,7 +15,7 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"format": "prettier --write .",
-		"lint": "prettier --check . && eslint .",
+		"lint": "prettier --check . && eslint . --cache --cache-strategy content --concurrency=auto",
 		"lint:css": "stylelint \"src/**/*.{css,svelte}\"",
 		"lint:deps": "depcruise --config .dependency-cruiser.cjs src",
 		"lint:dead": "knip --no-progress",

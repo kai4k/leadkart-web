@@ -78,7 +78,44 @@ jobs:
         # vulnerable deps introduced by the PR itself.
         run: npm audit --omit=dev --audit-level=high
 
+      # SvelteKit generates .svelte-kit/tsconfig.json + ambient types
+      # ($app, $env, $lib, route $types) via the sync step. Anything
+      # downstream that touches tsconfig.json (dep-cruiser, eslint with
+      # projectService, svelte-check, vite build) needs this dir to
+      # exist. Running it explicitly + early avoids the "Cannot read
+      # file .svelte-kit/tsconfig.json" crash that hit our lint:deps
+      # step.
+      #
+      # SvelteKit docs recommend this as the canonical CI setup step.
+      - name: SvelteKit sync — generate .svelte-kit ambient types
+        run: npx svelte-kit sync
+
+      # Persist ESLint's per-file content cache across CI runs.
+      # First cold run: ~3-4 min (typescript-eslint loads the entire
+      # TS program graph including node_modules type-defs).
+      # Subsequent warm runs: ~30-60s (only changed files re-typed).
+      # Cache key invalidates when package-lock.json (deps) or
+      # eslint.config.js (rules) change; restore-keys allows partial
+      # fallback when only one of them changes.
+      - name: Restore ESLint cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            .eslintcache
+            .stylelintcache
+          key: lint-${{ runner.os }}-${{ hashFiles('package-lock.json', 'eslint.config.js', '.stylelintrc.cjs') }}-${{ github.sha }}
+          restore-keys: |
+            lint-${{ runner.os }}-${{ hashFiles('package-lock.json', 'eslint.config.js', '.stylelintrc.cjs') }}-
+            lint-${{ runner.os }}-
+
       - name: Lint — prettier + eslint
+        # NODE_OPTIONS bumps the heap so typescript-eslint's TS-program
+        # creation doesn't trigger GC thrash on the 7GB CI runner. ESLint
+        # 10's --concurrency=auto (set in package.json script) splits the
+        # file set across cores (2 on GitHub Actions free tier → ~50%
+        # faster than serial).
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
         run: npm run lint
 
       - name: Lint — stylelint (design-token discipline)
