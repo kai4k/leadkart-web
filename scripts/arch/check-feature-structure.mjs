@@ -37,7 +37,7 @@ function hasNestedApi(dir) {
 // don't ship api.ts but still need index.ts as the public barrel.
 const NO_API_REQUIRED = new Set(['dashboard']);
 
-let errors = [];
+const errors = [];
 for (const f of features) {
 	const dir = join(FEATURES_DIR, f);
 	const hasApi = existsSync(join(dir, 'api.ts')) || hasNestedApi(dir);

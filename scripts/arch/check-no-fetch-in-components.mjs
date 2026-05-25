@@ -50,7 +50,7 @@ const files = globSync('src/**/*.{ts,svelte}', {
 	exclude: ['src/lib/api/generated/**']
 });
 
-let violations = [];
+const violations = [];
 for (const rel of files) {
 	if (isAllowed(rel)) continue;
 	const src = readFileSync(join(ROOT, rel), 'utf8');

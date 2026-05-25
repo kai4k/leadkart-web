@@ -35,7 +35,7 @@ export function tenantDetailQuery(tenantId: string) {
 	return createQuery(() => ({
 		queryKey: tenantsKeys.detail(tenantId),
 		queryFn: () => api.getTenant(tenantId),
-		enabled: !!tenantId
+		enabled: Boolean(tenantId)
 	}));
 }
 
@@ -44,7 +44,7 @@ export function registerTenantMutation() {
 	return createMutation(() => ({
 		mutationFn: (req: RegisterTenantRequest) => api.registerTenant(req),
 		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: tenantsKeys.all });
+			void qc.invalidateQueries({ queryKey: tenantsKeys.all });
 			toast('success', 'Tenant registered');
 		}
 	}));
@@ -56,7 +56,7 @@ export function suspendTenantMutation() {
 		mutationFn: ({ id, reason }: { id: string; reason: string }) =>
 			api.suspendTenant(id, { reason }),
 		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: tenantsKeys.all });
+			void qc.invalidateQueries({ queryKey: tenantsKeys.all });
 			toast('success', 'Tenant suspended');
 		}
 	}));
@@ -67,7 +67,7 @@ export function activateTenantMutation() {
 	return createMutation(() => ({
 		mutationFn: (id: string) => api.activateTenant(id),
 		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: tenantsKeys.all });
+			void qc.invalidateQueries({ queryKey: tenantsKeys.all });
 			toast('success', 'Tenant activated');
 		}
 	}));
@@ -79,7 +79,7 @@ export function markForDeletionMutation() {
 		mutationFn: ({ id, reason }: { id: string; reason: string }) =>
 			api.markForDeletion(id, { reason }),
 		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: tenantsKeys.all });
+			void qc.invalidateQueries({ queryKey: tenantsKeys.all });
 			toast('success', 'Tenant marked for deletion');
 		}
 	}));
@@ -90,7 +90,7 @@ export function restoreTenantMutation() {
 	return createMutation(() => ({
 		mutationFn: (id: string) => api.restoreTenant(id),
 		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: tenantsKeys.all });
+			void qc.invalidateQueries({ queryKey: tenantsKeys.all });
 			toast('success', 'Tenant restored');
 		}
 	}));

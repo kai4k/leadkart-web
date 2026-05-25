@@ -75,7 +75,7 @@ export function productDetailQuery(id: string) {
 	return createQuery(() => ({
 		queryKey: inventoryKeys.productDetail(id),
 		queryFn: () => api.getProduct(id),
-		enabled: !!id
+		enabled: Boolean(id)
 	}));
 }
 
@@ -86,7 +86,7 @@ export function createProductMutation() {
 		meta: { skipErrorToast: true },
 		onSuccess: (product) => {
 			qc.setQueryData(inventoryKeys.productDetail(product.id), product);
-			qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
+			void qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
 			toast('success', 'Product created');
 		}
 	}));
@@ -100,7 +100,7 @@ export function updateProductMutation() {
 		meta: { skipErrorToast: true },
 		onSuccess: (product) => {
 			qc.setQueryData(inventoryKeys.productDetail(product.id), product);
-			qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
+			void qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
 			toast('success', 'Product updated');
 		}
 	}));
@@ -112,7 +112,7 @@ export function deleteProductMutation() {
 		mutationFn: (id: string) => api.deleteProduct(id),
 		onSuccess: (product) => {
 			qc.setQueryData(inventoryKeys.productDetail(product.id), product);
-			qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
+			void qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
 			toast('success', 'Product deleted');
 		}
 	}));
@@ -123,7 +123,7 @@ export function bulkProductActionMutation() {
 	return createMutation(() => ({
 		mutationFn: (body: BulkProductActionRequest) => api.bulkProductAction(body),
 		onSuccess: (result) => {
-			qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
+			void qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
 			toast('success', `${result.affected} product${result.affected === 1 ? '' : 's'} updated`);
 		}
 	}));
@@ -135,7 +135,7 @@ export function batchesQuery(productId: string, params: ListBatchesParams = {}) 
 	return createQuery(() => ({
 		queryKey: [...inventoryKeys.batches(productId), params],
 		queryFn: () => api.listBatches(productId, params),
-		enabled: !!productId
+		enabled: Boolean(productId)
 	}));
 }
 
@@ -146,10 +146,10 @@ export function addBatchMutation() {
 			api.createBatch(productId, body),
 		meta: { skipErrorToast: true },
 		onSuccess: (_batch, vars) => {
-			qc.invalidateQueries({ queryKey: inventoryKeys.batches(vars.productId) });
-			qc.invalidateQueries({ queryKey: inventoryKeys.productDetail(vars.productId) });
-			qc.invalidateQueries({ queryKey: inventoryKeys.movements(vars.productId) });
-			qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
+			void qc.invalidateQueries({ queryKey: inventoryKeys.batches(vars.productId) });
+			void qc.invalidateQueries({ queryKey: inventoryKeys.productDetail(vars.productId) });
+			void qc.invalidateQueries({ queryKey: inventoryKeys.movements(vars.productId) });
+			void qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
 			toast('success', 'Batch added');
 		}
 	}));
@@ -168,8 +168,8 @@ export function writeOffBatchMutation() {
 		}) => api.writeOffBatch(batchId, body),
 		meta: { skipErrorToast: true },
 		onSuccess: (_batch, vars) => {
-			qc.invalidateQueries({ queryKey: inventoryKeys.batches(vars.productId) });
-			qc.invalidateQueries({ queryKey: inventoryKeys.productDetail(vars.productId) });
+			void qc.invalidateQueries({ queryKey: inventoryKeys.batches(vars.productId) });
+			void qc.invalidateQueries({ queryKey: inventoryKeys.productDetail(vars.productId) });
 			toast('success', 'Batch written off');
 		}
 	}));
@@ -181,8 +181,8 @@ export function quarantineBatchMutation() {
 		mutationFn: ({ batchId }: { productId: string; batchId: string }) =>
 			api.quarantineBatch(batchId),
 		onSuccess: (_batch, vars) => {
-			qc.invalidateQueries({ queryKey: inventoryKeys.batches(vars.productId) });
-			qc.invalidateQueries({ queryKey: inventoryKeys.productDetail(vars.productId) });
+			void qc.invalidateQueries({ queryKey: inventoryKeys.batches(vars.productId) });
+			void qc.invalidateQueries({ queryKey: inventoryKeys.productDetail(vars.productId) });
 			toast('success', 'Batch quarantined');
 		}
 	}));
@@ -199,7 +199,7 @@ export function movementsInfiniteQuery(productId: string, params: ListMovementsP
 				limit: params.limit ?? MOVEMENT_PAGE_SIZE,
 				cursor: pageParam as string | undefined
 			}),
-		enabled: !!productId,
+		enabled: Boolean(productId),
 		initialPageParam: undefined as string | undefined,
 		getNextPageParam: (last) => (last.has_more ? (last.next_cursor ?? undefined) : undefined)
 	}));
@@ -235,10 +235,10 @@ export function adjustStockMutation() {
 			if (ctx?.previous) qc.setQueryData(inventoryKeys.productDetail(ctx.productId), ctx.previous);
 		},
 		onSuccess: (movement, vars) => {
-			qc.invalidateQueries({ queryKey: inventoryKeys.productDetail(vars.productId) });
-			qc.invalidateQueries({ queryKey: inventoryKeys.batches(vars.productId) });
-			qc.invalidateQueries({ queryKey: inventoryKeys.movements(vars.productId) });
-			qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
+			void qc.invalidateQueries({ queryKey: inventoryKeys.productDetail(vars.productId) });
+			void qc.invalidateQueries({ queryKey: inventoryKeys.batches(vars.productId) });
+			void qc.invalidateQueries({ queryKey: inventoryKeys.movements(vars.productId) });
+			void qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
 
 			const sign = movement.delta > 0 ? '+' : '';
 			const reasonLabel = movementReasonLabel(movement.reason);
@@ -255,11 +255,11 @@ export function adjustStockMutation() {
 								note: `Undo of ${movement.id}`
 							})
 							.then(() => {
-								qc.invalidateQueries({
+								void qc.invalidateQueries({
 									queryKey: inventoryKeys.productDetail(vars.productId)
 								});
-								qc.invalidateQueries({ queryKey: inventoryKeys.batches(vars.productId) });
-								qc.invalidateQueries({
+								void qc.invalidateQueries({ queryKey: inventoryKeys.batches(vars.productId) });
+								void qc.invalidateQueries({
 									queryKey: inventoryKeys.movements(vars.productId)
 								});
 								toast('success', 'Adjustment undone');
@@ -300,7 +300,7 @@ export function computedPricesQuery(productId: string) {
 	return createQuery(() => ({
 		queryKey: inventoryKeys.computedPrices(productId),
 		queryFn: () => api.getComputedPrices(productId),
-		enabled: !!productId
+		enabled: Boolean(productId)
 	}));
 }
 
@@ -318,11 +318,12 @@ export function bulkUploadCommitMutation() {
 		mutationFn: ({ file, upsert_by }: { file: File; upsert_by?: 'product_key' | 'none' }) =>
 			api.bulkUploadCommit(file, { upsert_by }),
 		onSuccess: (result) => {
-			qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
+			void qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
 			toast(
 				'success',
-				`Inserted ${result.inserted}, updated ${result.updated}` +
-					(result.failed > 0 ? `, ${result.failed} failed` : '')
+				`Inserted ${result.inserted}, updated ${result.updated}${
+					result.failed > 0 ? `, ${result.failed} failed` : ''
+				}`
 			);
 		}
 	}));

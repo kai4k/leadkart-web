@@ -17,7 +17,7 @@ export function tenantActivityQuery(tenantId: string, params?: ActivityParams) {
 	return createQuery(() => ({
 		queryKey: activityKeys.tenant(tenantId, params),
 		queryFn: () => api.listTenantActivity(tenantId, params),
-		enabled: !!tenantId,
+		enabled: Boolean(tenantId),
 		staleTime: 60_000
 	}));
 }
@@ -26,7 +26,7 @@ export function personActivityQuery(personId: string, params?: ActivityParams) {
 	return createQuery(() => ({
 		queryKey: activityKeys.person(personId, params),
 		queryFn: () => api.listPersonActivity(personId, params),
-		enabled: !!personId,
+		enabled: Boolean(personId),
 		staleTime: 60_000
 	}));
 }

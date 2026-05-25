@@ -64,7 +64,7 @@ export function createUserMutation() {
 	return createMutation(() => ({
 		mutationFn: (req: CreateUserRequest) => api.createUser(req),
 		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: usersKeys.list() });
+			void qc.invalidateQueries({ queryKey: usersKeys.list() });
 			toast('success', 'Member added');
 		}
 	}));
@@ -76,7 +76,7 @@ export function deactivateUserMutation() {
 		mutationFn: ({ id, reason }: { id: string; reason: string }) =>
 			api.deactivateUser(id, { reason }),
 		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: usersKeys.all });
+			void qc.invalidateQueries({ queryKey: usersKeys.all });
 			toast('success', 'Member deactivated');
 		}
 	}));
@@ -87,7 +87,7 @@ export function reactivateUserMutation() {
 	return createMutation(() => ({
 		mutationFn: (id: string) => api.reactivateUser(id),
 		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: usersKeys.all });
+			void qc.invalidateQueries({ queryKey: usersKeys.all });
 			toast('success', 'Member reactivated');
 		}
 	}));
@@ -99,7 +99,7 @@ export function assignRoleMutation() {
 		mutationFn: ({ id, roleId }: { id: string; roleId: string }) =>
 			api.assignRole(id, { role_id: roleId }),
 		onSuccess: (_, vars) => {
-			qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id) });
+			void qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id) });
 			toast('success', 'Role assigned');
 		}
 	}));
@@ -110,7 +110,7 @@ export function revokeRoleMutation() {
 	return createMutation(() => ({
 		mutationFn: ({ id, roleId }: { id: string; roleId: string }) => api.revokeRole(id, roleId),
 		onSuccess: (_, vars) => {
-			qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id) });
+			void qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id) });
 			toast('success', 'Role revoked');
 		}
 	}));
@@ -122,7 +122,7 @@ export function replacePermissionOverridesMutation() {
 		mutationFn: ({ id, body }: { id: string; body: ReplacePermissionOverridesRequest }) =>
 			api.replacePermissionOverrides(id, body),
 		onSuccess: (_, vars) => {
-			qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id) });
+			void qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id) });
 			toast('success', 'Permission overrides saved');
 		}
 	}));
@@ -134,7 +134,7 @@ export function assignManagerMutation() {
 		mutationFn: ({ id, managerId }: { id: string; managerId: string }) =>
 			api.assignManager(id, { manager_id: managerId }),
 		onSuccess: (_, vars) => {
-			qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id) });
+			void qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id) });
 			toast('success', 'Manager assigned');
 		}
 	}));
@@ -145,7 +145,7 @@ export function removeManagerMutation() {
 	return createMutation(() => ({
 		mutationFn: (id: string) => api.removeManager(id),
 		onSuccess: (_, id) => {
-			qc.invalidateQueries({ queryKey: usersKeys.detail(id) });
+			void qc.invalidateQueries({ queryKey: usersKeys.detail(id) });
 			toast('success', 'Manager removed');
 		}
 	}));

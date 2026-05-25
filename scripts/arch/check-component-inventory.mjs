@@ -123,8 +123,8 @@ const OPT_OUT = new Set([
 	'ui/AspectRatio.svelte' // — aspect-* Tailwind utility covers the few usages
 ]);
 
-let missing = [];
-let utilityChecks = [];
+const missing = [];
+const utilityChecks = [];
 let counted = 0;
 
 for (const [group, items] of Object.entries(REQUIRED)) {

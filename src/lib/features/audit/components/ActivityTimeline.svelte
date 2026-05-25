@@ -179,8 +179,10 @@
 	</ol>
 
 	{#if nextCursor && onLoadMore}
+		{@const loadMore = onLoadMore}
+		{@const cursor = nextCursor}
 		<div class="flex justify-center pt-2">
-			<Button variant="ghost" onclick={() => onLoadMore!(nextCursor)} loading={isLoadingMore}>
+			<Button variant="ghost" onclick={() => loadMore(cursor)} loading={isLoadingMore}>
 				Load more
 			</Button>
 		</div>

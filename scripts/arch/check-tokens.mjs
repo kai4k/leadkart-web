@@ -88,7 +88,7 @@ function isPlaceholder(name) {
 
 const SCAN_GLOB = ['src/**/*.css', 'src/**/*.svelte', 'src/**/*.ts', 'src/**/*.html'];
 
-let undefinedRefs = [];
+const undefinedRefs = [];
 for (const pattern of SCAN_GLOB) {
 	const files = globSync(pattern, {
 		cwd: ROOT,

@@ -37,7 +37,7 @@ function flatten(obj, prefix = '') {
 const en = flatten(JSON.parse(readFileSync(join(LOCALES_DIR, 'en.json'), 'utf8')));
 const enKeys = new Set(en.keys());
 
-let errors = [];
+const errors = [];
 for (const [key, val] of en) {
 	if (val === '' || val == null) errors.push(`en.json: empty value at "${key}"`);
 }

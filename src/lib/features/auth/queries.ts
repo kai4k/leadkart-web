@@ -59,7 +59,7 @@ export function myProfileQuery(membershipId: string) {
 	return createQuery(() => ({
 		queryKey: profileKey(membershipId),
 		queryFn: () => api.getMyProfile(membershipId),
-		enabled: !!membershipId,
+		enabled: Boolean(membershipId),
 		staleTime: 2 * 60_000
 	}));
 }
@@ -70,7 +70,7 @@ export function updateMyProfileMutation(membershipId: string) {
 	return createMutation(() => ({
 		mutationFn: (patch: UpdateProfileRequest) => api.updateMyProfile(membershipId, patch),
 		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: profileKey(membershipId) });
+			void qc.invalidateQueries({ queryKey: profileKey(membershipId) });
 			toast('success', 'Profile updated');
 		}
 	}));
@@ -107,7 +107,7 @@ export function revokeSessionMutation() {
 			if (ctx?.previous) qc.setQueryData<SessionDto[]>(sessionsKey, ctx.previous);
 		},
 		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: sessionsKey });
+			void qc.invalidateQueries({ queryKey: sessionsKey });
 			toast('success', 'Session revoked');
 		}
 	}));
@@ -133,7 +133,7 @@ export function revokeOtherSessionsMutation(currentFamilyId: string | null) {
 			if (ctx?.previous) qc.setQueryData<SessionDto[]>(sessionsKey, ctx.previous);
 		},
 		onSuccess: ({ revoked_count }) => {
-			qc.invalidateQueries({ queryKey: sessionsKey });
+			void qc.invalidateQueries({ queryKey: sessionsKey });
 			if (revoked_count > 0) {
 				toast(
 					'success',

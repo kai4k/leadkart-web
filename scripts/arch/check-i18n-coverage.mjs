@@ -33,31 +33,16 @@ const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 
 const SKIP_PATHS = ['src/routes/(dev)/', 'src/lib/api/generated/', 'src/lib/icons/'];
 
-// User-facing attributes that should contain translated strings.
-const A11Y_ATTRS = ['aria-label', 'aria-description', 'placeholder', 'title', 'alt'];
-
-// Allowed-as-is patterns. Returns true if the string can stay hardcoded.
-function isAllowed(text) {
-	const trimmed = text.trim();
-	if (trimmed.length <= 2) return true; // single char / two-char
-	if (/^[\d.,-]+$/.test(trimmed)) return true; // pure digits
-	if (/^[\W_]+$/.test(trimmed)) return true; // pure punctuation/symbols
-	if (/^[a-z0-9_-]+$/i.test(trimmed) && trimmed.length < 20) return true; // CSS-class-shaped slug
-	if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return true;
-	if (trimmed.startsWith('/') || trimmed.startsWith('#')) return true; // route / anchor
-	if (/^(rem|px|em|vh|vw|ch|%|fr|s|ms|deg)$/i.test(trimmed)) return true; // unit
-	if (/\bvar\(--/.test(trimmed)) return true; // CSS var ref
-	if (trimmed.startsWith('rgb') || trimmed.startsWith('hsl') || trimmed.startsWith('oklch'))
-		return true;
-	if (/^[A-Z][A-Z0-9_-]+$/.test(trimmed)) return true; // CONSTANT_CASE
-	if (/^[—–-]+$/.test(trimmed)) return true; // em-dash em-dash em-dash placeholder
-	return false;
-}
+// Hardcoded-string check (a) is currently deferred — implementing a
+// reliable heuristic for "user-facing string inside JSX" without a real
+// AST is too noisy. Current scope: ICU pluralization detection only.
+// When Storybook + test-storybook ship the visual catalog, the
+// hardcoded-string sweep gets a meaningful baseline to ratchet from.
 
 const files = globSync('src/**/*.svelte', { cwd: ROOT });
-let i18nViolations = [];
-let pluralViolations = [];
-let pluralPattern =
+const i18nViolations = [];
+const pluralViolations = [];
+const pluralPattern =
 	/(?:items?|users?|messages?|results?|orders?|leads?|days?|hours?|minutes?|errors?|warnings?|sessions?)\.length\s*===?\s*1\s*\?/g;
 
 for (const rel of files) {

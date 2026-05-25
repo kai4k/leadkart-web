@@ -153,7 +153,7 @@ export const REMINDER_STATUS_LABEL: Record<ReminderStatus, string> = {
  */
 export function locationLabel(lead: CrmLeadDto): string {
 	const a = lead.address;
-	const parts = [a.city, a.state].filter((s) => !!s && s.length > 0);
+	const parts = [a.city, a.state].filter((s): s is string => s != null && s.length > 0);
 	if (parts.length === 0) return a.pin_code;
 	return `${parts.join(', ')} · ${a.pin_code}`;
 }

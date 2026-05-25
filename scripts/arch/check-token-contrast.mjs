@@ -122,9 +122,9 @@ function colorFor(name) {
 	return null;
 }
 
-let violations = [];
+const violations = [];
 let passed = 0;
-let unresolved = [];
+const unresolved = [];
 
 for (const { fg, bg, min, label } of PAIRS) {
 	const f = colorFor(fg);

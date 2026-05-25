@@ -91,7 +91,7 @@ export function leadDetailQuery(id: string) {
 	return createQuery(() => ({
 		queryKey: leadsKeys.detail(id),
 		queryFn: () => api.getLead(id),
-		enabled: !!id
+		enabled: Boolean(id)
 	}));
 }
 
@@ -99,7 +99,7 @@ export function leadCallsQuery(id: string) {
 	return createQuery(() => ({
 		queryKey: leadsKeys.calls(id),
 		queryFn: () => api.listCallLogs(id),
-		enabled: !!id
+		enabled: Boolean(id)
 	}));
 }
 
@@ -107,7 +107,7 @@ export function leadRemindersQuery(id: string) {
 	return createQuery(() => ({
 		queryKey: leadsKeys.reminders(id),
 		queryFn: () => api.listLeadReminders(id),
-		enabled: !!id
+		enabled: Boolean(id)
 	}));
 }
 
@@ -115,7 +115,7 @@ export function leadHistoryQuery(id: string) {
 	return createQuery(() => ({
 		queryKey: leadsKeys.history(id),
 		queryFn: () => api.listAssignmentHistory(id),
-		enabled: !!id
+		enabled: Boolean(id)
 	}));
 }
 
@@ -134,7 +134,7 @@ export function updateLeadMutation() {
 		mutationFn: ({ id, req }: { id: string; req: UpdateLeadRequest }) => api.updateLead(id, req),
 		onSuccess: (lead) => {
 			qc.setQueryData(leadsKeys.detail(lead.id), lead);
-			qc.invalidateQueries({ queryKey: leadsKeys.lists() });
+			void qc.invalidateQueries({ queryKey: leadsKeys.lists() });
 			toast('success', 'Lead updated');
 		}
 	}));

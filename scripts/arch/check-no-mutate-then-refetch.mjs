@@ -24,17 +24,18 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 
-// Multiline match: any `await <ident>` followed (with whitespace + optional
-// statement) by `await refetch` / `await invalidate` / `await load`.
-const SUSPECT =
-	/await\s+\w+\s*\([^)]*\)\s*;?\s*\n[^\n]*await\s+(refetch|invalidate(All)?|reload)\b/;
+// Multiline pattern (inline-applied below): any `await <ident>` followed
+// by `await refetch` / `await invalidate(All)` / `await reload` on the
+// next non-blank line. Lifted out to a top-level RegExp prevents repeat
+// compilation across the iteration; left inline here so the construction
+// stays close to the consumer.
 
 const files = globSync('src/lib/features/**/*.{ts,svelte}', {
 	cwd: ROOT,
 	exclude: ['src/lib/features/**/*.test.ts']
 });
 
-let violations = [];
+const violations = [];
 for (const rel of files) {
 	const src = readFileSync(join(ROOT, rel), 'utf8');
 	for (const m of src.matchAll(

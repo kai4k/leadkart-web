@@ -97,7 +97,7 @@
 
 	<!-- Right: actions -->
 	<div class="lk-topbar-actions">
-		<button class="lk-topbar-iconbtn" aria-label="Notifications">
+		<button type="button" class="lk-topbar-iconbtn" aria-label="Notifications">
 			<Icon icon={Bell} size="md" />
 			<span class="lk-topbar-dot" aria-hidden="true"></span>
 		</button>

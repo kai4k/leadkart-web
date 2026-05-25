@@ -44,7 +44,7 @@ function countLines(file) {
 	return readFileSync(file, 'utf8').split('\n').length;
 }
 
-let errors = [];
+const errors = [];
 let counted = 0;
 for (const { glob, limit, label } of BUDGETS) {
 	const files = globSync(glob, { cwd: ROOT });

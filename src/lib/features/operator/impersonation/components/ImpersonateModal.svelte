@@ -26,9 +26,14 @@
 			e.preventDefault();
 			return;
 		}
+		// Capture into a const so the async closure below preserves the
+		// non-null narrowing TypeScript can't track across the await
+		// boundary. Canon TS pattern for "I checked the value, now use
+		// it in a callback".
+		const target = tenant;
 		await form.submit(e, async (values) => {
 			await impersonation.start({
-				target_tenant_id: tenant!.id,
+				target_tenant_id: target.id,
 				reason: values.reason,
 				duration_minutes: values.duration_minutes
 			});

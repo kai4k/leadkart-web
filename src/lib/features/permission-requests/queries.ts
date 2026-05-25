@@ -28,7 +28,7 @@ export function permissionRequestDetailQuery(id: string) {
 	return createQuery(() => ({
 		queryKey: permissionRequestsKeys.detail(id),
 		queryFn: () => api.getPermissionRequest(id),
-		enabled: !!id
+		enabled: Boolean(id)
 	}));
 }
 
@@ -37,7 +37,7 @@ export function createPermissionRequestMutation() {
 	return createMutation(() => ({
 		mutationFn: (req: CreatePermissionRequest) => api.createPermissionRequest(req),
 		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: permissionRequestsKeys.all });
+			void qc.invalidateQueries({ queryKey: permissionRequestsKeys.all });
 			toast('success', 'Request submitted');
 		}
 	}));
@@ -49,7 +49,7 @@ export function approvePermissionRequestMutation() {
 		mutationFn: ({ id, decision_reason }: { id: string; decision_reason?: string }) =>
 			api.approvePermissionRequest(id, decision_reason ? { decision_reason } : {}),
 		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: permissionRequestsKeys.all });
+			void qc.invalidateQueries({ queryKey: permissionRequestsKeys.all });
 			toast('success', 'Request approved');
 		}
 	}));
@@ -61,7 +61,7 @@ export function denyPermissionRequestMutation() {
 		mutationFn: ({ id, decision_reason }: { id: string; decision_reason: string }) =>
 			api.denyPermissionRequest(id, { decision_reason }),
 		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: permissionRequestsKeys.all });
+			void qc.invalidateQueries({ queryKey: permissionRequestsKeys.all });
 			toast('success', 'Request denied');
 		}
 	}));
@@ -72,7 +72,7 @@ export function cancelPermissionRequestMutation() {
 	return createMutation(() => ({
 		mutationFn: (id: string) => api.cancelPermissionRequest(id),
 		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: permissionRequestsKeys.all });
+			void qc.invalidateQueries({ queryKey: permissionRequestsKeys.all });
 			toast('success', 'Request cancelled');
 		}
 	}));

@@ -67,7 +67,7 @@ export function orderDetailQuery(id: string) {
 	return createQuery(() => ({
 		queryKey: ordersKeys.detail(id),
 		queryFn: () => api.getOrder(id),
-		enabled: !!id
+		enabled: Boolean(id)
 	}));
 }
 
@@ -75,7 +75,7 @@ export function orderRevisionsQuery(id: string) {
 	return createQuery(() => ({
 		queryKey: ordersKeys.revisions(id),
 		queryFn: () => api.getOrderRevisions(id),
-		enabled: !!id
+		enabled: Boolean(id)
 	}));
 }
 
@@ -83,7 +83,7 @@ export function orderPaymentsQuery(id: string) {
 	return createQuery(() => ({
 		queryKey: ordersKeys.payments(id),
 		queryFn: () => api.getOrderPayments(id),
-		enabled: !!id
+		enabled: Boolean(id)
 	}));
 }
 
@@ -91,7 +91,7 @@ export function orderInvoiceQuery(id: string, opts?: { enabled?: boolean }) {
 	return createQuery(() => ({
 		queryKey: ordersKeys.invoice(id),
 		queryFn: () => api.getOrderInvoice(id),
-		enabled: !!id && (opts?.enabled ?? true)
+		enabled: Boolean(id) && (opts?.enabled ?? true)
 	}));
 }
 
@@ -99,7 +99,7 @@ export function orderCreditNotesQuery(id: string) {
 	return createQuery(() => ({
 		queryKey: ordersKeys.creditNotes(id),
 		queryFn: () => api.getOrderCreditNotes(id),
-		enabled: !!id
+		enabled: Boolean(id)
 	}));
 }
 
@@ -107,7 +107,7 @@ export function orderCreditNotesQuery(id: string) {
 
 function syncCaches(qc: ReturnType<typeof useQueryClient>, order: OrderDto): void {
 	qc.setQueryData(ordersKeys.detail(order.id), order);
-	qc.invalidateQueries({ queryKey: ordersKeys.lists() });
+	void qc.invalidateQueries({ queryKey: ordersKeys.lists() });
 }
 
 // ── CRUD ─────────────────────────────────────────────────────────────
@@ -141,7 +141,7 @@ export function deleteOrderMutation() {
 	return createMutation(() => ({
 		mutationFn: (id: string) => api.deleteOrder(id),
 		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: ordersKeys.lists() });
+			void qc.invalidateQueries({ queryKey: ordersKeys.lists() });
 			toast('success', 'Quotation deleted');
 		},
 		onError: () => toast('danger', 'Failed to delete quotation')
@@ -156,7 +156,7 @@ export function reviseQuotationMutation(id: string) {
 		mutationFn: (req: ReviseQuotationRequest) => api.reviseQuotation(id, req),
 		onSuccess: (order) => {
 			syncCaches(qc, order);
-			qc.invalidateQueries({ queryKey: ordersKeys.revisions(id) });
+			void qc.invalidateQueries({ queryKey: ordersKeys.revisions(id) });
 			toast('success', 'Quotation revised');
 		},
 		onError: () => toast('danger', 'Failed to revise quotation')
@@ -183,9 +183,9 @@ export function recordPaymentMutation(id: string) {
 			// Payment endpoint returns the PaymentDto, not the order — invalidate
 			// detail + payments so both surface the new payment + (for token)
 			// the resulting status flip.
-			qc.invalidateQueries({ queryKey: ordersKeys.detail(id) });
-			qc.invalidateQueries({ queryKey: ordersKeys.payments(id) });
-			qc.invalidateQueries({ queryKey: ordersKeys.lists() });
+			void qc.invalidateQueries({ queryKey: ordersKeys.detail(id) });
+			void qc.invalidateQueries({ queryKey: ordersKeys.payments(id) });
+			void qc.invalidateQueries({ queryKey: ordersKeys.lists() });
 			toast('success', 'Payment recorded');
 		},
 		onError: () => toast('danger', 'Failed to record payment')
@@ -222,7 +222,7 @@ export function generateInvoiceMutation(id: string) {
 		mutationFn: () => api.generateInvoice(id),
 		onSuccess: (order) => {
 			syncCaches(qc, order);
-			qc.invalidateQueries({ queryKey: ordersKeys.invoice(id) });
+			void qc.invalidateQueries({ queryKey: ordersKeys.invoice(id) });
 			toast('success', 'Invoice generated');
 		},
 		onError: () => toast('danger', 'Failed to generate invoice')
@@ -271,8 +271,8 @@ export function cancelOrderMutation(id: string) {
 		mutationFn: (req: CancelOrderRequest) => api.cancelOrder(id, req),
 		onSuccess: (order) => {
 			syncCaches(qc, order);
-			qc.invalidateQueries({ queryKey: ordersKeys.creditNotes(id) });
-			qc.invalidateQueries({ queryKey: ordersKeys.invoice(id) });
+			void qc.invalidateQueries({ queryKey: ordersKeys.creditNotes(id) });
+			void qc.invalidateQueries({ queryKey: ordersKeys.invoice(id) });
 			toast('success', 'Order cancelled');
 		},
 		onError: () => toast('danger', 'Failed to cancel order')
@@ -286,7 +286,7 @@ export function bulkOrderActionMutation() {
 	return createMutation(() => ({
 		mutationFn: (req: BulkOrderActionRequest) => api.bulkOrderAction(req),
 		onSuccess: (res) => {
-			qc.invalidateQueries({ queryKey: ordersKeys.lists() });
+			void qc.invalidateQueries({ queryKey: ordersKeys.lists() });
 			if (res.errors.length === 0) {
 				toast('success', `${res.affected} order${res.affected === 1 ? '' : 's'} updated`);
 			} else {

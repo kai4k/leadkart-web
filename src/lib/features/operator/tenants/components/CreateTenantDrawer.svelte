@@ -91,6 +91,7 @@
 		</Drawer.Header>
 		<Drawer.Body>
 			{#if credentials}
+				{@const c = credentials}
 				<Alert variant="success">
 					<strong>{credentials.displayName}</strong> registered (<code>{credentials.slug}</code>).
 					Share these credentials with the seed admin (one-time view — not retrievable):
@@ -105,7 +106,7 @@
 									variant="ghost"
 									size="sm"
 									aria-label="Copy tenant ID"
-									onclick={() => copy(credentials!.tenantId)}
+									onclick={() => copy(c.tenantId)}
 								>
 									<Icon icon={Copy} size="sm" />
 								</Button>
@@ -119,7 +120,7 @@
 									variant="ghost"
 									size="sm"
 									aria-label="Copy email"
-									onclick={() => copy(credentials!.email)}
+									onclick={() => copy(c.email)}
 								>
 									<Icon icon={Copy} size="sm" />
 								</Button>
@@ -133,7 +134,7 @@
 									variant="ghost"
 									size="sm"
 									aria-label="Copy password"
-									onclick={() => copy(credentials!.password)}
+									onclick={() => copy(c.password)}
 								>
 									<Icon icon={Copy} size="sm" />
 								</Button>

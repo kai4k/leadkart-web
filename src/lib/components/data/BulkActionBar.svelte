@@ -179,12 +179,13 @@
 	</div>
 {/if}
 
-{#if pendingConfirm}
+{#if pendingConfirm?.confirm}
+	{@const confirm = pendingConfirm.confirm}
 	<ConfirmDialog
 		open={true}
-		title={pendingConfirm.confirm!.title}
-		description={pendingConfirm.confirm!.description}
-		confirmLabel={pendingConfirm.confirm!.confirmLabel ?? pendingConfirm.label}
+		title={confirm.title}
+		description={confirm.description}
+		confirmLabel={confirm.confirmLabel ?? pendingConfirm.label}
 		variant={pendingConfirm.variant === 'danger' ? 'danger' : 'default'}
 		loading={runningId === pendingConfirm.id}
 		onConfirm={confirmCurrent}

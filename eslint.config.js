@@ -45,7 +45,13 @@ export default ts.config(
 			// part of the SvelteKit TS graph, so typescript-eslint's
 			// projectService can't find it. Its own logic is simple
 			// enough that PR review is sufficient.
-			'tests/e2e/mock-server/**'
+			'tests/e2e/mock-server/**',
+			// JSON is data, not source code. ESLint's default parser
+			// can't read JSON; matching it inadvertently (via an
+			// override glob like `.lintstagedrc.*`) makes the parser
+			// crash. Explicit ignore documents the intent.
+			'**/*.json',
+			'**/*.jsonc'
 		]
 	},
 	js.configs.recommended,
@@ -302,6 +308,13 @@ export default ts.config(
 		}
 	},
 	// ─── Tests + e2e ────────────────────────────────────────────
+	// Test scaffolding has a different rule contract than app code:
+	//   - raw new Error / instanceof Error / console.log are testing
+	//     ergonomics, not architectural drift
+	//   - process.env reads in test helpers are canonical (NODE_ENV,
+	//     CI flags vary behaviour deterministically across runners)
+	//   - `!!flag` boolean coercion in test setup is the JS idiom
+	//   - fire-and-forget event dispatch in helpers is intentional
 	{
 		files: [
 			'tests/**/*.{ts,js}',
@@ -311,16 +324,30 @@ export default ts.config(
 			'tests/unit/**/*.{ts,js}'
 		],
 		rules: {
-			// Test scaffolding can use raw new Error / instanceof Error /
-			// console.log without architectural significance.
 			'no-console': 'off',
 			'no-restricted-syntax': 'off',
+			'no-restricted-globals': 'off',
+			'no-implicit-coercion': 'off',
 			'@typescript-eslint/no-explicit-any': 'off',
 			'@typescript-eslint/no-non-null-assertion': 'off',
 			'@typescript-eslint/no-floating-promises': 'off'
 		}
 	},
 	// ─── Config files (vite, vitest, playwright, svelte, eslint) ──
+	// Build/tool configs aren't in the TS project graph; type-aware
+	// rules can't resolve them. Also: `Boolean(process.env.CI)` vs
+	// `!!process.env.CI` is style-only in a config file, not load-
+	// bearing — disable no-implicit-coercion here too.
+	//
+	// Glob covers the four ways our configs ship:
+	//   1. `*.config.{ts,js,mjs,cjs}`     — vite.config.ts, vitest.config.ts, …
+	//   2. `.dotfile.{cjs,mjs,js}`        — .stylelintrc.cjs, .dependency-cruiser.cjs, …
+	//   3. `scripts/**/*.{ts,js,mjs,cjs}` — scripts/arch/*, scripts/strip-zodios.mjs
+	//   4. named configs (svelte.config.js, playwright.config.*, …)
+	//
+	// We do NOT match `.lintstagedrc.*` here (that's a JSON file in this
+	// repo; ESLint doesn't lint JSON, and matching it would force the
+	// parser to crash trying to read JSON as TypeScript).
 	{
 		files: [
 			'*.config.{ts,js,mjs,cjs}',
@@ -328,7 +355,6 @@ export default ts.config(
 			'.dependency-cruiser.cjs',
 			'.stylelintrc.cjs',
 			'scripts/**/*.{ts,js,mjs,cjs}',
-			'.lintstagedrc.*',
 			'svelte.config.js',
 			'playwright.config.*',
 			'vitest.config.*',
@@ -342,6 +368,7 @@ export default ts.config(
 			'no-restricted-syntax': 'off',
 			'no-restricted-imports': 'off',
 			'no-restricted-globals': 'off',
+			'no-implicit-coercion': 'off',
 			'@typescript-eslint/no-floating-promises': 'off',
 			'@typescript-eslint/no-misused-promises': 'off',
 			'@typescript-eslint/require-await': 'off',

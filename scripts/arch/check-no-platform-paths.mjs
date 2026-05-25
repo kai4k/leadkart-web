@@ -30,7 +30,7 @@ const ALLOWLIST = [
 ];
 
 const files = globSync('src/lib/features/**/api.ts', { cwd: ROOT });
-let violations = [];
+const violations = [];
 
 for (const rel of files) {
 	const norm = rel.replaceAll('\\', '/');

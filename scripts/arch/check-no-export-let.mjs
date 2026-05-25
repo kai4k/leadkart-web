@@ -50,7 +50,7 @@ const PATTERNS = [
 
 const files = globSync('src/**/*.svelte', { cwd: ROOT });
 
-let violations = [];
+const violations = [];
 for (const rel of files) {
 	const src = readFileSync(join(ROOT, rel), 'utf8');
 	for (const { re, msg } of PATTERNS) {

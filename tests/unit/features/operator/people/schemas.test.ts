@@ -74,7 +74,6 @@ describe('personDtoSchema', () => {
 	});
 
 	it('rejects a PersonDto missing required created_at', () => {
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		const { created_at: _createdAt, ...withoutDate } = VALID_PERSON;
 		expect(personDtoSchema.safeParse(withoutDate).success).toBe(false);
 	});

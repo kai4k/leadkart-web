@@ -61,17 +61,16 @@ body = body.replace(/z\.record\(((?:[^()]|\([^)]*\))*?)\)/g, (match, inner) => {
 	return `z.record(z.string(), ${inner})`;
 });
 
-const cleaned =
-	'/**\n' +
-	' * AUTO-GENERATED — do not edit by hand.\n' +
-	' *\n' +
-	' * Zod schemas mirroring leadkart-go/api/openapi.yaml.\n' +
-	' * Source-of-record per backend ADR 0050. Regenerate with `npm run openapi:codegen`.\n' +
-	' * The @zodios/core scaffolding has been stripped by scripts/strip-zodios.mjs —\n' +
-	' * we use TanStack Query, not Zodios.\n' +
-	' */\n' +
-	body +
-	'\n';
+const cleaned = `/**
+ * AUTO-GENERATED — do not edit by hand.
+ *
+ * Zod schemas mirroring leadkart-go/api/openapi.yaml.
+ * Source-of-record per backend ADR 0050. Regenerate with \`npm run openapi:codegen\`.
+ * The @zodios/core scaffolding has been stripped by scripts/strip-zodios.mjs —
+ * we use TanStack Query, not Zodios.
+ */
+${body}
+`;
 
 writeFileSync(path, cleaned, 'utf8');
 console.log(`[strip-zodios] cleaned ${path}`);
