@@ -60,7 +60,7 @@ export function routeContext(pathname: string): RouteContext {
 	const crumbs: Crumb[] = [];
 	let accum = '';
 	for (const seg of segments) {
-		accum += '/' + seg;
+		accum += `/${seg}`;
 		const nav = matchNav(accum);
 		crumbs.push({
 			label: nav?.label ?? titleCase(seg),

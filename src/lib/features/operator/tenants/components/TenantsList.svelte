@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { page as pageStore } from '$app/stores';
+	import { page } from '$app/state';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
-	import { Alert, Badge, Button, DataTable, EmptyState } from '$ui';
+	import { Alert, Badge, Button, DataTable, EmptyState, Spinner } from '$ui';
 	import type { DataTableColumn } from '$ui';
 	import { Building2, Eye, Plus, Search, Shield, Icon } from '$icons';
 	import { tenantsListQuery } from '$features/operator/tenants/queries';
 	import { tenantLifecycleBadge } from '$features/operator/tenants/view-models';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
-	import { NetworkError } from '$lib/api/errors';
-	import { getCsrfToken } from '$lib/api/csrf';
+	import { AuthError, NetworkError, NotFoundError } from '$lib/api/errors';
+	import { enterScope as enterScopeApi } from '$features/operator/scope';
 	import { toast } from '$ui';
 	import CreateTenantDrawer from './CreateTenantDrawer.svelte';
 	import ImpersonateModal from '$features/operator/impersonation/components/ImpersonateModal.svelte';
@@ -21,13 +21,15 @@
 	let createOpen = $state(false);
 	let impersonateOpen = $state(false);
 	let impersonateTarget = $state<TenantDto | null>(null);
-	let openingScope = $state(false);
+	/** Slug of the tenant currently being opened — drives the inline
+	 *  row spinner and disables further row clicks while in flight. */
+	let openingScopeSlug = $state<string | null>(null);
 
-	const search = $derived($pageStore.url.searchParams.get('q') ?? '');
-	const page = $derived(Number($pageStore.url.searchParams.get('page') ?? '1') || 1);
+	const search = $derived(page.url.searchParams.get('q') ?? '');
+	const currentPage = $derived(Number(page.url.searchParams.get('page') ?? '1') || 1);
 
 	function setSearch(value: string) {
-		const params = new SvelteURLSearchParams($pageStore.url.searchParams.toString());
+		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
 		if (value) params.set('q', value);
 		else params.delete('q');
 		params.delete('page');
@@ -35,7 +37,7 @@
 	}
 
 	function setPage(p: number) {
-		const params = new SvelteURLSearchParams($pageStore.url.searchParams.toString());
+		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
 		if (p > 1) params.set('page', String(p));
 		else params.delete('page');
 		goto(`?${params}`, { replaceState: true });
@@ -65,11 +67,23 @@
 	});
 
 	const totalPages = $derived(Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)));
-	const paged = $derived(filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE));
+	const paged = $derived(filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE));
 
 	const tableState = $derived(
 		query.isPending ? 'loading' : query.isError ? 'error' : paged.length === 0 ? 'empty' : 'ready'
 	);
+
+	const listErrorCopy = $derived.by(() => {
+		const err = query.error;
+		if (!err) return null;
+		if (err instanceof NetworkError) return 'Check your network connection and try again.';
+		if (err instanceof AuthError)
+			return err.status === 403
+				? "You don't have permission to view tenants."
+				: 'Your session expired. Sign in again.';
+		if (err instanceof NotFoundError) return 'This resource was deleted or moved.';
+		return 'Something went wrong. Please try again.';
+	});
 
 	const columns: DataTableColumn<TenantDto>[] = [
 		{ id: 'name', header: 'Tenant', accessor: (t) => t.display_name, cell: nameCell },
@@ -98,23 +112,30 @@
 	 * the operator is acting on.
 	 */
 	async function enterScope(tenant: TenantDto) {
-		if (openingScope) return;
-		openingScope = true;
+		if (openingScopeSlug !== null) return; // a row is already in-flight
+		openingScopeSlug = tenant.slug;
 		try {
-			const resp = await fetch('/api/operator/scope', {
-				method: 'POST',
-				headers: { 'content-type': 'application/json', 'x-csrf-token': getCsrfToken() },
-				body: JSON.stringify({ slug: tenant.slug })
-			});
-			if (!resp.ok) {
-				toast('danger', 'Could not open tenant');
-				return;
-			}
+			await enterScopeApi({ slug: tenant.slug });
 			qc.clear();
 			await invalidateAll();
 			goto('/operator/scope/profile');
+		} catch (err) {
+			if (err instanceof NetworkError) {
+				toast('danger', 'Check your network connection and try again.');
+			} else if (err instanceof AuthError) {
+				toast(
+					'danger',
+					err.status === 403
+						? "You don't have permission to open this tenant."
+						: 'Your session expired. Sign in again.'
+				);
+			} else if (err instanceof NotFoundError) {
+				toast('danger', 'This tenant was deleted or moved.');
+			} else {
+				toast('danger', 'Could not open tenant');
+			}
 		} finally {
-			openingScope = false;
+			openingScopeSlug = null;
 		}
 	}
 </script>
@@ -126,21 +147,27 @@
 		{/if}
 		<span class="text-fg font-medium">{tenant.display_name}</span>
 		{#if tenant.slug === 'platform'}
-			<Badge variant="brand" style="soft" size="sm">Platform</Badge>
+			<Badge variant="brand" appearance="soft" size="sm">Platform</Badge>
 		{/if}
 	</div>
 {/snippet}
 
 {#snippet statusCell(tenant: TenantDto)}
 	{@const badge = tenantLifecycleBadge(tenant)}
-	<Badge variant={badge.variant} style="soft" size="sm">{badge.label}</Badge>
+	<Badge variant={badge.variant} appearance="soft" size="sm">{badge.label}</Badge>
 {/snippet}
 
 {#snippet rowActions(tenant: TenantDto)}
-	{#if canView && tenant.slug !== 'platform'}
+	{#if openingScopeSlug === tenant.slug}
+		<div class="cluster cluster-tight" aria-label="Opening {tenant.display_name}">
+			<Spinner size={14} />
+			<span class="caption text-fg-muted">Opening…</span>
+		</div>
+	{:else if canView && tenant.slug !== 'platform'}
 		<Button
 			variant="ghost"
 			size="sm"
+			disabled={openingScopeSlug !== null}
 			onclick={(e) => {
 				e.stopPropagation();
 				openImpersonate(tenant);
@@ -167,7 +194,7 @@
 
 	<div class="cluster">
 		<div class="relative flex-1">
-			<span class="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+			<span class="pointer-events-none absolute inset-y-0 start-3 flex items-center">
 				<Icon icon={Search} size="sm" class="text-fg-subtle" />
 			</span>
 			<input
@@ -175,7 +202,7 @@
 				placeholder="Filter by name, slug, or legal name"
 				value={search}
 				oninput={(e) => setSearch((e.currentTarget as HTMLInputElement).value)}
-				class="glass-input w-full rounded-md py-2 pr-3 pl-9 text-sm"
+				class="glass-input w-full rounded-md py-2 ps-9 pe-3 text-sm"
 				aria-label="Filter tenants"
 			/>
 		</div>
@@ -186,7 +213,7 @@
 		rows={paged}
 		rowKey={(t) => t.id}
 		state={tableState}
-		error={query.error?.message}
+		error={listErrorCopy}
 		onRowClick={enterScope}
 		{rowActions}
 	>
@@ -202,7 +229,15 @@
 					</Alert>
 				{:else}
 					<Alert variant="danger" title="Failed to load tenants">
-						{err?.message ?? 'Unknown error'}
+						{#if err instanceof AuthError}
+							{err.status === 403
+								? "You don't have permission to view tenants."
+								: 'Your session expired. Sign in again.'}
+						{:else if err instanceof NotFoundError}
+							This resource was deleted or moved.
+						{:else}
+							Something went wrong. Please try again.
+						{/if}
 						<Button variant="ghost" size="sm" onclick={() => query.refetch()} class="mt-2"
 							>Retry</Button
 						>
@@ -231,24 +266,24 @@
 	{#if totalPages > 1}
 		<nav class="cluster cluster-spread" aria-label="Tenant list pagination">
 			<p class="caption text-fg-muted">
-				{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+				{(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length}
 			</p>
 			<div class="cluster cluster-tight">
 				<Button
 					variant="ghost"
 					size="sm"
-					disabled={page <= 1}
-					onclick={() => setPage(page - 1)}
+					disabled={currentPage <= 1}
+					onclick={() => setPage(currentPage - 1)}
 					aria-label="Previous page"
 				>
 					← Prev
 				</Button>
-				<span class="caption">Page {page} / {totalPages}</span>
+				<span class="caption">Page {currentPage} / {totalPages}</span>
 				<Button
 					variant="ghost"
 					size="sm"
-					disabled={page >= totalPages}
-					onclick={() => setPage(page + 1)}
+					disabled={currentPage >= totalPages}
+					onclick={() => setPage(currentPage + 1)}
 					aria-label="Next page"
 				>
 					Next →

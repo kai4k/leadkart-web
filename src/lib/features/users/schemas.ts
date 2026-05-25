@@ -16,6 +16,28 @@ export const listUsersResponseSchema = z.object({
 	users: z.array(userDtoSchema)
 });
 
+/**
+ * Membership search result — the lightweight shape returned by
+ * `GET /v1/identity/memberships?q=…` (typeahead surfacing for
+ * reassignment pickers). Backend endpoint is planned but not yet
+ * shipped; the schema mirrors the documented contract so the frontend
+ * is wire-compatible the moment the endpoint lands.
+ */
+export const membershipSearchResultSchema = z.object({
+	id: z.string(),
+	person_id: z.string(),
+	first_name: z.string(),
+	last_name: z.string(),
+	email: z.string().email()
+});
+
+export const searchMembershipsResponseSchema = z.object({
+	memberships: z.array(membershipSearchResultSchema)
+});
+
+export type MembershipSearchResult = z.output<typeof membershipSearchResultSchema>;
+export type SearchMembershipsResponse = z.output<typeof searchMembershipsResponseSchema>;
+
 export const createUserRequestSchema = z
 	.object({
 		email: z.string().email(),

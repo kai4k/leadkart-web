@@ -108,11 +108,17 @@ async function proxy(event: RequestEvent, attempt = 1): Promise<Response> {
 		if (refreshed) return proxy(event, 2);
 	}
 
-	const responseBody = await upstream.arrayBuffer();
 	const responseHeaders = new Headers();
 	const upstreamCt = upstream.headers.get('content-type');
 	if (upstreamCt) responseHeaders.set('content-type', upstreamCt);
 
+	// Per the Fetch spec, Response constructor rejects a body on 204/205/304.
+	// Stream the upstream body only when the status permits one.
+	const NULL_BODY_STATUSES = new Set([204, 205, 304]);
+	if (NULL_BODY_STATUSES.has(upstream.status)) {
+		return new Response(null, { status: upstream.status, headers: responseHeaders });
+	}
+	const responseBody = await upstream.arrayBuffer();
 	return new Response(responseBody, { status: upstream.status, headers: responseHeaders });
 }
 

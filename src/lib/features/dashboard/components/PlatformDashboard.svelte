@@ -1,17 +1,19 @@
 <script lang="ts">
 	import {
-		Building2,
 		Activity,
 		Ban,
-		Users,
-		UserCheck,
+		Building2,
 		ClipboardCheck,
+		Icon,
 		ShoppingBag,
-		UserCog
-	} from 'lucide-svelte';
+		UserCheck,
+		UserCog,
+		Users
+	} from '$lib/icons';
 	import { Alert, Card, Spinner } from '$ui';
 	import { myCapabilitiesQuery } from '$features/auth/queries';
 	import { deriveTier } from '$features/auth/capabilities';
+	import { ApiError } from '$api/errors';
 	import { platformStatsQuery } from '$lib/features/operator/dashboard/queries';
 
 	/**
@@ -39,7 +41,7 @@
 	const statsLoading = $derived(statsQuery.isPending);
 	const statsError = $derived(
 		statsQuery.isError
-			? statsQuery.error instanceof Error
+			? statsQuery.error instanceof ApiError
 				? statsQuery.error.message
 				: 'Failed to load platform stats'
 			: null
@@ -171,12 +173,11 @@
 
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 		{#each statTiles as tile (tile.label)}
-			{@const Icon = tile.icon}
 			<Card.Root surface="glass" class="glass-hover">
 				<Card.Header>
 					<div class="cluster" style="--cluster-gap: var(--spacing-3);">
 						<span class={`lk-dash-tile-icon lk-dash-tile-icon--${tile.accent}`} aria-hidden="true">
-							<Icon size={16} />
+							<Icon icon={tile.icon} size="sm" />
 						</span>
 						<Card.Description>{tile.label}</Card.Description>
 					</div>
@@ -193,12 +194,11 @@
 		{/each}
 
 		{#each placeholderTiles as tile (tile.label)}
-			{@const Icon = tile.icon}
 			<Card.Root surface="glass" class="glass-hover">
 				<Card.Header>
 					<div class="cluster" style="--cluster-gap: var(--spacing-3);">
 						<span class={`lk-dash-tile-icon lk-dash-tile-icon--${tile.accent}`} aria-hidden="true">
-							<Icon size={16} />
+							<Icon icon={tile.icon} size="sm" />
 						</span>
 						<Card.Description>{tile.label}</Card.Description>
 					</div>

@@ -14,6 +14,7 @@
  */
 
 import { redirect } from '@sveltejs/kit';
+import type { Cookies } from '@sveltejs/kit';
 import { config } from '$lib/server/config';
 import { setAuthCookies, clearAuthCookies, ACCESS_COOKIE } from '$lib/server/cookies';
 import type { LayoutServerLoad } from './$types';
@@ -24,9 +25,7 @@ import type { Capabilities } from '$lib/features/auth/api';
  * On success: rotates all three cookies and returns the new access token.
  * On failure: clears cookies and returns null.
  */
-async function tryRefreshServerSide(
-	cookies: import('@sveltejs/kit').Cookies
-): Promise<string | null> {
+async function tryRefreshServerSide(cookies: Cookies): Promise<string | null> {
 	const refresh = cookies.get('lk_refresh');
 	if (!refresh) return null;
 

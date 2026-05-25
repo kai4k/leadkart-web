@@ -1,0 +1,31 @@
+# Force LF line endings for all text files across all platforms.
+# Combined with .editorconfig (end_of_line = lf), this eliminates the
+# CRLF/LF warning noise on Windows checkouts.
+#
+# Industry canon: every cross-platform repo at FAANG ships a .gitattributes
+# with `* text=auto eol=lf` so the committed bytes match what CI runners
+# (Linux) expect, regardless of which developer's machine wrote the file.
+
+* text=auto eol=lf
+
+# Explicit binary types — never normalised, never CRLF-converted.
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.webp   binary
+*.ico    binary
+*.svg    text eol=lf
+*.woff   binary
+*.woff2  binary
+*.ttf    binary
+*.otf    binary
+*.pdf    binary
+*.zip    binary
+*.gz     binary
+*.tar    binary
+
+# Generated lockfiles — treat as text so diffs are readable but
+# don't trigger the merge tool.
+package-lock.json -diff
+yarn.lock         -diff

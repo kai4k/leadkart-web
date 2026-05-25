@@ -45,7 +45,7 @@
 	 */
 	import { onMount } from 'svelte';
 	import { Logo } from '$ui';
-	import { ShieldCheck, TrendingUp, Truck } from 'lucide-svelte';
+	import { Icon, ShieldCheck, TrendingUp, Truck } from '$lib/icons';
 
 	let { children } = $props();
 	let canvas: HTMLElement | undefined = $state();
@@ -203,7 +203,7 @@
 
 	<!-- ── Viewport-wide particle canvas (decorative, aria-hidden) ── -->
 	<div class="lk-particles lk-particles--far" aria-hidden="true">
-		{#each FAR as p (p.x + '-' + p.y)}
+		{#each FAR as p (`${p.x}-${p.y}`)}
 			<span
 				class="lk-particle lk-particle--{p.kind}"
 				style="--x:{p.x}%;--y:{p.y}%;--len:{p.length}px;--rot:{p.rotation}deg;--delay:{p.delay}s;--c1:var({p.c1});--c2:var({p.c2});"
@@ -211,7 +211,7 @@
 		{/each}
 	</div>
 	<div class="lk-particles lk-particles--mid" aria-hidden="true">
-		{#each MID as p (p.x + '-' + p.y)}
+		{#each MID as p (`${p.x}-${p.y}`)}
 			<span
 				class="lk-particle lk-particle--{p.kind}"
 				style="--x:{p.x}%;--y:{p.y}%;--len:{p.length}px;--rot:{p.rotation}deg;--delay:{p.delay}s;--c1:var({p.c1});--c2:var({p.c2});"
@@ -219,7 +219,7 @@
 		{/each}
 	</div>
 	<div class="lk-particles lk-particles--near" aria-hidden="true">
-		{#each NEAR as p (p.x + '-' + p.y)}
+		{#each NEAR as p (`${p.x}-${p.y}`)}
 			<span
 				class="lk-particle lk-particle--{p.kind}"
 				style="--x:{p.x}%;--y:{p.y}%;--len:{p.length}px;--rot:{p.rotation}deg;--delay:{p.delay}s;--c1:var({p.c1});--c2:var({p.c2});"
@@ -257,19 +257,19 @@
 				<ul class="lk-auth-features">
 					<li class="glass-card lk-glass--feature lk-glass--purple">
 						<span class="lk-auth-feature-icon lk-auth-feature-icon--purple">
-							<ShieldCheck size={18} />
+							<Icon icon={ShieldCheck} size="md" />
 						</span>
 						<span class="body-base">Enterprise-grade security</span>
 					</li>
 					<li class="glass-card lk-glass--feature lk-glass--green">
 						<span class="lk-auth-feature-icon lk-auth-feature-icon--green">
-							<TrendingUp size={18} />
+							<Icon icon={TrendingUp} size="md" />
 						</span>
 						<span class="body-base">Real-time lead tracking</span>
 					</li>
 					<li class="glass-card lk-glass--feature lk-glass--blue">
 						<span class="lk-auth-feature-icon lk-auth-feature-icon--blue">
-							<Truck size={18} />
+							<Icon icon={Truck} size="md" />
 						</span>
 						<span class="body-base">Order-to-dispatch pipeline</span>
 					</li>

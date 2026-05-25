@@ -57,7 +57,7 @@
 
 /* ═══ PRIMARY COLOUR PICKER — multi-hue theme switching
  * Activated by `<html data-primary="X">` attribute set by
- * lib/stores/theme.svelte.ts. Each variant overrides the brand 11-stop
+ * lib/hooks/use-theme.svelte.ts. Each variant overrides the brand 11-stop
  * to a different OKLCH hue while keeping the lightness + chroma curves
  * consistent. Components consuming `var(--color-brand-{N})` re-skin
  * automatically — no per-component changes.

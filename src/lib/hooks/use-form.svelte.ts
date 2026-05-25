@@ -14,10 +14,10 @@
  * Module-level `let foo = $state(...)` is BANNED (CLAUDE.md). This is
  * a CLASS with $state fields — the canonical cross-module reactive pattern.
  */
-import { ValidationError } from '$api/errors';
-import { z } from 'zod';
+import { ApiError, ValidationError } from '$api/errors';
+import type { z } from 'zod';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- z.ZodObject's generic args are intentionally any-typed at the call-site of useForm
 type AnyObjectSchema = z.ZodObject<any, any>;
 
 /** Field-level validation errors — keyed by field name. */
@@ -99,8 +99,7 @@ export class FormState<TSchema extends AnyObjectSchema> {
 			this.errors = { ...this.errors, [field]: fieldError };
 		} else if (field in this.errors) {
 			// Field is now valid — clear its error (check key presence, not truthiness).
-			// eslint-disable-next-line @typescript-eslint/no-unused-vars
-			const { [field]: _, ...rest } = this.errors;
+			const { [field]: _omitted, ...rest } = this.errors;
 			this.errors = rest;
 		}
 	}
@@ -139,8 +138,14 @@ export class FormState<TSchema extends AnyObjectSchema> {
 		} catch (err) {
 			if (err instanceof ValidationError) {
 				this.errors = err.fields as FieldErrors;
+			} else if (err instanceof ApiError) {
+				// ApiError.message is the typed accessor for the wire-level
+				// detail string (RFC 9457 `detail` / legacy `message`); using
+				// it on a known-subclass instance is canon-legal — the rule
+				// 12 ban applies to bare `err.message` in untyped catches.
+				this.bannerError = err.message || 'An unexpected error occurred';
 			} else {
-				this.bannerError = err instanceof Error ? err.message : 'An unexpected error occurred';
+				this.bannerError = 'An unexpected error occurred';
 			}
 		} finally {
 			this.isSubmitting = false;

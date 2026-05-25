@@ -1,0 +1,34 @@
+name: _test
+# Reusable workflow — Vitest unit tests with coverage. Called by ci.yml.
+#
+# Vitest forks across CPU cores by default (8+ locally, 2 on GitHub free
+# tier). 513 tests × 26 files run in ~5s on cold runner. Coverage adds
+# ~5s of v8 instrumentation. Total: ~10-15s job time.
+#
+# We don't shard via --shard=N/M because the suite is small enough that
+# shard setup overhead would exceed the savings. Vitest's worker-pool
+# parallelism is sufficient.
+
+on:
+  workflow_call:
+
+jobs:
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+      - name: Vitest with coverage
+        run: npm run test:coverage
+      - name: Upload coverage (push-to-main only)
+        # Coverage on PR is rarely actioned; the merged-into-main report
+        # is what teams reference for trend lines. Skipping PR uploads
+        # saves ~20s per PR + storage.
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7

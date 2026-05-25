@@ -32,7 +32,7 @@ export function personDetailQuery(personId: string) {
 	return createQuery(() => ({
 		queryKey: peopleKeys.detail(personId),
 		queryFn: () => api.getPerson(personId),
-		enabled: !!personId
+		enabled: Boolean(personId)
 	}));
 }
 
@@ -41,7 +41,7 @@ export function personMembershipsQuery(personId: string) {
 	return createQuery(() => ({
 		queryKey: peopleKeys.memberships(personId),
 		queryFn: () => api.listPersonMemberships(personId),
-		enabled: !!personId
+		enabled: Boolean(personId)
 	}));
 }
 
@@ -54,7 +54,7 @@ export function globalSuspendMutation() {
 		mutationFn: ({ id, reason }: { id: string; reason: string }) =>
 			api.globalSuspend(id, { reason }),
 		onSuccess: (_, vars) => {
-			qc.invalidateQueries({ queryKey: peopleKeys.detail(vars.id) });
+			void qc.invalidateQueries({ queryKey: peopleKeys.detail(vars.id) });
 			toast('success', 'Person globally suspended');
 		}
 	}));
@@ -66,7 +66,7 @@ export function liftGlobalSuspensionMutation() {
 	return createMutation(() => ({
 		mutationFn: (id: string) => api.liftGlobalSuspension(id),
 		onSuccess: (_, id) => {
-			qc.invalidateQueries({ queryKey: peopleKeys.detail(id) });
+			void qc.invalidateQueries({ queryKey: peopleKeys.detail(id) });
 			toast('success', 'Suspension lifted');
 		}
 	}));
@@ -79,7 +79,7 @@ export function anonymisePersonMutation() {
 		mutationFn: ({ id, reason }: { id: string; reason: string }) =>
 			api.anonymisePerson(id, { reason }),
 		onSuccess: (_, vars) => {
-			qc.invalidateQueries({ queryKey: peopleKeys.detail(vars.id) });
+			void qc.invalidateQueries({ queryKey: peopleKeys.detail(vars.id) });
 			toast('success', 'Person anonymised');
 		}
 	}));

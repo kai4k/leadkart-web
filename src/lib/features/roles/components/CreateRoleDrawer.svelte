@@ -3,7 +3,7 @@
 	import { TextField } from '$lib/components/form';
 	import { createRoleMutation } from '$features/roles/queries';
 	import { createRoleRequestSchema } from '$features/roles/schemas';
-	import { useForm } from '$lib/utils/use-form.svelte';
+	import { useForm } from '$lib/hooks/use-form.svelte';
 
 	type Props = { open: boolean; onOpenChange: (open: boolean) => void };
 	let { open = $bindable(false), onOpenChange }: Props = $props();

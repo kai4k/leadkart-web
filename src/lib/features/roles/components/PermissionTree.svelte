@@ -65,7 +65,7 @@
 					{entries.filter((e) => selected.includes(e.name)).length} / {entries.length}
 				</span>
 			</header>
-			<ul class="stack stack-tight pl-6" role="group">
+			<ul class="stack stack-tight ps-6" role="group">
 				{#each entries as entry (entry.name)}
 					<li class="cluster cluster-tight">
 						<label class="cluster cluster-tight flex-1 cursor-pointer">

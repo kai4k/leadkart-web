@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Alert, Avatar, Badge, Button, Card, CopyButton, Spinner } from '$ui';
+	import { Alert, Avatar, Badge, Button, Card, CopyButton, Skeleton } from '$ui';
 	import { Pause, Play, UserMinus, Icon } from '$icons';
 	import {
 		personDetailQuery,
@@ -19,6 +19,7 @@
 	import AnonymiseDialog from './AnonymiseDialog.svelte';
 	import { personActivityQuery } from '$lib/features/audit/queries';
 	import ActivityTimeline from '$lib/features/audit/components/ActivityTimeline.svelte';
+	import { ApiError } from '$api/errors';
 
 	type Props = { personId: string };
 	let { personId }: Props = $props();
@@ -36,7 +37,7 @@
 	const isLoading = $derived(query.isPending);
 	const isError = $derived(query.isError);
 	const errorMsg = $derived(
-		query.error instanceof Error ? query.error.message : 'Failed to load person'
+		query.error instanceof ApiError ? query.error.message : 'Failed to load person'
 	);
 	const isPending = $derived(liftMutation.isPending);
 
@@ -58,7 +59,25 @@
 </script>
 
 {#if isLoading}
-	<div class="flex justify-center py-16"><Spinner size={32} /></div>
+	<div class="stack stack-relaxed" aria-busy="true" aria-label="Loading person">
+		<Card.Root>
+			<Card.Content>
+				<div class="flex flex-col gap-4 sm:flex-row sm:items-start">
+					<Skeleton shape="circle" class="h-16 w-16" />
+					<div class="stack stack-tight min-w-0 flex-1">
+						<Skeleton class="h-6 w-1/2" />
+						<Skeleton class="h-4 w-2/3" />
+						<Skeleton class="h-3 w-1/3" />
+					</div>
+				</div>
+			</Card.Content>
+		</Card.Root>
+		<Card.Root>
+			<Card.Content>
+				<Skeleton class="h-24 w-full rounded-md" />
+			</Card.Content>
+		</Card.Root>
+	</div>
 {:else if isError}
 	<Alert variant="danger" title="Load failed">{errorMsg}</Alert>
 {:else if !p}
@@ -81,7 +100,7 @@
 					<div class="stack stack-tight min-w-0">
 						<div class="flex flex-wrap items-center gap-2">
 							<span class="h2">{displayName}</span>
-							<Badge variant={badge.variant} style="soft" size="sm">{badge.label}</Badge>
+							<Badge variant={badge.variant} appearance="soft" size="sm">{badge.label}</Badge>
 						</div>
 						<div class="cluster cluster-tight flex-wrap">
 							<p class="body-base text-fg-muted break-all">{p.email}</p>
@@ -113,7 +132,11 @@
 			</Card.Header>
 			<Card.Content>
 				{#if membershipsQuery.isPending}
-					<div class="flex justify-center py-4"><Spinner size={24} /></div>
+					<div class="stack stack-tight" aria-busy="true">
+						{#each [0, 1, 2] as i (i)}
+							<Skeleton class="h-8 w-full rounded-md" />
+						{/each}
+					</div>
 				{:else if memberships.length === 0}
 					<p class="body-base text-fg-muted">No memberships found.</p>
 				{:else}
@@ -121,22 +144,22 @@
 						<table class="w-full text-sm">
 							<thead>
 								<tr class="border-border border-b">
-									<th class="caption text-fg-muted py-2 pr-4 text-left">Tenant ID</th>
-									<th class="caption text-fg-muted py-2 pr-4 text-left">Designation</th>
-									<th class="caption text-fg-muted py-2 text-left">Status</th>
+									<th class="caption text-fg-muted py-2 pe-4 text-start">Tenant ID</th>
+									<th class="caption text-fg-muted py-2 pe-4 text-start">Designation</th>
+									<th class="caption text-fg-muted py-2 text-start">Status</th>
 								</tr>
 							</thead>
 							<tbody>
 								{#each memberships as m (m.membership_id)}
-									<tr class="border-b border-[var(--color-border-subtle)] last:border-0">
-										<td class="py-2 pr-4">
+									<tr class="border-border border-b last:border-0">
+										<td class="py-2 pe-4">
 											<code class="caption">{m.tenant_id}</code>
 										</td>
-										<td class="text-fg py-2 pr-4">{m.designation || '—'}</td>
+										<td class="text-fg py-2 pe-4">{m.designation || '—'}</td>
 										<td class="py-2">
 											<Badge
 												variant={m.status === 'active' ? 'success' : 'warning'}
-												style="soft"
+												appearance="soft"
 												size="sm">{m.status}</Badge
 											>
 										</td>
@@ -160,7 +183,7 @@
 					data={activityQuery?.data ?? null}
 					isPending={activityQuery?.isPending ?? true}
 					isError={activityQuery?.isError ?? false}
-					errorMessage={activityQuery?.error instanceof Error
+					errorMessage={activityQuery?.error instanceof ApiError
 						? activityQuery.error.message
 						: 'Failed to load activity'}
 				/>

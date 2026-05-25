@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import Topbar from './Topbar.svelte';
 	import Sidebar from './Sidebar.svelte';
 	import Footer from './Footer.svelte';
 	import SettingsModal from './SettingsModal.svelte';
-	import { theme } from '$lib/stores/theme.svelte';
+	import { Drawer } from '$ui';
+	import { theme } from '$lib/hooks/use-theme.svelte';
 
 	/**
 	 * AppShell — Linear/Vercel-style canonical layout:
@@ -19,16 +19,20 @@
 	 *
 	 * Hamburger (in Topbar):
 	 *   ≥ lg : toggles theme.sidebarCollapsed (full ⇄ icon-only)
-	 *   < lg : opens the mobile drawer (existing focus-trapped dialog)
+	 *   < lg : opens the mobile drawer (bits-ui Dialog primitive)
 	 *
 	 * The viewport check uses window.matchMedia at click time so a user
 	 * resizing across the breakpoint gets the right action.
+	 *
+	 * Mobile drawer composes `<Drawer.Root>` (bits-ui Dialog) with a
+	 * class override flipping the panel to the left edge. The Drawer
+	 * primitive ships right-side only; a `position` prop is the
+	 * obvious follow-up enhancement.
 	 */
 
 	let { children } = $props();
 	let sidebarOpen = $state(false);
-	let drawerEl: HTMLElement | undefined = $state();
-	let triggerEl: HTMLElement | null = null;
+	let settingsOpen = $state(false);
 
 	function isDesktop(): boolean {
 		return typeof window !== 'undefined' && window.matchMedia('(min-width: 64rem)').matches;
@@ -41,54 +45,7 @@
 
 	function closeDrawer() {
 		sidebarOpen = false;
-		triggerEl?.focus();
 	}
-
-	function onKey(e: KeyboardEvent) {
-		if (!sidebarOpen) return;
-		if (e.key === 'Escape') {
-			e.preventDefault();
-			closeDrawer();
-			return;
-		}
-		if (e.key === 'Tab' && drawerEl) {
-			const focusables = drawerEl.querySelectorAll<HTMLElement>(
-				'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
-			);
-			if (focusables.length === 0) return;
-			const first = focusables[0];
-			const last = focusables[focusables.length - 1];
-			if (e.shiftKey && document.activeElement === first) {
-				e.preventDefault();
-				last.focus();
-			} else if (!e.shiftKey && document.activeElement === last) {
-				e.preventDefault();
-				first.focus();
-			}
-		}
-	}
-
-	let settingsOpen = $state(false);
-
-	$effect(() => {
-		if (sidebarOpen) {
-			triggerEl = document.activeElement as HTMLElement | null;
-			document.body.style.overflow = 'hidden';
-			queueMicrotask(() => {
-				const first = drawerEl?.querySelector<HTMLElement>(
-					'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
-				);
-				first?.focus();
-			});
-		} else {
-			document.body.style.overflow = '';
-		}
-	});
-
-	onMount(() => {
-		document.addEventListener('keydown', onKey);
-		return () => document.removeEventListener('keydown', onKey);
-	});
 </script>
 
 <div class="lk-app">
@@ -99,25 +56,21 @@
 		<Sidebar onNavigate={closeDrawer} />
 	</aside>
 
-	<!-- Mobile drawer -->
-	{#if sidebarOpen}
-		<button
-			type="button"
-			class="is-fixed-overlay--overlay bg-overlay inset-0 backdrop-blur-sm lg:hidden"
-			aria-label="Close sidebar"
-			onclick={closeDrawer}
-		></button>
-		<div
-			bind:this={drawerEl}
-			role="dialog"
-			aria-modal="true"
-			aria-label="Primary navigation"
-			class="lk-drawer fixed inset-y-0 lg:hidden"
-			style="animation: slide-in {`var(--duration-base) var(--ease-out)`};"
+	<!-- Mobile drawer — left-side slide-over.
+	     Overrides the Drawer primitive's default right-edge geometry
+	     (right-0 → left-0, border-l → border-r, slide-in-right →
+	     slide-in-left) via tailwind-merge inside cn(). Follow-up:
+	     promote a `position="left"` prop into the Drawer primitive. -->
+	<Drawer.Root bind:open={sidebarOpen} onOpenChange={(o) => (sidebarOpen = o)}>
+		<!-- rtl-allow: left-edge mobile drawer is a fixed design choice
+			(matches Sidebar position in LTR + RTL — opening from the same
+			edge keeps spatial memory consistent for users switching locales). -->
+		<Drawer.Content
+			class="lk-mobile-drawer animate-slide-in-left right-auto left-0 border-r border-l-0 lg:hidden"
 		>
 			<Sidebar onNavigate={closeDrawer} />
-		</div>
-	{/if}
+		</Drawer.Content>
+	</Drawer.Root>
 
 	<main id="main-content" class="lk-page-wrapper" tabindex="-1">
 		<div class="lk-page-inner">
@@ -127,7 +80,7 @@
 
 	<Footer />
 
-	<SettingsModal bind:open={settingsOpen} />
+	<SettingsModal bind:open={settingsOpen} onOpenChange={(o) => (settingsOpen = o)} />
 </div>
 
 <style>
@@ -175,28 +128,15 @@
 		padding-inline: clamp(0.75rem, 3vw, 1.75rem);
 	}
 
-	/* ─── Mobile drawer ────────────────────────────────────────────
+	/* ─── Mobile drawer geometry ──────────────────────────────────
 	   Width clamps responsively so it's not cramped on tiny phones
 	   nor wastefully wide on tablets. Safe-area-left so the drawer
-	   doesn't sit under a curved edge in landscape. */
-	.lk-drawer {
-		inset-inline-start: 0;
+	   doesn't sit under a curved edge in landscape. The Drawer
+	   primitive provides positioning (inset-y-0) and the glass
+	   material; this rule only narrows the width to sidebar-scale. */
+	:global(.lk-mobile-drawer) {
 		inline-size: clamp(17rem, 78vw, 22rem);
+		max-inline-size: clamp(17rem, 78vw, 22rem);
 		padding-inline-start: var(--safe-left);
-		z-index: var(--z-modal);
-	}
-
-	@keyframes slide-in {
-		from {
-			transform: translateX(-100%);
-		}
-		to {
-			transform: translateX(0);
-		}
-	}
-	@media (prefers-reduced-motion: reduce) {
-		[role='dialog'] {
-			animation: none !important;
-		}
 	}
 </style>

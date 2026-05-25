@@ -2,13 +2,16 @@
 	import { _ } from 'svelte-i18n';
 	import { Card } from '$ui';
 	import ChangePasswordForm from '$features/auth/components/ChangePasswordForm.svelte';
+	import ChangeEmailForm from '$features/auth/components/ChangeEmailForm.svelte';
 
 	/**
-	 * /settings/account/security — Account & Security page. Surface
-	 * intentionally limited to Change Password: per the LeadKart auth
-	 * model, self-service email change is disabled (email changes
-	 * happen via admin tooling only — TenantOwner / TenantAdmin /
-	 * SuperAdmin update users' emails on their behalf).
+	 * /settings/account/security — Account & Security page.
+	 *
+	 * Surfaces:
+	 *   - Change password  (authenticated, requires current password)
+	 *   - Change email     (authenticated; sends confirmation link to the
+	 *                       NEW address — change doesn't apply until the
+	 *                       link is clicked)
 	 */
 </script>
 
@@ -29,6 +32,16 @@
 		</Card.Header>
 		<Card.Content>
 			<ChangePasswordForm />
+		</Card.Content>
+	</Card.Root>
+
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>{$_('auth.changeEmail.title')}</Card.Title>
+			<Card.Description>{$_('auth.changeEmail.subtitle')}</Card.Description>
+		</Card.Header>
+		<Card.Content>
+			<ChangeEmailForm />
 		</Card.Content>
 	</Card.Root>
 </div>

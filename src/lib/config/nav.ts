@@ -26,13 +26,16 @@
  */
 
 import {
+	Boxes,
+	Building2,
+	Inbox,
 	LayoutDashboard,
-	Users,
+	type LucideIcon,
 	Settings,
 	ShieldCheck,
-	Building2,
-	type Icon as LucideIcon
-} from 'lucide-svelte';
+	ShoppingCart,
+	Users
+} from '$lib/icons';
 import type { PrincipalTier } from '$lib/features/auth/capabilities';
 
 export interface NavItem {
@@ -69,7 +72,16 @@ export const TENANT_ADMIN_NAV: NavSection[] = [
 		items: [
 			{ href: '/settings/tenant', label: 'Tenant Settings', icon: Settings },
 			{ href: '/settings/users', label: 'Team', icon: Users },
-			{ href: '/settings/roles', label: 'Roles', icon: ShieldCheck }
+			{ href: '/settings/roles', label: 'Roles', icon: ShieldCheck },
+			{ href: '/permission-requests', label: 'Permission requests', icon: Inbox }
+		]
+	},
+	{
+		title: 'CRM',
+		items: [
+			{ href: '/leads', label: 'Leads', icon: Users },
+			{ href: '/orders', label: 'Orders', icon: ShoppingCart },
+			{ href: '/inventory', label: 'Inventory', icon: Boxes }
 		]
 	},
 	{
@@ -81,6 +93,15 @@ export const TENANT_ADMIN_NAV: NavSection[] = [
 export const TENANT_USER_NAV: NavSection[] = [
 	{
 		items: [{ href: '/dashboard', label: 'My Dashboard', icon: LayoutDashboard }]
+	},
+	{
+		title: 'My Work',
+		items: [
+			{ href: '/leads', label: 'Leads', icon: Users },
+			{ href: '/orders', label: 'Orders', icon: ShoppingCart },
+			{ href: '/inventory', label: 'Inventory', icon: Boxes },
+			{ href: '/permission-requests', label: 'Permission requests', icon: Inbox }
+		]
 	},
 	{
 		title: 'Account',

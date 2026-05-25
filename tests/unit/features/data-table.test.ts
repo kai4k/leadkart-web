@@ -11,7 +11,6 @@ import type { DataTableColumn } from '$lib/components/ui/data-table';
 
 function getCellValue<T>(row: T, accessor: DataTableColumn<T>['accessor']): string | number | null {
 	if (typeof accessor === 'function') return accessor(row);
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	return (row as any)[accessor] ?? null;
 }
 

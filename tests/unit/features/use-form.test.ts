@@ -5,8 +5,8 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { FormState, useForm } from '$lib/utils/use-form.svelte';
-import { ValidationError } from '$lib/api/errors';
+import { FormState, useForm } from '$lib/hooks/use-form.svelte';
+import { NetworkError, ValidationError } from '$lib/api/errors';
 
 const testSchema = z.object({
 	email: z.string().email('Invalid email'),
@@ -68,13 +68,27 @@ describe('FormState.submit — error handling', () => {
 		expect(form.bannerError).toBeNull();
 	});
 
-	it('sets bannerError for non-ValidationError throws', async () => {
+	it('sets bannerError from ApiError subclass message (e.g. NetworkError)', async () => {
+		const form = useForm(testSchema, { email: 'alice@example.com', name: 'Alice' });
+		const submitFn = vi.fn().mockRejectedValue(new NetworkError(new Error('socket reset')));
+
+		await form.submit(makeEvent(), submitFn);
+
+		// ApiError's typed `.message` accessor is canon-legal — see use-form.svelte.ts
+		// catch-block comment. Bare `new Error(...)` surfaces a generic banner instead.
+		expect(form.bannerError).not.toBeNull();
+		expect(form.errors).toEqual({});
+	});
+
+	it('sets bannerError to generic message for bare Error throws (programmer error)', async () => {
 		const form = useForm(testSchema, { email: 'alice@example.com', name: 'Alice' });
 		const submitFn = vi.fn().mockRejectedValue(new Error('Network error'));
 
 		await form.submit(makeEvent(), submitFn);
 
-		expect(form.bannerError).toBe('Network error');
+		// Raw new Error() in a submit handler is a programmer error — should
+		// not surface its raw message to users (canon: typed ApiError or generic).
+		expect(form.bannerError).toBe('An unexpected error occurred');
 		expect(form.errors).toEqual({});
 	});
 
@@ -89,7 +103,7 @@ describe('FormState.submit — error handling', () => {
 });
 
 describe('FormState.reset', () => {
-	it('restores initial values and clears errors/bannerError', async () => {
+	it('restores initial values and clears errors/bannerError', () => {
 		const form = useForm(testSchema, { email: '', name: '' });
 		form.values.email = 'alice@example.com';
 		form.values.name = 'Alice';

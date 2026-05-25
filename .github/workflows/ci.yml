@@ -1,5 +1,7 @@
 name: CI
 on:
+  # GitHub Actions doesn't expand YAML anchors (& / *), so the paths-ignore
+  # list is duplicated here. Keep both copies in sync when editing.
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     paths-ignore:
@@ -20,131 +22,108 @@ on:
       - '.github/PULL_REQUEST_TEMPLATE.md'
 
 # Cancel in-flight runs on the same branch when a new commit lands.
-# Saves runner minutes + GitHub minutes quota. Industry canon (every
-# Linear / Vercel / Stripe public CI yaml).
+# Saves runner minutes when developers push rapid follow-ups.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# ─── PARALLEL-MATRIX CI ─────────────────────────────────────────────
+#
+#   install (1-2 min cold, 30s warm)        ← populates node_modules cache
+#     ↓
+#   ┌─────────────────────────────────────────────────────────────┐
+#   │  lint        typecheck      test         build              │
+#   │  ~3min cold  ~30s           ~10s         ~30s               │
+#   │  ~30s warm                                                  │
+#   └─────────────────────────────────────────────────────────────┘
+#                                              ↓ uploads build/ artifact
+#                                       ┌──────────────────────────────┐
+#                                       │  e2e × 4 shards (parallel)   │
+#                                       │  ~1.2-1.5 min wall-clock     │
+#                                       └──────────────────────────────┘
+#                                              ↓
+#                                       [ci-pass sentinel]
+#
+# Wall-clock target: ~3-5 min warm cache, ~6-8 min cold.
+#
+# Each tier's body lives in its own reusable workflow under
+# .github/workflows/_*.yml — this orchestrator just wires the
+# dependency graph. FAANG-canon DRY (Vercel, SvelteKit, Stripe).
+
 jobs:
-  # Combined static-analysis + unit + build + e2e in ONE job.
-  #
-  # Why combined: separating build and e2e into two jobs forces a
-  # second `npm install` + an artifact upload/download round-trip
-  # for the build output. At ~30s × 2 + ~30s × 2 = ~2-3 minutes
-  # of duplicated work per PR. For a free-tier private repo
-  # (2,000 min/month), that's a meaningful chunk over time.
-  #
-  # Order is fast-fail: cheap checks (audit, lint, check, test) run
-  # before the expensive ones (build, e2e), so a typo-level bug
-  # consumes seconds rather than the whole pipeline budget.
-  ci:
-    name: Build & test
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+  # ─── Install deps once; downstream jobs restore from cache ───
+  install:
+    name: Install deps
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 5
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     steps:
       - uses: actions/checkout@v6
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-
-      - name: Install dependencies
-        # `npm install` (not `npm ci`) because our dep tree includes
-        # platform-specific WASM bindings (@rolldown/binding-wasm32-wasi,
-        # @tailwindcss/oxide-wasm32-wasi) that Vite 8 + Tailwind 4 ship
-        # as optional fallbacks for native modules. npm 11's strict
-        # `npm ci` rejects the lock when the host platform's variant
-        # differs from the lock-author's platform — known issue tracked
-        # in npm/cli#5169 + vite/vite#15869. Plain `npm install` with
-        # `--prefer-offline` reuses the lock when possible while
-        # tolerating cross-platform variance. Lock determinism is still
-        # enforced at PR-review time via committed package-lock.json
-        # + Dependabot.
-        run: npm install --no-audit --no-fund --prefer-offline
-
+      - uses: ./.github/actions/setup
       - name: Security audit (high+ severity blocks)
-        # Cheap (~5s with cached registry); runs early so a vulnerable
-        # transitive dep blocks the rest of the pipeline before we
-        # spend minutes on lint / build / e2e. Dependabot covers
-        # ongoing surveillance of merged deps; this catches NEW
-        # vulnerable deps introduced by the PR itself.
+        # Runs in the install job (not a separate one) because audit
+        # is a 5-second check on a freshly resolved dep tree — pulling
+        # it into its own parallel job would add 15s of setup overhead
+        # to save 5s of run time.
         run: npm audit --omit=dev --audit-level=high
 
-      - name: Lint (prettier + eslint)
-        run: npm run lint
+  # ─── Static analysis lanes (parallel; all start after install) ───
+  lint:
+    name: Lint
+    needs: install
+    uses: ./.github/workflows/_lint.yml
 
-      - name: Type check (svelte-check + tsc)
-        run: npm run check
+  typecheck:
+    name: Typecheck
+    needs: install
+    uses: ./.github/workflows/_typecheck.yml
 
-      - name: Unit tests with coverage
-        run: npm run test:coverage
+  test:
+    name: Test
+    needs: install
+    uses: ./.github/workflows/_test.yml
 
-      - name: Upload coverage (push-to-main only)
-        # Coverage on PR is rarely actioned; the merged-into-main
-        # report is the one teams reference for trend lines. Skipping
-        # PR uploads saves ~20s per PR + storage.
-        if: github.event_name == 'push'
-        uses: actions/upload-artifact@v7
+  build:
+    name: Build
+    needs: install
+    uses: ./.github/workflows/_build.yml
+
+  # ─── E2E sharded across 4 runners (depends on build artifact) ───
+  e2e:
+    name: E2E
+    needs: build
+    uses: ./.github/workflows/_e2e.yml
+
+  # ─── Sentinel: single check for branch protection ───
+  #
+  # Branch protection on `main` should require ONLY this job ("CI pass").
+  # Adding/removing matrix shards (e.g. bumping e2e from 4 to 8 shards)
+  # then doesn't require updating branch-protection rules.
+  #
+  # Why re-actors/alls-green instead of a homegrown `contains(needs.*.result,
+  # 'failure')` check:
+  #
+  #   - A homegrown check passes the moment NO upstream result is 'failure',
+  #     which silently treats empty results (still-running matrix shards,
+  #     reusable-workflow result-propagation races) as success. Real bug
+  #     hit in the previous revision: ci-pass went green while typecheck
+  #     was still running because reusable-workflow callers occasionally
+  #     report empty `needs.*.result` before the inner workflow's last
+  #     job actually completes.
+  #
+  #   - re-actors/alls-green is the audited canon (used by Pydantic,
+  #     Django, FastAPI, NumPy, Scrapy, …) — explicitly waits for every
+  #     needed job to reach 'success' (failing on 'failure', 'cancelled',
+  #     'skipped', or empty/unresolved). Single source of truth for
+  #     matrix + reusable-workflow result aggregation.
+  ci-pass:
+    name: CI pass
+    if: always()
+    needs: [install, lint, typecheck, test, build, e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Verify all required jobs passed
+        uses: re-actors/alls-green@release/v1
         with:
-          name: coverage
-          path: coverage/
-          retention-days: 7
-
-      - name: Build
-        run: npm run build
-
-      - name: Bundle-size check
-        run: npx size-limit
-
-      # Cache Playwright's chromium across runs — saves ~30s per run
-      # when the @playwright/test version is unchanged. Cache key
-      # includes the package version so a bump invalidates cleanly.
-      - name: Get Playwright version
-        id: pw-version
-        run: |
-          echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Playwright chromium
-        uses: actions/cache@v5
-        id: pw-cache
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.version }}-chromium
-
-      - name: Install Playwright chromium
-        if: steps.pw-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
-
-      - name: Install Playwright system deps
-        if: steps.pw-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
-
-      - name: E2E tests (chromium)
-        # Chromium-only matrix per chore/ci-cost-reduction:
-        # Firefox + WebKit re-add when a browser-specific bug
-        # surfaces or pre-launch coverage demands it. ~70% of
-        # browser usage is Chromium-based (Chrome + Edge); the
-        # JS engine differences rarely manifest in our SPA's
-        # form/CRUD surfaces.
-        run: npx playwright test --project=chromium --reporter=html
-        env:
-          CI: 'true'
-
-      - name: Upload Playwright report on failure
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 14
-
-      - name: Upload Playwright traces on failure
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: playwright-traces
-          path: test-results/
-          retention-days: 14
+          jobs: ${{ toJSON(needs) }}

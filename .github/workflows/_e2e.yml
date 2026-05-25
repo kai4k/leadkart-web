@@ -1,0 +1,86 @@
+name: _e2e
+# Reusable workflow — Playwright e2e sharded across 4 parallel runners.
+# Called by ci.yml (needs build to have uploaded the build/ artifact).
+#
+# Sharding strategy:
+#   Playwright v1.40+ distributes TESTS (not files) across shards.
+#   ~143 tests / 4 shards ≈ 36 tests per shard. Per-shard wall-clock:
+#   ~1.2-1.5 min. Total e2e tier wall-clock = max(shard) ≈ 1.5 min
+#   (was 5 min on single worker).
+#
+# 4 shards × 2 CPUs each = 8 effective Playwright workers consuming
+# GitHub free-tier concurrency budget (20 concurrent jobs allowed).
+# Comfortable headroom; bump to 6 or 8 shards if e2e becomes the
+# longest pole post-cache-warm.
+
+on:
+  workflow_call:
+
+jobs:
+  e2e:
+    name: E2E (shard ${{ matrix.shard }}/${{ matrix.total }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        # `total` propagates into the --shard=N/M flag below so adding
+        # more shards is a single-number change.
+        shard: [1, 2, 3, 4]
+        total: [4]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/setup
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: build-${{ github.sha }}
+          path: build/
+
+      - name: Get Playwright version
+        id: pw-version
+        run: |
+          echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright chromium
+        uses: actions/cache@v5
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.version }}-chromium
+
+      - name: Install Playwright chromium (cache miss)
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system deps (cache hit)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: E2E — shard ${{ matrix.shard }}/${{ matrix.total }}
+        # Chromium-only matrix per chore/ci-cost-reduction (~70% of
+        # browser usage is Chromium-based; Firefox + WebKit re-add when
+        # a browser-specific bug surfaces). The blob reporter writes
+        # per-shard results which a merge job could later combine into
+        # a single HTML report (Wave-2 follow-up).
+        run: npx playwright test --project=chromium --shard=${{ matrix.shard }}/${{ matrix.total }}
+        env:
+          CI: 'true'
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-shard-${{ matrix.shard }}
+          path: playwright-report/
+          retention-days: 14
+
+      - name: Upload Playwright traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-traces-shard-${{ matrix.shard }}
+          path: test-results/
+          retention-days: 14

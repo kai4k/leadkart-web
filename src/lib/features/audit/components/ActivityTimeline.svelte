@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, Card, EmptyState, Spinner } from '$ui';
+	import { Button, Card, EmptyState, Skeleton } from '$ui';
 	import { Activity, User, Building2, Shield, AlertCircle } from '$icons';
 	import { SvelteSet } from 'svelte/reactivity';
 	import type { ActivityDto, ActivityListResponse } from '../schemas';
@@ -90,7 +90,21 @@
 </script>
 
 {#if isPending}
-	<div class="flex justify-center py-8"><Spinner size={28} /></div>
+	<ol class="stack stack-tight" aria-busy="true" aria-label="Loading activity">
+		{#each [0, 1, 2, 3, 4] as i (i)}
+			<li>
+				<Card.Root>
+					<Card.Content class="grid grid-cols-[auto_1fr] gap-3">
+						<Skeleton shape="circle" class="mt-0.5 h-8 w-8" />
+						<div class="stack stack-tight min-w-0">
+							<Skeleton class="h-4 w-3/4" />
+							<Skeleton class="h-3 w-1/4" />
+						</div>
+					</Card.Content>
+				</Card.Root>
+			</li>
+		{/each}
+	</ol>
 {:else if isError}
 	<div class="stack stack-tight">
 		<p class="body-sm text-danger-700">{errorMessage}</p>
@@ -165,8 +179,10 @@
 	</ol>
 
 	{#if nextCursor && onLoadMore}
+		{@const loadMore = onLoadMore}
+		{@const cursor = nextCursor}
 		<div class="flex justify-center pt-2">
-			<Button variant="ghost" onclick={() => onLoadMore!(nextCursor)} loading={isLoadingMore}>
+			<Button variant="ghost" onclick={() => loadMore(cursor)} loading={isLoadingMore}>
 				Load more
 			</Button>
 		</div>

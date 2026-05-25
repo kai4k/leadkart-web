@@ -12,11 +12,16 @@ import { register, init, getLocaleFromNavigator } from 'svelte-i18n';
 
 const FALLBACK_LOCALE = 'en';
 
-export function initI18n() {
+export function initI18n(): void {
 	register('en', () => import('./locales/en.json'));
 	register('hi', () => import('./locales/hi.json'));
 
-	init({
+	// svelte-i18n's `init()` returns a Promise (locale-load + dictionary
+	// ready). Components subscribed to the `$_` store reactively re-render
+	// when the dictionary populates, so we don't need to await here —
+	// `void` declares the intentional fire-and-forget (ESLint canon for
+	// no-floating-promises per the rule's docs).
+	void init({
 		fallbackLocale: FALLBACK_LOCALE,
 		initialLocale: getLocaleFromNavigator() ?? FALLBACK_LOCALE
 	});

@@ -197,13 +197,11 @@ describe('impersonationSessionDtoSchema', () => {
 	});
 
 	it('rejects DTO missing operator_id', () => {
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		const { operator_id: _op, ...rest } = VALID_SESSION_DTO;
 		expect(impersonationSessionDtoSchema.safeParse(rest).success).toBe(false);
 	});
 
 	it('rejects DTO missing expires_at', () => {
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		const { expires_at: _exp, ...rest } = VALID_SESSION_DTO;
 		expect(impersonationSessionDtoSchema.safeParse(rest).success).toBe(false);
 	});

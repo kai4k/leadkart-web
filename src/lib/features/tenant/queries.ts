@@ -38,7 +38,7 @@ export function tenantSelfQuery(tenantId: string) {
 	return createQuery(() => ({
 		queryKey: tenantSelfKeys.detail(tenantId),
 		queryFn: () => api.getTenant(tenantId),
-		enabled: !!tenantId,
+		enabled: Boolean(tenantId),
 		staleTime: 2 * 60_000
 	}));
 }
@@ -51,7 +51,7 @@ export function updateTenantProfileMutation(tenantId: string) {
 	return createMutation(() => ({
 		mutationFn: (body: UpdateTenantProfileRequest) => api.updateTenantProfile(tenantId, body),
 		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: tenantSelfKeys.detail(tenantId) });
+			void qc.invalidateQueries({ queryKey: tenantSelfKeys.detail(tenantId) });
 			toast('success', 'Profile saved');
 		}
 	}));
@@ -63,7 +63,7 @@ export function updateTenantStatutoryMutation(tenantId: string) {
 	return createMutation(() => ({
 		mutationFn: (body: UpdateTenantStatutoryRequest) => api.updateTenantStatutory(tenantId, body),
 		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: tenantSelfKeys.detail(tenantId) });
+			void qc.invalidateQueries({ queryKey: tenantSelfKeys.detail(tenantId) });
 			toast('success', 'Statutory IDs saved');
 		}
 	}));
@@ -76,7 +76,7 @@ export function updateTenantAdminContactMutation(tenantId: string) {
 		mutationFn: (body: UpdateTenantAdminContactRequest) =>
 			api.updateTenantAdminContact(tenantId, body),
 		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: tenantSelfKeys.detail(tenantId) });
+			void qc.invalidateQueries({ queryKey: tenantSelfKeys.detail(tenantId) });
 			toast('success', 'Contact details saved');
 		}
 	}));
@@ -88,7 +88,7 @@ export function updateTenantSettingsMutation(tenantId: string) {
 	return createMutation(() => ({
 		mutationFn: (body: UpdateTenantSettingsRequest) => api.updateTenantSettings(tenantId, body),
 		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: tenantSelfKeys.detail(tenantId) });
+			void qc.invalidateQueries({ queryKey: tenantSelfKeys.detail(tenantId) });
 			toast('success', 'Settings saved');
 		}
 	}));
@@ -101,7 +101,7 @@ export function updateTenantDisplayPreferencesMutation(tenantId: string) {
 		mutationFn: (body: UpdateTenantDisplayPreferencesRequest) =>
 			api.updateTenantDisplayPreferences(tenantId, body),
 		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: tenantSelfKeys.detail(tenantId) });
+			void qc.invalidateQueries({ queryKey: tenantSelfKeys.detail(tenantId) });
 			toast('success', 'Display preferences saved');
 		}
 	}));

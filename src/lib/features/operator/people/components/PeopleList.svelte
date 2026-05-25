@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page as pageStore } from '$app/stores';
+	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { Avatar, Badge, DataTable, EmptyState } from '$ui';
@@ -8,11 +8,12 @@
 	import { personsListQuery } from '$features/operator/people/queries';
 	import { personDisplayName, personLifecycleBadge } from '$features/operator/people/view-models';
 	import type { PersonDto } from '$features/operator/people/types';
+	import { ApiError } from '$api/errors';
 
 	const DEBOUNCE_MS = 300;
 
 	// URL is the single source of truth for search state.
-	const urlSearch = $derived($pageStore.url.searchParams.get('q') ?? '');
+	const urlSearch = $derived(page.url.searchParams.get('q') ?? '');
 
 	let debounceHandle: ReturnType<typeof setTimeout> | undefined;
 
@@ -20,7 +21,7 @@
 		const value = (e.currentTarget as HTMLInputElement).value;
 		clearTimeout(debounceHandle);
 		debounceHandle = setTimeout(() => {
-			const next = new SvelteURLSearchParams($pageStore.url.searchParams.toString());
+			const next = new SvelteURLSearchParams(page.url.searchParams.toString());
 			if (value.trim()) {
 				next.set('q', value.trim());
 			} else {
@@ -84,7 +85,7 @@
 
 {#snippet statusCell(p: PersonDto)}
 	{@const badge = personLifecycleBadge(p)}
-	<Badge variant={badge.variant} style="soft" size="sm">{badge.label}</Badge>
+	<Badge variant={badge.variant} appearance="soft" size="sm">{badge.label}</Badge>
 {/snippet}
 
 {#snippet dateCell(p: PersonDto)}
@@ -99,7 +100,7 @@
 
 	<div class="flex flex-col gap-3 md:flex-row md:items-center">
 		<div class="relative flex-1">
-			<span class="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+			<span class="pointer-events-none absolute inset-y-0 start-3 flex items-center">
 				<Icon icon={Search} size="sm" class="text-fg-subtle" />
 			</span>
 			<input
@@ -107,7 +108,7 @@
 				placeholder="Search by email or name"
 				value={urlSearch}
 				oninput={onSearchInput}
-				class="glass-input w-full rounded-md py-2 pr-3 pl-9 text-sm"
+				class="glass-input w-full rounded-md py-2 ps-9 pe-3 text-sm"
 				aria-label="Search persons by email or name"
 			/>
 		</div>
@@ -118,7 +119,7 @@
 		rows={persons}
 		rowKey={(p) => p.id}
 		state={tableState}
-		error={query.error instanceof Error ? query.error.message : null}
+		error={query.error instanceof ApiError ? query.error.message : null}
 	>
 		{#snippet emptyState()}
 			<EmptyState

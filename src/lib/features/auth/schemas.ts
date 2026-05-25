@@ -32,10 +32,13 @@ export const capabilitiesSchema = z.object({
  * AND runtime API response validation (industry canon: Stripe SDK,
  * tRPC, TanStack Query all do schema-at-the-boundary).
  *
- * Surface intentionally minimal: login + refresh response shapes +
- * change-password input. Self-serve register / forgot / reset /
- * email-change flows are NOT exposed in this SPA (admin tooling
- * only — see api.ts header for the auth-model rationale).
+ * Surfaces shipped:
+ *   - login              (request + ack)
+ *   - change password    (authenticated, requires current password)
+ *   - reset password     (public, requires old password + email)
+ *
+ * Self-serve registration + email-link reset + email-change remain
+ * disabled — see api.ts header.
  */
 
 export const loginRequestSchema = z.object({

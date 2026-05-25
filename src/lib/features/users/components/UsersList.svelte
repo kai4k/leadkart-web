@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page as pageStore } from '$app/stores';
+	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { Avatar, Badge, Button, DataTable, Dropdown, EmptyState, Pagination } from '$ui';
@@ -13,18 +13,17 @@
 		Users as UsersIcon,
 		Users,
 		Lock,
-		Unlock,
 		Icon
 	} from '$icons';
 	import {
 		usersListQuery,
 		rolesCatalogQuery,
-		reactivateUserMutation,
-		unlockUserMutation
+		reactivateUserMutation
 	} from '$features/users/queries';
 	import { userStatusBadge, userRoleBadges, canDeactivate } from '$features/users/view-models';
 	import { displayName, initials } from '$features/auth/view-models';
 	import type { UserDto } from '$features/users/types';
+	import { AuthError, NetworkError } from '$api/errors';
 	import CreateUserDrawer from './CreateUserDrawer.svelte';
 	import DeactivateUserDialog from './DeactivateUserDialog.svelte';
 	import RoleAssignmentDrawer from './RoleAssignmentDrawer.svelte';
@@ -46,12 +45,12 @@
 	let targetUser = $state<UserDto | null>(null);
 
 	// URL-driven filter state.
-	const search = $derived($pageStore.url.searchParams.get('q') ?? '');
-	const page = $derived(Number($pageStore.url.searchParams.get('page') ?? '1') || 1);
+	const search = $derived(page.url.searchParams.get('q') ?? '');
+	const currentPage = $derived(Number(page.url.searchParams.get('page') ?? '1') || 1);
 	const pageSize = 10;
 
 	function setSearch(value: string) {
-		const params = new SvelteURLSearchParams($pageStore.url.searchParams.toString());
+		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
 		if (value) {
 			params.set('q', value);
 		} else {
@@ -62,7 +61,7 @@
 	}
 
 	function setPage(p: number) {
-		const params = new SvelteURLSearchParams($pageStore.url.searchParams.toString());
+		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
 		if (p > 1) {
 			params.set('page', String(p));
 		} else {
@@ -74,7 +73,6 @@
 	const listQuery = usersListQuery();
 	const rolesQuery = rolesCatalogQuery();
 	const reactivate = reactivateUserMutation();
-	const unlock = unlockUserMutation();
 
 	const userList = $derived(listQuery.data?.users ?? []);
 	const roleList = $derived(rolesQuery.data?.roles ?? []);
@@ -93,7 +91,7 @@
 	});
 
 	const pageCount = $derived(Math.max(1, Math.ceil(filtered.length / pageSize)));
-	const paged = $derived(filtered.slice((page - 1) * pageSize, page * pageSize));
+	const paged = $derived(filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize));
 
 	const tableState = $derived(
 		listQuery.isPending
@@ -104,6 +102,17 @@
 					? 'empty'
 					: 'ready'
 	);
+
+	const listErrorCopy = $derived.by(() => {
+		const err = listQuery.error;
+		if (!err) return null;
+		if (err instanceof NetworkError) return 'Check your network connection and try again.';
+		if (err instanceof AuthError)
+			return err.status === 403
+				? "You don't have permission to view users."
+				: 'Your session expired. Sign in again.';
+		return 'Something went wrong. Please try again.';
+	});
 
 	const columns: DataTableColumn<UserDto>[] = [
 		{
@@ -134,7 +143,7 @@
 	];
 
 	function onAction(
-		action: 'deactivate' | 'reactivate' | 'roles' | 'manager' | 'permissions' | 'unlock',
+		action: 'deactivate' | 'reactivate' | 'roles' | 'manager' | 'permissions',
 		user: UserDto
 	) {
 		targetUser = user;
@@ -144,9 +153,6 @@
 				break;
 			case 'reactivate':
 				reactivate.mutate(user.membership_id);
-				break;
-			case 'unlock':
-				unlock.mutate(user.membership_id);
 				break;
 			case 'roles':
 				rolesOpen = true;
@@ -181,14 +187,14 @@
 {#snippet rolesCell(user: UserDto)}
 	<div class="cluster cluster-tight">
 		{#each userRoleBadges(user, roleList) as r (r.id)}
-			<Badge variant="brand" style="soft" size="sm">{r.name}</Badge>
+			<Badge variant="brand" appearance="soft" size="sm">{r.name}</Badge>
 		{/each}
 	</div>
 {/snippet}
 
 {#snippet statusCell(user: UserDto)}
 	{@const status = userStatusBadge(user.status)}
-	<Badge variant={status.variant} style="soft" size="sm">{status.label}</Badge>
+	<Badge variant={status.variant} appearance="soft" size="sm">{status.label}</Badge>
 {/snippet}
 
 {#snippet rowActions(user: UserDto)}
@@ -209,9 +215,6 @@
 				<Icon icon={Lock} size="sm" /> Permission overrides
 			</Dropdown.Item>
 			<Dropdown.Separator />
-			<Dropdown.Item onclick={() => onAction('unlock', user)}>
-				<Icon icon={Unlock} size="sm" /> Unlock
-			</Dropdown.Item>
 			{#if canDeactivate(user)}
 				<Dropdown.Item variant="danger" onclick={() => onAction('deactivate', user)}>
 					<Icon icon={UserMinus} size="sm" /> Deactivate
@@ -252,7 +255,7 @@
 		rows={paged}
 		rowKey={(u) => u.membership_id}
 		state={tableState}
-		error={listQuery.error?.message}
+		error={listErrorCopy}
 		{rowActions}
 	>
 		{#snippet emptyState()}
@@ -274,7 +277,7 @@
 		{/snippet}
 	</DataTable.Root>
 
-	<Pagination {page} {pageCount} onChange={setPage} />
+	<Pagination page={currentPage} {pageCount} onChange={setPage} />
 </div>
 
 <CreateUserDrawer bind:open={createOpen} onOpenChange={(o) => (createOpen = o)} />

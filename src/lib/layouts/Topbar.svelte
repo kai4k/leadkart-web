@@ -4,11 +4,13 @@
 	import { routeContext } from '$lib/utils/routeTitle';
 	import UserMenu from './UserMenu.svelte';
 	import { ChevronRight } from '$icons';
+	import CommandPalette from '$features/search/components/CommandPalette.svelte';
+	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 
 	/**
 	 * Topbar — Linear/Vercel-minimal shape:
 	 *   left   : sidebar toggle + breadcrumb / page title
-	 *   centre : cmd-K search trigger button (palette deferred)
+	 *   centre : Cmd+K search trigger (omni-search palette behind it)
 	 *   right  : notifications + settings drawer + user menu
 	 *
 	 * Active-tenant context (scope routes) is surfaced by the scope
@@ -21,7 +23,27 @@
 	}>();
 
 	const route = $derived(routeContext(page.url.pathname));
+
+	// Search palette: only operators (platform.users.view OR platform.tenants.view)
+	// can hit /v1/search. For everyone else, hide the trigger.
+	const capsQuery = myCapabilitiesQuery();
+	const canSearch = $derived(
+		hasCapability(capsQuery.data, 'platform.users.view') ||
+			hasCapability(capsQuery.data, 'platform.tenants.view')
+	);
+
+	let paletteOpen = $state(false);
+
+	function onKeydown(e: KeyboardEvent) {
+		if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+			if (!canSearch) return;
+			e.preventDefault();
+			paletteOpen = !paletteOpen;
+		}
+	}
 </script>
+
+<svelte:window onkeydown={onKeydown} />
 
 <header class="lk-topbar glass-card glass-border-glow" aria-label="Application bar">
 	<!-- Left: toggle + route badge (icon + title in a glass pill).
@@ -54,23 +76,28 @@
 		</nav>
 	</div>
 
-	<!-- Centre: cmd-K trigger (deferred palette) -->
-	<button
-		type="button"
-		class="lk-topbar-search-trigger glass-pill"
-		aria-label="Search (Cmd+K)"
-		title="Search · Cmd+K"
-	>
-		<Icon icon={Search} size="sm" />
-		<span class="lk-topbar-search-placeholder">Search…</span>
-		<kbd class="lk-topbar-kbd">
-			<Icon icon={Command} size="xs" />K
-		</kbd>
-	</button>
+	<!-- Centre: Cmd+K trigger — opens the omni-search palette -->
+	{#if canSearch}
+		<button
+			type="button"
+			class="lk-topbar-search-trigger glass-pill"
+			aria-label="Search (Cmd+K)"
+			title="Search · Cmd+K"
+			onclick={() => (paletteOpen = true)}
+		>
+			<Icon icon={Search} size="sm" />
+			<span class="lk-topbar-search-placeholder">Search…</span>
+			<kbd class="lk-topbar-kbd">
+				<Icon icon={Command} size="xs" />K
+			</kbd>
+		</button>
+	{:else}
+		<div></div>
+	{/if}
 
 	<!-- Right: actions -->
 	<div class="lk-topbar-actions">
-		<button class="lk-topbar-iconbtn" aria-label="Notifications">
+		<button type="button" class="lk-topbar-iconbtn" aria-label="Notifications">
 			<Icon icon={Bell} size="md" />
 			<span class="lk-topbar-dot" aria-hidden="true"></span>
 		</button>
@@ -85,6 +112,8 @@
 		<UserMenu />
 	</div>
 </header>
+
+<CommandPalette bind:open={paletteOpen} onOpenChange={(o) => (paletteOpen = o)} />
 
 <style>
 	/* ─── Topbar layout + chrome geometry ──────────────────────────

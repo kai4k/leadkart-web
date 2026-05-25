@@ -3,7 +3,7 @@
 	import { TextField } from '$form';
 	import { updateTenantAdminContactSchema } from '../schemas';
 	import { updateTenantAdminContactMutation } from '../queries';
-	import { useForm } from '$lib/utils/use-form.svelte';
+	import { useForm } from '$lib/hooks/use-form.svelte';
 	import type { Tenant } from '../types';
 
 	/**

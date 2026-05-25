@@ -1,0 +1,67 @@
+name: _lint
+# Reusable workflow — full lint pipeline. Called by ci.yml.
+#
+# Contains 5 sub-steps (prettier+eslint, stylelint, dep-cruiser, arch:check,
+# knip) running serially within a single job. ESLint with typescript-eslint
+# dominates the wall-clock (~3 min cold, ~30s warm), so parallelising the
+# sub-steps via matrix would just add setup overhead without saving time.
+#
+# Cache layers:
+#   - node_modules (via composite setup action; shared across jobs)
+#   - .eslintcache + .stylelintcache (per-file content cache, persisted
+#     across runs via actions/cache — invalidates when ruleset changes)
+
+on:
+  workflow_call:
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/setup
+
+      - name: Restore ESLint + Stylelint cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            .eslintcache
+            .stylelintcache
+          # Primary key includes the ruleset hash so a config change
+          # invalidates cleanly. restore-keys allow partial fallback
+          # (still saves time even on partial mismatch).
+          key: lint-${{ runner.os }}-${{ hashFiles('eslint.config.js', '.stylelintrc.cjs') }}-${{ github.sha }}
+          restore-keys: |
+            lint-${{ runner.os }}-${{ hashFiles('eslint.config.js', '.stylelintrc.cjs') }}-
+            lint-${{ runner.os }}-
+
+      - name: Prettier + ESLint
+        # NODE_OPTIONS heap bump prevents GC thrash on the 7GB runner
+        # during typescript-eslint's TS-program load.
+        # --cache + --concurrency=auto (set in package.json script)
+        # halve the runtime; cache hit-rate determines warm/cold delta.
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: npm run lint
+
+      - name: Stylelint (design-token discipline)
+        run: npm run lint:css
+
+      - name: dependency-cruiser (layering boundaries)
+        run: npm run lint:deps
+
+      - name: Architecture gate — 13 custom static checks
+        # Component inventory, token completeness, WCAG contrast, locale
+        # parity, RTL safety, i18n coverage, route +error.svelte pages,
+        # feature structure, fetch placement, Svelte-5 purity, LOC budgets,
+        # /v1/platform path scope, mutate-then-refetch ban.
+        run: npm run arch:check
+
+      - name: Knip — dead code + unused exports (advisory)
+        # Knip surfaces unused exports + files. Currently advisory because
+        # feature barrels expose types not yet consumed by route code.
+        # Promote to a hard gate once consumer surface stabilises.
+        run: npm run lint:dead -- --no-exit-code || true

@@ -16,8 +16,8 @@
 	 * variant a11y silently rots whenever a new variant ships under-tested.
 	 */
 	import { Button, Card, Alert } from '$lib/components/ui';
-	import { PRIMARY_COLORS, theme } from '$lib/stores/theme.svelte';
-	import { Plus } from 'lucide-svelte';
+	import { PRIMARY_COLORS, theme } from '$lib/hooks/use-theme.svelte';
+	import { Icon, Plus } from '$lib/icons';
 
 	const buttonVariants = [
 		'primary',
@@ -192,6 +192,8 @@
 			class="relative h-64 overflow-hidden rounded-lg"
 			style="background: linear-gradient(135deg, var(--color-brand-500), var(--color-secondary-500));"
 		>
+			<!-- rtl-allow: centered glass demo in styleguide catalog — physical
+				center-positioning is the visual demonstration. -->
 			<div
 				class="glass-popover glass-sheen absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg p-6"
 			>
@@ -209,7 +211,7 @@
 		<div class="flex flex-wrap items-center gap-3">
 			{#each buttonVariants.filter((v) => v !== 'link') as variant (variant)}
 				<Button {variant} size="icon" aria-label="{variant} icon">
-					<Plus size={18} aria-hidden="true" />
+					<Icon icon={Plus} size="md" />
 				</Button>
 			{/each}
 		</div>

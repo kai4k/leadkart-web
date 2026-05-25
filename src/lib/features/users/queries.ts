@@ -21,8 +21,29 @@ export const usersKeys = {
 	all: ['users'] as const,
 	list: () => [...usersKeys.all, 'list'] as const,
 	detail: (id: string) => [...usersKeys.all, 'detail', id] as const,
-	roles: () => ['roles', 'catalog'] as const
+	roles: () => ['roles', 'catalog'] as const,
+	membershipSearch: (q: string) => [...usersKeys.all, 'membership-search', q] as const
 };
+
+/**
+ * Typeahead search for memberships in the current tenant. Used by the
+ * lead reassignment Combobox. Gated by `q.length >= 2` so the picker
+ * doesn't blast the API on every keystroke. TanStack's stale-time
+ * cache + `placeholderData: keepPreviousData` deliver the implicit
+ * debounce — re-issuing the same key while typing returns instantly
+ * from cache and only the trailing distinct query lands a request.
+ */
+export function membershipSearchQuery(getQuery: () => string) {
+	return createQuery(() => {
+		const q = getQuery().trim();
+		return {
+			queryKey: usersKeys.membershipSearch(q),
+			queryFn: () => api.searchMemberships(q),
+			enabled: q.length >= 2,
+			staleTime: 30_000
+		};
+	});
+}
 
 export function usersListQuery() {
 	return createQuery(() => ({
@@ -43,7 +64,7 @@ export function createUserMutation() {
 	return createMutation(() => ({
 		mutationFn: (req: CreateUserRequest) => api.createUser(req),
 		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: usersKeys.list() });
+			void qc.invalidateQueries({ queryKey: usersKeys.list() });
 			toast('success', 'Member added');
 		}
 	}));
@@ -55,7 +76,7 @@ export function deactivateUserMutation() {
 		mutationFn: ({ id, reason }: { id: string; reason: string }) =>
 			api.deactivateUser(id, { reason }),
 		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: usersKeys.all });
+			void qc.invalidateQueries({ queryKey: usersKeys.all });
 			toast('success', 'Member deactivated');
 		}
 	}));
@@ -66,19 +87,8 @@ export function reactivateUserMutation() {
 	return createMutation(() => ({
 		mutationFn: (id: string) => api.reactivateUser(id),
 		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: usersKeys.all });
+			void qc.invalidateQueries({ queryKey: usersKeys.all });
 			toast('success', 'Member reactivated');
-		}
-	}));
-}
-
-export function unlockUserMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: (id: string) => api.unlockUser(id),
-		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: usersKeys.all });
-			toast('success', 'Account unlocked');
 		}
 	}));
 }
@@ -89,7 +99,7 @@ export function assignRoleMutation() {
 		mutationFn: ({ id, roleId }: { id: string; roleId: string }) =>
 			api.assignRole(id, { role_id: roleId }),
 		onSuccess: (_, vars) => {
-			qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id) });
+			void qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id) });
 			toast('success', 'Role assigned');
 		}
 	}));
@@ -100,7 +110,7 @@ export function revokeRoleMutation() {
 	return createMutation(() => ({
 		mutationFn: ({ id, roleId }: { id: string; roleId: string }) => api.revokeRole(id, roleId),
 		onSuccess: (_, vars) => {
-			qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id) });
+			void qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id) });
 			toast('success', 'Role revoked');
 		}
 	}));
@@ -112,7 +122,7 @@ export function replacePermissionOverridesMutation() {
 		mutationFn: ({ id, body }: { id: string; body: ReplacePermissionOverridesRequest }) =>
 			api.replacePermissionOverrides(id, body),
 		onSuccess: (_, vars) => {
-			qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id) });
+			void qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id) });
 			toast('success', 'Permission overrides saved');
 		}
 	}));
@@ -124,7 +134,7 @@ export function assignManagerMutation() {
 		mutationFn: ({ id, managerId }: { id: string; managerId: string }) =>
 			api.assignManager(id, { manager_id: managerId }),
 		onSuccess: (_, vars) => {
-			qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id) });
+			void qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id) });
 			toast('success', 'Manager assigned');
 		}
 	}));
@@ -135,7 +145,7 @@ export function removeManagerMutation() {
 	return createMutation(() => ({
 		mutationFn: (id: string) => api.removeManager(id),
 		onSuccess: (_, id) => {
-			qc.invalidateQueries({ queryKey: usersKeys.detail(id) });
+			void qc.invalidateQueries({ queryKey: usersKeys.detail(id) });
 			toast('success', 'Manager removed');
 		}
 	}));

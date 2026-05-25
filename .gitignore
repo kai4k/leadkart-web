@@ -21,3 +21,13 @@ test-results
 playwright-report
 playwright/.cache
 coverage
+
+# Linter caches — local + CI both write to these. Persisted in CI via
+# the actions/cache step in .github/workflows/ci.yml so subsequent runs
+# only relint changed files.
+.eslintcache
+.stylelintcache
+node_modules/.cache
+
+# Storybook static build output
+storybook-static

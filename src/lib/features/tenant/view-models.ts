@@ -113,13 +113,13 @@ export function formattedAddressLines(address: AdminAddress | undefined): string
 	if (street) lines.push(street);
 
 	const cityDistrict = [address.city?.trim(), address.district?.trim()].filter(
-		(s): s is string => !!s && s.length > 0
+		(s): s is string => s != null && s.length > 0
 	);
 	if (cityDistrict.length > 0) lines.push(cityDistrict.join(', '));
 
 	const pinned = formattedPincode(address.pincode);
 	const stateAndPin = [address.state?.trim(), pinned].filter(
-		(s): s is string => !!s && s.length > 0
+		(s): s is string => s != null && s.length > 0
 	);
 	if (stateAndPin.length > 0) lines.push(stateAndPin.join(' — '));
 

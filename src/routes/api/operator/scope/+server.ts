@@ -45,16 +45,22 @@ export async function POST(event: RequestEvent): Promise<Response> {
 	const slug = typeof body.slug === 'string' ? body.slug.trim() : '';
 	if (!slug) return json({ error: 'missing_slug' }, { status: 400 });
 
-	const resp = await fetch(
-		`${config.GO_API_URL}/api/v1/tenants/by-slug/${encodeURIComponent(slug)}`,
-		{
-			headers: { authorization: `Bearer ${access}` }
-		}
-	);
+	// Canonical slug lookup per backend ADR 0052 — Stripe-style filter
+	// query returning ListTenantsResponse. Slug uniqueness is a DB
+	// invariant; the list is either empty (→ 404) or a single hit.
+	const resp = await fetch(`${config.GO_API_URL}/api/v1/tenants?slug=${encodeURIComponent(slug)}`, {
+		headers: { authorization: `Bearer ${access}` }
+	});
 	if (!resp.ok) {
-		return json({ error: 'tenant_lookup_failed' }, { status: resp.status === 404 ? 404 : 502 });
+		return json({ error: 'tenant_lookup_failed' }, { status: 502 });
 	}
-	const tenant = (await resp.json()) as { id: string; slug: string; display_name: string };
+	const payload = (await resp.json()) as {
+		tenants?: Array<{ id: string; slug: string; display_name: string }>;
+	};
+	const tenant = payload.tenants?.[0];
+	if (!tenant) {
+		return json({ error: 'tenant_not_found' }, { status: 404 });
+	}
 
 	setOperatorScope(event.cookies, {
 		id: tenant.id,
@@ -64,6 +70,7 @@ export async function POST(event: RequestEvent): Promise<Response> {
 	return new Response(null, { status: 204 });
 }
 
+// eslint-disable-next-line @typescript-eslint/require-await -- SvelteKit handler signature is async by contract
 export async function DELETE(event: RequestEvent): Promise<Response> {
 	const csrfFail = checkCsrf(event);
 	if (csrfFail) return csrfFail;

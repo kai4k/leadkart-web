@@ -9,11 +9,65 @@
 			"subtitle": "Welcome back. Enter your credentials to continue.",
 			"email": "Email",
 			"password": "Password",
-			"submit": "Sign in"
+			"submit": "Sign in",
+			"forgotPassword": "Forgot password?"
+		},
+		"forgotPassword": {
+			"title": "Forgot your password?",
+			"subtitle": "Enter your email and we'll send you a reset link.",
+			"email": "Email",
+			"submit": "Send reset link",
+			"successCopy": "If that email is registered, we've sent a password-reset link. Check your inbox (and your spam folder).",
+			"knowIt": "Remembered it?",
+			"backToSignin": "Back to sign in"
+		},
+		"resetPassword": {
+			"title": "Choose a new password",
+			"subtitle": "Set the password you'll use to sign in.",
+			"newPassword": "New password",
+			"newPasswordHint": "At least 12 characters.",
+			"confirmPassword": "Confirm new password",
+			"submit": "Reset password",
+			"success": "Password reset. Redirecting you to sign in…",
+			"requestNew": "Request a new reset link",
+			"backToSignin": "Remembered it?",
+			"errors": {
+				"mismatch": "Passwords don't match.",
+				"breached": "This password appears in known breach lists — choose a different one.",
+				"same": "New password must differ from the current one.",
+				"weak": "Password doesn't meet the strength requirements.",
+				"invalidToken": "This reset link is invalid or has expired. Request a new one.",
+				"missingToken": "This page expects a reset token in the URL. Use the link from your email."
+			}
+		},
+		"changeEmail": {
+			"title": "Change email",
+			"subtitle": "Confirm your new email by clicking the link we send.",
+			"newEmail": "New email",
+			"submit": "Send confirmation link",
+			"successCopy": "Check your new inbox for a confirmation link. The change isn't applied until you click it.",
+			"errors": {
+				"invalid": "Invalid email format.",
+				"inUse": "That email is already in use on another account."
+			},
+			"confirm": {
+				"title": "Confirm your new email",
+				"subtitle": "We're verifying the token in your link…",
+				"success": "Email updated. Use the new one to sign in.",
+				"missingToken": "This page expects a confirmation token in the URL. Use the link from your email.",
+				"invalidToken": "This confirmation link is invalid or has expired."
+			}
 		},
 		"errors": {
 			"invalidCredentials": "Email or password is incorrect.",
+			"accountLocked": "Account locked after too many failed attempts. Try again in {seconds} seconds.",
+			"mustChangePassword": "Set a new password to continue.",
 			"unexpected": "Something went wrong. Please try again."
+		},
+		"mustChange": {
+			"title": "Set a new password",
+			"subtitle": "Your account needs a fresh password before you can continue. Pick one you don't use elsewhere.",
+			"submit": "Set password & continue"
 		}
 	},
 	"account": {
@@ -25,7 +79,7 @@
 				"description": "Pick a strong password you don't use elsewhere. We'll keep you signed in on this device.",
 				"currentPassword": "Current password",
 				"newPassword": "New password",
-				"newPasswordHint": "At least 8 characters. Must differ from your current password.",
+				"newPasswordHint": "At least 12 characters. Must differ from your current password.",
 				"confirmPassword": "Confirm new password",
 				"submit": "Update password",
 				"success": "Password updated.",
@@ -41,5 +95,10 @@
 		"loading": "Loading…",
 		"cancel": "Cancel",
 		"save": "Save"
+	},
+	"orders": {
+		"quotation": {
+			"revisionLineSummary": "{lineCount, plural, one {# line} other {# lines}} · subtotal {subtotal} · GST {gstTotal}"
+		}
 	}
 }

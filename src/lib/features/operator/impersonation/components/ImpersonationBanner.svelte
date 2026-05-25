@@ -68,7 +68,7 @@
 		padding-inline: var(--spacing-4);
 		padding-block: var(--spacing-2);
 		background: var(--color-warning-500);
-		color: white;
+		color: var(--color-fg-on-brand);
 	}
 
 	@media (min-width: 768px) {

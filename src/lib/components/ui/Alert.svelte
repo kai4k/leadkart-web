@@ -18,7 +18,7 @@
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { AlertCircle, CheckCircle2, Info, XCircle } from 'lucide-svelte';
+	import { AlertCircle, CheckCircle2, Icon, Info, XCircle } from '$lib/icons';
 	import { cn } from '$lib/utils/cn';
 
 	type Props = AlertVariants & {
@@ -38,7 +38,7 @@
 		children
 	}: Props = $props();
 
-	const Icon = $derived(
+	const variantIcon = $derived(
 		variant === 'success'
 			? CheckCircle2
 			: variant === 'warning'
@@ -51,7 +51,7 @@
 
 <div class={cn(alertVariants({ variant }), className)} role="alert" aria-live="polite">
 	<div class="flex items-start gap-3">
-		<Icon size={18} class="mt-0.5 flex-shrink-0" aria-hidden="true" />
+		<Icon icon={variantIcon} size="md" class="mt-0.5 flex-shrink-0" />
 		<div class="flex-1">
 			{#if title}
 				<p class="mb-1 font-semibold">{title}</p>
@@ -67,7 +67,7 @@
 				aria-label="Dismiss"
 				onclick={() => onDismiss?.()}
 			>
-				<XCircle size={16} aria-hidden="true" />
+				<Icon icon={XCircle} size="sm" />
 			</button>
 		{/if}
 	</div>

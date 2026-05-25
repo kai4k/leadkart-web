@@ -2,8 +2,8 @@
 	import { _ } from 'svelte-i18n';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { Lock } from 'lucide-svelte';
-	import { login } from '../api';
+	import { Icon, Lock } from '$lib/icons';
+	import { login, LoginError } from '../api';
 	import { loginRequestSchema } from '../schemas';
 	import { Alert, AuthCard, Button, Logo } from '$lib/components/ui';
 	import { TextField, PasswordField } from '$lib/components/form';
@@ -11,12 +11,17 @@
 	/**
 	 * SigninForm — feature-owned auth form using the cross-feature
 	 * primitives + Zod-validated request body + ?next= redirect honor.
-	 * Glass surface chrome lives in the AuthCard primitive (extracted
-	 * once 5 auth pages wanted the same treatment — Rule of Three).
+	 *
+	 * Three post-submit branches per ADR 0053:
+	 *   1. 200 with must_change_password=true → /must-change-password
+	 *      (mandatory rotation before any other action).
+	 *   2. 200 with must_change_password=false → /dashboard (or ?next=).
+	 *   3. 423 locked → render countdown using Retry-After delta-seconds.
+	 *
+	 * `?email=` prefill from an admin-initiated invite redirect. Read once
+	 * at mount; subsequent edits are user-driven.
 	 */
 
-	// `?email=` prefill from an admin-initiated invite redirect.
-	// Read once at mount; subsequent edits are user-driven.
 	let email = $state(page.url.searchParams.get('email') ?? '');
 	let password = $state('');
 	let loading = $state(false);
@@ -41,20 +46,30 @@
 
 		loading = true;
 		try {
-			// BFF login: POSTs to /auth/login (SvelteKit endpoint) which sets
-			// httpOnly cookies and returns { ok: true }. No token in the response.
-			await login(parsed.data);
+			const result = await login(parsed.data);
+			if (result.must_change_password) {
+				const nextParam = page.url.searchParams.get('next');
+				const suffix = nextParam ? `?next=${encodeURIComponent(nextParam)}` : '';
+				await goto(`/must-change-password${suffix}`);
+				return;
+			}
 			const next = page.url.searchParams.get('next');
 			const target = next && next.startsWith('/') ? decodeURIComponent(next) : '/dashboard';
 			await goto(target);
 		} catch (err) {
-			const status = (err as { status?: number }).status;
-			if (status === 401) {
-				formError = $_('auth.errors.invalidCredentials');
+			if (err instanceof LoginError) {
+				if (err.status === 423 && err.retryAfterSeconds !== undefined) {
+					formError = $_('auth.errors.accountLocked', {
+						values: { seconds: err.retryAfterSeconds }
+					});
+				} else if (err.status === 401) {
+					formError = $_('auth.errors.invalidCredentials');
+				} else {
+					formError = $_('auth.errors.unexpected');
+				}
 			} else {
 				formError = $_('auth.errors.unexpected');
 			}
-			// Move focus to the error region for screen-reader announcement.
 			queueMicrotask(() => errorRegion?.focus());
 		} finally {
 			loading = false;
@@ -97,13 +112,18 @@
 		<Button type="submit" {loading} fullWidth size="lg">
 			{loading ? $_('common.loading') : $_('auth.signin.submit')}
 		</Button>
+
+		<p class="caption text-fg-muted text-center">
+			<a href="/forgot-password" class="text-primary hover:underline"
+				>{$_('auth.signin.forgotPassword')}</a
+			>
+		</p>
 	</form>
 
-	<!-- Security trust badge — "256-bit SSL encrypted" microcopy with shield -->
 	<div
 		class="border-border text-fg-subtle flex flex-col items-center gap-2 border-t pt-4 sm:flex-row sm:justify-center"
 	>
-		<Lock size={14} aria-hidden="true" />
+		<Icon icon={Lock} size="xs" />
 		<span class="caption">256-bit SSL encrypted</span>
 	</div>
 </AuthCard>

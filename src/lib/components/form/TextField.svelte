@@ -15,11 +15,11 @@
 					false: 'focus-visible:ring-focus-ring'
 				},
 				hasLeading: {
-					true: 'pl-10',
+					true: 'ps-10',
 					false: ''
 				},
 				hasTrailing: {
-					true: 'pr-10',
+					true: 'pe-10',
 					false: ''
 				}
 			},
@@ -96,7 +96,7 @@
 	<div class="relative">
 		{#if leading}
 			<span
-				class="text-fg-subtle pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
+				class="text-fg-subtle pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3"
 				aria-hidden="true"
 			>
 				{@render leading()}
@@ -110,16 +110,16 @@
 			aria-describedby={describedBy}
 			class={cn(
 				textFieldInputVariants({
-					error: !!error,
-					hasLeading: !!leading,
-					hasTrailing: !!trailing
+					error: Boolean(error),
+					hasLeading: Boolean(leading),
+					hasTrailing: Boolean(trailing)
 				})
 			)}
 			{...rest}
 		/>
 
 		{#if trailing}
-			<span class="absolute inset-y-0 right-0 flex items-center pr-2">
+			<span class="absolute inset-y-0 end-0 flex items-center pe-2">
 				{@render trailing()}
 			</span>
 		{/if}

@@ -228,7 +228,12 @@
 	--color-fg-on-brand: oklch(1 0 0);
 
 	--color-border: oklch(0.9 0.01 245); /* ≈ #E2E8F0 */
-	--color-border-strong: oklch(0.78 0.01 245);
+	/* border-strong is used for hover-state indicators on Kanban cards +
+	 * FileDropZone — these are user-interface components per WCAG 2.2
+	 * 1.4.11 (Non-text Contrast) and require ≥3:1 against the canvas
+	 * (--color-bg). Lightness 0.55 → ~3.1:1 contrast (verified by
+	 * scripts/arch/check-token-contrast.mjs). */
+	--color-border-strong: oklch(0.55 0.015 245);
 
 	/* ═══ SEMANTIC BRAND-TEXT — emphasis + link tokens.
 	 * Both `heading` and `link` point at --color-primary (logo mark blue)

@@ -4,7 +4,7 @@
 	import { changePasswordSchema } from '../schemas';
 	import { Alert, Button } from '$ui';
 	import { PasswordField } from '$form';
-	import { useForm } from '$lib/utils/use-form.svelte';
+	import { useForm } from '$lib/hooks/use-form.svelte';
 
 	/**
 	 * ChangePasswordForm — authenticated password change. The server

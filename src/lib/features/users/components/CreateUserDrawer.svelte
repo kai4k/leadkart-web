@@ -4,7 +4,7 @@
 	import { TextField, PasswordField } from '$lib/components/form';
 	import { createUserMutation } from '$features/users/queries';
 	import { createUserRequestSchema } from '$features/users/schemas';
-	import { useForm } from '$lib/utils/use-form.svelte';
+	import { useForm } from '$lib/hooks/use-form.svelte';
 
 	type Props = {
 		open: boolean;

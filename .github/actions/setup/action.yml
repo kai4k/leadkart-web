@@ -1,0 +1,48 @@
+name: Setup Node + deps + sync
+description: >-
+  Composite action: actions/setup-node + npm cache + node_modules cache restore
+  + svelte-kit sync. Called by every CI job that needs the dep tree resolved
+  and SvelteKit's ambient types ($app, $env, $lib, route $types) generated.
+
+  Used in place of duplicating these 4-5 steps across every job. FAANG-canon
+  DRY pattern (Vercel, SvelteKit, Stripe all ship a similar composite setup
+  action). Reduces ci.yml + all reusable workflows by ~80 lines of boilerplate.
+
+  Cache strategy:
+    - npm registry tarballs cached by setup-node via cache:'npm' (key: lockfile)
+    - node_modules cached by hashFiles('package-lock.json') — shared across PRs
+      with the same lockfile, invalidates on any dep change
+    - On cache hit: skip `npm install` entirely (~30s saved per job)
+    - On cache miss: run `npm install` (3 min first PR; ~1 min subsequent)
+
+inputs:
+  run-svelte-kit-sync:
+    description: "Whether to run svelte-kit sync (default true). Set false for jobs that only need raw deps (e.g. test runner) and don't parse tsconfig."
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: '.nvmrc'
+        cache: 'npm'
+
+    - name: Restore node_modules cache
+      id: cache
+      uses: actions/cache@v5
+      with:
+        path: node_modules
+        key: node_modules-${{ runner.os }}-${{ hashFiles('package-lock.json', '.npmrc') }}
+
+    - name: Install dependencies (cache miss only)
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: npm install
+
+    - name: SvelteKit sync — generate ambient types
+      if: inputs.run-svelte-kit-sync == 'true'
+      shell: bash
+      run: npx svelte-kit sync

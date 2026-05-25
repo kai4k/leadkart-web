@@ -1,1 +1,10 @@
+#!/usr/bin/env sh
+# Pre-commit hook — formatting + linting on staged files only via
+# lint-staged. The full architecture gate (arch:check, lint:deps,
+# lint:dead) runs in CI rather than here so commits stay fast.
 npx lint-staged
+
+# Cheap arch gate — runs in ~100ms, catches token/structure drift
+# before it lands. The expensive gates (dep-cruiser, knip, eslint
+# with type info) run only in CI.
+node scripts/arch/run-all.mjs

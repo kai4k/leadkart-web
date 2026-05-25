@@ -2,12 +2,19 @@
 	import { ConfirmDialog, Alert } from '$ui';
 	import { deleteRoleMutation } from '$features/roles/queries';
 	import type { RoleDto } from '$features/roles/types';
+	import {
+		ValidationError,
+		ConflictError,
+		AuthError,
+		NotFoundError,
+		NetworkError
+	} from '$api/errors';
 
 	type Props = { open: boolean; role: RoleDto | null; onOpenChange: (open: boolean) => void };
 	let { open = $bindable(false), role, onOpenChange }: Props = $props();
 
 	let confirmName = $state('');
-	let error = $state<string | null>(null);
+	let bannerError = $state<string | null>(null);
 
 	const mutation = deleteRoleMutation();
 	const isPending = $derived(mutation.isPending);
@@ -15,14 +22,30 @@
 
 	async function onConfirm() {
 		if (!role || !canConfirm) return;
-		error = null;
+		bannerError = null;
 		mutation.mutate(role.id, {
 			onSuccess: () => {
 				confirmName = '';
 				onOpenChange(false);
 			},
 			onError: (err) => {
-				error = err instanceof Error ? err.message : 'Failed to delete role';
+				if (err instanceof ValidationError) {
+					bannerError = 'The server rejected the delete request.';
+				} else if (err instanceof ConflictError) {
+					bannerError =
+						err.detail || 'This role is still assigned to users — revoke it everywhere first.';
+				} else if (err instanceof AuthError) {
+					bannerError =
+						err.status === 403
+							? "You don't have permission to delete roles."
+							: 'Your session expired. Sign in again.';
+				} else if (err instanceof NotFoundError) {
+					bannerError = 'This role was already deleted.';
+				} else if (err instanceof NetworkError) {
+					bannerError = 'Check your network connection and try again.';
+				} else {
+					bannerError = 'Failed to delete role. Please try again.';
+				}
 			}
 		});
 	}
@@ -45,7 +68,7 @@
 			>
 			<input bind:value={confirmName} class="glass-input rounded-md px-3 py-2 text-sm" />
 		</label>
-		{#if error}<Alert variant="danger">{error}</Alert>{/if}
+		{#if bannerError}<Alert variant="danger">{bannerError}</Alert>{/if}
 		{#if !canConfirm && confirmName.length > 0}
 			<p class="caption text-warning-900">Name doesn't match.</p>
 		{/if}

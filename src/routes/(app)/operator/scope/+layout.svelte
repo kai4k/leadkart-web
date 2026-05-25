@@ -6,7 +6,7 @@
 	import { Badge, Breadcrumbs, Button } from '$ui';
 	import type { BreadcrumbItem } from '$ui';
 	import { Building2, Icon, Users, Shield, Settings, Activity, UserCog, LogOut } from '$icons';
-	import { getCsrfToken } from '$lib/api/csrf';
+	import { exitScope as exitScopeApi } from '$features/operator/scope/api';
 	import type { LayoutData } from './$types';
 
 	let { children, data }: { children: Snippet; data: LayoutData } = $props();
@@ -26,16 +26,13 @@
 	];
 
 	function isActive(href: string): boolean {
-		return page.url.pathname === href || page.url.pathname.startsWith(href + '/');
+		return page.url.pathname === href || page.url.pathname.startsWith(`${href}/`);
 	}
 
 	const qc = useQueryClient();
 
 	async function exitScope() {
-		await fetch('/api/operator/scope', {
-			method: 'DELETE',
-			headers: { 'x-csrf-token': getCsrfToken() }
-		});
+		await exitScopeApi();
 		// Drop the entire TanStack cache — the previous scope's data is
 		// no longer authoritative once the X-Tenant-Id header changes.
 		qc.clear();
@@ -58,7 +55,7 @@
 			{/if}
 			<h1 class="h2">{tenant.display_name}</h1>
 			{#if tenant.slug === 'platform'}
-				<Badge variant="brand" style="soft" size="sm">Platform</Badge>
+				<Badge variant="brand" appearance="soft" size="sm">Platform</Badge>
 			{/if}
 		</div>
 		<Button variant="ghost" size="sm" onclick={exitScope}>

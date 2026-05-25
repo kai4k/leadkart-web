@@ -11,15 +11,51 @@
  *   - AuthError: no retry (401 = not authed, 403 = not permitted)
  *   - Everything else: no retry (4xx are caller faults)
  * Mutations are never auto-retried (not idempotent by default).
+ *
+ * Global error surfacing (TanStack canon — see "Render Optimizations" docs):
+ *   - QueryCache.onError fires for EVERY background query failure. We toast
+ *     only when the query already has prior data (background refetch failed
+ *     while user is looking at stale-but-rendered data). Fresh-load failures
+ *     are surfaced by the component's own isError branch.
+ *   - MutationCache.onError fires for EVERY mutation failure. We toast unless
+ *     the mutation opts out via `meta: { skipErrorToast: true }` — used when
+ *     a dialog shows an inline Alert and a toast would be duplicative.
  */
-import { QueryClient } from '@tanstack/svelte-query';
-import { NetworkError, ServerError, AuthError } from './errors';
+import { QueryClient, QueryCache, MutationCache } from '@tanstack/svelte-query';
+import { ApiError, NetworkError, ServerError, AuthError } from './errors';
+import { toast } from '$lib/components/ui/Toaster.svelte';
+
+function describeError(err: unknown): string {
+	if (err instanceof ApiError) return err.message;
+	return 'Something went wrong';
+}
 
 export const queryClient = new QueryClient({
+	queryCache: new QueryCache({
+		onError: (error, query) => {
+			// Only surface background refetch failures — fresh-load errors
+			// are already rendered by the component via query.isError.
+			if (query.state.data !== undefined) {
+				toast('danger', `Couldn't refresh: ${describeError(error)}`);
+			}
+		}
+	}),
+	mutationCache: new MutationCache({
+		onError: (error, _vars, _ctx, mutation) => {
+			// Opt-out: pass meta: { skipErrorToast: true } when the calling
+			// dialog renders an inline error and a toast would be noise.
+			if (mutation.meta?.skipErrorToast === true) return;
+			// AuthError already triggers a signout redirect; suppress the toast
+			// so the user doesn't see "permission denied" before being kicked
+			// to /signin.
+			if (error instanceof AuthError && error.status === 401) return;
+			toast('danger', describeError(error));
+		}
+	}),
 	defaultOptions: {
 		queries: {
-			staleTime: 30_000, // 30 s stale-while-revalidate window
-			gcTime: 5 * 60_000, // 5 min cache retention after unmount
+			staleTime: 30_000,
+			gcTime: 5 * 60_000,
 			retry: (failureCount, error) => {
 				if (error instanceof AuthError) return false;
 				if (error instanceof NetworkError || error instanceof ServerError) {
@@ -31,7 +67,7 @@ export const queryClient = new QueryClient({
 			refetchOnReconnect: true
 		},
 		mutations: {
-			retry: false // mutations are not idempotent by default
+			retry: false
 		}
 	}
 });

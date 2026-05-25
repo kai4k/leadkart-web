@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { HTMLInputAttributes } from 'svelte/elements';
-	import { Eye, EyeOff } from 'lucide-svelte';
+	import { Eye, EyeOff, Icon } from '$lib/icons';
 	import TextField from './TextField.svelte';
 
 	/**
@@ -57,9 +57,9 @@
 			onclick={() => (visible = !visible)}
 		>
 			{#if visible}
-				<EyeOff size={16} aria-hidden="true" />
+				<Icon icon={EyeOff} size="sm" />
 			{:else}
-				<Eye size={16} aria-hidden="true" />
+				<Icon icon={Eye} size="sm" />
 			{/if}
 		</button>
 	{/snippet}

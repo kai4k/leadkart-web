@@ -1,3 +1,12 @@
 export { default as TextField } from './TextField.svelte';
 export { default as PasswordField } from './PasswordField.svelte';
 export { default as Select, type SelectOption } from './Select.svelte';
+export { default as NumberInput } from './NumberInput.svelte';
+export { default as TagInput } from './TagInput.svelte';
+export { default as FileDropZone } from './FileDropZone.svelte';
+export { default as Switch } from './Switch.svelte';
+export { default as RadioGroup } from './RadioGroup.svelte';
+export { default as RadioItem } from './RadioItem.svelte';
+export { default as Combobox, type ComboboxOption } from './Combobox.svelte';
+export { default as DatePicker } from './DatePicker.svelte';
+export { default as DateRangePicker, type DateRange } from './DateRangePicker.svelte';
