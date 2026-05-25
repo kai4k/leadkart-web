@@ -20,29 +20,51 @@ on:
       - '.github/PULL_REQUEST_TEMPLATE.md'
 
 # Cancel in-flight runs on the same branch when a new commit lands.
-# Saves runner minutes + GitHub minutes quota. Industry canon (every
-# Linear / Vercel / Stripe public CI yaml).
+# Saves runner minutes + GitHub minutes quota. Industry canon (Linear /
+# Vercel / Stripe public CI yaml).
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# ─── PARALLEL-MATRIX CI ───────────────────────────────────────────
+#
+# Single setup → fan-out to lint / typecheck / test / build → e2e
+# shards (depend on build) → final gate. Wall-clock dominated by the
+# slowest job in each tier (max), not the sum (sequential).
+#
+#   setup (install + svelte-kit sync)        ~1-2 min
+#     ↓
+#   ┌────────────────────────────────────────┐
+#   │  lint   typecheck   test   build       │  parallel — runs once setup
+#   │  ~3min  ~30s        ~10s   ~30s        │  completes; each restores
+#   └────────────────────────────────────────┘  cached node_modules.
+#                              ↓
+#                          ┌───────────┐
+#                          │ e2e shards│  ~2-3 min wall-clock per shard;
+#                          │  1/2  2/2 │  18 spec files split 9/9.
+#                          └───────────┘
+#                              ↓
+#                          [ci-pass gate]
+#
+# Total wall-clock: ~6-8 min (was ~15 min serial).
+# Total job-minutes consumed: ~18-22 (~20% more than serial — the
+# cost of 3× speedup).
+#
+# Industry refs:
+#   - Vercel's Next.js CI (public github.com/vercel/next.js)
+#   - SvelteKit's own CI (github.com/sveltejs/kit/.github/workflows/ci.yml)
+#   - Stripe Engineering blog "CI architecture at Stripe" 2024
+# ────────────────────────────────────────────────────────────────────
+
 jobs:
-  # Combined static-analysis + unit + build + e2e in ONE job.
-  #
-  # Why combined: separating build and e2e into two jobs forces a
-  # second `npm install` + an artifact upload/download round-trip
-  # for the build output. At ~30s × 2 + ~30s × 2 = ~2-3 minutes
-  # of duplicated work per PR. For a free-tier private repo
-  # (2,000 min/month), that's a meaningful chunk over time.
-  #
-  # Order is fast-fail: cheap checks (audit, lint, check, test) run
-  # before the expensive ones (build, e2e), so a typo-level bug
-  # consumes seconds rather than the whole pipeline budget.
-  ci:
-    name: Build & test
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+  # ─── Setup: install deps once, cache for downstream jobs ────────
+  setup:
+    name: Setup
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 5
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    outputs:
+      deps-cache-key: ${{ steps.deps-key.outputs.key }}
     steps:
       - uses: actions/checkout@v6
 
@@ -51,53 +73,60 @@ jobs:
           node-version-file: '.nvmrc'
           cache: 'npm'
 
+      - name: Compute deps cache key
+        id: deps-key
+        run: echo "key=deps-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.run_id }}" >> "$GITHUB_OUTPUT"
+
       - name: Install dependencies
-        # `npm install` (not `npm ci`) because our dep tree includes
+        # `npm install` (not `npm ci`) because the dep tree includes
         # platform-specific WASM bindings (@rolldown/binding-wasm32-wasi,
         # @tailwindcss/oxide-wasm32-wasi) that Vite 8 + Tailwind 4 ship
-        # as optional fallbacks for native modules. npm 11's strict
-        # `npm ci` rejects the lock when the host platform's variant
-        # differs from the lock-author's platform — known issue tracked
-        # in npm/cli#5169 + vite/vite#15869. Plain `npm install` with
-        # `--prefer-offline` reuses the lock when possible while
-        # tolerating cross-platform variance. Lock determinism is still
-        # enforced at PR-review time via committed package-lock.json
-        # + Dependabot.
-        #
-        # .npmrc sets legacy-peer-deps=true (TypeScript 6 + Storybook 10
-        # + culori + colord ahead of ecosystem peer ranges; integration
-        # works, only npm's strict check is the blocker). Pinning to the
-        # lockfile keeps the actual versions canonical.
+        # as optional fallbacks for native modules. `.npmrc` sets
+        # legacy-peer-deps + prefer-offline so this stays fast + tolerant.
         run: npm install
 
       - name: Security audit (high+ severity blocks)
-        # Cheap (~5s with cached registry); runs early so a vulnerable
-        # transitive dep blocks the rest of the pipeline before we
-        # spend minutes on lint / build / e2e. Dependabot covers
-        # ongoing surveillance of merged deps; this catches NEW
-        # vulnerable deps introduced by the PR itself.
         run: npm audit --omit=dev --audit-level=high
 
-      # SvelteKit generates .svelte-kit/tsconfig.json + ambient types
-      # ($app, $env, $lib, route $types) via the sync step. Anything
-      # downstream that touches tsconfig.json (dep-cruiser, eslint with
-      # projectService, svelte-check, vite build) needs this dir to
-      # exist. Running it explicitly + early avoids the "Cannot read
-      # file .svelte-kit/tsconfig.json" crash that hit our lint:deps
-      # step.
-      #
-      # SvelteKit docs recommend this as the canonical CI setup step.
       - name: SvelteKit sync — generate .svelte-kit ambient types
+        # Generates .svelte-kit/tsconfig.json + ambient types ($app,
+        # $env, $lib, route $types). Required by anything downstream
+        # that reads tsconfig.json (dep-cruiser, eslint projectService,
+        # svelte-check, vite build).
         run: npx svelte-kit sync
 
-      # Persist ESLint's per-file content cache across CI runs.
-      # First cold run: ~3-4 min (typescript-eslint loads the entire
-      # TS program graph including node_modules type-defs).
-      # Subsequent warm runs: ~30-60s (only changed files re-typed).
-      # Cache key invalidates when package-lock.json (deps) or
-      # eslint.config.js (rules) change; restore-keys allows partial
-      # fallback when only one of them changes.
-      - name: Restore ESLint cache
+      - name: Cache node_modules + .svelte-kit
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            node_modules
+            .svelte-kit
+          key: ${{ steps.deps-key.outputs.key }}
+
+  # ─── Lint: prettier + eslint + stylelint + dep-cruiser + arch ──
+  lint:
+    name: Lint
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Restore node_modules + .svelte-kit
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            node_modules
+            .svelte-kit
+          key: ${{ needs.setup.outputs.deps-cache-key }}
+          fail-on-cache-miss: true
+
+      - name: Restore ESLint + Stylelint cache
         uses: actions/cache@v5
         with:
           path: |
@@ -109,11 +138,9 @@ jobs:
             lint-${{ runner.os }}-
 
       - name: Lint — prettier + eslint
-        # NODE_OPTIONS bumps the heap so typescript-eslint's TS-program
-        # creation doesn't trigger GC thrash on the 7GB CI runner. ESLint
-        # 10's --concurrency=auto (set in package.json script) splits the
-        # file set across cores (2 on GitHub Actions free tier → ~50%
-        # faster than serial).
+        # NODE_OPTIONS heap bump prevents GC thrash on the 7GB runner
+        # during typescript-eslint's TS-program load.
+        # --concurrency=auto (set in package.json) splits across cores.
         env:
           NODE_OPTIONS: --max-old-space-size=6144
         run: npm run lint
@@ -124,30 +151,69 @@ jobs:
       - name: Lint — dependency-cruiser (layering boundaries)
         run: npm run lint:deps
 
-      - name: Architecture gate — custom static checks (13 checks)
+      - name: Architecture gate — 13 custom static checks
         # Component inventory, token completeness, WCAG contrast, locale
         # parity, RTL safety, i18n coverage, route +error.svelte pages,
         # feature structure, fetch placement, Svelte-5 purity, LOC budgets,
         # /v1/platform path scope, mutate-then-refetch ban.
         run: npm run arch:check
 
-      - name: Type check (svelte-check + tsc)
-        run: npm run check
-
-      - name: Lint — knip (dead code + unused exports)
-        # Knip surfaces unused exports + files. Currently runs as a
-        # non-blocking advisory because the feature barrels expose
-        # types that aren't consumed yet by route code. Promote to a
-        # hard gate once the consumer surface stabilises.
+      - name: Lint — knip (dead code + unused exports) — ADVISORY
+        # Knip surfaces unused exports + files. Currently advisory because
+        # the feature barrels expose types that aren't consumed yet by
+        # route code. Promote to a hard gate once the consumer surface
+        # stabilises (tracked: Phase F).
         run: npm run lint:dead -- --no-exit-code || true
 
-      - name: Unit tests with coverage
-        run: npm run test:coverage
+  # ─── Typecheck (svelte-check + tsc) ─────────────────────────────
+  typecheck:
+    name: Typecheck
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - name: Restore node_modules + .svelte-kit
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            node_modules
+            .svelte-kit
+          key: ${{ needs.setup.outputs.deps-cache-key }}
+          fail-on-cache-miss: true
+      - name: svelte-check + tsc
+        run: npm run check
 
+  # ─── Unit tests + coverage ──────────────────────────────────────
+  test:
+    name: Unit tests
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - name: Restore node_modules + .svelte-kit
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            node_modules
+            .svelte-kit
+          key: ${{ needs.setup.outputs.deps-cache-key }}
+          fail-on-cache-miss: true
+      - name: Vitest with coverage
+        run: npm run test:coverage
       - name: Upload coverage (push-to-main only)
-        # Coverage on PR is rarely actioned; the merged-into-main
-        # report is the one teams reference for trend lines. Skipping
-        # PR uploads saves ~20s per PR + storage.
+        # Coverage on PR is rarely actioned; the merged-into-main report
+        # is the one teams reference for trend lines. Skipping PR uploads
+        # saves ~20s per PR + storage.
         if: github.event_name == 'push'
         uses: actions/upload-artifact@v7
         with:
@@ -155,58 +221,140 @@ jobs:
           path: coverage/
           retention-days: 7
 
-      - name: Build
+  # ─── Build + bundle-size budget ─────────────────────────────────
+  # Build output uploaded as artifact; e2e shards below download it
+  # rather than rebuilding from source (saves ~10s × 2 shards).
+  build:
+    name: Build
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - name: Restore node_modules + .svelte-kit
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            node_modules
+            .svelte-kit
+          key: ${{ needs.setup.outputs.deps-cache-key }}
+          fail-on-cache-miss: true
+      - name: Vite build
         run: npm run build
-
       - name: Bundle-size check
         run: npx size-limit
+      - name: Upload build artifact for e2e shards
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-${{ github.sha }}
+          path: build/
+          retention-days: 1
+          if-no-files-found: error
 
-      # Cache Playwright's chromium across runs — saves ~30s per run
-      # when the @playwright/test version is unchanged. Cache key
-      # includes the package version so a bump invalidates cleanly.
+  # ─── E2E sharded across 2 parallel runners ──────────────────────
+  # Playwright's --shard=N/M splits spec files across M shards. Our
+  # 18 spec files split 9/9; each shard runs ~2-3 min on a single
+  # worker. Parallel = ~3 min wall-clock vs 5 min serial.
+  #
+  # Each shard:
+  #   - restores node_modules
+  #   - downloads the build artifact from the build job
+  #   - installs Playwright chromium (cached by version)
+  #   - runs `playwright test --shard=N/2`
+  e2e:
+    name: E2E (shard ${{ matrix.shard }}/2)
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - name: Restore node_modules + .svelte-kit
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            node_modules
+            .svelte-kit
+          key: ${{ needs.setup.outputs.deps-cache-key }}
+          fail-on-cache-miss: true
+      - name: Download build artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: build-${{ github.sha }}
+          path: build/
       - name: Get Playwright version
         id: pw-version
         run: |
           echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-
       - name: Cache Playwright chromium
         uses: actions/cache@v5
         id: pw-cache
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.version }}-chromium
-
       - name: Install Playwright chromium
         if: steps.pw-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
-
-      - name: Install Playwright system deps
+      - name: Install Playwright system deps (cache hit)
         if: steps.pw-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
-
-      - name: E2E tests (chromium)
-        # Chromium-only matrix per chore/ci-cost-reduction:
-        # Firefox + WebKit re-add when a browser-specific bug
-        # surfaces or pre-launch coverage demands it. ~70% of
-        # browser usage is Chromium-based (Chrome + Edge); the
-        # JS engine differences rarely manifest in our SPA's
-        # form/CRUD surfaces.
-        run: npx playwright test --project=chromium --reporter=html
+      - name: E2E tests — shard ${{ matrix.shard }}/2
+        # Chromium-only matrix per chore/ci-cost-reduction (Firefox +
+        # WebKit re-add when a browser-specific bug surfaces). ~70% of
+        # browser usage is Chromium-based.
+        run: npx playwright test --project=chromium --shard=${{ matrix.shard }}/2 --reporter=html
         env:
           CI: 'true'
-
       - name: Upload Playwright report on failure
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-report
+          name: playwright-report-shard-${{ matrix.shard }}
           path: playwright-report/
           retention-days: 14
-
       - name: Upload Playwright traces on failure
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-traces
+          name: playwright-traces-shard-${{ matrix.shard }}
           path: test-results/
           retention-days: 14
+
+  # ─── Sentinel: aggregates pass/fail of every required job ──────
+  # GitHub branch-protection points at this single job rather than
+  # the matrix (which would otherwise require each shard to be listed
+  # individually). When this passes, the PR is mergeable.
+  #
+  # `if: always()` so the sentinel still evaluates even when an
+  # upstream job fails — and explicitly fails itself in that case.
+  ci-pass:
+    name: CI pass
+    if: always()
+    needs:
+      - setup
+      - lint
+      - typecheck
+      - test
+      - build
+      - e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Verify all required jobs passed
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "::error::One or more required CI jobs failed or were cancelled."
+            exit 1
+          fi
+          echo "All jobs passed."
