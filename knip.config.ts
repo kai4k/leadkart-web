@@ -79,7 +79,9 @@ const config: KnipConfig = {
 		'storybook',
 		'@storybook/svelte',
 		'@storybook/sveltekit',
-		'@storybook/addon-essentials'
+		'@storybook/addon-essentials',
+		// oxlint — invoked by name via npm scripts + npx, knip doesn't see the call site
+		'oxlint'
 	]
 };
 

@@ -1,0 +1,50 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"plugins": ["typescript", "promise", "import"],
+	"categories": {
+		"correctness": "error",
+		"suspicious": "off",
+		"perf": "off",
+		"restriction": "off",
+		"pedantic": "off",
+		"style": "off",
+		"nursery": "off"
+	},
+	"rules": {
+		"no-eval": "error",
+		"no-implied-eval": "error",
+		"no-new-func": "error",
+		"no-script-url": "error",
+		"no-debugger": "error",
+		"no-alert": "error"
+	},
+	"overrides": [
+		{
+			"files": [
+				"scripts/**/*.{mjs,js,cjs,ts}",
+				"tests/**/*.{ts,js}",
+				"**/*.config.{ts,js,mjs,cjs}",
+				".*.{cjs,mjs,js}"
+			],
+			"rules": {
+				"no-console": "off"
+			}
+		}
+	],
+	"ignorePatterns": [
+		"node_modules",
+		".svelte-kit",
+		"build",
+		"coverage",
+		"playwright-report",
+		"test-results",
+		"storybook-static",
+		"src/lib/api/generated",
+		"**/*.stories.ts",
+		"**/*.stories.svelte",
+		".storybook",
+		"tests/e2e/mock-server",
+		"**/*.svelte",
+		"**/*.svelte.ts"
+	]
+}

@@ -95,20 +95,35 @@ jobs:
     uses: ./.github/workflows/_e2e.yml
 
   # ─── Sentinel: single check for branch protection ───
-  # Branch protection targets THIS job rather than each matrix shard
-  # individually. Adding/removing e2e shards doesn't require updating
-  # branch protection rules.
+  #
+  # Branch protection on `main` should require ONLY this job ("CI pass").
+  # Adding/removing matrix shards (e.g. bumping e2e from 4 to 8 shards)
+  # then doesn't require updating branch-protection rules.
+  #
+  # Why re-actors/alls-green instead of a homegrown `contains(needs.*.result,
+  # 'failure')` check:
+  #
+  #   - A homegrown check passes the moment NO upstream result is 'failure',
+  #     which silently treats empty results (still-running matrix shards,
+  #     reusable-workflow result-propagation races) as success. Real bug
+  #     hit in the previous revision: ci-pass went green while typecheck
+  #     was still running because reusable-workflow callers occasionally
+  #     report empty `needs.*.result` before the inner workflow's last
+  #     job actually completes.
+  #
+  #   - re-actors/alls-green is the audited canon (used by Pydantic,
+  #     Django, FastAPI, NumPy, Scrapy, …) — explicitly waits for every
+  #     needed job to reach 'success' (failing on 'failure', 'cancelled',
+  #     'skipped', or empty/unresolved). Single source of truth for
+  #     matrix + reusable-workflow result aggregation.
   ci-pass:
     name: CI pass
     if: always()
     needs: [install, lint, typecheck, test, build, e2e]
     runs-on: ubuntu-latest
-    timeout-minutes: 1
+    timeout-minutes: 2
     steps:
       - name: Verify all required jobs passed
-        run: |
-          if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
-            echo "::error::One or more required CI jobs failed or were cancelled."
-            exit 1
-          fi
-          echo "All jobs passed."
+        uses: re-actors/alls-green@release/v1
+        with:
+          jobs: ${{ toJSON(needs) }}
