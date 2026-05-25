@@ -69,10 +69,7 @@ for (const rel of files) {
 			return `${lineStart}${indent}void ${call}`;
 		}
 		const tail = next.slice(Math.max(0, look - 10), look + 1);
-		if (
-			/(await|return|void|,|\(|\[|=>|=\s*$)$/.test(tail) ||
-			tail.endsWith('Promise.all(')
-		) {
+		if (/(await|return|void|,|\(|\[|=>|=\s*$)$/.test(tail) || tail.endsWith('Promise.all(')) {
 			return match; // already handled
 		}
 		voidCount += 1;
