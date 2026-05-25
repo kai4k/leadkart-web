@@ -40,7 +40,12 @@ export default ts.config(
 			// type-check inside Storybook's own pipeline (storybook build).
 			'**/*.stories.ts',
 			'**/*.stories.svelte',
-			'.storybook/**'
+			'.storybook/**',
+			// Self-contained Node mock server for Playwright e2e — not
+			// part of the SvelteKit TS graph, so typescript-eslint's
+			// projectService can't find it. Its own logic is simple
+			// enough that PR review is sufficient.
+			'tests/e2e/mock-server/**'
 		]
 	},
 	js.configs.recommended,
