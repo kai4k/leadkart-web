@@ -19,7 +19,7 @@ const config: StorybookConfig = {
 		'../src/lib/components/**/*.stories.@(ts|svelte)',
 		'../src/lib/features/**/*.stories.@(ts|svelte)'
 	],
-	addons: ['@storybook/addon-essentials'],
+	addons: ['@storybook/addon-essentials', '@storybook/addon-a11y', '@storybook/addon-svelte-csf'],
 	staticDirs: ['../static'],
 	core: {
 		disableTelemetry: true,

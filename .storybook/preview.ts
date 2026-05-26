@@ -27,6 +27,21 @@ const preview: Preview = {
 			]
 		},
 		layout: 'centered',
+		// addon-a11y configuration: every story is automatically axe-
+		// scanned. `test: 'error'` makes a11y violations fail the
+		// `npx storybook test` runner (when wired). Storybook UI
+		// surfaces the violations in the A11y panel regardless.
+		a11y: {
+			test: 'error',
+			config: {
+				rules: [
+					// Accept WCAG 2.2 AA defaults; selectively disable noise
+					// that's intrinsic to a primitive viewed in isolation
+					// (e.g., a Button story has no surrounding landmark).
+					{ id: 'region', enabled: false }
+				]
+			}
+		},
 		options: {
 			storySort: {
 				order: ['Foundations', 'UI', 'Form', 'Data', 'Feedback', 'Overlay', 'Navigation']
