@@ -244,6 +244,9 @@
 				oninput={(e) => setSearch((e.currentTarget as HTMLInputElement).value)}
 				class="glass-input w-64 rounded-md px-3 py-2 text-sm"
 			/>
+			<Button variant="tonal" onclick={() => goto('/settings/users/hierarchy')}>
+				<Icon icon={Users} size="sm" /> Hierarchy
+			</Button>
 			<Button onclick={() => (createOpen = true)}>
 				<Icon icon={Plus} size="sm" /> Add member
 			</Button>
@@ -256,6 +259,7 @@
 		rowKey={(u) => u.membership_id}
 		state={tableState}
 		error={listErrorCopy}
+		onRowClick={(u) => goto(`/settings/users/${u.membership_id}`)}
 		{rowActions}
 	>
 		{#snippet emptyState()}

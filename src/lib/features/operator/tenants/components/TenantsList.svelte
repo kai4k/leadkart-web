@@ -3,22 +3,49 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
-	import { Alert, Badge, Button, DataTable, EmptyState, Spinner } from '$ui';
+	import { Alert, Badge, Button, DataTable, Dropdown, EmptyState, Spinner } from '$ui';
 	import type { DataTableColumn } from '$ui';
-	import { Building2, Eye, Plus, Search, Shield, Icon } from '$icons';
-	import { tenantsListQuery } from '$features/operator/tenants/queries';
-	import { tenantLifecycleBadge } from '$features/operator/tenants/view-models';
+	import {
+		Building2,
+		Eye,
+		MoreVertical,
+		Pause,
+		Play,
+		Plus,
+		RotateCcw,
+		Search,
+		Shield,
+		Trash2,
+		Icon
+	} from '$icons';
+	import {
+		activateTenantMutation,
+		restoreTenantMutation,
+		tenantsListQuery
+	} from '$features/operator/tenants/queries';
+	import {
+		canActivate,
+		canMarkForDeletion,
+		canRestore,
+		canSuspend,
+		tenantLifecycleBadge
+	} from '$features/operator/tenants/view-models';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 	import { AuthError, NetworkError, NotFoundError } from '$lib/api/errors';
 	import { enterScope as enterScopeApi } from '$features/operator/scope';
 	import { toast } from '$ui';
 	import CreateTenantDrawer from './CreateTenantDrawer.svelte';
+	import SuspendDialog from './SuspendDialog.svelte';
+	import MarkForDeletionDialog from './MarkForDeletionDialog.svelte';
 	import ImpersonateModal from '$features/operator/impersonation/components/ImpersonateModal.svelte';
 	import type { TenantDto } from '$features/operator/tenants/types';
 
 	const PAGE_SIZE = 10;
 
 	let createOpen = $state(false);
+	let suspendOpen = $state(false);
+	let markOpen = $state(false);
+	let lifecycleTarget = $state<TenantDto | null>(null);
 	let impersonateOpen = $state(false);
 	let impersonateTarget = $state<TenantDto | null>(null);
 	/** Slug of the tenant currently being opened — drives the inline
@@ -26,7 +53,16 @@
 	let openingScopeSlug = $state<string | null>(null);
 
 	const search = $derived(page.url.searchParams.get('q') ?? '');
+	const statusFilter = $derived(page.url.searchParams.get('status') ?? 'all');
 	const currentPage = $derived(Number(page.url.searchParams.get('page') ?? '1') || 1);
+
+	function setStatusFilter(value: string) {
+		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
+		if (value && value !== 'all') params.set('status', value);
+		else params.delete('status');
+		params.delete('page');
+		goto(`?${params}`, { replaceState: true });
+	}
 
 	function setSearch(value: string) {
 		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
@@ -46,9 +82,12 @@
 	const capsQuery = myCapabilitiesQuery();
 	const canCreate = $derived(hasCapability(capsQuery.data, 'platform.tenants.create'));
 	const canView = $derived(hasCapability(capsQuery.data, 'platform.tenants.view'));
+	const canManage = $derived(hasCapability(capsQuery.data, 'platform.tenants.manage'));
 
 	const query = tenantsListQuery();
 	const qc = useQueryClient();
+	const activateMutation = activateTenantMutation();
+	const restoreMutation = restoreTenantMutation();
 
 	const filtered = $derived.by(() => {
 		const all = query.data?.tenants ?? [];
@@ -61,10 +100,38 @@
 						t.legal_name.toLowerCase().includes(q)
 				)
 			: all;
-		const platform = matched.find((t: TenantDto) => t.slug === 'platform');
-		const rest = matched.filter((t: TenantDto) => t.slug !== 'platform');
+		const byStatus =
+			statusFilter === 'all'
+				? matched
+				: matched.filter((t: TenantDto) => t.status === statusFilter);
+		const platform = byStatus.find((t: TenantDto) => t.slug === 'platform');
+		const rest = byStatus.filter((t: TenantDto) => t.slug !== 'platform');
 		return platform ? [platform, ...rest] : rest;
 	});
+
+	const statusCounts = $derived.by(() => {
+		const all = query.data?.tenants ?? [];
+		const counts = { all: all.length, active: 0, suspended: 0, marked_for_deletion: 0, pending: 0 };
+		for (const t of all) {
+			if (t.status === 'active') counts.active++;
+			else if (t.status === 'suspended') counts.suspended++;
+			else if (t.status === 'marked_for_deletion') counts.marked_for_deletion++;
+			else if (t.status === 'pending') counts.pending++;
+		}
+		return counts;
+	});
+
+	const statusOptions = $derived([
+		{ value: 'all', label: 'All', count: statusCounts.all },
+		{ value: 'active', label: 'Active', count: statusCounts.active },
+		{ value: 'suspended', label: 'Suspended', count: statusCounts.suspended },
+		{ value: 'pending', label: 'Pending', count: statusCounts.pending },
+		{
+			value: 'marked_for_deletion',
+			label: 'Marked for deletion',
+			count: statusCounts.marked_for_deletion
+		}
+	] as const);
 
 	const totalPages = $derived(Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)));
 	const paged = $derived(filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE));
@@ -163,19 +230,70 @@
 			<Spinner size={14} />
 			<span class="caption text-fg-muted">Opening…</span>
 		</div>
-	{:else if canView && tenant.slug !== 'platform'}
-		<Button
-			variant="ghost"
-			size="sm"
-			disabled={openingScopeSlug !== null}
-			onclick={(e) => {
-				e.stopPropagation();
-				openImpersonate(tenant);
-			}}
-			aria-label="Impersonate {tenant.display_name}"
-		>
-			<Icon icon={Eye} size="sm" /> Impersonate
-		</Button>
+	{:else if tenant.slug !== 'platform'}
+		<div class="cluster cluster-tight">
+			{#if canView}
+				<Button
+					variant="ghost"
+					size="sm"
+					disabled={openingScopeSlug !== null}
+					onclick={(e) => {
+						e.stopPropagation();
+						openImpersonate(tenant);
+					}}
+					aria-label="Impersonate {tenant.display_name}"
+				>
+					<Icon icon={Eye} size="sm" /> Impersonate
+				</Button>
+			{/if}
+			{#if canManage}
+				<Dropdown.Root>
+					<Dropdown.Trigger>
+						<Button
+							variant="ghost"
+							size="sm"
+							aria-label="Lifecycle actions for {tenant.display_name}"
+						>
+							<Icon icon={MoreVertical} size="sm" />
+						</Button>
+					</Dropdown.Trigger>
+					<Dropdown.Menu>
+						{#if canSuspend(tenant)}
+							<Dropdown.Item
+								onclick={() => {
+									lifecycleTarget = tenant;
+									suspendOpen = true;
+								}}
+							>
+								<Icon icon={Pause} size="sm" /> Suspend
+							</Dropdown.Item>
+						{/if}
+						{#if canActivate(tenant)}
+							<Dropdown.Item onclick={() => activateMutation.mutate(tenant.id)}>
+								<Icon icon={Play} size="sm" /> Activate
+							</Dropdown.Item>
+						{/if}
+						{#if canRestore(tenant)}
+							<Dropdown.Item onclick={() => restoreMutation.mutate(tenant.id)}>
+								<Icon icon={RotateCcw} size="sm" /> Restore
+							</Dropdown.Item>
+						{/if}
+						{#if canMarkForDeletion(tenant)}
+							<Dropdown.Separator />
+							<Dropdown.Item
+								variant="danger"
+								onclick={() => {
+									lifecycleTarget = tenant;
+									markOpen = true;
+								}}
+							>
+								<Icon icon={Trash2} size="sm" /> Mark for deletion
+							</Dropdown.Item>
+						{/if}
+					</Dropdown.Menu>
+				</Dropdown.Root>
+			{/if}
+		</div>
 	{/if}
 {/snippet}
 
@@ -192,20 +310,39 @@
 		{/if}
 	</header>
 
-	<div class="cluster">
-		<div class="relative flex-1">
-			<span class="pointer-events-none absolute inset-y-0 start-3 flex items-center">
-				<Icon icon={Search} size="sm" class="text-fg-subtle" />
-			</span>
-			<input
-				type="search"
-				placeholder="Filter by name, slug, or legal name"
-				value={search}
-				oninput={(e) => setSearch((e.currentTarget as HTMLInputElement).value)}
-				class="glass-input w-full rounded-md py-2 ps-9 pe-3 text-sm"
-				aria-label="Filter tenants"
-			/>
+	<div class="stack stack-tight">
+		<div class="cluster">
+			<div class="relative flex-1">
+				<span class="pointer-events-none absolute inset-y-0 start-3 flex items-center">
+					<Icon icon={Search} size="sm" class="text-fg-subtle" />
+				</span>
+				<input
+					type="search"
+					placeholder="Filter by name, slug, or legal name"
+					value={search}
+					oninput={(e) => setSearch((e.currentTarget as HTMLInputElement).value)}
+					class="glass-input w-full rounded-md py-2 ps-9 pe-3 text-sm"
+					aria-label="Filter tenants"
+				/>
+			</div>
 		</div>
+
+		<nav class="cluster cluster-tight" aria-label="Filter tenants by lifecycle status">
+			{#each statusOptions as opt (opt.value)}
+				{@const active = statusFilter === opt.value}
+				<button
+					type="button"
+					onclick={() => setStatusFilter(opt.value)}
+					aria-pressed={active}
+					class="label inline-flex items-center gap-2 rounded-full px-3 py-1 transition-colors {active
+						? 'bg-primary text-primary-fg'
+						: 'bg-bg-muted text-fg-muted hover:text-fg'}"
+				>
+					{opt.label}
+					<span class="caption tabular-nums opacity-70">{opt.count}</span>
+				</button>
+			{/each}
+		</nav>
 	</div>
 
 	<DataTable.Root
@@ -294,6 +431,16 @@
 </div>
 
 <CreateTenantDrawer bind:open={createOpen} onOpenChange={(o) => (createOpen = o)} />
+<SuspendDialog
+	bind:open={suspendOpen}
+	tenant={lifecycleTarget}
+	onOpenChange={(o) => (suspendOpen = o)}
+/>
+<MarkForDeletionDialog
+	bind:open={markOpen}
+	tenant={lifecycleTarget}
+	onOpenChange={(o) => (markOpen = o)}
+/>
 <ImpersonateModal
 	bind:open={impersonateOpen}
 	tenant={impersonateTarget}

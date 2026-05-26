@@ -52,6 +52,22 @@ export function usersListQuery() {
 	}));
 }
 
+/**
+ * Single-membership detail — GET /v1/users/{membershipId}.
+ * Mutations on the same id invalidate this key, so the page re-fetches
+ * canonical state instead of patching mutation responses into the cache.
+ */
+export function userDetailQuery(getId: () => string) {
+	return createQuery(() => {
+		const id = getId();
+		return {
+			queryKey: usersKeys.detail(id),
+			queryFn: () => api.getUser(id),
+			enabled: Boolean(id)
+		};
+	});
+}
+
 export function rolesCatalogQuery() {
 	return createQuery(() => ({
 		queryKey: usersKeys.roles(),

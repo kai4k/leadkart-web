@@ -10,10 +10,8 @@
 	import type { RoleDto } from '$features/roles/types';
 	import { roleBadgeVariant, isProtectedRole, roleMemberCount } from '$features/roles/view-models';
 	import { AuthError, NetworkError } from '$api/errors';
-	import CreateRoleDrawer from './CreateRoleDrawer.svelte';
 	import DeleteRoleDialog from './DeleteRoleDialog.svelte';
 
-	let createOpen = $state(false);
 	let deleteOpen = $state(false);
 	let targetRole = $state<RoleDto | null>(null);
 
@@ -142,7 +140,7 @@
 				{roleList.length} role{roleList.length === 1 ? '' : 's'}
 			</p>
 		</div>
-		<Button onclick={() => (createOpen = true)}>
+		<Button onclick={() => goto('/settings/roles/new')}>
 			<Icon icon={Plus} size="sm" /> Create role
 		</Button>
 	</header>
@@ -162,7 +160,7 @@
 				description="Roles bundle permissions for easy assignment to team members."
 			>
 				{#snippet action()}
-					<Button onclick={() => (createOpen = true)}>
+					<Button onclick={() => goto('/settings/roles/new')}>
 						<Icon icon={Plus} size="sm" /> Create role
 					</Button>
 				{/snippet}
@@ -173,5 +171,4 @@
 	<Pagination page={currentPage} {pageCount} onChange={setPage} />
 </div>
 
-<CreateRoleDrawer bind:open={createOpen} onOpenChange={(o) => (createOpen = o)} />
 <DeleteRoleDialog bind:open={deleteOpen} role={targetRole} onOpenChange={(o) => (deleteOpen = o)} />

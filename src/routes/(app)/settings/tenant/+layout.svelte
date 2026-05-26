@@ -38,6 +38,7 @@
 		{ href: '/settings/tenant/profile', label: 'Profile' },
 		{ href: '/settings/tenant/statutory', label: 'Statutory IDs' },
 		{ href: '/settings/tenant/contact', label: 'Contact' },
+		{ href: '/settings/tenant/security', label: 'Security' },
 		{ href: '/settings/tenant/preferences', label: 'Preferences' }
 	];
 
