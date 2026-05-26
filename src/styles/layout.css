@@ -64,6 +64,38 @@
 		margin-block: auto;
 	}
 
+	/* ═══ Form-footer — canonical submit-button container ═══
+	 *
+	 * Every form's submit cluster goes inside `<div class="form-footer">`.
+	 * The class encodes the FAANG-canon footer pattern:
+	 *   - Mobile (default): single column, button stretches full-width
+	 *     for thumb-reachable tap target (Material 3 / Apple HIG guidance)
+	 *   - Desktop (sm+): row layout, content pushed to end of inline
+	 *     axis, buttons auto-sized to content
+	 *
+	 * Replaces the hand-rolled `flex flex-col gap-2 sm:flex-row
+	 * sm:justify-end` pattern that several forms shipped with — having
+	 * the canon in one named class:
+	 *   1. eliminates the "I forgot to wrap" bug (e.g. ChangeEmailForm
+	 *      submit-button-stretches-full-width regression)
+	 *   2. lets the arch gate `check-form-submit-canon` enforce that
+	 *      every `<Button type="submit">` is a child of `.form-footer`
+	 *   3. makes the intent named + searchable + greppable
+	 *
+	 * Pattern reference: Linear forms, Stripe Dashboard forms,
+	 * Polaris `FormLayout` footer, Atlassian Forge submit pattern. */
+	.form-footer {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-2);
+	}
+	@media (min-width: 40rem) {
+		.form-footer {
+			flex-direction: row;
+			justify-content: flex-end;
+		}
+	}
+
 	/* ═══ Visually hidden — screen-reader only ═══ */
 	.sr-only {
 		position: absolute;

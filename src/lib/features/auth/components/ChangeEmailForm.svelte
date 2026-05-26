@@ -83,8 +83,10 @@
 		{#if formError}
 			<Alert variant="danger">{formError}</Alert>
 		{/if}
-		<Button type="submit" {loading}>
-			{loading ? $_('common.loading') : $_('auth.changeEmail.submit')}
-		</Button>
+		<div class="form-footer">
+			<Button type="submit" {loading}>
+				{loading ? $_('common.loading') : $_('auth.changeEmail.submit')}
+			</Button>
+		</div>
 	</form>
 {/if}

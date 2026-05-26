@@ -108,7 +108,7 @@
 			<Alert variant="danger">{form.bannerError}</Alert>
 		{/if}
 
-		<div class="cluster">
+		<div class="form-footer">
 			<Button type="submit" loading={form.isSubmitting} disabled={!dirty || form.isSubmitting}
 				>Save changes</Button
 			>

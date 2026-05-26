@@ -64,7 +64,7 @@
 		<Alert variant="danger">{form.bannerError}</Alert>
 	{/if}
 
-	<div class="cluster justify-end">
+	<div class="form-footer">
 		<Button type="submit" loading={form.isSubmitting}>Save changes</Button>
 	</div>
 </form>
