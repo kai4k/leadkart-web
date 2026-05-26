@@ -26,6 +26,7 @@
 		"storybook:build": "storybook build",
 		"test:visual": "playwright test --project=visual",
 		"test:visual:update": "playwright test --project=visual --update-snapshots",
+		"test:a11y": "playwright test --project=a11y",
 		"verify": "npm run lint && npm run lint:css && npm run lint:deps && npm run arch:check && npm run check && npm run lint:dead",
 		"test": "vitest run --passWithNoTests",
 		"test:watch": "vitest",

@@ -1,0 +1,82 @@
+name: _visual
+# Reusable workflow — Playwright visual regression. Called by ci.yml
+# after the build job uploads the build/ artifact.
+#
+# Behaviour
+# ─────────
+# - Single chromium runner (cross-browser visual diffs are noise; the
+#   canonical industry pattern is to pin one engine — Playwright docs +
+#   Vercel Argos-CI + Chromatic all do this).
+# - Reuses node_modules cache + downloads build/ artifact + reuses the
+#   Playwright chromium cache (keyed on @playwright/test version).
+# - Uploads HTML report + traces on failure for human review.
+#
+# Baseline policy
+# ───────────────
+# Snapshot baselines live in `tests/visual/**/__screenshots__/` and are
+# committed to git. First-PR fail-mode: if the diff fails, the failure
+# HTML report makes the pixel delta obvious and the engineer either:
+#   1. Fixes the regression, OR
+#   2. Re-runs `npm run test:visual:update` locally and commits the new
+#      baselines as a deliberate visual change.
+#
+# This is the standard canon for visual-regression-in-CI (Vercel,
+# Stripe, Linear all ship this pattern).
+
+on:
+  workflow_call:
+
+jobs:
+  visual:
+    name: Visual regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+      - name: Download build artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: build-${{ github.sha }}
+          path: build/
+
+      - name: Get Playwright version
+        id: pw-version
+        run: |
+          echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright chromium
+        uses: actions/cache@v5
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.version }}-chromium
+
+      - name: Install Playwright chromium (cache miss)
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system deps (cache hit)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Run visual regression suite
+        run: npx playwright test --project=visual
+        env:
+          CI: 'true'
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-playwright-report
+          path: playwright-report/
+          retention-days: 14
+
+      - name: Upload visual diff artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-diffs
+          path: test-results/
+          retention-days: 14

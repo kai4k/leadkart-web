@@ -61,6 +61,16 @@ export default defineConfig({
 			testDir: './tests/e2e',
 			use: { ...devices['Desktop Safari'] }
 		},
+		// ── a11y deep (axe-core on every route, chromium only) ───────
+		// Separate project so `npx playwright test --project=a11y` runs
+		// the WCAG 2.2 AA suite independently. Chromium only — axe is
+		// rendering-engine-independent and re-running across browsers
+		// adds runtime without adding signal.
+		{
+			name: 'a11y',
+			testDir: './tests/a11y',
+			use: { ...devices['Desktop Chrome'] }
+		},
 		// ── visual (pixel-diff, chromium only) ────────────────────────
 		// Same browser engine as `chromium` above, but the testDir is
 		// `./tests/visual` so it's invokable independently via:
