@@ -6,6 +6,9 @@
 	import { managerLabel, userRoleBadges, userStatusBadge } from '../view-models';
 	import { displayName, initials } from '$features/auth/view-models';
 	import { removeManagerMutation } from '../queries';
+	import { personActivityQuery } from '$features/audit/queries';
+	import ActivityTimeline from '$features/audit/components/ActivityTimeline.svelte';
+	import { ApiError } from '$api/errors';
 
 	/**
 	 * UserDetailTabs — render-only sub-component for the dedicated
@@ -41,6 +44,8 @@
 	const directReports = $derived(roster.filter((u) => u.reports_to === user.membership_id));
 
 	const removeManager = removeManagerMutation();
+
+	const activityQuery = $derived(personActivityQuery(user.person_id));
 </script>
 
 <Tabs.Root value={tab} onValueChange={onTabChange}>
@@ -48,6 +53,7 @@
 		<Tabs.Trigger value="overview">Overview</Tabs.Trigger>
 		<Tabs.Trigger value="permissions">Roles & permissions</Tabs.Trigger>
 		<Tabs.Trigger value="reports">Reports</Tabs.Trigger>
+		<Tabs.Trigger value="activity">Activity</Tabs.Trigger>
 	</Tabs.List>
 
 	<Tabs.Content value="overview">
@@ -239,6 +245,28 @@
 						{/each}
 					</ul>
 				{/if}
+			</Card.Content>
+		</Card.Root>
+	</Tabs.Content>
+
+	<Tabs.Content value="activity">
+		<Card.Root padding="md" elevation="sm" class="mt-4">
+			<Card.Header>
+				<Card.Title>Activity log</Card.Title>
+				<Card.Description>
+					Audit events for this person across all tenants. Includes sign-ins, role changes, profile
+					updates, and lifecycle transitions.
+				</Card.Description>
+			</Card.Header>
+			<Card.Content>
+				<ActivityTimeline
+					data={activityQuery.data}
+					isPending={activityQuery.isPending}
+					isError={activityQuery.isError}
+					errorMessage={activityQuery.error instanceof ApiError
+						? activityQuery.error.message
+						: 'Failed to load activity'}
+				/>
 			</Card.Content>
 		</Card.Root>
 	</Tabs.Content>
