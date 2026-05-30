@@ -26,7 +26,7 @@ The Svelte SPA frontend for LeadKart's pharma SaaS. Targets the `leadkart-go` JS
 Per Niko Heikkilä "Clean Frontend Architecture with SvelteKit" + Strapi SOLID + the parallel TDL Wild Workouts pattern enforced on the Go side.
 
 ```
-┌──────────────────┐  ┌──────────────────┐  ┌───────────────┐  ┌─────────────┐
+┌──────────────────�  ┌──────────────────�  ┌───────────────�  ┌─────────────�
 │   API GATEWAY    │  │     SERVICE      │  │   VIEW MODEL  │  │  COMPONENT  │
 │  (lib/api/+      │→ │  (lib/features/  │→ │  (transform   │→ │  (renders   │
 │   features/<x>/  │  │   <x>/service.ts)│  │   for display)│  │   VM)       │
@@ -92,6 +92,8 @@ Today's codebase is SOLID-clean per `docs/audit-pass.md` (the deep-audit summary
 | Sidebar nav config (RBAC-ready)                                            | `src/lib/config/nav.ts`                                                                                                                 |
 | Auth route group                                                           | `src/routes/(auth)/` (signin + +error.svelte)                                                                                           |
 | Signed-in app group                                                        | `src/routes/(app)/` (auth-guarded by `+layout.ts`, +error.svelte for layout-aware errors)                                               |
+| Svelte canon prompt (load before any Svelte task)                          | `docs/svelte-canon-prompt.md` — verbatim from `https://svelte.dev/docs/ai/prompts/llms.txt`                                             |
+| Svelte MCP server config                                                   | `.mcp.json` — registers `@sveltejs/mcp` (tools: `svelte-autofixer`, `get-documentation`, `list-sections`, `playground-link`)            |
 
 ## Stack versions (locked to latest stable Q1 2026)
 
