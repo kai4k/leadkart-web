@@ -11,7 +11,7 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { ChevronRight, Icon } from '$icons';
-	import { cn, type WithElementRef } from '$lib/utils/cn';
+	import { cn, resolveHref, type WithElementRef } from '$lib/utils/cn';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLElement>> & {
 		items: BreadcrumbItem[];
@@ -47,7 +47,7 @@
 					</span>
 				{:else}
 					<a
-						href={item.href}
+						href={resolveHref(item.href)}
 						class="label-small text-fg-muted hover:text-fg focus-visible:ring-focus-ring inline-flex items-center gap-1 transition-colors focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
 					>
 						{#if item.icon}<Icon icon={item.icon} size="xs" />{/if}

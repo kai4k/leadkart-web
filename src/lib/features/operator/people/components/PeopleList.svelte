@@ -9,6 +9,7 @@
 	import { personDisplayName, personLifecycleBadge } from '$features/operator/people/view-models';
 	import type { PersonDto } from '$features/operator/people/types';
 	import { ApiError } from '$api/errors';
+	import { resolveHref } from '$lib/utils/cn';
 
 	const DEBOUNCE_MS = 300;
 
@@ -75,7 +76,7 @@
 		<Avatar initials={personInitials(name)} size="md" />
 		<div class="stack stack-tight min-w-0">
 			<a
-				href="/operator/persons/{p.id}"
+				href={resolveHref(`/operator/persons/${p.id}`)}
 				class="text-fg hover:text-primary truncate font-medium hover:underline">{name}</a
 			>
 			<span class="caption text-fg-muted truncate">{p.email}</span>

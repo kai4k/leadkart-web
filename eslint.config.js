@@ -98,11 +98,16 @@ export default ts.config(
 		},
 		rules: {
 			'no-undef': 'off',
-			// svelte/no-navigation-without-resolve fires on every goto() call
-			// until typed routes (`resolve()`) wraps every nav. Disabled
-			// during scaffold; revisit once route surface stable. Lifted
-			// up from the svelte-files-only block so `.svelte.ts` hooks
-			// that call goto() (use-url-tab, use-url-filters) don't trip.
+			// svelte/no-navigation-without-resolve: still 'off' (75 sites in
+			// total). Phase 2.5 swept 23 atom + consumer raw `<a href>` to
+			// use `resolveHref()` (src/lib/utils/cn.ts) which calls
+			// SvelteKit's `resolve()` internally with safe external-URL
+			// detection. The rule still flags those (it wants literal
+			// `resolve(...)` calls at the call site, not a wrapper) +
+			// ~50 `goto()` sites in .svelte.ts hooks (use-url-tab,
+			// use-url-filters, use-list-pagination) + .svelte files.
+			// Re-enable as 'error' once the typed-routes migration phase
+			// rewrites every goto() call to `goto(resolve('/path', {...}))`.
 			'svelte/no-navigation-without-resolve': 'off',
 			'svelte/no-useless-mustaches': 'off',
 

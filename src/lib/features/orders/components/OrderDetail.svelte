@@ -27,6 +27,7 @@
 	import DispatchDialog from './DispatchDialog.svelte';
 	import CancelOrderDialog from './CancelOrderDialog.svelte';
 	import type { BatchCatalogueEntry } from './OrderItemsEditor.svelte';
+	import { resolveHref } from '$lib/utils/cn';
 
 	type Props = { id: string };
 	let { id }: Props = $props();
@@ -78,7 +79,10 @@
 </script>
 
 <div class="stack stack-relaxed">
-	<a href="/orders" class="cluster cluster-tight text-fg-muted hover:text-fg caption inline-flex">
+	<a
+		href={resolveHref('/orders')}
+		class="cluster cluster-tight text-fg-muted hover:text-fg caption inline-flex"
+	>
 		<Icon icon={ChevronLeft} size="xs" /> Back to orders
 	</a>
 

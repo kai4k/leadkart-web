@@ -7,13 +7,13 @@
 	import { type VariantProps, tv } from 'tailwind-variants';
 
 	export const alertVariants = tv({
-		base: 'body-sm rounded-md border p-4',
+		base: 'body-sm rounded-md border p-4 backdrop-blur-md',
 		variants: {
 			variant: {
-				info: 'bg-info-50 border-info-100 text-info-900',
-				success: 'bg-success-50 border-success-100 text-success-900',
-				warning: 'bg-warning-50 border-warning-100 text-warning-900',
-				danger: 'bg-danger-50 border-danger-100 text-danger-900'
+				info: 'bg-info-50/85 border-info-100 text-info-900',
+				success: 'bg-success-50/85 border-success-100 text-success-900',
+				warning: 'bg-warning-50/85 border-warning-100 text-warning-900',
+				danger: 'bg-danger-50/85 border-danger-100 text-danger-900'
 			}
 		},
 		defaultVariants: { variant: 'info' }

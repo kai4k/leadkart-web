@@ -70,7 +70,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAnchorAttributes, HTMLButtonAttributes } from 'svelte/elements';
-	import { cn, type WithElementRef } from '$lib/utils/cn';
+	import { cn, resolveHref, type WithElementRef } from '$lib/utils/cn';
 	import Spinner from '../Spinner.svelte';
 
 	type Props = WithElementRef<HTMLButtonAttributes> &
@@ -96,11 +96,19 @@
 </script>
 
 {#if href}
+	<!--
+		Note: the svelte/no-navigation-without-resolve rule wants a literal
+		`resolve()` call at the href attribute. `resolveHref()` wraps
+		`resolve()` with external-URL detection so atoms can accept any
+		string prop safely. The rule's lexical check doesn't unwrap the
+		helper — flag is a known wrapper-pattern limitation; the helper
+		IS canonical-equivalent + handles externals (http, //, mailto:, #).
+	-->
 	<a
 		bind:this={ref}
 		data-slot="button"
 		class={cn(buttonVariants({ variant, size, fullWidth }), className)}
-		href={disabled || loading ? undefined : href}
+		href={disabled || loading ? undefined : resolveHref(href)}
 		aria-disabled={disabled || loading}
 		role={disabled || loading ? 'link' : undefined}
 		tabindex={disabled || loading ? -1 : undefined}

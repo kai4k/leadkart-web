@@ -9,6 +9,7 @@
 	import { roleBadgeVariant, isProtectedRole, roleMemberCount } from '$features/roles/view-models';
 	import { getListErrorMessage } from '$api/errors';
 	import { createListPagination } from '$lib/hooks';
+	import { resolveHref } from '$lib/utils/cn';
 	import DeleteRoleDialog from './DeleteRoleDialog.svelte';
 
 	let deleteOpen = $state(false);
@@ -74,8 +75,9 @@
 </script>
 
 {#snippet nameCell(role: RoleDto)}
-	<a href="/settings/roles/{role.id}" class="text-fg hover:text-primary font-medium hover:underline"
-		>{role.name}</a
+	<a
+		href={resolveHref(`/settings/roles/${role.id}`)}
+		class="text-fg hover:text-primary font-medium hover:underline">{role.name}</a
 	>
 {/snippet}
 
@@ -93,7 +95,7 @@
 		</Dropdown.Trigger>
 		<Dropdown.Menu>
 			<Dropdown.Item>
-				<a href="/settings/roles/{role.id}" class="cluster cluster-tight">
+				<a href={resolveHref(`/settings/roles/${role.id}`)} class="cluster cluster-tight">
 					<Icon icon={Edit} size="sm" /> Edit
 				</a>
 			</Dropdown.Item>

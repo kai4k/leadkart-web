@@ -6,6 +6,8 @@
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { ChevronLeft, ChevronRight, Icon } from '$icons';
 	import { cn, type WithElementRef } from '$lib/utils/cn';
+	import { Button } from '../button';
+	import { ButtonGroup } from '../button-group';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLElement>> & {
 		page: number;
@@ -40,54 +42,48 @@
 	const pages = $derived(visiblePages(page, pageCount));
 </script>
 
-<nav
-	bind:this={ref}
-	data-slot="pagination"
-	class={cn('cluster cluster-tight', className)}
-	aria-label="Pagination"
-	{...rest}
->
-	<button
-		type="button"
-		class="label text-fg-muted hover:text-fg inline-flex items-center gap-1 rounded-md px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40"
-		disabled={!canPrev}
-		aria-label="Previous page"
-		onclick={() => onChange(page - 1)}
-	>
-		<Icon icon={ChevronLeft} size="sm" />
-		Prev
-	</button>
-	<ul class="cluster cluster-tight list-none">
+<nav bind:this={ref} data-slot="pagination" aria-label="Pagination" class={cn(className)} {...rest}>
+	<ButtonGroup>
+		<Button
+			variant="tonal"
+			size="sm"
+			disabled={!canPrev}
+			aria-label="Previous page"
+			onclick={() => onChange(page - 1)}
+		>
+			<Icon icon={ChevronLeft} size="sm" />
+			Prev
+		</Button>
+
 		{#each pages as p, i (i)}
-			<li>
-				{#if p === 'gap'}
-					<span class="text-fg-subtle px-2">…</span>
-				{:else}
-					<button
-						type="button"
-						class={cn(
-							'label inline-flex h-7 min-w-7 items-center justify-center rounded-md px-2',
-							p === page
-								? 'bg-primary-soft text-primary'
-								: 'text-fg-muted hover:bg-bg-muted hover:text-fg'
-						)}
-						aria-current={p === page ? 'page' : undefined}
-						onclick={() => onChange(p)}
-					>
-						{p}
-					</button>
-				{/if}
-			</li>
+			{#if p === 'gap'}
+				<span
+					data-slot="pagination-ellipsis"
+					class="text-fg-subtle inline-flex items-center px-2"
+					aria-hidden="true">…</span
+				>
+			{:else}
+				<Button
+					variant={p === page ? 'primary' : 'tonal'}
+					size="sm"
+					aria-current={p === page ? 'page' : undefined}
+					aria-label={`Go to page ${p}`}
+					onclick={() => onChange(p)}
+				>
+					{p}
+				</Button>
+			{/if}
 		{/each}
-	</ul>
-	<button
-		type="button"
-		class="label text-fg-muted hover:text-fg inline-flex items-center gap-1 rounded-md px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40"
-		disabled={!canNext}
-		aria-label="Next page"
-		onclick={() => onChange(page + 1)}
-	>
-		Next
-		<Icon icon={ChevronRight} size="sm" />
-	</button>
+
+		<Button
+			variant="tonal"
+			size="sm"
+			disabled={!canNext}
+			aria-label="Next page"
+			onclick={() => onChange(page + 1)}
+		>
+			Next
+			<Icon icon={ChevronRight} size="sm" />
+		</Button>
+	</ButtonGroup>
 </nav>
