@@ -6,6 +6,27 @@
 
 The Svelte SPA frontend for LeadKart's pharma SaaS. Targets the `leadkart-go` JSON API. NOT a Blazor port — fresh build per Phase 0 decision (Svelte chosen over Blazor for cost + dashboard responsiveness).
 
+## Component library doctrine (Phase B — bits-ui refactor)
+
+| Concern                  | ONE library                                                                                                                                                                  |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Headless primitives      | **bits-ui v2** (only) — Dialog/Popover/Dropdown/Combobox/Calendar/Select/Switch/Tabs/Accordion/Tooltip/HoverCard/etc.                                                        |
+| Glass material           | **Svelte Bits GlassSurface** (only) — physics-based Liquid Glass via SVG filter. Drops our `.glass-*` utility CSS layer.                                                     |
+| Motion / decorative      | **Svelte Bits** (only) — Particles/AnimatedList/CountUp/ShinyText/FadeContent/AnimatedContent/ScrollReveal/BlurText/GradientText, installed via `pnpm dlx jsrepo add <name>` |
+| Tailwind animation utils | **tw-animate-css** (only) — `animate-in`, `fade-in-0`, `zoom-in-95`, `slide-in-from-*`                                                                                       |
+| Mobile bottom-sheet      | **vaul-svelte** (only) — has snap-points + drag + swipe; bits-ui Dialog doesn't                                                                                              |
+| Toasts                   | **svelte-sonner** (only) — bits-ui doesn't ship Toast                                                                                                                        |
+| Variants                 | **cva** (class-variance-authority — only, drop tailwind-variants in B2)                                                                                                      |
+| Class merge              | clsx + tailwind-merge via `cn()`                                                                                                                                             |
+| Icons                    | lucide-svelte via `$icons` registry                                                                                                                                          |
+| Forms state              | sveltekit-superforms + formsnap (Phase B7)                                                                                                                                   |
+| Charts                   | LayerChart (Phase B-data)                                                                                                                                                    |
+| Tables                   | TanStack Table (Phase B-data)                                                                                                                                                |
+
+**Single-library-per-component rule:** each concern picks ONE source. No two libraries doing the same job. Glass material composed via Svelte Bits `<GlassSurface>` as an inner wrapper inside bits-ui surface compounds — NOT baked into compound variants.
+
+**Visual canon:** Domiex token system (`--color-bg-*`, `--color-fg-*`, `--color-brand-*`, suffix `-hover`/`-active`/`-soft`/`-fg`) — OUR design language, stays. Logo OKLCH palette anchors the brand stops.
+
 ## Hard architectural rules
 
 1. **Industry-canonical SvelteKit 2 layout.** Feature-first under `lib/features/`. Cross-feature primitives under `lib/components/{ui,form,feedback,data}/`. Layout shell under `lib/layouts/`. Route groups `(auth)` and `(app)` for layout-different sections. NEVER type-first dumps like `lib/components/{common,layout-components,...}/`.
