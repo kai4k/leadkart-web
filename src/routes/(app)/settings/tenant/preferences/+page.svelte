@@ -1,26 +1,20 @@
 <script lang="ts">
 	import { Card } from '$ui';
 	import TenantDisplayPreferencesForm from '$features/tenant/components/TenantDisplayPreferencesForm.svelte';
-	import { tenantSelfQuery } from '$features/tenant/queries';
-	import { myCapabilitiesQuery } from '$features/auth/queries';
+	import type { PageData, ActionData } from './$types';
 
-	const capsQuery = myCapabilitiesQuery();
-	const tenantId = $derived(capsQuery.data?.tenant_id ?? '');
-	const tenantQuery = $derived(tenantSelfQuery(tenantId));
-	const tenantData = $derived(tenantQuery.data ?? null);
+	let { data, form }: { data: PageData; form: ActionData } = $props();
 </script>
 
-{#if tenantData}
-	<Card.Root>
-		<Card.Header>
-			<Card.Title>Display preferences</Card.Title>
-			<Card.Description>
-				Locale, time zone, date format, and currency control how data appears across the LeadKart UI
-				and on outbound emails / invoices.
-			</Card.Description>
-		</Card.Header>
-		<Card.Content>
-			<TenantDisplayPreferencesForm tenant={tenantData} {tenantId} />
-		</Card.Content>
-	</Card.Root>
-{/if}
+<Card.Root>
+	<Card.Header>
+		<Card.Title>Display preferences</Card.Title>
+		<Card.Description>
+			Locale, time zone, date format, and currency control how data appears across the LeadKart UI
+			and on outbound emails / invoices.
+		</Card.Description>
+	</Card.Header>
+	<Card.Content>
+		<TenantDisplayPreferencesForm tenant={data.tenant} form={form ?? undefined} />
+	</Card.Content>
+</Card.Root>

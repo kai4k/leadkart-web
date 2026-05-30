@@ -3,16 +3,14 @@
 	import { Card } from '$ui';
 	import ChangePasswordForm from '$features/auth/components/ChangePasswordForm.svelte';
 	import ChangeEmailForm from '$features/auth/components/ChangeEmailForm.svelte';
+	import type { ActionData } from './$types';
 
 	/**
-	 * /settings/account/security — Account & Security page.
-	 *
-	 * Surfaces:
-	 *   - Change password  (authenticated, requires current password)
-	 *   - Change email     (authenticated; sends confirmation link to the
-	 *                       NEW address — change doesn't apply until the
-	 *                       link is clicked)
+	 * /settings/account/security — two form actions (changePassword,
+	 * changeEmail). Each form filters by `form.which` so it only renders
+	 * the result for its own action.
 	 */
+	let { form }: { form: ActionData } = $props();
 </script>
 
 <svelte:head>
@@ -31,7 +29,7 @@
 			<Card.Description>{$_('account.security.changePassword.description')}</Card.Description>
 		</Card.Header>
 		<Card.Content>
-			<ChangePasswordForm />
+			<ChangePasswordForm form={form ?? undefined} />
 		</Card.Content>
 	</Card.Root>
 
@@ -41,7 +39,7 @@
 			<Card.Description>{$_('auth.changeEmail.subtitle')}</Card.Description>
 		</Card.Header>
 		<Card.Content>
-			<ChangeEmailForm />
+			<ChangeEmailForm form={form ?? undefined} />
 		</Card.Content>
 	</Card.Root>
 </div>

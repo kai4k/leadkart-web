@@ -1,70 +1,74 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import { Alert, Button } from '$ui';
 	import { TextField } from '$form';
-	import { updateTenantProfileSchema } from '../schemas';
-	import { updateTenantProfileMutation } from '../queries';
-	import { useForm } from '$lib/hooks/use-form.svelte';
 	import type { Tenant } from '../types';
 
 	/**
-	 * TenantProfileForm — edits legal_name + display_name and submits
-	 * via updateTenantProfileMutation. tenantId is threaded from the
-	 * parent so this form is pure: it owns no session reads.
+	 * TenantProfileForm — edits legal_name + display_name via SvelteKit
+	 * form action (default action on /settings/tenant/profile/+page.server.ts).
+	 * Pure renderer over tenant + form.
 	 */
+	type FormResult = {
+		values?: { legal_name: string; display_name: string };
+		errors?: Record<string, string | string[] | undefined>;
+		bannerError?: string;
+		success?: boolean;
+	};
+	type Props = { tenant: Tenant; form?: FormResult };
+	let { tenant, form }: Props = $props();
 
-	interface Props {
-		tenant: Tenant;
-		tenantId: string;
+	let loading = $state(false);
+
+	function err(field: string): string | undefined {
+		const v = form?.errors?.[field];
+		if (typeof v === 'string') return v;
+		if (Array.isArray(v)) return v[0];
+		return undefined;
 	}
 
-	let { tenant, tenantId }: Props = $props();
-
-	const mutation = $derived(updateTenantProfileMutation(tenantId));
-
-	const form = useForm(updateTenantProfileSchema, {
-		legal_name: '',
-		display_name: ''
-	});
-
-	$effect.pre(() => {
-		form.values.legal_name = tenant.legal_name;
-		form.values.display_name = tenant.display_name;
-	});
-
-	async function onSubmit(e: SubmitEvent) {
-		await form.submit(e, async (values) => {
-			await new Promise<void>((resolve, reject) => {
-				mutation.mutate(values, {
-					onSuccess: () => resolve(),
-					onError: (err) => reject(err)
-				});
-			});
-		});
-	}
+	const values = $derived(
+		form?.values ?? { legal_name: tenant.legal_name, display_name: tenant.display_name }
+	);
 </script>
 
-<form class="stack" onsubmit={onSubmit} novalidate>
+<form
+	class="stack"
+	method="POST"
+	novalidate
+	use:enhance={() => {
+		loading = true;
+		return async ({ update }) => {
+			await update();
+			loading = false;
+		};
+	}}
+>
 	<TextField
 		label="Legal name"
+		name="legal_name"
 		hint="The registered name on the tenant's drug-licence and tax filings."
 		required
-		bind:value={form.values.legal_name}
-		error={form.errors.legal_name}
+		value={values.legal_name}
+		error={err('legal_name')}
 	/>
 
 	<TextField
 		label="Display name"
+		name="display_name"
 		hint="The friendly name shown in the topbar and on emailed documents."
 		required
-		bind:value={form.values.display_name}
-		error={form.errors.display_name}
+		value={values.display_name}
+		error={err('display_name')}
 	/>
 
-	{#if form.bannerError}
+	{#if form?.bannerError}
 		<Alert variant="danger">{form.bannerError}</Alert>
+	{:else if form?.success}
+		<Alert variant="success">Profile saved.</Alert>
 	{/if}
 
 	<div class="form-footer">
-		<Button type="submit" loading={form.isSubmitting}>Save changes</Button>
+		<Button type="submit" {loading}>Save changes</Button>
 	</div>
 </form>

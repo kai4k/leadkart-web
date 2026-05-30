@@ -1,26 +1,20 @@
 <script lang="ts">
 	import { Card } from '$ui';
 	import TenantContactForm from '$features/tenant/components/TenantContactForm.svelte';
-	import { tenantSelfQuery } from '$features/tenant/queries';
-	import { myCapabilitiesQuery } from '$features/auth/queries';
+	import type { PageData, ActionData } from './$types';
 
-	const capsQuery = myCapabilitiesQuery();
-	const tenantId = $derived(capsQuery.data?.tenant_id ?? '');
-	const tenantQuery = $derived(tenantSelfQuery(tenantId));
-	const tenantData = $derived(tenantQuery.data ?? null);
+	let { data, form }: { data: PageData; form: ActionData } = $props();
 </script>
 
-{#if tenantData}
-	<Card.Root>
-		<Card.Header>
-			<Card.Title>Contact</Card.Title>
-			<Card.Description>
-				Admin phone and postal address. Used on tax filings, drug-control submissions, and outbound
-				platform notifications.
-			</Card.Description>
-		</Card.Header>
-		<Card.Content>
-			<TenantContactForm tenant={tenantData} {tenantId} />
-		</Card.Content>
-	</Card.Root>
-{/if}
+<Card.Root>
+	<Card.Header>
+		<Card.Title>Contact</Card.Title>
+		<Card.Description>
+			Admin phone and postal address. Used on tax filings, drug-control submissions, and outbound
+			platform notifications.
+		</Card.Description>
+	</Card.Header>
+	<Card.Content>
+		<TenantContactForm tenant={data.tenant} form={form ?? undefined} />
+	</Card.Content>
+</Card.Root>
