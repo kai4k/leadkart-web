@@ -182,7 +182,7 @@
 				aria-describedby={describedBy}
 				class={cn(
 					'body-sm text-fg placeholder:text-fg-subtle min-w-[6rem] flex-1 bg-transparent px-1 py-0.5',
-					'focus:outline-none'
+					'focus-visible:outline-none'
 				)}
 				placeholder={value.length === 0 ? placeholder : ''}
 				{disabled}

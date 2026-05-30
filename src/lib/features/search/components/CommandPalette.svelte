@@ -74,7 +74,7 @@
 				</label>
 			</div>
 
-			<div class="max-h-[60vh] overflow-y-auto">
+			<div class="max-h-[clamp(200px,60vh,80vh)] overflow-y-auto">
 				{#if q.trim().length < 2}
 					<p class="caption text-fg-subtle p-4">Type at least 2 characters.</p>
 				{:else if query.isPending}
@@ -85,7 +85,7 @@
 					{#if tenants.length > 0}
 						<div class="stack stack-tight p-2">
 							<p class="text-fg-subtle px-2 pt-1 overline">Tenants</p>
-							<ul class="stack stack-tight" style="list-style:none;margin:0;padding:0;">
+							<ul class="stack stack-tight m-0 list-none p-0">
 								{#each tenants as t (t.id)}
 									<li>
 										<button
@@ -111,7 +111,7 @@
 					{#if persons.length > 0}
 						<div class="stack stack-tight border-border-subtle border-t p-2">
 							<p class="text-fg-subtle px-2 pt-1 overline">People</p>
-							<ul class="stack stack-tight" style="list-style:none;margin:0;padding:0;">
+							<ul class="stack stack-tight m-0 list-none p-0">
 								{#each persons as p (p.id)}
 									<li>
 										<button

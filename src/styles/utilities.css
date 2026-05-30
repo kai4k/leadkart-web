@@ -361,10 +361,10 @@
 	.timeline > li:not(:last-child)::before {
 		content: '';
 		position: absolute;
-		left: 1rem; /* aligns with the 32px icon-circle centre (0.5rem from edge + (32px/2)) */
-		top: 2rem;
-		bottom: 0;
-		width: 2px;
+		inset-inline-start: 1rem; /* aligns with the 32px icon-circle centre (0.5rem from edge + (32px/2)) */
+		inset-block-start: 2rem;
+		inset-block-end: 0;
+		inline-size: 2px;
 		background: var(--color-border);
 		z-index: 0;
 	}

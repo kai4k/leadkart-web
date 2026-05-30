@@ -24,8 +24,8 @@
 	import { userStatusBadge, userRoleBadges, canDeactivate } from '$features/users/view-models';
 	import { displayName, initials } from '$features/auth/view-models';
 	import type { UserDto } from '$features/users/types';
-	import { AuthError, NetworkError } from '$api/errors';
-	import { UseBulkSelection } from '$lib/hooks';
+	import { getListErrorMessage } from '$api/errors';
+	import { UseBulkSelection, UseListPagination } from '$lib/hooks';
 	import { BulkActionBar, type BulkAction } from '$lib/components/data';
 	import CreateUserDrawer from './CreateUserDrawer.svelte';
 	import DeactivateUserDialog from './DeactivateUserDialog.svelte';
@@ -50,8 +50,6 @@
 	// URL-driven filter state.
 	const search = $derived(page.url.searchParams.get('q') ?? '');
 	const statusFilter = $derived(page.url.searchParams.get('status') ?? 'all');
-	const currentPage = $derived(Number(page.url.searchParams.get('page') ?? '1') || 1);
-	const pageSize = 10;
 
 	function setSearch(value: string) {
 		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
@@ -69,16 +67,6 @@
 		if (value && value !== 'all') params.set('status', value);
 		else params.delete('status');
 		params.delete('page');
-		goto(`?${params}`, { replaceState: true });
-	}
-
-	function setPage(p: number) {
-		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
-		if (p > 1) {
-			params.set('page', String(p));
-		} else {
-			params.delete('page');
-		}
 		goto(`?${params}`, { replaceState: true });
 	}
 
@@ -181,29 +169,19 @@
 		);
 	});
 
-	const pageCount = $derived(Math.max(1, Math.ceil(filtered.length / pageSize)));
-	const paged = $derived(filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize));
+	const pagination = new UseListPagination(() => filtered);
 
 	const tableState = $derived(
 		listQuery.isPending
 			? 'loading'
 			: listQuery.isError
 				? 'error'
-				: paged.length === 0
+				: pagination.paged.length === 0
 					? 'empty'
 					: 'ready'
 	);
 
-	const listErrorCopy = $derived.by(() => {
-		const err = listQuery.error;
-		if (!err) return null;
-		if (err instanceof NetworkError) return 'Check your network connection and try again.';
-		if (err instanceof AuthError)
-			return err.status === 403
-				? "You don't have permission to view users."
-				: 'Your session expired. Sign in again.';
-		return 'Something went wrong. Please try again.';
-	});
+	const listErrorCopy = $derived(getListErrorMessage(listQuery.error, 'team members'));
 
 	const columns: DataTableColumn<UserDto>[] = [
 		{
@@ -368,7 +346,7 @@
 
 	<DataTable.Root
 		{columns}
-		rows={paged}
+		rows={pagination.paged}
 		rowKey={(u) => u.membership_id}
 		state={tableState}
 		error={listErrorCopy}
@@ -395,7 +373,11 @@
 		{/snippet}
 	</DataTable.Root>
 
-	<Pagination page={currentPage} {pageCount} onChange={setPage} />
+	<Pagination
+		page={pagination.currentPage}
+		pageCount={pagination.pageCount}
+		onChange={pagination.setPage}
+	/>
 
 	<BulkActionBar {selection} actions={bulkActions} />
 </div>

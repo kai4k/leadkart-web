@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { goto, invalidateAll } from '$app/navigation';
-	import { useQueryClient } from '@tanstack/svelte-query';
+	import { goto } from '$app/navigation';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { Alert, Badge, Button, DataTable, Dropdown, EmptyState, Spinner } from '$ui';
 	import type { DataTableColumn } from '$ui';
@@ -31,14 +30,14 @@
 		tenantLifecycleBadge
 	} from '$features/operator/tenants/view-models';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
-	import { AuthError, NetworkError, NotFoundError } from '$lib/api/errors';
-	import { enterScope as enterScopeApi } from '$features/operator/scope';
-	import { toast } from '$ui';
+	import { AuthError, NetworkError, NotFoundError, getListErrorMessage } from '$api/errors';
+	import { enterScopeMutation } from '$features/operator/scope';
 	import CreateTenantDrawer from './CreateTenantDrawer.svelte';
 	import SuspendDialog from './SuspendDialog.svelte';
 	import MarkForDeletionDialog from './MarkForDeletionDialog.svelte';
 	import ImpersonateModal from '$features/operator/impersonation/components/ImpersonateModal.svelte';
 	import type { TenantDto } from '$features/operator/tenants/types';
+	import { UseListPagination } from '$lib/hooks';
 
 	const PAGE_SIZE = 10;
 
@@ -54,7 +53,6 @@
 
 	const search = $derived(page.url.searchParams.get('q') ?? '');
 	const statusFilter = $derived(page.url.searchParams.get('status') ?? 'all');
-	const currentPage = $derived(Number(page.url.searchParams.get('page') ?? '1') || 1);
 
 	function setStatusFilter(value: string) {
 		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
@@ -72,22 +70,15 @@
 		goto(`?${params}`, { replaceState: true, keepFocus: true });
 	}
 
-	function setPage(p: number) {
-		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
-		if (p > 1) params.set('page', String(p));
-		else params.delete('page');
-		goto(`?${params}`, { replaceState: true });
-	}
-
 	const capsQuery = myCapabilitiesQuery();
 	const canCreate = $derived(hasCapability(capsQuery.data, 'platform.tenants.create'));
 	const canView = $derived(hasCapability(capsQuery.data, 'platform.tenants.view'));
 	const canManage = $derived(hasCapability(capsQuery.data, 'platform.tenants.manage'));
 
 	const query = tenantsListQuery();
-	const qc = useQueryClient();
 	const activateMutation = activateTenantMutation();
 	const restoreMutation = restoreTenantMutation();
+	const enterMutation = enterScopeMutation();
 
 	const filtered = $derived.by(() => {
 		const all = query.data?.tenants ?? [];
@@ -133,24 +124,19 @@
 		}
 	] as const);
 
-	const totalPages = $derived(Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)));
-	const paged = $derived(filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE));
+	const pagination = new UseListPagination(() => filtered, { pageSize: PAGE_SIZE });
 
 	const tableState = $derived(
-		query.isPending ? 'loading' : query.isError ? 'error' : paged.length === 0 ? 'empty' : 'ready'
+		query.isPending
+			? 'loading'
+			: query.isError
+				? 'error'
+				: pagination.paged.length === 0
+					? 'empty'
+					: 'ready'
 	);
 
-	const listErrorCopy = $derived.by(() => {
-		const err = query.error;
-		if (!err) return null;
-		if (err instanceof NetworkError) return 'Check your network connection and try again.';
-		if (err instanceof AuthError)
-			return err.status === 403
-				? "You don't have permission to view tenants."
-				: 'Your session expired. Sign in again.';
-		if (err instanceof NotFoundError) return 'This resource was deleted or moved.';
-		return 'Something went wrong. Please try again.';
-	});
+	const listErrorCopy = $derived(getListErrorMessage(query.error, 'tenants'));
 
 	const columns: DataTableColumn<TenantDto>[] = [
 		{ id: 'name', header: 'Tenant', accessor: (t) => t.display_name, cell: nameCell },
@@ -178,32 +164,17 @@
 	 * to /operator/scope/profile — the URL never reveals which tenant
 	 * the operator is acting on.
 	 */
-	async function enterScope(tenant: TenantDto) {
+	function enterScope(tenant: TenantDto) {
 		if (openingScopeSlug !== null) return; // a row is already in-flight
 		openingScopeSlug = tenant.slug;
-		try {
-			await enterScopeApi({ slug: tenant.slug });
-			qc.clear();
-			await invalidateAll();
-			goto('/operator/scope/profile');
-		} catch (err) {
-			if (err instanceof NetworkError) {
-				toast('danger', 'Check your network connection and try again.');
-			} else if (err instanceof AuthError) {
-				toast(
-					'danger',
-					err.status === 403
-						? "You don't have permission to open this tenant."
-						: 'Your session expired. Sign in again.'
-				);
-			} else if (err instanceof NotFoundError) {
-				toast('danger', 'This tenant was deleted or moved.');
-			} else {
-				toast('danger', 'Could not open tenant');
+		enterMutation.mutate(
+			{ slug: tenant.slug },
+			{
+				onSettled: () => {
+					openingScopeSlug = null;
+				}
 			}
-		} finally {
-			openingScopeSlug = null;
-		}
+		);
 	}
 </script>
 
@@ -347,7 +318,7 @@
 
 	<DataTable.Root
 		{columns}
-		rows={paged}
+		rows={pagination.paged}
 		rowKey={(t) => t.id}
 		state={tableState}
 		error={listErrorCopy}
@@ -400,27 +371,32 @@
 		{/snippet}
 	</DataTable.Root>
 
-	{#if totalPages > 1}
+	{#if pagination.pageCount > 1}
 		<nav class="cluster cluster-spread" aria-label="Tenant list pagination">
 			<p class="caption text-fg-muted">
-				{(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length}
+				{(pagination.currentPage - 1) * PAGE_SIZE + 1}–{Math.min(
+					pagination.currentPage * PAGE_SIZE,
+					filtered.length
+				)} of {filtered.length}
 			</p>
 			<div class="cluster cluster-tight">
 				<Button
 					variant="ghost"
 					size="sm"
-					disabled={currentPage <= 1}
-					onclick={() => setPage(currentPage - 1)}
+					disabled={pagination.currentPage <= 1}
+					onclick={() => pagination.setPage(pagination.currentPage - 1)}
 					aria-label="Previous page"
 				>
 					← Prev
 				</Button>
-				<span class="caption">Page {currentPage} / {totalPages}</span>
+				<span class="caption">
+					Page {pagination.currentPage} / {pagination.pageCount}
+				</span>
 				<Button
 					variant="ghost"
 					size="sm"
-					disabled={currentPage >= totalPages}
-					onclick={() => setPage(currentPage + 1)}
+					disabled={pagination.currentPage >= pagination.pageCount}
+					onclick={() => pagination.setPage(pagination.currentPage + 1)}
 					aria-label="Next page"
 				>
 					Next →

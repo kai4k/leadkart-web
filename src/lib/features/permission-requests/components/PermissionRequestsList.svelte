@@ -9,7 +9,7 @@
 	import { stateBadge, daysOrIndefinite } from '$features/permission-requests/view-models';
 	import type { PermissionRequestDto } from '$features/permission-requests/schemas';
 	import type { ListRole } from '$features/permission-requests/api';
-	import { AuthError, NetworkError } from '$api/errors';
+	import { getListErrorMessage } from '$api/errors';
 	import CreatePermissionRequestDrawer from './CreatePermissionRequestDrawer.svelte';
 
 	/**
@@ -44,16 +44,7 @@
 					: 'ready'
 	);
 
-	const listErrorCopy = $derived.by(() => {
-		const err = query.error;
-		if (!err) return null;
-		if (err instanceof NetworkError) return 'Check your network connection and try again.';
-		if (err instanceof AuthError)
-			return err.status === 403
-				? "You don't have permission to view this list."
-				: 'Your session expired. Sign in again.';
-		return 'Something went wrong. Please try again.';
-	});
+	const listErrorCopy = $derived(getListErrorMessage(query.error, 'permission requests'));
 
 	const columns: DataTableColumn<PermissionRequestDto>[] = [
 		{

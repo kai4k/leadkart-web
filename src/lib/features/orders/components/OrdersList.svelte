@@ -13,12 +13,7 @@
 	import { Plus, ShoppingCart, Trash2, X } from '$icons';
 	import type { Component } from 'svelte';
 	import { UseBulkSelection, UseSavedViews, UseUrlFilters } from '$lib/hooks';
-	import { useQueryClient } from '@tanstack/svelte-query';
-	import {
-		ordersInfiniteQuery,
-		ordersKeys,
-		bulkOrderActionMutation
-	} from '$features/orders/queries';
+	import { ordersInfiniteQuery, bulkOrderActionMutation } from '$features/orders/queries';
 	import {
 		formatMoney,
 		lineItemsLabel,
@@ -28,7 +23,7 @@
 	import { orderFilterFields, type OrderListFilters } from './OrderFilters.svelte';
 	import OrderStatusBadge from './OrderStatusBadge.svelte';
 	import type { OrderDto } from '$features/orders/schemas';
-	import { AuthError, NetworkError } from '$api/errors';
+	import { getListErrorMessage } from '$api/errors';
 
 	// ── URL state ────────────────────────────────────────────────────
 	const urlFilters = new UseUrlFilters<OrderListFilters>({
@@ -68,7 +63,6 @@
 	);
 
 	const selection = new UseBulkSelection<OrderDto>();
-	const qc = useQueryClient();
 
 	// ── Query ────────────────────────────────────────────────────────
 	const listQuery = ordersInfiniteQuery(() => {
@@ -98,7 +92,6 @@
 	);
 
 	function openDetail(o: OrderDto) {
-		qc.setQueryData(ordersKeys.detail(o.id), o);
 		goto(`/orders/${o.id}`);
 	}
 
@@ -204,16 +197,7 @@
 	// ── Filter config ────────────────────────────────────────────────
 	const filterConfig: FilterBarField[] = orderFilterFields;
 
-	const listErrorCopy = $derived.by(() => {
-		const err = listQuery.error;
-		if (!err) return null;
-		if (err instanceof NetworkError) return 'Check your network connection and try again.';
-		if (err instanceof AuthError)
-			return err.status === 403
-				? "You don't have permission to view orders."
-				: 'Your session expired. Sign in again.';
-		return 'Something went wrong. Please try again.';
-	});
+	const listErrorCopy = $derived(getListErrorMessage(listQuery.error, 'orders'));
 </script>
 
 {#snippet statusCell(row: OrderDto)}
