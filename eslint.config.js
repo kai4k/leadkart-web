@@ -29,6 +29,7 @@ export default ts.config(
 	{
 		ignores: [
 			'src/lib/api/generated/**',
+			'src/lib/components/svelte-bits/**',
 			'.svelte-kit/**',
 			'build/**',
 			'coverage/**',
