@@ -4,18 +4,23 @@ import Content from './dropdown-menu-content.svelte';
 import Item from './dropdown-menu-item.svelte';
 import Separator from './dropdown-menu-separator.svelte';
 import Label from './dropdown-menu-label.svelte';
+import Group from './dropdown-menu-group.svelte';
 
 export {
 	Root,
 	Trigger,
 	Content,
+	Content as Menu,
 	Item,
 	Separator,
 	Label,
+	Group,
 	Root as DropdownMenu,
 	Trigger as DropdownMenuTrigger,
 	Content as DropdownMenuContent,
+	Content as DropdownMenuMenu,
 	Item as DropdownMenuItem,
 	Separator as DropdownMenuSeparator,
-	Label as DropdownMenuLabel
+	Label as DropdownMenuLabel,
+	Group as DropdownMenuGroup
 };

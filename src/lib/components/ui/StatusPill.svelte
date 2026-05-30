@@ -71,7 +71,7 @@
 	import { Check, ChevronDown, Icon } from '$lib/icons';
 	import { cn } from '$lib/utils/cn';
 	import { Badge } from './badge';
-	import * as Dropdown from './dropdown';
+	import * as Dropdown from './dropdown-menu';
 
 	type Props = {
 		value: string;

@@ -55,7 +55,7 @@ const REQUIRED = {
 		{ path: 'ui/sonner/Toaster.svelte' },
 		{ path: 'ui/tooltip/Tooltip.svelte' },
 		{ path: 'ui/skeleton/skeleton.svelte' },
-		{ path: 'ui/Spinner.svelte' },
+		{ path: 'ui/spinner/Spinner.svelte' },
 		{ path: 'ui/progress/Progress.svelte' }
 	],
 	// Overlay primitives (arch test #184)
@@ -63,7 +63,7 @@ const REQUIRED = {
 		{ path: 'ui/dialog/Dialog.svelte' },
 		{ path: 'ui/drawer/Drawer.svelte' },
 		{ path: 'ui/popover/Popover.svelte' },
-		{ path: 'ui/dropdown/Dropdown.svelte' },
+		{ path: 'ui/dropdown-menu/dropdown-menu.svelte' },
 		{ path: 'ui/accordion/Accordion.svelte' }
 	],
 	// Data display (arch test #185)
