@@ -1,23 +1,25 @@
-/**
- * Card composition — namespace export per shadcn-svelte canon.
- *
- * Consume:
- *   import * as Card from '$ui/card';
- *
- *   <Card.Root>
- *     <Card.Header>
- *       <Card.Title>Title</Card.Title>
- *       <Card.Description>Optional context</Card.Description>
- *     </Card.Header>
- *     <Card.Content>...</Card.Content>
- *     <Card.Footer>...</Card.Footer>
- *   </Card.Root>
- */
-export { default as Root } from './Card.svelte';
-export { default as Header } from './CardHeader.svelte';
-export { default as Title } from './CardTitle.svelte';
-export { default as Description } from './CardDescription.svelte';
-export { default as Content } from './CardContent.svelte';
-export { default as Footer } from './CardFooter.svelte';
+import Root from './card.svelte';
+import Content from './card-content.svelte';
+import Description from './card-description.svelte';
+import Footer from './card-footer.svelte';
+import Header from './card-header.svelte';
+import Title from './card-title.svelte';
+import Action from './card-action.svelte';
 
-export { cardVariants, type CardVariants } from './Card.svelte';
+export {
+	Root,
+	Content,
+	Description,
+	Footer,
+	Header,
+	Title,
+	Action,
+	//
+	Root as Card,
+	Content as CardContent,
+	Description as CardDescription,
+	Footer as CardFooter,
+	Header as CardHeader,
+	Title as CardTitle,
+	Action as CardAction
+};

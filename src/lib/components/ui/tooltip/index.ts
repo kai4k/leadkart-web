@@ -1,17 +1,19 @@
-/**
- * Tooltip compound primitive — namespace barrel.
- *
- * Built on bits-ui Tooltip (focus, hover, delay, dismiss, portal, ARIA).
- * Visual layer uses .glass-card material and design tokens throughout.
- *
- * Usage:
- *   import { Tooltip } from '$ui';
- *
- *   <Tooltip.Root>
- *     <Tooltip.Trigger>Hover me</Tooltip.Trigger>
- *     <Tooltip.Content>Helpful description</Tooltip.Content>
- *   </Tooltip.Root>
- */
-export { default as Root } from './Tooltip.svelte';
-export { default as Trigger } from './TooltipTrigger.svelte';
-export { default as Content } from './TooltipContent.svelte';
+import Root from './tooltip.svelte';
+import Trigger from './tooltip-trigger.svelte';
+import Content from './tooltip-content.svelte';
+import Provider from './tooltip-provider.svelte';
+import Portal from './tooltip-portal.svelte';
+
+export {
+	Root,
+	Trigger,
+	Content,
+	Provider,
+	Portal,
+	//
+	Root as Tooltip,
+	Content as TooltipContent,
+	Trigger as TooltipTrigger,
+	Provider as TooltipProvider,
+	Portal as TooltipPortal
+};

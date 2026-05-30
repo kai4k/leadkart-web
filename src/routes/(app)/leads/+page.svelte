@@ -235,8 +235,8 @@
 	{/snippet}
 
 	<div class="stack stack-relaxed">
-		<Tabs.Root value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-			<Tabs.List variant="pills">
+		<Tabs.Root value={viewMode} onValueChange={(v: string) => setViewMode(v as ViewMode)}>
+			<Tabs.List>
 				<Tabs.Trigger value="kanban">Kanban</Tabs.Trigger>
 				<Tabs.Trigger value="table">Table</Tabs.Trigger>
 			</Tabs.List>

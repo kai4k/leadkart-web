@@ -69,7 +69,7 @@ export * as Tree from './tree';
 export * as DataTable from './data-table';
 export type { DataTableColumn, DataTableProps } from './data-table';
 export * as Tabs from './tabs';
-export type { TabsListVariants } from './tabs';
+export type { TabsListVariant } from './tabs';
 export * as Accordion from './accordion';
 export * as Popover from './popover';
 export { Progress } from './progress';

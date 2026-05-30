@@ -1,28 +1,40 @@
-/**
- * Drawer compound primitive — namespace barrel.
- *
- * Right-side slide-over built on bits-ui Dialog (focus trap, ESC,
- * ARIA dialog role, portal). Visual layer uses .glass-card material
- * and design tokens throughout.
- *
- * Usage:
- *   import * as Drawer from '$ui/drawer';
- *   // or via ui barrel:
- *   import { Drawer } from '$ui';
- *
- *   <Drawer.Root bind:open>
- *     <Drawer.Trigger>Open</Drawer.Trigger>
- *     <Drawer.Content>
- *       <Drawer.Header>...</Drawer.Header>
- *       <Drawer.Body>...</Drawer.Body>
- *       <Drawer.Footer>...</Drawer.Footer>
- *     </Drawer.Content>
- *   </Drawer.Root>
- */
-export { default as Root } from './Drawer.svelte';
-export { default as Trigger } from './DrawerTrigger.svelte';
-export { default as Content } from './DrawerContent.svelte';
-export { default as Header } from './DrawerHeader.svelte';
-export { default as Body } from './DrawerBody.svelte';
-export { default as Footer } from './DrawerFooter.svelte';
-export { default as Close } from './DrawerClose.svelte';
+import Root from './drawer.svelte';
+import Body from './drawer-body.svelte';
+import Content from './drawer-content.svelte';
+import Description from './drawer-description.svelte';
+import Overlay from './drawer-overlay.svelte';
+import Footer from './drawer-footer.svelte';
+import Header from './drawer-header.svelte';
+import Title from './drawer-title.svelte';
+import NestedRoot from './drawer-nested.svelte';
+import Close from './drawer-close.svelte';
+import Trigger from './drawer-trigger.svelte';
+import Portal from './drawer-portal.svelte';
+
+export {
+	Root,
+	NestedRoot,
+	Body,
+	Content,
+	Description,
+	Overlay,
+	Footer,
+	Header,
+	Title,
+	Trigger,
+	Portal,
+	Close,
+	//
+	Root as Drawer,
+	NestedRoot as DrawerNestedRoot,
+	Body as DrawerBody,
+	Content as DrawerContent,
+	Description as DrawerDescription,
+	Overlay as DrawerOverlay,
+	Footer as DrawerFooter,
+	Header as DrawerHeader,
+	Title as DrawerTitle,
+	Trigger as DrawerTrigger,
+	Portal as DrawerPortal,
+	Close as DrawerClose
+};

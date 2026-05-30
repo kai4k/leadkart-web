@@ -1,28 +1,37 @@
-/**
- * Dialog compound primitive — namespace barrel.
- *
- * Centered modal built on bits-ui Dialog (focus trap, ESC,
- * ARIA dialog role, portal). Visual layer uses .glass-card material
- * and design tokens throughout. Animation: .animate-pop-in.
- *
- * Usage:
- *   import * as Dialog from '$ui/dialog';
- *   // or via ui barrel:
- *   import { Dialog } from '$ui';
- *
- *   <Dialog.Root bind:open>
- *     <Dialog.Trigger>Open</Dialog.Trigger>
- *     <Dialog.Content>
- *       <Dialog.Header>...</Dialog.Header>
- *       <Dialog.Body>...</Dialog.Body>
- *       <Dialog.Footer>...</Dialog.Footer>
- *     </Dialog.Content>
- *   </Dialog.Root>
- */
-export { default as Root } from './Dialog.svelte';
-export { default as Trigger } from './DialogTrigger.svelte';
-export { default as Content } from './DialogContent.svelte';
-export { default as Header } from './DialogHeader.svelte';
-export { default as Body } from './DialogBody.svelte';
-export { default as Footer } from './DialogFooter.svelte';
-export { default as Close } from './DialogClose.svelte';
+import Root from './dialog.svelte';
+import Portal from './dialog-portal.svelte';
+import Title from './dialog-title.svelte';
+import Body from './dialog-body.svelte';
+import Footer from './dialog-footer.svelte';
+import Header from './dialog-header.svelte';
+import Overlay from './dialog-overlay.svelte';
+import Content from './dialog-content.svelte';
+import Description from './dialog-description.svelte';
+import Trigger from './dialog-trigger.svelte';
+import Close from './dialog-close.svelte';
+
+export {
+	Root,
+	Title,
+	Portal,
+	Body,
+	Footer,
+	Header,
+	Trigger,
+	Overlay,
+	Content,
+	Description,
+	Close,
+	//
+	Root as Dialog,
+	Title as DialogTitle,
+	Portal as DialogPortal,
+	Body as DialogBody,
+	Footer as DialogFooter,
+	Header as DialogHeader,
+	Trigger as DialogTrigger,
+	Overlay as DialogOverlay,
+	Content as DialogContent,
+	Description as DialogDescription,
+	Close as DialogClose
+};

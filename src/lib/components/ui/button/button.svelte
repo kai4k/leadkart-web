@@ -32,6 +32,7 @@
 		],
 		variants: {
 			variant: {
+				// LeadKart-named variants
 				primary:
 					'relative overflow-hidden bg-primary text-primary-fg hover:bg-primary-hover active:bg-primary-active brand-halo glass-sheen',
 				secondary:
@@ -42,13 +43,28 @@
 					'bg-gradient-to-b from-danger-500 to-danger-700 text-fg-on-brand hover:from-danger-400 hover:to-danger-600 shadow-[var(--shadow-danger)]',
 				glass:
 					'relative overflow-hidden glass-popover glass-sheen text-fg hover:text-primary-hover',
-				link: '!transform-none hover:!transform-none active:!transform-none text-primary underline-offset-4 hover:underline hover:text-primary-hover p-0 h-auto'
+				link: '!transform-none hover:!transform-none active:!transform-none text-primary underline-offset-4 hover:underline hover:text-primary-hover p-0 h-auto',
+				// shadcn-canonical aliases — generated subcomponents (alert-dialog
+				// action/cancel, sheet/dialog close, carousel previous/next) pass
+				// these names; mapped onto our LeadKart visuals.
+				default:
+					'relative overflow-hidden bg-primary text-primary-fg hover:bg-primary-hover active:bg-primary-active brand-halo glass-sheen',
+				outline: 'bg-bg-muted text-fg hover:bg-bg-subtle border border-border',
+				destructive:
+					'bg-gradient-to-b from-danger-500 to-danger-700 text-fg-on-brand hover:from-danger-400 hover:to-danger-600 shadow-[var(--shadow-danger)]'
 			},
 			size: {
+				// LeadKart-named sizes
 				sm: 'h-9 px-3 body-sm',
 				md: 'h-11 px-4 body-sm',
 				lg: 'h-12 px-5 body-base',
-				icon: 'h-11 w-11 p-0'
+				icon: 'h-11 w-11 p-0',
+				// shadcn-canonical aliases
+				default: 'h-11 px-4 body-sm',
+				xs: 'h-7 px-2 text-xs',
+				'icon-xs': 'h-7 w-7 p-0',
+				'icon-sm': 'h-9 w-9 p-0',
+				'icon-lg': 'h-12 w-12 p-0'
 			},
 			fullWidth: {
 				true: 'w-full',
@@ -73,7 +89,7 @@
 	import { cn, resolveHref, type WithElementRef } from '$lib/utils/cn';
 	import Spinner from '../Spinner.svelte';
 
-	type Props = WithElementRef<HTMLButtonAttributes> &
+	export type ButtonProps = WithElementRef<HTMLButtonAttributes> &
 		WithElementRef<HTMLAnchorAttributes> &
 		ButtonVariants & {
 			loading?: boolean;
@@ -92,7 +108,7 @@
 		class: className = '',
 		children,
 		...rest
-	}: Props = $props();
+	}: ButtonProps = $props();
 </script>
 
 {#if href}

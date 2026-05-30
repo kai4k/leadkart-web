@@ -1,28 +1,28 @@
-/**
- * Popover compound primitive — namespace barrel.
- *
- * Built on bits-ui Popover (focus management, outside-click dismissal,
- * ESC dismissal, ARIA dialog semantics, Floating UI positioning,
- * portal).
- *
- * Visual: glass-card panel with rounded corners + token-driven padding.
- * Use for filter popovers, info bubbles, mini-forms anchored to a
- * trigger.
- *
- * Usage:
- *   import * as Popover from '$ui/popover';
- *   // or via ui barrel:
- *   import { Popover } from '$ui';
- *
- *   <Popover.Root>
- *     <Popover.Trigger>
- *       <Button>Filters</Button>
- *     </Popover.Trigger>
- *     <Popover.Content align="start">
- *       ...
- *     </Popover.Content>
- *   </Popover.Root>
- */
-export { default as Root } from './Popover.svelte';
-export { default as Trigger } from './PopoverTrigger.svelte';
-export { default as Content } from './PopoverContent.svelte';
+import Root from './popover.svelte';
+import Close from './popover-close.svelte';
+import Content from './popover-content.svelte';
+import Description from './popover-description.svelte';
+import Header from './popover-header.svelte';
+import Title from './popover-title.svelte';
+import Trigger from './popover-trigger.svelte';
+import Portal from './popover-portal.svelte';
+
+export {
+	Root,
+	Content,
+	Description,
+	Header,
+	Title,
+	Trigger,
+	Close,
+	Portal,
+	//
+	Root as Popover,
+	Content as PopoverContent,
+	Description as PopoverDescription,
+	Header as PopoverHeader,
+	Title as PopoverTitle,
+	Trigger as PopoverTrigger,
+	Close as PopoverClose,
+	Portal as PopoverPortal
+};
