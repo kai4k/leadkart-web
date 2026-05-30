@@ -1,24 +1,18 @@
 <script lang="ts" module>
-	/**
-	 * Alert — shadcn-svelte canonical structure with the LeadKart
-	 * 4-variant set (info / success / warning / danger). Auto-icon per
-	 * variant; optional title slot; dismiss button + onDismiss callback.
-	 */
-	import { type VariantProps, tv } from 'tailwind-variants';
-
-	export const alertVariants = tv({
-		base: 'body-sm rounded-md border p-4 backdrop-blur-md',
+	import { cva, type VariantProps } from 'class-variance-authority';
+	export const alertVariants = cva('body-sm rounded-md border p-4 backdrop-blur-md', {
 		variants: {
 			variant: {
 				info: 'bg-info-50/85 border-info-100 text-info-900',
 				success: 'bg-success-50/85 border-success-100 text-success-900',
 				warning: 'bg-warning-50/85 border-warning-100 text-warning-900',
-				danger: 'bg-danger-50/85 border-danger-100 text-danger-900'
+				danger: 'bg-danger-50/85 border-danger-100 text-danger-900',
+				default: 'bg-info-50/85 border-info-100 text-info-900',
+				destructive: 'bg-danger-50/85 border-danger-100 text-danger-900'
 			}
 		},
 		defaultVariants: { variant: 'info' }
 	});
-
 	export type AlertVariant = NonNullable<VariantProps<typeof alertVariants>['variant']>;
 	export type AlertVariants = VariantProps<typeof alertVariants>;
 </script>
@@ -53,7 +47,7 @@
 			? CheckCircle2
 			: variant === 'warning'
 				? AlertCircle
-				: variant === 'danger'
+				: variant === 'danger' || variant === 'destructive'
 					? XCircle
 					: Info
 	);
@@ -70,12 +64,8 @@
 	<div class="flex items-start gap-3">
 		<Icon icon={variantIcon} size="md" class="mt-0.5 flex-shrink-0" />
 		<div class="flex-1">
-			{#if title}
-				<p class="mb-1 font-semibold">{title}</p>
-			{/if}
-			{#if children}
-				<div>{@render children()}</div>
-			{/if}
+			{#if title}<p class="mb-1 font-semibold">{title}</p>{/if}
+			{#if children}<div>{@render children()}</div>{/if}
 		</div>
 		{#if dismissible}
 			<button

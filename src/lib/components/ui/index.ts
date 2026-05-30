@@ -1,15 +1,6 @@
 /**
- * UI primitives barrel — single import path for cross-feature
- * components. Industry canon (shadcn-svelte, Material UI, Chakra):
- * `import { Button, Alert } from '$ui'` over deep path imports.
- *
- * Phase 2 (shadcn-migration): atoms live in shadcn-canon dirs
- * (`./button`, `./alert`, `./badge`, `./avatar`, `./skeleton`,
- * `./breadcrumb`, `./pagination`) — re-exported here for back-compat
- * with the `import { Button } from '$ui'` consumer pattern.
- *
- * Composite primitives (Card, Dialog, Drawer, etc.) are exported as
- * namespaces under their own subfolder index.
+ * $ui — single import path for cross-feature primitives.
+ * Phase B rebuild on bits-ui + Svelte Bits (per CLAUDE.md doctrine).
  */
 export { Alert, type AlertVariant, type AlertVariants, alertVariants } from './alert';
 export {
@@ -34,27 +25,43 @@ export {
 export { Breadcrumb, Breadcrumbs, type BreadcrumbItem } from './breadcrumb';
 export {
 	Button,
+	type ButtonProps,
 	type ButtonVariant,
 	type ButtonSize,
 	type ButtonVariants,
 	buttonVariants
 } from './button';
-export { Pagination, type PaginationChange } from './pagination';
-export { Skeleton, type SkeletonShape, type SkeletonVariants, skeletonVariants } from './skeleton';
-export { default as CopyButton } from './CopyButton.svelte';
-export { default as AuthCard } from './AuthCard.svelte';
+export {
+	ButtonGroup,
+	type ButtonGroupOrientation,
+	buttonGroupVariants
+} from './button-group';
 export * as Card from './card';
 export { default as ConfirmDialog } from './ConfirmDialog.svelte';
 export type { ConfirmDialogVariant } from './ConfirmDialog.svelte';
+export { Kbd } from './kbd';
+export { Label } from './label';
+export { Pagination, type PaginationChange } from './pagination';
+export {
+	Skeleton,
+	type SkeletonShape,
+	type SkeletonVariants,
+	skeletonVariants
+} from './skeleton';
+export { Spinner } from './spinner';
+export { Separator } from './separator';
+export { ScrollArea } from './scroll-area';
+export { default as CopyButton } from './CopyButton.svelte';
+export { default as AuthCard } from './AuthCard.svelte';
 export * as Dialog from './dialog';
 export * as Drawer from './drawer';
-export * as Dropdown from './dropdown';
+export * as Dropdown from './dropdown-menu';
+export * as DropdownMenu from './dropdown-menu';
 export { default as EmptyState } from './EmptyState.svelte';
 export { default as InlineEdit } from './InlineEdit.svelte';
 export * as Kanban from './kanban';
 export type { KanbanColumnDescriptor, KanbanColumnAccent, KanbanMove } from './kanban';
 export { default as Logo } from './Logo.svelte';
-export { default as Spinner } from './Spinner.svelte';
 export { default as StatCard } from './StatCard.svelte';
 export type { StatCardAccent } from './StatCard.svelte';
 export { default as StatusPill, inferStatusVariant } from './StatusPill.svelte';

@@ -1,11 +1,6 @@
 <script lang="ts" module>
 	import type { Component } from 'svelte';
-
-	export type BreadcrumbItem = {
-		href?: string;
-		label: string;
-		icon?: Component;
-	};
+	export type BreadcrumbItem = { href?: string; label: string; icon?: Component };
 </script>
 
 <script lang="ts">
@@ -13,11 +8,13 @@
 	import { ChevronRight, Icon } from '$icons';
 	import { cn, resolveHref, type WithElementRef } from '$lib/utils/cn';
 
-	type Props = WithElementRef<HTMLAttributes<HTMLElement>> & {
-		items: BreadcrumbItem[];
-	};
-
-	let { ref = $bindable(null), items, class: className = '', ...rest }: Props = $props();
+	type Props = WithElementRef<HTMLAttributes<HTMLElement>> & { items: BreadcrumbItem[] };
+	let {
+		ref = $bindable(null),
+		items,
+		class: className = '',
+		...rest
+	}: Props = $props();
 </script>
 
 <nav
@@ -31,9 +28,7 @@
 		{#each items as item, i (item.label)}
 			{@const isLast = i === items.length - 1}
 			<li class="flex items-center gap-1">
-				{#if i > 0}
-					<Icon icon={ChevronRight} size="xs" class="text-fg-subtle flex-shrink-0" />
-				{/if}
+				{#if i > 0}<Icon icon={ChevronRight} size="xs" class="text-fg-subtle flex-shrink-0" />{/if}
 				{#if isLast || !item.href}
 					<span
 						class={cn(

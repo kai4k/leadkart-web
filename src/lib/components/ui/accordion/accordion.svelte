@@ -1,19 +1,6 @@
 <script lang="ts">
 	import { Accordion as AccordionPrimitive } from 'bits-ui';
-	import { cn } from '$lib/utils/cn.js';
-
-	let {
-		ref = $bindable(null),
-		value = $bindable(),
-		class: className,
-		...restProps
-	}: AccordionPrimitive.RootProps = $props();
+	let { ...rest }: AccordionPrimitive.RootProps = $props();
 </script>
 
-<AccordionPrimitive.Root
-	bind:ref
-	bind:value={value as never}
-	data-slot="accordion"
-	class={cn('cn-accordion flex w-full flex-col', className)}
-	{...restProps}
-/>
+<AccordionPrimitive.Root data-slot="accordion" {...rest} />

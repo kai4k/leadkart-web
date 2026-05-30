@@ -42,7 +42,13 @@
 	const pages = $derived(visiblePages(page, pageCount));
 </script>
 
-<nav bind:this={ref} data-slot="pagination" aria-label="Pagination" class={cn(className)} {...rest}>
+<nav
+	bind:this={ref}
+	data-slot="pagination"
+	aria-label="Pagination"
+	class={cn(className)}
+	{...rest}
+>
 	<ButtonGroup>
 		<Button
 			variant="tonal"
@@ -51,30 +57,21 @@
 			aria-label="Previous page"
 			onclick={() => onChange(page - 1)}
 		>
-			<Icon icon={ChevronLeft} size="sm" />
-			Prev
+			<Icon icon={ChevronLeft} size="sm" />Prev
 		</Button>
-
 		{#each pages as p, i (i)}
 			{#if p === 'gap'}
-				<span
-					data-slot="pagination-ellipsis"
-					class="text-fg-subtle inline-flex items-center px-2"
-					aria-hidden="true">…</span
-				>
+				<span class="text-fg-subtle inline-flex items-center px-2" aria-hidden="true">…</span>
 			{:else}
 				<Button
 					variant={p === page ? 'primary' : 'tonal'}
 					size="sm"
 					aria-current={p === page ? 'page' : undefined}
 					aria-label={`Go to page ${p}`}
-					onclick={() => onChange(p)}
+					onclick={() => onChange(p)}>{p}</Button
 				>
-					{p}
-				</Button>
 			{/if}
 		{/each}
-
 		<Button
 			variant="tonal"
 			size="sm"
@@ -82,8 +79,7 @@
 			aria-label="Next page"
 			onclick={() => onChange(page + 1)}
 		>
-			Next
-			<Icon icon={ChevronRight} size="sm" />
+			Next<Icon icon={ChevronRight} size="sm" />
 		</Button>
 	</ButtonGroup>
 </nav>

@@ -1,23 +1,19 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import { cn, type WithElementRef } from '$lib/utils/cn.js';
-
+	import { cn, type WithElementRef } from '$lib/utils/cn';
 	let {
 		ref = $bindable(null),
 		class: className,
 		children,
-		...restProps
+		...rest
 	}: WithElementRef<HTMLAttributes<HTMLDivElement>> = $props();
 </script>
 
 <div
 	bind:this={ref}
 	data-slot="drawer-header"
-	class={cn(
-		'gap-0.5 p-4 group-data-[vaul-drawer-direction=bottom]/drawer-content:text-center group-data-[vaul-drawer-direction=top]/drawer-content:text-center md:gap-0.5 md:text-left flex flex-col',
-		className
-	)}
-	{...restProps}
+	class={cn('flex flex-col gap-1.5 px-5 pb-3 pt-5', className)}
+	{...rest}
 >
 	{@render children?.()}
 </div>

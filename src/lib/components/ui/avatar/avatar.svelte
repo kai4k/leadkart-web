@@ -1,29 +1,24 @@
 <script lang="ts" module>
-	/**
-	 * Avatar — initials chip with size variants. Lifted from legacy
-	 * Avatar.svelte into shadcn-canon directory layout. Single component
-	 * (no compound Root/Image/Fallback split) — matches LeadKart usage.
-	 */
-	import { type VariantProps, tv } from 'tailwind-variants';
-
-	export const avatarVariants = tv({
-		base: [
+	import { cva, type VariantProps } from 'class-variance-authority';
+	export const avatarVariants = cva(
+		[
 			'relative inline-flex items-center justify-center overflow-hidden rounded-full font-medium uppercase',
 			'glass-sheen',
 			'bg-[linear-gradient(135deg,var(--color-primary-soft),var(--color-bg-muted))]',
 			'text-primary',
 			'ring-1 ring-bg-elevated/50'
 		],
-		variants: {
-			size: {
-				sm: 'inline-size-7 block-size-7 text-[var(--text-2xs)]',
-				md: 'inline-size-10 block-size-10 text-sm',
-				lg: 'inline-size-14 block-size-14 text-base'
-			}
-		},
-		defaultVariants: { size: 'md' }
-	});
-
+		{
+			variants: {
+				size: {
+					sm: 'inline-size-7 block-size-7 text-[var(--text-2xs)]',
+					md: 'inline-size-10 block-size-10 text-sm',
+					lg: 'inline-size-14 block-size-14 text-base'
+				}
+			},
+			defaultVariants: { size: 'md' }
+		}
+	);
 	export type AvatarSize = NonNullable<VariantProps<typeof avatarVariants>['size']>;
 	export type AvatarVariants = VariantProps<typeof avatarVariants>;
 </script>
@@ -33,10 +28,7 @@
 	import { cn, type WithElementRef } from '$lib/utils/cn';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLSpanElement>> &
-		AvatarVariants & {
-			initials: string;
-		};
-
+		AvatarVariants & { initials: string };
 	let {
 		ref = $bindable(null),
 		initials,
@@ -51,7 +43,5 @@
 	data-slot="avatar"
 	class={cn(avatarVariants({ size }), className)}
 	aria-hidden="true"
-	{...rest}
+	{...rest}>{initials}</span
 >
-	{initials}
-</span>

@@ -1,3 +1,2 @@
-import Root, { type AlertVariants, type AlertVariant, alertVariants } from './alert.svelte';
-
-export { Root, Root as Alert, type AlertVariants, type AlertVariant, alertVariants };
+import Root, { type AlertVariant, type AlertVariants, alertVariants } from './alert.svelte';
+export { Root, Root as Alert, type AlertVariant, type AlertVariants, alertVariants };

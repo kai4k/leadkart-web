@@ -1,37 +1,28 @@
 <script lang="ts" module>
-	/**
-	 * AvatarGroup — overlapping avatar stack with overflow indicator.
-	 *
-	 * Industry refs: Linear member list, GitHub reviewer chips, Figma
-	 * presence stack. Members render LTR with a 40%-width overlap;
-	 * overflow beyond `max` collapses into a "+N" chip in the same
-	 * shape.
-	 */
-	import { type VariantProps, tv } from 'tailwind-variants';
-
-	export const avatarGroupItemVariants = tv({
-		base: [
+	import { cva, type VariantProps } from 'class-variance-authority';
+	export const avatarGroupItemVariants = cva(
+		[
 			'inline-flex items-center justify-center rounded-full font-medium uppercase',
 			'ring-2 ring-bg-elevated',
 			'bg-[linear-gradient(135deg,var(--color-primary-soft),var(--color-bg-muted))]',
 			'text-primary'
 		],
-		variants: {
-			size: {
-				xs: 'inline-size-5 block-size-5 text-[var(--text-2xs)]',
-				sm: 'inline-size-7 block-size-7 text-[var(--text-2xs)]',
-				md: 'inline-size-9 block-size-9 text-xs',
-				lg: 'inline-size-12 block-size-12 text-sm'
-			}
-		},
-		defaultVariants: { size: 'sm' }
-	});
-
-	export type AvatarGroupSize = NonNullable<VariantProps<typeof avatarGroupItemVariants>['size']>;
-	export type AvatarGroupMember = {
-		name: string;
-		image?: string;
-	};
+		{
+			variants: {
+				size: {
+					xs: 'inline-size-5 block-size-5 text-[var(--text-2xs)]',
+					sm: 'inline-size-7 block-size-7 text-[var(--text-2xs)]',
+					md: 'inline-size-9 block-size-9 text-xs',
+					lg: 'inline-size-12 block-size-12 text-sm'
+				}
+			},
+			defaultVariants: { size: 'sm' }
+		}
+	);
+	export type AvatarGroupSize = NonNullable<
+		VariantProps<typeof avatarGroupItemVariants>['size']
+	>;
+	export type AvatarGroupMember = { name: string; image?: string };
 </script>
 
 <script lang="ts">

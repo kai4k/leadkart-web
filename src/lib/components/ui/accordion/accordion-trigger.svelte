@@ -1,38 +1,28 @@
 <script lang="ts">
 	import { Accordion as AccordionPrimitive } from 'bits-ui';
-	import { cn, type WithoutChild } from '$lib/utils/cn.js';
-	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
-	import ChevronUpIcon from '@lucide/svelte/icons/chevron-up';
-
+	import { ChevronDown, Icon } from '$icons';
+	import { cn } from '$lib/utils/cn';
 	let {
 		ref = $bindable(null),
 		class: className,
-		level = 3,
 		children,
-		...restProps
-	}: WithoutChild<AccordionPrimitive.TriggerProps> & {
-		level?: AccordionPrimitive.HeaderProps['level'];
-	} = $props();
+		...rest
+	}: AccordionPrimitive.TriggerProps = $props();
 </script>
 
-<AccordionPrimitive.Header {level} class="flex">
+<AccordionPrimitive.Header class="flex">
 	<AccordionPrimitive.Trigger
-		data-slot="accordion-trigger"
 		bind:ref
+		data-slot="accordion-trigger"
 		class={cn(
-			'focus-visible:ring-ring/50 focus-visible:border-ring focus-visible:after:border-ring **:data-[slot=accordion-trigger-icon]:text-muted-foreground rounded-lg py-2.5 text-left text-sm font-medium hover:underline focus-visible:ring-3 **:data-[slot=accordion-trigger-icon]:ml-auto **:data-[slot=accordion-trigger-icon]:size-4 group/accordion-trigger relative flex flex-1 items-start justify-between border border-transparent transition-all outline-none disabled:pointer-events-none disabled:opacity-50',
+			'flex flex-1 items-center justify-between gap-4 py-4 text-sm font-medium text-fg',
+			'transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
+			'[&[data-state=open]>svg]:rotate-180',
 			className
 		)}
-		{...restProps}
+		{...rest}
 	>
 		{@render children?.()}
-		<ChevronDownIcon
-			data-slot="accordion-trigger-icon"
-			class="cn-accordion-trigger-icon pointer-events-none shrink-0 group-aria-expanded/accordion-trigger:hidden"
-		/>
-		<ChevronUpIcon
-			data-slot="accordion-trigger-icon"
-			class="cn-accordion-trigger-icon pointer-events-none hidden shrink-0 group-aria-expanded/accordion-trigger:inline"
-		/>
+		<Icon icon={ChevronDown} size="sm" class="shrink-0 transition-transform" />
 	</AccordionPrimitive.Trigger>
 </AccordionPrimitive.Header>
