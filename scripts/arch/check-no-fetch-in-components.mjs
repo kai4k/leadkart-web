@@ -26,7 +26,11 @@ const ALLOWED_PREFIXES = [
 	'src/lib/api/',
 	'src/routes/api/',
 	'src/hooks.server.ts',
-	'src/hooks.client.ts'
+	'src/hooks.client.ts',
+	// Service worker IS the platform fetch layer — caching strategies
+	// (CacheFirst, NetworkFirst, StaleWhileRevalidate) require direct
+	// fetch() against the original Request object.
+	'src/service-worker.ts'
 ];
 
 function isAllowed(rel) {

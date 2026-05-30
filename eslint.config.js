@@ -503,7 +503,11 @@ export default ts.config(
 			'src/routes/**/+page.server.ts',
 			'src/routes/**/+layout.server.ts',
 			'src/hooks.server.ts',
-			'src/hooks.client.ts'
+			'src/hooks.client.ts',
+			// Service worker IS the platform fetch layer — caching
+			// strategies (CacheFirst, NetworkFirst, StaleWhileRevalidate)
+			// require direct fetch() against the original Request.
+			'src/service-worker.ts'
 		],
 		rules: {
 			'no-restricted-globals': [

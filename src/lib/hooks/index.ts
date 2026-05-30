@@ -43,6 +43,8 @@ export { UseBulkSelection, type SelectableItem } from './use-bulk-selection.svel
 
 export { UseListPagination, type UseListPaginationOptions } from './use-list-pagination.svelte';
 
+export { UsePwa } from './use-pwa.svelte';
+
 export { useForm, FormState, type FormOpts, type FieldErrors } from './use-form.svelte';
 
 export {
