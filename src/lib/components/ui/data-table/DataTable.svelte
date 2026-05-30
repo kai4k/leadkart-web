@@ -78,7 +78,7 @@
 	import { Skeleton, EmptyState } from '$ui';
 	import { ChevronUp, ChevronDown, ChevronsUpDown, Icon } from '$icons';
 	import { cn } from '$lib/utils/cn';
-	import Alert from '../Alert.svelte';
+	import { Alert } from '../alert';
 
 	let {
 		columns,

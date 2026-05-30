@@ -3,17 +3,24 @@
 </script>
 
 <script lang="ts">
+	import type { HTMLAttributes } from 'svelte/elements';
 	import { ChevronLeft, ChevronRight, Icon } from '$icons';
-	import { cn } from '$lib/utils/cn';
+	import { cn, type WithElementRef } from '$lib/utils/cn';
 
-	type Props = {
+	type Props = WithElementRef<HTMLAttributes<HTMLElement>> & {
 		page: number;
 		pageCount: number;
 		onChange: PaginationChange;
-		class?: string;
 	};
 
-	let { page, pageCount, onChange, class: className = '' }: Props = $props();
+	let {
+		ref = $bindable(null),
+		page,
+		pageCount,
+		onChange,
+		class: className = '',
+		...rest
+	}: Props = $props();
 
 	const canPrev = $derived(page > 1);
 	const canNext = $derived(page < pageCount);
@@ -33,7 +40,13 @@
 	const pages = $derived(visiblePages(page, pageCount));
 </script>
 
-<nav class={cn('cluster cluster-tight', className)} aria-label="Pagination">
+<nav
+	bind:this={ref}
+	data-slot="pagination"
+	class={cn('cluster cluster-tight', className)}
+	aria-label="Pagination"
+	{...rest}
+>
 	<button
 		type="button"
 		class="label text-fg-muted hover:text-fg inline-flex items-center gap-1 rounded-md px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40"

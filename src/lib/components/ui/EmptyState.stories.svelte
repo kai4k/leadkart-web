@@ -2,7 +2,7 @@
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import { Users, Building2, Inbox, Plus, Icon } from '$lib/icons';
 	import EmptyState from './EmptyState.svelte';
-	import Button from './Button.svelte';
+	import { Button } from './button';
 
 	/**
 	 * EmptyState — no-data placeholder.

@@ -1,7 +1,7 @@
 <script context="module" lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import * as Kanban from '$ui/kanban';
-	import Badge from '$ui/Badge.svelte';
+	import { Badge } from '$ui/badge';
 
 	const { Story } = defineMeta({
 		title: 'UI/Kanban',

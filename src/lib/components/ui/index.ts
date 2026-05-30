@@ -3,19 +3,46 @@
  * components. Industry canon (shadcn-svelte, Material UI, Chakra):
  * `import { Button, Alert } from '$ui'` over deep path imports.
  *
- * Composite primitives (Card, future Tabs/Dialog/Dropdown) are
- * exported as namespaces under their own subfolder index.
+ * Phase 2 (shadcn-migration): atoms live in shadcn-canon dirs
+ * (`./button`, `./alert`, `./badge`, `./avatar`, `./skeleton`,
+ * `./breadcrumb`, `./pagination`) — re-exported here for back-compat
+ * with the `import { Button } from '$ui'` consumer pattern.
+ *
+ * Composite primitives (Card, Dialog, Drawer, etc.) are exported as
+ * namespaces under their own subfolder index.
  */
-export { default as Alert } from './Alert.svelte';
-export { default as Breadcrumbs } from './Breadcrumbs.svelte';
-export type { BreadcrumbItem } from './Breadcrumbs.svelte';
+export { Alert, type AlertVariant, type AlertVariants, alertVariants } from './alert';
+export {
+	Avatar,
+	AvatarGroup,
+	type AvatarSize,
+	type AvatarVariants,
+	type AvatarGroupSize,
+	type AvatarGroupMember,
+	avatarVariants,
+	avatarGroupItemVariants
+} from './avatar';
+export {
+	Badge,
+	type BadgeVariant,
+	type BadgeAppearance,
+	type BadgeSize,
+	type BadgeStyle,
+	type BadgeVariants,
+	badgeVariants
+} from './badge';
+export { Breadcrumb, Breadcrumbs, type BreadcrumbItem } from './breadcrumb';
+export {
+	Button,
+	type ButtonVariant,
+	type ButtonSize,
+	type ButtonVariants,
+	buttonVariants
+} from './button';
+export { Pagination, type PaginationChange } from './pagination';
+export { Skeleton, type SkeletonShape, type SkeletonVariants, skeletonVariants } from './skeleton';
 export { default as CopyButton } from './CopyButton.svelte';
 export { default as AuthCard } from './AuthCard.svelte';
-export { default as Avatar } from './Avatar.svelte';
-export { default as AvatarGroup } from './AvatarGroup.svelte';
-export type { AvatarGroupMember, AvatarGroupSize } from './AvatarGroup.svelte';
-export { default as Badge } from './Badge.svelte';
-export { default as Button } from './Button.svelte';
 export * as Card from './card';
 export { default as ConfirmDialog } from './ConfirmDialog.svelte';
 export type { ConfirmDialogVariant } from './ConfirmDialog.svelte';
@@ -27,9 +54,6 @@ export { default as InlineEdit } from './InlineEdit.svelte';
 export * as Kanban from './kanban';
 export type { KanbanColumnDescriptor, KanbanColumnAccent, KanbanMove } from './kanban';
 export { default as Logo } from './Logo.svelte';
-export { default as Pagination } from './Pagination.svelte';
-export { default as Skeleton } from './Skeleton.svelte';
-export type { SkeletonVariants } from './Skeleton.svelte';
 export { default as Spinner } from './Spinner.svelte';
 export { default as StatCard } from './StatCard.svelte';
 export type { StatCardAccent } from './StatCard.svelte';

@@ -1,7 +1,7 @@
 <script context="module" lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import * as Popover from '$ui/popover';
-	import Button from '$ui/Button.svelte';
+	import { Button } from '$ui/button';
 	import TextField from '$lib/components/form/TextField.svelte';
 	import Switch from '$lib/components/form/Switch.svelte';
 	import { Filter, Settings } from '$icons';

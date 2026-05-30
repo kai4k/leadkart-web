@@ -1,6 +1,6 @@
 <script context="module" lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
-	import Skeleton from './Skeleton.svelte';
+	import { Skeleton } from './skeleton';
 
 	/**
 	 * Skeleton — loading placeholder. Renders only after >200 ms of

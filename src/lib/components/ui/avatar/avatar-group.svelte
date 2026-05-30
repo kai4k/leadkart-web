@@ -3,53 +3,55 @@
 	 * AvatarGroup — overlapping avatar stack with overflow indicator.
 	 *
 	 * Industry refs: Linear member list, GitHub reviewer chips, Figma
-	 * presence stack. Members render LTR with a 60%-width overlap (each
-	 * subsequent avatar nudged left). Overflow beyond `max` collapses
-	 * into a "+N" chip in the same shape.
+	 * presence stack. Members render LTR with a 40%-width overlap;
+	 * overflow beyond `max` collapses into a "+N" chip in the same
+	 * shape.
 	 */
+	import { type VariantProps, tv } from 'tailwind-variants';
 
-	import type { VariantProps } from 'class-variance-authority';
-	import { cva } from 'class-variance-authority';
-
-	export const avatarGroupItemVariants = cva(
-		[
+	export const avatarGroupItemVariants = tv({
+		base: [
 			'inline-flex items-center justify-center rounded-full font-medium uppercase',
 			'ring-2 ring-bg-elevated',
 			'bg-[linear-gradient(135deg,var(--color-primary-soft),var(--color-bg-muted))]',
 			'text-primary'
 		],
-		{
-			variants: {
-				size: {
-					xs: 'inline-size-5 block-size-5 text-[var(--text-2xs)]',
-					sm: 'inline-size-7 block-size-7 text-[var(--text-2xs)]',
-					md: 'inline-size-9 block-size-9 text-xs',
-					lg: 'inline-size-12 block-size-12 text-sm'
-				}
-			},
-			defaultVariants: { size: 'sm' }
-		}
-	);
+		variants: {
+			size: {
+				xs: 'inline-size-5 block-size-5 text-[var(--text-2xs)]',
+				sm: 'inline-size-7 block-size-7 text-[var(--text-2xs)]',
+				md: 'inline-size-9 block-size-9 text-xs',
+				lg: 'inline-size-12 block-size-12 text-sm'
+			}
+		},
+		defaultVariants: { size: 'sm' }
+	});
 
 	export type AvatarGroupSize = NonNullable<VariantProps<typeof avatarGroupItemVariants>['size']>;
-</script>
-
-<script lang="ts">
-	import { cn } from '$lib/utils/cn';
-
 	export type AvatarGroupMember = {
 		name: string;
 		image?: string;
 	};
+</script>
 
-	type Props = {
+<script lang="ts">
+	import type { HTMLAttributes } from 'svelte/elements';
+	import { cn, type WithElementRef } from '$lib/utils/cn';
+
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>> & {
 		members: AvatarGroupMember[];
 		max?: number;
 		size?: AvatarGroupSize;
-		class?: string;
 	};
 
-	let { members, max = 3, size = 'sm', class: className = '' }: Props = $props();
+	let {
+		ref = $bindable(null),
+		members,
+		max = 3,
+		size = 'sm',
+		class: className = '',
+		...rest
+	}: Props = $props();
 
 	const visible = $derived(members.slice(0, max));
 	const overflow = $derived(Math.max(0, members.length - max));
@@ -64,7 +66,14 @@
 	}
 </script>
 
-<div class={cn('inline-flex items-center', className)} role="group" aria-label="Members">
+<div
+	bind:this={ref}
+	data-slot="avatar-group"
+	class={cn('inline-flex items-center', className)}
+	role="group"
+	aria-label="Members"
+	{...rest}
+>
 	{#each visible as member, i (`${member.name}-${i}`)}
 		<span
 			class={cn(avatarGroupItemVariants({ size }), i > 0 && '-ml-[40%]')}

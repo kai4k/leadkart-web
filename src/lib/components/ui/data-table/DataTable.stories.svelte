@@ -1,8 +1,8 @@
 <script context="module" lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import DataTable, { type DataTableColumn } from './DataTable.svelte';
-	import Badge from '$ui/Badge.svelte';
-	import Button from '$ui/Button.svelte';
+	import { Badge } from '$ui/badge';
+	import { Button } from '$ui/button';
 	import StatusPill from '$ui/StatusPill.svelte';
 	import { EmptyState } from '$ui';
 	import { createBulkSelection } from '$lib/hooks';

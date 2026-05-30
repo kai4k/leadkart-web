@@ -32,7 +32,7 @@
 	import { ArrowDown, ArrowUp, Icon, iconSize } from '$lib/icons';
 	import { cn } from '$lib/utils/cn';
 	import * as Card from './card';
-	import Skeleton from './Skeleton.svelte';
+	import { Skeleton } from './skeleton';
 
 	type Props = {
 		label: string;

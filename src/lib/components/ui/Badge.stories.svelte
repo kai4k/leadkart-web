@@ -1,6 +1,6 @@
 <script context="module" lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
-	import Badge from './Badge.svelte';
+	import { Badge } from './badge';
 
 	/**
 	 * Badge — status/counter pill.

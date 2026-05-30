@@ -1,7 +1,7 @@
 <script context="module" lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import { Plus, Trash2, Icon } from '$lib/icons';
-	import Button from './Button.svelte';
+	import { Button } from './button';
 
 	/**
 	 * Button — primary CTA primitive.

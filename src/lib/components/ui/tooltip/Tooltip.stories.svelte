@@ -1,7 +1,7 @@
 <script context="module" lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import * as Tooltip from '$ui/tooltip';
-	import Button from '$ui/Button.svelte';
+	import { Button } from '$ui/button';
 	import { Info, HelpCircle } from '$icons';
 
 	const { Story } = defineMeta({

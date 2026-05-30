@@ -1,7 +1,7 @@
 <script context="module" lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import AuthCard from './AuthCard.svelte';
-	import Button from './Button.svelte';
+	import { Button } from './button';
 	import TextField from '$lib/components/form/TextField.svelte';
 	import PasswordField from '$lib/components/form/PasswordField.svelte';
 	import Logo from './Logo.svelte';

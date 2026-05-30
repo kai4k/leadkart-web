@@ -1,6 +1,6 @@
 <script context="module" lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
-	import Alert from './Alert.svelte';
+	import { Alert } from './alert';
 
 	/**
 	 * Alert — in-flow status banner. Inline non-blocking; for blocking

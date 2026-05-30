@@ -8,7 +8,7 @@
 	import { StatusPill, type StatusPillOption } from '$ui';
 	import { orderStatusSchema, type OrderStatus } from '$features/orders/schemas';
 	import { statusBadge } from '$features/orders/view-models';
-	import type { BadgeVariant } from '$lib/components/ui/Badge.svelte';
+	import type { BadgeVariant } from '$lib/components/ui/badge';
 
 	type Props = {
 		status: OrderStatus;

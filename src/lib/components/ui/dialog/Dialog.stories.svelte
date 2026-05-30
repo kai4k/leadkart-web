@@ -1,7 +1,7 @@
 <script context="module" lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import * as Dialog from '$ui/dialog';
-	import Button from '$ui/Button.svelte';
+	import { Button } from '$ui/button';
 	import TextField from '$lib/components/form/TextField.svelte';
 
 	const { Story } = defineMeta({

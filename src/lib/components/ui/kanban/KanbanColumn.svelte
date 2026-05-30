@@ -34,7 +34,7 @@
 	 */
 	import { getContext } from 'svelte';
 	import type { Snippet } from 'svelte';
-	import Badge from '../Badge.svelte';
+	import { Badge } from '../badge';
 	import { cn } from '$lib/utils/cn';
 	import { KANBAN_CTX } from './kanban-state.svelte';
 	import type { KanbanDragState } from './kanban-state.svelte';

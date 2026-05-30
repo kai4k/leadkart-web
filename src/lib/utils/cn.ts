@@ -13,3 +13,18 @@ import { twMerge } from 'tailwind-merge';
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
+
+// ─── shadcn-svelte helper types ──────────────────────────────────────
+// Used by every generated shadcn-svelte component to thread a `ref`
+// $bindable through to the underlying element + strip the children
+// snippet from prop types when forwarding to bits-ui primitives.
+
+export type WithElementRef<T, U extends HTMLElement = HTMLElement> = T & {
+	ref?: U | null;
+};
+
+export type WithoutChild<T> = T extends { child?: unknown } ? Omit<T, 'child'> : T;
+
+export type WithoutChildren<T> = T extends { children?: unknown } ? Omit<T, 'children'> : T;
+
+export type WithoutChildrenOrChild<T> = WithoutChildren<WithoutChild<T>>;

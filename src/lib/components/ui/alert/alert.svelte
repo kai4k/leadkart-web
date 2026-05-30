@@ -1,7 +1,13 @@
 <script lang="ts" module>
-	import { cva, type VariantProps } from 'class-variance-authority';
+	/**
+	 * Alert — shadcn-svelte canonical structure with the LeadKart
+	 * 4-variant set (info / success / warning / danger). Auto-icon per
+	 * variant; optional title slot; dismiss button + onDismiss callback.
+	 */
+	import { type VariantProps, tv } from 'tailwind-variants';
 
-	export const alertVariants = cva(['rounded-md border p-4 body-sm'], {
+	export const alertVariants = tv({
+		base: 'body-sm rounded-md border p-4',
 		variants: {
 			variant: {
 				info: 'bg-info-50 border-info-100 text-info-900',
@@ -13,29 +19,33 @@
 		defaultVariants: { variant: 'info' }
 	});
 
+	export type AlertVariant = NonNullable<VariantProps<typeof alertVariants>['variant']>;
 	export type AlertVariants = VariantProps<typeof alertVariants>;
 </script>
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import type { HTMLAttributes } from 'svelte/elements';
 	import { AlertCircle, CheckCircle2, Icon, Info, XCircle } from '$lib/icons';
-	import { cn } from '$lib/utils/cn';
+	import { cn, type WithElementRef } from '$lib/utils/cn';
 
-	type Props = AlertVariants & {
-		title?: string;
-		dismissible?: boolean;
-		onDismiss?: () => void;
-		class?: string;
-		children?: Snippet;
-	};
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>> &
+		AlertVariants & {
+			title?: string;
+			dismissible?: boolean;
+			onDismiss?: () => void;
+			children?: Snippet;
+		};
 
 	let {
+		ref = $bindable(null),
 		variant = 'info',
 		title,
 		dismissible = false,
 		onDismiss,
 		class: className = '',
-		children
+		children,
+		...rest
 	}: Props = $props();
 
 	const variantIcon = $derived(
@@ -49,7 +59,14 @@
 	);
 </script>
 
-<div class={cn(alertVariants({ variant }), className)} role="alert" aria-live="polite">
+<div
+	bind:this={ref}
+	data-slot="alert"
+	role="alert"
+	aria-live="polite"
+	class={cn(alertVariants({ variant }), className)}
+	{...rest}
+>
 	<div class="flex items-start gap-3">
 		<Icon icon={variantIcon} size="md" class="mt-0.5 flex-shrink-0" />
 		<div class="flex-1">

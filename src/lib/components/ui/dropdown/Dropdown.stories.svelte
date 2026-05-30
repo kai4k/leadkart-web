@@ -1,7 +1,7 @@
 <script context="module" lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import * as Dropdown from '$ui/dropdown';
-	import Button from '$ui/Button.svelte';
+	import { Button } from '$ui/button';
 	import { MoreHorizontal, Edit, Copy, Archive, Trash2 } from '$icons';
 
 	const { Story } = defineMeta({

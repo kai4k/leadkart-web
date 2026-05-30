@@ -1,7 +1,7 @@
 <script context="module" lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import ConfirmDialog from './ConfirmDialog.svelte';
-	import Button from './Button.svelte';
+	import { Button } from './button';
 
 	const { Story } = defineMeta({
 		title: 'UI/ConfirmDialog',

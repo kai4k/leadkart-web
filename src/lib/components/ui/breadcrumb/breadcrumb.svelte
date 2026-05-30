@@ -9,18 +9,24 @@
 </script>
 
 <script lang="ts">
+	import type { HTMLAttributes } from 'svelte/elements';
 	import { ChevronRight, Icon } from '$icons';
-	import { cn } from '$lib/utils/cn';
+	import { cn, type WithElementRef } from '$lib/utils/cn';
 
-	type Props = {
+	type Props = WithElementRef<HTMLAttributes<HTMLElement>> & {
 		items: BreadcrumbItem[];
-		class?: string;
 	};
 
-	let { items, class: className = '' }: Props = $props();
+	let { ref = $bindable(null), items, class: className = '', ...rest }: Props = $props();
 </script>
 
-<nav aria-label="Breadcrumb" class={cn('flex items-center', className)}>
+<nav
+	bind:this={ref}
+	data-slot="breadcrumb"
+	aria-label="Breadcrumb"
+	class={cn('flex items-center', className)}
+	{...rest}
+>
 	<ol class="flex flex-wrap items-center gap-1">
 		{#each items as item, i (item.label)}
 			{@const isLast = i === items.length - 1}
