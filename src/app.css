@@ -1,2 +1,20 @@
 @import 'tailwindcss';
+@import 'tw-animate-css';
+
+/* Dark mode variant — applied only when an ancestor has `.dark` class.
+ * Light-only by default; ModeWatcher in (app)/+layout.svelte handles
+ * future-toggle plumbing + FOUC. */
+@custom-variant dark (&:is(.dark *));
+
 @import './styles/index.css';
+
+@layer base {
+	body {
+		@apply bg-bg text-fg;
+	}
+	*,
+	::after,
+	::before {
+		@apply border-border;
+	}
+}
