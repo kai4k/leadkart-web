@@ -12,7 +12,7 @@
 	import { DataTable, EmptyState, type DataTableColumn } from '$ui';
 	import { Plus, ShoppingCart, Trash2, X } from '$icons';
 	import type { Component } from 'svelte';
-	import { UseBulkSelection, UseSavedViews, UseUrlFilters } from '$lib/hooks';
+	import { createBulkSelection, createSavedViews, createUrlFilters } from '$lib/hooks';
 	import { ordersInfiniteQuery, bulkOrderActionMutation } from '$features/orders/queries';
 	import {
 		formatMoney,
@@ -26,7 +26,7 @@
 	import { getListErrorMessage } from '$api/errors';
 
 	// ── URL state ────────────────────────────────────────────────────
-	const urlFilters = new UseUrlFilters<OrderListFilters>({
+	const urlFilters = createUrlFilters<OrderListFilters>({
 		q: { type: 'string', label: 'Search' },
 		status: { type: 'string[]', label: 'Status' },
 		customer_lead_id: { type: 'string', label: 'Customer' },
@@ -37,7 +37,7 @@
 		sort: { type: 'string', label: 'Sort' }
 	});
 
-	const savedViews = new UseSavedViews<OrderListFilters>(
+	const savedViews = createSavedViews<OrderListFilters>(
 		[
 			{ id: 'all', label: 'All', filters: { status: [] } },
 			{
@@ -62,7 +62,7 @@
 		urlFilters
 	);
 
-	const selection = new UseBulkSelection<OrderDto>();
+	const selection = createBulkSelection<OrderDto>();
 
 	// ── Query ────────────────────────────────────────────────────────
 	const listQuery = ordersInfiniteQuery(() => {

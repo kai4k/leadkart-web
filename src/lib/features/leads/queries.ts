@@ -2,7 +2,7 @@
  * TanStack Query hooks for the CRM Leads module.
  *
  * Pattern notes:
- *   - leadsInfiniteQuery wraps `UseInfiniteList` so the page can drop a
+ *   - leadsInfiniteQuery wraps `createInfiniteList` so the page can drop a
  *     sentinel + render `list.items` directly.
  *   - Mutations (per ADR 0038) return the updated DTO; we `setQueryData`
  *     to seed the cache BEFORE invalidating the list, so the row updates
@@ -14,7 +14,12 @@
 import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 import * as api from './api';
 import { toast } from '$ui';
-import { UseInfiniteList, useOptimisticMutation, type InfinitePage } from '$lib/hooks';
+import {
+	createInfiniteList,
+	useOptimisticMutation,
+	type InfiniteList,
+	type InfinitePage
+} from '$lib/hooks';
 import type {
 	CrmLeadDto,
 	ListLeadsParams,
@@ -41,7 +46,7 @@ type LeadsInfiniteCache = {
  *
  * Tolerant of:
  *   - cached value being a plain list envelope `{ items, has_more, ... }`
- *     (the leads list goes through `UseInfiniteList` so this branch
+ *     (the leads list goes through `createInfiniteList` so this branch
  *     normally won't fire, but the runtime guard keeps the projector
  *     safe across any future caller).
  *   - cached value being a TanStack infinite-cache wrapper.
@@ -75,8 +80,8 @@ export const leadsKeys = {
 
 // ── Queries ─────────────────────────────────────────────────────────
 
-export function leadsInfiniteQuery(getParams: () => ListLeadsParams): UseInfiniteList<CrmLeadDto> {
-	return new UseInfiniteList<CrmLeadDto>({
+export function leadsInfiniteQuery(getParams: () => ListLeadsParams): InfiniteList<CrmLeadDto> {
+	return createInfiniteList<CrmLeadDto>({
 		queryKey: () => leadsKeys.list(getParams()),
 		queryFn: ({ cursor }) =>
 			api.listLeads({ ...getParams(), cursor }).then((r) => ({

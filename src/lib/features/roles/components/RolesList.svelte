@@ -8,7 +8,7 @@
 	import type { RoleDto } from '$features/roles/types';
 	import { roleBadgeVariant, isProtectedRole, roleMemberCount } from '$features/roles/view-models';
 	import { getListErrorMessage } from '$api/errors';
-	import { UseListPagination } from '$lib/hooks';
+	import { createListPagination } from '$lib/hooks';
 	import DeleteRoleDialog from './DeleteRoleDialog.svelte';
 
 	let deleteOpen = $state(false);
@@ -19,7 +19,7 @@
 
 	const roleList = $derived(rolesQuery.data?.roles ?? []);
 	const userList = $derived(usersQuery.data?.users ?? []);
-	const pagination = new UseListPagination(() => roleList);
+	const pagination = createListPagination(() => roleList);
 
 	const tableState = $derived(
 		rolesQuery.isPending

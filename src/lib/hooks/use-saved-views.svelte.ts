@@ -1,14 +1,17 @@
 /**
- * `useSavedViews` — preset filter combinations rendered as tabs at the
- * top of a resource list page. Pattern reference: Linear's "All / My
- * Issues / In Progress" tabs and Stripe's saved-view chips.
+ * `createSavedViews` — preset filter combinations rendered as tabs at
+ * the top of a resource list page. Pattern reference: Linear's "All /
+ * My Issues / In Progress" tabs and Stripe's saved-view chips.
  *
  * Views are pure presets — clicking one writes its `filters` partial
- * to the underlying `UseUrlFilters` instance (which in turn updates
- * the URL). Active-state detection compares the current URL filters
- * to the view's preset; the first matching view wins.
+ * to the underlying `UrlFilters` instance (which in turn updates the
+ * URL). Active-state detection compares the current URL filters to
+ * the view's preset; the first matching view wins.
+ *
+ * Svelte canon: a factory returning an object with reactive getters
+ * and action functions, closing over the views + url filters.
  */
-import type { UseUrlFilters, UrlFiltersBase } from './use-url-filters.svelte';
+import type { UrlFilters, UrlFiltersBase } from './use-url-filters.svelte';
 
 export interface SavedView<TFilters extends UrlFiltersBase> {
 	id: string;
@@ -17,6 +20,13 @@ export interface SavedView<TFilters extends UrlFiltersBase> {
 	filters: Partial<TFilters>;
 	/** Optional badge count (e.g. "Awaiting decision · 3"). */
 	count?: () => number;
+}
+
+export interface SavedViews<TFilters extends UrlFiltersBase> {
+	readonly views: SavedView<TFilters>[];
+	readonly activeId: string | null;
+	activate(viewId: string): void;
+	isActive(viewId: string): boolean;
 }
 
 function valuesEqual(a: unknown, b: unknown): boolean {
@@ -29,45 +39,14 @@ function valuesEqual(a: unknown, b: unknown): boolean {
 	return a === b;
 }
 
-export class UseSavedViews<TFilters extends UrlFiltersBase> {
-	readonly views: SavedView<TFilters>[];
-	private readonly urlFilters: UseUrlFilters<TFilters>;
-
-	constructor(views: SavedView<TFilters>[], urlFilters: UseUrlFilters<TFilters>) {
-		this.views = views;
-		this.urlFilters = urlFilters;
-	}
-
-	/**
-	 * Apply a view's preset. Filters NOT mentioned by the view are
-	 * left intact — callers wanting a "fresh slate" should include
-	 * explicit clears in the view's `filters`.
-	 */
-	activate(viewId: string): void {
-		const v = this.views.find((x) => x.id === viewId);
-		if (!v) return;
-		for (const key in v.filters) {
-			const k = key as keyof TFilters & string;
-			const value = v.filters[k];
-			if (value !== undefined) {
-				this.urlFilters.setFilter(k, value as TFilters[typeof k]);
-			} else {
-				this.urlFilters.clearFilter(k);
-			}
-		}
-	}
-
-	/**
-	 * True when every key in `view.filters` matches the current URL
-	 * state. Empty-preset views ("All") are active iff no other
-	 * preset is active — handled implicitly because their filter
-	 * object is empty so the `every` returns true; consumers should
-	 * declare the "All" view first and rely on falling through.
-	 */
-	isActive(viewId: string): boolean {
-		const v = this.views.find((x) => x.id === viewId);
+export function createSavedViews<TFilters extends UrlFiltersBase>(
+	views: SavedView<TFilters>[],
+	urlFilters: UrlFilters<TFilters>
+): SavedViews<TFilters> {
+	function isActive(viewId: string): boolean {
+		const v = views.find((x) => x.id === viewId);
 		if (!v) return false;
-		const current = this.urlFilters.filters;
+		const current = urlFilters.filters;
 		for (const key in v.filters) {
 			if (!valuesEqual(current[key as keyof TFilters], v.filters[key as keyof TFilters])) {
 				return false;
@@ -76,11 +55,25 @@ export class UseSavedViews<TFilters extends UrlFiltersBase> {
 		return true;
 	}
 
-	/** The id of the first matching view — null if none match. */
-	get activeId(): string | null {
-		for (const v of this.views) {
-			if (this.isActive(v.id)) return v.id;
+	return {
+		views,
+		activate(viewId) {
+			const v = views.find((x) => x.id === viewId);
+			if (!v) return;
+			for (const key in v.filters) {
+				const k = key as keyof TFilters & string;
+				const value = v.filters[k];
+				if (value !== undefined) {
+					urlFilters.setFilter(k, value as TFilters[typeof k]);
+				} else {
+					urlFilters.clearFilter(k);
+				}
+			}
+		},
+		isActive,
+		get activeId() {
+			for (const v of views) if (isActive(v.id)) return v.id;
+			return null;
 		}
-		return null;
-	}
+	};
 }

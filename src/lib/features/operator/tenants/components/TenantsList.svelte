@@ -37,7 +37,7 @@
 	import MarkForDeletionDialog from './MarkForDeletionDialog.svelte';
 	import ImpersonateModal from '$features/operator/impersonation/components/ImpersonateModal.svelte';
 	import type { TenantDto } from '$features/operator/tenants/types';
-	import { UseListPagination } from '$lib/hooks';
+	import { createListPagination } from '$lib/hooks';
 
 	const PAGE_SIZE = 10;
 
@@ -124,7 +124,7 @@
 		}
 	] as const);
 
-	const pagination = new UseListPagination(() => filtered, { pageSize: PAGE_SIZE });
+	const pagination = createListPagination(() => filtered, { pageSize: PAGE_SIZE });
 
 	const tableState = $derived(
 		query.isPending

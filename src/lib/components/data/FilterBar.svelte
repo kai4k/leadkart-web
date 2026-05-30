@@ -19,14 +19,14 @@
 </script>
 
 <script lang="ts" generics="TFilters extends import('$lib/hooks').UrlFiltersBase">
-	import type { UseUrlFilters } from '$lib/hooks';
+	import type { UrlFilters } from '$lib/hooks';
 	import { Select, TextField } from '$form';
 	import { Icon, ChevronDown, ChevronUp } from '$icons';
 	import { cn } from '$lib/utils/cn';
 
 	/**
 	 * FilterBar — collapsible grid of filter controls wired to a
-	 * `UseUrlFilters` instance. Each field's `onchange` calls
+	 * `UrlFilters` instance. Each field's `onchange` calls
 	 * `urlFilters.setFilter(...)` so the URL is the single source of
 	 * truth.
 	 *
@@ -42,7 +42,7 @@
 
 	type Props = {
 		fields: FilterBarField[];
-		urlFilters: UseUrlFilters<TFilters>;
+		urlFilters: UrlFilters<TFilters>;
 		/** Externally controlled open/close state. */
 		open?: boolean;
 		class?: string;

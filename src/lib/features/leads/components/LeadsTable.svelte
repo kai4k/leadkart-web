@@ -12,7 +12,7 @@
 	import { goto } from '$app/navigation';
 	import { Skeleton, EmptyState, StatusPill } from '$ui';
 	import { Icon, Inbox } from '$icons';
-	import { UseBulkSelection, type UseInfiniteList, type UseKeyboardListNav } from '$lib/hooks';
+	import type { BulkSelection, InfiniteList, KeyboardListNav } from '$lib/hooks';
 	import type { CrmLeadDto, LeadStage, LeadTemperature } from '../schemas';
 	import {
 		BUSINESS_TYPE_LABEL,
@@ -25,9 +25,9 @@
 	import { changeStageMutation, changeTemperatureMutation } from '../queries';
 
 	type Props = {
-		list: UseInfiniteList<CrmLeadDto>;
-		selection: UseBulkSelection<CrmLeadDto>;
-		nav: UseKeyboardListNav<CrmLeadDto>;
+		list: InfiniteList<CrmLeadDto>;
+		selection: BulkSelection<CrmLeadDto>;
+		nav: KeyboardListNav<CrmLeadDto>;
 	};
 
 	let { list, selection, nav }: Props = $props();

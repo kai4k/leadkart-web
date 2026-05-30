@@ -5,7 +5,7 @@
 	import Button from '$ui/Button.svelte';
 	import StatusPill from '$ui/StatusPill.svelte';
 	import { EmptyState } from '$ui';
-	import { UseBulkSelection } from '$lib/hooks';
+	import { createBulkSelection } from '$lib/hooks';
 	import { Edit, Trash2, Database } from '$icons';
 
 	const { Story } = defineMeta({
@@ -100,7 +100,7 @@
 		}
 	];
 
-	const selection = new UseBulkSelection<Tenant>();
+	const selection = createBulkSelection<Tenant>();
 	const SELECTABLE_COLUMNS: DataTableColumn<Tenant>[] = [{ id: 'select', header: '' }, ...COLUMNS];
 </script>
 

@@ -1,5 +1,5 @@
 /**
- * Session store — Svelte 5 class-based reactive store.
+ * Session store — Svelte 5 reactive store via factory + singleton.
  *
  * BFF model: the browser never holds access/refresh tokens. Auth state
  * is entirely owned by the SvelteKit Node server (httpOnly cookies).
@@ -9,27 +9,38 @@
  * No localStorage reads/writes. No JWT decoding. No auth hooks wired
  * to the API client (CSRF header injection happens directly in client.ts).
  *
- * SessionStore exposes:
- *   - principal: derived $state from $page.data.capabilities (null = signed-out)
+ * The store exposes:
+ *   - principal: derived from $page.data.capabilities (null = signed-out)
  *   - isAuthenticated: boolean getter
  *   - logout(): calls /auth/logout BFF endpoint + navigates to /signin
+ *
+ * Svelte canon: a factory returning an object with reactive getters.
+ * The module-level export is the singleton — safe because the closure
+ * proxy state (none here; everything is derived from $page.data) lives
+ * inside the factory.
  */
 
 import { page } from '$app/state';
 import type { Capabilities } from '../api';
 import type { SessionPrincipal } from '../types';
 
-class SessionStore {
+export interface Session {
+	readonly principal: SessionPrincipal | null;
+	readonly isAuthenticated: boolean;
+	logout(): Promise<void>;
+}
+
+function createSession(): Session {
 	/**
-	 * Derives the current principal from the SSR-bootstrapped capabilities
+	 * Derive the current principal from the SSR-bootstrapped capabilities
 	 * in $page.data. On first render (SSR), this is populated from the
 	 * +layout.server.ts load. On navigation, SvelteKit re-runs the load
-	 * and updates the store reactively.
+	 * and updates reactively.
 	 *
 	 * Returns null when capabilities are absent (auth route, sign-out,
 	 * or layout server redirect to /signin before load completes).
 	 */
-	get principal(): SessionPrincipal | null {
+	function readPrincipal(): SessionPrincipal | null {
 		const caps = (page.data as { capabilities?: Capabilities }).capabilities;
 		if (!caps) return null;
 		return {
@@ -44,10 +55,6 @@ class SessionStore {
 		};
 	}
 
-	get isAuthenticated(): boolean {
-		return this.principal !== null;
-	}
-
 	/**
 	 * Sign the user out. Calls the BFF /auth/logout endpoint which:
 	 *   1. Best-effort revokes the refresh token server-side (Go)
@@ -56,7 +63,7 @@ class SessionStore {
 	 * Then navigates to /signin via full page reload (clears in-memory
 	 * state + ensures +layout.server.ts runs clean with no cookies).
 	 */
-	async logout(): Promise<void> {
+	async function logout(): Promise<void> {
 		// Read the CSRF cookie (non-httpOnly) to echo as X-CSRF-Token header
 		const csrf =
 			typeof document !== 'undefined'
@@ -78,6 +85,23 @@ class SessionStore {
 		// and the in-memory query cache is fully purged.
 		window.location.href = '/signin';
 	}
+
+	return {
+		get principal() {
+			return readPrincipal();
+		},
+		get isAuthenticated() {
+			return readPrincipal() !== null;
+		},
+		logout
+	};
 }
 
-export const session = new SessionStore();
+/**
+ * Singleton export. Per CLAUDE.md rule 4, the ban on module-level
+ * `$state` is to avoid silent cross-module reactivity breakage; this
+ * factory holds no `$state` at module scope — `readPrincipal()` reads
+ * `page.data` (Svelte-tracked at call site) every access, so there's
+ * nothing to break.
+ */
+export const session = createSession();

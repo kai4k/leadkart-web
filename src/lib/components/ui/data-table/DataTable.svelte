@@ -57,18 +57,18 @@
 		 * they also pass a selection whose item shape matches.
 		 */
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		selection?: import('$lib/hooks').UseBulkSelection<any>;
+		selection?: import('$lib/hooks').BulkSelection<any>;
 		/**
 		 * Roving-tabindex keyboard nav store. When set, the table forwards
 		 * `onkeydown` / `onfocusin` / `onfocusout` from the `<tbody>` to
 		 * the nav store, sets `data-roving-root` on the table wrapper,
-		 * sets per-row `tabindex` via {@link UseKeyboardListNav.tabindexFor},
+		 * sets per-row `tabindex` via {@link KeyboardListNav.tabindexFor},
 		 * and registers each row's element under its `rowKey` so j/k/Home/
 		 * End move DOM focus. Pair with `nav.setItems(rows)` in a parent
 		 * `$effect`.
 		 */
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		nav?: import('$lib/hooks').UseKeyboardListNav<any>;
+		nav?: import('$lib/hooks').KeyboardListNav<any>;
 		/** Optional class on the wrapping element. */
 		class?: string;
 	};

@@ -16,7 +16,7 @@
 	lang="ts"
 	generics="TFilters extends import('$lib/hooks').UrlFiltersBase, TItem extends import('$lib/hooks').SelectableItem"
 >
-	import type { UseUrlFilters, UseBulkSelection, UseSavedViews } from '$lib/hooks';
+	import type { UrlFilters, BulkSelection, SavedViews } from '$lib/hooks';
 	import { Button } from '$ui';
 	import { Icon } from '$icons';
 	import { cn } from '$lib/utils/cn';
@@ -41,13 +41,13 @@
 		subtitle?: string;
 		primaryAction?: ResourceListAction;
 		secondaryActions?: ResourceListAction[];
-		savedViews?: UseSavedViews<TFilters>;
+		savedViews?: SavedViews<TFilters>;
 		filters?: {
 			config: FilterBarField[];
-			instance: UseUrlFilters<TFilters>;
+			instance: UrlFilters<TFilters>;
 		};
 		bulk?: {
-			selection: UseBulkSelection<TItem>;
+			selection: BulkSelection<TItem>;
 			actions: BulkAction[];
 		};
 		/** Optional search-box snippet rendered into the toolbar centre. */

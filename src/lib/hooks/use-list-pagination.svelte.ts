@@ -1,5 +1,5 @@
 /**
- * `useListPagination` — URL-driven pagination state for client-paginated
+ * `createListPagination` — URL-driven pagination for client-paginated
  * resource lists.
  *
  * Three list pages (Users, Tenants, Roles) repeated the same shape:
@@ -8,17 +8,23 @@
  *   function setPage(p: number) { goto(`?page=${p}`) }
  *   const paged = $derived(items.slice((currentPage - 1) * pageSize, ...));
  *
- * Rule of Three was triggered — this hook centralises the wiring while
+ * Rule of Three triggered — this factory centralises the wiring while
  * letting callers control items + pageSize. Keeps the `?page=` query
  * param as the single source of truth so refresh + share + browser-back
  * preserve the page position. Mounted to `1` (i.e. omits the param)
  * when on the first page — Stripe/Linear/GitHub convention.
  *
- * Usage in a list component:
+ * Svelte canon: a factory function that closes over `$state`/`$derived`
+ * and returns an object with getter accessors. No classes, no `new`,
+ * no `this` — runes track reactivity through the closure. Module-level
+ * `$state` is avoided because the factory is called per-component,
+ * which gives each list its own pagination instance.
  *
- *   import { UseListPagination } from '$lib/hooks';
+ * Usage:
  *
- *   const pagination = new UseListPagination(() => filtered, { pageSize: 10 });
+ *   import { createListPagination } from '$lib/hooks';
+ *
+ *   const pagination = createListPagination(() => filtered, { pageSize: 10 });
  *
  *   {#each pagination.paged as item}…{/each}
  *   <Pagination
@@ -26,63 +32,61 @@
  *     pageCount={pagination.pageCount}
  *     onChange={pagination.setPage}
  *   />
- *
- * Why class-based: CLAUDE.md rule 4 — class with `$state`/`$derived`
- * fields is the canonical cross-module reactive shape. Module-level
- * `$state` would silently break under SSR + multiple list pages
- * mounted concurrently.
  */
 import { goto } from '$app/navigation';
 import { page } from '$app/state';
 import { SvelteURLSearchParams } from 'svelte/reactivity';
 
-export type UseListPaginationOptions = {
+export type ListPaginationOptions = {
 	/** Items per page. Default 10 (Stripe/Linear/GitHub canon for list views). */
 	pageSize?: number;
 	/** Query-param key. Default 'page' — change only when colliding with another param. */
 	paramKey?: string;
 };
 
-export class UseListPagination<TItem> {
+export interface ListPagination<TItem> {
 	readonly pageSize: number;
 	readonly paramKey: string;
-	private getItems: () => ReadonlyArray<TItem>;
+	readonly currentPage: number;
+	readonly pageCount: number;
+	readonly paged: TItem[];
+	setPage(p: number): void;
+}
 
-	constructor(getItems: () => ReadonlyArray<TItem>, opts: UseListPaginationOptions = {}) {
-		this.getItems = getItems;
-		this.pageSize = opts.pageSize ?? 10;
-		this.paramKey = opts.paramKey ?? 'page';
-	}
+export function createListPagination<TItem>(
+	getItems: () => ReadonlyArray<TItem>,
+	opts: ListPaginationOptions = {}
+): ListPagination<TItem> {
+	const pageSize = opts.pageSize ?? 10;
+	const paramKey = opts.paramKey ?? 'page';
 
-	get currentPage(): number {
-		const raw = page.url.searchParams.get(this.paramKey);
-		const n = Number(raw ?? '1');
-		return Number.isFinite(n) && n > 0 ? Math.floor(n) : 1;
-	}
-
-	get pageCount(): number {
-		const items = this.getItems();
-		return Math.max(1, Math.ceil(items.length / this.pageSize));
-	}
-
-	get paged(): TItem[] {
-		const items = this.getItems();
-		const start = (this.currentPage - 1) * this.pageSize;
-		return items.slice(start, start + this.pageSize);
-	}
-
-	/**
-	 * Method-property bound to the instance so it can be passed straight
-	 * to `<Pagination onChange={pagination.setPage} />` without re-binding.
-	 */
-	readonly setPage = (p: number): void => {
+	function setPage(p: number): void {
 		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
 		if (p > 1) {
-			params.set(this.paramKey, String(p));
+			params.set(paramKey, String(p));
 		} else {
-			params.delete(this.paramKey);
+			params.delete(paramKey);
 		}
 		const qs = params.toString();
 		void goto(qs ? `?${qs}` : page.url.pathname, { replaceState: true });
+	}
+
+	return {
+		pageSize,
+		paramKey,
+		get currentPage() {
+			const raw = page.url.searchParams.get(paramKey);
+			const n = Number(raw ?? '1');
+			return Number.isFinite(n) && n > 0 ? Math.floor(n) : 1;
+		},
+		get pageCount() {
+			return Math.max(1, Math.ceil(getItems().length / pageSize));
+		},
+		get paged() {
+			const items = getItems();
+			const start = (this.currentPage - 1) * pageSize;
+			return items.slice(start, start + pageSize);
+		},
+		setPage
 	};
 }

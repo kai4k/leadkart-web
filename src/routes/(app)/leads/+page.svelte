@@ -17,10 +17,10 @@
 	import { TextField } from '$form';
 	import { Upload } from '$icons';
 	import {
-		UseUrlFilters,
-		UseBulkSelection,
-		UseKeyboardListNav,
-		UseSavedViews,
+		createUrlFilters,
+		createBulkSelection,
+		createKeyboardListNav,
+		createSavedViews,
 		type SavedView
 	} from '$lib/hooks';
 	import { LEAD_FILTER_FIELDS, type LeadUrlFilters } from '$features/leads/filter-config';
@@ -43,7 +43,7 @@
 	} from '$features/leads/schemas';
 
 	// ── URL filters ──────────────────────────────────────────────────
-	const filters = new UseUrlFilters<LeadUrlFilters>({
+	const filters = createUrlFilters<LeadUrlFilters>({
 		q: { type: 'string', label: 'Search' },
 		stage: { type: 'string[]', label: 'Stage' },
 		temperature: { type: 'string[]', label: 'Temperature' },
@@ -83,7 +83,7 @@
 		}
 	]);
 
-	const savedViews = $derived(new UseSavedViews<LeadUrlFilters>(savedViewDefs, filters));
+	const savedViews = $derived(createSavedViews<LeadUrlFilters>(savedViewDefs, filters));
 
 	// ── View tab (kanban / table) ────────────────────────────────────
 	type ViewMode = 'kanban' | 'table';
@@ -124,7 +124,7 @@
 
 	// ── List + selection + keyboard nav ──────────────────────────────
 	const list = leadsInfiniteQuery(() => buildListParams());
-	const selection = new UseBulkSelection<CrmLeadDto>();
+	const selection = createBulkSelection<CrmLeadDto>();
 	let editingLead: CrmLeadDto | null = $state(null);
 	let editOpen = $state(false);
 	let bulkUploadOpen = $state(false);
@@ -132,7 +132,7 @@
 	// Roving-tabindex keyboard nav. Drawers (Edit / Bulk upload) own
 	// focus when open, so j/k bubble naturally out of the row list
 	// instead of needing an `isAnyOverlayOpen` guard.
-	const nav = new UseKeyboardListNav<CrmLeadDto>({
+	const nav = createKeyboardListNav<CrmLeadDto>({
 		onSelect: (lead) => goto(`/leads/${lead.id}`),
 		onEdit: (lead) => {
 			editingLead = lead;

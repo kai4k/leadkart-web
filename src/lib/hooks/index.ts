@@ -1,13 +1,16 @@
 /**
- * Reusable hooks barrel — runes-based, class-shaped composables that
+ * Reusable hooks barrel — runes-based, factory-shaped composables that
  * resource list pages consume to stay under ~200 lines apiece.
  *
- * Each hook exports both the class (for typed `let foo: UseFoo` binds)
- * and its option/result types so consumers can declare typed wrappers
- * without reaching into the module's path directly.
+ * Each hook exports its factory function (`createX`), its returned-
+ * interface type (`X`), and any options/result types. Consumers call
+ * the factory in component setup and store the returned object
+ * directly. No classes, no `new`, no `this` — runes track reactivity
+ * through closures (the Svelte 5 canon for shared reactive logic).
  */
 export {
-	UseUrlFilters,
+	createUrlFilters,
+	type UrlFilters,
 	type UrlFilterValue,
 	type UrlFiltersBase,
 	type UrlFilterFieldSchema,
@@ -16,22 +19,24 @@ export {
 } from './use-url-filters.svelte';
 
 export {
-	UseInfiniteList,
+	createInfiniteList,
+	type InfiniteList,
 	type InfinitePage,
 	type InfiniteListState,
-	type UseInfiniteListOptions,
+	type InfiniteListOptions,
 	type InfiniteListQuery
 } from './use-infinite-list.svelte';
 
 export {
-	UseKeyboardListNav,
+	createKeyboardListNav,
+	type KeyboardListNav,
 	type KeyableItem,
-	type UseKeyboardListNavOptions
+	type KeyboardListNavOptions
 } from './use-keyboard-list-nav.svelte';
 
 export { useUrlTab, type UseUrlTab } from './use-url-tab.svelte';
 
-export { UseSavedViews, type SavedView } from './use-saved-views.svelte';
+export { createSavedViews, type SavedViews, type SavedView } from './use-saved-views.svelte';
 
 export {
 	useOptimisticMutation,
@@ -39,16 +44,25 @@ export {
 	type OptimisticMutationHandle
 } from './use-optimistic-mutation.svelte';
 
-export { UseBulkSelection, type SelectableItem } from './use-bulk-selection.svelte';
+export {
+	createBulkSelection,
+	type BulkSelection,
+	type SelectableItem
+} from './use-bulk-selection.svelte';
 
-export { UseListPagination, type UseListPaginationOptions } from './use-list-pagination.svelte';
+export {
+	createListPagination,
+	type ListPagination,
+	type ListPaginationOptions
+} from './use-list-pagination.svelte';
 
-export { UsePwa } from './use-pwa.svelte';
+export { createPwa, type Pwa } from './use-pwa.svelte';
 
-export { useForm, FormState, type FormOpts, type FieldErrors } from './use-form.svelte';
+export { useForm, type Form, type FormOpts, type FieldErrors } from './use-form.svelte';
 
 export {
 	theme,
+	type Theme,
 	PRIMARY_COLORS,
 	CONTENT_WIDTHS,
 	type PrimaryColor,

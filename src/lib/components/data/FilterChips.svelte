@@ -1,6 +1,6 @@
 <!-- src/lib/components/data/FilterChips.svelte -->
 <script lang="ts" generics="TFilters extends import('$lib/hooks').UrlFiltersBase">
-	import type { UseUrlFilters } from '$lib/hooks';
+	import type { UrlFilters } from '$lib/hooks';
 	import { Icon, X } from '$icons';
 	import { cn } from '$lib/utils/cn';
 
@@ -12,7 +12,7 @@
 	 * Pure projection of `urlFilters.activeChips`; no state of its own.
 	 */
 	type Props = {
-		urlFilters: UseUrlFilters<TFilters>;
+		urlFilters: UrlFilters<TFilters>;
 		class?: string;
 	};
 

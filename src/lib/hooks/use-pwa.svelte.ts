@@ -1,16 +1,25 @@
 /**
- * `UsePwa` — singleton-shaped reactive store for PWA lifecycle:
+ * `createPwa` — PWA lifecycle factory:
  *   - install eligibility (Chromium `beforeinstallprompt` event)
  *   - update availability (new service worker waiting)
  *   - online/offline status (browser online events)
  *
- * Mounted once in `AppShell` (or `+layout.svelte`) on the client. Other
- * components read `pwa.isInstallable`, `pwa.isOnline`, `pwa.updateReady`
- * to render install/update CTAs and an offline badge.
+ * Svelte canon: a factory returning an object with reactive getters +
+ * imperative actions + a `start(): cleanup` function the caller invokes
+ * from `$effect`. No classes, no `this` — runes track through closure.
  *
- * Class-based with `$state` fields per CLAUDE.md rule 4. Browser-only —
- * SSR guard via `browser` import; all listeners are wired inside an
- * `attach()` method the caller invokes in an `$effect`.
+ * Browser-only — SSR guard via `browser`. The `start()` function is the
+ * single attach point; its return value is the cleanup that `$effect`
+ * runs on teardown.
+ *
+ * Usage:
+ *
+ *   import { createPwa } from '$lib/hooks';
+ *
+ *   const pwa = createPwa();
+ *   $effect(() => pwa.start());
+ *
+ *   {#if pwa.updateReady}<button onclick={pwa.applyUpdate}>Reload</button>{/if}
  */
 import { browser } from '$app/environment';
 
@@ -20,92 +29,69 @@ interface BeforeInstallPromptEvent extends Event {
 	readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-export class UsePwa {
-	isOnline: boolean = $state(browser ? navigator.onLine : true);
-	isInstallable: boolean = $state(false);
-	updateReady: boolean = $state(false);
-
-	#installPrompt: BeforeInstallPromptEvent | null = null;
-	#waitingWorker: ServiceWorker | null = null;
-	#detachers: Array<() => void> = [];
-
+export interface Pwa {
+	readonly isOnline: boolean;
+	readonly isInstallable: boolean;
+	readonly updateReady: boolean;
+	install(): Promise<boolean>;
+	applyUpdate(): void;
 	/**
-	 * Wire all listeners. Call once from an `$effect` in the root layout:
-	 *
-	 *   const pwa = new UsePwa();
-	 *   $effect(() => pwa.attach());
-	 *
-	 * Returns the cleanup function so Svelte can detach on unmount.
+	 * Wire all listeners and return a cleanup. Call from inside `$effect`:
+	 *   $effect(() => pwa.start());
 	 */
-	attach(): () => void {
-		if (!browser) return () => {};
+	start(): () => void;
+}
 
-		const onOnline = () => (this.isOnline = true);
-		const onOffline = () => (this.isOnline = false);
+export function createPwa(): Pwa {
+	let isOnline = $state(browser ? navigator.onLine : true);
+	let isInstallable = $state(false);
+	let updateReady = $state(false);
+
+	let installPrompt: BeforeInstallPromptEvent | null = null;
+	let waitingWorker: ServiceWorker | null = null;
+
+	function start(): () => void {
+		if (!browser) return () => {};
+		const cleanups: Array<() => void> = [];
+
+		const onOnline = () => (isOnline = true);
+		const onOffline = () => (isOnline = false);
 		window.addEventListener('online', onOnline);
 		window.addEventListener('offline', onOffline);
-		this.#detachers.push(() => window.removeEventListener('online', onOnline));
-		this.#detachers.push(() => window.removeEventListener('offline', onOffline));
+		cleanups.push(() => window.removeEventListener('online', onOnline));
+		cleanups.push(() => window.removeEventListener('offline', onOffline));
 
 		const onBeforeInstall = (e: Event) => {
 			e.preventDefault();
-			this.#installPrompt = e as BeforeInstallPromptEvent;
-			this.isInstallable = true;
+			installPrompt = e as BeforeInstallPromptEvent;
+			isInstallable = true;
 		};
 		window.addEventListener('beforeinstallprompt', onBeforeInstall);
-		this.#detachers.push(() => window.removeEventListener('beforeinstallprompt', onBeforeInstall));
+		cleanups.push(() => window.removeEventListener('beforeinstallprompt', onBeforeInstall));
 
 		const onInstalled = () => {
-			this.isInstallable = false;
-			this.#installPrompt = null;
+			isInstallable = false;
+			installPrompt = null;
 		};
 		window.addEventListener('appinstalled', onInstalled);
-		this.#detachers.push(() => window.removeEventListener('appinstalled', onInstalled));
+		cleanups.push(() => window.removeEventListener('appinstalled', onInstalled));
 
 		if ('serviceWorker' in navigator) {
-			void this.#wireServiceWorker();
+			void wireServiceWorker(cleanups);
 		}
 
-		return () => this.detach();
+		return () => {
+			for (const fn of cleanups) fn();
+		};
 	}
 
-	detach(): void {
-		for (const fn of this.#detachers) fn();
-		this.#detachers = [];
-	}
-
-	/**
-	 * Show the install prompt. Returns true if accepted, false if dismissed
-	 * or unavailable. Chromium fires `appinstalled` after acceptance, which
-	 * clears `isInstallable`.
-	 */
-	async install(): Promise<boolean> {
-		const prompt = this.#installPrompt;
-		if (!prompt) return false;
-		await prompt.prompt();
-		const choice = await prompt.userChoice;
-		return choice.outcome === 'accepted';
-	}
-
-	/**
-	 * Apply the waiting service worker (skip the wait-for-tabs-to-close
-	 * step). Reloads the page so the new bundle takes effect.
-	 */
-	applyUpdate(): void {
-		const waiting = this.#waitingWorker;
-		if (!waiting) return;
-		waiting.postMessage({ type: 'SKIP_WAITING' });
-		const reload = () => location.reload();
-		navigator.serviceWorker.addEventListener('controllerchange', reload, { once: true });
-	}
-
-	async #wireServiceWorker(): Promise<void> {
+	async function wireServiceWorker(cleanups: Array<() => void>): Promise<void> {
 		const reg = await navigator.serviceWorker.getRegistration();
 		if (!reg) return;
 
 		if (reg.waiting) {
-			this.#waitingWorker = reg.waiting;
-			this.updateReady = true;
+			waitingWorker = reg.waiting;
+			updateReady = true;
 		}
 
 		const onUpdateFound = () => {
@@ -113,12 +99,41 @@ export class UsePwa {
 			if (!installing) return;
 			installing.addEventListener('statechange', () => {
 				if (installing.state === 'installed' && navigator.serviceWorker.controller) {
-					this.#waitingWorker = installing;
-					this.updateReady = true;
+					waitingWorker = installing;
+					updateReady = true;
 				}
 			});
 		};
 		reg.addEventListener('updatefound', onUpdateFound);
-		this.#detachers.push(() => reg.removeEventListener('updatefound', onUpdateFound));
+		cleanups.push(() => reg.removeEventListener('updatefound', onUpdateFound));
 	}
+
+	async function install(): Promise<boolean> {
+		if (!installPrompt) return false;
+		await installPrompt.prompt();
+		const choice = await installPrompt.userChoice;
+		return choice.outcome === 'accepted';
+	}
+
+	function applyUpdate(): void {
+		if (!waitingWorker) return;
+		waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+		const reload = () => location.reload();
+		navigator.serviceWorker.addEventListener('controllerchange', reload, { once: true });
+	}
+
+	return {
+		get isOnline() {
+			return isOnline;
+		},
+		get isInstallable() {
+			return isInstallable;
+		},
+		get updateReady() {
+			return updateReady;
+		},
+		install,
+		applyUpdate,
+		start
+	};
 }

@@ -39,7 +39,7 @@
 </script>
 
 <script lang="ts" generics="TItem extends import('$lib/hooks').SelectableItem">
-	import type { UseBulkSelection } from '$lib/hooks';
+	import type { BulkSelection } from '$lib/hooks';
 	import { Button, ConfirmDialog, Dropdown } from '$ui';
 	import { Icon, ChevronDown } from '$icons';
 	import { cn } from '$lib/utils/cn';
@@ -56,7 +56,7 @@
 	 */
 
 	type Props = {
-		selection: UseBulkSelection<TItem>;
+		selection: BulkSelection<TItem>;
 		actions: BulkAction[];
 		class?: string;
 	};

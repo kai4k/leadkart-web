@@ -1,58 +1,60 @@
 /**
- * `useBulkSelection` — Set-of-ids selection store for resource list
+ * `createBulkSelection` — Set-of-ids selection store for resource-list
  * bulk operations. Wraps `SvelteSet<string>` (already self-reactive)
- * so `count` is a proper `$derived` and consumers can pass the
- * instance directly to `<BulkActionBar>`.
+ * so `count` reads through the proxy, and consumers can pass the
+ * returned object directly to `<BulkActionBar>`.
+ *
+ * Svelte canon: a factory closing over reactive state. The returned
+ * object has getters for derived values and plain functions for
+ * imperative actions. No classes, no `this`.
  */
 import { SvelteSet } from 'svelte/reactivity';
 
 export type SelectableItem = { id: string };
 
-export class UseBulkSelection<TItem extends SelectableItem> {
-	readonly selected: SvelteSet<string> = new SvelteSet<string>();
+export interface BulkSelection<TItem extends SelectableItem> {
+	readonly selected: SvelteSet<string>;
+	readonly count: number;
+	isSelected(id: string): boolean;
+	toggle(id: string): void;
+	selectAllVisible(items: TItem[]): void;
+	deselectAllVisible(items: TItem[]): void;
+	clear(): void;
+	getSelectedItems(items: TItem[]): TItem[];
+	areAllVisibleSelected(items: TItem[]): boolean;
+}
 
-	get count(): number {
-		return this.selected.size;
-	}
+export function createBulkSelection<TItem extends SelectableItem>(): BulkSelection<TItem> {
+	const selected = new SvelteSet<string>();
 
-	isSelected(id: string): boolean {
-		return this.selected.has(id);
-	}
-
-	toggle(id: string): void {
-		if (this.selected.has(id)) this.selected.delete(id);
-		else this.selected.add(id);
-	}
-
-	/** Add every currently-visible item to the selection. */
-	selectAllVisible(items: TItem[]): void {
-		for (const it of items) this.selected.add(it.id);
-	}
-
-	/** Remove every currently-visible item from the selection. */
-	deselectAllVisible(items: TItem[]): void {
-		for (const it of items) this.selected.delete(it.id);
-	}
-
-	clear(): void {
-		this.selected.clear();
-	}
-
-	/**
-	 * Map the selected id-set onto the provided items array. Items not
-	 * present in the array (because they're on another page or have
-	 * been filtered out) are silently skipped.
-	 */
-	getSelectedItems(items: TItem[]): TItem[] {
-		return items.filter((it) => this.selected.has(it.id));
-	}
-
-	/** True iff every visible item is selected. */
-	areAllVisibleSelected(items: TItem[]): boolean {
-		if (items.length === 0) return false;
-		for (const it of items) {
-			if (!this.selected.has(it.id)) return false;
+	return {
+		selected,
+		get count() {
+			return selected.size;
+		},
+		isSelected(id) {
+			return selected.has(id);
+		},
+		toggle(id) {
+			if (selected.has(id)) selected.delete(id);
+			else selected.add(id);
+		},
+		selectAllVisible(items) {
+			for (const it of items) selected.add(it.id);
+		},
+		deselectAllVisible(items) {
+			for (const it of items) selected.delete(it.id);
+		},
+		clear() {
+			selected.clear();
+		},
+		getSelectedItems(items) {
+			return items.filter((it) => selected.has(it.id));
+		},
+		areAllVisibleSelected(items) {
+			if (items.length === 0) return false;
+			for (const it of items) if (!selected.has(it.id)) return false;
+			return true;
 		}
-		return true;
-	}
+	};
 }

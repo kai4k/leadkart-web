@@ -25,7 +25,7 @@
 	import { displayName, initials } from '$features/auth/view-models';
 	import type { UserDto } from '$features/users/types';
 	import { getListErrorMessage } from '$api/errors';
-	import { UseBulkSelection, UseListPagination } from '$lib/hooks';
+	import { createBulkSelection, createListPagination } from '$lib/hooks';
 	import { BulkActionBar, type BulkAction } from '$lib/components/data';
 	import CreateUserDrawer from './CreateUserDrawer.svelte';
 	import DeactivateUserDialog from './DeactivateUserDialog.svelte';
@@ -79,7 +79,7 @@
 	// selection store keys on membership_id strings even though UserDto
 	// doesn't carry an `id` field. The store contract requires SelectableItem
 	// here for type-safety; the runtime store only ever sees the rowKey value.
-	const selection = new UseBulkSelection<{ id: string }>();
+	const selection = createBulkSelection<{ id: string }>();
 
 	const bulkActions: BulkAction[] = [
 		{
@@ -169,7 +169,7 @@
 		);
 	});
 
-	const pagination = new UseListPagination(() => filtered);
+	const pagination = createListPagination(() => filtered);
 
 	const tableState = $derived(
 		listQuery.isPending

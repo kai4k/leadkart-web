@@ -14,12 +14,12 @@
 	 * authenticated pages. Each bar uses the same .glass-card material
 	 * as toasts so the visual language is consistent.
 	 */
-	import { UsePwa } from '$lib/hooks';
+	import { createPwa } from '$lib/hooks';
 	import { Button } from '$ui';
 	import { CloudOff, Download, RefreshCw, Icon } from '$icons';
 
-	const pwa = new UsePwa();
-	$effect(() => pwa.attach());
+	const pwa = createPwa();
+	$effect(() => pwa.start());
 </script>
 
 <div
