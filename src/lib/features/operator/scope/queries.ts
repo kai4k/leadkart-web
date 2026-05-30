@@ -37,18 +37,17 @@ export function enterScopeMutation() {
 		},
 		onError: (err) => {
 			if (err instanceof NetworkError) {
-				toast('danger', 'Check your network connection and try again.');
+				toast.error('Check your network connection and try again.');
 			} else if (err instanceof AuthError) {
-				toast(
-					'danger',
+				toast.error(
 					err.status === 403
 						? "You don't have permission to open this tenant."
 						: 'Your session expired. Sign in again.'
 				);
 			} else if (err instanceof NotFoundError) {
-				toast('danger', 'This tenant was deleted or moved.');
+				toast.error('This tenant was deleted or moved.');
 			} else {
-				toast('danger', 'Could not open tenant');
+				toast.error('Could not open tenant');
 			}
 		}
 	}));
@@ -68,7 +67,7 @@ export function exitScopeMutation() {
 			await goto('/operator/tenants');
 		},
 		onError: () => {
-			toast('danger', 'Could not exit scope — try again.');
+			toast.error('Could not exit scope — try again.');
 		}
 	}));
 }

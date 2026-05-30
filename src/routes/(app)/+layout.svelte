@@ -5,7 +5,7 @@
 	import PwaStatusBar from '$layouts/PwaStatusBar.svelte';
 	import ImpersonationBanner from '$features/operator/impersonation/components/ImpersonationBanner.svelte';
 	import { queryClient } from '$lib/api/query-client';
-	import Toaster from '$lib/components/ui/Toaster.svelte';
+	import { Toaster } from '$ui';
 
 	let { children } = $props();
 </script>

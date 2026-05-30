@@ -81,7 +81,7 @@ export function createUserMutation() {
 		mutationFn: (req: CreateUserRequest) => api.createUser(req),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: usersKeys.list() });
-			toast('success', 'Member added');
+			toast.success('Member added');
 		}
 	}));
 }
@@ -93,7 +93,7 @@ export function deactivateUserMutation() {
 			api.deactivateUser(id, { reason }),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: usersKeys.all });
-			toast('success', 'Member deactivated');
+			toast.success('Member deactivated');
 		}
 	}));
 }
@@ -104,7 +104,7 @@ export function reactivateUserMutation() {
 		mutationFn: (id: string) => api.reactivateUser(id),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: usersKeys.all });
-			toast('success', 'Member reactivated');
+			toast.success('Member reactivated');
 		}
 	}));
 }
@@ -116,7 +116,7 @@ export function assignRoleMutation() {
 			api.assignRole(id, { role_id: roleId }),
 		onSuccess: (_, vars) => {
 			void qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id) });
-			toast('success', 'Role assigned');
+			toast.success('Role assigned');
 		}
 	}));
 }
@@ -127,7 +127,7 @@ export function revokeRoleMutation() {
 		mutationFn: ({ id, roleId }: { id: string; roleId: string }) => api.revokeRole(id, roleId),
 		onSuccess: (_, vars) => {
 			void qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id) });
-			toast('success', 'Role revoked');
+			toast.success('Role revoked');
 		}
 	}));
 }
@@ -139,7 +139,7 @@ export function replacePermissionOverridesMutation() {
 			api.replacePermissionOverrides(id, body),
 		onSuccess: (_, vars) => {
 			void qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id) });
-			toast('success', 'Permission overrides saved');
+			toast.success('Permission overrides saved');
 		}
 	}));
 }
@@ -151,7 +151,7 @@ export function assignManagerMutation() {
 			api.assignManager(id, { manager_id: managerId }),
 		onSuccess: (_, vars) => {
 			void qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id) });
-			toast('success', 'Manager assigned');
+			toast.success('Manager assigned');
 		}
 	}));
 }
@@ -162,7 +162,7 @@ export function removeManagerMutation() {
 		mutationFn: (id: string) => api.removeManager(id),
 		onSuccess: (_, id) => {
 			void qc.invalidateQueries({ queryKey: usersKeys.detail(id) });
-			toast('success', 'Manager removed');
+			toast.success('Manager removed');
 		}
 	}));
 }

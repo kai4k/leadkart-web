@@ -52,7 +52,7 @@ export function updateTenantProfileMutation(tenantId: string) {
 		mutationFn: (body: UpdateTenantProfileRequest) => api.updateTenantProfile(tenantId, body),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: tenantSelfKeys.detail(tenantId) });
-			toast('success', 'Profile saved');
+			toast.success('Profile saved');
 		}
 	}));
 }
@@ -64,7 +64,7 @@ export function updateTenantStatutoryMutation(tenantId: string) {
 		mutationFn: (body: UpdateTenantStatutoryRequest) => api.updateTenantStatutory(tenantId, body),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: tenantSelfKeys.detail(tenantId) });
-			toast('success', 'Statutory IDs saved');
+			toast.success('Statutory IDs saved');
 		}
 	}));
 }
@@ -77,7 +77,7 @@ export function updateTenantAdminContactMutation(tenantId: string) {
 			api.updateTenantAdminContact(tenantId, body),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: tenantSelfKeys.detail(tenantId) });
-			toast('success', 'Contact details saved');
+			toast.success('Contact details saved');
 		}
 	}));
 }
@@ -89,7 +89,7 @@ export function updateTenantSettingsMutation(tenantId: string) {
 		mutationFn: (body: UpdateTenantSettingsRequest) => api.updateTenantSettings(tenantId, body),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: tenantSelfKeys.detail(tenantId) });
-			toast('success', 'Settings saved');
+			toast.success('Settings saved');
 		}
 	}));
 }
@@ -102,7 +102,7 @@ export function updateTenantDisplayPreferencesMutation(tenantId: string) {
 			api.updateTenantDisplayPreferences(tenantId, body),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: tenantSelfKeys.detail(tenantId) });
-			toast('success', 'Display preferences saved');
+			toast.success('Display preferences saved');
 		}
 	}));
 }

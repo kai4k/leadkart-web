@@ -140,7 +140,7 @@ export function updateLeadMutation() {
 		onSuccess: (lead) => {
 			qc.setQueryData(leadsKeys.detail(lead.id), lead);
 			void qc.invalidateQueries({ queryKey: leadsKeys.lists() });
-			toast('success', 'Lead updated');
+			toast.success('Lead updated');
 		}
 	}));
 }
@@ -232,7 +232,7 @@ export function reassignLeadMutation() {
 			qc.setQueryData(leadsKeys.detail(lead.id), lead);
 			void qc.invalidateQueries({ queryKey: leadsKeys.history(lead.id) });
 			void qc.invalidateQueries({ queryKey: leadsKeys.lists() });
-			toast('success', 'Lead reassigned');
+			toast.success('Lead reassigned');
 		}
 	}));
 }
@@ -245,7 +245,7 @@ export function logCallMutation() {
 			void qc.invalidateQueries({ queryKey: leadsKeys.calls(vars.id) });
 			void qc.invalidateQueries({ queryKey: leadsKeys.reminders(vars.id) });
 			void qc.invalidateQueries({ queryKey: leadsKeys.detail(vars.id) });
-			toast('success', 'Call logged');
+			toast.success('Call logged');
 		}
 	}));
 }
@@ -265,7 +265,7 @@ export function updateReminderMutation() {
 		}) => api.updateReminder(id, action, snooze_until ? { snooze_until } : {}),
 		onSuccess: (_r, vars) => {
 			void qc.invalidateQueries({ queryKey: leadsKeys.reminders(vars.leadId) });
-			toast('success', `Reminder ${vars.action}d`);
+			toast.success(`Reminder ${vars.action}d`);
 		}
 	}));
 }
@@ -285,10 +285,10 @@ export function bulkLeadActionMutation() {
 						: vars.action === 'change_temperature'
 							? 'updated'
 							: 'updated';
-			toast('success', `${result.affected} ${noun} ${verb}`);
+			toast.success(`${result.affected} ${noun} ${verb}`);
 		},
 		onError: () => {
-			toast('danger', 'Bulk action failed');
+			toast.error('Bulk action failed');
 		}
 	}));
 }
@@ -306,7 +306,7 @@ export function bulkUploadCommitMutation() {
 			api.bulkUploadCommit(file, upsertBy),
 		onSuccess: (result) => {
 			void qc.invalidateQueries({ queryKey: leadsKeys.all });
-			toast('success', `${result.inserted + result.updated} leads imported`);
+			toast.success(`${result.inserted + result.updated} leads imported`);
 		}
 	}));
 }

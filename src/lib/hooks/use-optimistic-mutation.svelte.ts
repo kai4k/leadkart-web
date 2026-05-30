@@ -158,7 +158,7 @@ export function useOptimisticMutation<TVariables, TData = unknown, TContext = un
 			if (options.successToast) {
 				const msg = options.successToast(data, vars);
 				const undo = options.undo;
-				toast('success', msg, {
+				toast.success(msg, {
 					duration: options.toastDurationMs ?? (undo ? 10_000 : 5_000),
 					action: undo
 						? {

@@ -40,7 +40,7 @@ export function createRoleMutation() {
 		mutationFn: (req: CreateRoleRequest) => api.createRole(req),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: rolesKeys.all });
-			toast('success', 'Role created');
+			toast.success('Role created');
 		}
 	}));
 }
@@ -51,7 +51,7 @@ export function updateRoleMutation() {
 		mutationFn: ({ id, req }: { id: string; req: UpdateRoleRequest }) => api.updateRole(id, req),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: rolesKeys.all });
-			toast('success', 'Role updated');
+			toast.success('Role updated');
 		}
 	}));
 }
@@ -63,7 +63,7 @@ export function replaceRolePermissionsMutation() {
 			api.replaceRolePermissions(id, { permissions }),
 		onSuccess: (_, vars) => {
 			void qc.invalidateQueries({ queryKey: rolesKeys.detail(vars.id) });
-			toast('success', 'Permissions saved');
+			toast.success('Permissions saved');
 		}
 	}));
 }
@@ -75,7 +75,7 @@ export function grantRolePermissionMutation() {
 			api.grantRolePermission(id, { permission }),
 		onSuccess: (_, vars) => {
 			void qc.invalidateQueries({ queryKey: rolesKeys.detail(vars.id) });
-			toast('success', 'Permission granted');
+			toast.success('Permission granted');
 		}
 	}));
 }
@@ -87,7 +87,7 @@ export function revokeRolePermissionMutation() {
 			api.revokeRolePermission(id, { permission }),
 		onSuccess: (_, vars) => {
 			void qc.invalidateQueries({ queryKey: rolesKeys.detail(vars.id) });
-			toast('success', 'Permission revoked');
+			toast.success('Permission revoked');
 		}
 	}));
 }
@@ -98,7 +98,7 @@ export function deleteRoleMutation() {
 		mutationFn: (id: string) => api.deleteRole(id),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: rolesKeys.all });
-			toast('success', 'Role deleted');
+			toast.success('Role deleted');
 		}
 	}));
 }
@@ -111,7 +111,7 @@ export function setRoleParentMutation() {
 		onSuccess: (_, vars) => {
 			void qc.invalidateQueries({ queryKey: rolesKeys.all });
 			void qc.invalidateQueries({ queryKey: rolesKeys.detail(vars.id) });
-			toast('success', vars.parent_role_id ? 'Parent role set' : 'Parent role cleared');
+			toast.success(vars.parent_role_id ? 'Parent role set' : 'Parent role cleared');
 		}
 	}));
 }

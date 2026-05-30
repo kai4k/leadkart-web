@@ -45,7 +45,7 @@ export function registerTenantMutation() {
 		mutationFn: (req: RegisterTenantRequest) => api.registerTenant(req),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: tenantsKeys.all });
-			toast('success', 'Tenant registered');
+			toast.success('Tenant registered');
 		}
 	}));
 }
@@ -57,7 +57,7 @@ export function suspendTenantMutation() {
 			api.suspendTenant(id, { reason }),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: tenantsKeys.all });
-			toast('success', 'Tenant suspended');
+			toast.success('Tenant suspended');
 		}
 	}));
 }
@@ -68,7 +68,7 @@ export function activateTenantMutation() {
 		mutationFn: (id: string) => api.activateTenant(id),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: tenantsKeys.all });
-			toast('success', 'Tenant activated');
+			toast.success('Tenant activated');
 		}
 	}));
 }
@@ -80,7 +80,7 @@ export function markForDeletionMutation() {
 			api.markForDeletion(id, { reason }),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: tenantsKeys.all });
-			toast('success', 'Tenant marked for deletion');
+			toast.success('Tenant marked for deletion');
 		}
 	}));
 }
@@ -91,7 +91,7 @@ export function restoreTenantMutation() {
 		mutationFn: (id: string) => api.restoreTenant(id),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: tenantsKeys.all });
-			toast('success', 'Tenant restored');
+			toast.success('Tenant restored');
 		}
 	}));
 }

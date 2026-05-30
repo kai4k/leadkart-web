@@ -71,7 +71,7 @@ export function updateMyProfileMutation(membershipId: string) {
 		mutationFn: (patch: UpdateProfileRequest) => api.updateMyProfile(membershipId, patch),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: profileKey(membershipId) });
-			toast('success', 'Profile updated');
+			toast.success('Profile updated');
 		}
 	}));
 }
@@ -108,7 +108,7 @@ export function revokeSessionMutation() {
 		},
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: sessionsKey });
-			toast('success', 'Session revoked');
+			toast.success('Session revoked');
 		}
 	}));
 }
@@ -135,12 +135,9 @@ export function revokeOtherSessionsMutation(currentFamilyId: string | null) {
 		onSuccess: ({ revoked_count }) => {
 			void qc.invalidateQueries({ queryKey: sessionsKey });
 			if (revoked_count > 0) {
-				toast(
-					'success',
-					`Signed out ${revoked_count} other device${revoked_count === 1 ? '' : 's'}`
-				);
+				toast.success(`Signed out ${revoked_count} other device${revoked_count === 1 ? '' : 's'}`);
 			} else {
-				toast('success', 'No other sessions to revoke');
+				toast.success('No other sessions to revoke');
 			}
 		}
 	}));

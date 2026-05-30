@@ -385,4 +385,59 @@
 			background: var(--color-bg-elevated);
 		}
 	}
+
+	/* ═══ Sonner toast — Apple Liquid Glass skin.
+	 *
+	 * svelte-sonner renders each toast as `[data-sonner-toast]` with a
+	 * `data-type="success|error|warning|info"` attribute. Our wrapper at
+	 * src/lib/components/ui/sonner/Toaster.svelte applies the
+	 * `.glass-toast` class via `toastOptions.classes.toast`, so this
+	 * selector skins every toast.
+	 *
+	 * Variant accent stripe matches the prior Toaster.svelte semantic:
+	 * 4px inline-start border in the variant color, on top of the
+	 * shared glass material. */
+	.glass-toast {
+		position: relative;
+		border-radius: 1rem;
+		border-inline-start: 4px solid transparent;
+		border-block-start: var(--glass-border-subtle);
+		background: var(--color-bg-elevated);
+		box-shadow: var(--glass-specular);
+		color: var(--color-fg);
+	}
+	.glass-toast::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+		background: var(--glass-inner-gradient);
+		pointer-events: none;
+		z-index: 0;
+	}
+	.glass-toast > * {
+		position: relative;
+		z-index: 1;
+	}
+	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+		.glass-toast {
+			background: var(--glass-bg-thick);
+			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+				brightness(var(--glass-brightness));
+			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+				brightness(var(--glass-brightness));
+		}
+	}
+	.glass-toast[data-type='success'] {
+		border-inline-start-color: var(--color-success-500);
+	}
+	.glass-toast[data-type='error'] {
+		border-inline-start-color: var(--color-danger-500);
+	}
+	.glass-toast[data-type='warning'] {
+		border-inline-start-color: var(--color-warning-500);
+	}
+	.glass-toast[data-type='info'] {
+		border-inline-start-color: var(--color-info-500);
+	}
 }

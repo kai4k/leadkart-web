@@ -52,7 +52,7 @@ const REQUIRED = {
 	// Feedback primitives (arch test #183)
 	feedback: [
 		{ path: 'ui/Alert.svelte' },
-		{ path: 'ui/Toaster.svelte' },
+		{ path: 'ui/sonner/Toaster.svelte' },
 		{ path: 'ui/tooltip/Tooltip.svelte' },
 		{ path: 'ui/Skeleton.svelte' },
 		{ path: 'ui/Spinner.svelte' },
