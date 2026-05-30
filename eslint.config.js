@@ -502,12 +502,17 @@ export default ts.config(
 			'src/routes/**/+server.ts',
 			'src/routes/**/+page.server.ts',
 			'src/routes/**/+layout.server.ts',
+			'src/routes/**/+page.ts',
+			'src/routes/**/+layout.ts',
 			'src/hooks.server.ts',
 			'src/hooks.client.ts',
 			// Service worker IS the platform fetch layer — caching
 			// strategies (CacheFirst, NetworkFirst, StaleWhileRevalidate)
 			// require direct fetch() against the original Request.
-			'src/service-worker.ts'
+			'src/service-worker.ts',
+			// Server-only BFF helpers (lib/server/*) — cookie → Bearer
+			// auth model, called from action handlers + server loads.
+			'src/lib/server/**'
 		],
 		rules: {
 			'no-restricted-globals': [

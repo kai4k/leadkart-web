@@ -1,96 +1,44 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { goto } from '$app/navigation';
+	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 	import { Icon, Lock } from '$lib/icons';
-	import { z } from 'zod';
-	import { resetPassword } from '../api';
 	import { Alert, AuthCard, Button, Logo } from '$lib/components/ui';
 	import { PasswordField } from '$lib/components/form';
-	import { ValidationError, NetworkError, ApiError } from '$api/errors';
+	import type { ActionData } from '../../../../routes/(auth)/reset-password/$types';
 
 	/**
-	 * ResetPasswordForm — public reset confirmation step (email-link flow).
+	 * ResetPasswordForm — Svelte canon form-shaped route. Action lives
+	 * at (auth)/reset-password/+page.server.ts.
 	 *
-	 * Flow:
-	 *   1. User clicks the link emailed by Go: /reset-password?token=…
-	 *   2. We read the token from the query string.
-	 *   3. User enters new_password + confirm.
-	 *   4. POST /auth/reset-password { token, new_password } → 204.
-	 *   5. Success Alert + 2s setTimeout → /signin.
-	 *
-	 * Error mapping:
-	 *   400 invalid_token / token_consumed / token_expired → top banner
-	 *   422 password_breached → field error on new_password
-	 *   422 password_same     → field error on new_password
-	 *   422 weak_password     → field error on new_password
-	 *
-	 * Missing/empty token: surface "Reset link invalid — request a new one."
+	 * Token from URL (?token=...). Missing token surfaces a "Reset link
+	 * invalid" notice with a link to /forgot-password.
 	 */
+	type Props = { form?: ActionData };
+	let { form }: Props = $props();
 
 	const token = $derived(page.url.searchParams.get('token') ?? '');
-	const newPasswordSchema = z.string().min(12, $_('auth.resetPassword.newPasswordHint'));
 
-	let newPassword = $state('');
-	let confirmPassword = $state('');
-	let fieldErrors = $state<{ new_password?: string; confirm?: string }>({});
-	let formError = $state<string | null>(null);
 	let loading = $state(false);
-	let success = $state(false);
+	const success = $derived(Boolean(form && 'success' in form && form.success));
 
-	async function onSubmit(e: SubmitEvent) {
-		e.preventDefault();
-		formError = null;
-		fieldErrors = {};
+	const formErrorKey = $derived(
+		form && 'formErrorKey' in form && form.formErrorKey ? form.formErrorKey : null
+	);
+	const formError = $derived(formErrorKey ? $_(formErrorKey) : null);
 
-		if (!token) {
-			formError = $_('auth.resetPassword.errors.invalidToken');
-			return;
-		}
-		if (newPassword !== confirmPassword) {
-			fieldErrors = { confirm: $_('auth.resetPassword.errors.mismatch') };
-			return;
-		}
-		const parsed = newPasswordSchema.safeParse(newPassword);
-		if (!parsed.success) {
-			fieldErrors = { new_password: parsed.error.issues[0]?.message };
-			return;
-		}
+	const fieldKeys = $derived<{ new_password?: string; confirm?: string }>(
+		form && 'fieldKeys' in form && form.fieldKeys ? form.fieldKeys : {}
+	);
+	const fieldErrors = $derived({
+		new_password: fieldKeys.new_password ? $_(fieldKeys.new_password) : undefined,
+		confirm: fieldKeys.confirm ? $_(fieldKeys.confirm) : undefined
+	});
 
-		loading = true;
-		try {
-			await resetPassword({ token, new_password: parsed.data });
-			success = true;
-			setTimeout(() => goto('/signin'), 2000);
-		} catch (err) {
-			if (err instanceof ValidationError) {
-				// Token-lifecycle 400 codes surface as a top banner (the token
-				// is the problem, not the password); other ValidationErrors
-				// route to the password field.
-				if (
-					err.code === 'invalid_token' ||
-					err.code === 'token_consumed' ||
-					err.code === 'token_expired'
-				) {
-					formError = $_('auth.resetPassword.errors.invalidToken');
-				} else if (err.code === 'password_breached') {
-					fieldErrors = { new_password: $_('auth.resetPassword.errors.breached') };
-				} else if (err.code === 'password_same') {
-					fieldErrors = { new_password: $_('auth.resetPassword.errors.same') };
-				} else {
-					fieldErrors = { new_password: $_('auth.resetPassword.errors.weak') };
-				}
-			} else if (err instanceof NetworkError) {
-				formError = 'Check your network connection and try again.';
-			} else if (err instanceof ApiError && err.status === 400) {
-				formError = $_('auth.resetPassword.errors.invalidToken');
-			} else {
-				formError = $_('auth.errors.unexpected');
-			}
-		} finally {
-			loading = false;
-		}
-	}
+	$effect(() => {
+		if (success) setTimeout(() => goto('/signin'), 2000);
+	});
 </script>
 
 <AuthCard>
@@ -107,29 +55,40 @@
 			<p>{$_('auth.resetPassword.errors.missingToken')}</p>
 		</Alert>
 		<p class="caption text-fg-muted text-center">
-			<a href="/forgot-password" class="text-primary hover:underline"
-				>{$_('auth.resetPassword.requestNew')}</a
-			>
+			<a href="/forgot-password" class="text-primary hover:underline">
+				{$_('auth.resetPassword.requestNew')}
+			</a>
 		</p>
 	{:else if success}
 		<Alert variant="success">
 			<p>{$_('auth.resetPassword.success')}</p>
 		</Alert>
 	{:else}
-		<form class="stack" onsubmit={onSubmit} novalidate>
+		<form
+			class="stack"
+			method="POST"
+			novalidate
+			use:enhance={() => {
+				loading = true;
+				return async ({ update }) => {
+					await update();
+					loading = false;
+				};
+			}}
+		>
 			<PasswordField
 				label={$_('auth.resetPassword.newPassword')}
+				name="new_password"
 				hint={$_('auth.resetPassword.newPasswordHint')}
 				autocomplete="new-password"
 				required
-				bind:value={newPassword}
 				error={fieldErrors.new_password}
 			/>
 			<PasswordField
 				label={$_('auth.resetPassword.confirmPassword')}
+				name="confirm"
 				autocomplete="new-password"
 				required
-				bind:value={confirmPassword}
 				error={fieldErrors.confirm}
 			/>
 			{#if formError}
@@ -144,10 +103,10 @@
 			class="border-border text-fg-subtle flex flex-col items-center gap-2 border-t pt-4 sm:flex-row sm:justify-center"
 		>
 			<Icon icon={Lock} size="xs" />
-			<span class="caption"
-				>{$_('auth.resetPassword.backToSignin')}
-				<a href="/signin" class="text-primary hover:underline">{$_('auth.signin.title')}</a></span
-			>
+			<span class="caption">
+				{$_('auth.resetPassword.backToSignin')}
+				<a href="/signin" class="text-primary hover:underline">{$_('auth.signin.title')}</a>
+			</span>
 		</div>
 	{/if}
 </AuthCard>

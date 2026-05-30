@@ -1,80 +1,61 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { goto } from '$app/navigation';
+	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import { Icon, Lock } from '$lib/icons';
-	import { login, LoginError } from '../api';
-	import { loginRequestSchema } from '../schemas';
 	import { Alert, AuthCard, Button, Logo } from '$lib/components/ui';
 	import { TextField, PasswordField } from '$lib/components/form';
+	import type { ActionData } from '../../../../routes/(auth)/signin/$types';
 
 	/**
-	 * SigninForm — feature-owned auth form using the cross-feature
-	 * primitives + Zod-validated request body + ?next= redirect honor.
+	 * SigninForm — Svelte canon for form-shaped routes per the
+	 * "per-route shape" principle: forms use SvelteKit form actions +
+	 * use:enhance for progressive enhancement, lists use TanStack.
+	 *
+	 * The action lives at (auth)/signin/+page.server.ts. The `form` prop
+	 * exposes the action's last result (validation errors, login error,
+	 * lockout countdown). use:enhance keeps the submit on-page when JS
+	 * is available and degrades to a full POST + 303 redirect without it.
 	 *
 	 * Three post-submit branches per ADR 0053:
 	 *   1. 200 with must_change_password=true → /must-change-password
-	 *      (mandatory rotation before any other action).
-	 *   2. 200 with must_change_password=false → /dashboard (or ?next=).
-	 *   3. 423 locked → render countdown using Retry-After delta-seconds.
+	 *   2. 200 with must_change_password=false → /dashboard (or ?next=)
+	 *   3. 423 locked → renders countdown using returned retryAfterSeconds
 	 *
-	 * `?email=` prefill from an admin-initiated invite redirect. Read once
-	 * at mount; subsequent edits are user-driven.
+	 * `?email=` prefill from an admin-initiated invite redirect.
 	 */
 
-	let email = $state(page.url.searchParams.get('email') ?? '');
-	let password = $state('');
+	type Props = { form?: ActionData };
+	let { form }: Props = $props();
+
 	let loading = $state(false);
-	let formError = $state<string | null>(null);
-	let fieldErrors = $state<{ email?: string; password?: string }>({});
 	let errorRegion: HTMLElement | undefined = $state();
 
-	async function onSubmit(e: SubmitEvent) {
-		e.preventDefault();
-		formError = null;
-		fieldErrors = {};
+	// Repopulate email after a failed submit (server returned `email`).
+	// Falls back to ?email= prefill on first render.
+	const initialEmail = $derived(form?.email ?? page.url.searchParams.get('email') ?? '');
 
-		const parsed = loginRequestSchema.safeParse({ email, password });
-		if (!parsed.success) {
-			const flat = parsed.error.flatten().fieldErrors;
-			fieldErrors = {
-				email: flat.email?.[0],
-				password: flat.password?.[0]
-			};
-			return;
+	const formError = $derived.by(() => {
+		if (!form || !('formError' in form) || !form.formError) return null;
+		const key = form.formError;
+		const rawSeconds =
+			'retryAfterSeconds' in form ? (form.retryAfterSeconds as unknown) : undefined;
+		const seconds = typeof rawSeconds === 'number' ? rawSeconds : undefined;
+		if (key === 'auth.errors.accountLocked' && seconds !== undefined) {
+			return $_(key, { values: { seconds } });
 		}
+		return $_(key);
+	});
 
-		loading = true;
-		try {
-			const result = await login(parsed.data);
-			if (result.must_change_password) {
-				const nextParam = page.url.searchParams.get('next');
-				const suffix = nextParam ? `?next=${encodeURIComponent(nextParam)}` : '';
-				await goto(`/must-change-password${suffix}`);
-				return;
-			}
-			const next = page.url.searchParams.get('next');
-			const target = next && next.startsWith('/') ? decodeURIComponent(next) : '/dashboard';
-			await goto(target);
-		} catch (err) {
-			if (err instanceof LoginError) {
-				if (err.status === 423 && err.retryAfterSeconds !== undefined) {
-					formError = $_('auth.errors.accountLocked', {
-						values: { seconds: err.retryAfterSeconds }
-					});
-				} else if (err.status === 401) {
-					formError = $_('auth.errors.invalidCredentials');
-				} else {
-					formError = $_('auth.errors.unexpected');
-				}
-			} else {
-				formError = $_('auth.errors.unexpected');
-			}
-			queueMicrotask(() => errorRegion?.focus());
-		} finally {
-			loading = false;
-		}
-	}
+	const fieldErrors = $derived(
+		form && 'errors' in form && form.errors
+			? form.errors
+			: ({} as { email?: string; password?: string })
+	);
+
+	$effect(() => {
+		if (formError) queueMicrotask(() => errorRegion?.focus());
+	});
 </script>
 
 <AuthCard>
@@ -86,20 +67,32 @@
 		</div>
 	</div>
 
-	<form class="stack" onsubmit={onSubmit} novalidate>
+	<form
+		class="stack"
+		method="POST"
+		novalidate
+		use:enhance={() => {
+			loading = true;
+			return async ({ update }) => {
+				await update();
+				loading = false;
+			};
+		}}
+	>
 		<TextField
 			label={$_('auth.signin.email')}
+			name="email"
 			type="email"
 			autocomplete="email"
 			required
-			bind:value={email}
+			value={initialEmail}
 			error={fieldErrors.email}
 		/>
 
 		<PasswordField
 			label={$_('auth.signin.password')}
+			name="password"
 			required
-			bind:value={password}
 			error={fieldErrors.password}
 		/>
 
@@ -114,9 +107,9 @@
 		</Button>
 
 		<p class="caption text-fg-muted text-center">
-			<a href="/forgot-password" class="text-primary hover:underline"
-				>{$_('auth.signin.forgotPassword')}</a
-			>
+			<a href="/forgot-password" class="text-primary hover:underline">
+				{$_('auth.signin.forgotPassword')}
+			</a>
 		</p>
 	</form>
 

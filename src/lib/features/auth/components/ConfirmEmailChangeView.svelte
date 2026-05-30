@@ -1,44 +1,15 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { page } from '$app/state';
-	import { Alert, AuthCard, Logo, Spinner } from '$ui';
-	import { confirmEmailChange } from '../api';
-	import { NetworkError } from '$api/errors';
+	import { Alert, AuthCard, Logo } from '$ui';
+	import type { ConfirmPhase } from '../../../../routes/(auth)/confirm-email-change/+page';
 
 	/**
-	 * ConfirmEmailChangeView — public confirmation step.
-	 *
-	 * Reads the token from ?token= and POSTs it on mount. Four phases:
-	 *   - 'missing' → no token in URL
-	 *   - 'pending' → in-flight
-	 *   - 'success' → email updated
-	 *   - 'invalid' → token expired/consumed/malformed
+	 * ConfirmEmailChangeView — Svelte canon load-shaped route.
+	 * The POST happens in (auth)/confirm-email-change/+page.ts; this
+	 * component is a pure renderer over the `phase` returned by load.
 	 */
-
-	const token = $derived(page.url.searchParams.get('token') ?? '');
-
-	let phase: 'pending' | 'success' | 'invalid' | 'missing' = $state('pending');
-	let errorMessage: string | null = $state(null);
-
-	$effect(() => {
-		if (!token) {
-			phase = 'missing';
-			return;
-		}
-		confirmEmailChange({ token })
-			.then(() => {
-				phase = 'success';
-			})
-			.catch((err: unknown) => {
-				phase = 'invalid';
-				if (err instanceof NetworkError) {
-					errorMessage = 'Check your network connection and try again.';
-				} else {
-					// 400 invalid/expired/consumed token — surface the canonical copy.
-					errorMessage = null;
-				}
-			});
-	});
+	type Props = { phase: ConfirmPhase };
+	let { phase }: Props = $props();
 </script>
 
 <AuthCard>
@@ -52,25 +23,21 @@
 
 	{#if phase === 'missing'}
 		<Alert variant="warning">{$_('auth.changeEmail.confirm.missingToken')}</Alert>
-	{:else if phase === 'pending'}
-		<div class="flex justify-center py-8">
-			<Spinner size={28} />
-		</div>
 	{:else if phase === 'success'}
 		<Alert variant="success">{$_('auth.changeEmail.confirm.success')}</Alert>
 		<a
 			href="/signin"
 			class="bg-primary hover:bg-primary-hover focus-visible:ring-focus-ring inline-flex h-10 w-full items-center justify-center rounded-md px-4 text-sm font-medium text-white focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-			>{$_('auth.signin.title')}</a
 		>
+			{$_('auth.signin.title')}
+		</a>
 	{:else}
-		<Alert variant="danger">
-			{errorMessage ?? $_('auth.changeEmail.confirm.invalidToken')}
-		</Alert>
+		<Alert variant="danger">{$_('auth.changeEmail.confirm.invalidToken')}</Alert>
 		<a
 			href="/settings/account/security"
 			class="text-fg-muted hover:bg-bg-muted focus-visible:ring-focus-ring inline-flex h-10 w-full items-center justify-center rounded-md px-4 text-sm font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-			>{$_('common.cancel')}</a
 		>
+			{$_('common.cancel')}
+		</a>
 	{/if}
 </AuthCard>
