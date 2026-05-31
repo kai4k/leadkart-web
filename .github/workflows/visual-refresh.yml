@@ -1,0 +1,83 @@
+name: visual-refresh
+
+# Manually triggered workflow that regenerates Playwright visual
+# baselines on the current branch and commits them back.
+#
+# Use this when:
+#   - A deliberate visual change has shipped (doctrine swap, design
+#     system update, theme change) and every screenshot must be
+#     re-captured against the new output.
+#   - A new visual spec has been added and needs first-time baselines.
+#
+# How to run:
+#   GitHub → Actions → visual-refresh → Run workflow → pick the branch.
+#
+# Industry canon (Vercel Argos / Stripe Visual / Chromatic): visual
+# refresh is a deliberate human-triggered step, not an auto-pass on
+# every PR. The baselines committed by this workflow ARE the new
+# canonical state — review the screenshot deltas before merging.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    name: Regenerate visual baselines
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: ./.github/actions/setup
+
+      - name: Vite build
+        run: npm run build
+
+      - name: Get Playwright version
+        id: pw-version
+        run: |
+          echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright chromium
+        uses: actions/cache@v5
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.version }}-chromium
+
+      - name: Install Playwright chromium (cache miss)
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system deps (cache hit)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Regenerate visual baselines
+        run: npx playwright test --project=visual --update-snapshots
+        env:
+          CI: 'true'
+
+      - name: Commit baselines back
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add 'tests/visual/**/*.png' || true
+          if git diff --cached --quiet; then
+            echo "No baseline changes to commit."
+            exit 0
+          fi
+          git commit -m "test(visual): regenerate baselines via workflow_dispatch
+
+Auto-regenerated against the current branch HEAD after a deliberate
+visual change. Review the diff before merging.
+
+Triggered by: ${{ github.actor }}
+Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          git push origin HEAD:${{ github.ref_name }}
