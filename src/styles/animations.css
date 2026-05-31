@@ -140,7 +140,7 @@
  * for users who request reduced motion (base.css §reduce-motion).
  * ───────────────────────────────────────────────────────────────────── */
 
-@keyframes  {
+@keyframes {
 	0% {
 		transform: translateX(-150%) skewX(-20deg);
 		opacity: 0;
@@ -214,7 +214,7 @@
  * that should "breathe" attention (login modal, chrome surfaces).
  * Applied via the . utility class (defined below in
  * the components @layer). */
-@keyframes  {
+@keyframes {
 	0%,
 	100% {
 		border-color: color-mix(in srgb, var(--color-fg) 8%, transparent);
@@ -299,7 +299,7 @@
 	 * surfaces with one-edge borders). Plays well with .bg-bg-elevated border border-border rounded-xl shadow-card
 	 * since it animates only border-color, not other border longhands. */
 	. {
-		animation:  4s ease-in-out 1s infinite;
+		animation: 4s ease-in-out 1s infinite;
 	}
 
 	/* Hover-sheen overlay — composable on any glass surface or .interactive
@@ -333,6 +333,6 @@
 		transition: opacity var(--duration-fast) var(--ease-out);
 	}
 	.:hover::after {
-		animation:  var(--duration-slower) var(--ease-out) forwards;
+		animation: var(--duration-slower) var(--ease-out) forwards;
 	}
 }

@@ -1,11 +1,7 @@
 <script lang="ts">
 	import { Accordion as AccordionPrimitive } from 'bits-ui';
 	import { cn } from '$lib/utils/cn';
-	let {
-		ref = $bindable(null),
-		class: className,
-		...rest
-	}: AccordionPrimitive.ItemProps = $props();
+	let { ref = $bindable(null), class: className, ...rest }: AccordionPrimitive.ItemProps = $props();
 </script>
 
 <AccordionPrimitive.Item

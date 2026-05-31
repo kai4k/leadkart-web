@@ -42,13 +42,7 @@
 	const pages = $derived(visiblePages(page, pageCount));
 </script>
 
-<nav
-	bind:this={ref}
-	data-slot="pagination"
-	aria-label="Pagination"
-	class={cn(className)}
-	{...rest}
->
+<nav bind:this={ref} data-slot="pagination" aria-label="Pagination" class={cn(className)} {...rest}>
 	<ButtonGroup>
 		<Button
 			variant="tonal"

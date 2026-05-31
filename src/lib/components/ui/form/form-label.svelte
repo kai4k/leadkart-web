@@ -12,10 +12,7 @@
 <FormPrimitive.Label
 	bind:ref
 	data-slot="form-label"
-	class={cn(
-		'text-sm font-medium leading-none text-fg data-[fs-error]:text-danger-700',
-		className
-	)}
+	class={cn('text-sm font-medium leading-none text-fg data-[fs-error]:text-danger-700', className)}
 	{...rest}
 >
 	{@render children?.()}

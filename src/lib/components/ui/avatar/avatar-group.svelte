@@ -19,9 +19,7 @@
 			defaultVariants: { size: 'sm' }
 		}
 	);
-	export type AvatarGroupSize = NonNullable<
-		VariantProps<typeof avatarGroupItemVariants>['size']
-	>;
+	export type AvatarGroupSize = NonNullable<VariantProps<typeof avatarGroupItemVariants>['size']>;
 	export type AvatarGroupMember = { name: string; image?: string };
 </script>
 

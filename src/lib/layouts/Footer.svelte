@@ -19,7 +19,10 @@
   Glass material composes from .bg-bg-elevated border-t border-border (utilities.css) — one
   recipe shared with topbar/popover/dialog. No per-component duplication.
 -->
-<footer class="lk-footer bg-bg-elevated border border-border rounded-xl shadow-card  label-small" aria-label="Application footer">
+<footer
+	class="lk-footer bg-bg-elevated border border-border rounded-xl shadow-card label-small"
+	aria-label="Application footer"
+>
 	© {year} LeadKart · Pharma SaaS
 </footer>
 

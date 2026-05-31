@@ -31,23 +31,14 @@ export {
 	type ButtonVariants,
 	buttonVariants
 } from './button';
-export {
-	ButtonGroup,
-	type ButtonGroupOrientation,
-	buttonGroupVariants
-} from './button-group';
+export { ButtonGroup, type ButtonGroupOrientation, buttonGroupVariants } from './button-group';
 export * as Card from './card';
 export { default as ConfirmDialog } from './ConfirmDialog.svelte';
 export type { ConfirmDialogVariant } from './ConfirmDialog.svelte';
 export { Kbd } from './kbd';
 export { Label } from './label';
 export { Pagination, type PaginationChange } from './pagination';
-export {
-	Skeleton,
-	type SkeletonShape,
-	type SkeletonVariants,
-	skeletonVariants
-} from './skeleton';
+export { Skeleton, type SkeletonShape, type SkeletonVariants, skeletonVariants } from './skeleton';
 export { Spinner } from './spinner';
 export { Separator } from './separator';
 export { ScrollArea } from './scroll-area';

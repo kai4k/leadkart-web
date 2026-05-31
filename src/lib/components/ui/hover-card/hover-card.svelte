@@ -1,9 +1,6 @@
 <script lang="ts">
 	import { LinkPreview as LinkPreviewPrimitive } from 'bits-ui';
-	let {
-		open = $bindable(false),
-		...rest
-	}: LinkPreviewPrimitive.RootProps = $props();
+	let { open = $bindable(false), ...rest }: LinkPreviewPrimitive.RootProps = $props();
 </script>
 
 <LinkPreviewPrimitive.Root bind:open {...rest} />

@@ -77,4 +77,3 @@ export function routeContext(pathname: string): RouteContext {
 		crumbs
 	};
 }
-

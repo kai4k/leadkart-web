@@ -27,7 +27,9 @@
 	let { class: className = '', layoutClass = 'stack stack-relaxed', children }: Props = $props();
 </script>
 
-<div class={cn('lk-auth-card bg-bg-elevated border border-border rounded-xl shadow-card ', className)}>
+<div
+	class={cn('lk-auth-card bg-bg-elevated border border-border rounded-xl shadow-card ', className)}
+>
 	<div class={cn(layoutClass)}>
 		{@render children()}
 	</div>

@@ -14,7 +14,7 @@
  */
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { goto, invalidateAll } from '$app/navigation';
-	import { resolve } from '$app/paths';
+import { resolve } from '$app/paths';
 import { toast } from '$ui';
 import { AuthError, NetworkError, NotFoundError } from '$api/errors';
 import * as api from './api';

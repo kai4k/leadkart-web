@@ -195,11 +195,12 @@
 			<!-- rtl-allow: centered glass demo in styleguide catalog — physical
 				center-positioning is the visual demonstration. -->
 			<div
-				class="bg-bg-elevated border border-border rounded-md shadow-md  absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg p-6"
+				class="bg-bg-elevated border border-border rounded-md shadow-md absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg p-6"
 			>
 				<p class="h4">Frosted glass overlay</p>
 				<p class="body-sm text-fg-muted mt-2">
-					Hover to see the sheen sweep. Composes bg-bg-elevated border border-border rounded-md shadow-md + .
+					Hover to see the sheen sweep. Composes bg-bg-elevated border border-border rounded-md
+					shadow-md + .
 				</p>
 			</div>
 		</div>

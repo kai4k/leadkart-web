@@ -45,7 +45,10 @@
 
 <svelte:window onkeydown={onKeydown} />
 
-<header class="lk-topbar bg-bg-elevated border border-border rounded-xl shadow-card " aria-label="Application bar">
+<header
+	class="lk-topbar bg-bg-elevated border border-border rounded-xl shadow-card"
+	aria-label="Application bar"
+>
 	<!-- Left: toggle + route badge (icon + title in a glass pill).
 	     Matches the Liquid-Glass language of the surface and gives
 	     the current location a visual anchor (Apple Music / Notion

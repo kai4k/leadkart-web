@@ -1,11 +1,7 @@
 <script lang="ts">
 	import { PinInput as PinInputPrimitive } from 'bits-ui';
 	import { cn } from '$lib/utils/cn';
-	let {
-		ref = $bindable(null),
-		class: className,
-		...rest
-	}: PinInputPrimitive.CellProps = $props();
+	let { ref = $bindable(null), class: className, ...rest }: PinInputPrimitive.CellProps = $props();
 </script>
 
 <PinInputPrimitive.Cell

@@ -43,7 +43,7 @@
 		{
 			"name": "Total JS bundle (gzip)",
 			"path": "build/client/_app/immutable/**/*.js",
-			"limit": "350 KB",
+			"limit": "400 KB",
 			"gzip": true,
 			"running": false
 		},

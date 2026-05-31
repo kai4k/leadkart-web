@@ -4,10 +4,4 @@ import Root, {
 	skeletonVariants
 } from './skeleton.svelte';
 
-export {
-	Root,
-	Root as Skeleton,
-	type SkeletonShape,
-	type SkeletonVariants,
-	skeletonVariants
-};
+export { Root, Root as Skeleton, type SkeletonShape, type SkeletonVariants, skeletonVariants };

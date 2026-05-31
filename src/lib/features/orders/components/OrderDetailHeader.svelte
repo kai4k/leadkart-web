@@ -33,7 +33,10 @@
 				</span>
 			</div>
 			<div class="cluster cluster-tight">
-				<a href={resolve(`/leads/${order.customer_lead_id}`)} class="body-sm text-primary hover:underline">
+				<a
+					href={resolve(`/leads/${order.customer_lead_id}`)}
+					class="body-sm text-primary hover:underline"
+				>
 					{order.customer_name}
 				</a>
 				{#if order.customer_gst_number}

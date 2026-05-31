@@ -255,19 +255,25 @@
 				</div>
 
 				<ul class="lk-auth-features">
-					<li class="bg-bg-elevated border border-border rounded-xl shadow-card lk-glass--feature lk-glass--purple">
+					<li
+						class="bg-bg-elevated border border-border rounded-xl shadow-card lk-glass--feature lk-glass--purple"
+					>
 						<span class="lk-auth-feature-icon lk-auth-feature-icon--purple">
 							<Icon icon={ShieldCheck} size="md" />
 						</span>
 						<span class="body-base">Enterprise-grade security</span>
 					</li>
-					<li class="bg-bg-elevated border border-border rounded-xl shadow-card lk-glass--feature lk-glass--green">
+					<li
+						class="bg-bg-elevated border border-border rounded-xl shadow-card lk-glass--feature lk-glass--green"
+					>
 						<span class="lk-auth-feature-icon lk-auth-feature-icon--green">
 							<Icon icon={TrendingUp} size="md" />
 						</span>
 						<span class="body-base">Real-time lead tracking</span>
 					</li>
-					<li class="bg-bg-elevated border border-border rounded-xl shadow-card lk-glass--feature lk-glass--blue">
+					<li
+						class="bg-bg-elevated border border-border rounded-xl shadow-card lk-glass--feature lk-glass--blue"
+					>
 						<span class="lk-auth-feature-icon lk-auth-feature-icon--blue">
 							<Icon icon={Truck} size="md" />
 						</span>

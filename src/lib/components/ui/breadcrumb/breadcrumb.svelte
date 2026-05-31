@@ -11,12 +11,7 @@
 	import { cn, type WithElementRef } from '$lib/utils/cn';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLElement>> & { items: BreadcrumbItem[] };
-	let {
-		ref = $bindable(null),
-		items,
-		class: className = '',
-		...rest
-	}: Props = $props();
+	let { ref = $bindable(null), items, class: className = '', ...rest }: Props = $props();
 
 	const forwardRef: Attachment = (node) => {
 		ref = node as HTMLElement;
