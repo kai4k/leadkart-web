@@ -13,10 +13,7 @@
 		}
 	});
 
-	const breadcrumbs: BreadcrumbItem[] = [
-		{ href: '/settings', label: 'Settings' },
-		{ label: 'Team' }
-	];
+	const breadcrumbs: BreadcrumbItem[] = [{ label: 'Settings' }, { label: 'Team' }];
 </script>
 
 <svelte:head>

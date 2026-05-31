@@ -16,7 +16,7 @@
 	const personName = $derived(query.data ? personDisplayName(query.data) : 'Person');
 
 	const breadcrumbs = $derived<BreadcrumbItem[]>([
-		{ href: '/operator', label: 'Operator' },
+		{ label: 'Operator' },
 		{ href: '/operator/persons', label: 'Persons' },
 		{ label: personName }
 	]);

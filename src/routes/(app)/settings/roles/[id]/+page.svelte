@@ -50,7 +50,7 @@
 	const query = $derived(roleDetailQuery(roleId));
 	const role = $derived(query.data ?? null);
 	const breadcrumbs = $derived<BreadcrumbItem[]>([
-		{ href: '/settings', label: 'Settings' },
+		{ label: 'Settings' },
 		{ href: '/settings/roles', label: 'Roles' },
 		{ label: role?.name ?? 'Role' }
 	]);

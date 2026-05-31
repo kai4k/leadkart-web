@@ -52,7 +52,7 @@
 	const bannerError = $derived((form as { bannerError?: string } | null)?.bannerError ?? null);
 
 	const breadcrumbs: BreadcrumbItem[] = [
-		{ href: '/settings', label: 'Settings' },
+		{ label: 'Settings' },
 		{ href: '/settings/roles', label: 'Roles' },
 		{ label: 'New role' }
 	];

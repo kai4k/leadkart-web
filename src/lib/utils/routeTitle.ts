@@ -13,6 +13,7 @@
  * sidebar already shows the user's location in the nav tree).
  */
 
+import type { ResolvedPathname } from '$app/types';
 import { PLATFORM_NAV, TENANT_ADMIN_NAV, TENANT_USER_NAV, type NavItem } from '$lib/config/nav';
 
 const ALL_ITEMS = [...PLATFORM_NAV, ...TENANT_ADMIN_NAV, ...TENANT_USER_NAV].flatMap(
@@ -27,7 +28,7 @@ type IconComponent = NavItem['icon'];
 
 interface Crumb {
 	label: string;
-	href: string;
+	href: ResolvedPathname;
 	icon: IconComponent | null;
 }
 
@@ -64,7 +65,7 @@ export function routeContext(pathname: string): RouteContext {
 		const nav = matchNav(accum);
 		crumbs.push({
 			label: nav?.label ?? titleCase(seg),
-			href: accum,
+			href: accum as ResolvedPathname,
 			icon: nav?.icon ?? null
 		});
 	}

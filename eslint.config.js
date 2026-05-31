@@ -442,36 +442,30 @@ export default ts.config(
 		}
 	},
 	// ─── svelte/no-navigation-without-resolve override ─────────────
-	// Two irreducible shapes the rule's static detector cannot accept:
+	// Six surfaces emit `<a href={var}>` from a nav config / breadcrumb
+	// array. The rule's TS-aware path (expressionIsResolvedPathname)
+	// would accept these if projectService were enabled for .svelte
+	// files — but that adds 30-50% to lint runtime over 230+ Svelte
+	// files (per the projectService comment block above) and is too
+	// expensive to enable globally just for this rule. Inline `resolve()`
+	// also can't satisfy TS: the typed-routes overload's conditional
+	// `ResolveArgs<T>` distributes per literal in the generated Pathname
+	// union, breaking single-call union dispatch.
 	//
-	// 1. Shell + breadcrumb atoms render `<a>` per item from a nav
-	//    config — the href flows through a variable the rule can't
-	//    trace to a resolve() origin. SvelteKit's typed-routes
-	//    `resolve()` overload also doesn't accept the generated
-	//    `Pathname` union at a single dispatch site (the conditional
-	//    `ResolveArgs<T>` distributes per literal, breaking union
-	//    dispatch), so adding `resolve()` at the JSX attribute can't
-	//    satisfy TS without abandoning typed-routes safety.
-	//
-	// 2. URL-state goto (`?query` updates, view-mode swap, tab swap).
-	//    `resolve()` throws on non-absolute pathnames, so it cannot
-	//    wrap a query-only URL. Even the canonical `goto(URL)` form
-	//    fires the rule (the rule wants a literal `resolve(...)` call
-	//    inside the JSX expression — it can't inspect URL-object args).
-	//
-	// Per eslint-plugin-svelte's own rule docs, these are the
-	// documented escape cases.
+	// The href values ARE pre-typed as ResolvedPathname at the nav-config
+	// site (nav.ts, +layout.svelte tab arrays, routeContext crumbs), so
+	// runtime correctness + caller-side type safety is preserved.
 	{
 		files: [
 			'src/lib/components/ui/breadcrumb/breadcrumb.svelte',
 			'src/lib/layouts/Sidebar.svelte',
 			'src/lib/layouts/Topbar.svelte',
-			'src/lib/hooks/use-list-pagination.svelte.ts',
-			'src/lib/hooks/use-url-filters.svelte.ts',
-			'src/lib/hooks/use-url-tab.svelte.ts',
 			'src/routes/(app)/settings/account/+layout.svelte',
 			'src/routes/(app)/settings/tenant/+layout.svelte',
 			'src/routes/(app)/operator/scope/+layout.svelte',
+			'src/lib/hooks/use-list-pagination.svelte.ts',
+			'src/lib/hooks/use-url-filters.svelte.ts',
+			'src/lib/hooks/use-url-tab.svelte.ts',
 			'src/routes/(app)/leads/+page.svelte',
 			'src/routes/**/settings/users/**/+page.svelte',
 			'src/lib/features/operator/people/components/PeopleList.svelte',

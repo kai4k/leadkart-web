@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import type { ResolvedPathname } from '$app/types';
 	import { Breadcrumbs } from '$ui';
 	import type { BreadcrumbItem } from '$ui';
 	import { tenantDisplayName, tenantStatusBadge } from '$features/tenant/view-models';
@@ -24,7 +25,7 @@
 	const tenantData = $derived(data.tenant);
 	const badge = $derived(tenantStatusBadge(tenantData.status));
 
-	const tabs: ReadonlyArray<{ href: string; label: string }> = [
+	const tabs: ReadonlyArray<{ href: ResolvedPathname; label: string }> = [
 		{ href: '/settings/tenant/profile', label: 'Profile' },
 		{ href: '/settings/tenant/statutory', label: 'Statutory IDs' },
 		{ href: '/settings/tenant/contact', label: 'Contact' },
@@ -34,8 +35,8 @@
 
 	const activeTab = $derived(tabs.find((t) => isActive(t.href)));
 	const breadcrumbs = $derived<BreadcrumbItem[]>([
-		{ href: '/settings', label: 'Settings' },
-		{ href: '/settings/tenant', label: 'Tenant' },
+		{ label: 'Settings' },
+		{ label: 'Tenant' },
 		...(activeTab ? [{ label: activeTab.label }] : [])
 	]);
 

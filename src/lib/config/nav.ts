@@ -25,6 +25,7 @@
  *   - Vercel: per-scope (personal vs team) menus.
  */
 
+import type { ResolvedPathname } from '$app/types';
 import {
 	Boxes,
 	Building2,
@@ -39,7 +40,7 @@ import {
 import type { PrincipalTier } from '$lib/features/auth/capabilities';
 
 export interface NavItem {
-	href: string;
+	href: ResolvedPathname;
 	label: string;
 	icon: typeof LucideIcon;
 }

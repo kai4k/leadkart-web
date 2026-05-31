@@ -30,7 +30,7 @@
 	const tree = $derived(buildOrgTree(users));
 
 	const breadcrumbs: BreadcrumbItem[] = [
-		{ href: '/settings', label: 'Settings' },
+		{ label: 'Settings' },
 		{ href: '/settings/users', label: 'Team' },
 		{ label: 'Hierarchy' }
 	];

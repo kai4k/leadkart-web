@@ -42,7 +42,7 @@
 	const status = $derived(user ? userStatusBadge(user.status) : null);
 
 	const breadcrumbs = $derived<BreadcrumbItem[]>([
-		{ href: '/settings', label: 'Settings' },
+		{ label: 'Settings' },
 		{ href: '/settings/users', label: 'Team' },
 		{ label: user ? displayName(user) : '…' }
 	]);

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import type { ResolvedPathname } from '$app/types';
 	import { Alert, Breadcrumbs, Skeleton } from '$ui';
 	import type { BreadcrumbItem } from '$ui';
 	import { myCapabilitiesQuery, myProfileQuery } from '$features/auth/queries';
@@ -21,7 +22,7 @@
 	const profileQuery = $derived(myProfileQuery(membershipId));
 	const profileData = $derived(profileQuery.data ?? null);
 
-	const tabs: ReadonlyArray<{ href: string; label: string }> = [
+	const tabs: ReadonlyArray<{ href: ResolvedPathname; label: string }> = [
 		{ href: '/settings/account/profile', label: 'Profile' },
 		{ href: '/settings/account/security', label: 'Security' },
 		{ href: '/settings/account/sessions', label: 'Sessions' }
@@ -29,7 +30,7 @@
 
 	const activeTab = $derived(tabs.find((t) => isActive(t.href)));
 	const breadcrumbs = $derived<BreadcrumbItem[]>([
-		{ href: '/settings', label: 'Settings' },
+		{ label: 'Settings' },
 		{ href: '/settings/account', label: 'Account' },
 		...(activeTab ? [{ label: activeTab.label }] : [])
 	]);

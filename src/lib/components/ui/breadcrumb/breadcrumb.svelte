@@ -1,12 +1,12 @@
 <script lang="ts" module>
 	import type { Component } from 'svelte';
-	export type BreadcrumbItem = { href?: string; label: string; icon?: Component };
+	import type { ResolvedPathname } from '$app/types';
+	export type BreadcrumbItem = { href?: ResolvedPathname; label: string; icon?: Component };
 </script>
 
 <script lang="ts">
 	import type { Attachment } from 'svelte/attachments';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import { resolve } from '$app/paths';
 	import { ChevronRight, Icon } from '$icons';
 	import { cn, type WithElementRef } from '$lib/utils/cn';
 
@@ -50,8 +50,9 @@
 						{item.label}
 					</span>
 				{:else}
+					{@const href = item.href as ResolvedPathname}
 					<a
-						href={(resolve as (h: string) => string)(item.href)}
+						{href}
 						class="label-small text-fg-muted hover:text-fg focus-visible:ring-focus-ring inline-flex items-center gap-1 transition-colors focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
 					>
 						{#if item.icon}<Icon icon={item.icon} size="xs" />{/if}
