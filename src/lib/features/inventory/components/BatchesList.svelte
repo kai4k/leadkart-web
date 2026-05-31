@@ -189,14 +189,12 @@
 								</td>
 								<td class="w-12 px-3 py-3 text-end">
 									<Dropdown.Root>
-										<Dropdown.Trigger>
-											<Button
-												variant="ghost"
-												size="sm"
-												aria-label={`Actions for batch ${batch.batch_number}`}
-											>
-												<Icon icon={MoreVertical} size="sm" />
-											</Button>
+										<Dropdown.Trigger
+											variant="ghost"
+											size="sm"
+											aria-label={`Actions for batch ${batch.batch_number}`}
+										>
+											<Icon icon={MoreVertical} size="sm" />
 										</Dropdown.Trigger>
 										<Dropdown.Menu>
 											<Dropdown.Item onSelect={() => openAdjust(batch)}>

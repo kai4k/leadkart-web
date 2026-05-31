@@ -130,19 +130,17 @@
 			{#each actions as action (action.id)}
 				{#if action.subActions && action.subActions.length > 0}
 					<Dropdown.Root>
-						<Dropdown.Trigger>
-							<Button
-								size="sm"
-								variant={action.variant === 'danger' ? 'danger' : 'secondary'}
-								loading={runningId === action.id}
-								disabled={action.disabled || runningId !== null}
-							>
-								{#if action.icon}
-									<Icon icon={action.icon} size="sm" />
-								{/if}
-								{action.label}
-								<Icon icon={ChevronDown} size="xs" />
-							</Button>
+						<Dropdown.Trigger
+							size="sm"
+							variant={action.variant === 'danger' ? 'danger' : 'secondary'}
+							loading={runningId === action.id}
+							disabled={action.disabled || runningId !== null}
+						>
+							{#if action.icon}
+								<Icon icon={action.icon} size="sm" />
+							{/if}
+							{action.label}
+							<Icon icon={ChevronDown} size="xs" />
 						</Dropdown.Trigger>
 						<Dropdown.Menu align="end">
 							{#each action.subActions as sub (sub.id)}

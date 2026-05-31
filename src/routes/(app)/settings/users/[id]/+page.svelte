@@ -4,7 +4,7 @@
 	import { resolve } from '$app/paths';
 	import { SvelteURL } from 'svelte/reactivity';
 	import type { ResolvedPathname } from '$app/types';
-	import { Alert, Avatar, Badge, Breadcrumbs, Button, Dropdown, Skeleton } from '$ui';
+	import { Alert, Avatar, Badge, Breadcrumbs, Dropdown, Skeleton } from '$ui';
 	import type { BreadcrumbItem } from '$ui';
 	import { Icon, Lock, MoreVertical, Shield, UserMinus, UserPlus, Users } from '$icons';
 	import {
@@ -102,10 +102,8 @@
 			</div>
 
 			<Dropdown.Root>
-				<Dropdown.Trigger>
-					<Button variant="tonal" size="sm">
-						<Icon icon={MoreVertical} size="sm" /> Actions
-					</Button>
+				<Dropdown.Trigger variant="tonal" size="sm">
+					<Icon icon={MoreVertical} size="sm" /> Actions
 				</Dropdown.Trigger>
 				<Dropdown.Menu>
 					<Dropdown.Item onclick={() => (rolesOpen = true)}>

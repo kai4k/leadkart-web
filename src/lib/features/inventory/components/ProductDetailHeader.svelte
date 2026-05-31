@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Badge, Button, Dropdown } from '$ui';
+	import { Badge, Dropdown } from '$ui';
 	import { Icon, ArrowLeft, MoreVertical, Edit, Trash2 } from '$icons';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -67,10 +67,8 @@
 			</div>
 
 			<Dropdown.Root>
-				<Dropdown.Trigger>
-					<Button variant="ghost" size="md" aria-label="More actions">
-						<Icon icon={MoreVertical} size="sm" />
-					</Button>
+				<Dropdown.Trigger variant="ghost" size="md" aria-label="More actions">
+					<Icon icon={MoreVertical} size="sm" />
 				</Dropdown.Trigger>
 				<Dropdown.Menu>
 					<Dropdown.Item onSelect={onEdit}>

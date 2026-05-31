@@ -223,14 +223,12 @@
 			{/if}
 			{#if canManage}
 				<Dropdown.Root>
-					<Dropdown.Trigger>
-						<Button
-							variant="ghost"
-							size="sm"
-							aria-label="Lifecycle actions for {tenant.display_name}"
-						>
-							<Icon icon={MoreVertical} size="sm" />
-						</Button>
+					<Dropdown.Trigger
+						variant="ghost"
+						size="sm"
+						aria-label="Lifecycle actions for {tenant.display_name}"
+					>
+						<Icon icon={MoreVertical} size="sm" />
 					</Dropdown.Trigger>
 					<Dropdown.Menu>
 						{#if canSuspend(tenant)}

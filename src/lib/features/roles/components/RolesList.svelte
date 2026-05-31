@@ -88,10 +88,8 @@
 
 {#snippet rowActions(role: RoleDto)}
 	<Dropdown.Root>
-		<Dropdown.Trigger>
-			<Button variant="ghost" size="sm" aria-label="Row actions">
-				<Icon icon={MoreVertical} size="sm" />
-			</Button>
+		<Dropdown.Trigger variant="ghost" size="sm" aria-label="Row actions">
+			<Icon icon={MoreVertical} size="sm" />
 		</Dropdown.Trigger>
 		<Dropdown.Menu>
 			<Dropdown.Item>
