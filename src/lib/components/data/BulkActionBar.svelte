@@ -117,7 +117,7 @@
 {#if selection.count > 0}
 	<div
 		class={cn(
-			'glass-card sticky bottom-4 z-10 mx-auto w-full max-w-3xl',
+			'bg-bg-elevated border border-border rounded-xl shadow-card sticky bottom-4 z-10 mx-auto w-full max-w-3xl',
 			'cluster cluster-spread items-center gap-4 px-4 py-3',
 			className
 		)}

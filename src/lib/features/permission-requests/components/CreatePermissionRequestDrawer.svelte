@@ -69,7 +69,7 @@
 						bind:value={form.values.duration_days}
 						min={1}
 						max={365}
-						class="glass-input rounded-md px-3 py-2 text-sm"
+						class="bg-bg-elevated border border-border rounded-md rounded-md px-3 py-2 text-sm"
 					/>
 					<span class="caption text-fg-subtle">Leave blank for the tenant default.</span>
 				</label>
@@ -81,7 +81,7 @@
 						minlength={10}
 						maxlength={1024}
 						rows={4}
-						class="glass-input w-full rounded-md px-3 py-2 text-sm"
+						class="bg-bg-elevated border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
 					></textarea>
 					{#if form.errors.reason}
 						<span class="caption text-danger-700">{form.errors.reason}</span>

@@ -242,32 +242,32 @@
 			<div class="lk-auth-brand-content" aria-hidden="true">
 				<div class="lk-auth-content-washes"></div>
 
-				<div class="glass-card lk-glass--hero">
+				<div class="bg-bg-elevated border border-border rounded-xl shadow-card lk-glass--hero">
 					<p class="display-2 text-primary leading-[1.05] tracking-tight">
 						Pharma lead management,<br />simplified.
 					</p>
 				</div>
 
-				<div class="glass-card lk-glass--tagline">
+				<div class="bg-bg-elevated border border-border rounded-xl shadow-card lk-glass--tagline">
 					<p class="body-base text-fg-muted">
 						End-to-end CRM, orders, inventory &amp; dispatch — built for India's PCD pharma market.
 					</p>
 				</div>
 
 				<ul class="lk-auth-features">
-					<li class="glass-card lk-glass--feature lk-glass--purple">
+					<li class="bg-bg-elevated border border-border rounded-xl shadow-card lk-glass--feature lk-glass--purple">
 						<span class="lk-auth-feature-icon lk-auth-feature-icon--purple">
 							<Icon icon={ShieldCheck} size="md" />
 						</span>
 						<span class="body-base">Enterprise-grade security</span>
 					</li>
-					<li class="glass-card lk-glass--feature lk-glass--green">
+					<li class="bg-bg-elevated border border-border rounded-xl shadow-card lk-glass--feature lk-glass--green">
 						<span class="lk-auth-feature-icon lk-auth-feature-icon--green">
 							<Icon icon={TrendingUp} size="md" />
 						</span>
 						<span class="body-base">Real-time lead tracking</span>
 					</li>
-					<li class="glass-card lk-glass--feature lk-glass--blue">
+					<li class="bg-bg-elevated border border-border rounded-xl shadow-card lk-glass--feature lk-glass--blue">
 						<span class="lk-auth-feature-icon lk-auth-feature-icon--blue">
 							<Icon icon={Truck} size="md" />
 						</span>
@@ -429,10 +429,10 @@
 	}
 
 	/* ─── Auth-page pill modifiers ─────────────────────────────────
-	   The base material is .glass-card (utilities.css). These modifier
+	   The base material is .bg-bg-elevated border border-border rounded-xl shadow-card (utilities.css). These modifier
 	   classes ONLY set shape (padding + border-radius) + per-variant
 	   colour tints. The recipe (bg + blur + saturate + brightness +
-	   specular + inner gradient) is single-source in .glass-card. */
+	   specular + inner gradient) is single-source in .bg-bg-elevated border border-border rounded-xl shadow-card. */
 	.lk-glass--hero {
 		padding-block: 1.5rem;
 		padding-inline: 1.75rem;

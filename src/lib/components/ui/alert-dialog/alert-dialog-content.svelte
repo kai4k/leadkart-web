@@ -16,7 +16,7 @@
 		bind:ref
 		data-slot="alert-dialog-content"
 		class={cn(
-			'glass-card fixed left-[50%] top-[50%] z-50 flex w-full max-w-lg translate-x-[-50%] translate-y-[-50%] flex-col gap-4 p-6',
+			'bg-bg-elevated border border-border rounded-xl shadow-card fixed left-[50%] top-[50%] z-50 flex w-full max-w-lg translate-x-[-50%] translate-y-[-50%] flex-col gap-4 p-6',
 			'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95',
 			className
 		)}

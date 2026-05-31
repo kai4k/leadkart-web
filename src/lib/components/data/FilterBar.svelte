@@ -114,7 +114,7 @@
 						<select
 							id="filterbar-{field.key}"
 							multiple
-							class="glass-input body-sm text-fg min-h-24 w-full rounded-md px-3 py-2"
+							class="bg-bg-elevated border border-border rounded-md body-sm text-fg min-h-24 w-full rounded-md px-3 py-2"
 							value={multiValueOf(field.key)}
 							onchange={(e) => onMultiChange(field.key, e)}
 						>
@@ -137,7 +137,7 @@
 							<input
 								type="date"
 								aria-label="{field.label} from"
-								class="glass-input body-sm text-fg flex-1 rounded-md px-3 py-2"
+								class="bg-bg-elevated border border-border rounded-md body-sm text-fg flex-1 rounded-md px-3 py-2"
 								value={dateValueOf(field.key, 'from')}
 								onchange={(e) =>
 									setScalar(`${field.key}_from`, (e.currentTarget as HTMLInputElement).value)}
@@ -146,7 +146,7 @@
 							<input
 								type="date"
 								aria-label="{field.label} to"
-								class="glass-input body-sm text-fg flex-1 rounded-md px-3 py-2"
+								class="bg-bg-elevated border border-border rounded-md body-sm text-fg flex-1 rounded-md px-3 py-2"
 								value={dateValueOf(field.key, 'to')}
 								onchange={(e) =>
 									setScalar(`${field.key}_to`, (e.currentTarget as HTMLInputElement).value)}

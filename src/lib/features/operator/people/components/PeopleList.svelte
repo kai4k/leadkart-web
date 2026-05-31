@@ -109,7 +109,7 @@
 				placeholder="Search by email or name"
 				value={urlSearch}
 				oninput={onSearchInput}
-				class="glass-input w-full rounded-md py-2 ps-9 pe-3 text-sm"
+				class="bg-bg-elevated border border-border rounded-md w-full rounded-md py-2 ps-9 pe-3 text-sm"
 				aria-label="Search persons by email or name"
 			/>
 		</div>

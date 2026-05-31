@@ -106,7 +106,7 @@
 						bind:value={form.values.reason}
 						rows={3}
 						maxlength={500}
-						class="glass-input w-full rounded-md px-3 py-2 text-sm"
+						class="bg-bg-elevated border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
 						placeholder="Why the lead is being moved"
 					></textarea>
 				</label>

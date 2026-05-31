@@ -91,7 +91,7 @@
 			<BitsDatePicker.Input
 				{name}
 				class={cn(
-					'glass-input body-sm text-fg flex w-full items-center gap-px px-3 py-2 pe-10',
+					'bg-bg-elevated border border-border rounded-md body-sm text-fg flex w-full items-center gap-px px-3 py-2 pe-10',
 					'focus-visible:outline-none',
 					'disabled:cursor-not-allowed disabled:opacity-60',
 					'data-[invalid]:border-danger-500',
@@ -136,7 +136,7 @@
 		<BitsDatePicker.Content
 			sideOffset={6}
 			class={cn(
-				'glass-card z-popover rounded-xl p-3',
+				'bg-bg-elevated border border-border rounded-xl shadow-card z-popover rounded-xl p-3',
 				'border border-[var(--glass-border-subtle)]',
 				'shadow-[var(--glass-shadow-sm)]',
 				'data-[state=open]:animate-pop-in data-[state=closed]:animate-fade-out'

@@ -3,7 +3,7 @@
 	export const avatarVariants = cva(
 		[
 			'relative inline-flex items-center justify-center overflow-hidden rounded-full font-medium uppercase',
-			'glass-sheen',
+			'',
 			'bg-[linear-gradient(135deg,var(--color-primary-soft),var(--color-bg-muted))]',
 			'text-primary',
 			'ring-1 ring-bg-elevated/50'

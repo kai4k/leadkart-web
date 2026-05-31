@@ -15,7 +15,7 @@
 		data-slot="dropdown-menu-content"
 		{sideOffset}
 		class={cn(
-			'glass-popover z-50 min-w-[8rem] overflow-hidden rounded-md p-1 text-fg shadow-md',
+			'bg-bg-elevated border border-border rounded-md shadow-md z-50 min-w-[8rem] overflow-hidden rounded-md p-1 text-fg shadow-md',
 			'data-[state=open]:animate-in data-[state=closed]:animate-out',
 			'data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0',
 			'data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95',

@@ -10,7 +10,7 @@
 	closeButton
 	toastOptions={{
 		classes: {
-			toast: 'glass-toast group toast',
+			toast: 'bg-bg-elevated border border-border rounded-md shadow-lg group toast',
 			description: 'group-[.toast]:text-fg-muted',
 			actionButton: 'group-[.toast]:bg-primary group-[.toast]:text-primary-fg',
 			cancelButton: 'group-[.toast]:bg-bg-muted group-[.toast]:text-fg-muted'

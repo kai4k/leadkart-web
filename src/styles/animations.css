@@ -124,7 +124,7 @@
  * Pair with .glass-* utilities. These keyframes replace the static-glass
  * feel with subtle motion that signals "this surface is alive":
  *
- *   - glass-sheen     : a diagonal highlight sweeps left→right, evoking
+ *   -      : a diagonal highlight sweeps left→right, evoking
  *                       the gloss reflection on real glass when the
  *                       device tilts. Triggered on hover.
  *   - glass-breathe   : barely-perceptible scale pulse (1 → 1.005 → 1),
@@ -140,7 +140,7 @@
  * for users who request reduced motion (base.css §reduce-motion).
  * ───────────────────────────────────────────────────────────────────── */
 
-@keyframes glass-sheen {
+@keyframes  {
 	0% {
 		transform: translateX(-150%) skewX(-20deg);
 		opacity: 0;
@@ -212,9 +212,9 @@
  * --color-brand-400 at 45% mix. Originally on AuthCard only as a
  * focal-CTA highlight; promoted here for use across any glass surface
  * that should "breathe" attention (login modal, chrome surfaces).
- * Applied via the .glass-border-glow utility class (defined below in
+ * Applied via the . utility class (defined below in
  * the components @layer). */
-@keyframes glass-border-glow {
+@keyframes  {
 	0%,
 	100% {
 		border-color: color-mix(in srgb, var(--color-fg) 8%, transparent);
@@ -296,16 +296,16 @@
 	/* Border-glow — slow 4s pulse cycling border-color toward
 	 * brand-400 and back. Use on glass surfaces that should subtly
 	 * "breathe" to draw the eye (focal call-to-action modals, chrome
-	 * surfaces with one-edge borders). Plays well with .glass-card
+	 * surfaces with one-edge borders). Plays well with .bg-bg-elevated border border-border rounded-xl shadow-card
 	 * since it animates only border-color, not other border longhands. */
-	.glass-border-glow {
-		animation: glass-border-glow 4s ease-in-out 1s infinite;
+	. {
+		animation:  4s ease-in-out 1s infinite;
 	}
 
 	/* Hover-sheen overlay — composable on any glass surface or .interactive
 	 * primitive. Renders a diagonal highlight that sweeps across on hover.
 	 *
-	 * Usage: add `.glass-sheen` to a positioned container (relative/absolute);
+	 * Usage: add `.` to a positioned container (relative/absolute);
 	 * the ::after pseudo paints the gloss + clips to bounds via overflow.
 	 * The animation is hover-gated, NOT infinite — it fires once per
 	 * pointer entry. Industry parallel: Apple iOS app icons under the
@@ -313,11 +313,11 @@
 	 *
 	 * Falls back to no-op under prefers-reduced-motion (handled globally
 	 * in base.css). */
-	.glass-sheen {
+	. {
 		position: relative;
 		overflow: hidden;
 	}
-	.glass-sheen::after {
+	.::after {
 		content: '';
 		position: absolute;
 		inset: 0;
@@ -332,7 +332,7 @@
 		opacity: 0;
 		transition: opacity var(--duration-fast) var(--ease-out);
 	}
-	.glass-sheen:hover::after {
-		animation: glass-sheen var(--duration-slower) var(--ease-out) forwards;
+	.:hover::after {
+		animation:  var(--duration-slower) var(--ease-out) forwards;
 	}
 }

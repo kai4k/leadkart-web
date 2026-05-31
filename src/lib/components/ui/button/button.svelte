@@ -12,7 +12,7 @@
 			variants: {
 				variant: {
 					primary:
-						'relative overflow-hidden bg-primary text-primary-fg hover:bg-primary-hover active:bg-primary-active brand-halo glass-sheen',
+						'relative overflow-hidden bg-primary text-primary-fg hover:bg-primary-hover active:bg-primary-active  ',
 					secondary:
 						'bg-gradient-to-b from-secondary-700 to-secondary-900 text-white hover:from-secondary-600 hover:to-secondary-800 shadow-[var(--shadow-secondary)]',
 					tonal: 'bg-bg-muted text-fg hover:bg-bg-subtle border border-border',
@@ -20,10 +20,10 @@
 					danger:
 						'bg-gradient-to-b from-danger-500 to-danger-700 text-fg-on-brand hover:from-danger-400 hover:to-danger-600 shadow-[var(--shadow-danger)]',
 					glass:
-						'relative overflow-hidden glass-popover glass-sheen text-fg hover:text-primary-hover',
+						'relative overflow-hidden bg-bg-elevated border border-border rounded-md shadow-md  text-fg hover:text-primary-hover',
 					link: '!transform-none hover:!transform-none active:!transform-none text-primary underline-offset-4 hover:underline hover:text-primary-hover p-0 h-auto',
 					default:
-						'relative overflow-hidden bg-primary text-primary-fg hover:bg-primary-hover active:bg-primary-active brand-halo glass-sheen',
+						'relative overflow-hidden bg-primary text-primary-fg hover:bg-primary-hover active:bg-primary-active  ',
 					outline: 'bg-bg-muted text-fg hover:bg-bg-subtle border border-border',
 					destructive:
 						'bg-gradient-to-b from-danger-500 to-danger-700 text-fg-on-brand hover:from-danger-400 hover:to-danger-600 shadow-[var(--shadow-danger)]'

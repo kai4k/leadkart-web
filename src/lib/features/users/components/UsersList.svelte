@@ -316,7 +316,7 @@
 				placeholder="Search by name, email, role…"
 				value={search}
 				oninput={(e) => setSearch((e.currentTarget as HTMLInputElement).value)}
-				class="glass-input w-64 rounded-md px-3 py-2 text-sm"
+				class="bg-bg-elevated border border-border rounded-md w-64 rounded-md px-3 py-2 text-sm"
 			/>
 			<Button variant="tonal" onclick={() => goto('/settings/users/hierarchy')}>
 				<Icon icon={Users} size="sm" /> Hierarchy

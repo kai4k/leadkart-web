@@ -11,7 +11,7 @@
 	 *     Screen which lives outside our control).
 	 *
 	 * Mounted once from AppShell so the bars are always available on
-	 * authenticated pages. Each bar uses the same .glass-card material
+	 * authenticated pages. Each bar uses the same .bg-bg-elevated border border-border rounded-xl shadow-card material
 	 * as toasts so the visual language is consistent.
 	 */
 	import { createPwa } from '$lib/hooks';
@@ -29,7 +29,7 @@
 >
 	{#if pwa.updateReady}
 		<div
-			class="glass-card border-primary pointer-events-auto flex max-w-md items-center gap-3 border-s-4 px-4 py-3 shadow-md"
+			class="bg-bg-elevated border border-border rounded-xl shadow-card border-primary pointer-events-auto flex max-w-md items-center gap-3 border-s-4 px-4 py-3 shadow-md"
 			role="status"
 		>
 			<Icon icon={RefreshCw} size="sm" class="text-primary" />
@@ -43,7 +43,7 @@
 
 	{#if !pwa.isOnline}
 		<div
-			class="glass-card border-warning-500 pointer-events-auto flex max-w-md items-center gap-3 border-s-4 px-4 py-3 shadow-md"
+			class="bg-bg-elevated border border-border rounded-xl shadow-card border-warning-500 pointer-events-auto flex max-w-md items-center gap-3 border-s-4 px-4 py-3 shadow-md"
 			role="status"
 		>
 			<Icon icon={CloudOff} size="sm" class="text-warning-700" />
@@ -58,7 +58,7 @@
 
 	{#if pwa.isInstallable && pwa.isOnline && !pwa.updateReady}
 		<div
-			class="glass-card pointer-events-auto flex max-w-md items-center gap-3 px-4 py-3 shadow-md"
+			class="bg-bg-elevated border border-border rounded-xl shadow-card pointer-events-auto flex max-w-md items-center gap-3 px-4 py-3 shadow-md"
 			role="status"
 		>
 			<Icon icon={Download} size="sm" class="text-fg-muted" />

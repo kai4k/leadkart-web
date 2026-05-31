@@ -218,7 +218,7 @@
 						min={0}
 						max={100}
 						disabled={!canUpdate}
-						class="glass-input rounded-md px-3 py-2 text-sm"
+						class="bg-bg-elevated border border-border rounded-md rounded-md px-3 py-2 text-sm"
 					/>
 				</label>
 			</Card.Content>

@@ -76,7 +76,7 @@
 				maxlength={500}
 				rows={3}
 				aria-invalid={reasonError ? 'true' : undefined}
-				class="glass-input w-full rounded-md px-3 py-2 text-sm"
+				class="bg-bg-elevated border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
 			></textarea>
 			{#if reasonError}<span class="body-sm text-danger-700">{reasonError}</span>{/if}
 		</label>

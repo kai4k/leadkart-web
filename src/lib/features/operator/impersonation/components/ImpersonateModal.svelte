@@ -68,7 +68,7 @@
 						minlength={10}
 						maxlength={500}
 						rows={3}
-						class="glass-input w-full rounded-md px-3 py-2 text-sm"
+						class="bg-bg-elevated border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
 					></textarea>
 					{#if form.errors.reason}
 						<span class="caption text-danger">{form.errors.reason}</span>
@@ -81,7 +81,7 @@
 						bind:value={form.values.duration_minutes}
 						min={1}
 						max={240}
-						class="glass-input rounded-md px-3 py-2 text-sm"
+						class="bg-bg-elevated border border-border rounded-md rounded-md px-3 py-2 text-sm"
 					/>
 					{#if form.errors.duration_minutes}
 						<span class="caption text-danger">{form.errors.duration_minutes}</span>

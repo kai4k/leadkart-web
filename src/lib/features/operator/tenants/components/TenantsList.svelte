@@ -292,7 +292,7 @@
 					placeholder="Filter by name, slug, or legal name"
 					value={search}
 					oninput={(e) => setSearch((e.currentTarget as HTMLInputElement).value)}
-					class="glass-input w-full rounded-md py-2 ps-9 pe-3 text-sm"
+					class="bg-bg-elevated border border-border rounded-md w-full rounded-md py-2 ps-9 pe-3 text-sm"
 					aria-label="Filter tenants"
 				/>
 			</div>

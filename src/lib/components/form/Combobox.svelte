@@ -135,7 +135,7 @@
 				aria-invalid={error ? 'true' : undefined}
 				aria-describedby={describedBy}
 				class={cn(
-					'glass-input body-sm text-fg block w-full py-2 ps-3 pe-10',
+					'bg-bg-elevated border border-border rounded-md body-sm text-fg block w-full py-2 ps-3 pe-10',
 					'placeholder:text-fg-subtle',
 					'focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
 					'disabled:cursor-not-allowed disabled:opacity-60',
@@ -159,7 +159,7 @@
 			<BitsCombobox.Content
 				sideOffset={6}
 				class={cn(
-					'glass-card z-popover',
+					'bg-bg-elevated border border-border rounded-xl shadow-card z-popover',
 					'max-h-60 min-w-[var(--bits-combobox-anchor-width)] overflow-y-auto rounded-xl p-1',
 					'border border-[var(--glass-border-subtle)]',
 					'shadow-[var(--glass-shadow-sm)]',

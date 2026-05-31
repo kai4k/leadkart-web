@@ -45,7 +45,7 @@
 
 <svelte:window onkeydown={onKeydown} />
 
-<header class="lk-topbar glass-card glass-border-glow" aria-label="Application bar">
+<header class="lk-topbar bg-bg-elevated border border-border rounded-xl shadow-card " aria-label="Application bar">
 	<!-- Left: toggle + route badge (icon + title in a glass pill).
 	     Matches the Liquid-Glass language of the surface and gives
 	     the current location a visual anchor (Apple Music / Notion
@@ -80,7 +80,7 @@
 	{#if canSearch}
 		<button
 			type="button"
-			class="lk-topbar-search-trigger glass-pill"
+			class="lk-topbar-search-trigger bg-bg-muted"
 			aria-label="Search (Cmd+K)"
 			title="Search · Cmd+K"
 			onclick={() => (paletteOpen = true)}
@@ -117,10 +117,10 @@
 
 <style>
 	/* ─── Topbar layout + chrome geometry ──────────────────────────
-	   Composes the universal `.glass-card` material; this block only
+	   Composes the universal `.bg-bg-elevated border border-border rounded-xl shadow-card` material; this block only
 	   handles topbar-specific GEOMETRY: full-width edge-anchored strip
 	   with bottom-edge border and zero corner radius (the 1.5rem
-	   default from .glass-card would round the viewport-top corners
+	   default from .bg-bg-elevated border border-border rounded-xl shadow-card would round the viewport-top corners
 	   which makes no sense on a flush chrome bar). Semibox layout
 	   restores the radius for floating-pane mode. */
 	.lk-topbar {
@@ -134,7 +134,7 @@
 		align-items: center;
 		block-size: var(--lk-topbar-height);
 		padding-inline: clamp(0.75rem, 1.5vw, 1.25rem);
-		/* Override .glass-card defaults for edge-anchored chrome */
+		/* Override .bg-bg-elevated border border-border rounded-xl shadow-card defaults for edge-anchored chrome */
 		border: 0;
 		border-block-end: var(--glass-border-subtle);
 		border-radius: 0;
@@ -146,7 +146,7 @@
 			border-radius 0.18s ease-out;
 	}
 
-	/* Semibox — topbar floats with the .glass-card defaults restored
+	/* Semibox — topbar floats with the .bg-bg-elevated border border-border rounded-xl shadow-card defaults restored
 	   (full ring + 1.5rem radius). */
 	:global(:root[data-layout='semibox']) .lk-topbar {
 		border: var(--glass-border);
@@ -237,7 +237,7 @@
 	   Hidden by default (mobile + small tablets); reveals at 48rem
 	   (768px) so phones + small tablets get the full title width
 	   without ugly truncation. */
-	/* Layout only — visual is .glass-pill (added via class binding) */
+	/* Layout only — visual is .bg-bg-muted (added via class binding) */
 	.lk-topbar-search-trigger {
 		display: none;
 		align-items: center;
@@ -315,13 +315,13 @@
 			color 0.15s;
 	}
 	.lk-topbar-iconbtn:active {
-		background: var(--glass-pill-bg);
+		background: var(--bg-bg-muted-bg);
 		box-shadow: var(--glass-specular);
 		color: var(--color-primary-active);
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.lk-topbar-iconbtn:hover {
-			background: var(--glass-pill-bg);
+			background: var(--bg-bg-muted-bg);
 			box-shadow: var(--glass-specular);
 			color: var(--color-primary-hover);
 		}

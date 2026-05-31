@@ -105,7 +105,7 @@
 							type="date"
 							name="manufactured_at"
 							bind:value={form.values.manufactured_at}
-							class="glass-input body-sm text-fg rounded-md px-3 py-2"
+							class="bg-bg-elevated border border-border rounded-md body-sm text-fg rounded-md px-3 py-2"
 							data-testid="batch-manufactured-at"
 							required
 						/>
@@ -119,7 +119,7 @@
 							type="date"
 							name="expires_at"
 							bind:value={form.values.expires_at}
-							class="glass-input body-sm text-fg rounded-md px-3 py-2"
+							class="bg-bg-elevated border border-border rounded-md body-sm text-fg rounded-md px-3 py-2"
 							data-testid="batch-expires-at"
 							required
 						/>

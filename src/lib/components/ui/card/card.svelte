@@ -20,7 +20,7 @@
 				surface: {
 					default: 'bg-bg-elevated text-fg',
 					solid: 'bg-bg-elevated text-fg',
-					glass: 'glass-card text-fg'
+					glass: 'bg-bg-elevated border border-border rounded-xl shadow-card text-fg'
 				},
 				interactive: { true: 'interactive cursor-pointer', false: '' }
 			},

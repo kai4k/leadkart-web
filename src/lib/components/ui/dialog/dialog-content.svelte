@@ -19,7 +19,7 @@
 		bind:ref
 		data-slot="dialog-content"
 		class={cn(
-			'glass-card fixed left-[50%] top-[50%] z-50 flex max-h-[90vh] w-full max-w-lg translate-x-[-50%] translate-y-[-50%] flex-col gap-0 overflow-hidden p-0',
+			'bg-bg-elevated border border-border rounded-xl shadow-card fixed left-[50%] top-[50%] z-50 flex max-h-[90vh] w-full max-w-lg translate-x-[-50%] translate-y-[-50%] flex-col gap-0 overflow-hidden p-0',
 			'data-[state=open]:animate-in data-[state=closed]:animate-out',
 			'data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0',
 			'data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95',

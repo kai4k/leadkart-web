@@ -15,7 +15,7 @@
 		data-slot="combobox-content"
 		{sideOffset}
 		class={cn(
-			'glass-popover z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-md text-fg shadow-md',
+			'bg-bg-elevated border border-border rounded-md shadow-md z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-md text-fg shadow-md',
 			'data-[state=open]:animate-in data-[state=closed]:animate-out',
 			className
 		)}

@@ -16,7 +16,7 @@
 		data-slot="select-content"
 		{sideOffset}
 		class={cn(
-			'glass-popover relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-md text-fg shadow-md',
+			'bg-bg-elevated border border-border rounded-md shadow-md relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-md text-fg shadow-md',
 			'data-[state=open]:animate-in data-[state=closed]:animate-out',
 			className
 		)}

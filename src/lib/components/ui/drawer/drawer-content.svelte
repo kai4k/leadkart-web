@@ -16,7 +16,7 @@
 		bind:ref
 		data-slot="drawer-content"
 		class={cn(
-			'glass-card fixed z-50 flex h-auto flex-col text-sm',
+			'bg-bg-elevated border border-border rounded-xl shadow-card fixed z-50 flex h-auto flex-col text-sm',
 			'data-[vaul-drawer-direction=bottom]:inset-x-0 data-[vaul-drawer-direction=bottom]:bottom-0',
 			'data-[vaul-drawer-direction=bottom]:mt-24 data-[vaul-drawer-direction=bottom]:max-h-[80vh]',
 			'data-[vaul-drawer-direction=left]:inset-y-0 data-[vaul-drawer-direction=left]:left-0',

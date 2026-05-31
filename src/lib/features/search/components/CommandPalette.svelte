@@ -57,7 +57,7 @@
 			class="is-fixed-overlay--overlay animate-fade-in bg-overlay inset-0 backdrop-blur-sm"
 		/>
 		<BitsDialog.Content
-			class="is-fixed-overlay--modal glass-card animate-pop-in z-modal fixed start-1/2 top-[12vh] flex w-full max-w-xl -translate-x-1/2 flex-col rounded-xl border border-[var(--glass-border-subtle)]"
+			class="is-fixed-overlay--modal bg-bg-elevated border border-border rounded-xl shadow-card animate-pop-in z-modal fixed start-1/2 top-[12vh] flex w-full max-w-xl -translate-x-1/2 flex-col rounded-xl border border-[var(--glass-border-subtle)]"
 		>
 			<BitsDialog.Title class="sr-only">Search tenants and people</BitsDialog.Title>
 			<div class="border-border-subtle border-b">

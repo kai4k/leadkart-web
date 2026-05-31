@@ -64,7 +64,7 @@
 
 <style>
 	/* ─── Avatar trigger — glass-tinted circle ────────────────────
-	   Brand-tinted glass pill: brand-100 base fades to glass-pill on
+	   Brand-tinted glass pill: brand-100 base fades to bg-bg-muted on
 	   hover with a top-edge specular. Matches the Topbar icon button
 	   visual language (rounded glass pill on hover + tap). */
 	:global(.lk-avatar-btn) {

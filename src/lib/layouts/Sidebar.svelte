@@ -41,7 +41,7 @@
 	const sections = $derived(navForTier(tier));
 </script>
 
-<nav class="lk-sidebar glass-card glass-border-glow" aria-label="Main navigation">
+<nav class="lk-sidebar bg-bg-elevated border border-border rounded-xl shadow-card " aria-label="Main navigation">
 	<a href={resolveHref('/dashboard')} class="lk-sidebar-brand" aria-label="LeadKart home">
 		<span class="lk-sidebar-brand-full" aria-hidden="true">
 			<img src="/images/favicon/favicon_512x512.png" alt="LeadKart" class="lk-sidebar-brand-img" />

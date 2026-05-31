@@ -34,7 +34,7 @@
 		bind:ref
 		data-slot="sheet-content"
 		class={cn(
-			'glass-card fixed z-50 flex flex-col gap-0 overflow-hidden',
+			'bg-bg-elevated border border-border rounded-xl shadow-card fixed z-50 flex flex-col gap-0 overflow-hidden',
 			'data-[state=open]:animate-in data-[state=closed]:animate-out',
 			sideClasses,
 			className

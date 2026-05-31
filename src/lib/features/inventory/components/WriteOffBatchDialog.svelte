@@ -64,7 +64,7 @@
 						rows={3}
 						placeholder="e.g. damaged in transit; failed QC"
 						required
-						class="glass-input body-sm text-fg w-full rounded-md px-3 py-2"
+						class="bg-bg-elevated border border-border rounded-md body-sm text-fg w-full rounded-md px-3 py-2"
 						data-testid="write-off-reason"
 					></textarea>
 					{#if form.errors.reason}
