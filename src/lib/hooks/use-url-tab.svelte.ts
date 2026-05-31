@@ -17,6 +17,7 @@
  */
 import { goto } from '$app/navigation';
 import { page } from '$app/state';
+import type { ResolvedPathname } from '$app/types';
 import { SvelteURL } from 'svelte/reactivity';
 
 export interface UseUrlTab {
@@ -36,7 +37,11 @@ export function useUrlTab(defaultTab: string, valid?: readonly string[], param =
 		const url = new SvelteURL(page.url);
 		if (next === defaultTab) url.searchParams.delete(param);
 		else url.searchParams.set(param, next);
-		void goto(url, { replaceState: true, keepFocus: true, noScroll: true });
+		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
+			replaceState: true,
+			keepFocus: true,
+			noScroll: true
+		});
 	}
 
 	return {

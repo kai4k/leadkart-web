@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { SvelteURL } from 'svelte/reactivity';
+	import type { ResolvedPathname } from '$app/types';
 	import { Badge, Button, DataTable, EmptyState } from '$ui';
 	import type { DataTableColumn } from '$ui';
 	import { Icon, Inbox, Plus } from '$icons';
@@ -30,7 +31,10 @@
 		const url = new SvelteURL(page.url);
 		if (next === 'requester') url.searchParams.delete('role');
 		else url.searchParams.set('role', next);
-		void goto(url, { replaceState: true, keepFocus: true });
+		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
+			replaceState: true,
+			keepFocus: true
+		});
 	}
 
 	const requests = $derived(query.data?.requests ?? []);

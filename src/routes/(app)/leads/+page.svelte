@@ -11,6 +11,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import type { ResolvedPathname } from '$app/types';
 	import { SvelteURL } from 'svelte/reactivity';
 	import { ResourceListPage } from '$lib/components/data';
 	import type { BulkAction } from '$lib/components/data';
@@ -96,7 +97,11 @@
 		const url = new SvelteURL(page.url);
 		if (next === 'kanban') url.searchParams.delete('view');
 		else url.searchParams.set('view', 'table');
-		void goto(url, { replaceState: true, keepFocus: true, noScroll: true });
+		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
+			replaceState: true,
+			keepFocus: true,
+			noScroll: true
+		});
 	}
 
 	// ── Query params projection ──────────────────────────────────────

@@ -31,6 +31,7 @@
  */
 import { goto } from '$app/navigation';
 import { page } from '$app/state';
+import type { ResolvedPathname } from '$app/types';
 import { SvelteURL, SvelteURLSearchParams } from 'svelte/reactivity';
 
 export type UrlFilterValue = string | string[] | undefined;
@@ -80,7 +81,11 @@ export function createUrlFilters<TFilters extends UrlFiltersBase>(
 	function commit(next: SvelteURLSearchParams): void {
 		const url = new SvelteURL(page.url);
 		url.search = next.toString();
-		void goto(url, { keepFocus: true, replaceState: true, noScroll: true });
+		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
+			keepFocus: true,
+			replaceState: true,
+			noScroll: true
+		});
 	}
 
 	function readFilters(): TFilters {

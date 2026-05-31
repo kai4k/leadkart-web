@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { SvelteURL } from 'svelte/reactivity';
+	import type { ResolvedPathname } from '$app/types';
 	import { Avatar, Badge, Button, DataTable, Dropdown, EmptyState, Pagination } from '$ui';
 	import type { DataTableColumn } from '$ui';
 	import {
@@ -57,7 +58,10 @@
 		if (value) url.searchParams.set('q', value);
 		else url.searchParams.delete('q');
 		url.searchParams.delete('page');
-		void goto(url, { replaceState: true, keepFocus: true });
+		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
+			replaceState: true,
+			keepFocus: true
+		});
 	}
 
 	function setStatusFilter(value: string) {
@@ -65,7 +69,7 @@
 		if (value && value !== 'all') url.searchParams.set('status', value);
 		else url.searchParams.delete('status');
 		url.searchParams.delete('page');
-		void goto(url, { replaceState: true });
+		void goto(`${url.pathname}${url.search}` as ResolvedPathname, { replaceState: true });
 	}
 
 	const listQuery = usersListQuery();

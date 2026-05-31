@@ -35,6 +35,7 @@
  */
 import { goto } from '$app/navigation';
 import { page } from '$app/state';
+import type { ResolvedPathname } from '$app/types';
 import { SvelteURL } from 'svelte/reactivity';
 
 export type ListPaginationOptions = {
@@ -64,7 +65,7 @@ export function createListPagination<TItem>(
 		const next = new SvelteURL(page.url);
 		if (p > 1) next.searchParams.set(paramKey, String(p));
 		else next.searchParams.delete(paramKey);
-		void goto(next, { replaceState: true });
+		void goto(`${next.pathname}${next.search}` as ResolvedPathname, { replaceState: true });
 	}
 
 	return {

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import type { ResolvedPathname } from '$app/types';
 	import { SvelteURL } from 'svelte/reactivity';
 	import { Alert, Badge, Button, DataTable, Dropdown, EmptyState, Spinner } from '$ui';
 	import type { DataTableColumn } from '$ui';
@@ -59,7 +60,7 @@
 		if (value && value !== 'all') url.searchParams.set('status', value);
 		else url.searchParams.delete('status');
 		url.searchParams.delete('page');
-		void goto(url, { replaceState: true });
+		void goto(`${url.pathname}${url.search}` as ResolvedPathname, { replaceState: true });
 	}
 
 	function setSearch(value: string) {
@@ -67,7 +68,10 @@
 		if (value) url.searchParams.set('q', value);
 		else url.searchParams.delete('q');
 		url.searchParams.delete('page');
-		void goto(url, { replaceState: true, keepFocus: true });
+		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
+			replaceState: true,
+			keepFocus: true
+		});
 	}
 
 	const capsQuery = myCapabilitiesQuery();

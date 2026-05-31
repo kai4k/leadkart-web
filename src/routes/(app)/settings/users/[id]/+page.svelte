@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { SvelteURL } from 'svelte/reactivity';
+	import type { ResolvedPathname } from '$app/types';
 	import { Alert, Avatar, Badge, Breadcrumbs, Button, Dropdown, Skeleton } from '$ui';
 	import type { BreadcrumbItem } from '$ui';
 	import { Icon, Lock, MoreVertical, Shield, UserMinus, UserPlus, Users } from '$icons';
@@ -58,7 +59,10 @@
 		const url = new SvelteURL(page.url);
 		if (name === 'overview') url.searchParams.delete('tab');
 		else url.searchParams.set('tab', name);
-		void goto(url, { replaceState: true, keepFocus: true });
+		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
+			replaceState: true,
+			keepFocus: true
+		});
 	}
 </script>
 

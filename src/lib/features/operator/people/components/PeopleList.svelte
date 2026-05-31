@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import type { ResolvedPathname } from '$app/types';
 	import { SvelteURL } from 'svelte/reactivity';
 	import { Avatar, Badge, DataTable, EmptyState } from '$ui';
 	import type { DataTableColumn } from '$ui';
@@ -25,7 +26,10 @@
 			const url = new SvelteURL(page.url);
 			if (value.trim()) url.searchParams.set('q', value.trim());
 			else url.searchParams.delete('q');
-			void goto(url, { replaceState: true, keepFocus: true });
+			void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
+				replaceState: true,
+				keepFocus: true
+			});
 		}, DEBOUNCE_MS);
 	}
 
