@@ -5,7 +5,7 @@
 	let {
 		ref = $bindable(null),
 		class: className,
-		children,
+		children: _children,
 		...rest
 	}: SelectPrimitive.ItemProps = $props();
 </script>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { resolveHref } from '$lib/utils/cn';
+	import { resolve } from '$app/paths';
 	import { Alert, Button } from '$ui';
 
 	/**
@@ -38,6 +38,6 @@
 
 	<div class="cluster">
 		<Button variant="primary" onclick={() => location.reload()}>Try again</Button>
-		<a href={resolveHref('/dashboard')}><Button variant="ghost">Back to dashboard</Button></a>
+		<a href={resolve('/dashboard')}><Button variant="ghost">Back to dashboard</Button></a>
 	</div>
 </div>

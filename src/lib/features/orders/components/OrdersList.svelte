@@ -8,6 +8,7 @@
 -->
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { ResourceListPage, type FilterBarField, type BulkAction } from '$lib/components/data';
 	import { DataTable, EmptyState, type DataTableColumn } from '$ui';
 	import { Plus, ShoppingCart, Trash2, X } from '$icons';
@@ -92,7 +93,7 @@
 	);
 
 	function openDetail(o: OrderDto) {
-		goto(`/orders/${o.id}`);
+		goto(resolve(`/orders/${o.id}`));
 	}
 
 	// ── Bulk actions ─────────────────────────────────────────────────
@@ -226,7 +227,7 @@
 	primaryAction={{
 		label: 'New quotation',
 		icon: Plus as unknown as Component,
-		onClick: () => goto('/orders/new')
+		onClick: () => goto(resolve('/orders/new'))
 	}}
 	{savedViews}
 	filters={{ config: filterConfig, instance: urlFilters }}

@@ -4,7 +4,7 @@
 	import { Icon, Lock } from '$lib/icons';
 	import { Alert, AuthCard, Button, Logo } from '$lib/components/ui';
 	import { TextField } from '$lib/components/form';
-	import { resolveHref } from '$lib/utils/cn';
+	import { resolve } from '$app/paths';
 	import type { ActionData } from '../../../../routes/(auth)/forgot-password/$types';
 
 	/**
@@ -45,7 +45,7 @@
 			<p>{$_('auth.forgotPassword.successCopy')}</p>
 		</Alert>
 		<p class="caption text-fg-muted text-center">
-			<a href={resolveHref('/signin')} class="text-primary hover:underline">
+			<a href={resolve('/signin')} class="text-primary hover:underline">
 				{$_('auth.forgotPassword.backToSignin')}
 			</a>
 		</p>
@@ -85,7 +85,7 @@
 			<Icon icon={Lock} size="xs" />
 			<span class="caption">
 				{$_('auth.forgotPassword.knowIt')}
-				<a href={resolveHref('/signin')} class="text-primary hover:underline"
+				<a href={resolve('/signin')} class="text-primary hover:underline"
 					>{$_('auth.signin.title')}</a
 				>
 			</span>

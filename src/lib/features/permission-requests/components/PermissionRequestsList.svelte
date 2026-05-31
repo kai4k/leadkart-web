@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { Badge, Button, DataTable, EmptyState } from '$ui';
 	import type { DataTableColumn } from '$ui';
@@ -81,7 +82,7 @@
 	];
 
 	function onRowClick(req: PermissionRequestDto) {
-		goto(`/permission-requests/${req.id}`);
+		goto(resolve(`/permission-requests/${req.id}`));
 	}
 </script>
 

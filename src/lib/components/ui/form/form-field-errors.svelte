@@ -5,7 +5,7 @@
 		ref = $bindable(null),
 		class: className,
 		errorClasses = '',
-		children,
+		children: _children,
 		...rest
 	}: FormPrimitive.FieldErrorsProps & { errorClasses?: string } = $props();
 </script>

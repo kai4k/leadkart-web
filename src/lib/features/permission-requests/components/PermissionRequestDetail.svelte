@@ -14,7 +14,7 @@
 		daysOrIndefinite
 	} from '$features/permission-requests/view-models';
 	import { myCapabilitiesQuery } from '$features/auth/queries';
-	import { resolveHref } from '$lib/utils/cn';
+	import { resolve } from '$app/paths';
 
 	type Props = { id: string };
 	let { id }: Props = $props();
@@ -55,7 +55,7 @@
 
 <div class="stack stack-relaxed">
 	<a
-		href={resolveHref('/permission-requests')}
+		href={resolve('/permission-requests')}
 		class="cluster cluster-tight text-fg-muted hover:text-fg caption inline-flex"
 	>
 		<Icon icon={ChevronLeft} size="xs" /> Back to requests

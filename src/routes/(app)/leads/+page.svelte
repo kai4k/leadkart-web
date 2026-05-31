@@ -10,6 +10,7 @@
 	 */
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { ResourceListPage } from '$lib/components/data';
 	import type { BulkAction } from '$lib/components/data';
 	import { Tabs } from '$ui';
@@ -133,7 +134,7 @@
 	// focus when open, so j/k bubble naturally out of the row list
 	// instead of needing an `isAnyOverlayOpen` guard.
 	const nav = createKeyboardListNav<CrmLeadDto>({
-		onSelect: (lead) => goto(`/leads/${lead.id}`),
+		onSelect: (lead) => goto(resolve(`/leads/${lead.id}`)),
 		onEdit: (lead) => {
 			editingLead = lead;
 			editOpen = true;

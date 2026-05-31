@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { LogOut, User, Icon } from '$icons';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Dropdown } from '$ui';
 	import { session } from '$features/auth/stores/session.svelte';
 	import { myCapabilitiesQuery } from '$features/auth/queries';
@@ -18,7 +19,7 @@
 			await session.logout();
 		} catch {
 			/* ignore — BFF clears cookies regardless; navigate anyway */
-			await goto('/signin');
+			await goto(resolve('/signin'));
 		}
 	}
 
@@ -51,7 +52,7 @@
 			<p class="caption">Signed in as</p>
 			<p class="label truncate-1">{capsQuery.data?.email ?? '—'}</p>
 		</div>
-		<Dropdown.Item onSelect={() => goto('/settings/account/security')}>
+		<Dropdown.Item onSelect={() => goto(resolve('/settings/account/security'))}>
 			<Icon icon={User} size="sm" />
 			Account & Security
 		</Dropdown.Item>

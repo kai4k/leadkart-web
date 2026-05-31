@@ -9,7 +9,7 @@
 	import { roleBadgeVariant, isProtectedRole, roleMemberCount } from '$features/roles/view-models';
 	import { getListErrorMessage } from '$api/errors';
 	import { createListPagination } from '$lib/hooks';
-	import { resolveHref } from '$lib/utils/cn';
+	import { resolve } from '$app/paths';
 	import DeleteRoleDialog from './DeleteRoleDialog.svelte';
 
 	let deleteOpen = $state(false);
@@ -76,7 +76,7 @@
 
 {#snippet nameCell(role: RoleDto)}
 	<a
-		href={resolveHref(`/settings/roles/${role.id}`)}
+		href={resolve(`/settings/roles/${role.id}`)}
 		class="text-fg hover:text-primary font-medium hover:underline">{role.name}</a
 	>
 {/snippet}
@@ -95,7 +95,7 @@
 		</Dropdown.Trigger>
 		<Dropdown.Menu>
 			<Dropdown.Item>
-				<a href={resolveHref(`/settings/roles/${role.id}`)} class="cluster cluster-tight">
+				<a href={resolve(`/settings/roles/${role.id}`)} class="cluster cluster-tight">
 					<Icon icon={Edit} size="sm" /> Edit
 				</a>
 			</Dropdown.Item>
@@ -117,7 +117,7 @@
 				{roleList.length} role{roleList.length === 1 ? '' : 's'}
 			</p>
 		</div>
-		<Button onclick={() => goto('/settings/roles/new')}>
+		<Button onclick={() => goto(resolve('/settings/roles/new'))}>
 			<Icon icon={Plus} size="sm" /> Create role
 		</Button>
 	</header>
@@ -137,7 +137,7 @@
 				description="Roles bundle permissions for easy assignment to team members."
 			>
 				{#snippet action()}
-					<Button onclick={() => goto('/settings/roles/new')}>
+					<Button onclick={() => goto(resolve('/settings/roles/new'))}>
 						<Icon icon={Plus} size="sm" /> Create role
 					</Button>
 				{/snippet}

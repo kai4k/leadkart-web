@@ -5,7 +5,7 @@
 	import { Icon, Lock } from '$lib/icons';
 	import { Alert, AuthCard, Button, Logo } from '$lib/components/ui';
 	import { TextField, PasswordField } from '$lib/components/form';
-	import { resolveHref } from '$lib/utils/cn';
+	import { resolve } from '$app/paths';
 	import type { ActionData } from '../../../../routes/(auth)/signin/$types';
 
 	/**
@@ -108,7 +108,7 @@
 		</Button>
 
 		<p class="caption text-fg-muted text-center">
-			<a href={resolveHref('/forgot-password')} class="text-primary hover:underline">
+			<a href={resolve('/forgot-password')} class="text-primary hover:underline">
 				{$_('auth.signin.forgotPassword')}
 			</a>
 		</p>

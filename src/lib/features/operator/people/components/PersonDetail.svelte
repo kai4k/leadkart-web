@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { SvelteMap } from 'svelte/reactivity';
 	import { Alert, Avatar, Badge, Button, Card, CopyButton, Skeleton } from '$ui';
 	import { ArrowRight, Pause, Play, UserMinus, Icon } from '$icons';
@@ -202,7 +203,7 @@
 												<Button
 													variant="ghost"
 													size="sm"
-													onclick={() => goto(`/operator/tenants?q=${t.slug}`)}
+													onclick={() => goto(resolve(`/operator/tenants?q=${t.slug}`))}
 													aria-label={`Find tenant ${t.display_name}`}
 												>
 													<Icon icon={ArrowRight} size="sm" />

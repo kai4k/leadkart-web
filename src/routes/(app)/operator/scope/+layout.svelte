@@ -2,6 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import { goto, invalidateAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { Badge, Breadcrumbs, Button } from '$ui';
 	import type { BreadcrumbItem } from '$ui';
@@ -39,7 +40,7 @@
 		// Re-run server loads so capabilities + nav refresh under the
 		// non-scoped principal.
 		await invalidateAll();
-		goto('/operator/tenants', { replaceState: true });
+		goto(resolve('/operator/tenants'), { replaceState: true });
 	}
 </script>
 

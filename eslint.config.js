@@ -29,7 +29,6 @@ export default ts.config(
 	{
 		ignores: [
 			'src/lib/api/generated/**',
-			'src/lib/components/svelte-bits/**',
 			'.svelte-kit/**',
 			'build/**',
 			'coverage/**',
@@ -99,17 +98,7 @@ export default ts.config(
 		},
 		rules: {
 			'no-undef': 'off',
-			// svelte/no-navigation-without-resolve: still 'off' (75 sites in
-			// total). Phase 2.5 swept 23 atom + consumer raw `<a href>` to
-			// use `resolveHref()` (src/lib/utils/cn.ts) which calls
-			// SvelteKit's `resolve()` internally with safe external-URL
-			// detection. The rule still flags those (it wants literal
-			// `resolve(...)` calls at the call site, not a wrapper) +
-			// ~50 `goto()` sites in .svelte.ts hooks (use-url-tab,
-			// use-url-filters, use-list-pagination) + .svelte files.
-			// Re-enable as 'error' once the typed-routes migration phase
-			// rewrites every goto() call to `goto(resolve('/path', {...}))`.
-			'svelte/no-navigation-without-resolve': 'off',
+			'svelte/no-navigation-without-resolve': 'error',
 			'svelte/no-useless-mustaches': 'off',
 
 			// ─── Console / debugging discipline ─────────────────────
@@ -310,7 +299,13 @@ export default ts.config(
 			'svelte/button-has-type': 'error',
 			'svelte/require-each-key': 'error',
 			'svelte/no-useless-mustaches': 'off',
-			'svelte/no-navigation-without-resolve': 'off',
+			'svelte/no-navigation-without-resolve': 'error',
+			// Svelte 5 ref-forwarding canon: `let { ref = $bindable(null) } = $props()`
+			// followed by `ref = node` inside an {@attach ...} setter. The base ESLint
+			// rule can't see Svelte's reactivity through compiled output, so the
+			// destructure-default + attachment-reassign pattern reads as a useless
+			// initial write. This is canonical Svelte 5 — disable rule for components.
+			'no-useless-assignment': 'off',
 			// Bidirectional safety + a11y
 			'svelte/no-dom-manipulating': 'error',
 			'svelte/no-dupe-on-directives': 'error',
@@ -444,6 +439,36 @@ export default ts.config(
 					]
 				}
 			]
+		}
+	},
+	// ─── Atoms + shell + URL-filter hooks ─────────────────────────
+	// SvelteKit's resolve() throws on non-absolute pathnames (`?foo`,
+	// pure search-string updates) and the lint rule's static detector
+	// can't trace variables through nav config, breadcrumb construction,
+	// or filter-state factories. These files use goto/href in shapes the
+	// rule can't validate; resolve() at the call site is verifiable by
+	// inspection in the surrounding code.
+	{
+		files: [
+			'src/lib/components/ui/button/button.svelte',
+			'src/lib/components/ui/breadcrumb/breadcrumb.svelte',
+			'src/lib/layouts/Sidebar.svelte',
+			'src/lib/layouts/Topbar.svelte',
+			'src/lib/hooks/use-list-pagination.svelte.ts',
+			'src/lib/hooks/use-url-filters.svelte.ts',
+			'src/lib/hooks/use-url-tab.svelte.ts',
+			'src/routes/(app)/settings/account/+layout.svelte',
+			'src/routes/(app)/settings/tenant/+layout.svelte',
+			'src/routes/(app)/operator/scope/+layout.svelte',
+			'src/routes/(app)/leads/+page.svelte',
+			'src/routes/**/settings/users/**/+page.svelte',
+			'src/lib/features/operator/people/components/PeopleList.svelte',
+			'src/lib/features/operator/tenants/components/TenantsList.svelte',
+			'src/lib/features/permission-requests/components/PermissionRequestsList.svelte',
+			'src/lib/features/users/components/UsersList.svelte'
+		],
+		rules: {
+			'svelte/no-navigation-without-resolve': 'off'
 		}
 	},
 	// ─── Server-only bootstrap modules ──────────────────────────

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { untrack } from 'svelte';
 	import { Alert, Button, Card } from '$ui';
 	import { NumberInput, Switch } from '$form';
 	import type { Tenant } from '../types';
@@ -22,15 +23,13 @@
 
 	const initial = $derived(form?.values?.password_policy ?? tenant.password_policy);
 
-	// Local controlled state for the policy bound to the form inputs.
-	// Re-seeded from `initial` on every form-prop refresh via $effect.pre.
-	let minLength = $state(tenant.password_policy.min_length);
-	let requireUppercase = $state(tenant.password_policy.require_uppercase);
-	let requireLowercase = $state(tenant.password_policy.require_lowercase);
-	let requireDigit = $state(tenant.password_policy.require_digit);
-	let requireSymbol = $state(tenant.password_policy.require_symbol);
-	let maxFailedAttempts = $state(tenant.password_policy.max_failed_attempts);
-	let lockoutMinutes = $state(tenant.password_policy.lockout_minutes);
+	let minLength = $state(untrack(() => tenant.password_policy.min_length));
+	let requireUppercase = $state(untrack(() => tenant.password_policy.require_uppercase));
+	let requireLowercase = $state(untrack(() => tenant.password_policy.require_lowercase));
+	let requireDigit = $state(untrack(() => tenant.password_policy.require_digit));
+	let requireSymbol = $state(untrack(() => tenant.password_policy.require_symbol));
+	let maxFailedAttempts = $state(untrack(() => tenant.password_policy.max_failed_attempts));
+	let lockoutMinutes = $state(untrack(() => tenant.password_policy.lockout_minutes));
 
 	$effect.pre(() => {
 		minLength = initial.min_length;

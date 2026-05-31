@@ -11,6 +11,7 @@
 		setRoleParentMutation
 	} from '$features/roles/queries';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { roleBadgeVariant, isProtectedRole } from '$features/roles/view-models';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 	import {
@@ -58,7 +59,7 @@
 
 	$effect(() => {
 		if (capsQuery.data && !hasCapability(capsQuery.data, 'identity.roles.view')) {
-			goto('/dashboard', { replaceState: true });
+			goto(resolve('/dashboard'), { replaceState: true });
 		}
 	});
 

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Dialog as BitsDialog } from 'bits-ui';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Search, Building2, User, Icon } from '$icons';
 	import { omniSearchQuery } from '$features/search/queries';
 	import { enterScope } from '$features/operator/scope';
@@ -39,7 +40,7 @@
 		try {
 			await enterScope({ slug });
 			onOpenChange(false);
-			goto('/operator/scope/profile');
+			goto(resolve('/operator/scope/profile'));
 		} catch {
 			// Toast surfaces via global mutation cache — no inline error needed
 		}
@@ -47,7 +48,7 @@
 
 	function openPerson(id: string) {
 		onOpenChange(false);
-		goto(`/operator/persons/${id}`);
+		goto(resolve(`/operator/persons/${id}`));
 	}
 </script>
 

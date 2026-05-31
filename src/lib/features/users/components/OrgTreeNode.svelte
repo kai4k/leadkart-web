@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Avatar, Badge } from '$ui';
 	import { displayName, initials } from '$features/auth/view-models';
-	import { resolveHref } from '$lib/utils/cn';
+	import { resolve } from '$app/paths';
 	import { userStatusBadge } from '../view-models';
 	import type { OrgNode } from '../view-models-hierarchy';
 	import OrgTreeNode from './OrgTreeNode.svelte';
@@ -23,7 +23,7 @@
 
 <li class="relative">
 	<a
-		href={resolveHref(`/settings/users/${node.user.membership_id}`)}
+		href={resolve(`/settings/users/${node.user.membership_id}`)}
 		class="border-border bg-bg-elevated hover:border-primary focus-visible:ring-focus-ring flex items-center gap-3 rounded-md border px-3 py-2 transition-colors focus-visible:ring-2 focus-visible:outline-none"
 		aria-label={`${displayName(node.user)}${node.cycleBroken ? ' (cycle detected — review reporting line)' : ''}`}
 	>

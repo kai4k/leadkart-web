@@ -10,6 +10,7 @@
 	 * back; for now the markup is small enough to maintain.
 	 */
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Skeleton, EmptyState, StatusPill } from '$ui';
 	import { Icon, Inbox } from '$icons';
 	import type { BulkSelection, InfiniteList, KeyboardListNav } from '$lib/hooks';
@@ -52,7 +53,7 @@
 	}
 
 	function openDetail(lead: CrmLeadDto) {
-		goto(`/leads/${lead.id}`);
+		goto(resolve(`/leads/${lead.id}`));
 	}
 
 	function toggleAll() {

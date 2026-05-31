@@ -14,7 +14,14 @@
 		...rest
 	}: SingleProps & ToggleVariants = $props();
 
-	setContext('toggle-group', { variant, size });
+	setContext('toggle-group', {
+		get variant() {
+			return variant;
+		},
+		get size() {
+			return size;
+		}
+	});
 </script>
 
 <ToggleGroupPrimitive.Root

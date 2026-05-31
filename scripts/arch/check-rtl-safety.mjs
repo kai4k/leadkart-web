@@ -49,12 +49,7 @@ const STYLE_ATTR_BANNED =
 // - CSS files in src/styles/ (utility/base layer, intentionally
 //   non-mirror-aware so the consumer chooses)
 // - test files
-const SKIP_PATHS = [
-	'src/styles/',
-	'src/lib/icons/',
-	'src/lib/api/generated/',
-	'src/lib/components/svelte-bits/'
-];
+const SKIP_PATHS = ['src/styles/', 'src/lib/icons/', 'src/lib/api/generated/'];
 
 const files = globSync('src/**/*.{svelte,css}', { cwd: ROOT });
 let violations = [];

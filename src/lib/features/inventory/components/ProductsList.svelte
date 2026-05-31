@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Badge, Button, DataTable, EmptyState, type DataTableColumn } from '$ui';
 	import { ResourceListPage, type ResourceListAction, type BulkAction } from '$lib/components/data';
 	import { Icon, Plus, Package, UploadCloud, Pause, Check, Trash2 } from '$icons';
@@ -172,7 +173,7 @@
 	const isEmpty = $derived(!query.isPending && !query.isError && products.length === 0);
 
 	function openDetail(p: ProductDto) {
-		goto(`/inventory/${p.id}`);
+		goto(resolve(`/inventory/${p.id}`));
 	}
 
 	// ── Keyboard nav (Linear / Superhuman convention) ─────────────────

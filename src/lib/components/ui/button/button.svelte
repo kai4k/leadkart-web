@@ -51,9 +51,11 @@
 </script>
 
 <script lang="ts">
+	import type { Attachment } from 'svelte/attachments';
 	import type { Snippet } from 'svelte';
 	import type { HTMLAnchorAttributes, HTMLButtonAttributes } from 'svelte/elements';
-	import { cn, resolveHref, type WithElementRef } from '$lib/utils/cn';
+	import { resolve } from '$app/paths';
+	import { cn, type WithElementRef } from '$lib/utils/cn';
 	import Spinner from '../spinner/Spinner.svelte';
 
 	export type ButtonProps = WithElementRef<HTMLButtonAttributes> &
@@ -73,14 +75,21 @@
 		children,
 		...rest
 	}: ButtonProps = $props();
+
+	const forwardRef: Attachment = (node) => {
+		ref = node as HTMLAnchorElement & HTMLButtonElement;
+		return () => {
+			ref = null;
+		};
+	};
 </script>
 
 {#if href}
 	<a
-		bind:this={ref}
+		{@attach forwardRef}
 		data-slot="button"
 		class={cn(buttonVariants({ variant, size, fullWidth }), className)}
-		href={disabled || loading ? undefined : resolveHref(href)}
+		href={disabled || loading || !href ? undefined : (resolve as (h: string) => string)(href)}
 		aria-disabled={disabled || loading}
 		role={disabled || loading ? 'link' : undefined}
 		tabindex={disabled || loading ? -1 : undefined}
@@ -92,7 +101,7 @@
 	</a>
 {:else}
 	<button
-		bind:this={ref}
+		{@attach forwardRef}
 		data-slot="button"
 		{type}
 		disabled={disabled || loading}

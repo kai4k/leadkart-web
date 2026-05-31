@@ -9,7 +9,7 @@
 	import { personActivityQuery } from '$features/audit/queries';
 	import ActivityTimeline from '$features/audit/components/ActivityTimeline.svelte';
 	import { ApiError } from '$api/errors';
-	import { resolveHref } from '$lib/utils/cn';
+	import { resolve } from '$app/paths';
 
 	/**
 	 * UserDetailTabs — render-only sub-component for the dedicated
@@ -230,7 +230,7 @@
 							{@const rs = userStatusBadge(report.status)}
 							<li>
 								<a
-									href={resolveHref(`/settings/users/${report.membership_id}`)}
+									href={resolve(`/settings/users/${report.membership_id}`)}
 									class="hover:bg-bg-muted -mx-2 flex items-center gap-3 rounded-md px-2 py-2 transition-colors"
 								>
 									<Avatar initials={initials(report)} size="sm" />

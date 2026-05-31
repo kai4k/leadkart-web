@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { Alert, Avatar, Badge, Breadcrumbs, Button, Dropdown, Skeleton } from '$ui';
 	import type { BreadcrumbItem } from '$ui';
@@ -26,7 +27,7 @@
 	const capsQuery = myCapabilitiesQuery();
 	$effect(() => {
 		if (capsQuery.data && !hasCapability(capsQuery.data, 'identity.users.view')) {
-			goto('/dashboard', { replaceState: true });
+			goto(resolve('/dashboard'), { replaceState: true });
 		}
 	});
 

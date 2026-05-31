@@ -6,7 +6,7 @@
 	import { Icon, Lock } from '$lib/icons';
 	import { Alert, AuthCard, Button, Logo } from '$lib/components/ui';
 	import { PasswordField } from '$lib/components/form';
-	import { resolveHref } from '$lib/utils/cn';
+	import { resolve } from '$app/paths';
 	import type { ActionData } from '../../../../routes/(auth)/reset-password/$types';
 
 	/**
@@ -38,7 +38,7 @@
 	});
 
 	$effect(() => {
-		if (success) setTimeout(() => goto('/signin'), 2000);
+		if (success) setTimeout(() => goto(resolve('/signin')), 2000);
 	});
 </script>
 
@@ -56,7 +56,7 @@
 			<p>{$_('auth.resetPassword.errors.missingToken')}</p>
 		</Alert>
 		<p class="caption text-fg-muted text-center">
-			<a href={resolveHref('/forgot-password')} class="text-primary hover:underline">
+			<a href={resolve('/forgot-password')} class="text-primary hover:underline">
 				{$_('auth.resetPassword.requestNew')}
 			</a>
 		</p>
@@ -106,7 +106,7 @@
 			<Icon icon={Lock} size="xs" />
 			<span class="caption">
 				{$_('auth.resetPassword.backToSignin')}
-				<a href={resolveHref('/signin')} class="text-primary hover:underline"
+				<a href={resolve('/signin')} class="text-primary hover:underline"
 					>{$_('auth.signin.title')}</a
 				>
 			</span>

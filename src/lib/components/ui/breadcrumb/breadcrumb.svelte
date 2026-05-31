@@ -4,9 +4,11 @@
 </script>
 
 <script lang="ts">
+	import type { Attachment } from 'svelte/attachments';
 	import type { HTMLAttributes } from 'svelte/elements';
+	import { resolve } from '$app/paths';
 	import { ChevronRight, Icon } from '$icons';
-	import { cn, resolveHref, type WithElementRef } from '$lib/utils/cn';
+	import { cn, type WithElementRef } from '$lib/utils/cn';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLElement>> & { items: BreadcrumbItem[] };
 	let {
@@ -15,10 +17,17 @@
 		class: className = '',
 		...rest
 	}: Props = $props();
+
+	const forwardRef: Attachment = (node) => {
+		ref = node as HTMLElement;
+		return () => {
+			ref = null;
+		};
+	};
 </script>
 
 <nav
-	bind:this={ref}
+	{@attach forwardRef}
 	data-slot="breadcrumb"
 	aria-label="Breadcrumb"
 	class={cn('flex items-center', className)}
@@ -42,7 +51,7 @@
 					</span>
 				{:else}
 					<a
-						href={resolveHref(item.href)}
+						href={(resolve as (h: string) => string)(item.href)}
 						class="label-small text-fg-muted hover:text-fg focus-visible:ring-focus-ring inline-flex items-center gap-1 transition-colors focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
 					>
 						{#if item.icon}<Icon icon={item.icon} size="xs" />{/if}

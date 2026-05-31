@@ -2,6 +2,7 @@
 	import { Badge, Button, Dropdown } from '$ui';
 	import { Icon, ArrowLeft, MoreVertical, Edit, Trash2 } from '$icons';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import type { ProductDto } from '$features/inventory/schemas';
 	import {
 		drugScheduleBadge,
@@ -27,7 +28,7 @@
 	<button
 		type="button"
 		class="caption text-fg-muted hover:text-fg cluster cluster-tight self-start"
-		onclick={() => goto('/inventory')}
+		onclick={() => goto(resolve('/inventory'))}
 	>
 		<Icon icon={ArrowLeft} size="xs" /> Back to inventory
 	</button>

@@ -14,6 +14,7 @@
  */
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { goto, invalidateAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
 import { toast } from '$ui';
 import { AuthError, NetworkError, NotFoundError } from '$api/errors';
 import * as api from './api';
@@ -33,7 +34,7 @@ export function enterScopeMutation() {
 		onSuccess: async () => {
 			qc.clear();
 			await invalidateAll();
-			await goto('/operator/scope/profile');
+			await goto(resolve('/operator/scope/profile'));
 		},
 		onError: (err) => {
 			if (err instanceof NetworkError) {
@@ -64,7 +65,7 @@ export function exitScopeMutation() {
 		onSuccess: async () => {
 			qc.clear();
 			await invalidateAll();
-			await goto('/operator/tenants');
+			await goto(resolve('/operator/tenants'));
 		},
 		onError: () => {
 			toast.error('Could not exit scope — try again.');

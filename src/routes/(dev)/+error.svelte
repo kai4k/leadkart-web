@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { resolveHref } from '$lib/utils/cn';
+	import { resolve } from '$app/paths';
 	import { Alert, Button } from '$ui';
 
 	const status = $derived(page.status);
@@ -23,7 +23,7 @@
 
 	<div class="cluster">
 		<Button variant="primary" onclick={() => location.reload()}>Try again</Button>
-		<a href={resolveHref('/dashboard')}>
+		<a href={resolve('/dashboard')}>
 			<Button variant="ghost">Back to dashboard</Button>
 		</a>
 	</div>

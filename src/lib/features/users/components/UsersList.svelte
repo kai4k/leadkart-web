@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { Avatar, Badge, Button, DataTable, Dropdown, EmptyState, Pagination } from '$ui';
 	import type { DataTableColumn } from '$ui';
@@ -318,7 +319,7 @@
 				oninput={(e) => setSearch((e.currentTarget as HTMLInputElement).value)}
 				class="bg-bg-elevated border border-border rounded-md w-64 rounded-md px-3 py-2 text-sm"
 			/>
-			<Button variant="tonal" onclick={() => goto('/settings/users/hierarchy')}>
+			<Button variant="tonal" onclick={() => goto(resolve('/settings/users/hierarchy'))}>
 				<Icon icon={Users} size="sm" /> Hierarchy
 			</Button>
 			<Button onclick={() => (createOpen = true)}>
@@ -351,7 +352,7 @@
 		state={tableState}
 		error={listErrorCopy}
 		{selection}
-		onRowClick={(u) => goto(`/settings/users/${u.membership_id}`)}
+		onRowClick={(u) => goto(resolve(`/settings/users/${u.membership_id}`))}
 		{rowActions}
 	>
 		{#snippet emptyState()}

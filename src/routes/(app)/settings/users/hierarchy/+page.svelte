@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Alert, Breadcrumbs, Card, EmptyState, Skeleton } from '$ui';
 	import type { BreadcrumbItem } from '$ui';
 	import { Users } from '$icons';
@@ -20,7 +21,7 @@
 	const capsQuery = myCapabilitiesQuery();
 	$effect(() => {
 		if (capsQuery.data && !hasCapability(capsQuery.data, 'identity.users.view')) {
-			goto('/dashboard', { replaceState: true });
+			goto(resolve('/dashboard'), { replaceState: true });
 		}
 	});
 
