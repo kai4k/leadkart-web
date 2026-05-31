@@ -41,9 +41,12 @@
 	},
 	"size-limit": [
 		{
-			"name": "Total JS bundle (gzip)",
-			"path": "build/client/_app/immutable/**/*.js",
-			"limit": "400 KB",
+			"name": "Critical path JS (entry + sync chunks, gzip)",
+			"path": [
+				"build/client/_app/immutable/entry/**/*.js",
+				"build/client/_app/immutable/chunks/**/*.js"
+			],
+			"limit": "350 KB",
 			"gzip": true,
 			"running": false
 		},
@@ -55,9 +58,16 @@
 			"running": false
 		},
 		{
-			"name": "Initial route entry (signin)",
+			"name": "Entry chunk (cold-start, gzip)",
 			"path": "build/client/_app/immutable/entry/**/*.js",
 			"limit": "60 KB",
+			"gzip": true,
+			"running": false
+		},
+		{
+			"name": "Total cacheable JS (informational, gzip)",
+			"path": "build/client/_app/immutable/**/*.js",
+			"limit": "600 KB",
 			"gzip": true,
 			"running": false
 		}

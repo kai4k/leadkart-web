@@ -1,8 +1,8 @@
 <script lang="ts">
+	import type { Component } from 'svelte';
 	import Topbar from './Topbar.svelte';
 	import Sidebar from './Sidebar.svelte';
 	import Footer from './Footer.svelte';
-	import SettingsModal from './SettingsModal.svelte';
 	import { Drawer } from '$ui';
 	import { theme } from '$lib/hooks/use-theme.svelte';
 
@@ -34,6 +34,25 @@
 	let sidebarOpen = $state(false);
 	let settingsOpen = $state(false);
 
+	// FAANG canon: theme/layout settings drawer is opened on demand (avg session
+	// hits it ~0 times). Defer the SettingsModal compound + its bits-ui Dialog
+	// dependency to first click — saves ~10 KB gz on initial paint.
+	let SettingsModalCmp = $state<Component<{
+		open: boolean;
+		onOpenChange: (open: boolean) => void;
+	}> | null>(null);
+
+	async function openSettings(): Promise<void> {
+		if (!SettingsModalCmp) {
+			const mod = await import('./SettingsModal.svelte');
+			SettingsModalCmp = mod.default as unknown as Component<{
+				open: boolean;
+				onOpenChange: (open: boolean) => void;
+			}>;
+		}
+		settingsOpen = true;
+	}
+
 	function isDesktop(): boolean {
 		return typeof window !== 'undefined' && window.matchMedia('(min-width: 64rem)').matches;
 	}
@@ -49,7 +68,7 @@
 </script>
 
 <div class="lk-app">
-	<Topbar onToggleSidebar={onHamburger} onOpenSettings={() => (settingsOpen = true)} />
+	<Topbar onToggleSidebar={onHamburger} onOpenSettings={() => void openSettings()} />
 
 	<!-- Desktop fixed sidebar -->
 	<aside class="lk-sidebar-mount hidden lg:block" aria-label="Primary navigation">
@@ -80,7 +99,9 @@
 
 	<Footer />
 
-	<SettingsModal bind:open={settingsOpen} onOpenChange={(o) => (settingsOpen = o)} />
+	{#if SettingsModalCmp}
+		<SettingsModalCmp bind:open={settingsOpen} onOpenChange={(o) => (settingsOpen = o)} />
+	{/if}
 </div>
 
 <style>

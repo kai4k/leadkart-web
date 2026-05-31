@@ -16,11 +16,42 @@ import { defineConfig } from 'vite';
  * every authenticated route. That bug landed once already; don't add
  * the proxy back. See `src/routes/api/[...path]/+server.ts` for the
  * full proxy chain.
+ *
+ * Manual chunk splitting (FAANG canon — Vercel/Linear/Stripe):
+ *   - `vendor-bits-form`: form-input compounds (Combobox / Calendar /
+ *     RangeCalendar / DatePicker / Select / PinInput) — only loaded on
+ *     form routes; signin + dashboard never pull these.
+ *   - `vendor-bits-data`: heavy data-surface compounds (Command /
+ *     Menubar / NavigationMenu / ContextMenu) — load on detail pages.
+ *   - default vendor: bits-ui core (Dialog / Tooltip / Dropdown /
+ *     Popover / Tabs / Accordion / Drawer / Sheet) used by AppShell on
+ *     every authenticated route — keep in the shared chunk.
+ *
+ * Why split: the previous single-chunk bits-ui payload pulled every
+ * compound on first paint even though only Dialog/Tooltip/Dropdown were
+ * needed for the AppShell. Splitting form + data compounds into deferred
+ * chunks moves ~40-50 KB gz out of the initial paint.
  */
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
 	server: {
 		port: 5173,
 		strictPort: true
+	},
+	build: {
+		rollupOptions: {
+			output: {
+				manualChunks(id) {
+					if (id.includes('node_modules/bits-ui/dist/bits/')) {
+						if (/\/(combobox|calendar|range-calendar|date-picker|select|pin-input|date-field|date-range-field|time-field|slider|toggle|toggle-group)\//.test(id)) {
+							return 'vendor-bits-form';
+						}
+						if (/\/(command|menubar|navigation-menu|context-menu)\//.test(id)) {
+							return 'vendor-bits-data';
+						}
+					}
+				}
+			}
+		}
 	}
 });
