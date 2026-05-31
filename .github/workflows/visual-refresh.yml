@@ -75,6 +75,10 @@ jobs:
           CI: 'true'
 
       - name: Commit baselines back
+        env:
+          ACTOR: ${{ github.actor }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TARGET_REF: ${{ github.ref_name }}
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
@@ -83,11 +87,12 @@ jobs:
             echo "No baseline changes to commit."
             exit 0
           fi
-          git commit -m "test(visual): regenerate baselines via workflow_dispatch
-
-Auto-regenerated against the current branch HEAD after a deliberate
-visual change. Review the diff before merging.
-
-Triggered by: ${{ github.actor }}
-Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          git push origin HEAD:${{ github.ref_name }}
+          {
+            printf 'test(visual): regenerate baselines via workflow_dispatch\n\n'
+            printf 'Auto-regenerated against the current branch HEAD after a deliberate\n'
+            printf 'visual change. Review the diff before merging.\n\n'
+            printf 'Triggered by: %s\n' "$ACTOR"
+            printf 'Workflow run: %s\n' "$RUN_URL"
+          } > /tmp/commit-msg.txt
+          git commit -F /tmp/commit-msg.txt
+          git push origin "HEAD:$TARGET_REF"
