@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { SvelteURLSearchParams } from 'svelte/reactivity';
+	import { SvelteURL } from 'svelte/reactivity';
 	import { Alert, Badge, Button, DataTable, Dropdown, EmptyState, Spinner } from '$ui';
 	import type { DataTableColumn } from '$ui';
 	import {
@@ -55,19 +55,19 @@
 	const statusFilter = $derived(page.url.searchParams.get('status') ?? 'all');
 
 	function setStatusFilter(value: string) {
-		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
-		if (value && value !== 'all') params.set('status', value);
-		else params.delete('status');
-		params.delete('page');
-		goto(`?${params}`, { replaceState: true });
+		const url = new SvelteURL(page.url);
+		if (value && value !== 'all') url.searchParams.set('status', value);
+		else url.searchParams.delete('status');
+		url.searchParams.delete('page');
+		void goto(url, { replaceState: true });
 	}
 
 	function setSearch(value: string) {
-		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
-		if (value) params.set('q', value);
-		else params.delete('q');
-		params.delete('page');
-		goto(`?${params}`, { replaceState: true, keepFocus: true });
+		const url = new SvelteURL(page.url);
+		if (value) url.searchParams.set('q', value);
+		else url.searchParams.delete('q');
+		url.searchParams.delete('page');
+		void goto(url, { replaceState: true, keepFocus: true });
 	}
 
 	const capsQuery = myCapabilitiesQuery();

@@ -2,7 +2,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { SvelteURLSearchParams } from 'svelte/reactivity';
+	import { SvelteURL } from 'svelte/reactivity';
 	import { Alert, Avatar, Badge, Breadcrumbs, Button, Dropdown, Skeleton } from '$ui';
 	import type { BreadcrumbItem } from '$ui';
 	import { Icon, Lock, MoreVertical, Shield, UserMinus, UserPlus, Users } from '$icons';
@@ -55,11 +55,10 @@
 	const reactivate = reactivateUserMutation();
 
 	function setTab(name: string) {
-		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
-		if (name === 'overview') params.delete('tab');
-		else params.set('tab', name);
-		const qs = params.toString();
-		goto(qs ? `?${qs}` : page.url.pathname, { replaceState: true, keepFocus: true });
+		const url = new SvelteURL(page.url);
+		if (name === 'overview') url.searchParams.delete('tab');
+		else url.searchParams.set('tab', name);
+		void goto(url, { replaceState: true, keepFocus: true });
 	}
 </script>
 

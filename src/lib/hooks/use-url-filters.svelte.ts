@@ -31,7 +31,7 @@
  */
 import { goto } from '$app/navigation';
 import { page } from '$app/state';
-import { SvelteURLSearchParams } from 'svelte/reactivity';
+import { SvelteURL, SvelteURLSearchParams } from 'svelte/reactivity';
 
 export type UrlFilterValue = string | string[] | undefined;
 export type UrlFiltersBase = Record<string, UrlFilterValue>;
@@ -78,9 +78,9 @@ export function createUrlFilters<TFilters extends UrlFiltersBase>(
 	}
 
 	function commit(next: SvelteURLSearchParams): void {
-		const qs = next.toString();
-		const target = qs.length > 0 ? `?${qs}` : page.url.pathname;
-		void goto(target, { keepFocus: true, replaceState: true, noScroll: true });
+		const url = new SvelteURL(page.url);
+		url.search = next.toString();
+		void goto(url, { keepFocus: true, replaceState: true, noScroll: true });
 	}
 
 	function readFilters(): TFilters {

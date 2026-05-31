@@ -17,7 +17,7 @@
  */
 import { goto } from '$app/navigation';
 import { page } from '$app/state';
-import { SvelteURLSearchParams } from 'svelte/reactivity';
+import { SvelteURL } from 'svelte/reactivity';
 
 export interface UseUrlTab {
 	/** Current tab value, projected from `?tab=` (or the default). */
@@ -33,12 +33,10 @@ export interface UseUrlTab {
  */
 export function useUrlTab(defaultTab: string, valid?: readonly string[], param = 'tab'): UseUrlTab {
 	function set(next: string): void {
-		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
-		if (next === defaultTab) params.delete(param);
-		else params.set(param, next);
-		const search = params.toString();
-		const target = search ? `${page.url.pathname}?${search}` : page.url.pathname;
-		void goto(target, { replaceState: true, keepFocus: true, noScroll: true });
+		const url = new SvelteURL(page.url);
+		if (next === defaultTab) url.searchParams.delete(param);
+		else url.searchParams.set(param, next);
+		void goto(url, { replaceState: true, keepFocus: true, noScroll: true });
 	}
 
 	return {

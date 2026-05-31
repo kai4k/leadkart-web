@@ -11,6 +11,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { SvelteURL } from 'svelte/reactivity';
 	import { ResourceListPage } from '$lib/components/data';
 	import type { BulkAction } from '$lib/components/data';
 	import { Tabs } from '$ui';
@@ -92,14 +93,10 @@
 		page.url.searchParams.get('view') === 'table' ? 'table' : 'kanban'
 	);
 	function setViewMode(next: ViewMode) {
-		const next_url = new URL(page.url);
-		if (next === 'kanban') next_url.searchParams.delete('view');
-		else next_url.searchParams.set('view', 'table');
-		goto(`${next_url.pathname}${next_url.search}`, {
-			replaceState: true,
-			keepFocus: true,
-			noScroll: true
-		});
+		const url = new SvelteURL(page.url);
+		if (next === 'kanban') url.searchParams.delete('view');
+		else url.searchParams.set('view', 'table');
+		void goto(url, { replaceState: true, keepFocus: true, noScroll: true });
 	}
 
 	// ── Query params projection ──────────────────────────────────────

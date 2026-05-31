@@ -53,13 +53,11 @@
 <script lang="ts">
 	import type { Attachment } from 'svelte/attachments';
 	import type { Snippet } from 'svelte';
-	import type { HTMLAnchorAttributes, HTMLButtonAttributes } from 'svelte/elements';
-	import { resolve } from '$app/paths';
+	import type { HTMLButtonAttributes } from 'svelte/elements';
 	import { cn, type WithElementRef } from '$lib/utils/cn';
 	import Spinner from '../spinner/Spinner.svelte';
 
 	export type ButtonProps = WithElementRef<HTMLButtonAttributes> &
-		WithElementRef<HTMLAnchorAttributes> &
 		ButtonVariants & { loading?: boolean; children?: Snippet };
 
 	let {
@@ -69,7 +67,6 @@
 		loading = false,
 		disabled = false,
 		type = 'button',
-		href = undefined,
 		ref = $bindable(null),
 		class: className = '',
 		children,
@@ -77,39 +74,22 @@
 	}: ButtonProps = $props();
 
 	const forwardRef: Attachment = (node) => {
-		ref = node as HTMLAnchorElement & HTMLButtonElement;
+		ref = node as HTMLButtonElement;
 		return () => {
 			ref = null;
 		};
 	};
 </script>
 
-{#if href}
-	<a
-		{@attach forwardRef}
-		data-slot="button"
-		class={cn(buttonVariants({ variant, size, fullWidth }), className)}
-		href={disabled || loading || !href ? undefined : (resolve as (h: string) => string)(href)}
-		aria-disabled={disabled || loading}
-		role={disabled || loading ? 'link' : undefined}
-		tabindex={disabled || loading ? -1 : undefined}
-		aria-busy={loading || undefined}
-		{...rest}
-	>
-		{#if loading}<Spinner size={size === 'lg' ? 18 : 16} aria-hidden="true" />{/if}
-		{#if children}{@render children()}{/if}
-	</a>
-{:else}
-	<button
-		{@attach forwardRef}
-		data-slot="button"
-		{type}
-		disabled={disabled || loading}
-		aria-busy={loading || undefined}
-		class={cn(buttonVariants({ variant, size, fullWidth }), className)}
-		{...rest}
-	>
-		{#if loading}<Spinner size={size === 'lg' ? 18 : 16} aria-hidden="true" />{/if}
-		{#if children}{@render children()}{/if}
-	</button>
-{/if}
+<button
+	{@attach forwardRef}
+	data-slot="button"
+	{type}
+	disabled={disabled || loading}
+	aria-busy={loading || undefined}
+	class={cn(buttonVariants({ variant, size, fullWidth }), className)}
+	{...rest}
+>
+	{#if loading}<Spinner size={size === 'lg' ? 18 : 16} aria-hidden="true" />{/if}
+	{#if children}{@render children()}{/if}
+</button>

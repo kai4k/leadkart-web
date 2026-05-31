@@ -441,16 +441,28 @@ export default ts.config(
 			]
 		}
 	},
-	// ─── Atoms + shell + URL-filter hooks ─────────────────────────
-	// SvelteKit's resolve() throws on non-absolute pathnames (`?foo`,
-	// pure search-string updates) and the lint rule's static detector
-	// can't trace variables through nav config, breadcrumb construction,
-	// or filter-state factories. These files use goto/href in shapes the
-	// rule can't validate; resolve() at the call site is verifiable by
-	// inspection in the surrounding code.
+	// ─── svelte/no-navigation-without-resolve override ─────────────
+	// Two irreducible shapes the rule's static detector cannot accept:
+	//
+	// 1. Shell + breadcrumb atoms render `<a>` per item from a nav
+	//    config — the href flows through a variable the rule can't
+	//    trace to a resolve() origin. SvelteKit's typed-routes
+	//    `resolve()` overload also doesn't accept the generated
+	//    `Pathname` union at a single dispatch site (the conditional
+	//    `ResolveArgs<T>` distributes per literal, breaking union
+	//    dispatch), so adding `resolve()` at the JSX attribute can't
+	//    satisfy TS without abandoning typed-routes safety.
+	//
+	// 2. URL-state goto (`?query` updates, view-mode swap, tab swap).
+	//    `resolve()` throws on non-absolute pathnames, so it cannot
+	//    wrap a query-only URL. Even the canonical `goto(URL)` form
+	//    fires the rule (the rule wants a literal `resolve(...)` call
+	//    inside the JSX expression — it can't inspect URL-object args).
+	//
+	// Per eslint-plugin-svelte's own rule docs, these are the
+	// documented escape cases.
 	{
 		files: [
-			'src/lib/components/ui/button/button.svelte',
 			'src/lib/components/ui/breadcrumb/breadcrumb.svelte',
 			'src/lib/layouts/Sidebar.svelte',
 			'src/lib/layouts/Topbar.svelte',

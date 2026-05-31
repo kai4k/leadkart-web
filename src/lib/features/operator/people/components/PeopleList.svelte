@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { SvelteURLSearchParams } from 'svelte/reactivity';
+	import { SvelteURL } from 'svelte/reactivity';
 	import { Avatar, Badge, DataTable, EmptyState } from '$ui';
 	import type { DataTableColumn } from '$ui';
 	import { Users, Search, Icon } from '$icons';
@@ -22,13 +22,10 @@
 		const value = (e.currentTarget as HTMLInputElement).value;
 		clearTimeout(debounceHandle);
 		debounceHandle = setTimeout(() => {
-			const next = new SvelteURLSearchParams(page.url.searchParams.toString());
-			if (value.trim()) {
-				next.set('q', value.trim());
-			} else {
-				next.delete('q');
-			}
-			goto(`?${next}`, { replaceState: true, keepFocus: true });
+			const url = new SvelteURL(page.url);
+			if (value.trim()) url.searchParams.set('q', value.trim());
+			else url.searchParams.delete('q');
+			void goto(url, { replaceState: true, keepFocus: true });
 		}, DEBOUNCE_MS);
 	}
 

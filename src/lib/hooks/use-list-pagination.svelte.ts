@@ -35,7 +35,7 @@
  */
 import { goto } from '$app/navigation';
 import { page } from '$app/state';
-import { SvelteURLSearchParams } from 'svelte/reactivity';
+import { SvelteURL } from 'svelte/reactivity';
 
 export type ListPaginationOptions = {
 	/** Items per page. Default 10 (Stripe/Linear/GitHub canon for list views). */
@@ -61,14 +61,10 @@ export function createListPagination<TItem>(
 	const paramKey = opts.paramKey ?? 'page';
 
 	function setPage(p: number): void {
-		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
-		if (p > 1) {
-			params.set(paramKey, String(p));
-		} else {
-			params.delete(paramKey);
-		}
-		const qs = params.toString();
-		void goto(qs ? `?${qs}` : page.url.pathname, { replaceState: true });
+		const next = new SvelteURL(page.url);
+		if (p > 1) next.searchParams.set(paramKey, String(p));
+		else next.searchParams.delete(paramKey);
+		void goto(next, { replaceState: true });
 	}
 
 	return {
