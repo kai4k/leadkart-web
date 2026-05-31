@@ -42,13 +42,46 @@ export default defineConfig({
 		rollupOptions: {
 			output: {
 				manualChunks(id) {
+					// bits-ui core (Dialog/Drawer/Dropdown/Tooltip) stays in the
+					// default shared chunk — AppShell + UserMenu need them every
+					// authenticated route. EVERYTHING else gets deferred.
 					if (id.includes('node_modules/bits-ui/dist/bits/')) {
-						if (/\/(combobox|calendar|range-calendar|date-picker|select|pin-input|date-field|date-range-field|time-field|slider|toggle|toggle-group)\//.test(id)) {
+						// Form-input compounds — only loaded on form routes.
+						if (
+							/\/(combobox|calendar|range-calendar|date-picker|select|pin-input|date-field|date-range-field|time-field|slider|toggle|toggle-group|switch|checkbox|radio-group)\//.test(
+								id
+							)
+						) {
 							return 'vendor-bits-form';
 						}
-						if (/\/(command|menubar|navigation-menu|context-menu)\//.test(id)) {
+						// Heavy data-surface compounds — only on detail / feature pages.
+						if (
+							/\/(command|menubar|navigation-menu|context-menu|accordion|tabs|hover-card|sheet|alert-dialog|scroll-area|aspect-ratio|collapsible|popover|label|separator)\//.test(
+								id
+							)
+						) {
 							return 'vendor-bits-data';
 						}
+					}
+					// Zod is heavy (~26 KB gz) and only needed where gateway
+					// parseResponse runs — defer to its own chunk so initial paint
+					// pulls it only when a route actually fetches.
+					if (id.includes('node_modules/zod/')) {
+						return 'vendor-zod';
+					}
+					// formsnap + sveltekit-superforms — form stack, only used on
+					// form routes (auth, settings/account, settings/tenant).
+					if (
+						id.includes('node_modules/formsnap/') ||
+						id.includes('node_modules/sveltekit-superforms/')
+					) {
+						return 'vendor-forms';
+					}
+					// TanStack Query — used everywhere authenticated but is its own
+					// concern. Splitting it lets browsers cache it independently of
+					// app code that changes more often.
+					if (id.includes('node_modules/@tanstack/svelte-query/')) {
+						return 'vendor-tanstack';
 					}
 				}
 			}

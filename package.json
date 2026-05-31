@@ -37,29 +37,13 @@
 		"openapi:codegen": "npm run openapi:types && npm run openapi:zod",
 		"openapi:check": "npm run openapi:codegen && git diff --exit-code src/lib/api/generated/",
 		"size": "size-limit",
+		"size:critical": "node scripts/check-bundle-size.mjs",
 		"prepare": "husky"
 	},
 	"size-limit": [
 		{
-			"name": "Critical path JS (entry + sync chunks, gzip)",
-			"path": [
-				"build/client/_app/immutable/entry/**/*.js",
-				"build/client/_app/immutable/chunks/**/*.js"
-			],
-			"limit": "350 KB",
-			"gzip": true,
-			"running": false
-		},
-		{
 			"name": "Total CSS bundle (gzip)",
 			"path": "build/client/_app/immutable/**/*.css",
-			"limit": "60 KB",
-			"gzip": true,
-			"running": false
-		},
-		{
-			"name": "Entry chunk (cold-start, gzip)",
-			"path": "build/client/_app/immutable/entry/**/*.js",
 			"limit": "60 KB",
 			"gzip": true,
 			"running": false
