@@ -130,7 +130,7 @@
 	{/if}
 
 	{#if error}
-		<p id={errorId} class="body-sm text-danger-700">
+		<p id={errorId} role="alert" aria-live="polite" class="body-sm text-danger-700">
 			{error}
 		</p>
 	{/if}
