@@ -11,7 +11,7 @@ import type {
 
 const ACTIVE_SESSION_KEY = 'leadkart-impersonation-session';
 
-export type ImpersonationStatus = 'idle' | 'loading' | 'active' | 'mutating' | 'error';
+type ImpersonationStatus = 'idle' | 'loading' | 'active' | 'mutating' | 'error';
 
 export interface Impersonation {
 	readonly active: ImpersonationSessionDto | null;

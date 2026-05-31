@@ -81,7 +81,13 @@ const config: KnipConfig = {
 		'@storybook/sveltekit',
 		'@storybook/addon-essentials',
 		// oxlint — invoked by name via npm scripts + npx, knip doesn't see the call site
-		'oxlint'
+		'oxlint',
+		// Tailwind 4 — consumed via @tailwindcss/vite plugin + `@import 'tailwindcss'` in app.css
+		'tailwindcss',
+		// tw-animate-css — consumed via `@import 'tw-animate-css'` in app.css
+		'tw-animate-css',
+		// postcss — peer of stylelint declaration-strict-value plugin, resolved by stylelint itself
+		'postcss'
 	]
 };
 

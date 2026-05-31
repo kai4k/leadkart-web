@@ -32,13 +32,6 @@ export const listPersonMembershipsResponseSchema = z.object({
 
 export const globalSuspendRequestSchema = z.object({ reason: z.string().min(1).max(500) }).strict();
 
-export const updatePersonProfileRequestSchema = z
-	.object({
-		first_name: z.string().min(1).max(120),
-		last_name: z.string().min(1).max(120)
-	})
-	.strict();
-
 export const anonymisePersonRequestSchema = z
 	.object({ reason: z.string().min(1).max(500) })
 	.strict();

@@ -18,7 +18,7 @@ import * as api from './api';
 import { toast } from '$ui';
 import type { RegisterTenantRequest } from './types';
 
-export const tenantsKeys = {
+const tenantsKeys = {
 	all: ['tenants'] as const,
 	list: () => [...tenantsKeys.all, 'list'] as const,
 	detail: (id: string) => [...tenantsKeys.all, 'detail', id] as const
@@ -28,14 +28,6 @@ export function tenantsListQuery() {
 	return createQuery(() => ({
 		queryKey: tenantsKeys.list(),
 		queryFn: () => api.listTenants()
-	}));
-}
-
-export function tenantDetailQuery(tenantId: string) {
-	return createQuery(() => ({
-		queryKey: tenantsKeys.detail(tenantId),
-		queryFn: () => api.getTenant(tenantId),
-		enabled: Boolean(tenantId)
 	}));
 }
 

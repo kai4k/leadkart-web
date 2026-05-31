@@ -11,7 +11,7 @@ import { goFetch, readGoError, flattenGoErrors } from '$lib/server/go';
 import { decodeJwtPrincipal } from '$api/jwt';
 import { ACCESS_COOKIE } from '$lib/server/cookies';
 
-export function getTenantId(cookies: Cookies): string {
+function getTenantId(cookies: Cookies): string {
 	const access = cookies.get(ACCESS_COOKIE());
 	if (!access) throw redirect(303, '/signin');
 	return decodeJwtPrincipal(access).tenantId;

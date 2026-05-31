@@ -11,7 +11,7 @@ import { toast } from '$ui';
 import type { CreatePermissionRequest } from './schemas';
 import type { ListRole } from './api';
 
-export const permissionRequestsKeys = {
+const permissionRequestsKeys = {
 	all: ['permission-requests'] as const,
 	list: (role: ListRole = 'requester') => [...permissionRequestsKeys.all, 'list', role] as const,
 	detail: (id: string) => [...permissionRequestsKeys.all, 'detail', id] as const

@@ -18,8 +18,8 @@ import type { Cookies } from '@sveltejs/kit';
 import { isProd } from './config';
 
 export const ACCESS_COOKIE = (): string => (isProd() ? '__Host-lk_access' : 'lk_access');
-export const REFRESH_COOKIE = 'lk_refresh';
-export const CSRF_COOKIE = 'lk_csrf';
+const REFRESH_COOKIE = 'lk_refresh';
+const CSRF_COOKIE = 'lk_csrf';
 
 export function setAuthCookies(cookies: Cookies, access: string, refresh: string): void {
 	const secure = isProd();

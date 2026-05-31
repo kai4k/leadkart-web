@@ -17,7 +17,7 @@ import * as api from './api';
 import { toast } from '$ui';
 import type { CreateUserRequest, ReplacePermissionOverridesRequest } from './types';
 
-export const usersKeys = {
+const usersKeys = {
 	all: ['users'] as const,
 	list: () => [...usersKeys.all, 'list'] as const,
 	detail: (id: string) => [...usersKeys.all, 'detail', id] as const,

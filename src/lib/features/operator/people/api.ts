@@ -9,7 +9,6 @@ import type {
 	ListPersonMembershipsResponse,
 	PersonListResponse,
 	GlobalSuspendRequest,
-	UpdatePersonProfileRequest,
 	AnonymisePersonRequest
 } from './types';
 
@@ -46,12 +45,6 @@ export async function listPersons(params?: PersonListParams): Promise<PersonList
 	return parseResponse(personListResponseSchema, raw);
 }
 
-/** Look up a single person by email — operator-scoped (platform.users.view). */
-export async function getPersonByEmail(email: string): Promise<PersonDto> {
-	const raw = await api.get<unknown>(`/v1/platform/persons/by-email/${encodeURIComponent(email)}`);
-	return parseResponse(personDtoSchema, raw);
-}
-
 /** Read a Person by ID — operator-scoped (platform.users.view). */
 export async function getPerson(personId: string): Promise<PersonDto> {
 	const raw = await api.get<unknown>(`/v1/platform/persons/${personId}`);
@@ -65,15 +58,6 @@ export async function listPersonMemberships(
 ): Promise<ListPersonMembershipsResponse> {
 	const raw = await api.get<unknown>(`/v1/platform/persons/${personId}/memberships`);
 	return parseResponse(listPersonMembershipsResponseSchema, raw);
-}
-
-/** Update a Person's first_name / last_name — operator-scoped
- *  (platform.users.manage). Returns 204 No Content. */
-export async function updatePersonProfile(
-	personId: string,
-	req: UpdatePersonProfileRequest
-): Promise<void> {
-	await api.patch<void>(`/v1/platform/persons/${personId}/profile`, req);
 }
 
 /** Globally suspend a Person across ALL tenants — operator-scoped

@@ -16,11 +16,6 @@ import type {
  * to the browser. Principal is derived from SSR-bootstrapped capabilities.
  */
 
-export interface LoginRequest {
-	email: string;
-	password: string;
-}
-
 /** BFF login success — just an acknowledgement. Tokens are in cookies. */
 export interface LoginResponse {
 	ok: true;

@@ -66,7 +66,7 @@ function projectLeadsListCache(cache: unknown, mapRow: (lead: CrmLeadDto) => Crm
 	return cache;
 }
 
-export const leadsKeys = {
+const leadsKeys = {
 	all: ['crm-leads'] as const,
 	lists: () => [...leadsKeys.all, 'list'] as const,
 	list: (params: ListLeadsParams) => [...leadsKeys.lists(), params] as const,
@@ -121,13 +121,6 @@ export function leadHistoryQuery(id: string) {
 		queryKey: leadsKeys.history(id),
 		queryFn: () => api.listAssignmentHistory(id),
 		enabled: Boolean(id)
-	}));
-}
-
-export function crossRemindersQuery(getParams: () => CrossReminderParams) {
-	return createQuery(() => ({
-		queryKey: leadsKeys.crossReminders(getParams()),
-		queryFn: () => api.listReminders(getParams())
 	}));
 }
 

@@ -119,27 +119,27 @@
 </Story>
 
 <Story name="With custom cells (Badge + StatusPill)">
+	{@const cols = [
+		{ id: 'name', header: 'Tenant', accessor: 'name' as const, sortBy: 'name' },
+		{ id: 'gstin', header: 'GSTIN', accessor: 'gstin' as const, hideBelow: 'md' as const },
+		{
+			id: 'members',
+			header: 'Members',
+			accessor: 'members' as const,
+			class: 'text-end tabular-nums'
+		},
+		{
+			id: 'status',
+			header: 'Status',
+			cell: statusCell
+		},
+		{
+			id: 'tier',
+			header: 'Tier',
+			cell: tierCell
+		}
+	] as DataTableColumn<Tenant>[]}
 	<div style="width: 100%; max-width: 1080px;">
-		{@const cols = [
-			{ id: 'name', header: 'Tenant', accessor: 'name' as const, sortBy: 'name' },
-			{ id: 'gstin', header: 'GSTIN', accessor: 'gstin' as const, hideBelow: 'md' as const },
-			{
-				id: 'members',
-				header: 'Members',
-				accessor: 'members' as const,
-				class: 'text-end tabular-nums'
-			},
-			{
-				id: 'status',
-				header: 'Status',
-				cell: statusCell
-			},
-			{
-				id: 'tier',
-				header: 'Tier',
-				cell: tierCell
-			}
-		] as DataTableColumn<Tenant>[]}
 		<DataTable columns={cols} rows={TENANTS} rowKey={(t) => t.id} />
 	</div>
 </Story>

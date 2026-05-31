@@ -5,7 +5,7 @@ import { createQuery } from '@tanstack/svelte-query';
 import * as api from './api';
 import type { ActivityParams } from './api';
 
-export const activityKeys = {
+const activityKeys = {
 	tenant: (tenantId: string, params?: ActivityParams) =>
 		['activity', 'tenant', tenantId, params ?? {}] as const,
 	person: (personId: string, params?: ActivityParams) =>

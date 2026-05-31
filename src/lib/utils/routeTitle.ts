@@ -25,7 +25,7 @@ const ALL_ITEMS = [...PLATFORM_NAV, ...TENANT_ADMIN_NAV, ...TENANT_USER_NAV].fla
  *  enforced by the Icon wrapper). */
 type IconComponent = NavItem['icon'];
 
-export interface Crumb {
+interface Crumb {
 	label: string;
 	href: string;
 	icon: IconComponent | null;
@@ -77,7 +77,3 @@ export function routeContext(pathname: string): RouteContext {
 	};
 }
 
-/** Legacy export — keep until call sites migrate. */
-export function routeTitle(pathname: string): string {
-	return routeContext(pathname).label;
-}

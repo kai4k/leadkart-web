@@ -296,34 +296,3 @@ export function gstDefaultsQuery() {
 	}));
 }
 
-export function computedPricesQuery(productId: string) {
-	return createQuery(() => ({
-		queryKey: inventoryKeys.computedPrices(productId),
-		queryFn: () => api.getComputedPrices(productId),
-		enabled: Boolean(productId)
-	}));
-}
-
-// ── Bulk upload ──────────────────────────────────────────────────────
-
-export function bulkUploadPreviewMutation() {
-	return createMutation(() => ({
-		mutationFn: (file: File) => api.bulkUploadPreview(file)
-	}));
-}
-
-export function bulkUploadCommitMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: ({ file, upsert_by }: { file: File; upsert_by?: 'product_key' | 'none' }) =>
-			api.bulkUploadCommit(file, { upsert_by }),
-		onSuccess: (result) => {
-			void qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
-			toast.success(
-				`Inserted ${result.inserted}, updated ${result.updated}${
-					result.failed > 0 ? `, ${result.failed} failed` : ''
-				}`
-			);
-		}
-	}));
-}

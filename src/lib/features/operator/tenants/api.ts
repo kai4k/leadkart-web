@@ -1,5 +1,4 @@
 import { api, parseResponse } from '$api/client';
-import { NotFoundError } from '$api/errors';
 import {
 	tenantDtoSchema,
 	registerTenantResponseSchema,
@@ -20,32 +19,6 @@ import type {
 export async function registerTenant(req: RegisterTenantRequest): Promise<RegisterTenantResponse> {
 	const raw = await api.post<unknown>('/v1/tenants', req);
 	return parseResponse(registerTenantResponseSchema, raw);
-}
-
-/** Read a tenant by UUID — operator-scoped (platform.tenants.view).
- *  Same endpoint the tenant feature uses; access is widened by
- *  the operator's permission claim. */
-export async function getTenant(tenantId: string): Promise<TenantDto> {
-	const raw = await api.get<unknown>(`/v1/tenants/${tenantId}`);
-	return parseResponse(tenantDtoSchema, raw);
-}
-
-/** Read a tenant by human-readable slug.
- *
- *  Per backend ADR 0052, the canonical form is the Stripe-style filter
- *  query `GET /v1/tenants?slug=…` returning `{ tenants: [...] }`. The
- *  grandfathered `/v1/tenants/by-slug/{slug}` is deprecated and will be
- *  removed in a future release. Slug uniqueness is a DB invariant — the
- *  list returns either zero or one item. We surface a 404-shaped error
- *  on empty for caller convenience. */
-export async function getTenantBySlug(slug: string): Promise<TenantDto> {
-	const raw = await api.get<unknown>(`/v1/tenants?slug=${encodeURIComponent(slug)}`);
-	const list = parseResponse(listAllTenantsResponseSchema, raw);
-	const tenant = list.tenants[0];
-	if (!tenant) {
-		throw new NotFoundError(`Tenant ${slug}`);
-	}
-	return tenant;
 }
 
 export async function suspendTenant(

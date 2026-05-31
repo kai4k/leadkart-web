@@ -8,7 +8,7 @@ import { toast } from '$ui';
 
 // ── Query key factory ──────────────────────────────────────────────
 
-export const peopleKeys = {
+const peopleKeys = {
 	all: ['persons'] as const,
 	list: (params?: PersonListParams) => [...peopleKeys.all, 'list', params ?? {}] as const,
 	detail: (id: string) => [...peopleKeys.all, 'detail', id] as const,

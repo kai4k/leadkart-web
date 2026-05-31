@@ -22,20 +22,18 @@ import type {
 	ApproveQuotationRequest,
 	BulkOrderActionRequest,
 	CancelOrderRequest,
-	CreateQuotationRequest,
 	DispatchRequest,
 	MarkDeliveredRequest,
 	MarkPackedRequest,
 	OrderDto,
 	RecordPaymentRequest,
-	ReviseQuotationRequest,
-	UpdateOrderRequest
+	ReviseQuotationRequest
 } from './schemas';
 import type { ListOrdersParams } from './api';
 
 // ── Query keys ───────────────────────────────────────────────────────
 
-export const ordersKeys = {
+const ordersKeys = {
 	all: ['orders'] as const,
 	lists: () => [...ordersKeys.all, 'list'] as const,
 	list: (params: ListOrdersParams) => [...ordersKeys.lists(), params] as const,
@@ -108,44 +106,6 @@ export function orderCreditNotesQuery(id: string) {
 function syncCaches(qc: ReturnType<typeof useQueryClient>, order: OrderDto): void {
 	qc.setQueryData(ordersKeys.detail(order.id), order);
 	void qc.invalidateQueries({ queryKey: ordersKeys.lists() });
-}
-
-// ── CRUD ─────────────────────────────────────────────────────────────
-
-export function createQuotationMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: (req: CreateQuotationRequest) => api.createQuotation(req),
-		onSuccess: (order) => {
-			syncCaches(qc, order);
-			toast.success(`Quotation ${order.order_number} created`);
-		},
-		onError: () => toast.error('Failed to create quotation')
-	}));
-}
-
-export function updateOrderMutation(id: string) {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: (req: UpdateOrderRequest) => api.updateOrder(id, req),
-		onSuccess: (order) => {
-			syncCaches(qc, order);
-			toast.success('Order updated');
-		},
-		onError: () => toast.error('Failed to update order')
-	}));
-}
-
-export function deleteOrderMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: (id: string) => api.deleteOrder(id),
-		onSuccess: () => {
-			void qc.invalidateQueries({ queryKey: ordersKeys.lists() });
-			toast.success('Quotation deleted');
-		},
-		onError: () => toast.error('Failed to delete quotation')
-	}));
 }
 
 // ── State transitions ───────────────────────────────────────────────

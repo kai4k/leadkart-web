@@ -16,8 +16,7 @@ import { toast } from '$ui';
 import * as api from './api';
 import type { UpdateProfileRequest, SessionDto } from './types';
 import type { Capabilities } from './capabilities';
-// Pure helpers — re-exported so components can import from one place
-export { hasCapability, type Capabilities } from './capabilities';
+export { hasCapability } from './capabilities';
 
 export const capabilitiesKey = ['me', 'capabilities'] as const;
 const profileKey = (membershipId: string) => ['me', 'profile', membershipId] as const;
