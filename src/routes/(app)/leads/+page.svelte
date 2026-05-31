@@ -10,6 +10,9 @@
 	 */
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import type { ResolvedPathname } from '$app/types';
+	import { SvelteURL } from 'svelte/reactivity';
 	import { ResourceListPage } from '$lib/components/data';
 	import type { BulkAction } from '$lib/components/data';
 	import { Tabs } from '$ui';
@@ -17,10 +20,10 @@
 	import { TextField } from '$form';
 	import { Upload } from '$icons';
 	import {
-		UseUrlFilters,
-		UseBulkSelection,
-		UseKeyboardListNav,
-		UseSavedViews,
+		createUrlFilters,
+		createBulkSelection,
+		createKeyboardListNav,
+		createSavedViews,
 		type SavedView
 	} from '$lib/hooks';
 	import { LEAD_FILTER_FIELDS, type LeadUrlFilters } from '$features/leads/filter-config';
@@ -43,7 +46,7 @@
 	} from '$features/leads/schemas';
 
 	// ── URL filters ──────────────────────────────────────────────────
-	const filters = new UseUrlFilters<LeadUrlFilters>({
+	const filters = createUrlFilters<LeadUrlFilters>({
 		q: { type: 'string', label: 'Search' },
 		stage: { type: 'string[]', label: 'Stage' },
 		temperature: { type: 'string[]', label: 'Temperature' },
@@ -83,7 +86,7 @@
 		}
 	]);
 
-	const savedViews = $derived(new UseSavedViews<LeadUrlFilters>(savedViewDefs, filters));
+	const savedViews = $derived(createSavedViews<LeadUrlFilters>(savedViewDefs, filters));
 
 	// ── View tab (kanban / table) ────────────────────────────────────
 	type ViewMode = 'kanban' | 'table';
@@ -91,10 +94,10 @@
 		page.url.searchParams.get('view') === 'table' ? 'table' : 'kanban'
 	);
 	function setViewMode(next: ViewMode) {
-		const next_url = new URL(page.url);
-		if (next === 'kanban') next_url.searchParams.delete('view');
-		else next_url.searchParams.set('view', 'table');
-		goto(`${next_url.pathname}${next_url.search}`, {
+		const url = new SvelteURL(page.url);
+		if (next === 'kanban') url.searchParams.delete('view');
+		else url.searchParams.set('view', 'table');
+		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
 			replaceState: true,
 			keepFocus: true,
 			noScroll: true
@@ -124,7 +127,7 @@
 
 	// ── List + selection + keyboard nav ──────────────────────────────
 	const list = leadsInfiniteQuery(() => buildListParams());
-	const selection = new UseBulkSelection<CrmLeadDto>();
+	const selection = createBulkSelection<CrmLeadDto>();
 	let editingLead: CrmLeadDto | null = $state(null);
 	let editOpen = $state(false);
 	let bulkUploadOpen = $state(false);
@@ -132,8 +135,8 @@
 	// Roving-tabindex keyboard nav. Drawers (Edit / Bulk upload) own
 	// focus when open, so j/k bubble naturally out of the row list
 	// instead of needing an `isAnyOverlayOpen` guard.
-	const nav = new UseKeyboardListNav<CrmLeadDto>({
-		onSelect: (lead) => goto(`/leads/${lead.id}`),
+	const nav = createKeyboardListNav<CrmLeadDto>({
+		onSelect: (lead) => goto(resolve(`/leads/${lead.id}`)),
 		onEdit: (lead) => {
 			editingLead = lead;
 			editOpen = true;
@@ -235,8 +238,8 @@
 	{/snippet}
 
 	<div class="stack stack-relaxed">
-		<Tabs.Root value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-			<Tabs.List variant="pills">
+		<Tabs.Root value={viewMode} onValueChange={(v: string) => setViewMode(v as ViewMode)}>
+			<Tabs.List>
 				<Tabs.Trigger value="kanban">Kanban</Tabs.Trigger>
 				<Tabs.Trigger value="table">Table</Tabs.Trigger>
 			</Tabs.List>

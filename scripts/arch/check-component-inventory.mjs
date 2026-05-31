@@ -51,11 +51,11 @@ const REQUIRED = {
 	],
 	// Feedback primitives (arch test #183)
 	feedback: [
-		{ path: 'ui/Alert.svelte' },
-		{ path: 'ui/Toaster.svelte' },
+		{ path: 'ui/alert/alert.svelte' },
+		{ path: 'ui/sonner/Toaster.svelte' },
 		{ path: 'ui/tooltip/Tooltip.svelte' },
-		{ path: 'ui/Skeleton.svelte' },
-		{ path: 'ui/Spinner.svelte' },
+		{ path: 'ui/skeleton/skeleton.svelte' },
+		{ path: 'ui/spinner/Spinner.svelte' },
 		{ path: 'ui/progress/Progress.svelte' }
 	],
 	// Overlay primitives (arch test #184)
@@ -63,16 +63,16 @@ const REQUIRED = {
 		{ path: 'ui/dialog/Dialog.svelte' },
 		{ path: 'ui/drawer/Drawer.svelte' },
 		{ path: 'ui/popover/Popover.svelte' },
-		{ path: 'ui/dropdown/Dropdown.svelte' },
+		{ path: 'ui/dropdown-menu/dropdown-menu.svelte' },
 		{ path: 'ui/accordion/Accordion.svelte' }
 	],
 	// Data display (arch test #185)
 	data: [
 		{ path: 'ui/data-table/DataTable.svelte' },
 		{ path: 'ui/EmptyState.svelte' },
-		{ path: 'ui/Badge.svelte' },
-		{ path: 'ui/Avatar.svelte' },
-		{ path: 'ui/AvatarGroup.svelte' },
+		{ path: 'ui/badge/badge.svelte' },
+		{ path: 'ui/avatar/avatar.svelte' },
+		{ path: 'ui/avatar/avatar-group.svelte' },
 		{ path: 'ui/CopyButton.svelte' },
 		{ path: 'ui/InlineEdit.svelte' },
 		{ path: 'ui/StatCard.svelte' },
@@ -80,8 +80,8 @@ const REQUIRED = {
 	],
 	// Navigation (arch test #186)
 	navigation: [
-		{ path: 'ui/Breadcrumbs.svelte' },
-		{ path: 'ui/Pagination.svelte' },
+		{ path: 'ui/breadcrumb/breadcrumb.svelte' },
+		{ path: 'ui/pagination/pagination.svelte' },
 		{ path: 'ui/stepper/Stepper.svelte' }
 	],
 	// Interactive lists (arch test #187)

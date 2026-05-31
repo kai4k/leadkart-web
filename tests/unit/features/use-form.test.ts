@@ -1,11 +1,11 @@
 /**
- * Unit tests for the useForm hook (FormState class).
+ * Unit tests for the useForm hook (Form class).
  * Covers the client-side Zod validation path, error surface,
  * bannerError on unexpected throws, and ValidationError field mapping.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { FormState, useForm } from '$lib/hooks/use-form.svelte';
+import { useForm } from '$lib/hooks/use-form.svelte';
 import { NetworkError, ValidationError } from '$lib/api/errors';
 
 const testSchema = z.object({
@@ -18,9 +18,9 @@ function makeEvent(): SubmitEvent {
 }
 
 describe('useForm factory', () => {
-	it('returns a FormState instance', () => {
+	it('returns a Form instance', () => {
 		const form = useForm(testSchema, { email: '', name: '' });
-		expect(form).toBeInstanceOf(FormState);
+		expect(typeof form.submit).toBe('function');
 	});
 
 	it('initialises values from the initial argument', () => {
@@ -30,7 +30,7 @@ describe('useForm factory', () => {
 	});
 });
 
-describe('FormState.submit — client-side Zod validation', () => {
+describe('Form.submit — client-side Zod validation', () => {
 	it('sets field errors and does NOT call submitFn when validation fails', async () => {
 		const form = useForm(testSchema, { email: 'not-an-email', name: 'x' });
 		const submitFn = vi.fn();
@@ -56,7 +56,7 @@ describe('FormState.submit — client-side Zod validation', () => {
 	});
 });
 
-describe('FormState.submit — error handling', () => {
+describe('Form.submit — error handling', () => {
 	it('maps ValidationError.fields to form.errors', async () => {
 		const form = useForm(testSchema, { email: 'alice@example.com', name: 'Alice' });
 		const ve = new ValidationError({ email: 'Already taken' }, 422);
@@ -102,7 +102,7 @@ describe('FormState.submit — error handling', () => {
 	});
 });
 
-describe('FormState.reset', () => {
+describe('Form.reset', () => {
 	it('restores initial values and clears errors/bannerError', () => {
 		const form = useForm(testSchema, { email: '', name: '' });
 		form.values.email = 'alice@example.com';
@@ -119,7 +119,7 @@ describe('FormState.reset', () => {
 	});
 });
 
-describe('FormState.clearErrors', () => {
+describe('Form.clearErrors', () => {
 	it('clears field errors and bannerError without touching values', () => {
 		const form = useForm(testSchema, { email: '', name: '' });
 		form.values.email = 'alice@example.com';
@@ -134,7 +134,7 @@ describe('FormState.clearErrors', () => {
 	});
 });
 
-describe('FormState.validateField — blur validation', () => {
+describe('Form.validateField — blur validation', () => {
 	it('is a no-op when validateOn is not blur', () => {
 		const form = useForm(testSchema, { email: 'bad', name: 'x' });
 		// submitAttempted defaults false; even if we set it, without validateOn blur it no-ops

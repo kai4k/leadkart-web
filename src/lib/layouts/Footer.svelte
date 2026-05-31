@@ -16,17 +16,20 @@
     inset-inline-end : max(--lk-shell-gap, --safe-right)    — gap + curve
     block-size      : --lk-footer-height                    — 2.5rem
                                                                status bar
-  Glass material composes from .glass-statusbar (utilities.css) — one
+  Glass material composes from .bg-bg-elevated border-t border-border (utilities.css) — one
   recipe shared with topbar/popover/dialog. No per-component duplication.
 -->
-<footer class="lk-footer glass-card glass-border-glow label-small" aria-label="Application footer">
+<footer
+	class="lk-footer bg-bg-elevated border border-border rounded-xl shadow-card label-small"
+	aria-label="Application footer"
+>
 	© {year} LeadKart · Pharma SaaS
 </footer>
 
 <style>
-	/* Composes .glass-card material; this block handles footer-specific
+	/* Composes .bg-bg-elevated border border-border rounded-xl shadow-card material; this block handles footer-specific
 	   geometry: edge-anchored bottom strip with top-edge border only,
-	   zero radius (overrides .glass-card default of 1.5rem since the
+	   zero radius (overrides .bg-bg-elevated border border-border rounded-xl shadow-card default of 1.5rem since the
 	   footer is flush to viewport bottom). */
 	.lk-footer {
 		position: fixed;
@@ -39,7 +42,7 @@
 		block-size: var(--lk-footer-height);
 		padding-inline: clamp(0.75rem, 1.5vw, 1.25rem);
 		color: var(--color-fg-muted);
-		/* Override .glass-card defaults for edge-anchored chrome */
+		/* Override .bg-bg-elevated border border-border rounded-xl shadow-card defaults for edge-anchored chrome */
 		border: 0;
 		border-block-start: var(--glass-border-subtle);
 		border-radius: 0;
@@ -48,7 +51,7 @@
 			inset-inline-end 0.18s ease-out,
 			border-radius 0.18s ease-out;
 	}
-	/* Semibox — footer floats; restore .glass-card full ring + radius. */
+	/* Semibox — footer floats; restore .bg-bg-elevated border border-border rounded-xl shadow-card full ring + radius. */
 	:global(:root[data-layout='semibox']) .lk-footer {
 		border: var(--glass-border);
 		border-radius: var(--lk-shell-radius);

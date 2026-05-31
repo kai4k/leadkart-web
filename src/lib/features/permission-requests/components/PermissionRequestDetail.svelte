@@ -14,6 +14,7 @@
 		daysOrIndefinite
 	} from '$features/permission-requests/view-models';
 	import { myCapabilitiesQuery } from '$features/auth/queries';
+	import { resolve } from '$app/paths';
 
 	type Props = { id: string };
 	let { id }: Props = $props();
@@ -54,7 +55,7 @@
 
 <div class="stack stack-relaxed">
 	<a
-		href="/permission-requests"
+		href={resolve('/permission-requests')}
 		class="cluster cluster-tight text-fg-muted hover:text-fg caption inline-flex"
 	>
 		<Icon icon={ChevronLeft} size="xs" /> Back to requests
@@ -142,7 +143,7 @@
 							bind:value={approveReason}
 							maxlength={1024}
 							rows={2}
-							class="glass-input w-full rounded-md px-3 py-2 text-sm"
+							class="bg-bg-elevated border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
 						></textarea>
 					</label>
 					<div class="cluster">
@@ -157,7 +158,7 @@
 							bind:value={denyReason}
 							maxlength={1024}
 							rows={2}
-							class="glass-input w-full rounded-md px-3 py-2 text-sm"
+							class="bg-bg-elevated border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
 						></textarea>
 						{#if denyError}
 							<span class="caption text-danger-700">{denyError}</span>

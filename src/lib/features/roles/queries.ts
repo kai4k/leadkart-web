@@ -11,9 +11,9 @@
 import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 import * as api from './api';
 import { toast } from '$ui';
-import type { CreateRoleRequest, UpdateRoleRequest } from './types';
+import type { UpdateRoleRequest } from './types';
 
-export const rolesKeys = {
+const rolesKeys = {
 	all: ['roles'] as const,
 	list: () => [...rolesKeys.all, 'list'] as const,
 	detail: (id: string) => [...rolesKeys.all, 'detail', id] as const
@@ -34,24 +34,13 @@ export function roleDetailQuery(roleId: string) {
 	}));
 }
 
-export function createRoleMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: (req: CreateRoleRequest) => api.createRole(req),
-		onSuccess: () => {
-			void qc.invalidateQueries({ queryKey: rolesKeys.all });
-			toast('success', 'Role created');
-		}
-	}));
-}
-
 export function updateRoleMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: ({ id, req }: { id: string; req: UpdateRoleRequest }) => api.updateRole(id, req),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: rolesKeys.all });
-			toast('success', 'Role updated');
+			toast.success('Role updated');
 		}
 	}));
 }
@@ -63,31 +52,7 @@ export function replaceRolePermissionsMutation() {
 			api.replaceRolePermissions(id, { permissions }),
 		onSuccess: (_, vars) => {
 			void qc.invalidateQueries({ queryKey: rolesKeys.detail(vars.id) });
-			toast('success', 'Permissions saved');
-		}
-	}));
-}
-
-export function grantRolePermissionMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: ({ id, permission }: { id: string; permission: string }) =>
-			api.grantRolePermission(id, { permission }),
-		onSuccess: (_, vars) => {
-			void qc.invalidateQueries({ queryKey: rolesKeys.detail(vars.id) });
-			toast('success', 'Permission granted');
-		}
-	}));
-}
-
-export function revokeRolePermissionMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: ({ id, permission }: { id: string; permission: string }) =>
-			api.revokeRolePermission(id, { permission }),
-		onSuccess: (_, vars) => {
-			void qc.invalidateQueries({ queryKey: rolesKeys.detail(vars.id) });
-			toast('success', 'Permission revoked');
+			toast.success('Permissions saved');
 		}
 	}));
 }
@@ -98,7 +63,7 @@ export function deleteRoleMutation() {
 		mutationFn: (id: string) => api.deleteRole(id),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: rolesKeys.all });
-			toast('success', 'Role deleted');
+			toast.success('Role deleted');
 		}
 	}));
 }
@@ -111,7 +76,7 @@ export function setRoleParentMutation() {
 		onSuccess: (_, vars) => {
 			void qc.invalidateQueries({ queryKey: rolesKeys.all });
 			void qc.invalidateQueries({ queryKey: rolesKeys.detail(vars.id) });
-			toast('success', vars.parent_role_id ? 'Parent role set' : 'Parent role cleared');
+			toast.success(vars.parent_role_id ? 'Parent role set' : 'Parent role cleared');
 		}
 	}));
 }

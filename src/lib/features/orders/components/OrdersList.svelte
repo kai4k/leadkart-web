@@ -8,17 +8,13 @@
 -->
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { ResourceListPage, type FilterBarField, type BulkAction } from '$lib/components/data';
 	import { DataTable, EmptyState, type DataTableColumn } from '$ui';
 	import { Plus, ShoppingCart, Trash2, X } from '$icons';
 	import type { Component } from 'svelte';
-	import { UseBulkSelection, UseSavedViews, UseUrlFilters } from '$lib/hooks';
-	import { useQueryClient } from '@tanstack/svelte-query';
-	import {
-		ordersInfiniteQuery,
-		ordersKeys,
-		bulkOrderActionMutation
-	} from '$features/orders/queries';
+	import { createBulkSelection, createSavedViews, createUrlFilters } from '$lib/hooks';
+	import { ordersInfiniteQuery, bulkOrderActionMutation } from '$features/orders/queries';
 	import {
 		formatMoney,
 		lineItemsLabel,
@@ -28,10 +24,10 @@
 	import { orderFilterFields, type OrderListFilters } from './OrderFilters.svelte';
 	import OrderStatusBadge from './OrderStatusBadge.svelte';
 	import type { OrderDto } from '$features/orders/schemas';
-	import { AuthError, NetworkError } from '$api/errors';
+	import { getListErrorMessage } from '$api/errors';
 
 	// ── URL state ────────────────────────────────────────────────────
-	const urlFilters = new UseUrlFilters<OrderListFilters>({
+	const urlFilters = createUrlFilters<OrderListFilters>({
 		q: { type: 'string', label: 'Search' },
 		status: { type: 'string[]', label: 'Status' },
 		customer_lead_id: { type: 'string', label: 'Customer' },
@@ -42,7 +38,7 @@
 		sort: { type: 'string', label: 'Sort' }
 	});
 
-	const savedViews = new UseSavedViews<OrderListFilters>(
+	const savedViews = createSavedViews<OrderListFilters>(
 		[
 			{ id: 'all', label: 'All', filters: { status: [] } },
 			{
@@ -67,8 +63,7 @@
 		urlFilters
 	);
 
-	const selection = new UseBulkSelection<OrderDto>();
-	const qc = useQueryClient();
+	const selection = createBulkSelection<OrderDto>();
 
 	// ── Query ────────────────────────────────────────────────────────
 	const listQuery = ordersInfiniteQuery(() => {
@@ -98,8 +93,7 @@
 	);
 
 	function openDetail(o: OrderDto) {
-		qc.setQueryData(ordersKeys.detail(o.id), o);
-		goto(`/orders/${o.id}`);
+		goto(resolve(`/orders/${o.id}`));
 	}
 
 	// ── Bulk actions ─────────────────────────────────────────────────
@@ -204,16 +198,7 @@
 	// ── Filter config ────────────────────────────────────────────────
 	const filterConfig: FilterBarField[] = orderFilterFields;
 
-	const listErrorCopy = $derived.by(() => {
-		const err = listQuery.error;
-		if (!err) return null;
-		if (err instanceof NetworkError) return 'Check your network connection and try again.';
-		if (err instanceof AuthError)
-			return err.status === 403
-				? "You don't have permission to view orders."
-				: 'Your session expired. Sign in again.';
-		return 'Something went wrong. Please try again.';
-	});
+	const listErrorCopy = $derived(getListErrorMessage(listQuery.error, 'orders'));
 </script>
 
 {#snippet statusCell(row: OrderDto)}
@@ -242,7 +227,7 @@
 	primaryAction={{
 		label: 'New quotation',
 		icon: Plus as unknown as Component,
-		onClick: () => goto('/orders/new')
+		onClick: () => goto(resolve('/orders/new'))
 	}}
 	{savedViews}
 	filters={{ config: filterConfig, instance: urlFilters }}

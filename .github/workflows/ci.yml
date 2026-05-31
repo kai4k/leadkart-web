@@ -94,6 +94,18 @@ jobs:
     needs: build
     uses: ./.github/workflows/_e2e.yml
 
+  # ─── Visual regression (chromium, depends on build artifact) ───
+  visual:
+    name: Visual
+    needs: build
+    uses: ./.github/workflows/_visual.yml
+
+  # ─── A11y deep (chromium, depends on build artifact) ──────────
+  a11y:
+    name: A11y
+    needs: build
+    uses: ./.github/workflows/_a11y.yml
+
   # ─── Sentinel: single check for branch protection ───
   #
   # Branch protection on `main` should require ONLY this job ("CI pass").
@@ -119,7 +131,7 @@ jobs:
   ci-pass:
     name: CI pass
     if: always()
-    needs: [install, lint, typecheck, test, build, e2e]
+    needs: [install, lint, typecheck, test, build, e2e, visual, a11y]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:

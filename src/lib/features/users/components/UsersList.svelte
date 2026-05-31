@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { SvelteURLSearchParams } from 'svelte/reactivity';
+	import { resolve } from '$app/paths';
+	import { SvelteURL } from 'svelte/reactivity';
+	import type { ResolvedPathname } from '$app/types';
 	import { Avatar, Badge, Button, DataTable, Dropdown, EmptyState, Pagination } from '$ui';
 	import type { DataTableColumn } from '$ui';
 	import {
@@ -18,12 +20,15 @@
 	import {
 		usersListQuery,
 		rolesCatalogQuery,
-		reactivateUserMutation
+		reactivateUserMutation,
+		deactivateUserMutation
 	} from '$features/users/queries';
 	import { userStatusBadge, userRoleBadges, canDeactivate } from '$features/users/view-models';
 	import { displayName, initials } from '$features/auth/view-models';
 	import type { UserDto } from '$features/users/types';
-	import { AuthError, NetworkError } from '$api/errors';
+	import { getListErrorMessage } from '$api/errors';
+	import { createBulkSelection, createListPagination } from '$lib/hooks';
+	import { BulkActionBar, type BulkAction } from '$lib/components/data';
 	import CreateUserDrawer from './CreateUserDrawer.svelte';
 	import DeactivateUserDialog from './DeactivateUserDialog.svelte';
 	import RoleAssignmentDrawer from './RoleAssignmentDrawer.svelte';
@@ -46,41 +51,117 @@
 
 	// URL-driven filter state.
 	const search = $derived(page.url.searchParams.get('q') ?? '');
-	const currentPage = $derived(Number(page.url.searchParams.get('page') ?? '1') || 1);
-	const pageSize = 10;
+	const statusFilter = $derived(page.url.searchParams.get('status') ?? 'all');
 
 	function setSearch(value: string) {
-		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
-		if (value) {
-			params.set('q', value);
-		} else {
-			params.delete('q');
-		}
-		params.delete('page');
-		goto(`?${params}`, { replaceState: true, keepFocus: true });
+		const url = new SvelteURL(page.url);
+		if (value) url.searchParams.set('q', value);
+		else url.searchParams.delete('q');
+		url.searchParams.delete('page');
+		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
+			replaceState: true,
+			keepFocus: true
+		});
 	}
 
-	function setPage(p: number) {
-		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
-		if (p > 1) {
-			params.set('page', String(p));
-		} else {
-			params.delete('page');
-		}
-		goto(`?${params}`, { replaceState: true });
+	function setStatusFilter(value: string) {
+		const url = new SvelteURL(page.url);
+		if (value && value !== 'all') url.searchParams.set('status', value);
+		else url.searchParams.delete('status');
+		url.searchParams.delete('page');
+		void goto(`${url.pathname}${url.search}` as ResolvedPathname, { replaceState: true });
 	}
 
 	const listQuery = usersListQuery();
 	const rolesQuery = rolesCatalogQuery();
 	const reactivate = reactivateUserMutation();
+	const deactivate = deactivateUserMutation();
+
+	// DataTable normalises rows to `{ id }` at runtime via rowKey, so the
+	// selection store keys on membership_id strings even though UserDto
+	// doesn't carry an `id` field. The store contract requires SelectableItem
+	// here for type-safety; the runtime store only ever sees the rowKey value.
+	const selection = createBulkSelection<{ id: string }>();
+
+	const bulkActions: BulkAction[] = [
+		{
+			id: 'deactivate',
+			label: 'Deactivate',
+			icon: UserMinus as never,
+			variant: 'danger',
+			confirm: {
+				title: 'Deactivate selected members?',
+				description:
+					'Selected members lose access immediately. You can reactivate them later from this list.',
+				confirmLabel: 'Deactivate'
+			},
+			onClick: async () => {
+				const ids = Array.from(selection.selected);
+				await Promise.all(
+					ids.map(
+						(id) =>
+							new Promise<void>((resolve) => {
+								deactivate.mutate(
+									{ id, reason: 'Bulk deactivate' },
+									{
+										onSuccess: () => resolve(),
+										onError: () => resolve()
+									}
+								);
+							})
+					)
+				);
+				selection.clear();
+			}
+		},
+		{
+			id: 'reactivate',
+			label: 'Reactivate',
+			icon: UserPlus as never,
+			onClick: async () => {
+				const ids = Array.from(selection.selected);
+				await Promise.all(
+					ids.map(
+						(id) =>
+							new Promise<void>((resolve) => {
+								reactivate.mutate(id, {
+									onSuccess: () => resolve(),
+									onError: () => resolve()
+								});
+							})
+					)
+				);
+				selection.clear();
+			}
+		}
+	];
 
 	const userList = $derived(listQuery.data?.users ?? []);
 	const roleList = $derived(rolesQuery.data?.roles ?? []);
 
+	const statusCounts = $derived.by(() => {
+		const counts = { all: userList.length, active: 0, pending: 0, inactive: 0 };
+		for (const u of userList) {
+			if (u.status === 'active') counts.active++;
+			else if (u.status === 'pending') counts.pending++;
+			else if (u.status === 'inactive') counts.inactive++;
+		}
+		return counts;
+	});
+
+	const statusOptions = $derived([
+		{ value: 'all', label: 'All', count: statusCounts.all },
+		{ value: 'active', label: 'Active', count: statusCounts.active },
+		{ value: 'pending', label: 'Pending', count: statusCounts.pending },
+		{ value: 'inactive', label: 'Inactive', count: statusCounts.inactive }
+	] as const);
+
 	const filtered = $derived.by(() => {
 		const q = search.trim().toLowerCase();
-		if (!q) return userList;
-		return userList.filter(
+		const byStatus =
+			statusFilter === 'all' ? userList : userList.filter((u) => u.status === statusFilter);
+		if (!q) return byStatus;
+		return byStatus.filter(
 			(u) =>
 				u.email.toLowerCase().includes(q) ||
 				u.first_name.toLowerCase().includes(q) ||
@@ -90,31 +171,26 @@
 		);
 	});
 
-	const pageCount = $derived(Math.max(1, Math.ceil(filtered.length / pageSize)));
-	const paged = $derived(filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize));
+	const pagination = createListPagination(() => filtered);
 
 	const tableState = $derived(
 		listQuery.isPending
 			? 'loading'
 			: listQuery.isError
 				? 'error'
-				: paged.length === 0
+				: pagination.paged.length === 0
 					? 'empty'
 					: 'ready'
 	);
 
-	const listErrorCopy = $derived.by(() => {
-		const err = listQuery.error;
-		if (!err) return null;
-		if (err instanceof NetworkError) return 'Check your network connection and try again.';
-		if (err instanceof AuthError)
-			return err.status === 403
-				? "You don't have permission to view users."
-				: 'Your session expired. Sign in again.';
-		return 'Something went wrong. Please try again.';
-	});
+	const listErrorCopy = $derived(getListErrorMessage(listQuery.error, 'team members'));
 
 	const columns: DataTableColumn<UserDto>[] = [
+		{
+			id: 'select',
+			header: '',
+			selectLabel: (u) => `Select ${displayName(u)}`
+		},
 		{
 			id: 'member',
 			header: 'Member',
@@ -199,10 +275,8 @@
 
 {#snippet rowActions(user: UserDto)}
 	<Dropdown.Root>
-		<Dropdown.Trigger>
-			<Button variant="ghost" size="sm" aria-label="Row actions">
-				<Icon icon={MoreVertical} size="sm" />
-			</Button>
+		<Dropdown.Trigger variant="ghost" size="sm" aria-label="Row actions">
+			<Icon icon={MoreVertical} size="sm" />
 		</Dropdown.Trigger>
 		<Dropdown.Menu>
 			<Dropdown.Item onclick={() => onAction('roles', user)}>
@@ -242,20 +316,42 @@
 				placeholder="Search by name, email, role…"
 				value={search}
 				oninput={(e) => setSearch((e.currentTarget as HTMLInputElement).value)}
-				class="glass-input w-64 rounded-md px-3 py-2 text-sm"
+				class="bg-bg-elevated border border-border rounded-md w-64 rounded-md px-3 py-2 text-sm"
 			/>
+			<Button variant="tonal" onclick={() => goto(resolve('/settings/users/hierarchy'))}>
+				<Icon icon={Users} size="sm" /> Hierarchy
+			</Button>
 			<Button onclick={() => (createOpen = true)}>
 				<Icon icon={Plus} size="sm" /> Add member
 			</Button>
 		</div>
 	</header>
 
+	<nav class="cluster cluster-tight" aria-label="Filter members by status">
+		{#each statusOptions as opt (opt.value)}
+			{@const active = statusFilter === opt.value}
+			<button
+				type="button"
+				onclick={() => setStatusFilter(opt.value)}
+				aria-pressed={active}
+				class="label inline-flex items-center gap-2 rounded-full px-3 py-1 transition-colors {active
+					? 'bg-primary text-primary-fg'
+					: 'bg-bg-muted text-fg-muted hover:text-fg'}"
+			>
+				{opt.label}
+				<span class="caption tabular-nums opacity-70">{opt.count}</span>
+			</button>
+		{/each}
+	</nav>
+
 	<DataTable.Root
 		{columns}
-		rows={paged}
+		rows={pagination.paged}
 		rowKey={(u) => u.membership_id}
 		state={tableState}
 		error={listErrorCopy}
+		{selection}
+		onRowClick={(u) => goto(resolve(`/settings/users/${u.membership_id}`))}
 		{rowActions}
 	>
 		{#snippet emptyState()}
@@ -277,7 +373,13 @@
 		{/snippet}
 	</DataTable.Root>
 
-	<Pagination page={currentPage} {pageCount} onChange={setPage} />
+	<Pagination
+		page={pagination.currentPage}
+		pageCount={pagination.pageCount}
+		onChange={pagination.setPage}
+	/>
+
+	<BulkActionBar {selection} actions={bulkActions} />
 </div>
 
 <CreateUserDrawer bind:open={createOpen} onOpenChange={(o) => (createOpen = o)} />

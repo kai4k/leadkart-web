@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import { navForTier } from '$lib/config/nav';
 	import { session } from '$features/auth/stores/session.svelte';
 	import type { PrincipalTier } from '$features/auth/capabilities';
@@ -40,8 +41,11 @@
 	const sections = $derived(navForTier(tier));
 </script>
 
-<nav class="lk-sidebar glass-card glass-border-glow" aria-label="Main navigation">
-	<a href="/dashboard" class="lk-sidebar-brand" aria-label="LeadKart home">
+<nav
+	class="lk-sidebar bg-bg-elevated border border-border rounded-xl shadow-card"
+	aria-label="Main navigation"
+>
+	<a href={resolve('/dashboard')} class="lk-sidebar-brand" aria-label="LeadKart home">
 		<span class="lk-sidebar-brand-full" aria-hidden="true">
 			<img src="/images/favicon/favicon_512x512.png" alt="LeadKart" class="lk-sidebar-brand-img" />
 		</span>

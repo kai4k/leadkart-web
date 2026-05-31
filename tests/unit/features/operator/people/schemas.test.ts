@@ -10,7 +10,6 @@ import {
 	personDtoSchema,
 	listPersonMembershipsResponseSchema,
 	globalSuspendRequestSchema,
-	updatePersonProfileRequestSchema,
 	anonymisePersonRequestSchema
 } from '$lib/features/operator/people/schemas';
 
@@ -125,49 +124,6 @@ describe('globalSuspendRequestSchema', () => {
 	it('rejects extra fields (strict mode)', () => {
 		expect(
 			globalSuspendRequestSchema.safeParse({ reason: 'Valid reason', extra: true }).success
-		).toBe(false);
-	});
-});
-
-// ---------------------------------------------------------------------------
-// updatePersonProfileRequestSchema
-// ---------------------------------------------------------------------------
-
-describe('updatePersonProfileRequestSchema', () => {
-	it('accepts valid first_name and last_name', () => {
-		expect(
-			updatePersonProfileRequestSchema.safeParse({ first_name: 'Raj', last_name: 'Verma' }).success
-		).toBe(true);
-	});
-
-	it('rejects empty first_name (min 1)', () => {
-		expect(
-			updatePersonProfileRequestSchema.safeParse({ first_name: '', last_name: 'Verma' }).success
-		).toBe(false);
-	});
-
-	it('rejects empty last_name (min 1)', () => {
-		expect(
-			updatePersonProfileRequestSchema.safeParse({ first_name: 'Raj', last_name: '' }).success
-		).toBe(false);
-	});
-
-	it('rejects first_name longer than 120 characters', () => {
-		expect(
-			updatePersonProfileRequestSchema.safeParse({
-				first_name: 'R'.repeat(121),
-				last_name: 'Verma'
-			}).success
-		).toBe(false);
-	});
-
-	it('rejects extra fields (strict mode)', () => {
-		expect(
-			updatePersonProfileRequestSchema.safeParse({
-				first_name: 'Raj',
-				last_name: 'Verma',
-				email: 'sneaky@acme.test'
-			}).success
 		).toBe(false);
 	});
 });

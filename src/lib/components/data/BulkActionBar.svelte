@@ -39,7 +39,7 @@
 </script>
 
 <script lang="ts" generics="TItem extends import('$lib/hooks').SelectableItem">
-	import type { UseBulkSelection } from '$lib/hooks';
+	import type { BulkSelection } from '$lib/hooks';
 	import { Button, ConfirmDialog, Dropdown } from '$ui';
 	import { Icon, ChevronDown } from '$icons';
 	import { cn } from '$lib/utils/cn';
@@ -56,7 +56,7 @@
 	 */
 
 	type Props = {
-		selection: UseBulkSelection<TItem>;
+		selection: BulkSelection<TItem>;
 		actions: BulkAction[];
 		class?: string;
 	};
@@ -117,7 +117,7 @@
 {#if selection.count > 0}
 	<div
 		class={cn(
-			'glass-card sticky bottom-4 z-10 mx-auto w-full max-w-3xl',
+			'bg-bg-elevated border border-border rounded-xl shadow-card sticky bottom-4 z-10 mx-auto w-full max-w-3xl',
 			'cluster cluster-spread items-center gap-4 px-4 py-3',
 			className
 		)}
@@ -130,19 +130,17 @@
 			{#each actions as action (action.id)}
 				{#if action.subActions && action.subActions.length > 0}
 					<Dropdown.Root>
-						<Dropdown.Trigger>
-							<Button
-								size="sm"
-								variant={action.variant === 'danger' ? 'danger' : 'secondary'}
-								loading={runningId === action.id}
-								disabled={action.disabled || runningId !== null}
-							>
-								{#if action.icon}
-									<Icon icon={action.icon} size="sm" />
-								{/if}
-								{action.label}
-								<Icon icon={ChevronDown} size="xs" />
-							</Button>
+						<Dropdown.Trigger
+							size="sm"
+							variant={action.variant === 'danger' ? 'danger' : 'secondary'}
+							loading={runningId === action.id}
+							disabled={action.disabled || runningId !== null}
+						>
+							{#if action.icon}
+								<Icon icon={action.icon} size="sm" />
+							{/if}
+							{action.label}
+							<Icon icon={ChevronDown} size="xs" />
 						</Dropdown.Trigger>
 						<Dropdown.Menu align="end">
 							{#each action.subActions as sub (sub.id)}

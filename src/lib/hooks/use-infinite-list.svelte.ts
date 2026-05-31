@@ -1,19 +1,22 @@
 /**
- * `useInfiniteList` — typed wrapper around TanStack `createInfiniteQuery`
- * tied to an IntersectionObserver sentinel. Returns a class instance
- * whose `items` field is the flattened page array; consumer renders
- * `items` and binds the `sentinelRef` to a `<div bind:this>` placed at
- * the bottom of the list. When the sentinel scrolls into view we call
+ * `createInfiniteList` — typed wrapper around TanStack `createInfiniteQuery`
+ * tied to an IntersectionObserver sentinel. Returns an object whose
+ * `items` getter is the flattened page array; consumer renders `items`
+ * and binds the `sentinelRef` to a `<div bind:this>` placed at the
+ * bottom of the list. When the sentinel scrolls into view we call
  * `query.fetchNextPage()`.
  *
  * Cursor-based pagination contract (leadkart-go):
  *   page shape = `{ items, has_more, next_cursor? }`
  *   queryFn receives `{ cursor }` derived from `getNextPageParam`.
  *
- * Lifetime: the IntersectionObserver is constructed inside a `$effect`
- * keyed on `sentinelRef` so it tears down + rebuilds whenever the
- * sentinel element changes. Always returns a cleanup function so
- * Svelte's runtime disconnects the observer on component teardown.
+ * Svelte canon: a factory closing over `$state` (the sentinel ref).
+ * The IntersectionObserver lifecycle is pinned to a `$effect` declared
+ * INSIDE the factory body, which means the factory MUST be called from
+ * a component-mounted context (a `.svelte` file or a function called
+ * during a component setup). The `$effect` tears down + rebuilds the
+ * observer whenever the sentinel ref changes, and Svelte's runtime
+ * disconnects the observer on component teardown.
  */
 import { createInfiniteQuery, type CreateInfiniteQueryResult } from '@tanstack/svelte-query';
 
@@ -25,7 +28,7 @@ export interface InfinitePage<T> {
 
 export type InfiniteListState = 'pending' | 'error' | 'empty' | 'ready';
 
-export interface UseInfiniteListOptions<T> {
+export interface InfiniteListOptions<T> {
 	/** Reactive query key — recomputed on every read for proper invalidation. */
 	queryKey: () => readonly unknown[];
 	/** Page fetcher. `cursor` is the pageParam threaded by TanStack. */
@@ -41,8 +44,8 @@ export interface UseInfiniteListOptions<T> {
 }
 
 /**
- * Internal type alias for the TanStack handle. Exposed via the class
- * field `query` so consumers can reach into `isFetching`, `isError`,
+ * Internal type alias for the TanStack handle. Exposed via the returned
+ * `query` field so consumers can reach into `isFetching`, `isError`,
  * `data.pages`, etc. directly when the high-level wrapper isn't enough.
  */
 export type InfiniteListQuery<T> = CreateInfiniteQueryResult<
@@ -50,80 +53,82 @@ export type InfiniteListQuery<T> = CreateInfiniteQueryResult<
 	Error
 >;
 
-export class UseInfiniteList<T> {
+export interface InfiniteList<T> {
 	readonly query: InfiniteListQuery<T>;
-	/** Sentinel element ref — bind via `<div bind:this={list.sentinelRef}></div>`. */
-	sentinelRef: HTMLElement | null = $state(null);
+	sentinelRef: HTMLElement | null;
+	readonly items: T[];
+	readonly state: InfiniteListState;
+	readonly error: string | null;
+	readonly isFetching: boolean;
+	readonly isFetchingNextPage: boolean;
+	readonly hasNextPage: boolean;
+}
 
-	private readonly rootMargin: string;
+export function createInfiniteList<T>(options: InfiniteListOptions<T>): InfiniteList<T> {
+	const enabled = options.enabled ?? (() => true);
+	const rootMargin = options.rootMargin ?? '200px';
 
-	constructor(options: UseInfiniteListOptions<T>) {
-		const enabled = options.enabled ?? (() => true);
-		this.rootMargin = options.rootMargin ?? '200px';
+	const query = createInfiniteQuery(() => ({
+		queryKey: options.queryKey(),
+		queryFn: ({ pageParam }) => options.queryFn({ cursor: pageParam as string | undefined }),
+		initialPageParam: undefined as string | undefined,
+		getNextPageParam: (last: InfinitePage<T>) =>
+			last.has_more ? (last.next_cursor ?? undefined) : undefined,
+		enabled: enabled()
+	})) as InfiniteListQuery<T>;
 
-		this.query = createInfiniteQuery(() => ({
-			queryKey: options.queryKey(),
-			queryFn: ({ pageParam }) => options.queryFn({ cursor: pageParam as string | undefined }),
-			initialPageParam: undefined as string | undefined,
-			getNextPageParam: (last: InfinitePage<T>) =>
-				last.has_more ? (last.next_cursor ?? undefined) : undefined,
-			enabled: enabled()
-		})) as InfiniteListQuery<T>;
+	let sentinelRef = $state<HTMLElement | null>(null);
 
-		// IntersectionObserver lifecycle pinned to sentinel + page state.
-		$effect(() => {
-			const el = this.sentinelRef;
-			if (!el) return;
-			const observer = new IntersectionObserver(
-				(entries) => {
-					for (const entry of entries) {
-						if (entry.isIntersecting && this.query.hasNextPage && !this.query.isFetchingNextPage) {
-							void this.query.fetchNextPage();
-						}
+	$effect(() => {
+		const el = sentinelRef;
+		if (!el) return;
+		const observer = new IntersectionObserver(
+			(entries) => {
+				for (const entry of entries) {
+					if (entry.isIntersecting && query.hasNextPage && !query.isFetchingNextPage) {
+						void query.fetchNextPage();
 					}
-				},
-				{ rootMargin: this.rootMargin }
-			);
-			observer.observe(el);
-			return () => observer.disconnect();
-		});
-	}
+				}
+			},
+			{ rootMargin }
+		);
+		observer.observe(el);
+		return () => observer.disconnect();
+	});
 
-	/** Flattened items across all loaded pages. */
-	get items(): T[] {
-		const pages = this.query.data?.pages ?? [];
-		const out: T[] = [];
-		for (const p of pages) {
-			for (const it of p.items) out.push(it);
+	return {
+		query,
+		get sentinelRef() {
+			return sentinelRef;
+		},
+		set sentinelRef(el: HTMLElement | null) {
+			sentinelRef = el;
+		},
+		get items() {
+			const pages = query.data?.pages ?? [];
+			const out: T[] = [];
+			for (const p of pages) {
+				for (const it of p.items) out.push(it);
+			}
+			return out;
+		},
+		get state() {
+			if (query.isPending) return 'pending';
+			if (query.isError) return 'error';
+			if (this.items.length === 0) return 'empty';
+			return 'ready';
+		},
+		get error() {
+			return query.error?.message ?? null;
+		},
+		get isFetching() {
+			return query.isFetching;
+		},
+		get isFetchingNextPage() {
+			return query.isFetchingNextPage;
+		},
+		get hasNextPage() {
+			return query.hasNextPage ?? false;
 		}
-		return out;
-	}
-
-	/** Coarse state for DataTable's `state` prop. */
-	get state(): InfiniteListState {
-		if (this.query.isPending) return 'pending';
-		if (this.query.isError) return 'error';
-		if (this.items.length === 0) return 'empty';
-		return 'ready';
-	}
-
-	/** Error message for the error state. */
-	get error(): string | null {
-		return this.query.error?.message ?? null;
-	}
-
-	/** True while any in-flight fetch (initial or pagination) is open. */
-	get isFetching(): boolean {
-		return this.query.isFetching;
-	}
-
-	/** True while the next-page fetch is in flight. */
-	get isFetchingNextPage(): boolean {
-		return this.query.isFetchingNextPage;
-	}
-
-	/** True if `getNextPageParam` returned a non-null cursor on the last page. */
-	get hasNextPage(): boolean {
-		return this.query.hasNextPage ?? false;
-	}
+	};
 }

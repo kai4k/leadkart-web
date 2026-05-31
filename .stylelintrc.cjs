@@ -18,6 +18,13 @@
 module.exports = {
 	extends: ['stylelint-config-standard'],
 	customSyntax: 'postcss-html',
+	ignoreFiles: [
+		'src/lib/components/svelte-bits/**',
+		'src/lib/api/generated/**',
+		'node_modules/**',
+		'build/**',
+		'.svelte-kit/**'
+	],
 	plugins: ['stylelint-declaration-strict-value', 'stylelint-plugin-logical-css'],
 	overrides: [
 		{

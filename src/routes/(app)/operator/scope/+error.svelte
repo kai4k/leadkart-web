@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import { Alert, Button } from '$ui';
 
 	const status = $derived(page.status);
@@ -11,7 +12,7 @@
 		<p>{message}</p>
 		<div class="cluster cluster-tight mt-3">
 			<Button variant="ghost" size="sm" onclick={() => location.reload()}>Retry</Button>
-			<a class="lk-link-btn" href="/operator/tenants">Back to tenants</a>
+			<a class="lk-link-btn" href={resolve('/operator/tenants')}>Back to tenants</a>
 		</div>
 	</Alert>
 </div>

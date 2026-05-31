@@ -11,6 +11,7 @@
 		setRoleParentMutation
 	} from '$features/roles/queries';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { roleBadgeVariant, isProtectedRole } from '$features/roles/view-models';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 	import {
@@ -49,7 +50,7 @@
 	const query = $derived(roleDetailQuery(roleId));
 	const role = $derived(query.data ?? null);
 	const breadcrumbs = $derived<BreadcrumbItem[]>([
-		{ href: '/settings', label: 'Settings' },
+		{ label: 'Settings' },
 		{ href: '/settings/roles', label: 'Roles' },
 		{ label: role?.name ?? 'Role' }
 	]);
@@ -58,7 +59,7 @@
 
 	$effect(() => {
 		if (capsQuery.data && !hasCapability(capsQuery.data, 'identity.roles.view')) {
-			goto('/dashboard', { replaceState: true });
+			goto(resolve('/dashboard'), { replaceState: true });
 		}
 	});
 
@@ -218,7 +219,7 @@
 						min={0}
 						max={100}
 						disabled={!canUpdate}
-						class="glass-input rounded-md px-3 py-2 text-sm"
+						class="bg-bg-elevated border border-border rounded-md rounded-md px-3 py-2 text-sm"
 					/>
 				</label>
 			</Card.Content>

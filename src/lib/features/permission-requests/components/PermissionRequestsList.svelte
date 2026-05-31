@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { SvelteURLSearchParams } from 'svelte/reactivity';
+	import { resolve } from '$app/paths';
+	import { SvelteURL } from 'svelte/reactivity';
+	import type { ResolvedPathname } from '$app/types';
 	import { Badge, Button, DataTable, EmptyState } from '$ui';
 	import type { DataTableColumn } from '$ui';
 	import { Icon, Inbox, Plus } from '$icons';
@@ -9,7 +11,7 @@
 	import { stateBadge, daysOrIndefinite } from '$features/permission-requests/view-models';
 	import type { PermissionRequestDto } from '$features/permission-requests/schemas';
 	import type { ListRole } from '$features/permission-requests/api';
-	import { AuthError, NetworkError } from '$api/errors';
+	import { getListErrorMessage } from '$api/errors';
 	import CreatePermissionRequestDrawer from './CreatePermissionRequestDrawer.svelte';
 
 	/**
@@ -26,10 +28,13 @@
 	let createOpen = $state(false);
 
 	function setRole(next: ListRole) {
-		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
-		if (next === 'requester') params.delete('role');
-		else params.set('role', next);
-		goto(`?${params}`, { replaceState: true, keepFocus: true });
+		const url = new SvelteURL(page.url);
+		if (next === 'requester') url.searchParams.delete('role');
+		else url.searchParams.set('role', next);
+		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
+			replaceState: true,
+			keepFocus: true
+		});
 	}
 
 	const requests = $derived(query.data?.requests ?? []);
@@ -44,16 +49,7 @@
 					: 'ready'
 	);
 
-	const listErrorCopy = $derived.by(() => {
-		const err = query.error;
-		if (!err) return null;
-		if (err instanceof NetworkError) return 'Check your network connection and try again.';
-		if (err instanceof AuthError)
-			return err.status === 403
-				? "You don't have permission to view this list."
-				: 'Your session expired. Sign in again.';
-		return 'Something went wrong. Please try again.';
-	});
+	const listErrorCopy = $derived(getListErrorMessage(query.error, 'permission requests'));
 
 	const columns: DataTableColumn<PermissionRequestDto>[] = [
 		{
@@ -90,7 +86,7 @@
 	];
 
 	function onRowClick(req: PermissionRequestDto) {
-		goto(`/permission-requests/${req.id}`);
+		goto(resolve(`/permission-requests/${req.id}`));
 	}
 </script>
 

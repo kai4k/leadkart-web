@@ -66,7 +66,10 @@
 			<span class="label"
 				>Type <code class="bg-bg-muted rounded px-1">{role?.name ?? ''}</code> to confirm</span
 			>
-			<input bind:value={confirmName} class="glass-input rounded-md px-3 py-2 text-sm" />
+			<input
+				bind:value={confirmName}
+				class="bg-bg-elevated border border-border rounded-md rounded-md px-3 py-2 text-sm"
+			/>
 		</label>
 		{#if bannerError}<Alert variant="danger">{bannerError}</Alert>{/if}
 		{#if !canConfirm && confirmName.length > 0}

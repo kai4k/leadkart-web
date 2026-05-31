@@ -14,7 +14,7 @@
 
 <script lang="ts">
 	import * as Dialog from './dialog/index.js';
-	import Button from './Button.svelte';
+	import { Button } from './button';
 	import { Icon, AlertTriangle, Info, AlertCircle } from '$icons';
 	import { cn } from '$lib/utils/cn';
 	import type { Snippet } from 'svelte';

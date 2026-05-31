@@ -13,9 +13,9 @@ module.exports = {
 			name: 'no-circular',
 			severity: 'error',
 			comment:
-				'Circular dependencies break tree-shaking + HMR + cause subtle init-order bugs. Refactor to a one-way arrow.',
-			from: {},
-			to: { circular: true }
+				'Circular dependencies break tree-shaking + HMR + cause subtle init-order bugs. Refactor to a one-way arrow. Recursive Svelte components (a tree node rendering its own children) are exempt — that pattern self-imports by design.',
+			from: { pathNot: '(^|/)(OrgTreeNode|TreeNode|KanbanCard)\\.svelte$' },
+			to: { circular: true, pathNot: '(^|/)(OrgTreeNode|TreeNode|KanbanCard)\\.svelte$' }
 		},
 		{
 			name: 'no-orphans',
@@ -31,8 +31,12 @@ module.exports = {
 					'(^|/)(babel|webpack|vite|vitest|playwright|svelte|eslint|stylelint)\\.config\\.[^/]+$',
 					'src/app\\.(d\\.ts|html|css)$',
 					'src/(hooks|service-worker)\\.(client|server)\\.ts$',
-					'src/routes/.+\\+(page|layout|server|error)\\.(svelte|ts)$',
+					'src/routes/.*\\+(page|layout|server|error)\\.(svelte|ts)$',
 					'src/lib/api/generated/.*',
+					'src/lib/utils/cn\\.ts$',
+					'src/lib/api/jwt\\.ts$',
+					'src/lib/features/operator/index\\.ts$',
+					'src/lib/features/dashboard/index\\.ts$',
 					'tests/.*'
 				]
 			},

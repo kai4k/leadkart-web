@@ -1,70 +1,77 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import { Alert, Button } from '$ui';
 	import { TextField } from '$form';
-	import { updateTenantAdminContactSchema } from '../schemas';
-	import { updateTenantAdminContactMutation } from '../queries';
-	import { useForm } from '$lib/hooks/use-form.svelte';
 	import type { Tenant } from '../types';
 
 	/**
-	 * TenantContactForm — admin phone + postal address. Submits as a
-	 * single PATCH /admin-contact body where the address is a nested
-	 * object the leadkart-go aggregate accepts atomically.
+	 * TenantContactForm — admin phone + postal address via SvelteKit
+	 * form action. Nested address fields use `name="address.field"`
+	 * pattern; the action handler reconstructs the nested object.
 	 */
-
-	interface Props {
-		tenant: Tenant;
-		tenantId: string;
-	}
-
-	let { tenant, tenantId }: Props = $props();
-
-	const mutation = $derived(updateTenantAdminContactMutation(tenantId));
-
-	const form = useForm(updateTenantAdminContactSchema, {
-		phone: '',
-		address: {
-			street: '',
-			city: '',
-			district: '',
-			state: '',
-			state_code: '',
-			pincode: ''
-		}
-	});
-
-	$effect.pre(() => {
-		form.values.phone = tenant.admin_phone ?? '';
-		form.values.address = {
-			street: tenant.admin_address.street ?? '',
-			city: tenant.admin_address.city ?? '',
-			district: tenant.admin_address.district ?? '',
-			state: tenant.admin_address.state ?? '',
-			state_code: tenant.admin_address.state_code ?? '',
-			pincode: tenant.admin_address.pincode ?? ''
+	type FormResult = {
+		values?: {
+			phone: string;
+			address: {
+				street?: string;
+				city?: string;
+				district?: string;
+				state?: string;
+				state_code?: string;
+				pincode?: string;
+			};
 		};
-	});
+		errors?: Record<string, string | string[] | undefined>;
+		bannerError?: string;
+		success?: boolean;
+	};
+	type Props = { tenant: Tenant; form?: FormResult };
+	let { tenant, form }: Props = $props();
 
-	async function onSubmit(e: SubmitEvent) {
-		await form.submit(e, async (values) => {
-			await new Promise<void>((resolve, reject) => {
-				mutation.mutate(values, {
-					onSuccess: () => resolve(),
-					onError: (err) => reject(err)
-				});
-			});
-		});
+	let loading = $state(false);
+
+	function err(field: string): string | undefined {
+		const v = form?.errors?.[field];
+		if (typeof v === 'string') return v;
+		if (Array.isArray(v)) return v[0];
+		return undefined;
 	}
+
+	const values = $derived(
+		form?.values ?? {
+			phone: tenant.admin_phone ?? '',
+			address: {
+				street: tenant.admin_address.street ?? '',
+				city: tenant.admin_address.city ?? '',
+				district: tenant.admin_address.district ?? '',
+				state: tenant.admin_address.state ?? '',
+				state_code: tenant.admin_address.state_code ?? '',
+				pincode: tenant.admin_address.pincode ?? ''
+			}
+		}
+	);
 </script>
 
-<form class="stack" onsubmit={onSubmit} novalidate>
+<form
+	class="stack"
+	method="POST"
+	novalidate
+	use:enhance={() => {
+		loading = true;
+		return async ({ update }) => {
+			await update();
+			loading = false;
+		};
+	}}
+>
 	<TextField
 		label="Admin phone"
+		name="phone"
 		hint="The number drug-control inspectors and platform notifications reach you on."
 		type="tel"
 		autocomplete="tel"
-		bind:value={form.values.phone}
-		error={form.errors.phone}
+		value={values.phone}
+		error={err('phone')}
 	/>
 
 	<fieldset class="stack stack-tight">
@@ -72,42 +79,53 @@
 
 		<TextField
 			label="Street"
+			name="address.street"
 			srLabel
 			placeholder="Building, street, landmark"
 			autocomplete="street-address"
-			bind:value={form.values.address.street}
+			value={values.address.street ?? ''}
 		/>
 
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-			<TextField label="City" autocomplete="address-level2" bind:value={form.values.address.city} />
-			<TextField label="District" bind:value={form.values.address.district} />
+			<TextField
+				label="City"
+				name="address.city"
+				autocomplete="address-level2"
+				value={values.address.city ?? ''}
+			/>
+			<TextField label="District" name="address.district" value={values.address.district ?? ''} />
 		</div>
 
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 			<TextField
 				label="State"
+				name="address.state"
 				autocomplete="address-level1"
-				bind:value={form.values.address.state}
+				value={values.address.state ?? ''}
 			/>
 			<TextField
 				label="State code"
+				name="address.state_code"
 				hint="2-digit GST state code"
 				autocomplete="off"
-				bind:value={form.values.address.state_code}
+				value={values.address.state_code ?? ''}
 			/>
 			<TextField
 				label="Pincode"
+				name="address.pincode"
 				autocomplete="postal-code"
-				bind:value={form.values.address.pincode}
+				value={values.address.pincode ?? ''}
 			/>
 		</div>
 	</fieldset>
 
-	{#if form.bannerError}
+	{#if form?.bannerError}
 		<Alert variant="danger">{form.bannerError}</Alert>
+	{:else if form?.success}
+		<Alert variant="success">Contact details saved.</Alert>
 	{/if}
 
-	<div class="cluster justify-end">
-		<Button type="submit" loading={form.isSubmitting}>Save changes</Button>
+	<div class="form-footer">
+		<Button type="submit" {loading}>Save changes</Button>
 	</div>
 </form>

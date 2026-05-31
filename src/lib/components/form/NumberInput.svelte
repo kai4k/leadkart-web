@@ -133,7 +133,7 @@
 		<button
 			type="button"
 			class={cn(
-				'glass-input flex items-center justify-center px-2',
+				'bg-bg-elevated border border-border rounded-md flex items-center justify-center px-2',
 				'text-fg-muted hover:text-fg',
 				'focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:outline-none',
 				'disabled:cursor-not-allowed disabled:opacity-40'
@@ -175,7 +175,7 @@
 				onblur={() => commit(displayValue)}
 				onkeydown={onKeyDown}
 				class={cn(
-					'glass-input body-sm text-fg block w-full px-3 py-2 text-center tabular-nums',
+					'bg-bg-elevated border border-border rounded-md body-sm text-fg block w-full px-3 py-2 text-center tabular-nums',
 					'placeholder:text-fg-subtle',
 					'focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
 					'disabled:cursor-not-allowed disabled:opacity-60',
@@ -200,7 +200,7 @@
 		<button
 			type="button"
 			class={cn(
-				'glass-input flex items-center justify-center px-2',
+				'bg-bg-elevated border border-border rounded-md flex items-center justify-center px-2',
 				'text-fg-muted hover:text-fg',
 				'focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:outline-none',
 				'disabled:cursor-not-allowed disabled:opacity-40'

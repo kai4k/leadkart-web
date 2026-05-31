@@ -163,7 +163,7 @@
 	{#if hasFiles}
 		<div
 			class={cn(
-				'glass-input flex items-start gap-3 px-4 py-3',
+				'bg-bg-elevated border border-border rounded-md flex items-start gap-3 px-4 py-3',
 				disabled && 'is-disabled',
 				(error || localError) && 'border-danger-500'
 			)}

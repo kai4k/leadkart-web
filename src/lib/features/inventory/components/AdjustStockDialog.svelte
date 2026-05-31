@@ -103,7 +103,7 @@
 							type="number"
 							readonly
 							value={currentAvailable}
-							class="glass-input body-sm text-fg bg-bg-muted rounded-md px-3 py-2"
+							class="bg-bg-elevated border border-border rounded-md body-sm text-fg bg-bg-muted rounded-md px-3 py-2"
 							aria-label="Current available"
 						/>
 					</label>
@@ -134,7 +134,7 @@
 						maxlength={1000}
 						rows={2}
 						placeholder="Anything worth remembering for the audit trail…"
-						class="glass-input body-sm text-fg w-full rounded-md px-3 py-2"
+						class="bg-bg-elevated border border-border rounded-md body-sm text-fg w-full rounded-md px-3 py-2"
 					></textarea>
 				</label>
 

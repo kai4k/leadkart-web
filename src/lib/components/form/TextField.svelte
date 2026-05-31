@@ -3,7 +3,7 @@
 
 	export const textFieldInputVariants = cva(
 		[
-			'glass-input body-sm block w-full px-3 py-2 text-fg',
+			'bg-bg-elevated border border-border rounded-md body-sm block w-full px-3 py-2 text-fg',
 			'placeholder:text-fg-subtle',
 			'focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
 			'disabled:cursor-not-allowed disabled:opacity-60'
@@ -130,7 +130,7 @@
 	{/if}
 
 	{#if error}
-		<p id={errorId} class="body-sm text-danger-700">
+		<p id={errorId} role="alert" aria-live="polite" class="body-sm text-danger-700">
 			{error}
 		</p>
 	{/if}

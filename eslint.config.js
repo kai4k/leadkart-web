@@ -98,12 +98,7 @@ export default ts.config(
 		},
 		rules: {
 			'no-undef': 'off',
-			// svelte/no-navigation-without-resolve fires on every goto() call
-			// until typed routes (`resolve()`) wraps every nav. Disabled
-			// during scaffold; revisit once route surface stable. Lifted
-			// up from the svelte-files-only block so `.svelte.ts` hooks
-			// that call goto() (use-url-tab, use-url-filters) don't trip.
-			'svelte/no-navigation-without-resolve': 'off',
+			'svelte/no-navigation-without-resolve': 'error',
 			'svelte/no-useless-mustaches': 'off',
 
 			// ─── Console / debugging discipline ─────────────────────
@@ -293,7 +288,9 @@ export default ts.config(
 			parserOptions: {
 				extraFileExtensions: ['.svelte'],
 				parser: ts.parser,
-				svelteConfig
+				svelteConfig,
+				projectService: true,
+				tsconfigRootDir: import.meta.dirname
 			}
 		},
 		rules: {
@@ -304,7 +301,13 @@ export default ts.config(
 			'svelte/button-has-type': 'error',
 			'svelte/require-each-key': 'error',
 			'svelte/no-useless-mustaches': 'off',
-			'svelte/no-navigation-without-resolve': 'off',
+			'svelte/no-navigation-without-resolve': 'error',
+			// Svelte 5 ref-forwarding canon: `let { ref = $bindable(null) } = $props()`
+			// followed by `ref = node` inside an {@attach ...} setter. The base ESLint
+			// rule can't see Svelte's reactivity through compiled output, so the
+			// destructure-default + attachment-reassign pattern reads as a useless
+			// initial write. This is canonical Svelte 5 — disable rule for components.
+			'no-useless-assignment': 'off',
 			// Bidirectional safety + a11y
 			'svelte/no-dom-manipulating': 'error',
 			'svelte/no-dupe-on-directives': 'error',
@@ -502,8 +505,17 @@ export default ts.config(
 			'src/routes/**/+server.ts',
 			'src/routes/**/+page.server.ts',
 			'src/routes/**/+layout.server.ts',
+			'src/routes/**/+page.ts',
+			'src/routes/**/+layout.ts',
 			'src/hooks.server.ts',
-			'src/hooks.client.ts'
+			'src/hooks.client.ts',
+			// Service worker IS the platform fetch layer — caching
+			// strategies (CacheFirst, NetworkFirst, StaleWhileRevalidate)
+			// require direct fetch() against the original Request.
+			'src/service-worker.ts',
+			// Server-only BFF helpers (lib/server/*) — cookie → Bearer
+			// auth model, called from action handlers + server loads.
+			'src/lib/server/**'
 		],
 		rules: {
 			'no-restricted-globals': [

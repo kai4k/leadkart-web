@@ -115,7 +115,7 @@
 				<h3 class="overline">Extra grants</h3>
 				<div class="cluster">
 					<input
-						class="glass-input flex-1 rounded-md px-3 py-2 text-sm"
+						class="bg-bg-elevated border border-border rounded-md flex-1 rounded-md px-3 py-2 text-sm"
 						placeholder="e.g. crm.leads.reassign"
 						aria-invalid={grantedError ? 'true' : undefined}
 						bind:value={newGrant}
@@ -145,7 +145,7 @@
 				<h3 class="overline">Revocations</h3>
 				<div class="cluster">
 					<input
-						class="glass-input flex-1 rounded-md px-3 py-2 text-sm"
+						class="bg-bg-elevated border border-border rounded-md flex-1 rounded-md px-3 py-2 text-sm"
 						placeholder="e.g. crm.leads.delete"
 						aria-invalid={revokedError ? 'true' : undefined}
 						bind:value={newRevoke}

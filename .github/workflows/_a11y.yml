@@ -1,0 +1,63 @@
+name: _a11y
+# Reusable workflow — strict WCAG 2.2 AA enforcement via axe-core on
+# every signed-in + unauthenticated route. Called by ci.yml after the
+# build job uploads the build/ artifact.
+#
+# Strictness contract (tests/a11y/routes.spec.ts):
+#   - fails on impact: critical
+#   - fails on impact: serious
+#   - fails on impact: moderate  ← tightened from the previous suite
+#   - flags impact: minor as warnings (don't gate CI)
+#
+# Chromium-only — axe is rendering-engine-independent. Cross-browser
+# wouldn't add a11y signal, just runtime.
+
+on:
+  workflow_call:
+
+jobs:
+  a11y:
+    name: A11y (WCAG 2.2 AA)
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+      - name: Download build artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: build-${{ github.sha }}
+          path: build/
+
+      - name: Get Playwright version
+        id: pw-version
+        run: |
+          echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright chromium
+        uses: actions/cache@v5
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.version }}-chromium
+
+      - name: Install Playwright chromium (cache miss)
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system deps (cache hit)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Run a11y suite
+        run: npx playwright test --project=a11y
+        env:
+          CI: 'true'
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: a11y-playwright-report
+          path: playwright-report/
+          retention-days: 14

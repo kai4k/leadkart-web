@@ -276,7 +276,7 @@
 							<span class="label">Upsert mode</span>
 							<select
 								bind:value={upsertBy}
-								class="glass-input body-sm text-fg rounded-md px-3 py-2"
+								class="bg-bg-elevated border border-border rounded-md body-sm text-fg rounded-md px-3 py-2"
 							>
 								{#each upsertOptions as opt (opt.value)}
 									<option value={opt.value}>{opt.label}</option>

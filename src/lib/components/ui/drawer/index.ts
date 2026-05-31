@@ -1,28 +1,33 @@
-/**
- * Drawer compound primitive — namespace barrel.
- *
- * Right-side slide-over built on bits-ui Dialog (focus trap, ESC,
- * ARIA dialog role, portal). Visual layer uses .glass-card material
- * and design tokens throughout.
- *
- * Usage:
- *   import * as Drawer from '$ui/drawer';
- *   // or via ui barrel:
- *   import { Drawer } from '$ui';
- *
- *   <Drawer.Root bind:open>
- *     <Drawer.Trigger>Open</Drawer.Trigger>
- *     <Drawer.Content>
- *       <Drawer.Header>...</Drawer.Header>
- *       <Drawer.Body>...</Drawer.Body>
- *       <Drawer.Footer>...</Drawer.Footer>
- *     </Drawer.Content>
- *   </Drawer.Root>
- */
-export { default as Root } from './Drawer.svelte';
-export { default as Trigger } from './DrawerTrigger.svelte';
-export { default as Content } from './DrawerContent.svelte';
-export { default as Header } from './DrawerHeader.svelte';
-export { default as Body } from './DrawerBody.svelte';
-export { default as Footer } from './DrawerFooter.svelte';
-export { default as Close } from './DrawerClose.svelte';
+import Root from './drawer.svelte';
+import Trigger from './drawer-trigger.svelte';
+import Content from './drawer-content.svelte';
+import Header from './drawer-header.svelte';
+import Footer from './drawer-footer.svelte';
+import Body from './drawer-body.svelte';
+import Title from './drawer-title.svelte';
+import Description from './drawer-description.svelte';
+import Close from './drawer-close.svelte';
+import Overlay from './drawer-overlay.svelte';
+
+export {
+	Root,
+	Trigger,
+	Content,
+	Header,
+	Footer,
+	Body,
+	Title,
+	Description,
+	Close,
+	Overlay,
+	Root as Drawer,
+	Trigger as DrawerTrigger,
+	Content as DrawerContent,
+	Header as DrawerHeader,
+	Footer as DrawerFooter,
+	Body as DrawerBody,
+	Title as DrawerTitle,
+	Description as DrawerDescription,
+	Close as DrawerClose,
+	Overlay as DrawerOverlay
+};

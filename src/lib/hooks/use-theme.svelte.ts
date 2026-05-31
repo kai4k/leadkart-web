@@ -56,58 +56,55 @@ const STORAGE_KEYS = {
 	contentWidth: 'leadkart-content-width'
 } as const;
 
-class ThemeStore {
-	primary = $state<PrimaryColor>(
-		this.readInitial<PrimaryColor>(STORAGE_KEYS.primary, 'navy', PRIMARY_COLORS)
+function readInitial<T extends string>(
+	key: string,
+	fallback: T,
+	valid: ReadonlyArray<{ id: T }>
+): T {
+	if (typeof window === 'undefined') return fallback;
+	const stored = window.localStorage.getItem(key);
+	const found = valid.find((c) => c.id === stored);
+	return found?.id ?? fallback;
+}
+
+function readBoolean(key: string, fallback: boolean): boolean {
+	if (typeof window === 'undefined') return fallback;
+	const stored = window.localStorage.getItem(key);
+	if (stored === '1') return true;
+	if (stored === '0') return false;
+	return fallback;
+}
+
+function persist(key: string, value: string): void {
+	if (typeof window === 'undefined') return;
+	window.localStorage.setItem(key, value);
+}
+
+function setAttr(el: Element, name: string, value: string, defaultValue: string): void {
+	if (value === defaultValue) el.removeAttribute(name);
+	else el.setAttribute(name, value);
+}
+
+export interface Theme {
+	readonly primary: PrimaryColor;
+	readonly sidebarCollapsed: boolean;
+	readonly contentWidth: ContentWidth;
+	setPrimary(next: PrimaryColor): void;
+	setSidebarCollapsed(next: boolean): void;
+	toggleSidebarCollapsed(): void;
+	setContentWidth(next: ContentWidth): void;
+	reset(): void;
+	applyToDocument(): void;
+}
+
+function createTheme(): Theme {
+	let primary = $state<PrimaryColor>(
+		readInitial<PrimaryColor>(STORAGE_KEYS.primary, 'navy', PRIMARY_COLORS)
 	);
-	sidebarCollapsed = $state<boolean>(this.readBoolean(STORAGE_KEYS.sidebarCollapsed, false));
-	contentWidth = $state<ContentWidth>(
-		this.readInitial<ContentWidth>(STORAGE_KEYS.contentWidth, 'default', CONTENT_WIDTHS)
+	let sidebarCollapsed = $state<boolean>(readBoolean(STORAGE_KEYS.sidebarCollapsed, false));
+	let contentWidth = $state<ContentWidth>(
+		readInitial<ContentWidth>(STORAGE_KEYS.contentWidth, 'default', CONTENT_WIDTHS)
 	);
-
-	private readInitial<T extends string>(
-		key: string,
-		fallback: T,
-		valid: ReadonlyArray<{ id: T }>
-	): T {
-		if (typeof window === 'undefined') return fallback;
-		const stored = window.localStorage.getItem(key);
-		const found = valid.find((c) => c.id === stored);
-		return found?.id ?? fallback;
-	}
-
-	private readBoolean(key: string, fallback: boolean): boolean {
-		if (typeof window === 'undefined') return fallback;
-		const stored = window.localStorage.getItem(key);
-		if (stored === '1') return true;
-		if (stored === '0') return false;
-		return fallback;
-	}
-
-	setPrimary(next: PrimaryColor) {
-		this.primary = next;
-		this.persist(STORAGE_KEYS.primary, next);
-		this.applyToDocument();
-	}
-	toggleSidebarCollapsed() {
-		this.setSidebarCollapsed(!this.sidebarCollapsed);
-	}
-	setSidebarCollapsed(next: boolean) {
-		this.sidebarCollapsed = next;
-		this.persist(STORAGE_KEYS.sidebarCollapsed, next ? '1' : '0');
-		this.applyToDocument();
-	}
-	setContentWidth(next: ContentWidth) {
-		this.contentWidth = next;
-		this.persist(STORAGE_KEYS.contentWidth, next);
-		this.applyToDocument();
-	}
-
-	reset() {
-		this.setPrimary('navy');
-		this.setSidebarCollapsed(false);
-		this.setContentWidth('default');
-	}
 
 	/**
 	 * Reflects state on <html>:
@@ -119,26 +116,69 @@ class ThemeStore {
 	 * in app.html and never touched at runtime — semibox is the only
 	 * supported chrome shape.
 	 */
-	applyToDocument() {
+	function applyToDocument(): void {
 		if (typeof document === 'undefined') return;
 		const root = document.documentElement;
-
-		this.setAttr(root, 'data-primary', this.primary, 'navy');
-		this.setAttr(root, 'data-content-width', this.contentWidth, 'default');
-
-		if (this.sidebarCollapsed) root.setAttribute('data-sidebar-collapsed', '');
+		setAttr(root, 'data-primary', primary, 'navy');
+		setAttr(root, 'data-content-width', contentWidth, 'default');
+		if (sidebarCollapsed) root.setAttribute('data-sidebar-collapsed', '');
 		else root.removeAttribute('data-sidebar-collapsed');
 	}
 
-	private setAttr(el: Element, name: string, value: string, defaultValue: string) {
-		if (value === defaultValue) el.removeAttribute(name);
-		else el.setAttribute(name, value);
+	function setPrimary(next: PrimaryColor): void {
+		primary = next;
+		persist(STORAGE_KEYS.primary, next);
+		applyToDocument();
 	}
 
-	private persist(key: string, value: string) {
-		if (typeof window === 'undefined') return;
-		window.localStorage.setItem(key, value);
+	function setSidebarCollapsed(next: boolean): void {
+		sidebarCollapsed = next;
+		persist(STORAGE_KEYS.sidebarCollapsed, next ? '1' : '0');
+		applyToDocument();
 	}
+
+	function setContentWidth(next: ContentWidth): void {
+		contentWidth = next;
+		persist(STORAGE_KEYS.contentWidth, next);
+		applyToDocument();
+	}
+
+	return {
+		get primary() {
+			return primary;
+		},
+		get sidebarCollapsed() {
+			return sidebarCollapsed;
+		},
+		get contentWidth() {
+			return contentWidth;
+		},
+		setPrimary,
+		setSidebarCollapsed,
+		toggleSidebarCollapsed() {
+			setSidebarCollapsed(!sidebarCollapsed);
+		},
+		setContentWidth,
+		reset() {
+			setPrimary('navy');
+			setSidebarCollapsed(false);
+			setContentWidth('default');
+		},
+		applyToDocument
+	};
 }
 
-export const theme = new ThemeStore();
+/**
+ * Module-level singleton — the theme store is intentionally shared
+ * across every component (FOUC prime in app.html, Topbar toggle,
+ * Sidebar collapse). Singleton-via-module-export is the Svelte canon
+ * for this kind of root-scope reactive state (Stripe Dashboard, Linear,
+ * Vercel all ship the same pattern).
+ *
+ * The "module-level $state" ban in CLAUDE.md rule 4 targets bare
+ * `let foo = $state(...)` at module scope, which silently breaks
+ * reactivity across module boundaries. `createTheme()` returns a fresh
+ * closure with proxied state — the singleton instance below is safe
+ * because the proxy lives inside the closure, not at module scope.
+ */
+export const theme = createTheme();

@@ -47,12 +47,6 @@ export const loginRequestSchema = z.object({
 });
 
 /**
- * BFF login success acknowledgement — browser-visible login response.
- * Tokens are set as httpOnly cookies by the BFF; the browser only sees ok:true.
- */
-export const loginOkSchema = z.object({ ok: z.literal(true) });
-
-/**
  * Change password (authenticated) — both current + new are required.
  * Domain enforcement of "new must differ from current" lives server-
  * side; this schema only catches blank inputs.
@@ -61,10 +55,6 @@ export const changePasswordSchema = z.object({
 	current_password: z.string().min(1, 'Current password is required'),
 	new_password: z.string().min(8, 'Password must be at least 8 characters')
 });
-
-export type LoginRequestInput = z.input<typeof loginRequestSchema>;
-export type LoginRequest = z.output<typeof loginRequestSchema>;
-export type ChangePasswordInput = z.input<typeof changePasswordSchema>;
 
 /**
  * UserDto — wire shape of GET /v1/users/:membership_id.

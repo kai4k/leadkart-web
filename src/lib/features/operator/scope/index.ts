@@ -3,3 +3,4 @@
  * the BFF cookie-auth ADR for the surrounding flow.
  */
 export { enterScope, exitScope, type EnterScopeRequest, type EnterScopeResponse } from './api';
+export { enterScopeMutation, exitScopeMutation } from './queries';

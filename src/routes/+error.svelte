@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 </script>
 
 <div class="flex min-h-screen items-center justify-center p-6">
@@ -9,7 +10,7 @@
 			{page.error?.message ?? 'Something went wrong.'}
 		</p>
 		<a
-			href="/"
+			href={resolve('/')}
 			class="bg-primary text-primary-fg hover:bg-primary-hover mt-6 inline-block rounded-md px-4 py-2 text-sm font-medium"
 		>
 			Back to home

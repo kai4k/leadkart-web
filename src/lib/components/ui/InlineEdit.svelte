@@ -118,7 +118,7 @@
 				aria-label={label}
 				aria-invalid={error ? 'true' : undefined}
 				class={cn(
-					'glass-input body-sm text-fg block w-full px-2 py-1',
+					'bg-bg-elevated border border-border rounded-md body-sm text-fg block w-full px-2 py-1',
 					'focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
 					'disabled:cursor-not-allowed disabled:opacity-60',
 					error

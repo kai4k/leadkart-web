@@ -3,7 +3,7 @@
 
 	export const selectVariants = cva(
 		[
-			'glass-input body-sm block w-full appearance-none px-3 py-2 pe-10 text-fg',
+			'bg-bg-elevated border border-border rounded-md body-sm block w-full appearance-none px-3 py-2 pe-10 text-fg',
 			'focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
 			'disabled:cursor-not-allowed disabled:opacity-60'
 		],

@@ -1,7 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { Badge, Button, DataTable, Dropdown, EmptyState, Pagination } from '$ui';
 	import type { DataTableColumn } from '$ui';
 	import { Plus, Shield, MoreVertical, Trash2, Edit, Icon } from '$icons';
@@ -9,56 +7,32 @@
 	import { usersListQuery } from '$features/users/queries';
 	import type { RoleDto } from '$features/roles/types';
 	import { roleBadgeVariant, isProtectedRole, roleMemberCount } from '$features/roles/view-models';
-	import { AuthError, NetworkError } from '$api/errors';
-	import CreateRoleDrawer from './CreateRoleDrawer.svelte';
+	import { getListErrorMessage } from '$api/errors';
+	import { createListPagination } from '$lib/hooks';
+	import { resolve } from '$app/paths';
 	import DeleteRoleDialog from './DeleteRoleDialog.svelte';
 
-	let createOpen = $state(false);
 	let deleteOpen = $state(false);
 	let targetRole = $state<RoleDto | null>(null);
-
-	// URL-driven pagination.
-	const currentPage = $derived(Number(page.url.searchParams.get('page') ?? '1') || 1);
-	const pageSize = 10;
-
-	function setPage(p: number) {
-		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
-		if (p > 1) {
-			params.set('page', String(p));
-		} else {
-			params.delete('page');
-		}
-		goto(`?${params}`, { replaceState: true });
-	}
 
 	const rolesQuery = rolesListQuery();
 	const usersQuery = usersListQuery();
 
 	const roleList = $derived(rolesQuery.data?.roles ?? []);
 	const userList = $derived(usersQuery.data?.users ?? []);
-	const pageCount = $derived(Math.max(1, Math.ceil(roleList.length / pageSize)));
-	const paged = $derived(roleList.slice((currentPage - 1) * pageSize, currentPage * pageSize));
+	const pagination = createListPagination(() => roleList);
 
 	const tableState = $derived(
 		rolesQuery.isPending
 			? 'loading'
 			: rolesQuery.isError
 				? 'error'
-				: paged.length === 0
+				: pagination.paged.length === 0
 					? 'empty'
 					: 'ready'
 	);
 
-	const listErrorCopy = $derived.by(() => {
-		const err = rolesQuery.error;
-		if (!err) return null;
-		if (err instanceof NetworkError) return 'Check your network connection and try again.';
-		if (err instanceof AuthError)
-			return err.status === 403
-				? "You don't have permission to view roles."
-				: 'Your session expired. Sign in again.';
-		return 'Something went wrong. Please try again.';
-	});
+	const listErrorCopy = $derived(getListErrorMessage(rolesQuery.error, 'roles'));
 
 	const columns: DataTableColumn<RoleDto>[] = [
 		{
@@ -101,8 +75,9 @@
 </script>
 
 {#snippet nameCell(role: RoleDto)}
-	<a href="/settings/roles/{role.id}" class="text-fg hover:text-primary font-medium hover:underline"
-		>{role.name}</a
+	<a
+		href={resolve(`/settings/roles/${role.id}`)}
+		class="text-fg hover:text-primary font-medium hover:underline">{role.name}</a
 	>
 {/snippet}
 
@@ -113,14 +88,12 @@
 
 {#snippet rowActions(role: RoleDto)}
 	<Dropdown.Root>
-		<Dropdown.Trigger>
-			<Button variant="ghost" size="sm" aria-label="Row actions">
-				<Icon icon={MoreVertical} size="sm" />
-			</Button>
+		<Dropdown.Trigger variant="ghost" size="sm" aria-label="Row actions">
+			<Icon icon={MoreVertical} size="sm" />
 		</Dropdown.Trigger>
 		<Dropdown.Menu>
 			<Dropdown.Item>
-				<a href="/settings/roles/{role.id}" class="cluster cluster-tight">
+				<a href={resolve(`/settings/roles/${role.id}`)} class="cluster cluster-tight">
 					<Icon icon={Edit} size="sm" /> Edit
 				</a>
 			</Dropdown.Item>
@@ -142,14 +115,14 @@
 				{roleList.length} role{roleList.length === 1 ? '' : 's'}
 			</p>
 		</div>
-		<Button onclick={() => (createOpen = true)}>
+		<Button onclick={() => goto(resolve('/settings/roles/new'))}>
 			<Icon icon={Plus} size="sm" /> Create role
 		</Button>
 	</header>
 
 	<DataTable.Root
 		{columns}
-		rows={paged}
+		rows={pagination.paged}
 		rowKey={(r) => r.id}
 		state={tableState}
 		error={listErrorCopy}
@@ -162,7 +135,7 @@
 				description="Roles bundle permissions for easy assignment to team members."
 			>
 				{#snippet action()}
-					<Button onclick={() => (createOpen = true)}>
+					<Button onclick={() => goto(resolve('/settings/roles/new'))}>
 						<Icon icon={Plus} size="sm" /> Create role
 					</Button>
 				{/snippet}
@@ -170,8 +143,11 @@
 		{/snippet}
 	</DataTable.Root>
 
-	<Pagination page={currentPage} {pageCount} onChange={setPage} />
+	<Pagination
+		page={pagination.currentPage}
+		pageCount={pagination.pageCount}
+		onChange={pagination.setPage}
+	/>
 </div>
 
-<CreateRoleDrawer bind:open={createOpen} onOpenChange={(o) => (createOpen = o)} />
 <DeleteRoleDialog bind:open={deleteOpen} role={targetRole} onOpenChange={(o) => (deleteOpen = o)} />

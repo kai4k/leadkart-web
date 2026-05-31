@@ -35,7 +35,7 @@
 		return 'upcoming';
 	}
 
-	const groups = $derived(() => {
+	const groups = $derived.by(() => {
 		const buckets: Record<'overdue' | 'today' | 'upcoming', ReminderDto[]> = {
 			overdue: [],
 			today: [],
@@ -63,7 +63,7 @@
 		description="Schedule a callback or a manual reminder during call logging."
 	/>
 {:else}
-	{@const g = groups()}
+	{@const g = groups}
 	<div class="stack stack-relaxed">
 		{#each [{ key: 'overdue' as const, label: 'Overdue', variant: 'danger' as const }, { key: 'today' as const, label: 'Today', variant: 'warning' as const }, { key: 'upcoming' as const, label: 'Upcoming', variant: 'info' as const }] as group (group.key)}
 			{#if g[group.key].length > 0}

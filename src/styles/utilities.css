@@ -5,17 +5,19 @@
  * default utility set + don't fit cleanly under typography/layout/
  * animations belong here. Keep small — most one-off needs go inline
  * via Tailwind utility classes.
+ *
+ * Phase B (bits-ui-refactor): the `.glass-*` utility CSS layer was
+ * dropped. Liquid Glass material comes from Svelte Bits GlassSurface
+ * composed inside surface compounds (Dialog/Sheet/Popover/Card) on
+ * demand. Plain surfaces use `bg-bg-elevated border border-border
+ * rounded-* shadow-*` Tailwind utilities directly.
  * ───────────────────────────────────────────────────────────────────── */
 
 @layer utilities {
 	/* ═══ Fixed-overlay stack helpers ════════════════════════════════
 	 * Canonical position+z-index pairs for every overlay layer in the
-	 * stacking order. Replaces inline `style="z-index: var(--z-X);
-	 * position: fixed;"` workarounds caused by .glass-card's
-	 * `position: relative` anchoring its ::before pseudo-element.
-	 *
-	 * Use the `-fixed` variants when the element must escape the
-	 * document flow (dialogs, drawers, tooltips, backdrops).
+	 * stacking order. Use the `-fixed` variants when the element must
+	 * escape the document flow (dialogs, drawers, tooltips, backdrops).
 	 * Use the plain `z-*` utilities (Tailwind generates these from
 	 * @theme --z-* tokens) when the element is already positioned by
 	 * bits-ui / Floating UI (dropdown menus, popovers). */
@@ -36,14 +38,12 @@
 		z-index: var(--z-tooltip);
 	}
 	.is-fixed-overlay--sticky-top {
-		position: sticky;
-		top: 0;
+		position: sticky !important;
+		inset-block-start: 0;
 		z-index: var(--z-sticky);
 	}
 
-	/* Z-index-only helpers — for Floating UI / bits-ui portalled content
-	 * that manages its own position (absolute) but needs the z-index
-	 * token lifted out of an inline style attribute.               */
+	/* ═══ Z-index helpers used inline */
 	.z-dropdown {
 		z-index: var(--z-dropdown);
 	}
@@ -54,30 +54,27 @@
 		z-index: var(--z-overlay);
 	}
 
-	/* ═══ Container — max-width-centred, with padded inline gutters
-	 * `.container-page` for the main outer container of every route. */
+	/* ═══ Page container — content width caps + safe-area padding */
 	.container-page {
-		width: 100%;
-		max-width: var(--container-2xl);
+		inline-size: 100%;
+		max-inline-size: var(--lk-content-max-width, 80rem);
 		margin-inline: auto;
-		padding-inline: var(--space-fluid-md);
+		padding-inline: clamp(1rem, 4vw, 2rem);
 	}
-
 	.container-narrow {
-		width: 100%;
-		max-width: var(--container-md);
+		inline-size: 100%;
+		max-inline-size: 48rem;
 		margin-inline: auto;
-		padding-inline: var(--space-fluid-md);
+		padding-inline: clamp(1rem, 4vw, 2rem);
 	}
 
-	/* ═══ Scroll shadows — for scrollable panels (data tables, drawers)
-	 * Visual cue that content extends. Used on overflow-y containers. */
+	/* ═══ Scroll-shadow — top/bottom fade on scrollable lists */
 	.scroll-shadow {
 		background:
 			linear-gradient(var(--color-bg-elevated) 30%, transparent),
 			linear-gradient(transparent, var(--color-bg-elevated) 70%) 0 100%,
-			radial-gradient(50% 0, oklch(0.2 0.02 256 / 0.1), transparent),
-			radial-gradient(50% 100%, oklch(0.2 0.02 256 / 0.1), transparent) 0 100%;
+			radial-gradient(at top, rgb(0 0 0 / 12%) 0, transparent 70%),
+			radial-gradient(at bottom, rgb(0 0 0 / 12%) 0, transparent 70%) 0 100%;
 		background-repeat: no-repeat;
 		background-size:
 			100% 40px,
@@ -87,10 +84,9 @@
 		background-attachment: local, local, scroll, scroll;
 	}
 
-	/* ═══ Tabular numerals — for ledger/figures alignment */
+	/* ═══ Tabular numbers — for counters / metrics / timestamps */
 	.tabular-nums {
 		font-variant-numeric: tabular-nums;
-		font-feature-settings: 'tnum';
 	}
 
 	/* ═══ Disabled state — applied to non-interactive ancestors */
@@ -100,203 +96,19 @@
 		pointer-events: none;
 	}
 
-	/* ═══ LIQUID GLASS — single canonical surface ════════════════════
-	 * `.glass-card` is THE Liquid-Glass class. Every surface in the
-	 * product that should read as glass — login modal, dashboard
-	 * tiles, popovers, dialogs, toasts, and chrome (topbar/sidebar/
-	 * footer) — composes this one class. Chrome surfaces add their
-	 * own component-CSS overrides for geometry (border-radius: 0 at
-	 * viewport edges, edge-only border) since they're position-fixed
-	 * and edge-anchored, but the MATERIAL (bg + blur + saturate +
-	 * brightness + specular + inner gradient) is identical.
-	 *
-	 * Recipe (Apple iOS 26 thick material, 1.5rem widget radius):
-	 *   background           --glass-bg-thick (85% elevated)
-	 *   backdrop-filter      blur 32px + saturate 220% + brightness 1.06
-	 *   border               --glass-border-subtle hairline
-	 *   border-radius        1.5rem (Apple iOS 26 widget canon)
-	 *   box-shadow           --glass-specular (top-edge highlight only,
-	 *                          NO outer drop-shadow — embedded, not
-	 *                          floating, per iOS Liquid Glass canon)
-	 *   ::before             --glass-inner-gradient (top-light →
-	 *                          bottom-dark dimensional curvature)
-	 *
-	 * Result: change a token in tokens.css and every glass surface
-	 * across the product re-skins in lockstep. One class. One source.
-	 *
-	 * @supports gate ensures graceful fallback in browsers without
-	 * backdrop-filter — the base sets a solid `--color-bg-elevated`
-	 * background; the @supports block layers the translucent glass
-	 * on top when the property is supported. */
-	.glass-card {
-		position: relative;
-		background: var(--color-bg-elevated);
-		border: var(--glass-border-subtle);
-		border-radius: 1.5rem;
-		box-shadow: var(--glass-specular);
-	}
-	.glass-card::before {
-		content: '';
-		position: absolute;
-		inset: 0;
-		border-radius: inherit;
-		background: var(--glass-inner-gradient);
-		pointer-events: none;
-		z-index: 0;
-	}
-	.glass-card > * {
-		position: relative;
-		z-index: 1;
-	}
-	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-		.glass-card {
-			background: var(--glass-bg-thick);
-			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
-				brightness(var(--glass-brightness));
-			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
-				brightness(var(--glass-brightness));
-		}
-	}
-
-	/* Tooltip — small inline hint. Just blur, inherits its own tint. */
-	.glass-tooltip {
-		backdrop-filter: blur(16px) saturate(var(--glass-saturate));
-		-webkit-backdrop-filter: blur(16px) saturate(var(--glass-saturate));
-	}
-
-	/* ─── Glass input — inset variant (iOS Safari address-bar pattern) ─
-	 * Form fields need their own glass treatment because:
-	 *   1. They often sit INSIDE a .glass-card parent (login form
-	 *      inside AuthCard, settings rows inside the drawer). Using
-	 *      .glass-card on inputs would stack two ~85% surfaces and
-	 *      flatten to near-white.
-	 *   2. They need to read as "content surface" — a recessed input,
-	 *      not a raised card. iOS Safari address bar, Spotlight search,
-	 *      and Settings text fields all use this inset-glass treatment.
-	 *
-	 * Recipe:
-	 *   - LIGHTER fill than .glass-card (50% vs 85%) so it contrasts
-	 *     against a glass-card parent AND still refracts canvas behind
-	 *     when used standalone.
-	 *   - INSET top-edge shadow simulating "pressed-in" depth (the
-	 *     opposite of .glass-card's top-edge specular highlight).
-	 *   - Small radius (0.5rem) matching input convention.
-	 *   - Reduced blur (12px vs 32px) — inputs are small surfaces,
-	 *     heavy blur on them looks soft / out-of-focus. */
-	.glass-input {
-		background: var(--color-bg-elevated);
-		border: 1px solid color-mix(in srgb, var(--color-fg) 10%, transparent);
-		border-radius: 0.5rem;
-		box-shadow:
-			inset 0 1px 2px color-mix(in srgb, var(--color-fg) 6%, transparent),
-			inset 0 0 0 0.5px color-mix(in srgb, var(--color-bg-elevated) 60%, transparent);
-	}
-	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-		.glass-input {
-			background: color-mix(in srgb, var(--color-bg-elevated) 50%, transparent);
-			-webkit-backdrop-filter: blur(12px) saturate(var(--glass-saturate));
-			backdrop-filter: blur(12px) saturate(var(--glass-saturate));
-		}
-	}
-
-	/* Pill — interactive state background (hover / active / selected).
-	 * Sits over a parent glass surface as an ephemeral highlight. */
-	.glass-pill {
-		background: var(--glass-pill-bg);
-		box-shadow: var(--glass-specular);
-		border-radius: 0.5rem;
-	}
-
-	/* Glass-hover — REUSABLE interactive lift pattern (iOS Mail /
-	 * Music / Finder sidebar canon). Subtle DARKEN against the
-	 * white-tinted parent chrome, defined by:
-	 *   - 5% fg-mix background fill            (the darken)
-	 *   - 1px alpha-fg ring                    (crisp glass edge)
-	 *   - top specular highlight               (catches light)
-	 *   - soft outer drop                      (lifts off chrome)
-	 *
-	 * White-on-white doesn't contrast on a light Liquid-Glass chrome;
-	 * the hover needs a direction shift (slight tint toward --color-fg)
-	 * to register as a lift. This is what Apple does — the hover is a
-	 * 5-8% black overlay on Music/Mail/Finder sidebar items, NOT
-	 * another layer of white.
-	 *
-	 * Pointer + hover gates respect touch devices; :active mirrors
-	 * the effect for tap feedback. */
-	.glass-hover {
-		transition:
-			background 0.18s cubic-bezier(0.22, 1, 0.36, 1),
-			box-shadow 0.18s cubic-bezier(0.22, 1, 0.36, 1);
-	}
-	@media (hover: hover) and (pointer: fine) {
-		.glass-hover:hover {
-			background: var(--glass-pill-bg);
-			box-shadow:
-				var(--glass-specular),
-				inset 0 0 0 1px color-mix(in srgb, var(--color-fg) 8%, transparent);
-		}
-	}
-	.glass-hover:active {
-		background: var(--glass-pill-bg);
-		box-shadow:
-			var(--glass-specular),
-			inset 0 0 0 1px color-mix(in srgb, var(--color-fg) 8%, transparent);
-	}
-
-	/* Status bar — FOOTER surface (iOS 26 thin material).
-	   Embedded chrome — top hairline border + edge specular, no
-	   drop-shadow. Same canon as appbar/drawer. */
-	.glass-statusbar {
-		position: relative;
-		background: var(--color-bg-elevated);
-		border-block-start: var(--glass-border-subtle);
-		box-shadow: var(--glass-specular);
-	}
-	.glass-statusbar::before {
-		content: '';
-		position: absolute;
-		inset: 0;
-		background: var(--glass-inner-gradient);
-		pointer-events: none;
-		z-index: 0;
-	}
-	.glass-statusbar > * {
-		position: relative;
-		z-index: 1;
-	}
-	@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-		.glass-statusbar {
-			background: var(--glass-bg-thick);
-			-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
-				brightness(var(--glass-brightness));
-			backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
-				brightness(var(--glass-brightness));
-		}
-	}
-
-	/* ═══ INTERACTIVE — composable lift/press/glow primitives
+	/* ═══ INTERACTIVE — composable lift/press primitives
 	 *
 	 * Apply to Buttons, Cards, list rows, anything pointer-interactable.
 	 * Hover lifts + scales 1.01 with spring easing; active snaps to 0.96
-	 * for tactile click feedback. Industry refs: Apple HIG tap targets,
-	 * Material 3 state-layer system, Stripe Dashboard hover treatment.
-	 *
+	 * for tactile click feedback.
 	 * GPU-accelerated via translate-z(0) + will-change hints (only on
-	 * hover-capable inputs to avoid layer churn on touch).
-	 * ───────────────────────────────────────────────────────────── */
+	 * hover-capable inputs to avoid layer churn on touch). */
 	.interactive {
 		transition:
 			transform var(--duration-base) var(--ease-spring-soft),
 			box-shadow var(--duration-base) var(--ease-out),
 			background-color var(--duration-base) var(--ease-out),
 			filter var(--duration-base) var(--ease-out);
-		/* Force a compositor layer to prevent text antialiasing jitter
-		 * during sub-pixel transforms (1px lift + 1.01 scale). Without
-		 * this, browsers can rasterise text at the destination pixel
-		 * grid causing visible re-rendering on every hover frame.
-		 * Industry refs: Apple WebKit blog "Hardware acceleration
-		 * with translate3d", Chrome dev docs "Stick to compositor-
-		 * only properties", Stripe Sail "no font shimmer" rule. */
 		transform: translate3d(0, 0, 0);
 		backface-visibility: hidden;
 	}
@@ -310,48 +122,8 @@
 		transition-duration: var(--duration-fast);
 	}
 
-	/* ═══ Glass surfaces — hover saturate boost + ::after sheen sweep
-	 * Adds the "this surface reacts to me" feel without changing shape.
-	 * Composable on top of .glass-{appbar,drawer,popover,dialog,toast}. */
-	@media (hover: hover) {
-		.glass-appbar,
-		.glass-drawer,
-		.glass-popover,
-		.glass-dialog,
-		.glass-toast {
-			transition:
-				backdrop-filter var(--duration-slow) var(--ease-out),
-				-webkit-backdrop-filter var(--duration-slow) var(--ease-out),
-				border-color var(--duration-base) var(--ease-out);
-		}
-		.glass-popover:hover,
-		.glass-dialog:hover {
-			backdrop-filter: blur(var(--glass-blur-lg)) saturate(calc(var(--glass-saturate-lg) + 0.2));
-			-webkit-backdrop-filter: blur(var(--glass-blur-lg))
-				saturate(calc(var(--glass-saturate-lg) + 0.2));
-		}
-	}
-
-	/* ═══ Brand-tinted glow ring — for primary CTAs that should pull the
-	 * eye. Pair with .interactive on Button variant="primary" to get the
-	 * full Apple-CTA feel: lift + sheen + soft brand-coloured halo.
-	 *
-	 * Shadow values live in tokens.css as --shadow-brand / --shadow-brand-hover
-	 * — keeps the OKLCH triplets in one place if the brand hue ever shifts. */
-	.brand-halo {
-		box-shadow: var(--shadow-brand);
-	}
-	@media (hover: hover) {
-		.brand-halo:hover {
-			box-shadow: var(--shadow-brand-hover);
-		}
-	}
-
 	/* ═══ Timeline guide line — vertical rule connecting milestone icons.
-	 * Used by <Timeline> + <TimelineItem>. The line sits behind each
-	 * item's icon-circle (icon has ring-2 ring-bg-elevated to "punch
-	 * through" the line), giving the GitHub PR / Linear activity-stream
-	 * vertical guide effect without per-item border tricks. */
+	 * Used by <Timeline> + <TimelineItem>. */
 	.timeline {
 		position: relative;
 	}
@@ -361,28 +133,11 @@
 	.timeline > li:not(:last-child)::before {
 		content: '';
 		position: absolute;
-		left: 1rem; /* aligns with the 32px icon-circle centre (0.5rem from edge + (32px/2)) */
-		top: 2rem;
-		bottom: 0;
-		width: 2px;
+		inset-inline-start: 1rem;
+		inset-block-start: 2rem;
+		inset-block-end: 0;
+		inline-size: 2px;
 		background: var(--color-border);
 		z-index: 0;
-	}
-
-	/* ═══ Reduced-transparency fallback — WCAG 2.2 §1.4.3 + Apple HIG.
-	 * Some users (vestibular sensitivity, low-end GPUs) opt out of
-	 * translucent surfaces via the OS setting. Glass surfaces fall
-	 * back to solid bg-elevated. ─────────────────────────────── */
-	@media (prefers-reduced-transparency) {
-		.glass-appbar,
-		.glass-drawer,
-		.glass-popover,
-		.glass-dialog,
-		.glass-toast,
-		.glass-tooltip {
-			backdrop-filter: none;
-			-webkit-backdrop-filter: none;
-			background: var(--color-bg-elevated);
-		}
 	}
 }

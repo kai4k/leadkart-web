@@ -1,36 +1,58 @@
 /**
- * UI primitives barrel — single import path for cross-feature
- * components. Industry canon (shadcn-svelte, Material UI, Chakra):
- * `import { Button, Alert } from '$ui'` over deep path imports.
- *
- * Composite primitives (Card, future Tabs/Dialog/Dropdown) are
- * exported as namespaces under their own subfolder index.
+ * $ui — single import path for cross-feature primitives.
+ * Phase B rebuild on bits-ui + Svelte Bits (per CLAUDE.md doctrine).
  */
-export { default as Alert } from './Alert.svelte';
-export { default as Breadcrumbs } from './Breadcrumbs.svelte';
-export type { BreadcrumbItem } from './Breadcrumbs.svelte';
-export { default as CopyButton } from './CopyButton.svelte';
-export { default as AuthCard } from './AuthCard.svelte';
-export { default as Avatar } from './Avatar.svelte';
-export { default as AvatarGroup } from './AvatarGroup.svelte';
-export type { AvatarGroupMember, AvatarGroupSize } from './AvatarGroup.svelte';
-export { default as Badge } from './Badge.svelte';
-export { default as Button } from './Button.svelte';
+export { Alert, type AlertVariant, type AlertVariants, alertVariants } from './alert';
+export {
+	Avatar,
+	AvatarGroup,
+	type AvatarSize,
+	type AvatarVariants,
+	type AvatarGroupSize,
+	type AvatarGroupMember,
+	avatarVariants,
+	avatarGroupItemVariants
+} from './avatar';
+export {
+	Badge,
+	type BadgeVariant,
+	type BadgeAppearance,
+	type BadgeSize,
+	type BadgeStyle,
+	type BadgeVariants,
+	badgeVariants
+} from './badge';
+export { Breadcrumb, Breadcrumbs, type BreadcrumbItem } from './breadcrumb';
+export {
+	Button,
+	type ButtonProps,
+	type ButtonVariant,
+	type ButtonSize,
+	type ButtonVariants,
+	buttonVariants
+} from './button';
+export { ButtonGroup, type ButtonGroupOrientation, buttonGroupVariants } from './button-group';
 export * as Card from './card';
 export { default as ConfirmDialog } from './ConfirmDialog.svelte';
 export type { ConfirmDialogVariant } from './ConfirmDialog.svelte';
+export { Kbd } from './kbd';
+export { Label } from './label';
+export { Pagination, type PaginationChange } from './pagination';
+export { Skeleton, type SkeletonShape, type SkeletonVariants, skeletonVariants } from './skeleton';
+export { Spinner } from './spinner';
+export { Separator } from './separator';
+export { ScrollArea } from './scroll-area';
+export { default as CopyButton } from './CopyButton.svelte';
+export { default as AuthCard } from './AuthCard.svelte';
 export * as Dialog from './dialog';
 export * as Drawer from './drawer';
-export * as Dropdown from './dropdown';
+export * as Dropdown from './dropdown-menu';
+export * as DropdownMenu from './dropdown-menu';
 export { default as EmptyState } from './EmptyState.svelte';
 export { default as InlineEdit } from './InlineEdit.svelte';
 export * as Kanban from './kanban';
 export type { KanbanColumnDescriptor, KanbanColumnAccent, KanbanMove } from './kanban';
 export { default as Logo } from './Logo.svelte';
-export { default as Pagination } from './Pagination.svelte';
-export { default as Skeleton } from './Skeleton.svelte';
-export type { SkeletonVariants } from './Skeleton.svelte';
-export { default as Spinner } from './Spinner.svelte';
 export { default as StatCard } from './StatCard.svelte';
 export type { StatCardAccent } from './StatCard.svelte';
 export { default as StatusPill, inferStatusVariant } from './StatusPill.svelte';
@@ -40,13 +62,12 @@ export type { StepperState } from './stepper';
 export * as Timeline from './timeline';
 export type { TimelineItemAccent } from './timeline';
 export * as Tooltip from './tooltip';
-export { toast, dismiss } from './Toaster.svelte';
-export type { ToastAction } from './Toaster.svelte';
+export { Toaster, toast } from './sonner';
 export * as Tree from './tree';
 export * as DataTable from './data-table';
 export type { DataTableColumn, DataTableProps } from './data-table';
 export * as Tabs from './tabs';
-export type { TabsListVariants } from './tabs';
+export type { TabsListVariant } from './tabs';
 export * as Accordion from './accordion';
 export * as Popover from './popover';
 export { Progress } from './progress';

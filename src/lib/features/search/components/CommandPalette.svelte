@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Dialog as BitsDialog } from 'bits-ui';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Search, Building2, User, Icon } from '$icons';
 	import { omniSearchQuery } from '$features/search/queries';
 	import { enterScope } from '$features/operator/scope';
@@ -39,7 +40,7 @@
 		try {
 			await enterScope({ slug });
 			onOpenChange(false);
-			goto('/operator/scope/profile');
+			goto(resolve('/operator/scope/profile'));
 		} catch {
 			// Toast surfaces via global mutation cache — no inline error needed
 		}
@@ -47,7 +48,7 @@
 
 	function openPerson(id: string) {
 		onOpenChange(false);
-		goto(`/operator/persons/${id}`);
+		goto(resolve(`/operator/persons/${id}`));
 	}
 </script>
 
@@ -57,7 +58,7 @@
 			class="is-fixed-overlay--overlay animate-fade-in bg-overlay inset-0 backdrop-blur-sm"
 		/>
 		<BitsDialog.Content
-			class="is-fixed-overlay--modal glass-card animate-pop-in z-modal fixed start-1/2 top-[12vh] flex w-full max-w-xl -translate-x-1/2 flex-col rounded-xl border border-[var(--glass-border-subtle)]"
+			class="is-fixed-overlay--modal bg-bg-elevated border border-border rounded-xl shadow-card animate-pop-in z-modal fixed start-1/2 top-[12vh] flex w-full max-w-xl -translate-x-1/2 flex-col rounded-xl border border-[var(--glass-border-subtle)]"
 		>
 			<BitsDialog.Title class="sr-only">Search tenants and people</BitsDialog.Title>
 			<div class="border-border-subtle border-b">
@@ -74,7 +75,7 @@
 				</label>
 			</div>
 
-			<div class="max-h-[60vh] overflow-y-auto">
+			<div class="max-h-[clamp(200px,60vh,80vh)] overflow-y-auto">
 				{#if q.trim().length < 2}
 					<p class="caption text-fg-subtle p-4">Type at least 2 characters.</p>
 				{:else if query.isPending}
@@ -85,7 +86,7 @@
 					{#if tenants.length > 0}
 						<div class="stack stack-tight p-2">
 							<p class="text-fg-subtle px-2 pt-1 overline">Tenants</p>
-							<ul class="stack stack-tight" style="list-style:none;margin:0;padding:0;">
+							<ul class="stack stack-tight m-0 list-none p-0">
 								{#each tenants as t (t.id)}
 									<li>
 										<button
@@ -111,7 +112,7 @@
 					{#if persons.length > 0}
 						<div class="stack stack-tight border-border-subtle border-t p-2">
 							<p class="text-fg-subtle px-2 pt-1 overline">People</p>
-							<ul class="stack stack-tight" style="list-style:none;margin:0;padding:0;">
+							<ul class="stack stack-tight m-0 list-none p-0">
 								{#each persons as p (p.id)}
 									<li>
 										<button

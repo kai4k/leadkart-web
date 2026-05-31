@@ -34,7 +34,7 @@
 	import { setContext } from 'svelte';
 	import type { Snippet } from 'svelte';
 	import { cn } from '$lib/utils/cn';
-	import { KanbanDragState, KANBAN_CTX } from './kanban-state.svelte';
+	import { createKanbanDragState, KANBAN_CTX } from './kanban-state.svelte';
 
 	type Props = {
 		onCardMove?: KanbanMove;
@@ -45,7 +45,7 @@
 
 	let { onCardMove, ariaLabel = 'Kanban board', class: className = '', children }: Props = $props();
 
-	const state = new KanbanDragState();
+	const state = createKanbanDragState();
 
 	// Context value uses a getter so updates to the onCardMove prop are
 	// always visible to consumer columns/cards (Svelte 5 captures values

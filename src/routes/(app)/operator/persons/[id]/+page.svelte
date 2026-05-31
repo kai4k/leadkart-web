@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import PersonDetail from '$features/operator/people/components/PersonDetail.svelte';
 	import { personDetailQuery } from '$features/operator/people/queries';
 	import { personDisplayName } from '$features/operator/people/view-models';
@@ -15,7 +16,7 @@
 	const personName = $derived(query.data ? personDisplayName(query.data) : 'Person');
 
 	const breadcrumbs = $derived<BreadcrumbItem[]>([
-		{ href: '/operator', label: 'Operator' },
+		{ label: 'Operator' },
 		{ href: '/operator/persons', label: 'Persons' },
 		{ label: personName }
 	]);
@@ -23,7 +24,7 @@
 	const capsQuery = myCapabilitiesQuery();
 	$effect(() => {
 		if (capsQuery.data && !hasCapability(capsQuery.data, 'platform.users.view')) {
-			goto('/dashboard', { replaceState: true });
+			goto(resolve('/dashboard'), { replaceState: true });
 		}
 	});
 </script>

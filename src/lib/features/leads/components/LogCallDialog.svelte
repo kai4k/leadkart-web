@@ -91,7 +91,7 @@
 						bind:value={form.values.notes}
 						rows={3}
 						maxlength={2000}
-						class="glass-input w-full rounded-md px-3 py-2 text-sm"
+						class="bg-bg-elevated border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
 						placeholder="What did the lead say?"
 					></textarea>
 					{#if form.errors.notes}
@@ -105,7 +105,7 @@
 						type="datetime-local"
 						name="callback_at"
 						bind:value={form.values.callback_at}
-						class="glass-input rounded-md px-3 py-2 text-sm"
+						class="bg-bg-elevated border border-border rounded-md rounded-md px-3 py-2 text-sm"
 					/>
 				</label>
 

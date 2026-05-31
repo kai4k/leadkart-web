@@ -12,7 +12,7 @@
 import type { Cookies } from '@sveltejs/kit';
 import { isProd } from './config';
 
-export const OP_TENANT_COOKIE = 'lk_op_tenant';
+const OP_TENANT_COOKIE = 'lk_op_tenant';
 
 /** Stored in the cookie — both id + slug so the layout can render
  *  the active-context pill without round-tripping for display data. */

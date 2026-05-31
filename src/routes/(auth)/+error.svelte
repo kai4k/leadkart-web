@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import { Alert, Button } from '$ui';
 
 	const status = $derived(page.status);
@@ -22,7 +23,7 @@
 
 	<div class="cluster">
 		<Button variant="primary" onclick={() => page.url && location.reload()}>Try again</Button>
-		<a href="/signin">
+		<a href={resolve('/signin')}>
 			<Button variant="ghost">Back to sign in</Button>
 		</a>
 	</div>

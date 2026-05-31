@@ -1,50 +1,42 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Alert, Breadcrumbs, Skeleton } from '$ui';
+	import type { ResolvedPathname } from '$app/types';
+	import { Breadcrumbs } from '$ui';
 	import type { BreadcrumbItem } from '$ui';
-	import { myCapabilitiesQuery } from '$features/auth/queries';
-	import { tenantSelfQuery } from '$features/tenant/queries';
 	import { tenantDisplayName, tenantStatusBadge } from '$features/tenant/view-models';
 	import { cn } from '$lib/utils/cn';
+	import type { LayoutData } from './$types';
 
 	/**
-	 * Tenant Settings layout — owns the shared chrome (header + status
-	 * pill + sub-route nav) for /settings/tenant/* sub-pages. Each
-	 * sub-page (profile / statutory / contact / preferences) renders
-	 * only its own Card section into {@render children()}.
+	 * Tenant Settings layout — shared chrome (header + status pill +
+	 * sub-route nav) for /settings/tenant/* sub-pages. Each sub-page
+	 * (profile / statutory / contact / preferences / security)
+	 * renders its own Card section into {@render children()}.
 	 *
-	 * Why a layout, not a single page with bits-ui Tabs:
-	 *   - WAI-ARIA Authoring Practices: "If tabs are linked to URLs,
-	 *     do not use the tabs design pattern" — use <nav> with
-	 *     anchor links and aria-current="page".
-	 *   - Stripe / Linear / GitHub / Vercel: deep-linkable settings
-	 *     sub-routes, browser back/forward works, smaller per-route
-	 *     entry chunks (Display Preferences ships Select primitive
-	 *     ~3 KB; Statutory does not — only the visited route bundle
-	 *     loads).
+	 * Tenant data comes from +layout.server.ts (Svelte canon for
+	 * form-shaped routes — load functions + form actions, no TanStack).
 	 *
-	 * TanStack Query handles fetch lifecycle — no manual load() call needed.
+	 * Why a layout, not bits-ui Tabs: WAI-ARIA APG says "tabs linked
+	 * to URLs use <nav>, not the tabs design pattern". Plus deep-link
+	 * support + smaller per-route entry chunks.
 	 */
+	let { children, data }: { children: import('svelte').Snippet; data: LayoutData } = $props();
 
-	let { children } = $props();
+	const tenantData = $derived(data.tenant);
+	const badge = $derived(tenantStatusBadge(tenantData.status));
 
-	const capsQuery = myCapabilitiesQuery();
-	const tenantId = $derived(capsQuery.data?.tenant_id ?? '');
-	const tenantQuery = $derived(tenantSelfQuery(tenantId));
-	const tenantData = $derived(tenantQuery.data ?? null);
-	const badge = $derived(tenantData ? tenantStatusBadge(tenantData.status) : null);
-
-	const tabs: ReadonlyArray<{ href: string; label: string }> = [
+	const tabs: ReadonlyArray<{ href: ResolvedPathname; label: string }> = [
 		{ href: '/settings/tenant/profile', label: 'Profile' },
 		{ href: '/settings/tenant/statutory', label: 'Statutory IDs' },
 		{ href: '/settings/tenant/contact', label: 'Contact' },
+		{ href: '/settings/tenant/security', label: 'Security' },
 		{ href: '/settings/tenant/preferences', label: 'Preferences' }
 	];
 
 	const activeTab = $derived(tabs.find((t) => isActive(t.href)));
 	const breadcrumbs = $derived<BreadcrumbItem[]>([
-		{ href: '/settings', label: 'Settings' },
-		{ href: '/settings/tenant', label: 'Tenant' },
+		{ label: 'Settings' },
+		{ label: 'Tenant' },
 		...(activeTab ? [{ label: activeTab.label }] : [])
 	]);
 
@@ -61,24 +53,20 @@
 <div class="stack stack-relaxed">
 	<Breadcrumbs items={breadcrumbs} />
 	<header class="stack stack-tight">
-		{#if tenantData && badge}
-			<div class="cluster">
-				<h1 class="h1">{tenantDisplayName(tenantData)}</h1>
-				<span
-					class={cn(
-						'label-small inline-flex items-center rounded-full px-2 py-0.5',
-						badge.variant === 'success' && 'bg-success-50 text-success-900',
-						badge.variant === 'warning' && 'bg-warning-50 text-warning-900',
-						badge.variant === 'danger' && 'bg-danger-50 text-danger-900',
-						badge.variant === 'info' && 'bg-info-50 text-info-900'
-					)}
-				>
-					{badge.label}
-				</span>
-			</div>
-		{:else}
-			<h1 class="h1">Tenant Settings</h1>
-		{/if}
+		<div class="cluster">
+			<h1 class="h1">{tenantDisplayName(tenantData)}</h1>
+			<span
+				class={cn(
+					'label-small inline-flex items-center rounded-full px-2 py-0.5',
+					badge.variant === 'success' && 'bg-success-50 text-success-900',
+					badge.variant === 'warning' && 'bg-warning-50 text-warning-900',
+					badge.variant === 'danger' && 'bg-danger-50 text-danger-900',
+					badge.variant === 'info' && 'bg-info-50 text-info-900'
+				)}
+			>
+				{badge.label}
+			</span>
+		</div>
 		<p class="body-sm text-fg-muted">
 			Manage your organisation's profile, statutory IDs, contact details, and platform preferences.
 		</p>
@@ -108,16 +96,5 @@
 		</ul>
 	</nav>
 
-	{#if tenantQuery.isPending}
-		<div class="stack stack-relaxed" aria-busy="true" aria-label="Loading tenant settings">
-			<Skeleton class="h-6 w-1/3" />
-			<Skeleton class="h-40 w-full rounded-md" />
-		</div>
-	{:else if tenantQuery.isError}
-		<Alert variant="danger" title="Could not load tenant settings">
-			Refresh the page or try again in a moment. If the problem persists, contact support.
-		</Alert>
-	{:else if tenantData}
-		{@render children()}
-	{/if}
+	{@render children()}
 </div>

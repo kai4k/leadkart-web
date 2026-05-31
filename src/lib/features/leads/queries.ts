@@ -2,7 +2,7 @@
  * TanStack Query hooks for the CRM Leads module.
  *
  * Pattern notes:
- *   - leadsInfiniteQuery wraps `UseInfiniteList` so the page can drop a
+ *   - leadsInfiniteQuery wraps `createInfiniteList` so the page can drop a
  *     sentinel + render `list.items` directly.
  *   - Mutations (per ADR 0038) return the updated DTO; we `setQueryData`
  *     to seed the cache BEFORE invalidating the list, so the row updates
@@ -14,7 +14,12 @@
 import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 import * as api from './api';
 import { toast } from '$ui';
-import { UseInfiniteList, useOptimisticMutation, type InfinitePage } from '$lib/hooks';
+import {
+	createInfiniteList,
+	useOptimisticMutation,
+	type InfiniteList,
+	type InfinitePage
+} from '$lib/hooks';
 import type {
 	CrmLeadDto,
 	ListLeadsParams,
@@ -41,7 +46,7 @@ type LeadsInfiniteCache = {
  *
  * Tolerant of:
  *   - cached value being a plain list envelope `{ items, has_more, ... }`
- *     (the leads list goes through `UseInfiniteList` so this branch
+ *     (the leads list goes through `createInfiniteList` so this branch
  *     normally won't fire, but the runtime guard keeps the projector
  *     safe across any future caller).
  *   - cached value being a TanStack infinite-cache wrapper.
@@ -61,7 +66,7 @@ function projectLeadsListCache(cache: unknown, mapRow: (lead: CrmLeadDto) => Crm
 	return cache;
 }
 
-export const leadsKeys = {
+const leadsKeys = {
 	all: ['crm-leads'] as const,
 	lists: () => [...leadsKeys.all, 'list'] as const,
 	list: (params: ListLeadsParams) => [...leadsKeys.lists(), params] as const,
@@ -75,8 +80,8 @@ export const leadsKeys = {
 
 // ── Queries ─────────────────────────────────────────────────────────
 
-export function leadsInfiniteQuery(getParams: () => ListLeadsParams): UseInfiniteList<CrmLeadDto> {
-	return new UseInfiniteList<CrmLeadDto>({
+export function leadsInfiniteQuery(getParams: () => ListLeadsParams): InfiniteList<CrmLeadDto> {
+	return createInfiniteList<CrmLeadDto>({
 		queryKey: () => leadsKeys.list(getParams()),
 		queryFn: ({ cursor }) =>
 			api.listLeads({ ...getParams(), cursor }).then((r) => ({
@@ -119,13 +124,6 @@ export function leadHistoryQuery(id: string) {
 	}));
 }
 
-export function crossRemindersQuery(getParams: () => CrossReminderParams) {
-	return createQuery(() => ({
-		queryKey: leadsKeys.crossReminders(getParams()),
-		queryFn: () => api.listReminders(getParams())
-	}));
-}
-
 // ── Mutations ───────────────────────────────────────────────────────
 
 export function updateLeadMutation() {
@@ -135,7 +133,7 @@ export function updateLeadMutation() {
 		onSuccess: (lead) => {
 			qc.setQueryData(leadsKeys.detail(lead.id), lead);
 			void qc.invalidateQueries({ queryKey: leadsKeys.lists() });
-			toast('success', 'Lead updated');
+			toast.success('Lead updated');
 		}
 	}));
 }
@@ -227,7 +225,7 @@ export function reassignLeadMutation() {
 			qc.setQueryData(leadsKeys.detail(lead.id), lead);
 			void qc.invalidateQueries({ queryKey: leadsKeys.history(lead.id) });
 			void qc.invalidateQueries({ queryKey: leadsKeys.lists() });
-			toast('success', 'Lead reassigned');
+			toast.success('Lead reassigned');
 		}
 	}));
 }
@@ -240,7 +238,7 @@ export function logCallMutation() {
 			void qc.invalidateQueries({ queryKey: leadsKeys.calls(vars.id) });
 			void qc.invalidateQueries({ queryKey: leadsKeys.reminders(vars.id) });
 			void qc.invalidateQueries({ queryKey: leadsKeys.detail(vars.id) });
-			toast('success', 'Call logged');
+			toast.success('Call logged');
 		}
 	}));
 }
@@ -260,7 +258,7 @@ export function updateReminderMutation() {
 		}) => api.updateReminder(id, action, snooze_until ? { snooze_until } : {}),
 		onSuccess: (_r, vars) => {
 			void qc.invalidateQueries({ queryKey: leadsKeys.reminders(vars.leadId) });
-			toast('success', `Reminder ${vars.action}d`);
+			toast.success(`Reminder ${vars.action}d`);
 		}
 	}));
 }
@@ -280,10 +278,10 @@ export function bulkLeadActionMutation() {
 						: vars.action === 'change_temperature'
 							? 'updated'
 							: 'updated';
-			toast('success', `${result.affected} ${noun} ${verb}`);
+			toast.success(`${result.affected} ${noun} ${verb}`);
 		},
 		onError: () => {
-			toast('danger', 'Bulk action failed');
+			toast.error('Bulk action failed');
 		}
 	}));
 }
@@ -301,7 +299,7 @@ export function bulkUploadCommitMutation() {
 			api.bulkUploadCommit(file, upsertBy),
 		onSuccess: (result) => {
 			void qc.invalidateQueries({ queryKey: leadsKeys.all });
-			toast('success', `${result.inserted + result.updated} leads imported`);
+			toast.success(`${result.inserted + result.updated} leads imported`);
 		}
 	}));
 }

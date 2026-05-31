@@ -1,13 +1,14 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Badge, Button, DataTable, EmptyState, type DataTableColumn } from '$ui';
 	import { ResourceListPage, type ResourceListAction, type BulkAction } from '$lib/components/data';
 	import { Icon, Plus, Package, UploadCloud, Pause, Check, Trash2 } from '$icons';
 	import {
-		UseBulkSelection,
-		UseKeyboardListNav,
-		UseSavedViews,
-		UseUrlFilters,
+		createBulkSelection,
+		createKeyboardListNav,
+		createSavedViews,
+		createUrlFilters,
 		type SavedView
 	} from '$lib/hooks';
 	import {
@@ -44,7 +45,7 @@
 	 * row gets a primary border-s accent.
 	 */
 
-	const filters = new UseUrlFilters<ProductFilters>({
+	const filters = createUrlFilters<ProductFilters>({
 		q: { type: 'string', label: 'Search' },
 		product_category: { type: 'string[]', label: 'Category' },
 		product_type: { type: 'string[]', label: 'Type' },
@@ -54,7 +55,7 @@
 		expiring_within_days: { type: 'string', label: 'Expiring within' }
 	});
 
-	const savedViews = new UseSavedViews<ProductFilters>(
+	const savedViews = createSavedViews<ProductFilters>(
 		[
 			{ id: 'all', label: 'All', filters: {} },
 			{ id: 'low', label: 'Low stock', filters: { low_stock: 'true' } },
@@ -109,7 +110,7 @@
 	});
 
 	// ── Bulk selection ────────────────────────────────────────────────
-	const selection = new UseBulkSelection<ProductDto>();
+	const selection = createBulkSelection<ProductDto>();
 
 	const bulkMut = bulkProductActionMutation();
 
@@ -172,7 +173,7 @@
 	const isEmpty = $derived(!query.isPending && !query.isError && products.length === 0);
 
 	function openDetail(p: ProductDto) {
-		goto(`/inventory/${p.id}`);
+		goto(resolve(`/inventory/${p.id}`));
 	}
 
 	// ── Keyboard nav (Linear / Superhuman convention) ─────────────────
@@ -181,7 +182,7 @@
 	// `j`/`k` move DOM focus. When a drawer (Create / Bulk upload) is
 	// open it owns focus, so keys naturally bubble through the portal
 	// boundary without polluting the row list.
-	const nav = new UseKeyboardListNav<ProductDto>({
+	const nav = createKeyboardListNav<ProductDto>({
 		onSelect: (p) => openDetail(p),
 		onToggleSelect: (p) => selection.toggle(p.id)
 	});

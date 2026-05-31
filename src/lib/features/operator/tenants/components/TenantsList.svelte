@@ -1,24 +1,51 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { goto, invalidateAll } from '$app/navigation';
-	import { useQueryClient } from '@tanstack/svelte-query';
-	import { SvelteURLSearchParams } from 'svelte/reactivity';
-	import { Alert, Badge, Button, DataTable, EmptyState, Spinner } from '$ui';
+	import { goto } from '$app/navigation';
+	import type { ResolvedPathname } from '$app/types';
+	import { SvelteURL } from 'svelte/reactivity';
+	import { Alert, Badge, Button, DataTable, Dropdown, EmptyState, Spinner } from '$ui';
 	import type { DataTableColumn } from '$ui';
-	import { Building2, Eye, Plus, Search, Shield, Icon } from '$icons';
-	import { tenantsListQuery } from '$features/operator/tenants/queries';
-	import { tenantLifecycleBadge } from '$features/operator/tenants/view-models';
+	import {
+		Building2,
+		Eye,
+		MoreVertical,
+		Pause,
+		Play,
+		Plus,
+		RotateCcw,
+		Search,
+		Shield,
+		Trash2,
+		Icon
+	} from '$icons';
+	import {
+		activateTenantMutation,
+		restoreTenantMutation,
+		tenantsListQuery
+	} from '$features/operator/tenants/queries';
+	import {
+		canActivate,
+		canMarkForDeletion,
+		canRestore,
+		canSuspend,
+		tenantLifecycleBadge
+	} from '$features/operator/tenants/view-models';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
-	import { AuthError, NetworkError, NotFoundError } from '$lib/api/errors';
-	import { enterScope as enterScopeApi } from '$features/operator/scope';
-	import { toast } from '$ui';
+	import { AuthError, NetworkError, NotFoundError, getListErrorMessage } from '$api/errors';
+	import { enterScopeMutation } from '$features/operator/scope';
 	import CreateTenantDrawer from './CreateTenantDrawer.svelte';
+	import SuspendDialog from './SuspendDialog.svelte';
+	import MarkForDeletionDialog from './MarkForDeletionDialog.svelte';
 	import ImpersonateModal from '$features/operator/impersonation/components/ImpersonateModal.svelte';
 	import type { TenantDto } from '$features/operator/tenants/types';
+	import { createListPagination } from '$lib/hooks';
 
 	const PAGE_SIZE = 10;
 
 	let createOpen = $state(false);
+	let suspendOpen = $state(false);
+	let markOpen = $state(false);
+	let lifecycleTarget = $state<TenantDto | null>(null);
 	let impersonateOpen = $state(false);
 	let impersonateTarget = $state<TenantDto | null>(null);
 	/** Slug of the tenant currently being opened — drives the inline
@@ -26,29 +53,36 @@
 	let openingScopeSlug = $state<string | null>(null);
 
 	const search = $derived(page.url.searchParams.get('q') ?? '');
-	const currentPage = $derived(Number(page.url.searchParams.get('page') ?? '1') || 1);
+	const statusFilter = $derived(page.url.searchParams.get('status') ?? 'all');
 
-	function setSearch(value: string) {
-		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
-		if (value) params.set('q', value);
-		else params.delete('q');
-		params.delete('page');
-		goto(`?${params}`, { replaceState: true, keepFocus: true });
+	function setStatusFilter(value: string) {
+		const url = new SvelteURL(page.url);
+		if (value && value !== 'all') url.searchParams.set('status', value);
+		else url.searchParams.delete('status');
+		url.searchParams.delete('page');
+		void goto(`${url.pathname}${url.search}` as ResolvedPathname, { replaceState: true });
 	}
 
-	function setPage(p: number) {
-		const params = new SvelteURLSearchParams(page.url.searchParams.toString());
-		if (p > 1) params.set('page', String(p));
-		else params.delete('page');
-		goto(`?${params}`, { replaceState: true });
+	function setSearch(value: string) {
+		const url = new SvelteURL(page.url);
+		if (value) url.searchParams.set('q', value);
+		else url.searchParams.delete('q');
+		url.searchParams.delete('page');
+		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
+			replaceState: true,
+			keepFocus: true
+		});
 	}
 
 	const capsQuery = myCapabilitiesQuery();
 	const canCreate = $derived(hasCapability(capsQuery.data, 'platform.tenants.create'));
 	const canView = $derived(hasCapability(capsQuery.data, 'platform.tenants.view'));
+	const canManage = $derived(hasCapability(capsQuery.data, 'platform.tenants.manage'));
 
 	const query = tenantsListQuery();
-	const qc = useQueryClient();
+	const activateMutation = activateTenantMutation();
+	const restoreMutation = restoreTenantMutation();
+	const enterMutation = enterScopeMutation();
 
 	const filtered = $derived.by(() => {
 		const all = query.data?.tenants ?? [];
@@ -61,29 +95,52 @@
 						t.legal_name.toLowerCase().includes(q)
 				)
 			: all;
-		const platform = matched.find((t: TenantDto) => t.slug === 'platform');
-		const rest = matched.filter((t: TenantDto) => t.slug !== 'platform');
+		const byStatus =
+			statusFilter === 'all'
+				? matched
+				: matched.filter((t: TenantDto) => t.status === statusFilter);
+		const platform = byStatus.find((t: TenantDto) => t.slug === 'platform');
+		const rest = byStatus.filter((t: TenantDto) => t.slug !== 'platform');
 		return platform ? [platform, ...rest] : rest;
 	});
 
-	const totalPages = $derived(Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)));
-	const paged = $derived(filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE));
+	const statusCounts = $derived.by(() => {
+		const all = query.data?.tenants ?? [];
+		const counts = { all: all.length, active: 0, suspended: 0, marked_for_deletion: 0, pending: 0 };
+		for (const t of all) {
+			if (t.status === 'active') counts.active++;
+			else if (t.status === 'suspended') counts.suspended++;
+			else if (t.status === 'marked_for_deletion') counts.marked_for_deletion++;
+			else if (t.status === 'pending') counts.pending++;
+		}
+		return counts;
+	});
+
+	const statusOptions = $derived([
+		{ value: 'all', label: 'All', count: statusCounts.all },
+		{ value: 'active', label: 'Active', count: statusCounts.active },
+		{ value: 'suspended', label: 'Suspended', count: statusCounts.suspended },
+		{ value: 'pending', label: 'Pending', count: statusCounts.pending },
+		{
+			value: 'marked_for_deletion',
+			label: 'Marked for deletion',
+			count: statusCounts.marked_for_deletion
+		}
+	] as const);
+
+	const pagination = createListPagination(() => filtered, { pageSize: PAGE_SIZE });
 
 	const tableState = $derived(
-		query.isPending ? 'loading' : query.isError ? 'error' : paged.length === 0 ? 'empty' : 'ready'
+		query.isPending
+			? 'loading'
+			: query.isError
+				? 'error'
+				: pagination.paged.length === 0
+					? 'empty'
+					: 'ready'
 	);
 
-	const listErrorCopy = $derived.by(() => {
-		const err = query.error;
-		if (!err) return null;
-		if (err instanceof NetworkError) return 'Check your network connection and try again.';
-		if (err instanceof AuthError)
-			return err.status === 403
-				? "You don't have permission to view tenants."
-				: 'Your session expired. Sign in again.';
-		if (err instanceof NotFoundError) return 'This resource was deleted or moved.';
-		return 'Something went wrong. Please try again.';
-	});
+	const listErrorCopy = $derived(getListErrorMessage(query.error, 'tenants'));
 
 	const columns: DataTableColumn<TenantDto>[] = [
 		{ id: 'name', header: 'Tenant', accessor: (t) => t.display_name, cell: nameCell },
@@ -111,32 +168,17 @@
 	 * to /operator/scope/profile — the URL never reveals which tenant
 	 * the operator is acting on.
 	 */
-	async function enterScope(tenant: TenantDto) {
+	function enterScope(tenant: TenantDto) {
 		if (openingScopeSlug !== null) return; // a row is already in-flight
 		openingScopeSlug = tenant.slug;
-		try {
-			await enterScopeApi({ slug: tenant.slug });
-			qc.clear();
-			await invalidateAll();
-			goto('/operator/scope/profile');
-		} catch (err) {
-			if (err instanceof NetworkError) {
-				toast('danger', 'Check your network connection and try again.');
-			} else if (err instanceof AuthError) {
-				toast(
-					'danger',
-					err.status === 403
-						? "You don't have permission to open this tenant."
-						: 'Your session expired. Sign in again.'
-				);
-			} else if (err instanceof NotFoundError) {
-				toast('danger', 'This tenant was deleted or moved.');
-			} else {
-				toast('danger', 'Could not open tenant');
+		enterMutation.mutate(
+			{ slug: tenant.slug },
+			{
+				onSettled: () => {
+					openingScopeSlug = null;
+				}
 			}
-		} finally {
-			openingScopeSlug = null;
-		}
+		);
 	}
 </script>
 
@@ -163,19 +205,68 @@
 			<Spinner size={14} />
 			<span class="caption text-fg-muted">Opening…</span>
 		</div>
-	{:else if canView && tenant.slug !== 'platform'}
-		<Button
-			variant="ghost"
-			size="sm"
-			disabled={openingScopeSlug !== null}
-			onclick={(e) => {
-				e.stopPropagation();
-				openImpersonate(tenant);
-			}}
-			aria-label="Impersonate {tenant.display_name}"
-		>
-			<Icon icon={Eye} size="sm" /> Impersonate
-		</Button>
+	{:else if tenant.slug !== 'platform'}
+		<div class="cluster cluster-tight">
+			{#if canView}
+				<Button
+					variant="ghost"
+					size="sm"
+					disabled={openingScopeSlug !== null}
+					onclick={(e) => {
+						e.stopPropagation();
+						openImpersonate(tenant);
+					}}
+					aria-label="Impersonate {tenant.display_name}"
+				>
+					<Icon icon={Eye} size="sm" /> Impersonate
+				</Button>
+			{/if}
+			{#if canManage}
+				<Dropdown.Root>
+					<Dropdown.Trigger
+						variant="ghost"
+						size="sm"
+						aria-label="Lifecycle actions for {tenant.display_name}"
+					>
+						<Icon icon={MoreVertical} size="sm" />
+					</Dropdown.Trigger>
+					<Dropdown.Menu>
+						{#if canSuspend(tenant)}
+							<Dropdown.Item
+								onclick={() => {
+									lifecycleTarget = tenant;
+									suspendOpen = true;
+								}}
+							>
+								<Icon icon={Pause} size="sm" /> Suspend
+							</Dropdown.Item>
+						{/if}
+						{#if canActivate(tenant)}
+							<Dropdown.Item onclick={() => activateMutation.mutate(tenant.id)}>
+								<Icon icon={Play} size="sm" /> Activate
+							</Dropdown.Item>
+						{/if}
+						{#if canRestore(tenant)}
+							<Dropdown.Item onclick={() => restoreMutation.mutate(tenant.id)}>
+								<Icon icon={RotateCcw} size="sm" /> Restore
+							</Dropdown.Item>
+						{/if}
+						{#if canMarkForDeletion(tenant)}
+							<Dropdown.Separator />
+							<Dropdown.Item
+								variant="danger"
+								onclick={() => {
+									lifecycleTarget = tenant;
+									markOpen = true;
+								}}
+							>
+								<Icon icon={Trash2} size="sm" /> Mark for deletion
+							</Dropdown.Item>
+						{/if}
+					</Dropdown.Menu>
+				</Dropdown.Root>
+			{/if}
+		</div>
 	{/if}
 {/snippet}
 
@@ -192,25 +283,44 @@
 		{/if}
 	</header>
 
-	<div class="cluster">
-		<div class="relative flex-1">
-			<span class="pointer-events-none absolute inset-y-0 start-3 flex items-center">
-				<Icon icon={Search} size="sm" class="text-fg-subtle" />
-			</span>
-			<input
-				type="search"
-				placeholder="Filter by name, slug, or legal name"
-				value={search}
-				oninput={(e) => setSearch((e.currentTarget as HTMLInputElement).value)}
-				class="glass-input w-full rounded-md py-2 ps-9 pe-3 text-sm"
-				aria-label="Filter tenants"
-			/>
+	<div class="stack stack-tight">
+		<div class="cluster">
+			<div class="relative flex-1">
+				<span class="pointer-events-none absolute inset-y-0 start-3 flex items-center">
+					<Icon icon={Search} size="sm" class="text-fg-subtle" />
+				</span>
+				<input
+					type="search"
+					placeholder="Filter by name, slug, or legal name"
+					value={search}
+					oninput={(e) => setSearch((e.currentTarget as HTMLInputElement).value)}
+					class="bg-bg-elevated border border-border rounded-md w-full rounded-md py-2 ps-9 pe-3 text-sm"
+					aria-label="Filter tenants"
+				/>
+			</div>
 		</div>
+
+		<nav class="cluster cluster-tight" aria-label="Filter tenants by lifecycle status">
+			{#each statusOptions as opt (opt.value)}
+				{@const active = statusFilter === opt.value}
+				<button
+					type="button"
+					onclick={() => setStatusFilter(opt.value)}
+					aria-pressed={active}
+					class="label inline-flex items-center gap-2 rounded-full px-3 py-1 transition-colors {active
+						? 'bg-primary text-primary-fg'
+						: 'bg-bg-muted text-fg-muted hover:text-fg'}"
+				>
+					{opt.label}
+					<span class="caption tabular-nums opacity-70">{opt.count}</span>
+				</button>
+			{/each}
+		</nav>
 	</div>
 
 	<DataTable.Root
 		{columns}
-		rows={paged}
+		rows={pagination.paged}
 		rowKey={(t) => t.id}
 		state={tableState}
 		error={listErrorCopy}
@@ -263,27 +373,32 @@
 		{/snippet}
 	</DataTable.Root>
 
-	{#if totalPages > 1}
+	{#if pagination.pageCount > 1}
 		<nav class="cluster cluster-spread" aria-label="Tenant list pagination">
 			<p class="caption text-fg-muted">
-				{(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length}
+				{(pagination.currentPage - 1) * PAGE_SIZE + 1}–{Math.min(
+					pagination.currentPage * PAGE_SIZE,
+					filtered.length
+				)} of {filtered.length}
 			</p>
 			<div class="cluster cluster-tight">
 				<Button
 					variant="ghost"
 					size="sm"
-					disabled={currentPage <= 1}
-					onclick={() => setPage(currentPage - 1)}
+					disabled={pagination.currentPage <= 1}
+					onclick={() => pagination.setPage(pagination.currentPage - 1)}
 					aria-label="Previous page"
 				>
 					← Prev
 				</Button>
-				<span class="caption">Page {currentPage} / {totalPages}</span>
+				<span class="caption">
+					Page {pagination.currentPage} / {pagination.pageCount}
+				</span>
 				<Button
 					variant="ghost"
 					size="sm"
-					disabled={currentPage >= totalPages}
-					onclick={() => setPage(currentPage + 1)}
+					disabled={pagination.currentPage >= pagination.pageCount}
+					onclick={() => pagination.setPage(pagination.currentPage + 1)}
 					aria-label="Next page"
 				>
 					Next →
@@ -294,6 +409,16 @@
 </div>
 
 <CreateTenantDrawer bind:open={createOpen} onOpenChange={(o) => (createOpen = o)} />
+<SuspendDialog
+	bind:open={suspendOpen}
+	tenant={lifecycleTarget}
+	onOpenChange={(o) => (suspendOpen = o)}
+/>
+<MarkForDeletionDialog
+	bind:open={markOpen}
+	tenant={lifecycleTarget}
+	onOpenChange={(o) => (markOpen = o)}
+/>
 <ImpersonateModal
 	bind:open={impersonateOpen}
 	tenant={impersonateTarget}

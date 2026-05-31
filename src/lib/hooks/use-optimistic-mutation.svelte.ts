@@ -33,7 +33,7 @@
 import { createMutation, useQueryClient, type CreateMutationResult } from '@tanstack/svelte-query';
 import { toast } from '$ui';
 
-export interface ProjectInLists<TVariables> {
+interface ProjectInLists<TVariables> {
 	/**
 	 * Reactive function returning the list-key PREFIXES to project into.
 	 * Each prefix is matched via TanStack's `getQueriesData({ queryKey })`
@@ -158,7 +158,7 @@ export function useOptimisticMutation<TVariables, TData = unknown, TContext = un
 			if (options.successToast) {
 				const msg = options.successToast(data, vars);
 				const undo = options.undo;
-				toast('success', msg, {
+				toast.success(msg, {
 					duration: options.toastDurationMs ?? (undo ? 10_000 : 5_000),
 					action: undo
 						? {

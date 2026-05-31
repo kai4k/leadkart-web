@@ -78,7 +78,10 @@
 			<span class="label text-sm md:text-base"
 				>Type <code class="bg-bg-muted rounded px-1">{person?.email ?? ''}</code> to confirm</span
 			>
-			<input bind:value={typedEmail} class="glass-input w-full rounded-md px-3 py-2 text-sm" />
+			<input
+				bind:value={typedEmail}
+				class="bg-bg-elevated border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
+			/>
 		</label>
 		<label class="stack stack-tight mt-4 w-full">
 			<span class="label text-sm md:text-base">Reason (required, audited)</span>
@@ -89,7 +92,7 @@
 				maxlength={500}
 				rows={3}
 				aria-invalid={reasonError ? 'true' : undefined}
-				class="glass-input w-full rounded-md px-3 py-2 text-sm"
+				class="bg-bg-elevated border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
 			></textarea>
 			{#if reasonError}<span class="body-sm text-danger-700">{reasonError}</span>{/if}
 		</label>

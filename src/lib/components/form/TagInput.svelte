@@ -141,7 +141,7 @@
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class={cn(
-				'glass-input body-sm flex w-full flex-wrap items-center gap-2 px-2 py-1.5 text-start',
+				'bg-bg-elevated border border-border rounded-md body-sm flex w-full flex-wrap items-center gap-2 px-2 py-1.5 text-start',
 				'focus-within:ring-2 focus-within:ring-offset-1 focus-within:outline-none',
 				disabled && 'is-disabled',
 				error || localError
@@ -182,7 +182,7 @@
 				aria-describedby={describedBy}
 				class={cn(
 					'body-sm text-fg placeholder:text-fg-subtle min-w-[6rem] flex-1 bg-transparent px-1 py-0.5',
-					'focus:outline-none'
+					'focus-visible:outline-none'
 				)}
 				placeholder={value.length === 0 ? placeholder : ''}
 				{disabled}
@@ -199,7 +199,7 @@
 				id={listboxId}
 				role="listbox"
 				class={cn(
-					'glass-card z-dropdown absolute start-0 end-0 top-full mt-1 max-h-60 overflow-auto p-1'
+					'bg-bg-elevated border border-border rounded-xl shadow-card z-dropdown absolute start-0 end-0 top-full mt-1 max-h-60 overflow-auto p-1'
 				)}
 			>
 				{#each filteredSuggestions as suggestion, i (suggestion)}

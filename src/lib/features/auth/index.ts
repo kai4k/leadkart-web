@@ -9,7 +9,6 @@
  * resolves the ambiguity in favour of the curated types module.
  */
 export {
-	login,
 	logout,
 	requestPasswordReset,
 	resetPassword,
@@ -21,10 +20,9 @@ export {
 	updateMyProfile,
 	listSessions,
 	revokeSession,
-	revokeOtherSessions,
-	LoginError
+	revokeOtherSessions
 } from './api';
-export type { Capabilities, LoginResult } from './api';
+export type { Capabilities } from './api';
 
 export {
 	myCapabilitiesQuery,

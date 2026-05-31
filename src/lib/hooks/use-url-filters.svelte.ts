@@ -1,12 +1,12 @@
 /**
- * `useUrlFilters` — class-based store that mirrors a typed filter set
- * to the page URL's query string. Resource list pages reach for this
- * once and stop hand-rolling `SvelteURLSearchParams` boilerplate.
+ * `createUrlFilters` — factory that mirrors a typed filter set to the
+ * page URL's query string. Resource list pages reach for this once
+ * and stop hand-rolling `SvelteURLSearchParams` boilerplate.
  *
- * Single source of truth: the URL. The `filters` field is a reactive
- * `$derived` projection of `page.url.searchParams`. Mutators update
- * the URL via `goto(..., { replaceState, keepFocus })`; the next
- * `$derived` recompute updates `filters` automatically.
+ * Single source of truth: the URL. The `filters` getter is a reactive
+ * projection of `page.url.searchParams`. Mutators update the URL via
+ * `goto(..., { replaceState, keepFocus })`; the next read picks up
+ * the change automatically.
  *
  * Two filter shapes are supported per-key:
  *   - `type: 'string'` — single scalar param (`?status=active`)
@@ -15,10 +15,24 @@
  * Active-chip projection is exposed for `<FilterChips>` consumption
  * (one chip per active filter; multi-value filters render one chip
  * per value so each can be removed independently).
+ *
+ * Svelte canon: a factory returning an object with reactive getters
+ * and plain action functions. No classes, no `this`.
+ *
+ * Usage:
+ *
+ *   const filters = createUrlFilters<MyFilters>({
+ *     status:  { type: 'string',   label: 'Status' },
+ *     tag:     { type: 'string[]', label: 'Tag' }
+ *   });
+ *
+ *   <FilterBar urlFilters={filters} ... />
+ *   <FilterChips urlFilters={filters} />
  */
 import { goto } from '$app/navigation';
 import { page } from '$app/state';
-import { SvelteURLSearchParams } from 'svelte/reactivity';
+import type { ResolvedPathname } from '$app/types';
+import { SvelteURL, SvelteURLSearchParams } from 'svelte/reactivity';
 
 export type UrlFilterValue = string | string[] | undefined;
 export type UrlFiltersBase = Record<string, UrlFilterValue>;
@@ -42,35 +56,43 @@ export interface UrlFilterChip {
 	value: string;
 }
 
+export interface UrlFilters<TFilters extends UrlFiltersBase> {
+	readonly schema: UrlFiltersSchema<TFilters>;
+	readonly filters: TFilters;
+	readonly activeChips: UrlFilterChip[];
+	readonly hasActive: boolean;
+	setFilter<K extends keyof TFilters & string>(key: K, value: TFilters[K]): void;
+	clearFilter<K extends keyof TFilters & string>(key: K): void;
+	clearAll(): void;
+	clearValue<K extends keyof TFilters & string>(key: K, value: string): void;
+}
+
 function isStringArray(v: UrlFilterValue): v is string[] {
 	return Array.isArray(v);
 }
 
-/**
- * Class-based filter store. Construct once at the top of a page
- * component:
- *
- *   const filters = new UseUrlFilters<MyFilters>({
- *     status:  { type: 'string',   label: 'Status' },
- *     tag:     { type: 'string[]', label: 'Tag' }
- *   });
- *
- *   <FilterBar urlFilters={filters} ... />
- *   <FilterChips urlFilters={filters} />
- */
-export class UseUrlFilters<TFilters extends UrlFiltersBase> {
-	readonly schema: UrlFiltersSchema<TFilters>;
-
-	constructor(schema: UrlFiltersSchema<TFilters>) {
-		this.schema = schema;
+export function createUrlFilters<TFilters extends UrlFiltersBase>(
+	schema: UrlFiltersSchema<TFilters>
+): UrlFilters<TFilters> {
+	function cloneParams(): SvelteURLSearchParams {
+		return new SvelteURLSearchParams(page.url.searchParams.toString());
 	}
 
-	/** Reactive snapshot of the current filter values, decoded from the URL. */
-	get filters(): TFilters {
+	function commit(next: SvelteURLSearchParams): void {
+		const url = new SvelteURL(page.url);
+		url.search = next.toString();
+		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
+			keepFocus: true,
+			replaceState: true,
+			noScroll: true
+		});
+	}
+
+	function readFilters(): TFilters {
 		const params = page.url.searchParams;
 		const out: Record<string, UrlFilterValue> = {};
-		for (const key in this.schema) {
-			const field = this.schema[key];
+		for (const key in schema) {
+			const field = schema[key];
 			if (field.type === 'string[]') {
 				const all = params.getAll(key);
 				out[key] = all.length > 0 ? all : (field.defaultValue ?? []);
@@ -81,74 +103,11 @@ export class UseUrlFilters<TFilters extends UrlFiltersBase> {
 		return out as TFilters;
 	}
 
-	/**
-	 * Set a filter to a concrete value. Pass `undefined` (string) or
-	 * empty array (string[]) to clear.
-	 */
-	setFilter<K extends keyof TFilters & string>(key: K, value: TFilters[K]): void {
-		const next = this.cloneParams();
-		const field = this.schema[key];
-
-		if (field.type === 'string[]') {
-			next.delete(key);
-			if (isStringArray(value)) {
-				for (const v of value) {
-					if (v != null && v !== '') next.append(key, v);
-				}
-			}
-		} else {
-			if (value === undefined || value === null || value === '') {
-				next.delete(key);
-			} else {
-				next.set(key, String(value));
-			}
-		}
-
-		void this.commit(next);
-	}
-
-	/** Remove a filter (equivalent to setting it to undefined / empty). */
-	clearFilter<K extends keyof TFilters & string>(key: K): void {
-		const next = this.cloneParams();
-		next.delete(key);
-		void this.commit(next);
-	}
-
-	/** Clear all known filters; non-filter params (e.g. `?role=...`) are preserved. */
-	clearAll(): void {
-		const next = this.cloneParams();
-		for (const key in this.schema) {
-			next.delete(key);
-		}
-		void this.commit(next);
-	}
-
-	/**
-	 * Remove a single value from a multi-value filter (or fully clear
-	 * a scalar filter when the values match).
-	 */
-	clearValue<K extends keyof TFilters & string>(key: K, value: string): void {
-		const field = this.schema[key];
-		const next = this.cloneParams();
-		if (field.type === 'string[]') {
-			const remaining = next.getAll(key).filter((v) => v !== value);
-			next.delete(key);
-			for (const v of remaining) next.append(key, v);
-		} else {
-			if (next.get(key) === value) next.delete(key);
-		}
-		void this.commit(next);
-	}
-
-	/**
-	 * Chip projection — one chip per active value. Multi-value filters
-	 * expand to one chip per value so each is independently removable.
-	 */
-	get activeChips(): UrlFilterChip[] {
-		const f = this.filters;
+	function readChips(): UrlFilterChip[] {
+		const f = readFilters();
 		const chips: UrlFilterChip[] = [];
-		for (const key in this.schema) {
-			const field = this.schema[key];
+		for (const key in schema) {
+			const field = schema[key];
 			const value = f[key];
 			if (field.type === 'string[]' && isStringArray(value)) {
 				for (const v of value) {
@@ -163,20 +122,53 @@ export class UseUrlFilters<TFilters extends UrlFiltersBase> {
 		return chips;
 	}
 
-	/** True iff there is at least one non-default filter applied. */
-	get hasActive(): boolean {
-		return this.activeChips.length > 0;
-	}
-
-	// ── internal ───────────────────────────────────────────────────────
-
-	private cloneParams(): SvelteURLSearchParams {
-		return new SvelteURLSearchParams(page.url.searchParams.toString());
-	}
-
-	private commit(next: SvelteURLSearchParams): Promise<void> {
-		const qs = next.toString();
-		const target = qs.length > 0 ? `?${qs}` : page.url.pathname;
-		return goto(target, { keepFocus: true, replaceState: true, noScroll: true });
-	}
+	return {
+		schema,
+		get filters() {
+			return readFilters();
+		},
+		get activeChips() {
+			return readChips();
+		},
+		get hasActive() {
+			return readChips().length > 0;
+		},
+		setFilter(key, value) {
+			const next = cloneParams();
+			const field = schema[key];
+			if (field.type === 'string[]') {
+				next.delete(key);
+				if (isStringArray(value)) {
+					for (const v of value) if (v != null && v !== '') next.append(key, v);
+				}
+			} else if (value === undefined || value === null || value === '') {
+				next.delete(key);
+			} else {
+				next.set(key, String(value));
+			}
+			commit(next);
+		},
+		clearFilter(key) {
+			const next = cloneParams();
+			next.delete(key);
+			commit(next);
+		},
+		clearAll() {
+			const next = cloneParams();
+			for (const key in schema) next.delete(key);
+			commit(next);
+		},
+		clearValue(key, value) {
+			const field = schema[key];
+			const next = cloneParams();
+			if (field.type === 'string[]') {
+				const remaining = next.getAll(key).filter((v) => v !== value);
+				next.delete(key);
+				for (const v of remaining) next.append(key, v);
+			} else if (next.get(key) === value) {
+				next.delete(key);
+			}
+			commit(next);
+		}
+	};
 }

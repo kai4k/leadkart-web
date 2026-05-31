@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { SvelteURLSearchParams } from 'svelte/reactivity';
+	import type { ResolvedPathname } from '$app/types';
+	import { SvelteURL } from 'svelte/reactivity';
 	import { Avatar, Badge, DataTable, EmptyState } from '$ui';
 	import type { DataTableColumn } from '$ui';
 	import { Users, Search, Icon } from '$icons';
@@ -9,6 +10,7 @@
 	import { personDisplayName, personLifecycleBadge } from '$features/operator/people/view-models';
 	import type { PersonDto } from '$features/operator/people/types';
 	import { ApiError } from '$api/errors';
+	import { resolve } from '$app/paths';
 
 	const DEBOUNCE_MS = 300;
 
@@ -21,13 +23,13 @@
 		const value = (e.currentTarget as HTMLInputElement).value;
 		clearTimeout(debounceHandle);
 		debounceHandle = setTimeout(() => {
-			const next = new SvelteURLSearchParams(page.url.searchParams.toString());
-			if (value.trim()) {
-				next.set('q', value.trim());
-			} else {
-				next.delete('q');
-			}
-			goto(`?${next}`, { replaceState: true, keepFocus: true });
+			const url = new SvelteURL(page.url);
+			if (value.trim()) url.searchParams.set('q', value.trim());
+			else url.searchParams.delete('q');
+			void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
+				replaceState: true,
+				keepFocus: true
+			});
 		}, DEBOUNCE_MS);
 	}
 
@@ -75,7 +77,7 @@
 		<Avatar initials={personInitials(name)} size="md" />
 		<div class="stack stack-tight min-w-0">
 			<a
-				href="/operator/persons/{p.id}"
+				href={resolve(`/operator/persons/${p.id}`)}
 				class="text-fg hover:text-primary truncate font-medium hover:underline">{name}</a
 			>
 			<span class="caption text-fg-muted truncate">{p.email}</span>
@@ -108,7 +110,7 @@
 				placeholder="Search by email or name"
 				value={urlSearch}
 				oninput={onSearchInput}
-				class="glass-input w-full rounded-md py-2 ps-9 pe-3 text-sm"
+				class="bg-bg-elevated border border-border rounded-md w-full rounded-md py-2 ps-9 pe-3 text-sm"
 				aria-label="Search persons by email or name"
 			/>
 		</div>

@@ -36,7 +36,10 @@ jobs:
       - name: Vite build
         run: npm run build
 
-      - name: Bundle-size budget check
+      - name: Critical-path JS budget (Svelte canon — entry + sync chunks, ≤ 120 KB gz)
+        run: npm run size:critical
+
+      - name: Bundle informational metrics (CSS, total cacheable)
         run: npx size-limit
 
       - name: Upload build artifact for e2e shards

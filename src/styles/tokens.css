@@ -224,7 +224,7 @@
 
 	--color-fg: oklch(0.18 0.02 250); /* ≈ #0F172A */
 	--color-fg-muted: oklch(0.42 0.02 250); /* ≈ #475569 */
-	--color-fg-subtle: oklch(0.65 0.02 250); /* ≈ #94A3B8 */
+	--color-fg-subtle: oklch(0.5 0.02 250); /* ≈ #6B7280 — 4.6:1 vs white (WCAG AA small text) */
 	--color-fg-on-brand: oklch(1 0 0);
 
 	--color-border: oklch(0.9 0.01 245); /* ≈ #E2E8F0 */
@@ -627,5 +627,74 @@
 	   parent glass + this darken combine to read as "selected
 	   refraction" without competing with the active state's brand
 	   tint. */
-	--glass-pill-bg: color-mix(in srgb, var(--color-fg) 5%, transparent);
+	--bg-bg-muted-bg: color-mix(in srgb, var(--color-fg) 5%, transparent);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * SHADCN-CANON SEMANTIC TOKENS — Tailwind 4 two-block pattern.
+ *
+ * `:root` declares raw OKLCH values anchored to the LeadKart logo
+ * palette (see `--color-logo-*` above). `@theme inline` wires them as
+ * Tailwind color utilities (`bg-background`, `text-foreground`,
+ * `ring-ring`, etc.) per shadcn-svelte 2025+ canon.
+ *
+ * Anchors (from logo asset):
+ *   #502d81 wordmark purple   → --primary   (hue 296, L 0.34, C 0.14)
+ *   #0b3e8c navy supporting   → --accent    (hue 250, L 0.42, C 0.13)
+ *   #953fc9 highlight purple  → --ring      (hue 296, L 0.52, C 0.20)
+ *   #FF3B30 iOS red → medical → --destructive (hue 27, L 0.58, C 0.22)
+ *
+ * Domiex-style `--color-bg-*`, `--color-fg-*`, `--color-brand-*` etc.
+ * remain ABOVE this block during the migration. Phase 7 of the
+ * shadcn-svelte rebuild sweeps all consumer call sites to the new
+ * `text-foreground` / `bg-background` / `bg-primary` etc. names, then
+ * deletes the legacy tokens.
+ * ═══════════════════════════════════════════════════════════════════ */
+:root {
+	--background: oklch(0.99 0.005 296);
+	--foreground: oklch(0.18 0.02 296);
+	--card: oklch(1 0 0);
+	--card-foreground: var(--foreground);
+	--popover: var(--card);
+	--popover-foreground: var(--foreground);
+	--primary: oklch(0.34 0.14 296);
+	--primary-foreground: oklch(0.98 0.005 296);
+	--secondary: oklch(0.94 0.015 296);
+	--secondary-foreground: var(--foreground);
+	--muted: oklch(0.96 0.01 296);
+	--muted-foreground: oklch(0.5 0.02 296);
+	--accent: oklch(0.42 0.13 250);
+	--accent-foreground: oklch(0.98 0.005 296);
+	--destructive: oklch(0.58 0.22 27);
+	--destructive-foreground: oklch(0.98 0.005 296);
+	--border: oklch(0.92 0.01 296);
+	--input: oklch(0.94 0.005 296);
+	--ring: oklch(0.52 0.2 296);
+	--radius: 0.75rem;
+}
+
+@theme inline {
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-destructive-foreground: var(--destructive-foreground);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
 }

@@ -11,7 +11,7 @@ import { toast } from '$ui';
 import type { CreatePermissionRequest } from './schemas';
 import type { ListRole } from './api';
 
-export const permissionRequestsKeys = {
+const permissionRequestsKeys = {
 	all: ['permission-requests'] as const,
 	list: (role: ListRole = 'requester') => [...permissionRequestsKeys.all, 'list', role] as const,
 	detail: (id: string) => [...permissionRequestsKeys.all, 'detail', id] as const
@@ -38,7 +38,7 @@ export function createPermissionRequestMutation() {
 		mutationFn: (req: CreatePermissionRequest) => api.createPermissionRequest(req),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: permissionRequestsKeys.all });
-			toast('success', 'Request submitted');
+			toast.success('Request submitted');
 		}
 	}));
 }
@@ -50,7 +50,7 @@ export function approvePermissionRequestMutation() {
 			api.approvePermissionRequest(id, decision_reason ? { decision_reason } : {}),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: permissionRequestsKeys.all });
-			toast('success', 'Request approved');
+			toast.success('Request approved');
 		}
 	}));
 }
@@ -62,7 +62,7 @@ export function denyPermissionRequestMutation() {
 			api.denyPermissionRequest(id, { decision_reason }),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: permissionRequestsKeys.all });
-			toast('success', 'Request denied');
+			toast.success('Request denied');
 		}
 	}));
 }
@@ -73,7 +73,7 @@ export function cancelPermissionRequestMutation() {
 		mutationFn: (id: string) => api.cancelPermissionRequest(id),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: permissionRequestsKeys.all });
-			toast('success', 'Request cancelled');
+			toast.success('Request cancelled');
 		}
 	}));
 }

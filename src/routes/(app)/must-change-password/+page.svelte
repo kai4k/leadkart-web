@@ -1,85 +1,33 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { goto } from '$app/navigation';
-	import { page } from '$app/state';
-	import { z } from 'zod';
-	import { changePassword } from '$features/auth/api';
+	import { enhance } from '$app/forms';
 	import { Alert, Button, Card } from '$ui';
 	import { PasswordField } from '$lib/components/form';
-	import { AuthError, ValidationError, NetworkError } from '$api/errors';
+	import type { ActionData } from './$types';
 
 	/**
 	 * /must-change-password — forced password rotation per ADR 0053.
 	 *
-	 * Reached when the BFF login response carries `must_change_password=true`
-	 * (admin-invite passwords, expired credentials, force-rotate). The
-	 * dashboard sidebar isn't useful here — the user can't act on anything
-	 * else until they rotate. We surface only the form; the layout's
-	 * AppShell shows the standard chrome but the page itself is bounded.
-	 *
-	 * Flow:
-	 *   current + new + confirm → POST /v1/auth/change-password (authenticated;
-	 *   the access cookie from sign-in is in flight) → 204 → goto ?next=
-	 *   or /dashboard.
+	 * Reached when login returned `must_change_password=true`. The action
+	 * at +page.server.ts handles the rotation server-side; this component
+	 * is a pure renderer over the `form` prop.
 	 */
-
-	const schema = z.object({
-		current_password: z.string().min(1, $_('account.security.changePassword.currentPassword')),
-		new_password: z.string().min(12, $_('account.security.changePassword.newPasswordHint'))
-	});
-
-	let current = $state('');
-	let next = $state('');
-	let confirm = $state('');
-	let fieldErrors = $state<{ current?: string; new?: string; confirm?: string }>({});
-	let formError = $state<string | null>(null);
+	let { form }: { form: ActionData } = $props();
 	let loading = $state(false);
 
-	async function onSubmit(e: SubmitEvent) {
-		e.preventDefault();
-		formError = null;
-		fieldErrors = {};
+	const formErrorKey = $derived(
+		form && 'formErrorKey' in form && form.formErrorKey ? form.formErrorKey : null
+	);
+	const formError = $derived(formErrorKey ? $_(formErrorKey) : null);
 
-		if (next !== confirm) {
-			fieldErrors = { confirm: $_('account.security.changePassword.errors.mismatch') };
-			return;
-		}
-		const parsed = schema.safeParse({ current_password: current, new_password: next });
-		if (!parsed.success) {
-			const flat = parsed.error.flatten().fieldErrors;
-			fieldErrors = {
-				current: flat.current_password?.[0],
-				new: flat.new_password?.[0]
-			};
-			return;
-		}
-
-		loading = true;
-		try {
-			await changePassword(parsed.data);
-			const nextParam = page.url.searchParams.get('next');
-			const target = nextParam && nextParam.startsWith('/') ? nextParam : '/dashboard';
-			await goto(target);
-		} catch (err) {
-			if (err instanceof AuthError && err.status === 401) {
-				fieldErrors = { current: $_('account.security.changePassword.errors.incorrectCurrent') };
-			} else if (err instanceof ValidationError) {
-				if (err.code === 'password_breached') {
-					fieldErrors = { new: $_('auth.resetPassword.errors.breached') };
-				} else if (err.code === 'password_same') {
-					fieldErrors = { new: $_('auth.resetPassword.errors.same') };
-				} else {
-					fieldErrors = { new: $_('auth.resetPassword.errors.weak') };
-				}
-			} else if (err instanceof NetworkError) {
-				formError = 'Check your network connection and try again.';
-			} else {
-				formError = $_('auth.errors.unexpected');
-			}
-		} finally {
-			loading = false;
-		}
-	}
+	const fieldKeys = $derived<{ current?: string; new?: string; confirm?: string }>(
+		form && 'fieldKeys' in form && form.fieldKeys ? form.fieldKeys : {}
+	);
+	const fieldErrors = $derived({
+		current: fieldKeys.current ? $_(fieldKeys.current) : undefined,
+		new: fieldKeys.new ? $_(fieldKeys.new) : undefined,
+		confirm: fieldKeys.confirm ? $_(fieldKeys.confirm) : undefined
+	});
 </script>
 
 <svelte:head>
@@ -94,27 +42,38 @@
 
 	<Card.Root>
 		<Card.Content>
-			<form class="stack" onsubmit={onSubmit} novalidate>
+			<form
+				class="stack"
+				method="POST"
+				novalidate
+				use:enhance={() => {
+					loading = true;
+					return async ({ update }) => {
+						await update();
+						loading = false;
+					};
+				}}
+			>
 				<PasswordField
 					label={$_('account.security.changePassword.currentPassword')}
+					name="current_password"
 					autocomplete="current-password"
 					required
-					bind:value={current}
 					error={fieldErrors.current}
 				/>
 				<PasswordField
 					label={$_('account.security.changePassword.newPassword')}
+					name="new_password"
 					hint={$_('account.security.changePassword.newPasswordHint')}
 					autocomplete="new-password"
 					required
-					bind:value={next}
 					error={fieldErrors.new}
 				/>
 				<PasswordField
 					label={$_('account.security.changePassword.confirmPassword')}
+					name="confirm"
 					autocomplete="new-password"
 					required
-					bind:value={confirm}
 					error={fieldErrors.confirm}
 				/>
 				{#if formError}

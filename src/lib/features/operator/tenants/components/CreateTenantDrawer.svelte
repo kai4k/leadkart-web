@@ -5,6 +5,7 @@
 	import { registerTenantMutation } from '$features/operator/tenants/queries';
 	import { registerTenantRequestSchema } from '$features/operator/tenants/schemas';
 	import { useForm } from '$lib/hooks/use-form.svelte';
+	import { resolve } from '$app/paths';
 	import type { RegisterTenantResponse } from '$features/operator/tenants/types';
 
 	type Props = { open: boolean; onOpenChange: (open: boolean) => void };
@@ -147,7 +148,7 @@
 				</p>
 				<div class="cluster mt-4">
 					<Button variant="ghost" onclick={reset}>Register another</Button>
-					<a href="/operator/tenants/{credentials.slug}" class="label text-primary hover:underline"
+					<a href={resolve('/operator/tenants')} class="label text-primary hover:underline"
 						>View tenant →</a
 					>
 					<Button onclick={() => handleClose(false)}>Done</Button>

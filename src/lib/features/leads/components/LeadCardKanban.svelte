@@ -7,6 +7,7 @@
 	 * navigates to detail; the surrounding li handles drag.
 	 */
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Badge, StatusPill } from '$ui';
 	import type { CrmLeadDto } from '../schemas';
 	import {
@@ -27,7 +28,7 @@
 	const tempVariant = $derived(temperatureMeta(lead.temperature).variant);
 
 	function open() {
-		goto(`/leads/${lead.id}`);
+		goto(resolve(`/leads/${lead.id}`));
 	}
 </script>
 

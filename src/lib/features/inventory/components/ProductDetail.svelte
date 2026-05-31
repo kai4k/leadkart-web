@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Alert, Skeleton, Tabs, ConfirmDialog } from '$ui';
 	import { useUrlTab } from '$lib/hooks';
 	import { productDetailQuery, deleteProductMutation } from '$features/inventory/queries';
@@ -42,7 +43,7 @@
 		deleteMut.mutate(product.id, {
 			onSettled: () => {
 				confirmDeleteOpen = false;
-				goto('/inventory');
+				goto(resolve('/inventory'));
 			}
 		});
 	}

@@ -25,84 +25,17 @@
  */
 import { api, parseResponse } from '$api/client';
 import { ApiError, type ApiErrorBody } from '$api/errors';
-import {
-	loginRequestSchema,
-	userDtoSchema,
-	listSessionsResponseSchema,
-	capabilitiesSchema
-} from './schemas';
-import type { LoginRequest, UserDto, SessionDto, UpdateProfileRequest } from './types';
+import { userDtoSchema, listSessionsResponseSchema, capabilitiesSchema } from './schemas';
+import type { UserDto, SessionDto, UpdateProfileRequest } from './types';
 import { z } from 'zod';
 
 export type Capabilities = z.output<typeof capabilitiesSchema>;
 
-/**
- * Browser-visible login result. `must_change_password` is set when the
- * user's account requires a fresh password before any other operation
- * (ADR 0053: invite-issued passwords, expired credentials, admin force).
- * Caller redirects to /must-change-password when true.
- */
-export interface LoginResult {
-	ok: true;
-	must_change_password: boolean;
-}
-
-/**
- * Login error subclass — carries the Retry-After header from 423
- * responses so the signin form can render a countdown.
- */
-export class LoginError extends Error {
-	status: number;
-	code?: string;
-	retryAfterSeconds?: number;
-	constructor(message: string, status: number, code?: string, retryAfterSeconds?: number) {
-		super(message);
-		this.status = status;
-		this.code = code;
-		this.retryAfterSeconds = retryAfterSeconds;
-	}
-}
-
-/**
- * BFF login — POSTs credentials to /auth/login (SvelteKit BFF endpoint,
- * not Go directly). The BFF forwards to Go and sets httpOnly cookies.
- * Returns `{ ok, must_change_password }` on success; browser never sees
- * tokens.
- *
- * On 423 (account locked per ADR 0053), the BFF forwards Go's
- * Retry-After header — surfaced on the thrown LoginError so the form
- * can render "try again in N seconds".
- */
-export async function login(body: LoginRequest): Promise<LoginResult> {
-	loginRequestSchema.parse(body);
-
-	const raw = await fetch('/auth/login', {
-		method: 'POST',
-		headers: { 'content-type': 'application/json' },
-		credentials: 'same-origin',
-		body: JSON.stringify(body)
-	});
-	if (!raw.ok) {
-		const text = await raw.text();
-		let parsed: { code?: string; message?: string } = {};
-		try {
-			parsed = JSON.parse(text);
-		} catch {
-			/* non-JSON */
-		}
-		const retryAfterRaw = raw.headers.get('retry-after');
-		const retryAfterSeconds =
-			retryAfterRaw && !Number.isNaN(Number(retryAfterRaw)) ? Number(retryAfterRaw) : undefined;
-		throw new LoginError(
-			parsed.message ?? 'Login failed',
-			raw.status,
-			parsed.code,
-			retryAfterSeconds
-		);
-	}
-	const result = (await raw.json()) as { ok: true; must_change_password?: boolean };
-	return { ok: true, must_change_password: result.must_change_password ?? false };
-}
+// Login was migrated to a SvelteKit form action at
+// src/routes/(auth)/signin/+page.server.ts — per the "per-route shape"
+// principle (forms → form actions, lists → TanStack). The action runs
+// server-side, calls Go directly, sets cookies, and redirects in one
+// handler. No browser-facing login() function is needed.
 
 /**
  * BFF logout — POSTs to /auth/logout (BFF) which revokes server-side

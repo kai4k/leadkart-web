@@ -2,6 +2,8 @@
 	import type { Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import { goto, invalidateAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import type { ResolvedPathname } from '$app/types';
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { Badge, Breadcrumbs, Button } from '$ui';
 	import type { BreadcrumbItem } from '$ui';
@@ -17,7 +19,7 @@
 		{ label: tenant.display_name }
 	]);
 
-	const tabs = [
+	const tabs: ReadonlyArray<{ href: ResolvedPathname; label: string; icon: typeof Building2 }> = [
 		{ href: '/operator/scope/profile', label: 'Profile', icon: Building2 },
 		{ href: '/operator/scope/members', label: 'Members', icon: Users },
 		{ href: '/operator/scope/roles', label: 'Roles', icon: UserCog },
@@ -39,7 +41,7 @@
 		// Re-run server loads so capabilities + nav refresh under the
 		// non-scoped principal.
 		await invalidateAll();
-		goto('/operator/tenants', { replaceState: true });
+		goto(resolve('/operator/tenants'), { replaceState: true });
 	}
 </script>
 

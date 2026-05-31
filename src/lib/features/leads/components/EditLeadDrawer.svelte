@@ -217,7 +217,7 @@
 						bind:value={form.values.notes}
 						rows={4}
 						maxlength={4000}
-						class="glass-input w-full rounded-md px-3 py-2 text-sm"
+						class="bg-bg-elevated border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
 					></textarea>
 				</label>
 

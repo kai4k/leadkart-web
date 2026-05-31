@@ -26,7 +26,11 @@ const ALLOWED_PREFIXES = [
 	'src/lib/api/',
 	'src/routes/api/',
 	'src/hooks.server.ts',
-	'src/hooks.client.ts'
+	'src/hooks.client.ts',
+	// Service worker IS the platform fetch layer — caching strategies
+	// (CacheFirst, NetworkFirst, StaleWhileRevalidate) require direct
+	// fetch() against the original Request object.
+	'src/service-worker.ts'
 ];
 
 function isAllowed(rel) {
@@ -35,11 +39,19 @@ function isAllowed(rel) {
 	if (norm.endsWith('+server.ts')) return true;
 	if (norm.endsWith('+page.server.ts')) return true;
 	if (norm.endsWith('+layout.server.ts')) return true;
+	// Universal +page.ts loads may legitimately fetch — they run client
+	// or server depending on render context; SvelteKit's `event.fetch`
+	// IS the canonical load fetch path.
+	if (norm.endsWith('+page.ts')) return true;
+	if (norm.endsWith('+layout.ts')) return true;
 	// Feature gateway files (lib/features/<x>/api.ts and nested
 	// lib/features/<x>/<sub>/api.ts) ARE the gateway layer per
 	// CLAUDE.md rule 6 — they may legitimately use fetch() to hit
 	// SvelteKit BFF routes (which the typed $api/client doesn't cover).
 	if (/^src\/lib\/features\/[\w-]+(\/[\w-]+)*\/api\.ts$/.test(norm)) return true;
+	// Server-only BFF helpers — lib/server/* is server-side by SvelteKit
+	// convention; same auth model as the proxy (cookie → Bearer).
+	if (norm.startsWith('src/lib/server/')) return true;
 	// Auth session store legitimately calls fetch for logout (BFF endpoint).
 	if (norm === 'src/lib/features/auth/stores/session.svelte.ts') return true;
 	return false;

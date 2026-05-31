@@ -16,11 +16,75 @@ import { defineConfig } from 'vite';
  * every authenticated route. That bug landed once already; don't add
  * the proxy back. See `src/routes/api/[...path]/+server.ts` for the
  * full proxy chain.
+ *
+ * Manual chunk splitting (FAANG canon — Vercel/Linear/Stripe):
+ *   - `vendor-bits-form`: form-input compounds (Combobox / Calendar /
+ *     RangeCalendar / DatePicker / Select / PinInput) — only loaded on
+ *     form routes; signin + dashboard never pull these.
+ *   - `vendor-bits-data`: heavy data-surface compounds (Command /
+ *     Menubar / NavigationMenu / ContextMenu) — load on detail pages.
+ *   - default vendor: bits-ui core (Dialog / Tooltip / Dropdown /
+ *     Popover / Tabs / Accordion / Drawer / Sheet) used by AppShell on
+ *     every authenticated route — keep in the shared chunk.
+ *
+ * Why split: the previous single-chunk bits-ui payload pulled every
+ * compound on first paint even though only Dialog/Tooltip/Dropdown were
+ * needed for the AppShell. Splitting form + data compounds into deferred
+ * chunks moves ~40-50 KB gz out of the initial paint.
  */
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
 	server: {
 		port: 5173,
 		strictPort: true
+	},
+	build: {
+		rollupOptions: {
+			output: {
+				manualChunks(id) {
+					// bits-ui core (Dialog/Drawer/Dropdown/Tooltip) stays in the
+					// default shared chunk — AppShell + UserMenu need them every
+					// authenticated route. EVERYTHING else gets deferred.
+					if (id.includes('node_modules/bits-ui/dist/bits/')) {
+						// Form-input compounds — only loaded on form routes.
+						if (
+							/\/(combobox|calendar|range-calendar|date-picker|select|pin-input|date-field|date-range-field|time-field|slider|toggle|toggle-group|switch|checkbox|radio-group)\//.test(
+								id
+							)
+						) {
+							return 'vendor-bits-form';
+						}
+						// Heavy data-surface compounds — only on detail / feature pages.
+						if (
+							/\/(command|menubar|navigation-menu|context-menu|accordion|tabs|hover-card|sheet|alert-dialog|scroll-area|aspect-ratio|collapsible|popover|label|separator)\//.test(
+								id
+							)
+						) {
+							return 'vendor-bits-data';
+						}
+					}
+					// Zod is heavy (~26 KB gz) and only needed where gateway
+					// parseResponse runs — defer to its own chunk so initial paint
+					// pulls it only when a route actually fetches.
+					if (id.includes('node_modules/zod/')) {
+						return 'vendor-zod';
+					}
+					// formsnap + sveltekit-superforms — form stack, only used on
+					// form routes (auth, settings/account, settings/tenant).
+					if (
+						id.includes('node_modules/formsnap/') ||
+						id.includes('node_modules/sveltekit-superforms/')
+					) {
+						return 'vendor-forms';
+					}
+					// TanStack Query — used everywhere authenticated but is its own
+					// concern. Splitting it lets browsers cache it independently of
+					// app code that changes more often.
+					if (id.includes('node_modules/@tanstack/svelte-query/')) {
+						return 'vendor-tanstack';
+					}
+				}
+			}
+		}
 	}
 });

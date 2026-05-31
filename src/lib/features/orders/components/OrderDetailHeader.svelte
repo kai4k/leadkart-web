@@ -5,6 +5,7 @@
 	transitions that need extra input.
 -->
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { CopyButton } from '$ui';
 	import OrderActionButtons from './OrderActionButtons.svelte';
 	import OrderLifecycleStepper from './OrderLifecycleStepper.svelte';
@@ -32,7 +33,10 @@
 				</span>
 			</div>
 			<div class="cluster cluster-tight">
-				<a href={`/leads/${order.customer_lead_id}`} class="body-sm text-primary hover:underline">
+				<a
+					href={resolve(`/leads/${order.customer_lead_id}`)}
+					class="body-sm text-primary hover:underline"
+				>
 					{order.customer_name}
 				</a>
 				{#if order.customer_gst_number}

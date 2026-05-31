@@ -22,20 +22,18 @@ import type {
 	ApproveQuotationRequest,
 	BulkOrderActionRequest,
 	CancelOrderRequest,
-	CreateQuotationRequest,
 	DispatchRequest,
 	MarkDeliveredRequest,
 	MarkPackedRequest,
 	OrderDto,
 	RecordPaymentRequest,
-	ReviseQuotationRequest,
-	UpdateOrderRequest
+	ReviseQuotationRequest
 } from './schemas';
 import type { ListOrdersParams } from './api';
 
 // ── Query keys ───────────────────────────────────────────────────────
 
-export const ordersKeys = {
+const ordersKeys = {
 	all: ['orders'] as const,
 	lists: () => [...ordersKeys.all, 'list'] as const,
 	list: (params: ListOrdersParams) => [...ordersKeys.lists(), params] as const,
@@ -110,44 +108,6 @@ function syncCaches(qc: ReturnType<typeof useQueryClient>, order: OrderDto): voi
 	void qc.invalidateQueries({ queryKey: ordersKeys.lists() });
 }
 
-// ── CRUD ─────────────────────────────────────────────────────────────
-
-export function createQuotationMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: (req: CreateQuotationRequest) => api.createQuotation(req),
-		onSuccess: (order) => {
-			syncCaches(qc, order);
-			toast('success', `Quotation ${order.order_number} created`);
-		},
-		onError: () => toast('danger', 'Failed to create quotation')
-	}));
-}
-
-export function updateOrderMutation(id: string) {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: (req: UpdateOrderRequest) => api.updateOrder(id, req),
-		onSuccess: (order) => {
-			syncCaches(qc, order);
-			toast('success', 'Order updated');
-		},
-		onError: () => toast('danger', 'Failed to update order')
-	}));
-}
-
-export function deleteOrderMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: (id: string) => api.deleteOrder(id),
-		onSuccess: () => {
-			void qc.invalidateQueries({ queryKey: ordersKeys.lists() });
-			toast('success', 'Quotation deleted');
-		},
-		onError: () => toast('danger', 'Failed to delete quotation')
-	}));
-}
-
 // ── State transitions ───────────────────────────────────────────────
 
 export function reviseQuotationMutation(id: string) {
@@ -157,9 +117,9 @@ export function reviseQuotationMutation(id: string) {
 		onSuccess: (order) => {
 			syncCaches(qc, order);
 			void qc.invalidateQueries({ queryKey: ordersKeys.revisions(id) });
-			toast('success', 'Quotation revised');
+			toast.success('Quotation revised');
 		},
-		onError: () => toast('danger', 'Failed to revise quotation')
+		onError: () => toast.error('Failed to revise quotation')
 	}));
 }
 
@@ -169,9 +129,9 @@ export function approveQuotationMutation(id: string) {
 		mutationFn: (req: ApproveQuotationRequest = {}) => api.approveQuotation(id, req),
 		onSuccess: (order) => {
 			syncCaches(qc, order);
-			toast('success', 'Quotation approved');
+			toast.success('Quotation approved');
 		},
-		onError: () => toast('danger', 'Failed to approve quotation')
+		onError: () => toast.error('Failed to approve quotation')
 	}));
 }
 
@@ -186,9 +146,9 @@ export function recordPaymentMutation(id: string) {
 			void qc.invalidateQueries({ queryKey: ordersKeys.detail(id) });
 			void qc.invalidateQueries({ queryKey: ordersKeys.payments(id) });
 			void qc.invalidateQueries({ queryKey: ordersKeys.lists() });
-			toast('success', 'Payment recorded');
+			toast.success('Payment recorded');
 		},
-		onError: () => toast('danger', 'Failed to record payment')
+		onError: () => toast.error('Failed to record payment')
 	}));
 }
 
@@ -198,9 +158,9 @@ export function confirmOrderMutation(id: string) {
 		mutationFn: () => api.confirmOrder(id),
 		onSuccess: (order) => {
 			syncCaches(qc, order);
-			toast('success', 'Order confirmed');
+			toast.success('Order confirmed');
 		},
-		onError: () => toast('danger', 'Failed to confirm order')
+		onError: () => toast.error('Failed to confirm order')
 	}));
 }
 
@@ -210,9 +170,9 @@ export function markPackedMutation(id: string) {
 		mutationFn: (req: MarkPackedRequest) => api.markPacked(id, req),
 		onSuccess: (order) => {
 			syncCaches(qc, order);
-			toast('success', 'Order marked as packed');
+			toast.success('Order marked as packed');
 		},
-		onError: () => toast('danger', 'Failed to mark as packed')
+		onError: () => toast.error('Failed to mark as packed')
 	}));
 }
 
@@ -223,9 +183,9 @@ export function generateInvoiceMutation(id: string) {
 		onSuccess: (order) => {
 			syncCaches(qc, order);
 			void qc.invalidateQueries({ queryKey: ordersKeys.invoice(id) });
-			toast('success', 'Invoice generated');
+			toast.success('Invoice generated');
 		},
-		onError: () => toast('danger', 'Failed to generate invoice')
+		onError: () => toast.error('Failed to generate invoice')
 	}));
 }
 
@@ -235,9 +195,9 @@ export function dispatchOrderMutation(id: string) {
 		mutationFn: (req: DispatchRequest = {}) => api.dispatchOrder(id, req),
 		onSuccess: (order) => {
 			syncCaches(qc, order);
-			toast('success', 'Order dispatched');
+			toast.success('Order dispatched');
 		},
-		onError: () => toast('danger', 'Failed to dispatch order')
+		onError: () => toast.error('Failed to dispatch order')
 	}));
 }
 
@@ -247,9 +207,9 @@ export function markDeliveredMutation(id: string) {
 		mutationFn: (req: MarkDeliveredRequest = {}) => api.markDelivered(id, req),
 		onSuccess: (order) => {
 			syncCaches(qc, order);
-			toast('success', 'Order marked as delivered');
+			toast.success('Order marked as delivered');
 		},
-		onError: () => toast('danger', 'Failed to mark as delivered')
+		onError: () => toast.error('Failed to mark as delivered')
 	}));
 }
 
@@ -259,9 +219,9 @@ export function completeOrderMutation(id: string) {
 		mutationFn: () => api.completeOrder(id),
 		onSuccess: (order) => {
 			syncCaches(qc, order);
-			toast('success', 'Order complete');
+			toast.success('Order complete');
 		},
-		onError: () => toast('danger', 'Failed to complete order')
+		onError: () => toast.error('Failed to complete order')
 	}));
 }
 
@@ -273,9 +233,9 @@ export function cancelOrderMutation(id: string) {
 			syncCaches(qc, order);
 			void qc.invalidateQueries({ queryKey: ordersKeys.creditNotes(id) });
 			void qc.invalidateQueries({ queryKey: ordersKeys.invoice(id) });
-			toast('success', 'Order cancelled');
+			toast.success('Order cancelled');
 		},
-		onError: () => toast('danger', 'Failed to cancel order')
+		onError: () => toast.error('Failed to cancel order')
 	}));
 }
 
@@ -288,11 +248,11 @@ export function bulkOrderActionMutation() {
 		onSuccess: (res) => {
 			void qc.invalidateQueries({ queryKey: ordersKeys.lists() });
 			if (res.errors.length === 0) {
-				toast('success', `${res.affected} order${res.affected === 1 ? '' : 's'} updated`);
+				toast.success(`${res.affected} order${res.affected === 1 ? '' : 's'} updated`);
 			} else {
-				toast('warning', `${res.affected} updated, ${res.errors.length} failed`);
+				toast.warning(`${res.affected} updated, ${res.errors.length} failed`);
 			}
 		},
-		onError: () => toast('danger', 'Bulk action failed')
+		onError: () => toast.error('Bulk action failed')
 	}));
 }

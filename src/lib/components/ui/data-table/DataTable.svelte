@@ -57,18 +57,18 @@
 		 * they also pass a selection whose item shape matches.
 		 */
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		selection?: import('$lib/hooks').UseBulkSelection<any>;
+		selection?: import('$lib/hooks').BulkSelection<any>;
 		/**
 		 * Roving-tabindex keyboard nav store. When set, the table forwards
 		 * `onkeydown` / `onfocusin` / `onfocusout` from the `<tbody>` to
 		 * the nav store, sets `data-roving-root` on the table wrapper,
-		 * sets per-row `tabindex` via {@link UseKeyboardListNav.tabindexFor},
+		 * sets per-row `tabindex` via {@link KeyboardListNav.tabindexFor},
 		 * and registers each row's element under its `rowKey` so j/k/Home/
 		 * End move DOM focus. Pair with `nav.setItems(rows)` in a parent
 		 * `$effect`.
 		 */
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		nav?: import('$lib/hooks').UseKeyboardListNav<any>;
+		nav?: import('$lib/hooks').KeyboardListNav<any>;
 		/** Optional class on the wrapping element. */
 		class?: string;
 	};
@@ -78,7 +78,7 @@
 	import { Skeleton, EmptyState } from '$ui';
 	import { ChevronUp, ChevronDown, ChevronsUpDown, Icon } from '$icons';
 	import { cn } from '$lib/utils/cn';
-	import Alert from '../Alert.svelte';
+	import { Alert } from '../alert';
 
 	let {
 		columns,
@@ -163,7 +163,7 @@
 					{#each columns as col (col.id)}
 						<th
 							class={cn(
-								'text-fg-muted px-3 py-3 text-xs font-medium tracking-wide uppercase',
+								'text-fg-muted px-3 py-3 align-middle text-xs font-medium tracking-wide uppercase',
 								isSelectCol(col) && 'w-10',
 								getHideBreakpoint(col),
 								col.class
@@ -174,14 +174,14 @@
 							{/if}
 						</th>
 					{/each}
-					{#if rowActions}<th class="w-12"></th>{/if}
+					{#if rowActions}<th class="w-12 align-middle"></th>{/if}
 				</tr>
 			</thead>
 			<tbody>
 				{#each [0, 1, 2, 3, 4, 5] as i (i)}
 					<tr class="border-border border-b">
 						{#each columns as col (col.id)}
-							<td class={cn('px-3 py-3', getHideBreakpoint(col), col.class)}>
+							<td class={cn('px-3 py-3 align-middle', getHideBreakpoint(col), col.class)}>
 								{#if isSelectCol(col)}
 									<Skeleton class="h-4 w-4" />
 								{:else}
@@ -189,7 +189,7 @@
 								{/if}
 							</td>
 						{/each}
-						{#if rowActions}<td class="w-12"></td>{/if}
+						{#if rowActions}<td class="w-12 align-middle"></td>{/if}
 					</tr>
 				{/each}
 			</tbody>
@@ -211,7 +211,7 @@
 					{#each columns as col (col.id)}
 						<th
 							class={cn(
-								'text-fg-muted px-3 py-3 text-xs font-medium tracking-wide uppercase',
+								'text-fg-muted px-3 py-3 align-middle text-xs font-medium tracking-wide uppercase',
 								isSelectCol(col) && 'w-10',
 								getHideBreakpoint(col),
 								col.class
@@ -284,7 +284,7 @@
 							: undefined}
 					>
 						{#each columns as col (col.id)}
-							<td class={cn('px-3 py-3', getHideBreakpoint(col), col.class)}>
+							<td class={cn('px-3 py-3 align-middle', getHideBreakpoint(col), col.class)}>
 								{#if isSelectCol(col)}
 									{@const selectId = rowKey(row)}
 									<div
@@ -310,7 +310,11 @@
 							</td>
 						{/each}
 						{#if rowActions}
-							<td class="w-12 px-3 text-end" onclick={(e) => e.stopPropagation()} role="cell">
+							<td
+								class="w-12 px-3 text-end align-middle"
+								onclick={(e) => e.stopPropagation()}
+								role="cell"
+							>
 								{@render rowActions(row)}
 							</td>
 						{/if}

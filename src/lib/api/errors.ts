@@ -241,3 +241,6 @@ export function isApiError(value: unknown): value is ApiError {
 /** Sentinel codes used by client.ts (preserved for backward compat). */
 export const TRANSPORT_ERROR = 'transport';
 export const REFRESH_FAILED = 'auth.refresh_failed';
+
+/** Re-export the user-copy mapper so callers `import { getListErrorMessage } from '$api/errors'`. */
+export { getListErrorMessage } from './error-messages';

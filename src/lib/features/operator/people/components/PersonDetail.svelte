@@ -1,6 +1,10 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import { SvelteMap } from 'svelte/reactivity';
 	import { Alert, Avatar, Badge, Button, Card, CopyButton, Skeleton } from '$ui';
-	import { Pause, Play, UserMinus, Icon } from '$icons';
+	import { ArrowRight, Pause, Play, UserMinus, Icon } from '$icons';
+	import { tenantsListQuery } from '$features/operator/tenants/queries';
 	import {
 		personDetailQuery,
 		personMembershipsQuery,
@@ -30,7 +34,17 @@
 
 	const query = $derived(personDetailQuery(personId));
 	const membershipsQuery = $derived(personMembershipsQuery(personId));
+	const tenantsQuery = tenantsListQuery();
 	const liftMutation = liftGlobalSuspensionMutation();
+
+	type TenantSummary = { slug: string; display_name: string };
+	const tenantsById = $derived.by(() => {
+		const map = new SvelteMap<string, TenantSummary>();
+		for (const t of tenantsQuery.data?.tenants ?? []) {
+			map.set(t.id, { slug: t.slug, display_name: t.display_name });
+		}
+		return map;
+	});
 
 	const p = $derived(query.data ?? null);
 	const memberships = $derived(membershipsQuery.data?.memberships ?? []);
@@ -144,24 +158,57 @@
 						<table class="w-full text-sm">
 							<thead>
 								<tr class="border-border border-b">
-									<th class="caption text-fg-muted py-2 pe-4 text-start">Tenant ID</th>
+									<th class="caption text-fg-muted py-2 pe-4 text-start">Tenant</th>
 									<th class="caption text-fg-muted py-2 pe-4 text-start">Designation</th>
-									<th class="caption text-fg-muted py-2 text-start">Status</th>
+									<th class="caption text-fg-muted py-2 pe-4 text-start">Department</th>
+									<th class="caption text-fg-muted py-2 pe-4 text-start">Joined</th>
+									<th class="caption text-fg-muted py-2 pe-4 text-start">Status</th>
+									<th class="caption text-fg-muted py-2 text-end"></th>
 								</tr>
 							</thead>
 							<tbody>
 								{#each memberships as m (m.membership_id)}
-									<tr class="border-border border-b last:border-0">
+									{@const t = tenantsById.get(m.tenant_id)}
+									<tr class="border-border border-b align-middle last:border-0">
 										<td class="py-2 pe-4">
-											<code class="caption">{m.tenant_id}</code>
+											{#if t}
+												<div class="stack stack-tight">
+													<span class="text-fg font-medium">{t.display_name}</span>
+													<code class="caption text-fg-muted">{t.slug}</code>
+												</div>
+											{:else}
+												<code class="caption text-fg-muted">{m.tenant_id}</code>
+											{/if}
 										</td>
 										<td class="text-fg py-2 pe-4">{m.designation || '—'}</td>
-										<td class="py-2">
+										<td class="text-fg py-2 pe-4">{m.department || '—'}</td>
+										<td class="text-fg-muted py-2 pe-4 tabular-nums">
+											{new Date(m.joined_at).toLocaleDateString()}
+										</td>
+										<td class="py-2 pe-4">
 											<Badge
-												variant={m.status === 'active' ? 'success' : 'warning'}
+												variant={m.status === 'active'
+													? 'success'
+													: m.status === 'inactive'
+														? 'neutral'
+														: 'warning'}
 												appearance="soft"
-												size="sm">{m.status}</Badge
+												size="sm"
 											>
+												{m.status}
+											</Badge>
+										</td>
+										<td class="py-2 text-end">
+											{#if t}
+												<Button
+													variant="ghost"
+													size="sm"
+													onclick={() => goto(resolve(`/operator/tenants?q=${t.slug}`))}
+													aria-label={`Find tenant ${t.display_name}`}
+												>
+													<Icon icon={ArrowRight} size="sm" />
+												</Button>
+											{/if}
 										</td>
 									</tr>
 								{/each}

@@ -97,7 +97,7 @@
 	>
 		<div
 			class={cn(
-				'glass-input text-fg relative flex w-full items-center gap-1 px-3 py-2 pe-10',
+				'bg-bg-elevated border border-border rounded-md text-fg relative flex w-full items-center gap-1 px-3 py-2 pe-10',
 				'body-sm focus-within:ring-focus-ring focus-within:ring-2 focus-within:ring-offset-1',
 				'disabled:cursor-not-allowed disabled:opacity-60',
 				error && 'border-danger-500 focus-within:ring-danger-500'
@@ -151,7 +151,7 @@
 		<BitsDateRangePicker.Content
 			sideOffset={6}
 			class={cn(
-				'glass-card z-popover rounded-xl p-3',
+				'bg-bg-elevated border border-border rounded-xl shadow-card z-popover rounded-xl p-3',
 				'border border-[var(--glass-border-subtle)]',
 				'shadow-[var(--glass-shadow-sm)]',
 				'data-[state=open]:animate-pop-in data-[state=closed]:animate-fade-out'

@@ -23,7 +23,7 @@
  */
 import { QueryClient, QueryCache, MutationCache } from '@tanstack/svelte-query';
 import { ApiError, NetworkError, ServerError, AuthError } from './errors';
-import { toast } from '$lib/components/ui/Toaster.svelte';
+import { toast } from '$ui';
 
 function describeError(err: unknown): string {
 	if (err instanceof ApiError) return err.message;
@@ -36,7 +36,7 @@ export const queryClient = new QueryClient({
 			// Only surface background refetch failures — fresh-load errors
 			// are already rendered by the component via query.isError.
 			if (query.state.data !== undefined) {
-				toast('danger', `Couldn't refresh: ${describeError(error)}`);
+				toast.error(`Couldn't refresh: ${describeError(error)}`);
 			}
 		}
 	}),
@@ -49,7 +49,7 @@ export const queryClient = new QueryClient({
 			// so the user doesn't see "permission denied" before being kicked
 			// to /signin.
 			if (error instanceof AuthError && error.status === 401) return;
-			toast('danger', describeError(error));
+			toast.error(describeError(error));
 		}
 	}),
 	defaultOptions: {
