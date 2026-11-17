@@ -307,146 +307,113 @@ Lint failures from the `#lib` imports are fixed in Task 5. If lint blocks the co
 
 ---
 
-### Task 4: Semantic changes (handleError, service worker, 404 copy)
+### Task 4: Lock in the Kit 3 error and service-worker semantics with tests
+
+> Re-planned after Tasks 2 and 3. The `handleError` rewrite (kind-based `ClientCaughtError` input), the move from `$service-worker` to `src/service-worker/index.ts`, and the service-worker type-check gate all landed in 69a7bfd plus its fix commit, because Kit 3 wouldn't compile without them. This task adds the missing regression tests and verifies the built worker.
 
 **Files:**
 
-- Modify: `src/hooks.client.ts`
-- Modify: `src/service-worker.ts` → move to `src/service-worker/index.ts`, plus create `src/service-worker/tsconfig.json`
-- Modify: `scripts/arch/check-no-fetch-in-components.mjs` (service worker path)
-- Test: `tests/unit/hooks/handle-error.test.ts`
+- Test: `tests/unit/hooks/handle-error.test.ts` (create)
+- Test: `tests/unit/service-worker/precache.test.ts` (create; build-output check)
 
-**Interfaces:** `handleError` returns `App.Error` `{ message: string; status: number }`.
+**Interfaces:**
 
-- [ ] **Step 1: Write the failing test for `handleError`**
+- Consumes: `handleError` from `src/hooks.client.ts`. Its type is `HandleClientError` from `@sveltejs/kit/hooks`, with input `ClientCaughtError & { event }`, where `kind` is `'app' | 'framework' | 'unknown'`.
 
-Kit 3 now routes `error(404, 'Person not found')` through `handleError`. The current hook rewrites every 404 to "Page not found", which would hide domain messages.
+- [ ] **Step 1: Write the handleError tests**
 
 ```ts
 // tests/unit/hooks/handle-error.test.ts
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('#lib/i18n/index.js', () => ({ initI18n: () => {} }));
+vi.mock('#lib/i18n/index.ts', () => ({ initI18n: () => {} }));
 
 const { handleError } = await import('../../../src/hooks.client');
 
 const event = { url: new URL('http://x/leads/1') } as never;
 
-describe('handleError', () => {
-	it('keeps a domain 404 message thrown via error()', () => {
+describe('handleError (Kit 3 kind-based)', () => {
+	it('keeps app errors (error(404, "Person not found")) on Kit defaults', () => {
 		const out = handleError({
-			error: new Error('x'),
-			event,
-			status: 404,
-			message: 'Person not found'
-		});
-		expect(out).toEqual({ message: 'Person not found', status: 404 });
+			kind: 'app',
+			error: { status: 404, body: { message: 'Person not found' } },
+			event
+		} as never);
+		expect(out).toBeUndefined();
 	});
-	it('uses generic copy for a route-miss 404 (Kit default message)', () => {
-		const out = handleError({ error: new Error('x'), event, status: 404, message: 'Not Found' });
-		expect(out).toEqual({ message: 'Page not found', status: 404 });
-	});
-	it('hides 5xx detail', () => {
+
+	it('maps a framework 404 (route miss) to generic copy', () => {
 		const out = handleError({
-			error: new Error('db down'),
-			event,
-			status: 500,
-			message: 'Internal Error'
-		});
-		expect(out).toEqual({
-			message: 'Something went wrong on our end. Please try again.',
-			status: 500
-		});
+			kind: 'framework',
+			error: { status: 404, message: 'Not Found' },
+			event
+		} as never);
+		expect(out).toEqual({ message: 'Page not found' });
+	});
+
+	it('keeps a framework non-404 4xx message', () => {
+		const out = handleError({
+			kind: 'framework',
+			error: { status: 405, message: 'Method Not Allowed' },
+			event
+		} as never);
+		expect(out).toEqual({ message: 'Method Not Allowed' });
+	});
+
+	it('hides unknown error detail behind 5xx copy', () => {
+		const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const out = handleError({ kind: 'unknown', error: new Error('db down'), event } as never);
+		expect(out).toEqual({ message: 'Something went wrong on our end. Please try again.' });
+		spy.mockRestore();
 	});
 });
 ```
 
-- [ ] **Step 2: Run it and confirm it fails**
+Before writing this, compare the `error` object shapes for each `kind` against `node_modules/@sveltejs/kit/types/index.d.ts` (`CaughtError`, around line 1280). If a field name differs (for example `body` versus `message`), use the real shape and drop the `as never` cast where the types allow it.
 
-Run (PowerShell, `D:\`): `npx vitest run tests/unit/hooks/handle-error.test.ts`
+- [ ] **Step 2: Run the tests**
 
-Expected: FAIL. The domain message is replaced and `status` is missing.
+From PowerShell at `D:\`, run `npx vitest run tests/unit/hooks/handle-error.test.ts`.
 
-- [ ] **Step 3: Implement**
+Expected: 4 pass. The behaviour already exists, so these lock it in. **Prove each test can fail:** temporarily change `if (kind === 'app') return;` to `return {message:'x'}`, confirm the first test fails, then revert.
 
-Replace the body of `src/hooks.client.ts`:
-
-```ts
-/**
- * Client-side hooks. Initialises i18n on first paint and maps errors
- * reaching the route boundary to safe, user-facing copy.
- *
- * Kit 3: handleError receives errors thrown via `error()` too, and the
- * returned object must carry `status`. Domain 404s ("Person not found")
- * keep their message; only Kit's default route-miss message becomes
- * generic copy. 5xx never leaks internals.
- *
- * https://svelte.dev/docs/kit/hooks#shared-hooks-handleerror
- */
-import type { HandleClientError } from '@sveltejs/kit/hooks';
-import { initI18n } from '#lib/i18n/index.js';
-
-initI18n();
-
-const KIT_DEFAULT_404 = 'Not Found';
-
-export const handleError: HandleClientError = ({ error, event, status, message }) => {
-	console.error('[handleError]', { status, message, pathname: event.url?.pathname, error });
-
-	if (status >= 500) {
-		return { message: 'Something went wrong on our end. Please try again.', status };
-	}
-	if (status === 404 && message === KIT_DEFAULT_404) {
-		return { message: 'Page not found', status };
-	}
-	return { message, status };
-};
-```
-
-In `src/app.d.ts`, make sure `App.Error` is `interface Error { message: string; status: number }`.
-
-- [ ] **Step 4: Run it and confirm it passes**
-
-Run: `npx vitest run tests/unit/hooks/handle-error.test.ts`
-
-Expected: PASS, 3 tests.
-
-- [ ] **Step 5: Move the service worker off `$service-worker`**
-
-```bash
-mkdir -p src/service-worker && git mv src/service-worker.ts src/service-worker/index.ts
-```
-
-In `src/service-worker/index.ts`, replace `import { build, files, version } from '$service-worker';` with:
+- [ ] **Step 3: Write the service-worker precache test (checks the build output)**
 
 ```ts
-import { version } from '$app/env';
-import { immutable as build, assets as files } from '$app/manifest';
+// tests/unit/service-worker/precache.test.ts
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { describe, expect, it } from 'vitest';
+
+const sw = resolve(__dirname, '../../../build/client/service-worker.js');
+
+describe.skipIf(!existsSync(sw))('built service worker', () => {
+	it('precaches immutable app chunks', () => {
+		const src = readFileSync(sw, 'utf8');
+		expect(src).toMatch(/_app\/immutable\//);
+	});
+	it('does not reference the removed $service-worker module', () => {
+		expect(readFileSync(sw, 'utf8')).not.toContain('$service-worker');
+	});
+});
 ```
 
-Before relying on this mapping, confirm it against the guide's `$service-worker` section: in Kit 2, `build` was the immutable chunk list and `files` the static assets. If the guide names them differently, follow the guide.
-
-Create `src/service-worker/tsconfig.json`:
-
-```json
-{
-	"extends": "../../tsconfig.json",
-	"compilerOptions": { "lib": ["esnext", "webworker"], "types": [] },
-	"include": ["./**/*.ts"]
-}
-```
-
-In `scripts/arch/check-no-fetch-in-components.mjs`, change the hard-coded `src/service-worker.ts` to `src/service-worker/index.ts`. Check the service worker registration (`grep -rn "serviceWorker.register" src`) and pass `{ type: 'module' }` if the guide requires module registration.
-
-- [ ] **Step 6: Verify and commit**
+- [ ] **Step 4: Build, then run the test**
 
 ```bash
-npm run check && npm run build && ls build/client/service-worker.js
-git add -A
-git commit -m "fix(kit3): handleError keeps domain 404 copy + returns status; service worker off \$service-worker"
+npm run build
 ```
 
-Expected: the build emits `service-worker.js`.
+Then, from PowerShell, run `npx vitest run tests/unit/service-worker/precache.test.ts`.
+
+Expected: 2 pass (they skip only when no build exists).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add tests/unit/hooks tests/unit/service-worker
+git commit -m "test(kit3): lock kind-based handleError + built service-worker precache"
+```
 
 ---
 
