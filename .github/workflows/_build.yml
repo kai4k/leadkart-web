@@ -36,6 +36,9 @@ jobs:
       - name: Vite build
         run: npm run build
 
+      - name: Verify built service worker
+        run: npx vitest run tests/unit/service-worker
+
       - name: Critical-path JS budget (Svelte canon — entry + sync chunks, ≤ 120 KB gz)
         run: npm run size:critical
 

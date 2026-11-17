@@ -36,6 +36,7 @@ describe('handleError (Kit 3 kind-based)', () => {
 			event
 		});
 		expect(out).toEqual({ message: 'Page not found' });
+		expect(console.error).toHaveBeenCalledOnce();
 	});
 
 	it('keeps a framework non-404 4xx message', () => {
@@ -45,6 +46,17 @@ describe('handleError (Kit 3 kind-based)', () => {
 			event
 		});
 		expect(out).toEqual({ message: 'Method Not Allowed' });
+		expect(console.error).toHaveBeenCalledOnce();
+	});
+
+	it('maps a framework 500 to generic 5xx copy', () => {
+		const out = handleError({
+			kind: 'framework',
+			error: { status: 500, message: 'Internal Error' },
+			event
+		});
+		expect(out).toEqual({ message: 'Something went wrong on our end. Please try again.' });
+		expect(console.error).toHaveBeenCalledOnce();
 	});
 
 	it('hides unknown error detail behind 5xx copy', () => {
