@@ -123,7 +123,6 @@
 		"zod": "^4.4.3"
 	},
 	"imports": {
-		"#lib": "./src/lib/index.js",
 		"#lib/*": "./src/lib/*"
 	}
 }

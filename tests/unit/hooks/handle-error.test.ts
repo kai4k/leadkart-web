@@ -22,7 +22,7 @@ describe('handleError (Kit 3 kind-based)', () => {
 	it('keeps app errors (error(404, "Person not found")) on Kit defaults', () => {
 		const out = handleError({
 			kind: 'app',
-			error: { message: 'Person not found' },
+			error: { status: 404, message: 'Person not found' },
 			event
 		});
 		expect(out).toBeUndefined();

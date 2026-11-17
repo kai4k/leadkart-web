@@ -204,6 +204,14 @@ export default ts.config(
 				{
 					paths: [
 						{
+							name: '$app/environment',
+							message: 'Removed in SvelteKit 3 — use $app/env / $app/manifest'
+						},
+						{
+							name: '$service-worker',
+							message: 'Removed in SvelteKit 3 — use $app/env / $app/manifest'
+						},
+						{
 							name: '$app/stores',
 							message:
 								'$app/stores is deprecated since SvelteKit 2.59+ — use $app/state (page/navigating/updated) instead. CLAUDE.md banned-list.'
@@ -253,7 +261,7 @@ export default ts.config(
 					],
 					patterns: [
 						{
-							group: ['$features/*/*/*'],
+							group: ['$features/*/*/*', '#lib/features/*/*/*'],
 							message:
 								'Deep imports into feature internals are forbidden — import from the feature barrel ($features/<name>) only.'
 						}
@@ -425,6 +433,14 @@ export default ts.config(
 				{
 					paths: [
 						{
+							name: '$app/environment',
+							message: 'Removed in SvelteKit 3 — use $app/env / $app/manifest'
+						},
+						{
+							name: '$service-worker',
+							message: 'Removed in SvelteKit 3 — use $app/env / $app/manifest'
+						},
+						{
 							name: '@lucide/svelte',
 							message:
 								"Import icons from '$icons' (the registry) instead. Add new icons to src/lib/icons/index.ts."
@@ -467,6 +483,14 @@ export default ts.config(
 				'error',
 				{
 					paths: [
+						{
+							name: '$app/environment',
+							message: 'Removed in SvelteKit 3 — use $app/env / $app/manifest'
+						},
+						{
+							name: '$service-worker',
+							message: 'Removed in SvelteKit 3 — use $app/env / $app/manifest'
+						},
 						{
 							name: '$api/client',
 							message:
