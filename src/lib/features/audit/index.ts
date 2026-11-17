@@ -7,3 +7,5 @@
  */
 export * from './api';
 export * from './schemas';
+export * from './queries';
+export { default as ActivityTimeline } from './components/ActivityTimeline.svelte';

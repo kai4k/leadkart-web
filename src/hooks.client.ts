@@ -1,13 +1,13 @@
 import type { HandleClientError } from '@sveltejs/kit/hooks';
 
 /**
- * Client-side hooks per SvelteKit canon. Initialises i18n on first paint.
- * handleError captures unhandled errors at the route boundary and logs
- * them to the console in dev; in production this is the integration point
- * for an APM/error-tracking service (Sentry, etc.).
+ * Client-side hooks per SvelteKit 3 canon. Initialises i18n on first paint.
+ * handleError is kind-based: `app` (expected `error()`) errors keep the
+ * defaults; `framework` (404s etc.) and unexpected errors are logged and
+ * reshaped into a safe message for the nearest +error.svelte. In production
+ * this is the integration point for an APM/error-tracking service (Sentry).
  *
- * Server hooks are not used because adapter-static produces a pure SPA
- * bundle (no server runtime).
+ * Server-side auth/BFF hooks live in hooks.server.ts.
  *
  * https://svelte.dev/docs/kit/hooks#shared-hooks-handleerror
  */

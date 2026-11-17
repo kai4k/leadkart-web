@@ -20,20 +20,8 @@ import { defineConfig } from 'vite';
  * the proxy back. See `src/routes/api/[...path]/+server.ts` for the
  * full proxy chain.
  *
- * Manual chunk splitting (FAANG canon — Vercel/Linear/Stripe):
- *   - `vendor-bits-form`: form-input compounds (Combobox / Calendar /
- *     RangeCalendar / DatePicker / Select / PinInput) — only loaded on
- *     form routes; signin + dashboard never pull these.
- *   - `vendor-bits-data`: heavy data-surface compounds (Command /
- *     Menubar / NavigationMenu / ContextMenu) — load on detail pages.
- *   - default vendor: bits-ui core (Dialog / Tooltip / Dropdown /
- *     Popover / Tabs / Accordion / Drawer / Sheet) used by AppShell on
- *     every authenticated route — keep in the shared chunk.
- *
- * Why split: the previous single-chunk bits-ui payload pulled every
- * compound on first paint even though only Dialog/Tooltip/Dropdown were
- * needed for the AppShell. Splitting form + data compounds into deferred
- * chunks moves ~40-50 KB gz out of the initial paint.
+ * Chunking is left to Kit 3's `output.codeSplitting` (a custom `manualChunks`
+ * is ignored by rolldown there). Bundle size is informational (desktop-first).
  */
 export default defineConfig({
 	plugins: [
@@ -62,70 +50,19 @@ export default defineConfig({
 		})
 	],
 	resolve: {
-		alias: {
+		alias: [
+			// TODO: remove once Tailwind resolves tw-animate-css upstream.
 			// tw-animate-css exports its stylesheet under the `style` condition
-			// only. Kit 3's SSR build resolves app.css `@import`s without that
-			// condition (Tailwind's createResolver conditions are ignored for
-			// the ssr environment), so point the bare import at the file.
-			'tw-animate-css': fileURLToPath(
-				new URL('./node_modules/tw-animate-css/dist/tw-animate.css', import.meta.url)
-			)
-		}
-	},
-	server: { port: 5173, strictPort: true },
-	// Client-only: the serviceWorker environment (Kit 3) is built with
-	// `codeSplitting: false`, which rejects `output.manualChunks`.
-	environments: {
-		client: {
-			build: {
-				rollupOptions: {
-					output: {
-						manualChunks(id) {
-							// bits-ui core (Dialog/Drawer/Dropdown/Tooltip) stays in the
-							// default shared chunk — AppShell + UserMenu need them every
-							// authenticated route. EVERYTHING else gets deferred.
-							if (id.includes('node_modules/bits-ui/dist/bits/')) {
-								// Form-input compounds — only loaded on form routes.
-								if (
-									/\/(combobox|calendar|range-calendar|date-picker|select|pin-input|date-field|date-range-field|time-field|slider|toggle|toggle-group|switch|checkbox|radio-group)\//.test(
-										id
-									)
-								) {
-									return 'vendor-bits-form';
-								}
-								// Heavy data-surface compounds — only on detail / feature pages.
-								if (
-									/\/(command|menubar|navigation-menu|context-menu|accordion|tabs|hover-card|sheet|alert-dialog|scroll-area|aspect-ratio|collapsible|popover|label|separator)\//.test(
-										id
-									)
-								) {
-									return 'vendor-bits-data';
-								}
-							}
-							// Zod is heavy (~26 KB gz) and only needed where gateway
-							// parseResponse runs — defer to its own chunk so initial paint
-							// pulls it only when a route actually fetches.
-							if (id.includes('node_modules/zod/')) {
-								return 'vendor-zod';
-							}
-							// formsnap + sveltekit-superforms — form stack, only used on
-							// form routes (auth, settings/account, settings/tenant).
-							if (
-								id.includes('node_modules/formsnap/') ||
-								id.includes('node_modules/sveltekit-superforms/')
-							) {
-								return 'vendor-forms';
-							}
-							// TanStack Query — used everywhere authenticated but is its own
-							// concern. Splitting it lets browsers cache it independently of
-							// app code that changes more often.
-							if (id.includes('node_modules/@tanstack/svelte-query/')) {
-								return 'vendor-tanstack';
-							}
-						}
-					}
-				}
+			// only. Kit 3's SSR build could not resolve the bare app.css
+			// `@import` (Tailwind's resolver conditions are ignored for the ssr
+			// environment), so point the exact bare specifier at the file.
+			{
+				find: /^tw-animate-css$/,
+				replacement: fileURLToPath(
+					new URL('./node_modules/tw-animate-css/dist/tw-animate.css', import.meta.url)
+				)
 			}
-		}
-	}
+		]
+	},
+	server: { port: 5173, strictPort: true }
 });

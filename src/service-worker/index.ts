@@ -33,16 +33,21 @@
 import { self } from '$app/service-worker';
 import { version } from '$app/env';
 import { assets, immutable } from '$app/manifest';
-import { resolve } from '$app/paths';
-import type { Path } from '$app/types';
+import { asset, resolve } from '$app/paths';
 
 const CACHE_PREFIX = 'lk';
 const APP_SHELL_CACHE = `${CACHE_PREFIX}-shell-${version}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime-${version}`;
 const API_CACHE = `${CACHE_PREFIX}-api-${version}`;
 
+/** `immutable` paths are plain build-output strings, not typed routes. */
+const resolveBuildPath = resolve as (path: string) => string;
+
 /** Files to precache on install — built assets + bundled statics. */
-const APP_SHELL: string[] = [...immutable, ...assets].map(({ path }) => resolve(path as Path));
+const APP_SHELL: string[] = [
+	...immutable.map(({ path }) => resolveBuildPath(path)),
+	...assets.map(({ path }) => asset(path))
+];
 
 const API_TIMEOUT_MS = 10_000;
 

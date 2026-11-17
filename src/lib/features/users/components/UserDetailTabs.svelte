@@ -6,8 +6,7 @@
 	import { managerLabel, userRoleBadges, userStatusBadge } from '../view-models';
 	import { displayName, initials } from '$features/auth/view-models';
 	import { removeManagerMutation } from '../queries';
-	import { personActivityQuery } from '$features/audit/queries';
-	import ActivityTimeline from '$features/audit/components/ActivityTimeline.svelte';
+	import { personActivityQuery, ActivityTimeline } from '$features/audit';
 	import { ApiError } from '$api/errors';
 	import { resolve } from '$app/paths';
 

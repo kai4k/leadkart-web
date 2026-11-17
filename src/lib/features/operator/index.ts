@@ -8,4 +8,4 @@
  * (`$features/operator/scope`, `$features/operator/tenants`, …) rather
  * than from the top-level barrel.
  */
-export {};
+export { platformStatsQuery } from './dashboard/queries.ts';

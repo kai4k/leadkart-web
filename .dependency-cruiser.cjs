@@ -96,7 +96,7 @@ module.exports = {
 			to: {
 				path: '^src/lib/features/([^/]+)/',
 				pathNot:
-					'^src/lib/features/$1/|^src/lib/features/[^/]+/index\\.ts$|^src/lib/features/[^/]+/schemas\\.ts$|^src/lib/features/[^/]+/types\\.ts$|^src/lib/features/audit/(queries\\.ts|components/)|^src/lib/features/operator/dashboard/queries\\.ts$'
+					'^src/lib/features/$1/|^src/lib/features/[^/]+/index\\.ts$|^src/lib/features/[^/]+/schemas\\.ts$|^src/lib/features/[^/]+/types\\.ts$'
 			}
 		},
 		// ─── arch test #126-130 ────────────────────────────────

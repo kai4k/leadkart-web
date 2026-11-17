@@ -1,6 +1,6 @@
 {
 	"name": "leadkart-web",
-	"description": "LeadKart SaaS web frontend — Svelte 5 + SvelteKit 2 + Tailwind 4 SPA targeting the leadkart-go JSON API.",
+	"description": "LeadKart SaaS web frontend — Svelte 5 + SvelteKit 3 + Tailwind 4, adapter-node BFF targeting the leadkart-go JSON API.",
 	"private": true,
 	"version": "0.1.0",
 	"type": "module",
@@ -12,7 +12,7 @@
 		"build": "vite build",
 		"preview": "ORIGIN=http://localhost:4173 PORT=4173 node build/index.js",
 		"test:mock-server": "node tests/e2e/mock-server/server.mjs",
-		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && svelte-check --tsconfig ./src/service-worker/tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"format": "prettier --write .",
 		"lint": "prettier --check . && oxlint && eslint . --cache --cache-strategy content --concurrency=auto",

@@ -21,8 +21,7 @@
 	import type { PersonDto } from '$features/operator/people/types';
 	import GlobalSuspendDialog from './GlobalSuspendDialog.svelte';
 	import AnonymiseDialog from './AnonymiseDialog.svelte';
-	import { personActivityQuery } from '#lib/features/audit/queries.ts';
-	import ActivityTimeline from '#lib/features/audit/components/ActivityTimeline.svelte';
+	import { personActivityQuery, ActivityTimeline } from '#lib/features/audit/index.ts';
 	import { ApiError } from '$api/errors';
 
 	type Props = { personId: string };
