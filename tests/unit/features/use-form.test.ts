@@ -5,8 +5,8 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { useForm } from '$lib/hooks/use-form.svelte';
-import { NetworkError, ValidationError } from '$lib/api/errors';
+import { useForm } from '#lib/hooks/use-form.svelte.ts';
+import { NetworkError, ValidationError } from '#lib/api/errors.ts';
 
 const testSchema = z.object({
 	email: z.string().email('Invalid email'),

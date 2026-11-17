@@ -3,7 +3,7 @@
  * canonical `<FilterBar>`. Kept as a const so the page composition
  * stays declarative; the actual UI lives in `FilterBar`.
  */
-import type { FilterBarField } from '$lib/components/data';
+import type { FilterBarField } from '#lib/components/data/index.ts';
 import {
 	BUSINESS_TYPE_LABEL,
 	BUY_TIMELINE_LABEL,

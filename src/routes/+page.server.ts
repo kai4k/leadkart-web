@@ -3,7 +3,7 @@
  * signin if not. Runs server-side so it can check the httpOnly cookie.
  */
 import { redirect } from '@sveltejs/kit';
-import { ACCESS_COOKIE } from '$lib/server/cookies';
+import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = ({ cookies }) => {

@@ -19,7 +19,7 @@
 			await session.logout();
 		} catch {
 			/* ignore — BFF clears cookies regardless; navigate anyway */
-			await goto(resolve('/signin'));
+			await goto(resolve('signin'));
 		}
 	}
 
@@ -52,14 +52,14 @@
 			<p class="caption">Signed in as</p>
 			<p class="label truncate-1">{capsQuery.data?.email ?? '—'}</p>
 		</div>
-		<Dropdown.Item onSelect={() => goto(resolve('/settings/account/security'))}>
-			<Icon icon={User} size="sm" />
-			Account & Security
-		</Dropdown.Item>
-		<Dropdown.Item variant="danger" onSelect={handleSignOut}>
-			<Icon icon={LogOut} size="sm" />
-			Sign out
-		</Dropdown.Item>
+
+		<Dropdown.Item onSelect={() => goto(resolve('settings/account/security'))}
+			><Icon icon={User} size="sm" /> Account & Security</Dropdown.Item
+		>
+
+		<Dropdown.Item variant="danger" onSelect={handleSignOut}
+			><Icon icon={LogOut} size="sm" /> Sign out</Dropdown.Item
+		>
 	</Dropdown.Menu>
 </Dropdown.Root>
 

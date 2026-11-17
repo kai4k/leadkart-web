@@ -37,13 +37,9 @@
 		<Card.Footer>
 			<Button variant="primary" onclick={() => location.reload()}>Try again</Button>
 			{#if isAuthError}
-				<a href={resolve('/signin')}>
-					<Button variant="tonal">Sign in</Button>
-				</a>
+				<a href={resolve('signin')}><Button variant="tonal">Sign in</Button></a>
 			{:else}
-				<a href={resolve('/dashboard')}>
-					<Button variant="ghost">Back to dashboard</Button>
-				</a>
+				<a href={resolve('dashboard')}><Button variant="ghost">Back to dashboard</Button></a>
 			{/if}
 		</Card.Footer>
 	</Card.Root>

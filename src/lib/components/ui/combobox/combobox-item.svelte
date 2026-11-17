@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Combobox as ComboboxPrimitive } from 'bits-ui';
 	import { Check, Icon } from '$icons';
-	import { cn } from '$lib/utils/cn';
+	import { cn } from '#lib/utils/cn.ts';
 	let {
 		ref = $bindable(null),
 		class: className,

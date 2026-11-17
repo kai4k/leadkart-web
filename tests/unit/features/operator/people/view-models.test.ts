@@ -11,8 +11,8 @@ import {
 	canGloballySuspend,
 	canLiftSuspension,
 	canAnonymise
-} from '$lib/features/operator/people/view-models';
-import type { PersonDto } from '$lib/features/operator/people/types';
+} from '#lib/features/operator/people/view-models.ts';
+import type { PersonDto } from '#lib/features/operator/people/types.ts';
 
 // ---------------------------------------------------------------------------
 // Fixture factory — only fields consumed by view-models needed

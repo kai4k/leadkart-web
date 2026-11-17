@@ -17,8 +17,8 @@
 -->
 <script lang="ts">
 	import { Combobox as BitsCombobox } from 'bits-ui';
-	import { Check, ChevronDown, Icon } from '$lib/icons';
-	import { cn } from '$lib/utils/cn';
+	import { Check, ChevronDown, Icon } from '#lib/icons/index.ts';
+	import { cn } from '#lib/utils/cn.ts';
 
 	export interface ComboboxOption {
 		value: string;

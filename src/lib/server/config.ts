@@ -2,7 +2,7 @@
  * Validated server-side runtime configuration.
  *
  * One module owns env-var ingestion. Every server-side import touches
- * `config.X` here instead of reaching into `$env/dynamic/private` directly.
+ * `config.X` here instead of reaching into `$app/env/private` directly.
  *
  * Why this matters:
  *   - Boot-time validation: if a required var is missing or malformed,
@@ -17,13 +17,13 @@
  * Pattern reference: T3 env (create-t3-app), Stripe's internal config
  * loaders, Vercel's `process.env` validation pass at edge-function boot.
  *
- * The module is server-only (`$lib/server/*` is unreachable from
+ * The module is server-only (`#lib/server/*` is unreachable from
  * client bundles per SvelteKit's static analysis). Never import this
  * from a `.svelte` file or anything that ends up in the client graph.
  */
+import { GO_API_URL, NODE_ENV } from '$app/env/private';
 
-import { env } from '$env/dynamic/private';
-import { building } from '$app/environment';
+import { building } from '$app/env';
 import { z } from 'zod';
 
 const schema = z.object({
@@ -58,10 +58,8 @@ export type Config = z.infer<typeof schema>;
  * Zod error if it's missing; the build never depends on it.
  */
 function load(): Config {
-	const parsed = schema.safeParse({
-		GO_API_URL: env.GO_API_URL,
-		NODE_ENV: env.NODE_ENV
-	});
+	const parsed = schema.safeParse({ GO_API_URL, NODE_ENV });
+
 	if (!parsed.success) {
 		const issues = parsed.error.issues
 			.map((i) => `  - ${i.path.join('.')}: ${i.message}`)
@@ -92,7 +90,7 @@ export const config = new Proxy({} as Config, {
 		if (building) {
 			throw new Error(
 				`config.${String(key)} read during build — server config is runtime-only. ` +
-					`If you need a value at build time, use $env/static/private instead.`
+					`If you need a value at build time, use a static: true env var in src/env.ts instead.`
 			);
 		}
 		return get()[key as keyof Config];

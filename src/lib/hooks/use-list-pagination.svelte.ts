@@ -22,7 +22,7 @@
  *
  * Usage:
  *
- *   import { createListPagination } from '$lib/hooks';
+ *   import { createListPagination } from '#lib/hooks/index.ts';
  *
  *   const pagination = createListPagination(() => filtered, { pageSize: 10 });
  *
@@ -62,10 +62,10 @@ export function createListPagination<TItem>(
 	const paramKey = opts.paramKey ?? 'page';
 
 	function setPage(p: number): void {
-		const next = new SvelteURL(page.url);
+		const next = new SvelteURL(page.url.href);
 		if (p > 1) next.searchParams.set(paramKey, String(p));
 		else next.searchParams.delete(paramKey);
-		void goto(`${next.pathname}${next.search}` as ResolvedPathname, { replaceState: true });
+		void goto(`${next.pathname}${next.search}` as ResolvedPathname, { replace: true });
 	}
 
 	return {

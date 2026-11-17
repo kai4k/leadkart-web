@@ -15,16 +15,15 @@
  */
 
 import type { RequestHandler } from './$types';
-import { config } from '$lib/server/config';
-import { setAuthCookies } from '$lib/server/cookies';
-import { json } from '@sveltejs/kit';
+import { config } from '#lib/server/config.ts';
+import { setAuthCookies } from '#lib/server/cookies.ts';
 
 export const POST: RequestHandler = async (event) => {
 	let body: unknown;
 	try {
 		body = await event.request.json();
 	} catch {
-		return json(
+		return Response.json(
 			{ error: 'invalid_json', message: 'Request body must be valid JSON' },
 			{ status: 400 }
 		);
@@ -38,7 +37,7 @@ export const POST: RequestHandler = async (event) => {
 			body: JSON.stringify(body)
 		});
 	} catch {
-		return json(
+		return Response.json(
 			{ error: 'upstream_unavailable', message: 'Go API is unreachable' },
 			{ status: 502 }
 		);
@@ -64,5 +63,5 @@ export const POST: RequestHandler = async (event) => {
 	setAuthCookies(event.cookies, tokens.access_token, tokens.refresh_token);
 
 	// Browser sees only acknowledgement + the force-change hint.
-	return json({ ok: true, must_change_password: tokens.must_change_password ?? false });
+	return Response.json({ ok: true, must_change_password: tokens.must_change_password ?? false });
 };

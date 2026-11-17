@@ -20,7 +20,7 @@ vi.mock('$app/navigation', () => ({
 }));
 
 // Import AFTER the mocks are registered.
-import { useUrlTab } from '$lib/hooks/use-url-tab.svelte';
+import { useUrlTab } from '#lib/hooks/use-url-tab.svelte.ts';
 
 function setUrl(href: string): void {
 	pageState.url = new URL(href);
@@ -72,9 +72,8 @@ describe('useUrlTab.set', () => {
 		const tab = useUrlTab('items', ['items', 'payments']);
 		tab.set('payments');
 		expect(gotoSpy).toHaveBeenCalledWith('/orders/abc?tab=payments', {
-			replaceState: true,
-			keepFocus: true,
-			noScroll: true
+			replace: true,
+			reset: false
 		});
 	});
 
@@ -83,9 +82,8 @@ describe('useUrlTab.set', () => {
 		const tab = useUrlTab('items', ['items', 'payments']);
 		tab.set('items');
 		expect(gotoSpy).toHaveBeenCalledWith('/orders/abc', {
-			replaceState: true,
-			keepFocus: true,
-			noScroll: true
+			replace: true,
+			reset: false
 		});
 	});
 

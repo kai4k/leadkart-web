@@ -11,8 +11,8 @@ import {
 	formattedPincode,
 	tenantDisplayName,
 	tenantStatusBadge
-} from '$lib/features/tenant/view-models';
-import type { Tenant } from '$lib/features/tenant/types';
+} from '#lib/features/tenant/view-models.ts';
+import type { Tenant } from '#lib/features/tenant/types.ts';
 
 const BASE_TENANT: Tenant = {
 	id: 'tid-1',

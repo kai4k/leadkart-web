@@ -9,7 +9,7 @@
  * the wire-shape drift before the SPA fails to mount in production.
  */
 import { describe, expect, it } from 'vitest';
-import { decodeJwtPrincipal, JwtDecodeError } from '$lib/api/jwt';
+import { decodeJwtPrincipal, JwtDecodeError } from '#lib/api/jwt.ts';
 
 /**
  * Builds a fake JWT with the given payload object. Header + signature

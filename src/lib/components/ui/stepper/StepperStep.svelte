@@ -4,7 +4,7 @@
 
 <script lang="ts">
 	import { Check, AlertTriangle } from '$icons';
-	import { cn } from '$lib/utils/cn';
+	import { cn } from '#lib/utils/cn.ts';
 
 	type Props = {
 		index: number;

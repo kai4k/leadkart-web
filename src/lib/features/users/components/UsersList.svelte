@@ -27,8 +27,8 @@
 	import { displayName, initials } from '$features/auth/view-models';
 	import type { UserDto } from '$features/users/types';
 	import { getListErrorMessage } from '$api/errors';
-	import { createBulkSelection, createListPagination } from '$lib/hooks';
-	import { BulkActionBar, type BulkAction } from '$lib/components/data';
+	import { createBulkSelection, createListPagination } from '#lib/hooks/index.ts';
+	import { BulkActionBar, type BulkAction } from '#lib/components/data/index.ts';
 	import CreateUserDrawer from './CreateUserDrawer.svelte';
 	import DeactivateUserDialog from './DeactivateUserDialog.svelte';
 	import RoleAssignmentDrawer from './RoleAssignmentDrawer.svelte';
@@ -54,22 +54,22 @@
 	const statusFilter = $derived(page.url.searchParams.get('status') ?? 'all');
 
 	function setSearch(value: string) {
-		const url = new SvelteURL(page.url);
+		const url = new SvelteURL(page.url.href);
 		if (value) url.searchParams.set('q', value);
 		else url.searchParams.delete('q');
 		url.searchParams.delete('page');
 		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
-			replaceState: true,
-			keepFocus: true
+			replace: true,
+			reset: false
 		});
 	}
 
 	function setStatusFilter(value: string) {
-		const url = new SvelteURL(page.url);
+		const url = new SvelteURL(page.url.href);
 		if (value && value !== 'all') url.searchParams.set('status', value);
 		else url.searchParams.delete('status');
 		url.searchParams.delete('page');
-		void goto(`${url.pathname}${url.search}` as ResolvedPathname, { replaceState: true });
+		void goto(`${url.pathname}${url.search}` as ResolvedPathname, { replace: true });
 	}
 
 	const listQuery = usersListQuery();
@@ -318,12 +318,12 @@
 				oninput={(e) => setSearch((e.currentTarget as HTMLInputElement).value)}
 				class="bg-bg-elevated border border-border rounded-md w-64 rounded-md px-3 py-2 text-sm"
 			/>
-			<Button variant="tonal" onclick={() => goto(resolve('/settings/users/hierarchy'))}>
-				<Icon icon={Users} size="sm" /> Hierarchy
-			</Button>
-			<Button onclick={() => (createOpen = true)}>
-				<Icon icon={Plus} size="sm" /> Add member
-			</Button>
+
+			<Button variant="tonal" onclick={() => goto(resolve('settings/users/hierarchy'))}
+				><Icon icon={Users} size="sm" /> Hierarchy</Button
+			>
+
+			<Button onclick={() => (createOpen = true)}><Icon icon={Plus} size="sm" /> Add member</Button>
 		</div>
 	</header>
 
@@ -351,7 +351,7 @@
 		state={tableState}
 		error={listErrorCopy}
 		{selection}
-		onRowClick={(u) => goto(resolve(`/settings/users/${u.membership_id}`))}
+		onRowClick={(u) => goto(resolve('/(app)/settings/users/[id]', { id: u.membership_id }))}
 		{rowActions}
 	>
 		{#snippet emptyState()}
@@ -364,9 +364,9 @@
 			>
 				{#snippet action()}
 					{#if !search}
-						<Button onclick={() => (createOpen = true)}>
-							<Icon icon={UserPlus} size="sm" /> Add member
-						</Button>
+						<Button onclick={() => (createOpen = true)}
+							><Icon icon={UserPlus} size="sm" /> Add member</Button
+						>
 					{/if}
 				{/snippet}
 			</EmptyState>
@@ -383,6 +383,7 @@
 </div>
 
 <CreateUserDrawer bind:open={createOpen} onOpenChange={(o) => (createOpen = o)} />
+
 <DeactivateUserDialog
 	bind:open={deactivateOpen}
 	user={targetUser}

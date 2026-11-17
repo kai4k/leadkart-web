@@ -11,7 +11,7 @@
  */
 import { fail } from '@sveltejs/kit';
 import { z } from 'zod';
-import { goFetch, readGoError } from '$lib/server/go';
+import { goFetch, readGoError } from '#lib/server/go.ts';
 import { changePasswordSchema } from '$features/auth/schemas';
 import type { Actions } from './$types';
 

@@ -16,8 +16,8 @@
 <script lang="ts">
 	import { DateRangePicker as BitsDateRangePicker, type SegmentPart } from 'bits-ui';
 	import type { DateValue } from '@internationalized/date';
-	import { Calendar, ChevronLeft, ChevronRight, Icon } from '$lib/icons';
-	import { cn } from '$lib/utils/cn';
+	import { Calendar, ChevronLeft, ChevronRight, Icon } from '#lib/icons/index.ts';
+	import { cn } from '#lib/utils/cn.ts';
 
 	export type DateRange = {
 		start: DateValue | undefined;

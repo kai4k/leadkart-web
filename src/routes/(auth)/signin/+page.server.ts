@@ -16,8 +16,8 @@
  * Per ADR: docs/superpowers/specs/2026-05-20-bff-cookie-auth-adr.md
  */
 import { fail, redirect } from '@sveltejs/kit';
-import { config } from '$lib/server/config';
-import { setAuthCookies } from '$lib/server/cookies';
+import { config } from '#lib/server/config.ts';
+import { setAuthCookies } from '#lib/server/cookies.ts';
 import { loginRequestSchema } from '$features/auth/schemas';
 import type { Actions } from './$types';
 

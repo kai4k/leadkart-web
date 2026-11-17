@@ -11,7 +11,7 @@ import {
 	listPersonMembershipsResponseSchema,
 	globalSuspendRequestSchema,
 	anonymisePersonRequestSchema
-} from '$lib/features/operator/people/schemas';
+} from '#lib/features/operator/people/schemas.ts';
 
 // ---------------------------------------------------------------------------
 // Fixtures

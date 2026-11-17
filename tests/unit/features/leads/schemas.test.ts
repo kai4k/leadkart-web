@@ -23,7 +23,7 @@ import {
 	leadStageSchema,
 	leadTemperatureSchema,
 	callOutcomeSchema
-} from '$lib/features/leads/schemas';
+} from '#lib/features/leads/schemas.ts';
 
 const LEAD_ID = '00000000-0000-4000-8000-000000000001';
 const TENANT_ID = '00000000-0000-4000-8000-0000000000aa';

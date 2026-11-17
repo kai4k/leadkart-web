@@ -29,9 +29,9 @@ jobs:
           path: |
             node_modules/.vite
             .svelte-kit/output
-          key: vite-${{ runner.os }}-${{ hashFiles('package-lock.json', 'svelte.config.js', 'vite.config.ts') }}-${{ github.sha }}
+          key: vite-${{ runner.os }}-${{ hashFiles('package-lock.json', 'vite.config.ts') }}-${{ github.sha }}
           restore-keys: |
-            vite-${{ runner.os }}-${{ hashFiles('package-lock.json', 'svelte.config.js', 'vite.config.ts') }}-
+            vite-${{ runner.os }}-${{ hashFiles('package-lock.json', 'vite.config.ts') }}-
 
       - name: Vite build
         run: npm run build

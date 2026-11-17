@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Drawer, Button, Alert } from '$ui';
 	import { TextField, NumberInput, Combobox, RadioGroup, RadioItem } from '$form';
-	import { useForm } from '$lib/hooks/use-form.svelte';
+	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 	import {
 		categoriesQuery,
 		createProductMutation,

@@ -15,9 +15,9 @@
 	 * Polaris (Shopify), Carbon (IBM), Primer (GitHub). Without a styleguide,
 	 * variant a11y silently rots whenever a new variant ships under-tested.
 	 */
-	import { Button, Card, Alert } from '$lib/components/ui';
-	import { PRIMARY_COLORS, theme } from '$lib/hooks/use-theme.svelte';
-	import { Icon, Plus } from '$lib/icons';
+	import { Button, Card, Alert } from '#lib/components/ui/index.ts';
+	import { PRIMARY_COLORS, theme } from '#lib/hooks/use-theme.svelte.ts';
+	import { Icon, Plus } from '#lib/icons/index.ts';
 
 	const buttonVariants = [
 		'primary',

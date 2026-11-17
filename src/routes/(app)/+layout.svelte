@@ -5,7 +5,7 @@
 	import NavProgressBar from '$layouts/NavProgressBar.svelte';
 	import PwaStatusBar from '$layouts/PwaStatusBar.svelte';
 	import ImpersonationBanner from '$features/operator/impersonation/components/ImpersonationBanner.svelte';
-	import { queryClient } from '$lib/api/query-client';
+	import { queryClient } from '#lib/api/query-client.ts';
 	import { Toaster } from '$ui';
 
 	let { children } = $props();

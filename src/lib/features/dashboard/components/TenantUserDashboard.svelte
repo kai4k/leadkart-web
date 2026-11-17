@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { AlarmClock, ClipboardList, Icon, PhoneCall, UserPlus } from '$lib/icons';
+	import { AlarmClock, ClipboardList, Icon, PhoneCall, UserPlus } from '#lib/icons/index.ts';
 	import { Alert, Card } from '$ui';
 	import { myCapabilitiesQuery } from '$features/auth/queries';
 

@@ -15,8 +15,8 @@ import {
 	movementReasonLabel,
 	movementReasonAccent,
 	LOW_STOCK_THRESHOLD
-} from '$lib/features/inventory/view-models';
-import type { BatchDto } from '$lib/features/inventory/schemas';
+} from '#lib/features/inventory/view-models.ts';
+import type { BatchDto } from '#lib/features/inventory/schemas.ts';
 
 describe('stockLevel', () => {
 	it('out when total_quantity_available is 0', () => {

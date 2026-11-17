@@ -12,9 +12,9 @@
  */
 
 import { redirect, error } from '@sveltejs/kit';
-import { config } from '$lib/server/config';
-import { clearOperatorScope, getOperatorScope } from '$lib/server/scope';
-import { ACCESS_COOKIE } from '$lib/server/cookies';
+import { config } from '#lib/server/config.ts';
+import { clearOperatorScope, getOperatorScope } from '#lib/server/scope.ts';
+import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
 import type { LayoutServerLoad } from './$types';
 import type { TenantDto } from '$features/operator/tenants/types';
 

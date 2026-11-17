@@ -38,11 +38,11 @@
 	}
 </script>
 
-<script lang="ts" generics="TItem extends import('$lib/hooks').SelectableItem">
-	import type { BulkSelection } from '$lib/hooks';
+<script lang="ts" generics="TItem extends import('#lib/hooks/index.ts').SelectableItem">
+	import type { BulkSelection } from '#lib/hooks/index.ts';
 	import { Button, ConfirmDialog, Dropdown } from '$ui';
 	import { Icon, ChevronDown } from '$icons';
-	import { cn } from '$lib/utils/cn';
+	import { cn } from '#lib/utils/cn.ts';
 
 	/**
 	 * BulkActionBar — sticky bottom action bar that appears once the

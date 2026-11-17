@@ -16,7 +16,7 @@
 	import { Dialog, Button, Alert } from '$ui';
 	import { Combobox, type ComboboxOption } from '$form';
 	import { reassignLeadSchema } from '../schemas';
-	import { useForm } from '$lib/hooks/use-form.svelte';
+	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 	import { reassignLeadMutation } from '../queries';
 	import { membershipSearchQuery } from '$features/users/queries';
 

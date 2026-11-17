@@ -11,17 +11,16 @@
  */
 
 import type { RequestHandler } from './$types';
-import { config } from '$lib/server/config';
-import { clearAuthCookies } from '$lib/server/cookies';
-import { clearOperatorScope } from '$lib/server/scope';
-import { timingSafeEqualString } from '$lib/server/csrf';
-import { json } from '@sveltejs/kit';
+import { config } from '#lib/server/config.ts';
+import { clearAuthCookies } from '#lib/server/cookies.ts';
+import { clearOperatorScope } from '#lib/server/scope.ts';
+import { timingSafeEqualString } from '#lib/server/csrf.ts';
 
 export const POST: RequestHandler = async (event) => {
 	const headerCsrf = event.request.headers.get('x-csrf-token');
 	const cookieCsrf = event.cookies.get('lk_csrf');
 	if (!headerCsrf || !cookieCsrf || !timingSafeEqualString(headerCsrf, cookieCsrf)) {
-		return json({ error: 'csrf_mismatch' }, { status: 403 });
+		return Response.json({ error: 'csrf_mismatch' }, { status: 403 });
 	}
 
 	const refresh = event.cookies.get('lk_refresh');
@@ -38,5 +37,5 @@ export const POST: RequestHandler = async (event) => {
 	clearAuthCookies(event.cookies);
 	clearOperatorScope(event.cookies);
 
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

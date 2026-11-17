@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { TextField } from '$lib/components/form';
+	import { TextField } from '#lib/components/form/index.ts';
 	import { Alert, Button } from '$ui';
 	import { displayName } from '$features/auth/view-models';
 	import type { UserDto } from '$features/auth/types';

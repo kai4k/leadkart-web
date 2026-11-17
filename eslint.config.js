@@ -5,7 +5,6 @@ import svelte from 'eslint-plugin-svelte';
 import globals from 'globals';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript-eslint';
-import svelteConfig from './svelte.config.js';
 
 const gitignorePath = fileURLToPath(new URL('./.gitignore', import.meta.url));
 
@@ -104,7 +103,7 @@ export default ts.config(
 			// ─── Console / debugging discipline ─────────────────────
 			// Rule 61: only `warn` + `error` permitted in production code;
 			// `log` / `debug` / `info` are dev-only and route through
-			// `$lib/utils/logger.ts` (when added).
+			// `#lib/utils/logger.ts` (when added).
 			'no-console': ['error', { allow: ['warn', 'error'] }],
 			'no-debugger': 'error',
 			'no-alert': 'error',
@@ -118,8 +117,7 @@ export default ts.config(
 				'error',
 				{
 					name: 'process',
-					message:
-						'Use $env/static/public or $env/dynamic/public — process.env reads break SSR + tree-shaking.'
+					message: 'Use $app/env/public — process.env reads break SSR + tree-shaking.'
 				}
 			],
 
@@ -182,8 +180,7 @@ export default ts.config(
 				'error',
 				{
 					selector: "MemberExpression[object.name='process'][property.name='env']",
-					message:
-						'process.env is forbidden — use $env/static/public / $env/dynamic/public per SvelteKit canon.'
+					message: 'process.env is forbidden — use $app/env/public per SvelteKit canon.'
 				},
 				{
 					// Rule 35: `instanceof Error` is too broad — use ApiError subclass.
@@ -288,7 +285,6 @@ export default ts.config(
 			parserOptions: {
 				extraFileExtensions: ['.svelte'],
 				parser: ts.parser,
-				svelteConfig,
 				projectService: true,
 				tsconfigRootDir: import.meta.dirname
 			}
@@ -341,7 +337,7 @@ export default ts.config(
 			// the body happens to be synchronous (re-throws, return-data).
 			'@typescript-eslint/require-await': 'off',
 			// import() type annotations come up in generics= attrs:
-			// `<script lang="ts" generics="T extends import('$lib/hooks').Foo">`.
+			// `<script lang="ts" generics="T extends import('#lib/hooks').Foo">`.
 			// Canonical Svelte 5 syntax; the rule's "import type" fix
 			// doesn't apply to inline generics.
 			'@typescript-eslint/consistent-type-imports': 'off'
@@ -383,7 +379,7 @@ export default ts.config(
 	//   1. `*.config.{ts,js,mjs,cjs}`     — vite.config.ts, vitest.config.ts, …
 	//   2. `.dotfile.{cjs,mjs,js}`        — .stylelintrc.cjs, .dependency-cruiser.cjs, …
 	//   3. `scripts/**/*.{ts,js,mjs,cjs}` — scripts/arch/*, scripts/strip-zodios.mjs
-	//   4. named configs (svelte.config.js, playwright.config.*, …)
+	//   4. named configs (vite.config.ts, playwright.config.*, …)
 	//
 	// We do NOT match `.lintstagedrc.*` here (that's a JSON file in this
 	// repo; ESLint doesn't lint JSON, and matching it would force the
@@ -395,7 +391,6 @@ export default ts.config(
 			'.dependency-cruiser.cjs',
 			'.stylelintrc.cjs',
 			'scripts/**/*.{ts,js,mjs,cjs}',
-			'svelte.config.js',
 			'playwright.config.*',
 			'vitest.config.*',
 			'vite.config.*',
@@ -512,7 +507,7 @@ export default ts.config(
 			// Service worker IS the platform fetch layer — caching
 			// strategies (CacheFirst, NetworkFirst, StaleWhileRevalidate)
 			// require direct fetch() against the original Request.
-			'src/service-worker.ts',
+			'src/service-worker/index.ts',
 			// Server-only BFF helpers (lib/server/*) — cookie → Bearer
 			// auth model, called from action handlers + server loads.
 			'src/lib/server/**'

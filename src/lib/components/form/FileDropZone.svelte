@@ -12,8 +12,8 @@
 </script>
 
 <script lang="ts">
-	import { Icon, UploadCloud, X } from '$lib/icons';
-	import { cn } from '$lib/utils/cn';
+	import { Icon, UploadCloud, X } from '#lib/icons/index.ts';
+	import { cn } from '#lib/utils/cn.ts';
 
 	type Props = {
 		value: File | File[] | null;

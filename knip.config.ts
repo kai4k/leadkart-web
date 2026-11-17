@@ -78,7 +78,6 @@ const config: KnipConfig = {
 		'storybook',
 		'@storybook/svelte',
 		'@storybook/sveltekit',
-		'@storybook/addon-essentials',
 		// oxlint — invoked by name via npm scripts + npx, knip doesn't see the call site
 		'oxlint',
 		// Tailwind 4 — consumed via @tailwindcss/vite plugin + `@import 'tailwindcss'` in app.css

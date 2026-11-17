@@ -58,7 +58,7 @@ function collectStaticChain(entryKey, visited = new Set()) {
 	return visited;
 }
 
-const entryKey = '.svelte-kit/generated/client-optimized/app.js';
+const entryKey = '.svelte-kit/generated/build/client-optimized/app.js';
 const chain = collectStaticChain(entryKey);
 
 const files = [];

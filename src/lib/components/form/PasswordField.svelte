@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { HTMLInputAttributes } from 'svelte/elements';
-	import { Eye, EyeOff, Icon } from '$lib/icons';
+	import { Eye, EyeOff, Icon } from '#lib/icons/index.ts';
 	import TextField from './TextField.svelte';
 
 	/**

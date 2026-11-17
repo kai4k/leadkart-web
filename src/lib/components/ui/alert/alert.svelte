@@ -20,8 +20,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import { AlertCircle, CheckCircle2, Icon, Info, XCircle } from '$lib/icons';
-	import { cn, type WithElementRef } from '$lib/utils/cn';
+	import { AlertCircle, CheckCircle2, Icon, Info, XCircle } from '#lib/icons/index.ts';
+	import { cn, type WithElementRef } from '#lib/utils/cn.ts';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>> &
 		AlertVariants & {

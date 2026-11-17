@@ -14,7 +14,7 @@
  */
 
 import type { ResolvedPathname } from '$app/types';
-import { PLATFORM_NAV, TENANT_ADMIN_NAV, TENANT_USER_NAV, type NavItem } from '$lib/config/nav';
+import { PLATFORM_NAV, TENANT_ADMIN_NAV, TENANT_USER_NAV, type NavItem } from '#lib/config/nav.ts';
 
 const ALL_ITEMS = [...PLATFORM_NAV, ...TENANT_ADMIN_NAV, ...TENANT_USER_NAV].flatMap(
 	(s) => s.items

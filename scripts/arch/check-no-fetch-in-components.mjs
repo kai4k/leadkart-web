@@ -30,7 +30,7 @@ const ALLOWED_PREFIXES = [
 	// Service worker IS the platform fetch layer — caching strategies
 	// (CacheFirst, NetworkFirst, StaleWhileRevalidate) require direct
 	// fetch() against the original Request object.
-	'src/service-worker.ts'
+	'src/service-worker/index.ts'
 ];
 
 function isAllowed(rel) {

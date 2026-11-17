@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Drawer, Button, Alert } from '$ui';
 	import { TextField, NumberInput } from '$form';
-	import { useForm } from '$lib/hooks/use-form.svelte';
+	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 	import { addBatchMutation } from '$features/inventory/queries';
 	import { createBatchRequestSchema, type CreateBatchRequest } from '$features/inventory/schemas';
 	import { Icon, X } from '$icons';

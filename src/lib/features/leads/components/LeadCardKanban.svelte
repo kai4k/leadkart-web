@@ -28,7 +28,7 @@
 	const tempVariant = $derived(temperatureMeta(lead.temperature).variant);
 
 	function open() {
-		goto(resolve(`/leads/${lead.id}`));
+		goto(resolve('/(app)/leads/[id]', { id: lead.id }));
 	}
 </script>
 

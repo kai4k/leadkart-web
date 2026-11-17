@@ -16,7 +16,7 @@ import {
 	bulkUploadResultSchema,
 	gstDefaultsResponseSchema,
 	computedPricesResponseSchema
-} from '$lib/features/inventory/schemas';
+} from '#lib/features/inventory/schemas.ts';
 
 describe('hsnCodeSchema', () => {
 	it('accepts 4 to 8 digits', () => {

@@ -2,14 +2,14 @@
  * Composition primitives for data-heavy pages.
  *
  * These primitives compose the `$ui` namespace's atoms (Button,
- * Drawer, Dialog, etc.) with the hooks under `$lib/hooks` so that
+ * Drawer, Dialog, etc.) with the hooks under `#lib/hooks/index.ts` so that
  * each feature's list page reduces to ~200 lines of declarative
  * config rather than 800 lines of hand-rolled wiring.
  *
  * Usage:
- *   import * as Data from '$lib/components/data';
+ *   import * as Data from '#lib/components/data/index.ts';
  *   // or named:
- *   import { ResourceListPage, FilterBar } from '$lib/components/data';
+ *   import { ResourceListPage, FilterBar } from '#lib/components/data/index.ts';
  */
 export { default as Toolbar } from './Toolbar.svelte';
 export { default as FilterBar } from './FilterBar.svelte';

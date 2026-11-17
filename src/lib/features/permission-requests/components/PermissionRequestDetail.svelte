@@ -55,7 +55,7 @@
 
 <div class="stack stack-relaxed">
 	<a
-		href={resolve('/permission-requests')}
+		href={resolve('permission-requests')}
 		class="cluster cluster-tight text-fg-muted hover:text-fg caption inline-flex"
 	>
 		<Icon icon={ChevronLeft} size="xs" /> Back to requests

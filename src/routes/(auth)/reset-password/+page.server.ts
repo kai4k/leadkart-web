@@ -14,7 +14,7 @@
  */
 import { fail } from '@sveltejs/kit';
 import { z } from 'zod';
-import { config } from '$lib/server/config';
+import { config } from '#lib/server/config.ts';
 import type { Actions } from './$types';
 
 const newPasswordSchema = z.string().min(12);

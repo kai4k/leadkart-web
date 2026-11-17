@@ -9,7 +9,7 @@ import type {
 	assignManagerRequestSchema
 } from './schemas';
 
-export type { UserDto } from '$lib/features/auth/types';
+export type { UserDto } from '#lib/features/auth/types.ts';
 
 export type ListUsersResponse = z.output<typeof listUsersResponseSchema>;
 export type CreateUserRequest = z.output<typeof createUserRequestSchema>;
@@ -20,4 +20,4 @@ export type ReplacePermissionOverridesRequest = z.output<
 	typeof replacePermissionOverridesRequestSchema
 >;
 export type AssignManagerRequest = z.output<typeof assignManagerRequestSchema>;
-export type { RoleDto, ListRolesResponse } from '$lib/features/roles/types';
+export type { RoleDto, ListRolesResponse } from '#lib/features/roles/types.ts';

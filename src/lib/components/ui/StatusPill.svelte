@@ -68,8 +68,8 @@
 </script>
 
 <script lang="ts">
-	import { Check, ChevronDown, Icon } from '$lib/icons';
-	import { cn } from '$lib/utils/cn';
+	import { Check, ChevronDown, Icon } from '#lib/icons/index.ts';
+	import { cn } from '#lib/utils/cn.ts';
 	import { Badge } from './badge';
 	import * as Dropdown from './dropdown-menu';
 

@@ -9,12 +9,12 @@
 		UserCheck,
 		UserCog,
 		Users
-	} from '$lib/icons';
+	} from '#lib/icons/index.ts';
 	import { Alert, Card, Spinner } from '$ui';
 	import { myCapabilitiesQuery } from '$features/auth/queries';
 	import { deriveTier } from '$features/auth/capabilities';
 	import { ApiError } from '$api/errors';
-	import { platformStatsQuery } from '$lib/features/operator/dashboard/queries';
+	import { platformStatsQuery } from '#lib/features/operator/dashboard/queries.ts';
 
 	/**
 	 * Platform-tier dashboard.

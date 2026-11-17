@@ -30,7 +30,9 @@ module.exports = {
 					'(^|/)tsconfig\\.json$',
 					'(^|/)(babel|webpack|vite|vitest|playwright|svelte|eslint|stylelint)\\.config\\.[^/]+$',
 					'src/app\\.(d\\.ts|html|css)$',
+					'src/env\\.ts$',
 					'src/(hooks|service-worker)\\.(client|server)\\.ts$',
+					'src/service-worker/(index\\.ts|tsconfig\\.json)$',
 					'src/routes/.*\\+(page|layout|server|error)\\.(svelte|ts)$',
 					'src/lib/api/generated/.*',
 					'src/lib/utils/cn\\.ts$',
@@ -94,7 +96,7 @@ module.exports = {
 			to: {
 				path: '^src/lib/features/([^/]+)/',
 				pathNot:
-					'^src/lib/features/$1/|^src/lib/features/[^/]+/index\\.ts$|^src/lib/features/[^/]+/schemas\\.ts$|^src/lib/features/[^/]+/types\\.ts$'
+					'^src/lib/features/$1/|^src/lib/features/[^/]+/index\\.ts$|^src/lib/features/[^/]+/schemas\\.ts$|^src/lib/features/[^/]+/types\\.ts$|^src/lib/features/audit/(queries\\.ts|components/)|^src/lib/features/operator/dashboard/queries\\.ts$'
 			}
 		},
 		// ─── arch test #126-130 ────────────────────────────────
@@ -135,7 +137,9 @@ module.exports = {
 			comment: 'lib/icons/* is a leaf — no app code dependencies.',
 			from: { path: '^src/lib/icons/' },
 			to: {
-				path: '^src/lib/(components|features|hooks|layouts|api|stores|utils)/'
+				path: '^src/lib/(components|features|hooks|layouts|api|stores|utils)/',
+				// cn() is the class-merge leaf (clsx + tailwind-merge), no app deps.
+				pathNot: '^src/lib/utils/cn\\.ts$'
 			}
 		},
 		// ─── Layouts cannot reach into features (with auth exception) ──

@@ -13,17 +13,15 @@
 	 * and an aria-label so screen readers don't traverse into a phantom
 	 * subtree.
 	 */
-	type Props = {
-		node: OrgNode;
-	};
-	let { node }: Props = $props();
+	type Props = { node: OrgNode };
 
+	let { node }: Props = $props();
 	const status = $derived(userStatusBadge(node.user.status));
 </script>
 
 <li class="relative">
 	<a
-		href={resolve(`/settings/users/${node.user.membership_id}`)}
+		href={resolve('/(app)/settings/users/[id]', { id: node.user.membership_id })}
 		class="border-border bg-bg-elevated hover:border-primary focus-visible:ring-focus-ring flex items-center gap-3 rounded-md border px-3 py-2 transition-colors focus-visible:ring-2 focus-visible:outline-none"
 		aria-label={`${displayName(node.user)}${node.cycleBroken ? ' (cycle detected — review reporting line)' : ''}`}
 	>

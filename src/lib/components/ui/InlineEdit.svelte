@@ -13,9 +13,9 @@
 </script>
 
 <script lang="ts">
-	import { Edit, Icon } from '$lib/icons';
+	import { Edit, Icon } from '#lib/icons/index.ts';
 	import { tick } from 'svelte';
-	import { cn } from '$lib/utils/cn';
+	import { cn } from '#lib/utils/cn.ts';
 
 	type Props = {
 		value: string;

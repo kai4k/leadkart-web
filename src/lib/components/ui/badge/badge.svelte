@@ -61,7 +61,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAnchorAttributes, HTMLAttributes } from 'svelte/elements';
-	import { cn, type WithElementRef } from '$lib/utils/cn';
+	import { cn, type WithElementRef } from '#lib/utils/cn.ts';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLSpanElement>> &
 		WithElementRef<HTMLAnchorAttributes> &

@@ -15,7 +15,7 @@
 </script>
 
 <script lang="ts">
-	import { cn } from '$lib/utils/cn';
+	import { cn } from '#lib/utils/cn.ts';
 
 	/**
 	 * Icon wrapper consumes the icon-size design tokens and passes

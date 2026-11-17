@@ -3,9 +3,9 @@
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { Icon, Lock } from '$lib/icons';
-	import { Alert, AuthCard, Button, Logo } from '$lib/components/ui';
-	import { PasswordField } from '$lib/components/form';
+	import { Icon, Lock } from '#lib/icons/index.ts';
+	import { Alert, AuthCard, Button, Logo } from '#lib/components/ui/index.ts';
+	import { PasswordField } from '#lib/components/form/index.ts';
 	import { resolve } from '$app/paths';
 	import type { ActionData } from '../../../../routes/(auth)/reset-password/$types';
 
@@ -38,7 +38,7 @@
 	});
 
 	$effect(() => {
-		if (success) setTimeout(() => goto(resolve('/signin')), 2000);
+		if (success) setTimeout(() => goto(resolve('signin')), 2000);
 	});
 </script>
 
@@ -56,9 +56,9 @@
 			<p>{$_('auth.resetPassword.errors.missingToken')}</p>
 		</Alert>
 		<p class="caption text-fg-muted text-center">
-			<a href={resolve('/forgot-password')} class="text-primary hover:underline">
-				{$_('auth.resetPassword.requestNew')}
-			</a>
+			<a href={resolve('forgot-password')} class="text-primary hover:underline"
+				>{$_('auth.resetPassword.requestNew')}</a
+			>
 		</p>
 	{:else if success}
 		<Alert variant="success">
@@ -95,6 +95,7 @@
 			{#if formError}
 				<Alert variant="danger">{formError}</Alert>
 			{/if}
+
 			<Button type="submit" {loading} fullWidth size="lg">
 				{loading ? $_('common.loading') : $_('auth.resetPassword.submit')}
 			</Button>
@@ -106,7 +107,8 @@
 			<Icon icon={Lock} size="xs" />
 			<span class="caption">
 				{$_('auth.resetPassword.backToSignin')}
-				<a href={resolve('/signin')} class="text-primary hover:underline"
+
+				<a href={resolve('signin')} class="text-primary hover:underline"
 					>{$_('auth.signin.title')}</a
 				>
 			</span>

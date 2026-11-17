@@ -13,7 +13,7 @@
 	import { resolve } from '$app/paths';
 	import { Skeleton, EmptyState, StatusPill } from '$ui';
 	import { Icon, Inbox } from '$icons';
-	import type { BulkSelection, InfiniteList, KeyboardListNav } from '$lib/hooks';
+	import type { BulkSelection, InfiniteList, KeyboardListNav } from '#lib/hooks/index.ts';
 	import type { CrmLeadDto, LeadStage, LeadTemperature } from '../schemas';
 	import {
 		BUSINESS_TYPE_LABEL,
@@ -53,7 +53,7 @@
 	}
 
 	function openDetail(lead: CrmLeadDto) {
-		goto(resolve(`/leads/${lead.id}`));
+		goto(resolve('/(app)/leads/[id]', { id: lead.id }));
 	}
 
 	function toggleAll() {
@@ -95,9 +95,11 @@
 							aria-label={allSelected ? 'Deselect all' : 'Select all'}
 						/>
 					</th>
-					<th class="text-fg-muted px-3 py-3 text-xs font-medium tracking-wide uppercase">
-						Contact
-					</th>
+
+					<th class="text-fg-muted px-3 py-3 text-xs font-medium tracking-wide uppercase"
+						>Contact</th
+					>
+
 					<th
 						class="text-fg-muted hidden px-3 py-3 text-xs font-medium tracking-wide uppercase md:table-cell"
 					>

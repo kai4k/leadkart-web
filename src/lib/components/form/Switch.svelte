@@ -17,7 +17,7 @@
 <script lang="ts">
 	import { Switch as BitsSwitch } from 'bits-ui';
 	import type { Snippet } from 'svelte';
-	import { cn } from '$lib/utils/cn';
+	import { cn } from '#lib/utils/cn.ts';
 
 	type Props = {
 		label: string;

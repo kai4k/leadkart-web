@@ -4,7 +4,7 @@
 	import { Breadcrumbs } from '$ui';
 	import type { BreadcrumbItem } from '$ui';
 	import { tenantDisplayName, tenantStatusBadge } from '$features/tenant/view-models';
-	import { cn } from '$lib/utils/cn';
+	import { cn } from '#lib/utils/cn.ts';
 	import type { LayoutData } from './$types';
 
 	/**

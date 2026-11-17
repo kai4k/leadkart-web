@@ -7,7 +7,7 @@
 	import { untrack } from 'svelte';
 	import { Alert, Button, Dialog } from '$ui';
 	import { NumberInput, RadioGroup, RadioItem, Select, TextField } from '$form';
-	import { useForm } from '$lib/hooks';
+	import { useForm } from '#lib/hooks/index.ts';
 	import { recordPaymentRequestSchema, type PaymentKind } from '$features/orders/schemas';
 	import { recordPaymentMutation } from '$features/orders/queries';
 	import { outstandingBalance } from '$features/orders/view-models';

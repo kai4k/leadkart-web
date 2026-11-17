@@ -10,9 +10,9 @@
 	 * collapses (or moves to parent — handled by parent recursion);
 	 * Space/Enter triggers onClick.
 	 */
-	import { ChevronRight, Icon, iconSize } from '$lib/icons';
+	import { ChevronRight, Icon, iconSize } from '#lib/icons/index.ts';
 	import type { Snippet } from 'svelte';
-	import { cn } from '$lib/utils/cn';
+	import { cn } from '#lib/utils/cn.ts';
 
 	type Props = {
 		label: string;

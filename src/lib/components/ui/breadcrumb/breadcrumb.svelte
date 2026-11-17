@@ -8,7 +8,7 @@
 	import type { Attachment } from 'svelte/attachments';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { ChevronRight, Icon } from '$icons';
-	import { cn, type WithElementRef } from '$lib/utils/cn';
+	import { cn, type WithElementRef } from '#lib/utils/cn.ts';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLElement>> & { items: BreadcrumbItem[] };
 	let { ref = $bindable(null), items, class: className = '', ...rest }: Props = $props();

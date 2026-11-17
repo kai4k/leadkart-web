@@ -14,17 +14,17 @@
  * /api/[...path] proxy).
  */
 
-import { json, type RequestEvent } from '@sveltejs/kit';
-import { config } from '$lib/server/config';
-import { setOperatorScope, clearOperatorScope } from '$lib/server/scope';
-import { timingSafeEqualString } from '$lib/server/csrf';
-import { ACCESS_COOKIE } from '$lib/server/cookies';
+import type { RequestEvent } from '@sveltejs/kit';
+import { config } from '#lib/server/config.ts';
+import { setOperatorScope, clearOperatorScope } from '#lib/server/scope.ts';
+import { timingSafeEqualString } from '#lib/server/csrf.ts';
+import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
 
 function checkCsrf(event: RequestEvent): Response | null {
 	const headerCsrf = event.request.headers.get('x-csrf-token');
 	const cookieCsrf = event.cookies.get('lk_csrf');
 	if (!headerCsrf || !cookieCsrf || !timingSafeEqualString(headerCsrf, cookieCsrf)) {
-		return json({ error: 'csrf_mismatch' }, { status: 403 });
+		return Response.json({ error: 'csrf_mismatch' }, { status: 403 });
 	}
 	return null;
 }
@@ -34,16 +34,16 @@ export async function POST(event: RequestEvent): Promise<Response> {
 	if (csrfFail) return csrfFail;
 
 	const access = event.cookies.get(ACCESS_COOKIE());
-	if (!access) return json({ error: 'unauthenticated' }, { status: 401 });
+	if (!access) return Response.json({ error: 'unauthenticated' }, { status: 401 });
 
 	let body: { slug?: string };
 	try {
 		body = await event.request.json();
 	} catch {
-		return json({ error: 'invalid_body' }, { status: 400 });
+		return Response.json({ error: 'invalid_body' }, { status: 400 });
 	}
 	const slug = typeof body.slug === 'string' ? body.slug.trim() : '';
-	if (!slug) return json({ error: 'missing_slug' }, { status: 400 });
+	if (!slug) return Response.json({ error: 'missing_slug' }, { status: 400 });
 
 	// Canonical slug lookup per backend ADR 0052 — Stripe-style filter
 	// query returning ListTenantsResponse. Slug uniqueness is a DB
@@ -52,14 +52,14 @@ export async function POST(event: RequestEvent): Promise<Response> {
 		headers: { authorization: `Bearer ${access}` }
 	});
 	if (!resp.ok) {
-		return json({ error: 'tenant_lookup_failed' }, { status: 502 });
+		return Response.json({ error: 'tenant_lookup_failed' }, { status: 502 });
 	}
 	const payload = (await resp.json()) as {
 		tenants?: Array<{ id: string; slug: string; display_name: string }>;
 	};
 	const tenant = payload.tenants?.[0];
 	if (!tenant) {
-		return json({ error: 'tenant_not_found' }, { status: 404 });
+		return Response.json({ error: 'tenant_not_found' }, { status: 404 });
 	}
 
 	setOperatorScope(event.cookies, {

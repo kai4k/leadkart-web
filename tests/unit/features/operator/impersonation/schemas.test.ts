@@ -13,7 +13,7 @@ import {
 	createImpersonationSessionResponseSchema,
 	impersonationSessionDtoSchema,
 	listImpersonationSessionsResponseSchema
-} from '$lib/features/operator/impersonation/schemas';
+} from '#lib/features/operator/impersonation/schemas.ts';
 
 // ---------------------------------------------------------------------------
 // Fixtures

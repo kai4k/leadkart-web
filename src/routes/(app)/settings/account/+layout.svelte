@@ -5,7 +5,7 @@
 	import type { BreadcrumbItem } from '$ui';
 	import { myCapabilitiesQuery, myProfileQuery } from '$features/auth/queries';
 	import { displayName } from '$features/auth/view-models';
-	import { cn } from '$lib/utils/cn';
+	import { cn } from '#lib/utils/cn.ts';
 
 	/**
 	 * Account Settings layout — owns the shared chrome (header + sub-

@@ -11,7 +11,7 @@ import {
 	sessionDtoSchema,
 	listSessionsResponseSchema,
 	updateProfileRequestSchema
-} from '$lib/features/auth/schemas';
+} from '#lib/features/auth/schemas.ts';
 
 describe('userDtoSchema', () => {
 	it('parses a well-formed UserDto', () => {

@@ -5,7 +5,7 @@
  *
  * Single source of truth: the URL. The `filters` getter is a reactive
  * projection of `page.url.searchParams`. Mutators update the URL via
- * `goto(..., { replaceState, keepFocus })`; the next read picks up
+ * `goto(..., { replace, reset: false })`; the next read picks up
  * the change automatically.
  *
  * Two filter shapes are supported per-key:
@@ -79,12 +79,11 @@ export function createUrlFilters<TFilters extends UrlFiltersBase>(
 	}
 
 	function commit(next: SvelteURLSearchParams): void {
-		const url = new SvelteURL(page.url);
+		const url = new SvelteURL(page.url.href);
 		url.search = next.toString();
 		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
-			keepFocus: true,
-			replaceState: true,
-			noScroll: true
+			reset: false,
+			replace: true
 		});
 	}
 

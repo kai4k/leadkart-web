@@ -24,7 +24,7 @@
 	const capsQuery = myCapabilitiesQuery();
 	$effect(() => {
 		if (capsQuery.data && !hasCapability(capsQuery.data, 'platform.users.view')) {
-			goto(resolve('/dashboard'), { replaceState: true });
+			goto(resolve('dashboard'), { replace: true });
 		}
 	});
 </script>

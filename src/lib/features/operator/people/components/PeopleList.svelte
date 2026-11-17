@@ -23,12 +23,12 @@
 		const value = (e.currentTarget as HTMLInputElement).value;
 		clearTimeout(debounceHandle);
 		debounceHandle = setTimeout(() => {
-			const url = new SvelteURL(page.url);
+			const url = new SvelteURL(page.url.href);
 			if (value.trim()) url.searchParams.set('q', value.trim());
 			else url.searchParams.delete('q');
 			void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
-				replaceState: true,
-				keepFocus: true
+				replace: true,
+				reset: false
 			});
 		}, DEBOUNCE_MS);
 	}
@@ -77,7 +77,7 @@
 		<Avatar initials={personInitials(name)} size="md" />
 		<div class="stack stack-tight min-w-0">
 			<a
-				href={resolve(`/operator/persons/${p.id}`)}
+				href={resolve('/(app)/operator/persons/[id]', { id: p.id })}
 				class="text-fg hover:text-primary truncate font-medium hover:underline">{name}</a
 			>
 			<span class="caption text-fg-muted truncate">{p.email}</span>

@@ -5,7 +5,7 @@
 	import { Button } from '$ui/button';
 	import StatusPill from '$ui/StatusPill.svelte';
 	import { EmptyState } from '$ui';
-	import { createBulkSelection } from '$lib/hooks';
+	import { createBulkSelection } from '#lib/hooks/index.ts';
 	import { Edit, Trash2, Database } from '$icons';
 
 	const { Story } = defineMeta({

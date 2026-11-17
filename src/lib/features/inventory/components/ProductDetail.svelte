@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { Alert, Skeleton, Tabs, ConfirmDialog } from '$ui';
-	import { useUrlTab } from '$lib/hooks';
+	import { useUrlTab } from '#lib/hooks/index.ts';
 	import { productDetailQuery, deleteProductMutation } from '$features/inventory/queries';
 	import { computePriceWithGst, formatPrice } from '$features/inventory/view-models';
 	import { AuthError, NetworkError, NotFoundError } from '$api/errors';
@@ -43,7 +43,7 @@
 		deleteMut.mutate(product.id, {
 			onSettled: () => {
 				confirmDeleteOpen = false;
-				goto(resolve('/inventory'));
+				goto(resolve('inventory'));
 			}
 		});
 	}
@@ -51,6 +51,7 @@
 	const purchaseWithGst = $derived(
 		product ? computePriceWithGst(product.purchase_rate, product.gst_percentage) : 0
 	);
+
 	const saleWithGst = $derived(
 		product ? computePriceWithGst(product.sale_rate, product.gst_percentage) : 0
 	);
@@ -99,13 +100,10 @@
 				<Tabs.Trigger value="activity">Activity</Tabs.Trigger>
 			</Tabs.List>
 
-			<Tabs.Content value="batches">
-				<BatchesList productId={product.id} />
-			</Tabs.Content>
-
-			<Tabs.Content value="movements">
-				<StockMovementsTimeline productId={product.id} />
-			</Tabs.Content>
+			<Tabs.Content value="batches"><BatchesList productId={product.id} /></Tabs.Content>
+			<Tabs.Content value="movements"
+				><StockMovementsTimeline productId={product.id} /></Tabs.Content
+			>
 
 			<Tabs.Content value="pricing">
 				<div class="stack stack-tight">

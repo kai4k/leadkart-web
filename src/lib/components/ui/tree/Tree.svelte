@@ -10,7 +10,7 @@
 	 * list view, WAI-ARIA APG TreeView pattern.
 	 */
 	import type { Snippet } from 'svelte';
-	import { cn } from '$lib/utils/cn';
+	import { cn } from '#lib/utils/cn.ts';
 
 	type Props = {
 		'aria-label'?: string;

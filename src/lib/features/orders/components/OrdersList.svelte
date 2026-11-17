@@ -1,19 +1,15 @@
-<!--
-	OrdersList — page-level composition of the foundation primitives:
-	  - ResourceListPage shell (title, toolbar, tabs, filters, bulk bar)
-	  - DataTable rendering the list rows (server-paginated)
-	  - useUrlFilters as the source of truth for filter state
-	  - useSavedViews for canned view tabs
-	  - useBulkSelection for the bulk-action bar
--->
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { ResourceListPage, type FilterBarField, type BulkAction } from '$lib/components/data';
+	import {
+		ResourceListPage,
+		type FilterBarField,
+		type BulkAction
+	} from '#lib/components/data/index.ts';
 	import { DataTable, EmptyState, type DataTableColumn } from '$ui';
 	import { Plus, ShoppingCart, Trash2, X } from '$icons';
 	import type { Component } from 'svelte';
-	import { createBulkSelection, createSavedViews, createUrlFilters } from '$lib/hooks';
+	import { createBulkSelection, createSavedViews, createUrlFilters } from '#lib/hooks/index.ts';
 	import { ordersInfiniteQuery, bulkOrderActionMutation } from '$features/orders/queries';
 	import {
 		formatMoney,
@@ -87,13 +83,12 @@
 	const orders: OrderDto[] = $derived(
 		listQuery.data ? listQuery.data.pages.flatMap((p) => p.items) : []
 	);
-
 	const tableState = $derived(
 		listQuery.isPending ? 'loading' : listQuery.isError ? 'error' : 'ready'
 	);
 
 	function openDetail(o: OrderDto) {
-		goto(resolve(`/orders/${o.id}`));
+		goto(resolve('/(app)/orders/[id]', { id: o.id }));
 	}
 
 	// ── Bulk actions ─────────────────────────────────────────────────
@@ -150,7 +145,14 @@
 			class: 'w-10',
 			selectLabel: (o) => `Select ${o.order_number}`
 		},
-		{ id: 'order_number', header: 'Order #', accessor: 'order_number', sortBy: 'order_number' },
+
+		{
+			id: 'order_number',
+			header: 'Order #',
+			accessor: 'order_number',
+			sortBy: 'order_number'
+		},
+
 		{
 			id: 'placed_at',
 			header: 'Created',
@@ -201,6 +203,15 @@
 	const listErrorCopy = $derived(getListErrorMessage(listQuery.error, 'orders'));
 </script>
 
+<!--
+	OrdersList — page-level composition of the foundation primitives:
+	  - ResourceListPage shell (title, toolbar, tabs, filters, bulk bar)
+	  - DataTable rendering the list rows (server-paginated)
+	  - useUrlFilters as the source of truth for filter state
+	  - useSavedViews for canned view tabs
+	  - useBulkSelection for the bulk-action bar
+-->
+
 {#snippet statusCell(row: OrderDto)}
 	<OrderStatusBadge status={row.status} />
 {/snippet}
@@ -227,7 +238,7 @@
 	primaryAction={{
 		label: 'New quotation',
 		icon: Plus as unknown as Component,
-		onClick: () => goto(resolve('/orders/new'))
+		onClick: () => goto(resolve('orders/new'))
 	}}
 	{savedViews}
 	filters={{ config: filterConfig, instance: urlFilters }}

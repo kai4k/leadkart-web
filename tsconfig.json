@@ -1,15 +1,25 @@
 {
-	"extends": "./.svelte-kit/tsconfig.json",
+	"extends": "$app/tsconfig",
 	"compilerOptions": {
-		"allowJs": true,
-		"checkJs": true,
-		"esModuleInterop": true,
-		"forceConsistentCasingInFileNames": true,
-		"resolveJsonModule": true,
-		"skipLibCheck": true,
 		"sourceMap": true,
-		"strict": true,
-		"moduleResolution": "bundler"
+		"strict": true
 	},
-	"exclude": ["**/*.stories.ts", "**/*.stories.svelte", ".storybook/**", "storybook-static/**"]
+	"include": [
+		"src/**/*.ts",
+		"src/**/*.js",
+		"src/**/*.svelte",
+		"tests/**/*.ts",
+		"vite.config.ts",
+		"vitest.config.ts",
+		"playwright.config.ts"
+	],
+	"exclude": [
+		"**/*.stories.ts",
+		"**/*.stories.svelte",
+		".storybook/**",
+		"storybook-static/**",
+		"src/service-worker/**",
+		"node_modules/**",
+		"build/**"
+	]
 }

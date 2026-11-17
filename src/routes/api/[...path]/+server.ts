@@ -21,10 +21,10 @@
  */
 
 import type { RequestEvent } from './$types';
-import { config } from '$lib/server/config';
-import { setAuthCookies, clearAuthCookies, ACCESS_COOKIE } from '$lib/server/cookies';
-import { getOperatorScope } from '$lib/server/scope';
-import { timingSafeEqualString } from '$lib/server/csrf';
+import { config } from '#lib/server/config.ts';
+import { setAuthCookies, clearAuthCookies, ACCESS_COOKIE } from '#lib/server/cookies.ts';
+import { getOperatorScope } from '#lib/server/scope.ts';
+import { timingSafeEqualString } from '#lib/server/csrf.ts';
 
 const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 

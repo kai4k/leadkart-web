@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { BulkUploadDrawer } from '$lib/components/data';
+	import { BulkUploadDrawer } from '#lib/components/data/index.ts';
 	import { bulkUploadPreview, bulkUploadCommit } from '$features/inventory/api';
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { inventoryKeys } from '$features/inventory/queries';

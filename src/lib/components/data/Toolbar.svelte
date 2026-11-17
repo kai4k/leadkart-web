@@ -1,7 +1,7 @@
 <!-- src/lib/components/data/Toolbar.svelte -->
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { cn } from '$lib/utils/cn';
+	import { cn } from '#lib/utils/cn.ts';
 
 	/**
 	 * Toolbar — composable list-page header bar.

@@ -14,14 +14,14 @@
  *
  * Usage:
  *
- *   import { createPwa } from '$lib/hooks';
+ *   import { createPwa } from '#lib/hooks/index.ts';
  *
  *   const pwa = createPwa();
  *   $effect(() => pwa.start());
  *
  *   {#if pwa.updateReady}<button onclick={pwa.applyUpdate}>Reload</button>{/if}
  */
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 
 interface BeforeInstallPromptEvent extends Event {
 	readonly platforms: string[];

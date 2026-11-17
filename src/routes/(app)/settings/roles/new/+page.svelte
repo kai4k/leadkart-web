@@ -22,7 +22,7 @@
 	const capsQuery = myCapabilitiesQuery();
 	$effect(() => {
 		if (capsQuery.data && !hasCapability(capsQuery.data, 'identity.roles.manage')) {
-			goto(resolve('/dashboard'), { replaceState: true });
+			goto(resolve('dashboard'), { replace: true });
 		}
 	});
 
@@ -111,9 +111,10 @@
 				{/if}
 
 				<div class="form-footer">
-					<Button variant="ghost" type="button" onclick={() => goto(resolve('/settings/roles'))}>
-						Cancel
-					</Button>
+					<Button variant="ghost" type="button" onclick={() => goto(resolve('settings/roles'))}
+						>Cancel</Button
+					>
+
 					<Button type="submit" {loading}>Create role</Button>
 				</div>
 			</form>

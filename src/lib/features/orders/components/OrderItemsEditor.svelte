@@ -23,7 +23,7 @@
 		computeOrderTotals,
 		formatMoney
 	} from '$features/orders/view-models';
-	import type { ComboboxOption } from '$lib/components/form/Combobox.svelte';
+	import type { ComboboxOption } from '#lib/components/form/Combobox.svelte';
 
 	export interface BatchCatalogueEntry {
 		/** Composite "product_id:batch_id" — the value emitted by the combobox option. */

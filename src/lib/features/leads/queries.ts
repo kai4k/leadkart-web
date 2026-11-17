@@ -19,7 +19,7 @@ import {
 	useOptimisticMutation,
 	type InfiniteList,
 	type InfinitePage
-} from '$lib/hooks';
+} from '#lib/hooks/index.ts';
 import type {
 	CrmLeadDto,
 	ListLeadsParams,

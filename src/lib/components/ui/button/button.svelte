@@ -54,7 +54,7 @@
 	import type { Attachment } from 'svelte/attachments';
 	import type { Snippet } from 'svelte';
 	import type { HTMLButtonAttributes } from 'svelte/elements';
-	import { cn, type WithElementRef } from '$lib/utils/cn';
+	import { cn, type WithElementRef } from '#lib/utils/cn.ts';
 	import Spinner from '../spinner/Spinner.svelte';
 
 	export type ButtonProps = WithElementRef<HTMLButtonAttributes> &

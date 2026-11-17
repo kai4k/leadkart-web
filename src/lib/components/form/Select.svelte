@@ -23,8 +23,8 @@
 
 <script lang="ts">
 	import type { HTMLSelectAttributes } from 'svelte/elements';
-	import { ChevronDown, Icon } from '$lib/icons';
-	import { cn } from '$lib/utils/cn';
+	import { ChevronDown, Icon } from '#lib/icons/index.ts';
+	import { cn } from '#lib/utils/cn.ts';
 
 	/**
 	 * Select — labelled native-<select> primitive. Mirrors TextField's

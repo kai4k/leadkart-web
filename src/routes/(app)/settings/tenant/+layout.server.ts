@@ -9,9 +9,9 @@
  * tenant_id is extracted from the JWT access cookie.
  */
 import { redirect } from '@sveltejs/kit';
-import { goFetch, readGoJson } from '$lib/server/go';
+import { goFetch, readGoJson } from '#lib/server/go.ts';
 import { decodeJwtPrincipal } from '$api/jwt';
-import { ACCESS_COOKIE } from '$lib/server/cookies';
+import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
 import type { Tenant } from '$features/tenant/types';
 import type { LayoutServerLoad } from './$types';
 

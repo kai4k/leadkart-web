@@ -1,9 +1,3 @@
-<!--
-	OrderDetailHeader — top of the detail page. Shows order_number,
-	customer name, status pill, action buttons, and the lifecycle
-	stepper. The parent provides the dialog open-state callbacks for the
-	transitions that need extra input.
--->
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { CopyButton } from '$ui';
@@ -23,6 +17,13 @@
 	let { order, onRevise, onRecordPayment, onMarkPacked, onDispatch, onCancel }: Props = $props();
 </script>
 
+<!--
+	OrderDetailHeader — top of the detail page. Shows order_number,
+	customer name, status pill, action buttons, and the lifecycle
+	stepper. The parent provides the dialog open-state callbacks for the
+	transitions that need extra input.
+-->
+
 <header class="stack stack-relaxed">
 	<div class="cluster cluster-spread items-start gap-4">
 		<div class="stack stack-tight min-w-0">
@@ -34,7 +35,7 @@
 			</div>
 			<div class="cluster cluster-tight">
 				<a
-					href={resolve(`/leads/${order.customer_lead_id}`)}
+					href={resolve('/(app)/leads/[id]', { id: order.customer_lead_id })}
 					class="body-sm text-primary hover:underline"
 				>
 					{order.customer_name}

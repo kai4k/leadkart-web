@@ -4,8 +4,8 @@ import {
 	initials,
 	lastSeenLabel,
 	isCurrentSession
-} from '$lib/features/auth/view-models';
-import type { UserDto, SessionDto } from '$lib/features/auth/types';
+} from '#lib/features/auth/view-models.ts';
+import type { UserDto, SessionDto } from '#lib/features/auth/types.ts';
 
 const baseUser: UserDto = {
 	membership_id: 'mem_1',

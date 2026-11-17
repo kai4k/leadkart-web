@@ -2,7 +2,7 @@
 	import { _ } from 'svelte-i18n';
 	import { enhance } from '$app/forms';
 	import { Alert, Button, Card } from '$ui';
-	import { PasswordField } from '$lib/components/form';
+	import { PasswordField } from '#lib/components/form/index.ts';
 	import type { ActionData } from './$types';
 
 	/**

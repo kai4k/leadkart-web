@@ -10,7 +10,7 @@
 	import { Tabs, Skeleton } from '$ui';
 	import { Button } from '$ui';
 	import { Icon, Plus } from '$icons';
-	import { useUrlTab } from '$lib/hooks';
+	import { useUrlTab } from '#lib/hooks/index.ts';
 	import {
 		leadDetailQuery,
 		leadCallsQuery,

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { page } from '$app/state';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto, refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import type { ResolvedPathname } from '$app/types';
 	import { useQueryClient } from '@tanstack/svelte-query';
@@ -40,8 +40,8 @@
 		qc.clear();
 		// Re-run server loads so capabilities + nav refresh under the
 		// non-scoped principal.
-		await invalidateAll();
-		goto(resolve('/operator/tenants'), { replaceState: true });
+		await refreshAll();
+		goto(resolve('operator/tenants'), { replace: true });
 	}
 </script>
 

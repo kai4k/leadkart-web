@@ -7,9 +7,9 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Cookies } from '@sveltejs/kit';
 import type { z } from 'zod';
-import { goFetch, readGoError, flattenGoErrors } from '$lib/server/go';
+import { goFetch, readGoError, flattenGoErrors } from '#lib/server/go.ts';
 import { decodeJwtPrincipal } from '$api/jwt';
-import { ACCESS_COOKIE } from '$lib/server/cookies';
+import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
 
 function getTenantId(cookies: Cookies): string {
 	const access = cookies.get(ACCESS_COOKIE());

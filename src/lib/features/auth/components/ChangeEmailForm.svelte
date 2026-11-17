@@ -2,7 +2,7 @@
 	import { _ } from 'svelte-i18n';
 	import { enhance } from '$app/forms';
 	import { Alert, Button } from '$ui';
-	import { TextField } from '$lib/components/form';
+	import { TextField } from '#lib/components/form/index.ts';
 
 	/**
 	 * ChangeEmailForm — authenticated email-change request via SvelteKit

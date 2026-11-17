@@ -14,12 +14,12 @@
 
 <script
 	lang="ts"
-	generics="TFilters extends import('$lib/hooks').UrlFiltersBase, TItem extends import('$lib/hooks').SelectableItem"
+	generics="TFilters extends import('#lib/hooks/index.ts').UrlFiltersBase, TItem extends import('#lib/hooks/index.ts').SelectableItem"
 >
-	import type { UrlFilters, BulkSelection, SavedViews } from '$lib/hooks';
+	import type { UrlFilters, BulkSelection, SavedViews } from '#lib/hooks/index.ts';
 	import { Button } from '$ui';
 	import { Icon } from '$icons';
-	import { cn } from '$lib/utils/cn';
+	import { cn } from '#lib/utils/cn.ts';
 	import Toolbar from './Toolbar.svelte';
 	import FilterBar from './FilterBar.svelte';
 	import FilterChips from './FilterChips.svelte';

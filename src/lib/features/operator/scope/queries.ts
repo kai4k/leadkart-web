@@ -13,7 +13,7 @@
  * the rest of the operator surface.
  */
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
-import { goto, invalidateAll } from '$app/navigation';
+import { goto, refreshAll } from '$app/navigation';
 import { resolve } from '$app/paths';
 import { toast } from '$ui';
 import { AuthError, NetworkError, NotFoundError } from '$api/errors';
@@ -33,8 +33,8 @@ export function enterScopeMutation() {
 		mutationFn: (req: EnterScopeRequest) => api.enterScope(req),
 		onSuccess: async () => {
 			qc.clear();
-			await invalidateAll();
-			await goto(resolve('/operator/scope/profile'));
+			await refreshAll();
+			await goto(resolve('operator/scope/profile'));
 		},
 		onError: (err) => {
 			if (err instanceof NetworkError) {
@@ -64,8 +64,8 @@ export function exitScopeMutation() {
 		mutationFn: () => api.exitScope(),
 		onSuccess: async () => {
 			qc.clear();
-			await invalidateAll();
-			await goto(resolve('/operator/tenants'));
+			await refreshAll();
+			await goto(resolve('operator/tenants'));
 		},
 		onError: () => {
 			toast.error('Could not exit scope — try again.');

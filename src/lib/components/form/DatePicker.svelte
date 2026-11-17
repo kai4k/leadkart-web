@@ -18,8 +18,8 @@
 <script lang="ts">
 	import { DatePicker as BitsDatePicker, type SegmentPart } from 'bits-ui';
 	import type { DateValue } from '@internationalized/date';
-	import { Calendar, ChevronLeft, ChevronRight, Icon } from '$lib/icons';
-	import { cn } from '$lib/utils/cn';
+	import { Calendar, ChevronLeft, ChevronRight, Icon } from '#lib/icons/index.ts';
+	import { cn } from '#lib/utils/cn.ts';
 
 	type Props = {
 		label: string;

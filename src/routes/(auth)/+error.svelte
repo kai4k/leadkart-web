@@ -23,8 +23,7 @@
 
 	<div class="cluster">
 		<Button variant="primary" onclick={() => page.url && location.reload()}>Try again</Button>
-		<a href={resolve('/signin')}>
-			<Button variant="ghost">Back to sign in</Button>
-		</a>
+
+		<a href={resolve('signin')}><Button variant="ghost">Back to sign in</Button></a>
 	</div>
 </div>

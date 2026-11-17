@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Dialog, Button, Alert } from '$ui';
 	import { NumberInput, RadioGroup, RadioItem } from '$form';
-	import { useForm } from '$lib/hooks/use-form.svelte';
+	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 	import { adjustStockMutation } from '$features/inventory/queries';
 	import {
 		createMovementRequestSchema,

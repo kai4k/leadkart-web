@@ -21,8 +21,8 @@
 	import type { PersonDto } from '$features/operator/people/types';
 	import GlobalSuspendDialog from './GlobalSuspendDialog.svelte';
 	import AnonymiseDialog from './AnonymiseDialog.svelte';
-	import { personActivityQuery } from '$lib/features/audit/queries';
-	import ActivityTimeline from '$lib/features/audit/components/ActivityTimeline.svelte';
+	import { personActivityQuery } from '#lib/features/audit/queries.ts';
+	import ActivityTimeline from '#lib/features/audit/components/ActivityTimeline.svelte';
 	import { ApiError } from '$api/errors';
 
 	type Props = { personId: string };
@@ -203,7 +203,7 @@
 												<Button
 													variant="ghost"
 													size="sm"
-													onclick={() => goto(resolve(`/operator/tenants?q=${t.slug}`))}
+													onclick={() => goto(resolve(`/(app)/operator/tenants?q=${t.slug}`))}
 													aria-label={`Find tenant ${t.display_name}`}
 												>
 													<Icon icon={ArrowRight} size="sm" />

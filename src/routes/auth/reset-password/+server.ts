@@ -11,15 +11,14 @@
  */
 
 import type { RequestHandler } from './$types';
-import { config } from '$lib/server/config';
-import { json } from '@sveltejs/kit';
+import { config } from '#lib/server/config.ts';
 
 export const POST: RequestHandler = async (event) => {
 	let body: unknown;
 	try {
 		body = await event.request.json();
 	} catch {
-		return json(
+		return Response.json(
 			{ error: 'invalid_json', message: 'Request body must be valid JSON' },
 			{ status: 400 }
 		);
@@ -33,7 +32,7 @@ export const POST: RequestHandler = async (event) => {
 			body: JSON.stringify(body)
 		});
 	} catch {
-		return json(
+		return Response.json(
 			{ error: 'upstream_unavailable', message: 'Go API is unreachable' },
 			{ status: 502 }
 		);

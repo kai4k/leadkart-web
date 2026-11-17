@@ -4,8 +4,8 @@ import {
 	roleBadgeVariant,
 	rolePermissionSet,
 	roleMemberCount
-} from '$lib/features/roles/view-models';
-import type { RoleDto } from '$lib/features/roles/types';
+} from '#lib/features/roles/view-models.ts';
+import type { RoleDto } from '#lib/features/roles/types.ts';
 
 const base: RoleDto = {
 	id: 'r1',

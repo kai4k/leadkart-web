@@ -15,10 +15,10 @@
 
 import { redirect } from '@sveltejs/kit';
 import type { Cookies } from '@sveltejs/kit';
-import { config } from '$lib/server/config';
-import { setAuthCookies, clearAuthCookies, ACCESS_COOKIE } from '$lib/server/cookies';
+import { config } from '#lib/server/config.ts';
+import { setAuthCookies, clearAuthCookies, ACCESS_COOKIE } from '#lib/server/cookies.ts';
 import type { LayoutServerLoad } from './$types';
-import type { Capabilities } from '$lib/features/auth/api';
+import type { Capabilities } from '#lib/features/auth/api.ts';
 
 /**
  * Attempts a silent token refresh server-side using the lk_refresh cookie.

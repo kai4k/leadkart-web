@@ -14,8 +14,8 @@
 </script>
 
 <script lang="ts">
-	import { Icon, X } from '$lib/icons';
-	import { cn } from '$lib/utils/cn';
+	import { Icon, X } from '#lib/icons/index.ts';
+	import { cn } from '#lib/utils/cn.ts';
 
 	type Props = {
 		value: string[];

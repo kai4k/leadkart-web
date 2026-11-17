@@ -57,7 +57,7 @@
 		 * they also pass a selection whose item shape matches.
 		 */
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		selection?: import('$lib/hooks').BulkSelection<any>;
+		selection?: import('#lib/hooks/index.ts').BulkSelection<any>;
 		/**
 		 * Roving-tabindex keyboard nav store. When set, the table forwards
 		 * `onkeydown` / `onfocusin` / `onfocusout` from the `<tbody>` to
@@ -68,7 +68,7 @@
 		 * `$effect`.
 		 */
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		nav?: import('$lib/hooks').KeyboardListNav<any>;
+		nav?: import('#lib/hooks/index.ts').KeyboardListNav<any>;
 		/** Optional class on the wrapping element. */
 		class?: string;
 	};
@@ -77,7 +77,7 @@
 <script lang="ts" generics="T">
 	import { Skeleton, EmptyState } from '$ui';
 	import { ChevronUp, ChevronDown, ChevronsUpDown, Icon } from '$icons';
-	import { cn } from '$lib/utils/cn';
+	import { cn } from '#lib/utils/cn.ts';
 	import { Alert } from '../alert';
 
 	let {

@@ -28,7 +28,7 @@
 	<button
 		type="button"
 		class="caption text-fg-muted hover:text-fg cluster cluster-tight self-start"
-		onclick={() => goto(resolve('/inventory'))}
+		onclick={() => goto(resolve('inventory'))}
 	>
 		<Icon icon={ArrowLeft} size="xs" /> Back to inventory
 	</button>

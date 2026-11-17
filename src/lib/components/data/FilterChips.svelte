@@ -1,8 +1,8 @@
 <!-- src/lib/components/data/FilterChips.svelte -->
-<script lang="ts" generics="TFilters extends import('$lib/hooks').UrlFiltersBase">
-	import type { UrlFilters } from '$lib/hooks';
+<script lang="ts" generics="TFilters extends import('#lib/hooks/index.ts').UrlFiltersBase">
+	import type { UrlFilters } from '#lib/hooks/index.ts';
 	import { Icon, X } from '$icons';
-	import { cn } from '$lib/utils/cn';
+	import { cn } from '#lib/utils/cn.ts';
 
 	/**
 	 * FilterChips — horizontal flex of removable chips, one per active

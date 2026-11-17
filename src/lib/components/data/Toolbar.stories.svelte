@@ -2,7 +2,7 @@
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import Toolbar from './Toolbar.svelte';
 	import { Button } from '$ui/button';
-	import TextField from '$lib/components/form/TextField.svelte';
+	import TextField from '#lib/components/form/TextField.svelte';
 	import * as Tabs from '$ui/tabs';
 	import { Plus, Download, Filter, Search } from '$icons';
 

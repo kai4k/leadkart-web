@@ -73,7 +73,7 @@ updates:
           - 'patch'
       runtime:
         patterns:
-          - 'lucide-svelte'
+          - '@lucide/svelte'
           - 'svelte-i18n'
           - 'sveltekit-superforms'
           - 'zod'

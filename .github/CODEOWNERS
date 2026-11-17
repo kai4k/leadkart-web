@@ -13,7 +13,6 @@
 /.lintstagedrc.json                    @kai4k
 /eslint.config.js                      @kai4k
 /playwright.config.ts                  @kai4k
-/svelte.config.js                      @kai4k
 /tsconfig.json                         @kai4k
 /vite.config.ts                        @kai4k
 /vitest.config.ts                      @kai4k

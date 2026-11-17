@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Alert, Badge, Breadcrumbs, Button, Card, CopyButton, Skeleton } from '$ui';
 	import type { BreadcrumbItem } from '$ui';
-	import { Select, TextField } from '$lib/components/form';
+	import { Select, TextField } from '#lib/components/form/index.ts';
 	import PermissionTree from '$features/roles/components/PermissionTree.svelte';
 	import {
 		roleDetailQuery,
@@ -59,7 +59,7 @@
 
 	$effect(() => {
 		if (capsQuery.data && !hasCapability(capsQuery.data, 'identity.roles.view')) {
-			goto(resolve('/dashboard'), { replaceState: true });
+			goto(resolve('dashboard'), { replace: true });
 		}
 	});
 
@@ -94,6 +94,7 @@
 		if (!role || !canUpdate) return;
 		error = null;
 		saved = false;
+
 		parentMutation.mutate(
 			{ id: role.id, parent_role_id: selectedParent || null },
 			{
@@ -126,7 +127,10 @@
 		error = null;
 		saved = false;
 		updateMutation.mutate(
-			{ id: role.id, req: { name: name.trim(), hierarchy_level: hierarchyLevel } },
+			{
+				id: role.id,
+				req: { name: name.trim(), hierarchy_level: hierarchyLevel }
+			},
 			{
 				onSuccess: () => (saved = true),
 				onError: (err) => (error = describeError(err, 'Failed to save.'))
@@ -138,6 +142,7 @@
 		if (!role || !canUpdate) return;
 		error = null;
 		saved = false;
+
 		replacePermsMutation.mutate(
 			{ id: role.id, permissions: selectedPerms },
 			{

@@ -1,12 +1,7 @@
-<!--
-	OrderDetail — composes header + lifecycle stepper + tabs (Items /
-	Revisions / Payments / Invoice / Credit Notes / Activity) using
-	$ui/tabs and the new feature components.
--->
 <script lang="ts">
 	import { Alert, Card, Skeleton, Tabs } from '$ui';
 	import { Icon, ChevronLeft } from '$icons';
-	import { useUrlTab } from '$lib/hooks';
+	import { useUrlTab } from '#lib/hooks/index.ts';
 	import {
 		orderCreditNotesQuery,
 		orderDetailQuery,
@@ -78,9 +73,15 @@
 	});
 </script>
 
+<!--
+	OrderDetail — composes header + lifecycle stepper + tabs (Items /
+	Revisions / Payments / Invoice / Credit Notes / Activity) using
+	$ui/tabs and the new feature components.
+-->
+
 <div class="stack stack-relaxed">
 	<a
-		href={resolve('/orders')}
+		href={resolve('orders')}
 		class="cluster cluster-tight text-fg-muted hover:text-fg caption inline-flex"
 	>
 		<Icon icon={ChevronLeft} size="xs" /> Back to orders
@@ -259,7 +260,9 @@
 			onOpenChange={(o) => (reviseOpen = o)}
 			{catalogue}
 		/>
+
 		<RecordPaymentDialog {order} bind:open={paymentOpen} onOpenChange={(o) => (paymentOpen = o)} />
+
 		<MarkPackedDialog
 			orderId={order.id}
 			bind:open={packedOpen}

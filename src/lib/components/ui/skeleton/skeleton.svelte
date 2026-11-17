@@ -10,7 +10,7 @@
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import { cn, type WithElementRef, type WithoutChildren } from '$lib/utils/cn';
+	import { cn, type WithElementRef, type WithoutChildren } from '#lib/utils/cn.ts';
 	type Props = WithoutChildren<WithElementRef<HTMLAttributes<HTMLSpanElement>>> & SkeletonVariants;
 	let { ref = $bindable(null), shape = 'line', class: className = '', ...rest }: Props = $props();
 </script>

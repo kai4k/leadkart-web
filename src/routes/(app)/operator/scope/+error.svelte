@@ -12,7 +12,8 @@
 		<p>{message}</p>
 		<div class="cluster cluster-tight mt-3">
 			<Button variant="ghost" size="sm" onclick={() => location.reload()}>Retry</Button>
-			<a class="lk-link-btn" href={resolve('/operator/tenants')}>Back to tenants</a>
+
+			<a class="lk-link-btn" href={resolve('operator/tenants')}>Back to tenants</a>
 		</div>
 	</Alert>
 </div>

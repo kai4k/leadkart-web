@@ -8,7 +8,7 @@ import {
 	AuthError,
 	NotFoundError,
 	ConflictError
-} from '$lib/api/errors';
+} from '#lib/api/errors.ts';
 
 describe('Error subclass hierarchy', () => {
 	describe('NetworkError', () => {

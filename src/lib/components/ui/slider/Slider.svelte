@@ -13,7 +13,7 @@
 -->
 <script lang="ts">
 	import { Slider as BitsSlider } from 'bits-ui';
-	import { cn } from '$lib/utils/cn';
+	import { cn } from '#lib/utils/cn.ts';
 
 	type Props = {
 		value?: number;

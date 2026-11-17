@@ -11,7 +11,7 @@
 	import { Select, Switch, TagInput, TextField } from '$form';
 	import { Icon, X } from '$icons';
 	import { updateLeadSchema, type CrmLeadDto } from '../schemas';
-	import { useForm } from '$lib/hooks/use-form.svelte';
+	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 	import { updateLeadMutation } from '../queries';
 	import {
 		BUY_TIMELINE_LABEL,

@@ -15,8 +15,8 @@
 </script>
 
 <script lang="ts">
-	import { Icon, Minus, Plus } from '$lib/icons';
-	import { cn } from '$lib/utils/cn';
+	import { Icon, Minus, Plus } from '#lib/icons/index.ts';
+	import { cn } from '#lib/utils/cn.ts';
 
 	type Props = {
 		value: number | null;

@@ -1,6 +1,6 @@
 <!-- src/lib/features/orders/components/OrderFilters.svelte -->
 <script lang="ts" module>
-	import type { FilterBarField } from '$lib/components/data';
+	import type { FilterBarField } from '#lib/components/data/index.ts';
 	import { statusBadge } from '$features/orders/view-models';
 	import { orderStatusSchema } from '$features/orders/schemas';
 

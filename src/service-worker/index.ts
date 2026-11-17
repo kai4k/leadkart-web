@@ -1,8 +1,3 @@
-/// <reference types="@sveltejs/kit" />
-/// <reference no-default-lib="true"/>
-/// <reference lib="esnext" />
-/// <reference lib="webworker" />
-
 /**
  * LeadKart service worker.
  *
@@ -10,8 +5,8 @@
  *
  * 1. **App-shell precache** — every build, the static SvelteKit build
  *    output is pre-cached so the app boots offline. SvelteKit's
- *    virtual `$service-worker` module exposes the manifest +
- *    versioned cache name.
+ *    `$app/manifest` exposes the build + static asset lists and
+ *    `$app/env` the versioned cache name.
  *
  * 2. **Runtime caching**:
  *    - Build chunks / static assets → CacheFirst (immutable hashes).
@@ -35,9 +30,11 @@
  * Industry refs: Workbox recipes, Stripe Dashboard SW, GitHub PWA SW,
  * SvelteKit "Service workers" docs.
  */
-import { build, files, version } from '$service-worker';
-
-declare const self: ServiceWorkerGlobalScope;
+import { self } from '$app/service-worker';
+import { version } from '$app/env';
+import { assets, immutable } from '$app/manifest';
+import { resolve } from '$app/paths';
+import type { Path } from '$app/types';
 
 const CACHE_PREFIX = 'lk';
 const APP_SHELL_CACHE = `${CACHE_PREFIX}-shell-${version}`;
@@ -45,7 +42,7 @@ const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime-${version}`;
 const API_CACHE = `${CACHE_PREFIX}-api-${version}`;
 
 /** Files to precache on install — built assets + bundled statics. */
-const APP_SHELL: string[] = [...build, ...files];
+const APP_SHELL: string[] = [...immutable, ...assets].map(({ path }) => resolve(path as Path));
 
 const API_TIMEOUT_MS = 10_000;
 

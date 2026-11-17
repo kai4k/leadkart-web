@@ -31,4 +31,6 @@ node_modules/.cache
 
 # Storybook static build output
 storybook-static
+
+# Superpowers SDD scratch (briefs/reports/ledger)
 .superpowers/

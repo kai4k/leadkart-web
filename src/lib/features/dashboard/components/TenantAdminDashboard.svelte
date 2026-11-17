@@ -9,7 +9,7 @@
 		Truck,
 		UserPlus,
 		Users
-	} from '$lib/icons';
+	} from '#lib/icons/index.ts';
 	import { Alert, Card } from '$ui';
 	import { myCapabilitiesQuery } from '$features/auth/queries';
 

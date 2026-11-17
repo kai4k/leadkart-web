@@ -14,7 +14,7 @@ import type {
 	listAllTenantsResponseSchema
 } from './schemas';
 
-export type { Tenant as TenantDto } from '$lib/features/tenant/types';
+export type { Tenant as TenantDto } from '#lib/features/tenant/types.ts';
 
 export type RegisterTenantRequest = z.output<typeof registerTenantRequestSchema>;
 export type RegisterTenantResponse = z.output<typeof registerTenantResponseSchema>;

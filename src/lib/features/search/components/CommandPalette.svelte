@@ -40,7 +40,7 @@
 		try {
 			await enterScope({ slug });
 			onOpenChange(false);
-			goto(resolve('/operator/scope/profile'));
+			goto(resolve('operator/scope/profile'));
 		} catch {
 			// Toast surfaces via global mutation cache — no inline error needed
 		}
@@ -48,7 +48,7 @@
 
 	function openPerson(id: string) {
 		onOpenChange(false);
-		goto(resolve(`/operator/persons/${id}`));
+		goto(resolve('/(app)/operator/persons/[id]', { id }));
 	}
 </script>
 

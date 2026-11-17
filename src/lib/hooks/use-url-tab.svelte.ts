@@ -23,7 +23,7 @@ import { SvelteURL } from 'svelte/reactivity';
 export interface UseUrlTab {
 	/** Current tab value, projected from `?tab=` (or the default). */
 	readonly value: string;
-	/** Switch tab. Updates the URL via `replaceState` (no history pollution). */
+	/** Switch tab. Updates the URL via `replace` (no history pollution). */
 	set(next: string): void;
 }
 
@@ -34,13 +34,12 @@ export interface UseUrlTab {
  */
 export function useUrlTab(defaultTab: string, valid?: readonly string[], param = 'tab'): UseUrlTab {
 	function set(next: string): void {
-		const url = new SvelteURL(page.url);
+		const url = new SvelteURL(page.url.href);
 		if (next === defaultTab) url.searchParams.delete(param);
 		else url.searchParams.set(param, next);
 		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
-			replaceState: true,
-			keepFocus: true,
-			noScroll: true
+			replace: true,
+			reset: false
 		});
 	}
 

@@ -10,8 +10,8 @@
  */
 import { fail, redirect } from '@sveltejs/kit';
 import { z } from 'zod';
-import { config } from '$lib/server/config';
-import { ACCESS_COOKIE } from '$lib/server/cookies';
+import { config } from '#lib/server/config.ts';
+import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
 import type { Actions } from './$types';
 
 const schema = z.object({

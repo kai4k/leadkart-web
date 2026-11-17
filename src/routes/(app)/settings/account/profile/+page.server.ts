@@ -13,10 +13,10 @@
  * without a manual invalidate() call.
  */
 import { fail, redirect } from '@sveltejs/kit';
-import { goFetch, readGoJson, readGoError, flattenGoErrors } from '$lib/server/go';
+import { goFetch, readGoJson, readGoError, flattenGoErrors } from '#lib/server/go.ts';
 import { updateProfileRequestSchema } from '$features/auth/schemas';
 import { decodeJwtPrincipal } from '$api/jwt';
-import { ACCESS_COOKIE } from '$lib/server/cookies';
+import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
 import type { UserDto } from '$features/auth/types';
 import type { Actions, PageServerLoad } from './$types';
 

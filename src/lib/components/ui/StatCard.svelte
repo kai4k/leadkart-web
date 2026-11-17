@@ -29,8 +29,8 @@
 </script>
 
 <script lang="ts">
-	import { ArrowDown, ArrowUp, Icon, iconSize } from '$lib/icons';
-	import { cn } from '$lib/utils/cn';
+	import { ArrowDown, ArrowUp, Icon, iconSize } from '#lib/icons/index.ts';
+	import { cn } from '#lib/utils/cn.ts';
 	import * as Card from './card';
 	import { Skeleton } from './skeleton';
 

@@ -11,8 +11,8 @@ import {
 	canActivate,
 	canMarkForDeletion,
 	canRestore
-} from '$lib/features/operator/tenants/view-models';
-import type { TenantDto } from '$lib/features/operator/tenants/types';
+} from '#lib/features/operator/tenants/view-models.ts';
+import type { TenantDto } from '#lib/features/operator/tenants/types.ts';
 
 // ---------------------------------------------------------------------------
 // Fixture factory — only fields consumed by view-models needed

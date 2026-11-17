@@ -5,7 +5,7 @@
  * can immediately assign permissions.
  */
 import { fail, redirect } from '@sveltejs/kit';
-import { goFetch, readGoJson, readGoError, flattenGoErrors } from '$lib/server/go';
+import { goFetch, readGoJson, readGoError, flattenGoErrors } from '#lib/server/go.ts';
 import { createRoleRequestSchema } from '$features/roles/schemas';
 import type { Actions } from './$types';
 

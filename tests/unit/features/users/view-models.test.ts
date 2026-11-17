@@ -5,8 +5,8 @@ import {
 	managerLabel,
 	canDeactivate,
 	canRevokeRole
-} from '$lib/features/users/view-models';
-import type { UserDto, RoleDto } from '$lib/features/users/types';
+} from '#lib/features/users/view-models.ts';
+import type { UserDto, RoleDto } from '#lib/features/users/types.ts';
 
 const u: UserDto = {
 	membership_id: 'm1',

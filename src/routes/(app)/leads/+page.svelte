@@ -13,10 +13,10 @@
 	import { resolve } from '$app/paths';
 	import type { ResolvedPathname } from '$app/types';
 	import { SvelteURL } from 'svelte/reactivity';
-	import { ResourceListPage } from '$lib/components/data';
-	import type { BulkAction } from '$lib/components/data';
+	import { ResourceListPage } from '#lib/components/data/index.ts';
+	import type { BulkAction } from '#lib/components/data/index.ts';
 	import { Tabs } from '$ui';
-	import BulkUploadDrawerShared from '$lib/components/data/BulkUploadDrawer.svelte';
+	import BulkUploadDrawerShared from '#lib/components/data/BulkUploadDrawer.svelte';
 	import { TextField } from '$form';
 	import { Upload } from '$icons';
 	import {
@@ -25,7 +25,7 @@
 		createKeyboardListNav,
 		createSavedViews,
 		type SavedView
-	} from '$lib/hooks';
+	} from '#lib/hooks/index.ts';
 	import { LEAD_FILTER_FIELDS, type LeadUrlFilters } from '$features/leads/filter-config';
 	import {
 		leadsInfiniteQuery,
@@ -94,13 +94,12 @@
 		page.url.searchParams.get('view') === 'table' ? 'table' : 'kanban'
 	);
 	function setViewMode(next: ViewMode) {
-		const url = new SvelteURL(page.url);
+		const url = new SvelteURL(page.url.href);
 		if (next === 'kanban') url.searchParams.delete('view');
 		else url.searchParams.set('view', 'table');
 		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
-			replaceState: true,
-			keepFocus: true,
-			noScroll: true
+			replace: true,
+			reset: false
 		});
 	}
 
@@ -136,7 +135,7 @@
 	// focus when open, so j/k bubble naturally out of the row list
 	// instead of needing an `isAnyOverlayOpen` guard.
 	const nav = createKeyboardListNav<CrmLeadDto>({
-		onSelect: (lead) => goto(resolve(`/leads/${lead.id}`)),
+		onSelect: (lead) => goto(resolve('/(app)/leads/[id]', { id: lead.id })),
 		onEdit: (lead) => {
 			editingLead = lead;
 			editOpen = true;
@@ -247,9 +246,8 @@
 			<Tabs.Content value="kanban">
 				<LeadsKanban leads={list.items} state={list.state} error={list.error} />
 			</Tabs.Content>
-			<Tabs.Content value="table">
-				<LeadsTable {list} {selection} {nav} />
-			</Tabs.Content>
+
+			<Tabs.Content value="table"><LeadsTable {list} {selection} {nav} /></Tabs.Content>
 		</Tabs.Root>
 	</div>
 </ResourceListPage>

@@ -9,7 +9,7 @@ import {
 	assignManagerRequestSchema,
 	roleDtoSchema,
 	listRolesResponseSchema
-} from '$lib/features/users/schemas';
+} from '#lib/features/users/schemas.ts';
 
 describe('listUsersResponseSchema', () => {
 	it('parses a list shape', () => {

@@ -2,7 +2,11 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { Badge, Button, DataTable, EmptyState, type DataTableColumn } from '$ui';
-	import { ResourceListPage, type ResourceListAction, type BulkAction } from '$lib/components/data';
+	import {
+		ResourceListPage,
+		type ResourceListAction,
+		type BulkAction
+	} from '#lib/components/data/index.ts';
 	import { Icon, Plus, Package, UploadCloud, Pause, Check, Trash2 } from '$icons';
 	import {
 		createBulkSelection,
@@ -10,7 +14,7 @@
 		createSavedViews,
 		createUrlFilters,
 		type SavedView
-	} from '$lib/hooks';
+	} from '#lib/hooks/index.ts';
 	import {
 		productsInfiniteQuery,
 		bulkProductActionMutation,
@@ -58,13 +62,24 @@
 	const savedViews = createSavedViews<ProductFilters>(
 		[
 			{ id: 'all', label: 'All', filters: {} },
-			{ id: 'low', label: 'Low stock', filters: { low_stock: 'true' } },
+			{
+				id: 'low',
+				label: 'Low stock',
+				filters: { low_stock: 'true' }
+			},
+
 			{
 				id: 'expiring',
 				label: 'Expiring soon',
 				filters: { expiring_within_days: '90' }
 			},
-			{ id: 'inactive', label: 'Inactive', filters: { is_active: 'false' } },
+
+			{
+				id: 'inactive',
+				label: 'Inactive',
+				filters: { is_active: 'false' }
+			},
+
 			{
 				id: 'schedule_h',
 				label: 'Schedule H',
@@ -173,7 +188,7 @@
 	const isEmpty = $derived(!query.isPending && !query.isError && products.length === 0);
 
 	function openDetail(p: ProductDto) {
-		goto(resolve(`/inventory/${p.id}`));
+		goto(resolve('/(app)/inventory/[id]', { id: p.id }));
 	}
 
 	// ── Keyboard nav (Linear / Superhuman convention) ─────────────────
@@ -199,7 +214,14 @@
 			class: 'w-10',
 			selectLabel: (p) => `Select ${p.brand_name}`
 		},
-		{ id: 'brand', header: 'Brand', accessor: 'brand_name', cell: brandCell },
+
+		{
+			id: 'brand',
+			header: 'Brand',
+			accessor: 'brand_name',
+			cell: brandCell
+		},
+
 		{
 			id: 'category',
 			header: 'Category',
@@ -309,12 +331,13 @@
 	>
 		{#snippet action()}
 			<div class="cluster cluster-tight">
-				<Button onclick={() => (createOpen = true)} data-testid="empty-create-product">
-					<Icon icon={Plus} size="sm" /> Create product
-				</Button>
-				<Button variant="tonal" onclick={() => (bulkUploadOpen = true)}>
-					<Icon icon={UploadCloud} size="sm" /> Bulk upload
-				</Button>
+				<Button onclick={() => (createOpen = true)} data-testid="empty-create-product"
+					><Icon icon={Plus} size="sm" /> Create product</Button
+				>
+
+				<Button variant="tonal" onclick={() => (bulkUploadOpen = true)}
+					><Icon icon={UploadCloud} size="sm" /> Bulk upload</Button
+				>
 			</div>
 		{/snippet}
 	</EmptyState>
@@ -360,4 +383,5 @@
 </ResourceListPage>
 
 <CreateProductDrawer bind:open={createOpen} onOpenChange={(o) => (createOpen = o)} />
+
 <ProductBulkUploadDrawer bind:open={bulkUploadOpen} onOpenChange={(o) => (bulkUploadOpen = o)} />

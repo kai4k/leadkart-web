@@ -5,7 +5,7 @@
  * in isolation — no DOM / Svelte rendering required.
  */
 import { describe, expect, it } from 'vitest';
-import type { DataTableColumn } from '$lib/components/ui/data-table';
+import type { DataTableColumn } from '#lib/components/ui/data-table/index.ts';
 
 // ─── Replicate helpers from DataTable.svelte (pure, no Svelte deps) ──────────
 

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Calendar as CalendarPrimitive } from 'bits-ui';
 	import { ChevronLeft, ChevronRight, Icon } from '$icons';
-	import { cn } from '$lib/utils/cn';
+	import { cn } from '#lib/utils/cn.ts';
 	type SingleProps = Extract<CalendarPrimitive.RootProps, { type?: 'single' }>;
 	let {
 		ref = $bindable(null),

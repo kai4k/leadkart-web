@@ -8,7 +8,7 @@
  * is covered via jsdom DOM construction.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { createKeyboardListNav } from '$lib/hooks/use-keyboard-list-nav.svelte';
+import { createKeyboardListNav } from '#lib/hooks/use-keyboard-list-nav.svelte.ts';
 
 type Item = { id: string; label: string };
 

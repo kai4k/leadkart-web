@@ -8,7 +8,7 @@
 	import type { RoleDto } from '$features/roles/types';
 	import { roleBadgeVariant, isProtectedRole, roleMemberCount } from '$features/roles/view-models';
 	import { getListErrorMessage } from '$api/errors';
-	import { createListPagination } from '$lib/hooks';
+	import { createListPagination } from '#lib/hooks/index.ts';
 	import { resolve } from '$app/paths';
 	import DeleteRoleDialog from './DeleteRoleDialog.svelte';
 
@@ -35,12 +35,7 @@
 	const listErrorCopy = $derived(getListErrorMessage(rolesQuery.error, 'roles'));
 
 	const columns: DataTableColumn<RoleDto>[] = [
-		{
-			id: 'name',
-			header: 'Role',
-			accessor: 'name',
-			cell: nameCell
-		},
+		{ id: 'name', header: 'Role', accessor: 'name', cell: nameCell },
 		{
 			id: 'type',
 			header: 'Type',
@@ -76,7 +71,7 @@
 
 {#snippet nameCell(role: RoleDto)}
 	<a
-		href={resolve(`/settings/roles/${role.id}`)}
+		href={resolve('/(app)/settings/roles/[id]', { id: role.id })}
 		class="text-fg hover:text-primary font-medium hover:underline">{role.name}</a
 	>
 {/snippet}
@@ -93,9 +88,10 @@
 		</Dropdown.Trigger>
 		<Dropdown.Menu>
 			<Dropdown.Item>
-				<a href={resolve(`/settings/roles/${role.id}`)} class="cluster cluster-tight">
-					<Icon icon={Edit} size="sm" /> Edit
-				</a>
+				<a
+					href={resolve('/(app)/settings/roles/[id]', { id: role.id })}
+					class="cluster cluster-tight"><Icon icon={Edit} size="sm" /> Edit</a
+				>
 			</Dropdown.Item>
 			{#if !isProtectedRole(role)}
 				<Dropdown.Separator />
@@ -115,9 +111,9 @@
 				{roleList.length} role{roleList.length === 1 ? '' : 's'}
 			</p>
 		</div>
-		<Button onclick={() => goto(resolve('/settings/roles/new'))}>
-			<Icon icon={Plus} size="sm" /> Create role
-		</Button>
+		<Button onclick={() => goto(resolve('settings/roles/new'))}
+			><Icon icon={Plus} size="sm" /> Create role</Button
+		>
 	</header>
 
 	<DataTable.Root
@@ -135,9 +131,9 @@
 				description="Roles bundle permissions for easy assignment to team members."
 			>
 				{#snippet action()}
-					<Button onclick={() => goto(resolve('/settings/roles/new'))}>
-						<Icon icon={Plus} size="sm" /> Create role
-					</Button>
+					<Button onclick={() => goto(resolve('settings/roles/new'))}
+						><Icon icon={Plus} size="sm" /> Create role</Button
+					>
 				{/snippet}
 			</EmptyState>
 		{/snippet}

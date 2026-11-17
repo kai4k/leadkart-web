@@ -12,8 +12,6 @@ export default defineConfig({
 	plugins: [svelte()],
 	resolve: {
 		alias: {
-			$lib: resolve(root, 'lib'),
-			'$lib/*': resolve(root, 'lib/*'),
 			$features: resolve(root, 'lib/features'),
 			'$features/*': resolve(root, 'lib/features/*'),
 			$layouts: resolve(root, 'lib/layouts'),

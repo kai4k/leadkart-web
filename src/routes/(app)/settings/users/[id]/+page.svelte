@@ -28,7 +28,7 @@
 	const capsQuery = myCapabilitiesQuery();
 	$effect(() => {
 		if (capsQuery.data && !hasCapability(capsQuery.data, 'identity.users.view')) {
-			goto(resolve('/dashboard'), { replaceState: true });
+			goto(resolve('dashboard'), { replace: true });
 		}
 	});
 
@@ -56,12 +56,12 @@
 	const reactivate = reactivateUserMutation();
 
 	function setTab(name: string) {
-		const url = new SvelteURL(page.url);
+		const url = new SvelteURL(page.url.href);
 		if (name === 'overview') url.searchParams.delete('tab');
 		else url.searchParams.set('tab', name);
 		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
-			replaceState: true,
-			keepFocus: true
+			replace: true,
+			reset: false
 		});
 	}
 </script>
@@ -106,20 +106,23 @@
 					<Icon icon={MoreVertical} size="sm" /> Actions
 				</Dropdown.Trigger>
 				<Dropdown.Menu>
-					<Dropdown.Item onclick={() => (rolesOpen = true)}>
-						<Icon icon={Shield} size="sm" /> Manage roles
-					</Dropdown.Item>
-					<Dropdown.Item onclick={() => (managerOpen = true)}>
-						<Icon icon={Users} size="sm" /> Set manager
-					</Dropdown.Item>
+					<Dropdown.Item onclick={() => (rolesOpen = true)}
+						><Icon icon={Shield} size="sm" /> Manage roles</Dropdown.Item
+					>
+					<Dropdown.Item onclick={() => (managerOpen = true)}
+						><Icon icon={Users} size="sm" /> Set manager</Dropdown.Item
+					>
+
 					<Dropdown.Item onclick={() => (permsOpen = true)}>
-						<Icon icon={Lock} size="sm" /> Permission overrides
+						<Icon icon={Lock} size="sm" />
+						Permission overrides
 					</Dropdown.Item>
+
 					<Dropdown.Separator />
 					{#if user.status === 'active'}
-						<Dropdown.Item variant="danger" onclick={() => (deactivateOpen = true)}>
-							<Icon icon={UserMinus} size="sm" /> Deactivate
-						</Dropdown.Item>
+						<Dropdown.Item variant="danger" onclick={() => (deactivateOpen = true)}
+							><Icon icon={UserMinus} size="sm" /> Deactivate</Dropdown.Item
+						>
 					{:else if user.status === 'inactive'}
 						<Dropdown.Item onclick={() => reactivate.mutate(user.membership_id)}>
 							<Icon icon={UserPlus} size="sm" /> Reactivate
@@ -159,4 +162,5 @@
 	{user}
 	onOpenChange={(o) => (managerOpen = o)}
 />
+
 <PermissionOverridesPanel bind:open={permsOpen} {user} onOpenChange={(o) => (permsOpen = o)} />

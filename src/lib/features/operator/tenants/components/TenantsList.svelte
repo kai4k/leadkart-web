@@ -38,7 +38,7 @@
 	import MarkForDeletionDialog from './MarkForDeletionDialog.svelte';
 	import ImpersonateModal from '$features/operator/impersonation/components/ImpersonateModal.svelte';
 	import type { TenantDto } from '$features/operator/tenants/types';
-	import { createListPagination } from '$lib/hooks';
+	import { createListPagination } from '#lib/hooks/index.ts';
 
 	const PAGE_SIZE = 10;
 
@@ -56,21 +56,21 @@
 	const statusFilter = $derived(page.url.searchParams.get('status') ?? 'all');
 
 	function setStatusFilter(value: string) {
-		const url = new SvelteURL(page.url);
+		const url = new SvelteURL(page.url.href);
 		if (value && value !== 'all') url.searchParams.set('status', value);
 		else url.searchParams.delete('status');
 		url.searchParams.delete('page');
-		void goto(`${url.pathname}${url.search}` as ResolvedPathname, { replaceState: true });
+		void goto(`${url.pathname}${url.search}` as ResolvedPathname, { replace: true });
 	}
 
 	function setSearch(value: string) {
-		const url = new SvelteURL(page.url);
+		const url = new SvelteURL(page.url.href);
 		if (value) url.searchParams.set('q', value);
 		else url.searchParams.delete('q');
 		url.searchParams.delete('page');
 		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
-			replaceState: true,
-			keepFocus: true
+			replace: true,
+			reset: false
 		});
 	}
 

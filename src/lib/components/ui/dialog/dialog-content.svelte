@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Dialog as DialogPrimitive } from 'bits-ui';
-	import { X, Icon } from '$lib/icons';
-	import { cn } from '$lib/utils/cn';
+	import { X, Icon } from '#lib/icons/index.ts';
+	import { cn } from '#lib/utils/cn.ts';
 	import DialogOverlay from './dialog-overlay.svelte';
 
 	let {

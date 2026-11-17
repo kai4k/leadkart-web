@@ -2,9 +2,9 @@
 	import { _ } from 'svelte-i18n';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
-	import { Icon, Lock } from '$lib/icons';
-	import { Alert, AuthCard, Button, Logo } from '$lib/components/ui';
-	import { TextField, PasswordField } from '$lib/components/form';
+	import { Icon, Lock } from '#lib/icons/index.ts';
+	import { Alert, AuthCard, Button, Logo } from '#lib/components/ui/index.ts';
+	import { TextField, PasswordField } from '#lib/components/form/index.ts';
 	import { resolve } from '$app/paths';
 	import type { ActionData } from '../../../../routes/(auth)/signin/$types';
 
@@ -103,14 +103,14 @@
 			</div>
 		{/if}
 
-		<Button type="submit" {loading} fullWidth size="lg">
-			{loading ? $_('common.loading') : $_('auth.signin.submit')}
-		</Button>
+		<Button type="submit" {loading} fullWidth size="lg"
+			>{loading ? $_('common.loading') : $_('auth.signin.submit')}</Button
+		>
 
 		<p class="caption text-fg-muted text-center">
-			<a href={resolve('/forgot-password')} class="text-primary hover:underline">
-				{$_('auth.signin.forgotPassword')}
-			</a>
+			<a href={resolve('forgot-password')} class="text-primary hover:underline"
+				>{$_('auth.signin.forgotPassword')}</a
+			>
 		</p>
 	</form>
 

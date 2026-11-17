@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { z } from 'zod';
 	import { Alert, Button, Dialog } from '$ui';
-	import { useForm } from '$lib/hooks/use-form.svelte';
+	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 	import { impersonation } from '$features/operator/impersonation/stores/impersonation.svelte';
 	import type { TenantDto } from '$features/operator/tenants/types';
 

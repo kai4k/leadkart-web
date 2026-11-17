@@ -1,3 +1,5 @@
+import type { HandleClientError } from '@sveltejs/kit/hooks';
+
 /**
  * Client-side hooks per SvelteKit canon. Initialises i18n on first paint.
  * handleError captures unhandled errors at the route boundary and logs
@@ -9,12 +11,19 @@
  *
  * https://svelte.dev/docs/kit/hooks#shared-hooks-handleerror
  */
-import type { HandleClientError } from '@sveltejs/kit';
-import { initI18n } from '$lib/i18n';
+import { initI18n } from '#lib/i18n/index.ts';
 
 initI18n();
 
-export const handleError: HandleClientError = ({ error, event, status, message }) => {
+export const handleError: HandleClientError = ({ kind, error, event }) => {
+	// Kit 3 routes expected (`error(...)`) errors through this hook too.
+	// Keep them on the defaults — only unexpected + framework errors
+	// (404s, thrown exceptions) are logged and re-shaped here.
+	if (kind === 'app') return;
+
+	const status = kind === 'framework' ? error.status : 500;
+	const message = kind === 'framework' ? error.message : 'Internal Error';
+
 	// In production this is the integration point for Sentry / Datadog RUM.
 	// For now: structured console log so the browser devtools give context.
 	console.error('[handleError]', {
@@ -25,7 +34,7 @@ export const handleError: HandleClientError = ({ error, event, status, message }
 	});
 
 	// Return a safe error object that SvelteKit passes to the nearest
-	// +error.svelte as `$page.error`. Do not expose internal stack traces
+	// +error.svelte as `page.error`. Do not expose internal stack traces
 	// to the user — only the human-readable message.
 	return {
 		message:

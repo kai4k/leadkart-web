@@ -36,8 +36,8 @@ import {
 	ShieldCheck,
 	ShoppingCart,
 	Users
-} from '$lib/icons';
-import type { PrincipalTier } from '$lib/features/auth/capabilities';
+} from '#lib/icons/index.ts';
+import type { PrincipalTier } from '#lib/features/auth/capabilities.ts';
 
 export interface NavItem {
 	href: ResolvedPathname;

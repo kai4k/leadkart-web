@@ -8,7 +8,7 @@
  * for the caller's own profile.
  */
 import { z } from 'zod';
-import { userDtoSchema } from '$lib/features/auth/schemas';
+import { userDtoSchema } from '#lib/features/auth/schemas.ts';
 
 export { userDtoSchema };
 
@@ -70,4 +70,4 @@ export const replacePermissionOverridesRequestSchema = z
 
 export const assignManagerRequestSchema = z.object({ manager_id: z.string() }).strict();
 
-export { roleDtoSchema, listRolesResponseSchema } from '$lib/features/roles/schemas';
+export { roleDtoSchema, listRolesResponseSchema } from '#lib/features/roles/schemas.ts';

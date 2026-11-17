@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Dialog, Button, Alert } from '$ui';
-	import { useForm } from '$lib/hooks/use-form.svelte';
+	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 	import { writeOffBatchMutation } from '$features/inventory/queries';
 	import { writeOffBatchRequestSchema, type BatchDto } from '$features/inventory/schemas';
 

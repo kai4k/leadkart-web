@@ -14,7 +14,7 @@
 	 * authenticated pages. Each bar uses the same .bg-bg-elevated border border-border rounded-xl shadow-card material
 	 * as toasts so the visual language is consistent.
 	 */
-	import { createPwa } from '$lib/hooks';
+	import { createPwa } from '#lib/hooks/index.ts';
 	import { Button } from '$ui';
 	import { CloudOff, Download, RefreshCw, Icon } from '$icons';
 

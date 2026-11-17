@@ -33,7 +33,7 @@
 	 */
 	import { setContext } from 'svelte';
 	import type { Snippet } from 'svelte';
-	import { cn } from '$lib/utils/cn';
+	import { cn } from '#lib/utils/cn.ts';
 	import { createKanbanDragState, KANBAN_CTX } from './kanban-state.svelte';
 
 	type Props = {

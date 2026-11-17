@@ -13,7 +13,7 @@
  */
 import { fail } from '@sveltejs/kit';
 import { z } from 'zod';
-import { config } from '$lib/server/config';
+import { config } from '#lib/server/config.ts';
 import type { Actions } from './$types';
 
 const emailSchema = z.string().min(1, 'Email is required').email('Invalid email format');

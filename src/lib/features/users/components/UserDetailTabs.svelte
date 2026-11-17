@@ -116,9 +116,10 @@
 								<span class="body-base text-fg">{manager}</span>
 							</div>
 							<div class="cluster cluster-tight">
-								<Button variant="ghost" size="sm" onclick={onManageManager}>
-									<Icon icon={Edit} size="sm" /> Change
-								</Button>
+								<Button variant="ghost" size="sm" onclick={onManageManager}
+									><Icon icon={Edit} size="sm" /> Change</Button
+								>
+
 								<Button
 									variant="ghost"
 									size="sm"
@@ -230,7 +231,7 @@
 							{@const rs = userStatusBadge(report.status)}
 							<li>
 								<a
-									href={resolve(`/settings/users/${report.membership_id}`)}
+									href={resolve('/(app)/settings/users/[id]', { id: report.membership_id })}
 									class="hover:bg-bg-muted -mx-2 flex items-center gap-3 rounded-md px-2 py-2 transition-colors"
 								>
 									<Avatar initials={initials(report)} size="sm" />

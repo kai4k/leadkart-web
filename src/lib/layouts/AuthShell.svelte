@@ -45,7 +45,7 @@
 	 */
 	import { onMount } from 'svelte';
 	import { Logo } from '$ui';
-	import { Icon, ShieldCheck, TrendingUp, Truck } from '$lib/icons';
+	import { Icon, ShieldCheck, TrendingUp, Truck } from '#lib/icons/index.ts';
 
 	let { children } = $props();
 	let canvas: HTMLElement | undefined = $state();

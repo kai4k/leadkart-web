@@ -1,10 +1,10 @@
 <!-- src/lib/features/users/components/CreateUserDrawer.svelte -->
 <script lang="ts">
 	import { Drawer, Button, Alert } from '$ui';
-	import { TextField, PasswordField } from '$lib/components/form';
+	import { TextField, PasswordField } from '#lib/components/form/index.ts';
 	import { createUserMutation } from '$features/users/queries';
 	import { createUserRequestSchema } from '$features/users/schemas';
-	import { useForm } from '$lib/hooks/use-form.svelte';
+	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 
 	type Props = {
 		open: boolean;

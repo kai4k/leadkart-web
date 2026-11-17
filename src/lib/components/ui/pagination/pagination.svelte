@@ -5,7 +5,7 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { ChevronLeft, ChevronRight, Icon } from '$icons';
-	import { cn, type WithElementRef } from '$lib/utils/cn';
+	import { cn, type WithElementRef } from '#lib/utils/cn.ts';
 	import { Button } from '../button';
 	import { ButtonGroup } from '../button-group';
 

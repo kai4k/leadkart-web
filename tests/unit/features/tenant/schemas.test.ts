@@ -14,7 +14,7 @@ import {
 	updateTenantProfileSchema,
 	updateTenantSettingsSchema,
 	updateTenantStatutorySchema
-} from '$lib/features/tenant/schemas';
+} from '#lib/features/tenant/schemas.ts';
 
 const FULL_TENANT = {
 	id: '00000000-0000-0000-0000-000000000001',

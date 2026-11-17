@@ -1,6 +1,6 @@
 <script lang="ts" module>
-	import type { FilterBarField } from '$lib/components/data';
-	import type { UrlFilterValue } from '$lib/hooks';
+	import type { FilterBarField } from '#lib/components/data/index.ts';
+	import type { UrlFilterValue } from '#lib/hooks/index.ts';
 	import { DRUG_SCHEDULE_OPTIONS } from '$features/inventory/view-models';
 
 	export type ProductFilters = {

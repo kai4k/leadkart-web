@@ -4,7 +4,7 @@
 	import Sidebar from './Sidebar.svelte';
 	import Footer from './Footer.svelte';
 	import { Drawer } from '$ui';
-	import { theme } from '$lib/hooks/use-theme.svelte';
+	import { theme } from '#lib/hooks/use-theme.svelte.ts';
 
 	/**
 	 * AppShell — Linear/Vercel-style canonical layout:

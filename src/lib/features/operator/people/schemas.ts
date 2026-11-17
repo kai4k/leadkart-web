@@ -10,7 +10,7 @@
  * context or from the platform persons/memberships endpoint.
  */
 import { z } from 'zod';
-import { userDtoSchema } from '$lib/features/auth/schemas';
+import { userDtoSchema } from '#lib/features/auth/schemas.ts';
 
 export const personDtoSchema = z.object({
 	id: z.string(),

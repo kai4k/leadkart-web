@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { Drawer, Button, Alert } from '$ui';
-	import { TextField } from '$lib/components/form';
+	import { TextField } from '#lib/components/form/index.ts';
 	import { createPermissionRequestMutation } from '$features/permission-requests/queries';
 	import { createPermissionRequestSchema } from '$features/permission-requests/schemas';
-	import { useForm } from '$lib/hooks/use-form.svelte';
+	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 
 	type Props = { open: boolean; onOpenChange: (open: boolean) => void };
 	let { open = $bindable(false), onOpenChange }: Props = $props();

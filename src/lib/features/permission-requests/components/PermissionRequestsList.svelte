@@ -19,21 +19,21 @@
 	 * requests. Tabs across `requester` (my requests) and `approver`
 	 * (queue waiting on my decision).
 	 */
-
 	const role = $derived<ListRole>(
 		(page.url.searchParams.get('role') as ListRole | null) ?? 'requester'
 	);
+
 	const query = $derived(permissionRequestsListQuery(role));
 
 	let createOpen = $state(false);
 
 	function setRole(next: ListRole) {
-		const url = new SvelteURL(page.url);
+		const url = new SvelteURL(page.url.href);
 		if (next === 'requester') url.searchParams.delete('role');
 		else url.searchParams.set('role', next);
 		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
-			replaceState: true,
-			keepFocus: true
+			replace: true,
+			reset: false
 		});
 	}
 
@@ -86,7 +86,7 @@
 	];
 
 	function onRowClick(req: PermissionRequestDto) {
-		goto(resolve(`/permission-requests/${req.id}`));
+		goto(resolve('/(app)/permission-requests/[id]', { id: req.id }));
 	}
 </script>
 
@@ -111,9 +111,10 @@
 				Request time-bound elevated permissions; approve or deny requests waiting on you.
 			</p>
 		</div>
-		<Button onclick={() => (createOpen = true)}>
-			<Icon icon={Plus} size="sm" /> Request permission
-		</Button>
+
+		<Button onclick={() => (createOpen = true)}
+			><Icon icon={Plus} size="sm" /> Request permission</Button
+		>
 	</header>
 
 	<nav aria-label="Request scope" class="border-border border-b">
@@ -159,9 +160,9 @@
 			>
 				{#snippet action()}
 					{#if role === 'requester'}
-						<Button onclick={() => (createOpen = true)}>
-							<Icon icon={Plus} size="sm" /> Request permission
-						</Button>
+						<Button onclick={() => (createOpen = true)}
+							><Icon icon={Plus} size="sm" /> Request permission</Button
+						>
 					{/if}
 				{/snippet}
 			</EmptyState>

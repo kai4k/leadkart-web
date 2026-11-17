@@ -5,7 +5,7 @@
  * class strings without needing DOM / Svelte rendering.
  */
 import { describe, expect, it } from 'vitest';
-import { skeletonVariants } from '$lib/components/ui/skeleton';
+import { skeletonVariants } from '#lib/components/ui/skeleton/index.ts';
 
 describe('skeletonVariants', () => {
 	it('default shape is line — has rounded class', () => {

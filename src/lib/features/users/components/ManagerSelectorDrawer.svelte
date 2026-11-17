@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Drawer, Button, Alert } from '$ui';
-	import { Select } from '$lib/components/form';
+	import { Select } from '#lib/components/form/index.ts';
 	import { assignManagerMutation, removeManagerMutation } from '$features/users/queries';
 	import type { UserDto } from '$features/users/types';
 	import { displayName } from '$features/auth/view-models';

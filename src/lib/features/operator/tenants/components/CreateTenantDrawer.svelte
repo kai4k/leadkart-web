@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { Drawer, Button, Alert, Card } from '$ui';
-	import { TextField, PasswordField } from '$lib/components/form';
+	import { TextField, PasswordField } from '#lib/components/form/index.ts';
 	import { Copy, Icon } from '$icons';
 	import { registerTenantMutation } from '$features/operator/tenants/queries';
 	import { registerTenantRequestSchema } from '$features/operator/tenants/schemas';
-	import { useForm } from '$lib/hooks/use-form.svelte';
+	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 	import { resolve } from '$app/paths';
 	import type { RegisterTenantResponse } from '$features/operator/tenants/types';
 
@@ -148,9 +148,11 @@
 				</p>
 				<div class="cluster mt-4">
 					<Button variant="ghost" onclick={reset}>Register another</Button>
-					<a href={resolve('/operator/tenants')} class="label text-primary hover:underline"
+
+					<a href={resolve('operator/tenants')} class="label text-primary hover:underline"
 						>View tenant →</a
 					>
+
 					<Button onclick={() => handleClose(false)}>Done</Button>
 				</div>
 			{:else}

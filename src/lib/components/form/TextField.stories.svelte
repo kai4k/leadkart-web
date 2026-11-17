@@ -1,6 +1,6 @@
 <script context="module" lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
-	import { Mail, Search, Icon } from '$lib/icons';
+	import { Mail, Search, Icon } from '#lib/icons/index.ts';
 	import TextField from './TextField.svelte';
 
 	const { Story } = defineMeta({

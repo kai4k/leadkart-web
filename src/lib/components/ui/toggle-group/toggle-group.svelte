@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ToggleGroup as ToggleGroupPrimitive } from 'bits-ui';
 	import { setContext } from 'svelte';
-	import { cn } from '$lib/utils/cn';
+	import { cn } from '#lib/utils/cn.ts';
 	import type { ToggleVariants } from '../toggle';
 	type SingleProps = Extract<ToggleGroupPrimitive.RootProps, { type?: 'single' }>;
 	let {

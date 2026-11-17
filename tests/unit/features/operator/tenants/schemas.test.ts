@@ -12,7 +12,7 @@ import {
 	markForDeletionRequestSchema,
 	tenantDtoSchema,
 	listAllTenantsResponseSchema
-} from '$lib/features/operator/tenants/schemas';
+} from '#lib/features/operator/tenants/schemas.ts';
 
 // ---------------------------------------------------------------------------
 // Fixtures
