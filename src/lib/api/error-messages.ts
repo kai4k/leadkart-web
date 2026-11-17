@@ -15,7 +15,7 @@
  *
  * Returns `null` when there is no error so the template can `{#if listErrorCopy}`.
  */
-import { AuthError, NetworkError, NotFoundError } from '$api/errors';
+import { AuthError, NetworkError, NotFoundError } from './errors';
 
 /**
  * Map an `ApiError` subclass to a user-facing copy line. Returns `null`

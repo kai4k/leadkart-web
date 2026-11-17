@@ -6,9 +6,9 @@
 	import { Avatar, Badge, DataTable, EmptyState } from '$ui';
 	import type { DataTableColumn } from '$ui';
 	import { Users, Search, Icon } from '$icons';
-	import { personsListQuery } from '$features/operator/people/queries';
-	import { personDisplayName, personLifecycleBadge } from '$features/operator/people/view-models';
-	import type { PersonDto } from '$features/operator/people/types';
+	import { personsListQuery } from '../queries';
+	import { personDisplayName, personLifecycleBadge } from '../view-models';
+	import type { PersonDto } from '../types';
 	import { ApiError } from '$api/errors';
 	import { resolve } from '$app/paths';
 

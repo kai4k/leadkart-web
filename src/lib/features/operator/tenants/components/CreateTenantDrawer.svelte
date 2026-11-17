@@ -2,11 +2,11 @@
 	import { Drawer, Button, Alert, Card } from '$ui';
 	import { TextField, PasswordField } from '#lib/components/form/index.ts';
 	import { Copy, Icon } from '$icons';
-	import { registerTenantMutation } from '$features/operator/tenants/queries';
-	import { registerTenantRequestSchema } from '$features/operator/tenants/schemas';
+	import { registerTenantMutation } from '../queries';
+	import { registerTenantRequestSchema } from '../schemas';
 	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 	import { resolve } from '$app/paths';
-	import type { RegisterTenantResponse } from '$features/operator/tenants/types';
+	import type { RegisterTenantResponse } from '../types';
 
 	type Props = { open: boolean; onOpenChange: (open: boolean) => void };
 	let { open = $bindable(false), onOpenChange }: Props = $props();

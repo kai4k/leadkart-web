@@ -2,7 +2,7 @@
 	import { Alert, Badge, Breadcrumbs, Button, Card, CopyButton, Skeleton } from '$ui';
 	import type { BreadcrumbItem } from '$ui';
 	import { Select, TextField } from '#lib/components/form/index.ts';
-	import PermissionTree from '$features/roles/components/PermissionTree.svelte';
+	import { PermissionTree } from '$features/roles';
 	import {
 		roleDetailQuery,
 		rolesListQuery,

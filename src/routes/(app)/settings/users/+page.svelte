@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import UsersList from '$features/users/components/UsersList.svelte';
+	import { UsersList } from '$features/users';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 	import { Breadcrumbs } from '$ui';
 	import type { BreadcrumbItem } from '$ui';

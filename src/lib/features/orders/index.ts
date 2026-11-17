@@ -6,3 +6,5 @@
 export * from './api';
 export * from './schemas';
 export * from './view-models';
+export { default as OrdersList } from './components/OrdersList.svelte';
+export { default as OrderDetail } from './components/OrderDetail.svelte';

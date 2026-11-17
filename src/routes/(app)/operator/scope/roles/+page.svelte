@@ -1,5 +1,5 @@
 <script lang="ts">
-	import RolesList from '$features/roles/components/RolesList.svelte';
+	import { RolesList } from '$features/roles';
 	import type { LayoutData } from '../$types';
 
 	let { data }: { data: LayoutData } = $props();

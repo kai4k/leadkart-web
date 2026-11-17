@@ -11,7 +11,7 @@
 	import { stateBadge, daysOrIndefinite } from '$features/permission-requests/view-models';
 	import type { PermissionRequestDto } from '$features/permission-requests/schemas';
 	import type { ListRole } from '$features/permission-requests/api';
-	import { getListErrorMessage } from '$api/errors';
+	import { getListErrorMessage } from '$api/error-messages';
 	import CreatePermissionRequestDrawer from './CreatePermissionRequestDrawer.svelte';
 
 	/**

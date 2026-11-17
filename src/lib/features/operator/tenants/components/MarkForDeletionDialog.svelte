@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ConfirmDialog, Alert } from '$ui';
-	import { markForDeletionMutation } from '$features/operator/tenants/queries';
-	import type { TenantDto } from '$features/operator/tenants/types';
+	import { markForDeletionMutation } from '../queries';
+	import type { TenantDto } from '../types';
 	import {
 		ValidationError,
 		ConflictError,

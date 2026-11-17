@@ -3,7 +3,7 @@
 	import { Select } from '#lib/components/form/index.ts';
 	import { assignManagerMutation, removeManagerMutation } from '$features/users/queries';
 	import type { UserDto } from '$features/users/types';
-	import { displayName } from '$features/auth/view-models';
+	import { displayName } from '$features/auth';
 	import {
 		ValidationError,
 		ConflictError,

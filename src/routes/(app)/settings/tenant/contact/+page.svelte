@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Card } from '$ui';
-	import TenantContactForm from '$features/tenant/components/TenantContactForm.svelte';
+	import { TenantContactForm } from '$features/tenant';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();

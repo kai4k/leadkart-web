@@ -4,10 +4,10 @@
 	import type { DataTableColumn } from '$ui';
 	import { Plus, Shield, MoreVertical, Trash2, Edit, Icon } from '$icons';
 	import { rolesListQuery } from '$features/roles/queries';
-	import { usersListQuery } from '$features/users/queries';
+	import { usersListQuery } from '$features/users';
 	import type { RoleDto } from '$features/roles/types';
 	import { roleBadgeVariant, isProtectedRole, roleMemberCount } from '$features/roles/view-models';
-	import { getListErrorMessage } from '$api/errors';
+	import { getListErrorMessage } from '$api/error-messages';
 	import { createListPagination } from '#lib/hooks/index.ts';
 	import { resolve } from '$app/paths';
 	import DeleteRoleDialog from './DeleteRoleDialog.svelte';

@@ -4,7 +4,7 @@
 	import AppShell from '$layouts/AppShell.svelte';
 	import NavProgressBar from '$layouts/NavProgressBar.svelte';
 	import PwaStatusBar from '$layouts/PwaStatusBar.svelte';
-	import ImpersonationBanner from '$features/operator/impersonation/components/ImpersonationBanner.svelte';
+	import { ImpersonationBanner } from '$features/operator/impersonation';
 	import { queryClient } from '#lib/api/query-client.ts';
 	import { Toaster } from '$ui';
 

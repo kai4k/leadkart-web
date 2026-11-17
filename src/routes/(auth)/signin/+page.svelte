@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import SigninForm from '$features/auth/components/SigninForm.svelte';
+	import { SigninForm } from '$features/auth';
 	import type { ActionData } from './$types';
 
 	let { form }: { form: ActionData } = $props();

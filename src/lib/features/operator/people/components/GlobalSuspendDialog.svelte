@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ConfirmDialog, Alert } from '$ui';
-	import { globalSuspendMutation } from '$features/operator/people/queries';
-	import type { PersonDto } from '$features/operator/people/types';
+	import { globalSuspendMutation } from '../queries';
+	import type { PersonDto } from '../types';
 	import {
 		ValidationError,
 		ConflictError,

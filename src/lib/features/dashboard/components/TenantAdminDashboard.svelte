@@ -11,7 +11,7 @@
 		Users
 	} from '#lib/icons/index.ts';
 	import { Alert, Card } from '$ui';
-	import { myCapabilitiesQuery } from '$features/auth/queries';
+	import { myCapabilitiesQuery } from '$features/auth';
 
 	/**
 	 * Tenant-admin dashboard skeleton.

@@ -16,11 +16,11 @@
 	import { userStatusBadge } from '$features/users/view-models';
 	import { displayName, initials } from '$features/auth/view-models';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
-	import DeactivateUserDialog from '$features/users/components/DeactivateUserDialog.svelte';
-	import RoleAssignmentDrawer from '$features/users/components/RoleAssignmentDrawer.svelte';
-	import ManagerSelectorDrawer from '$features/users/components/ManagerSelectorDrawer.svelte';
-	import PermissionOverridesPanel from '$features/users/components/PermissionOverridesPanel.svelte';
-	import UserDetailTabs from '$features/users/components/UserDetailTabs.svelte';
+	import { DeactivateUserDialog } from '$features/users';
+	import { RoleAssignmentDrawer } from '$features/users';
+	import { ManagerSelectorDrawer } from '$features/users';
+	import { PermissionOverridesPanel } from '$features/users';
+	import { UserDetailTabs } from '$features/users';
 
 	const membershipId = $derived(page.params.id ?? '');
 	const tab = $derived(page.url.searchParams.get('tab') ?? 'overview');

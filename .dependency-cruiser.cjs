@@ -45,6 +45,14 @@ module.exports = {
 			to: {}
 		},
 		{
+			name: 'not-to-unresolvable',
+			severity: 'error',
+			comment:
+				'Every import must resolve. Exempt: SvelteKit virtual modules ($app/*, $env/*) which only exist at build time.',
+			from: {},
+			to: { couldNotResolve: true, pathNot: ['^\\$(app|env)/', '(^|/)\\$types$'] }
+		},
+		{
 			name: 'no-deprecated-core',
 			severity: 'error',
 			from: {},
@@ -83,7 +91,7 @@ module.exports = {
 				path: '(view-models|viewmodels)\\.ts$|/view-models/'
 			},
 			to: {
-				path: '^(src/lib/api/|src/\\$app|src/lib/features/.*/(api|service|stores)|src/routes/)'
+				path: '^(src/lib/api/|\\$app/|src/lib/features/.*/(api|service|stores)|src/routes/)'
 			}
 		},
 		// ─── CLAUDE.md feature isolation (arch test #8) ──────────
@@ -146,11 +154,13 @@ module.exports = {
 		{
 			name: 'layouts-no-feature-import',
 			severity: 'error',
-			comment: 'lib/layouts/* must not import from lib/features/* except auth (session shell).',
+			comment:
+				'lib/layouts/* must not import from lib/features/* except auth (session shell) and the search barrel (command palette).',
 			from: { path: '^src/lib/layouts/' },
 			to: {
 				path: '^src/lib/features/',
-				pathNot: '^src/lib/features/auth/'
+				// Shell-level features: auth (whole feature), search (barrel only).
+				pathNot: '^src/lib/features/auth/|^src/lib/features/search/index\\.ts$'
 			}
 		}
 	],
@@ -170,7 +180,9 @@ module.exports = {
 			]
 		},
 		tsPreCompilationDeps: true,
-		tsConfig: { fileName: 'tsconfig.json' },
+		// tsconfig.json extends the generated `$app/tsconfig` (svelte-kit sync), which
+		// depcruise cannot follow — tsconfig.depcruise.json carries the `$` aliases explicitly.
+		tsConfig: { fileName: 'tsconfig.depcruise.json' },
 		enhancedResolveOptions: {
 			exportsFields: ['exports'],
 			conditionNames: ['import', 'require', 'node', 'default', 'svelte'],

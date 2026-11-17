@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Badge, Button, Card, CopyButton } from '$ui';
 	import { Eye, Icon } from '$icons';
-	import ImpersonateModal from '$features/operator/impersonation/components/ImpersonateModal.svelte';
-	import { tenantLifecycleBadge } from '$features/operator/tenants/view-models';
+	import { ImpersonateModal } from '$features/operator/impersonation';
+	import { tenantLifecycleBadge } from '$features/operator/tenants';
 	import { hasCapability, myCapabilitiesQuery } from '$features/auth/queries';
 	import type { LayoutData } from '../$types';
 

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PeopleList from '$features/operator/people/components/PeopleList.svelte';
+	import { PeopleList } from '$features/operator/people';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 
 	const capsQuery = myCapabilitiesQuery();

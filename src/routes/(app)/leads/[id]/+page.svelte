@@ -17,15 +17,15 @@
 		leadRemindersQuery,
 		leadHistoryQuery
 	} from '$features/leads/queries';
-	import LeadDetailHeader from '$features/leads/components/LeadDetailHeader.svelte';
-	import LeadProfileCard from '$features/leads/components/LeadProfileCard.svelte';
-	import LeadComplianceCard from '$features/leads/components/LeadComplianceCard.svelte';
-	import CallLogTimeline from '$features/leads/components/CallLogTimeline.svelte';
-	import LogCallDialog from '$features/leads/components/LogCallDialog.svelte';
-	import RemindersList from '$features/leads/components/RemindersList.svelte';
-	import ReassignmentHistory from '$features/leads/components/ReassignmentHistory.svelte';
-	import EditLeadDrawer from '$features/leads/components/EditLeadDrawer.svelte';
-	import ReassignDialog from '$features/leads/components/ReassignDialog.svelte';
+	import { LeadDetailHeader } from '$features/leads';
+	import { LeadProfileCard } from '$features/leads';
+	import { LeadComplianceCard } from '$features/leads';
+	import { CallLogTimeline } from '$features/leads';
+	import { LogCallDialog } from '$features/leads';
+	import { RemindersList } from '$features/leads';
+	import { ReassignmentHistory } from '$features/leads';
+	import { EditLeadDrawer } from '$features/leads';
+	import { ReassignDialog } from '$features/leads';
 	import { AuthError, NetworkError, NotFoundError } from '$api/errors';
 
 	const id = $derived(page.params.id ?? '');

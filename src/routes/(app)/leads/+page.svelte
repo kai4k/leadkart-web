@@ -34,9 +34,9 @@
 		bulkUploadPreviewMutation
 	} from '$features/leads/queries';
 	import { myCapabilitiesQuery } from '$features/auth/queries';
-	import LeadsKanban from '$features/leads/components/LeadsKanban.svelte';
-	import LeadsTable from '$features/leads/components/LeadsTable.svelte';
-	import EditLeadDrawer from '$features/leads/components/EditLeadDrawer.svelte';
+	import { LeadsKanban } from '$features/leads';
+	import { LeadsTable } from '$features/leads';
+	import { EditLeadDrawer } from '$features/leads';
 	import { STAGE_META, TEMPERATURE_META } from '$features/leads/view-models';
 	import type {
 		CrmLeadDto,

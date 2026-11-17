@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import PermissionRequestDetail from '$features/permission-requests/components/PermissionRequestDetail.svelte';
+	import { PermissionRequestDetail } from '$features/permission-requests';
 
 	const id = $derived(page.params.id ?? '');
 </script>

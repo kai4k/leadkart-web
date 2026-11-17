@@ -1,0 +1,23 @@
+{
+	"//": "Used ONLY by dependency-cruiser. tsconfig.json extends the generated $app/tsconfig which depcruise cannot follow, so the kit.alias paths are restated here. Keep in sync with kit.alias.",
+	"compilerOptions": {
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"allowJs": true,
+		"paths": {
+			"$features": ["./src/lib/features"],
+			"$features/*": ["./src/lib/features/*"],
+			"$layouts": ["./src/lib/layouts"],
+			"$layouts/*": ["./src/lib/layouts/*"],
+			"$ui": ["./src/lib/components/ui"],
+			"$ui/*": ["./src/lib/components/ui/*"],
+			"$form": ["./src/lib/components/form"],
+			"$form/*": ["./src/lib/components/form/*"],
+			"$icons": ["./src/lib/icons"],
+			"$icons/*": ["./src/lib/icons/*"],
+			"$api": ["./src/lib/api"],
+			"$api/*": ["./src/lib/api/*"]
+		}
+	},
+	"include": ["src/**/*"]
+}

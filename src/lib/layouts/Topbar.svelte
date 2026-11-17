@@ -4,7 +4,7 @@
 	import { routeContext } from '#lib/utils/routeTitle.ts';
 	import UserMenu from './UserMenu.svelte';
 	import { ChevronRight } from '$icons';
-	import CommandPalette from '$features/search/components/CommandPalette.svelte';
+	import { CommandPalette } from '$features/search';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 
 	/**

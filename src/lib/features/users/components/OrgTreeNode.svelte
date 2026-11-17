@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Avatar, Badge } from '$ui';
-	import { displayName, initials } from '$features/auth/view-models';
+	import { displayName, initials } from '$features/auth';
 	import { resolve } from '$app/paths';
 	import { userStatusBadge } from '../view-models';
 	import type { OrgNode } from '../view-models-hierarchy';

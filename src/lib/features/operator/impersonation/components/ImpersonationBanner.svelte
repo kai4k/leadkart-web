@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Button } from '$ui';
 	import { Eye, LogOut, Icon } from '$icons';
-	import { impersonation } from '$features/operator/impersonation/stores/impersonation.svelte';
-	import { myCapabilitiesQuery } from '$features/auth/queries';
+	import { impersonation } from '../stores/impersonation.svelte';
+	import { myCapabilitiesQuery } from '$features/auth';
 
 	// Reconcile impersonation state once capabilities are resolved.
 	// Must live here (inside <QueryClientProvider>) not in (app)/+layout.svelte

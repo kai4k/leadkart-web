@@ -34,6 +34,7 @@ export {
 	capabilitiesKey
 } from './queries';
 
+export { displayName, initials } from './view-models';
 export { hasCapability, deriveTier, type PrincipalTier } from './capabilities';
 
 export type {
@@ -46,3 +47,11 @@ export type {
 } from './types';
 
 export { session } from './stores/session.svelte';
+export { default as ProfileForm } from './components/ProfileForm.svelte';
+export { default as ChangePasswordForm } from './components/ChangePasswordForm.svelte';
+export { default as ChangeEmailForm } from './components/ChangeEmailForm.svelte';
+export { default as SessionsList } from './components/SessionsList.svelte';
+export { default as ConfirmEmailChangeView } from './components/ConfirmEmailChangeView.svelte';
+export { default as ForgotPasswordForm } from './components/ForgotPasswordForm.svelte';
+export { default as ResetPasswordForm } from './components/ResetPasswordForm.svelte';
+export { default as SigninForm } from './components/SigninForm.svelte';

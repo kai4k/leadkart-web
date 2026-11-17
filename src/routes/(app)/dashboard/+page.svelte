@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { myCapabilitiesQuery } from '$features/auth/queries';
 	import { deriveTier } from '$features/auth/capabilities';
-	import PlatformDashboard from '$features/dashboard/components/PlatformDashboard.svelte';
-	import TenantAdminDashboard from '$features/dashboard/components/TenantAdminDashboard.svelte';
-	import TenantUserDashboard from '$features/dashboard/components/TenantUserDashboard.svelte';
+	import { PlatformDashboard } from '$features/dashboard';
+	import { TenantAdminDashboard } from '$features/dashboard';
+	import { TenantUserDashboard } from '$features/dashboard';
 
 	/**
 	 * /dashboard — routes to the appropriate dashboard variant based on

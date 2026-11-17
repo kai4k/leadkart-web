@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Copy, Check, Icon } from '$icons';
-	import { Button } from '$ui';
+	import { Button } from './button';
 
 	type Props = {
 		/** Text to copy to the clipboard. */

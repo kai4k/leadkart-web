@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ConfirmDialog, Alert } from '$ui';
-	import { suspendTenantMutation } from '$features/operator/tenants/queries';
-	import type { TenantDto } from '$features/operator/tenants/types';
+	import { suspendTenantMutation } from '../queries';
+	import type { TenantDto } from '../types';
 	import {
 		ValidationError,
 		ConflictError,

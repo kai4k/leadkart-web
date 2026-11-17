@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ConfirmDialog, Alert } from '$ui';
-	import { anonymisePersonMutation } from '$features/operator/people/queries';
-	import type { PersonDto } from '$features/operator/people/types';
+	import { anonymisePersonMutation } from '../queries';
+	import type { PersonDto } from '../types';
 	import {
 		ValidationError,
 		ConflictError,

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Alert, Skeleton } from '$ui';
-	import SessionsList from '$features/auth/components/SessionsList.svelte';
+	import { SessionsList } from '$features/auth';
 	import { mySessionsQuery } from '$features/auth/queries';
 	import { ApiError } from '$api/errors';
 

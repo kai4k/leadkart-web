@@ -6,7 +6,7 @@
 	import { Users } from '$icons';
 	import { usersListQuery } from '$features/users/queries';
 	import { buildOrgTree } from '$features/users/view-models-hierarchy';
-	import OrgTreeNode from '$features/users/components/OrgTreeNode.svelte';
+	import { OrgTreeNode } from '$features/users';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 
 	/**

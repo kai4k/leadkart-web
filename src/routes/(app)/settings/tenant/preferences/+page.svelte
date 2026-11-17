@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Card } from '$ui';
-	import TenantDisplayPreferencesForm from '$features/tenant/components/TenantDisplayPreferencesForm.svelte';
+	import { TenantDisplayPreferencesForm } from '$features/tenant';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();

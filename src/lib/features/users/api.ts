@@ -9,9 +9,11 @@ import {
 	createUserResponseSchema,
 	userDtoSchema,
 	searchMembershipsResponseSchema,
+	listRolesResponseSchema,
 	type SearchMembershipsResponse
 } from './schemas';
 import type {
+	ListRolesResponse,
 	ListUsersResponse,
 	CreateUserRequest,
 	CreateUserResponse,
@@ -90,4 +92,8 @@ export async function searchMemberships(q: string): Promise<SearchMembershipsRes
 	return parseResponse(searchMembershipsResponseSchema, raw);
 }
 
-export { listRoles } from '$features/roles/api';
+/** Roles available for assignment — users owns its own read (avoids a users<->roles barrel cycle). */
+export async function listRoles(): Promise<ListRolesResponse> {
+	const raw = await api.get<unknown>('/v1/roles');
+	return parseResponse(listRolesResponseSchema, raw);
+}

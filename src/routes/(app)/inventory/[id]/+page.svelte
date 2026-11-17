@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import ProductDetail from '$features/inventory/components/ProductDetail.svelte';
+	import { ProductDetail } from '$features/inventory';
 
 	const id = $derived(page.params.id ?? '');
 </script>

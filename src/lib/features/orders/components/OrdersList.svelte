@@ -20,7 +20,7 @@
 	import { orderFilterFields, type OrderListFilters } from './OrderFilters.svelte';
 	import OrderStatusBadge from './OrderStatusBadge.svelte';
 	import type { OrderDto } from '$features/orders/schemas';
-	import { getListErrorMessage } from '$api/errors';
+	import { getListErrorMessage } from '$api/error-messages';
 
 	// ── URL state ────────────────────────────────────────────────────
 	const urlFilters = createUrlFilters<OrderListFilters>({

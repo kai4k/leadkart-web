@@ -2,8 +2,8 @@
 	import { z } from 'zod';
 	import { Alert, Button, Dialog } from '$ui';
 	import { useForm } from '#lib/hooks/use-form.svelte.ts';
-	import { impersonation } from '$features/operator/impersonation/stores/impersonation.svelte';
-	import type { TenantDto } from '$features/operator/tenants/types';
+	import { impersonation } from '../stores/impersonation.svelte';
+	import type { TenantDto } from '../../tenants/types';
 
 	type Props = { open: boolean; tenant: TenantDto | null; onOpenChange: (open: boolean) => void };
 	let { open = $bindable(false), tenant, onOpenChange }: Props = $props();

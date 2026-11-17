@@ -9,3 +9,4 @@
  * `$features/operator`.
  */
 export { platformStatsQuery } from './dashboard/queries.ts';
+export { enterScope } from './scope';

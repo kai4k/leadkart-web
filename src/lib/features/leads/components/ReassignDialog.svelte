@@ -18,7 +18,7 @@
 	import { reassignLeadSchema } from '../schemas';
 	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 	import { reassignLeadMutation } from '../queries';
-	import { membershipSearchQuery } from '$features/users/queries';
+	import { membershipSearchQuery } from '$features/users';
 
 	type Props = {
 		leadId: string;

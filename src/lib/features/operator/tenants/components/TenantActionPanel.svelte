@@ -1,18 +1,10 @@
 <script lang="ts">
 	import { Button, Card } from '$ui';
 	import { Pause, Play, Trash2, RotateCcw, Icon } from '$icons';
-	import {
-		canSuspend,
-		canActivate,
-		canMarkForDeletion,
-		canRestore
-	} from '$features/operator/tenants/view-models';
-	import {
-		activateTenantMutation,
-		restoreTenantMutation
-	} from '$features/operator/tenants/queries';
-	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
-	import type { TenantDto } from '$features/operator/tenants/types';
+	import { canSuspend, canActivate, canMarkForDeletion, canRestore } from '../view-models';
+	import { activateTenantMutation, restoreTenantMutation } from '../queries';
+	import { myCapabilitiesQuery, hasCapability } from '$features/auth';
+	import type { TenantDto } from '../types';
 
 	type Props = {
 		tenant: TenantDto;

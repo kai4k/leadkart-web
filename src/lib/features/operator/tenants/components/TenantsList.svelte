@@ -18,26 +18,23 @@
 		Trash2,
 		Icon
 	} from '$icons';
-	import {
-		activateTenantMutation,
-		restoreTenantMutation,
-		tenantsListQuery
-	} from '$features/operator/tenants/queries';
+	import { activateTenantMutation, restoreTenantMutation, tenantsListQuery } from '../queries';
 	import {
 		canActivate,
 		canMarkForDeletion,
 		canRestore,
 		canSuspend,
 		tenantLifecycleBadge
-	} from '$features/operator/tenants/view-models';
-	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
-	import { AuthError, NetworkError, NotFoundError, getListErrorMessage } from '$api/errors';
+	} from '../view-models';
+	import { myCapabilitiesQuery, hasCapability } from '$features/auth';
+	import { AuthError, NetworkError, NotFoundError } from '$api/errors';
+	import { getListErrorMessage } from '$api/error-messages';
 	import { enterScopeMutation } from '$features/operator/scope';
 	import CreateTenantDrawer from './CreateTenantDrawer.svelte';
 	import SuspendDialog from './SuspendDialog.svelte';
 	import MarkForDeletionDialog from './MarkForDeletionDialog.svelte';
-	import ImpersonateModal from '$features/operator/impersonation/components/ImpersonateModal.svelte';
-	import type { TenantDto } from '$features/operator/tenants/types';
+	import ImpersonateModal from '../../impersonation/components/ImpersonateModal.svelte';
+	import type { TenantDto } from '../types';
 	import { createListPagination } from '#lib/hooks/index.ts';
 
 	const PAGE_SIZE = 10;

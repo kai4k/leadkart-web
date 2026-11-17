@@ -1,8 +1,8 @@
 <script lang="ts">
-	import TenantActionPanel from '$features/operator/tenants/components/TenantActionPanel.svelte';
-	import SuspendDialog from '$features/operator/tenants/components/SuspendDialog.svelte';
-	import MarkForDeletionDialog from '$features/operator/tenants/components/MarkForDeletionDialog.svelte';
-	import type { TenantDto } from '$features/operator/tenants/types';
+	import { TenantActionPanel } from '$features/operator/tenants';
+	import { SuspendDialog } from '$features/operator/tenants';
+	import { MarkForDeletionDialog } from '$features/operator/tenants';
+	import type { TenantDto } from '$features/operator/tenants';
 	import type { LayoutData } from '../$types';
 
 	let { data }: { data: LayoutData } = $props();

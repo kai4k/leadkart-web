@@ -4,7 +4,7 @@
 	import type { UserDto } from '$features/users/types';
 	import type { RoleDto } from '$features/roles/types';
 	import { managerLabel, userRoleBadges, userStatusBadge } from '../view-models';
-	import { displayName, initials } from '$features/auth/view-models';
+	import { displayName, initials } from '$features/auth';
 	import { removeManagerMutation } from '../queries';
 	import { personActivityQuery, ActivityTimeline } from '$features/audit';
 	import { ApiError } from '$api/errors';

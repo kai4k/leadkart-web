@@ -29,6 +29,8 @@ export default defineConfig({
 			// during import-analysis. Empty stubs at known paths satisfy
 			// that without affecting test behaviour.
 			'$app/navigation': resolve(__dirname, 'tests/unit/stubs/app-navigation.ts'),
+			'$app/forms': resolve(__dirname, 'tests/unit/stubs/app-forms.ts'),
+			'$app/paths': resolve(__dirname, 'tests/unit/stubs/app-paths.ts'),
 			'$app/state': resolve(__dirname, 'tests/unit/stubs/app-state.ts')
 		}
 	},

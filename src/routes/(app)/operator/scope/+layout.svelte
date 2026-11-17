@@ -8,7 +8,7 @@
 	import { Badge, Breadcrumbs, Button } from '$ui';
 	import type { BreadcrumbItem } from '$ui';
 	import { Building2, Icon, Users, Shield, Settings, Activity, UserCog, LogOut } from '$icons';
-	import { exitScope as exitScopeApi } from '$features/operator/scope/api';
+	import { exitScope as exitScopeApi } from '$features/operator/scope';
 	import type { LayoutData } from './$types';
 
 	let { children, data }: { children: Snippet; data: LayoutData } = $props();

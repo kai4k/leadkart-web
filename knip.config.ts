@@ -46,7 +46,7 @@ const config: KnipConfig = {
 	],
 	project: ['src/**/*.{ts,svelte,svelte.ts}', 'scripts/**/*.{ts,js,mjs,cjs}'],
 	ignore: ['src/lib/api/generated/**'],
-	// Kit 3 virtual modules ($app/*, $service-worker) have no file on disk.
+	// Kit 3 virtual modules ($app/*) have no file on disk. ($service-worker is removed in Kit 3 and banned by eslint.)
 	ignoreUnresolved: [/^\$app\//],
 	ignoreDependencies: [
 		// Fontsource referenced via @import in tokens.css

@@ -2,7 +2,7 @@
 	import { Drawer, Button, Badge, Alert } from '$ui';
 	import { replacePermissionOverridesMutation } from '$features/users/queries';
 	import type { UserDto } from '$features/users/types';
-	import { displayName } from '$features/auth/view-models';
+	import { displayName } from '$features/auth';
 	import {
 		ValidationError,
 		ConflictError,

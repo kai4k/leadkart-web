@@ -24,9 +24,9 @@
 		deactivateUserMutation
 	} from '$features/users/queries';
 	import { userStatusBadge, userRoleBadges, canDeactivate } from '$features/users/view-models';
-	import { displayName, initials } from '$features/auth/view-models';
+	import { displayName, initials } from '$features/auth';
 	import type { UserDto } from '$features/users/types';
-	import { getListErrorMessage } from '$api/errors';
+	import { getListErrorMessage } from '$api/error-messages';
 	import { createBulkSelection, createListPagination } from '#lib/hooks/index.ts';
 	import { BulkActionBar, type BulkAction } from '#lib/components/data/index.ts';
 	import CreateUserDrawer from './CreateUserDrawer.svelte';

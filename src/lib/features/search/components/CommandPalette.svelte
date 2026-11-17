@@ -4,7 +4,7 @@
 	import { resolve } from '$app/paths';
 	import { Search, Building2, User, Icon } from '$icons';
 	import { omniSearchQuery } from '$features/search/queries';
-	import { enterScope } from '$features/operator/scope';
+	import { enterScope } from '$features/operator';
 	import type { SearchPersonHit, SearchTenantHit } from '$features/search/schemas';
 
 	/**

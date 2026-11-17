@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import RolesList from '$features/roles/components/RolesList.svelte';
+	import { RolesList } from '$features/roles';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 
 	const capsQuery = myCapabilitiesQuery();

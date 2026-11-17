@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import OrderDetail from '$features/orders/components/OrderDetail.svelte';
+	import { OrderDetail } from '$features/orders';
 
 	const id = $derived(page.params.id ?? '');
 </script>

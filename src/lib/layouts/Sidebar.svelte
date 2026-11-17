@@ -2,7 +2,7 @@
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { navForTier } from '#lib/config/nav.ts';
-	import { session } from '$features/auth/stores/session.svelte';
+	import { session } from '$features/auth';
 	import type { PrincipalTier } from '$features/auth/capabilities';
 
 	let { onNavigate }: { onNavigate?: () => void } = $props();

@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { Dropdown } from '$ui';
-	import { session } from '$features/auth/stores/session.svelte';
+	import { session } from '$features/auth';
 	import { myCapabilitiesQuery } from '$features/auth/queries';
 
 	/**

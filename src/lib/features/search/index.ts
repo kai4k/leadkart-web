@@ -4,3 +4,4 @@
  */
 export * from './api';
 export * from './schemas';
+export { default as CommandPalette } from './components/CommandPalette.svelte';

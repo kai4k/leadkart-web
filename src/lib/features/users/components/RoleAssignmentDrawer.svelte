@@ -4,7 +4,7 @@
 	import { assignRoleMutation, revokeRoleMutation } from '$features/users/queries';
 	import type { UserDto, RoleDto } from '$features/users/types';
 	import { canRevokeRole } from '$features/users/view-models';
-	import { displayName } from '$features/auth/view-models';
+	import { displayName } from '$features/auth';
 	import {
 		ValidationError,
 		ConflictError,

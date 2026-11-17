@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PersonDetail from '$features/operator/people/components/PersonDetail.svelte';
-	import { personDetailQuery } from '$features/operator/people/queries';
-	import { personDisplayName } from '$features/operator/people/view-models';
+	import { PersonDetail } from '$features/operator/people';
+	import { personDetailQuery } from '$features/operator/people';
+	import { personDisplayName } from '$features/operator/people';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 	import { Breadcrumbs } from '$ui';
 	import type { BreadcrumbItem } from '$ui';

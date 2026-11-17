@@ -4,21 +4,21 @@
 	import { SvelteMap } from 'svelte/reactivity';
 	import { Alert, Avatar, Badge, Button, Card, CopyButton, Skeleton } from '$ui';
 	import { ArrowRight, Pause, Play, UserMinus, Icon } from '$icons';
-	import { tenantsListQuery } from '$features/operator/tenants/queries';
+	import { tenantsListQuery } from '../../tenants/queries';
 	import {
 		personDetailQuery,
 		personMembershipsQuery,
 		liftGlobalSuspensionMutation
-	} from '$features/operator/people/queries';
+	} from '../queries';
 	import {
 		personDisplayName,
 		personLifecycleBadge,
 		canGloballySuspend,
 		canLiftSuspension,
 		canAnonymise
-	} from '$features/operator/people/view-models';
-	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
-	import type { PersonDto } from '$features/operator/people/types';
+	} from '../view-models';
+	import { myCapabilitiesQuery, hasCapability } from '$features/auth';
+	import type { PersonDto } from '../types';
 	import GlobalSuspendDialog from './GlobalSuspendDialog.svelte';
 	import AnonymiseDialog from './AnonymiseDialog.svelte';
 	import { personActivityQuery, ActivityTimeline } from '$features/audit';

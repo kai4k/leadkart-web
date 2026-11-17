@@ -8,6 +8,73 @@ import ts from 'typescript-eslint';
 
 const gitignorePath = fileURLToPath(new URL('./.gitignore', import.meta.url));
 
+/** Shared no-restricted-imports bans. Flat config REPLACES rule options per block, so every block that sets the rule must spread these. */
+const RESTRICTED_PATHS = [
+	{
+		name: '$app/environment',
+		message: 'Removed in SvelteKit 3 — use $app/env / $app/manifest'
+	},
+	{
+		name: '$service-worker',
+		message: 'Removed in SvelteKit 3 — use $app/env / $app/manifest'
+	},
+	{
+		name: '$app/stores',
+		message:
+			'$app/stores is deprecated since SvelteKit 2.59+ — use $app/state (page/navigating/updated) instead. CLAUDE.md banned-list.'
+	},
+	{
+		name: 'svelte/store',
+		importNames: ['writable', 'readable', 'derived'],
+		message:
+			'writable/readable/derived from svelte/store are forbidden in new code — use class-based $state stores per CLAUDE.md rule 4.'
+	},
+	{
+		name: 'svelte',
+		importNames: ['createEventDispatcher'],
+		message:
+			'createEventDispatcher is forbidden — use callback props (Svelte 5 native event-as-callback pattern).'
+	},
+	{
+		name: 'remixicon',
+		message: 'Only @lucide/svelte (via $icons) is permitted — CLAUDE.md rule 5.'
+	},
+	{
+		name: 'boxicons',
+		message: 'Only @lucide/svelte (via $icons) is permitted — CLAUDE.md rule 5.'
+	},
+	{
+		name: 'line-awesome',
+		message: 'Only @lucide/svelte (via $icons) is permitted — CLAUDE.md rule 5.'
+	},
+	{
+		name: 'react-icons',
+		message: 'Only @lucide/svelte (via $icons) is permitted — CLAUDE.md rule 5.'
+	},
+	{
+		name: '@iconify/svelte',
+		message: 'Only @lucide/svelte (via $icons) is permitted — CLAUDE.md rule 5.'
+	},
+	{
+		name: 'moment',
+		message:
+			'moment is forbidden (large + immutable-API smell) — use @internationalized/date or native Intl.'
+	},
+	{
+		name: 'lodash',
+		message:
+			'Import from lodash-es subpaths only (lodash-es/foo) for tree-shaking — full barrel banned.'
+	}
+];
+
+const RESTRICTED_PATTERNS = [
+	{
+		group: ['$features/*/*/*', '#lib/features/*/*/*'],
+		message:
+			'Deep imports into feature internals are forbidden — import from the feature barrel ($features/<name>) only.'
+	}
+];
+
 /**
  * Architecture-canon ESLint config — strict gates, no warnings.
  *
@@ -202,70 +269,8 @@ export default ts.config(
 			'no-restricted-imports': [
 				'error',
 				{
-					paths: [
-						{
-							name: '$app/environment',
-							message: 'Removed in SvelteKit 3 — use $app/env / $app/manifest'
-						},
-						{
-							name: '$service-worker',
-							message: 'Removed in SvelteKit 3 — use $app/env / $app/manifest'
-						},
-						{
-							name: '$app/stores',
-							message:
-								'$app/stores is deprecated since SvelteKit 2.59+ — use $app/state (page/navigating/updated) instead. CLAUDE.md banned-list.'
-						},
-						{
-							name: 'svelte/store',
-							importNames: ['writable', 'readable', 'derived'],
-							message:
-								'writable/readable/derived from svelte/store are forbidden in new code — use class-based $state stores per CLAUDE.md rule 4.'
-						},
-						{
-							name: 'svelte',
-							importNames: ['createEventDispatcher'],
-							message:
-								'createEventDispatcher is forbidden — use callback props (Svelte 5 native event-as-callback pattern).'
-						},
-						{
-							name: 'remixicon',
-							message: 'Only @lucide/svelte (via $icons) is permitted — CLAUDE.md rule 5.'
-						},
-						{
-							name: 'boxicons',
-							message: 'Only @lucide/svelte (via $icons) is permitted — CLAUDE.md rule 5.'
-						},
-						{
-							name: 'line-awesome',
-							message: 'Only @lucide/svelte (via $icons) is permitted — CLAUDE.md rule 5.'
-						},
-						{
-							name: 'react-icons',
-							message: 'Only @lucide/svelte (via $icons) is permitted — CLAUDE.md rule 5.'
-						},
-						{
-							name: '@iconify/svelte',
-							message: 'Only @lucide/svelte (via $icons) is permitted — CLAUDE.md rule 5.'
-						},
-						{
-							name: 'moment',
-							message:
-								'moment is forbidden (large + immutable-API smell) — use @internationalized/date or native Intl.'
-						},
-						{
-							name: 'lodash',
-							message:
-								'Import from lodash-es subpaths only (lodash-es/foo) for tree-shaking — full barrel banned.'
-						}
-					],
-					patterns: [
-						{
-							group: ['$features/*/*/*', '#lib/features/*/*/*'],
-							message:
-								'Deep imports into feature internals are forbidden — import from the feature barrel ($features/<name>) only.'
-						}
-					]
+					paths: RESTRICTED_PATHS,
+					patterns: RESTRICTED_PATTERNS
 				}
 			],
 
@@ -432,24 +437,14 @@ export default ts.config(
 				'error',
 				{
 					paths: [
-						{
-							name: '$app/environment',
-							message: 'Removed in SvelteKit 3 — use $app/env / $app/manifest'
-						},
-						{
-							name: '$service-worker',
-							message: 'Removed in SvelteKit 3 — use $app/env / $app/manifest'
-						},
+						...RESTRICTED_PATHS,
 						{
 							name: '@lucide/svelte',
 							message:
 								"Import icons from '$icons' (the registry) instead. Add new icons to src/lib/icons/index.ts."
-						},
-						{
-							name: '$app/stores',
-							message: '$app/stores is deprecated — use $app/state instead.'
 						}
-					]
+					],
+					patterns: RESTRICTED_PATTERNS
 				}
 			]
 		}
@@ -483,14 +478,7 @@ export default ts.config(
 				'error',
 				{
 					paths: [
-						{
-							name: '$app/environment',
-							message: 'Removed in SvelteKit 3 — use $app/env / $app/manifest'
-						},
-						{
-							name: '$service-worker',
-							message: 'Removed in SvelteKit 3 — use $app/env / $app/manifest'
-						},
+						...RESTRICTED_PATHS,
 						{
 							name: '$api/client',
 							message:
@@ -499,10 +487,14 @@ export default ts.config(
 						{
 							name: '@lucide/svelte',
 							message: "Import icons from '$icons' (the registry) instead."
-						},
+						}
+					],
+					patterns: [
+						...RESTRICTED_PATTERNS,
 						{
-							name: '$app/stores',
-							message: '$app/stores is deprecated — use $app/state instead.'
+							group: ['$api/client*', '#lib/api/client*'],
+							message:
+								'Components must not import $api/client directly. Use a feature gateway in $features/<name>/api.ts (CLAUDE.md layering rule 1).'
 						}
 					]
 				}

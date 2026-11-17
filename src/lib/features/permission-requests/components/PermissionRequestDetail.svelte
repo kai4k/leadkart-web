@@ -13,7 +13,7 @@
 		canDecide,
 		daysOrIndefinite
 	} from '$features/permission-requests/view-models';
-	import { myCapabilitiesQuery } from '$features/auth/queries';
+	import { myCapabilitiesQuery } from '$features/auth';
 	import { resolve } from '$app/paths';
 
 	type Props = { id: string };

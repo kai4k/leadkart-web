@@ -1,13 +1,6 @@
-import {
-	startImpersonation,
-	endImpersonation,
-	listImpersonationSessions
-} from '$features/operator/impersonation/api';
+import { startImpersonation, endImpersonation, listImpersonationSessions } from '../api';
 import { ApiError } from '$api/errors';
-import type {
-	ImpersonationSessionDto,
-	CreateImpersonationSessionRequest
-} from '$features/operator/impersonation/types';
+import type { ImpersonationSessionDto, CreateImpersonationSessionRequest } from '../types';
 
 const ACTIVE_SESSION_KEY = 'leadkart-impersonation-session';
 

@@ -16,7 +16,7 @@ import { config } from '#lib/server/config.ts';
 import { clearOperatorScope, getOperatorScope } from '#lib/server/scope.ts';
 import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
 import type { LayoutServerLoad } from './$types';
-import type { TenantDto } from '$features/operator/tenants/types';
+import type { TenantDto } from '$features/operator/tenants';
 
 export const load: LayoutServerLoad = async ({ cookies }) => {
 	const scope = getOperatorScope(cookies);
