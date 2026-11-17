@@ -14,6 +14,7 @@
 
 - **Pin exact versions.** `.npmrc` has `prefer-offline=true`, which makes `@latest` resolve stale metadata. Never `npm i pkg@latest`.
 - Install with `npm i --prefer-online <pkg>@<exact>`.
+- **The local npm cache is stale.** Even with `--prefer-online` it reports old versions (for example `@lucide/svelte` 1.17.0 when the live registry has 1.74.0). Run every npm install, uninstall and ci command with a fresh cache, set per shell: `export npm_config_cache="C:/Users/anrgc/AppData/Local/Temp/claude/a847394163f802b5/88a4fd59-6778-430f-b631-5a7a2ab05de6/scratchpad/npmcache"` (in PowerShell: `$env:npm_config_cache = '…'`). Check it first: `npm view @lucide/svelte version` must print `1.74.0`. Never clean the user's real cache.
 - Branch `feat/kit3-hardening` lives in the main repo. **No worktrees.**
 - Run commands from `D:\Development\leadkart-web` with an **uppercase drive letter**. Vitest loads two module instances if the cwd is `d:` (all suites then fail with `Cannot read properties of undefined (reading 'config')`). PowerShell's default cwd is fine; in Git Bash, `cd /D/Development/leadkart-web` does not fix it, so run vitest from PowerShell.
 - The gate set after every task is `npm run check`, `npm run lint`, `npm run test`, `npm run arch:check`, `npm run lint:deps`, `npm run build`. All must pass before a commit. Exception: Task 3 is allowed red until Step 6.
