@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { myActivityQuery } from '#lib/features/audit/queries.ts';
-	import ActivityTimeline from '#lib/features/audit/components/ActivityTimeline.svelte';
+	import { ActivityTimeline } from '$features/audit';
 	import { ApiError } from '$api/errors';
 </script>
 

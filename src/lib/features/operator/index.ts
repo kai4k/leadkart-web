@@ -4,8 +4,8 @@
  * lookup). Each submodule (`scope`, `tenants`, `impersonation`, `people`,
  * `dashboard`) ships its own api.ts/index.ts.
  *
- * Callers typically import from a specific submodule
- * (`$features/operator/scope`, `$features/operator/tenants`, …) rather
- * than from the top-level barrel.
+ * This barrel is the required entry point for cross-feature imports from
+ * outside `operator/` (it exports `platformStatsQuery`). Import from it as
+ * `$features/operator`.
  */
 export { platformStatsQuery } from './dashboard/queries.ts';

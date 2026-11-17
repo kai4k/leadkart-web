@@ -40,7 +40,12 @@ const APP_SHELL_CACHE = `${CACHE_PREFIX}-shell-${version}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime-${version}`;
 const API_CACHE = `${CACHE_PREFIX}-api-${version}`;
 
-/** `immutable` paths are plain build-output strings, not typed routes. */
+/**
+ * `immutable` paths are plain build-output strings, not typed routes.
+ * They are base-relative with no leading slash, so `resolve()` base-prefixes
+ * them correctly. This assumes `paths.assets` is not configured; revisit if
+ * a CDN asset prefix is added.
+ */
 const resolveBuildPath = resolve as (path: string) => string;
 
 /** Files to precache on install — built assets + bundled statics. */
