@@ -17,10 +17,13 @@
 	 * layout's own header — no separate topbar chip needed.
 	 */
 
-	let { onToggleSidebar, onOpenSettings } = $props<{
+	let {
+		onToggleSidebar,
+		onOpenSettings
+	}: {
 		onToggleSidebar?: () => void;
 		onOpenSettings?: () => void;
-	}>();
+	} = $props();
 
 	const route = $derived(routeContext(page.url.pathname));
 

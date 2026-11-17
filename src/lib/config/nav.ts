@@ -42,7 +42,7 @@ import type { PrincipalTier } from '$lib/features/auth/capabilities';
 export interface NavItem {
 	href: ResolvedPathname;
 	label: string;
-	icon: typeof LucideIcon;
+	icon: LucideIcon;
 }
 
 export interface NavSection {

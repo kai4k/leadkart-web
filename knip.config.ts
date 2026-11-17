@@ -54,7 +54,6 @@ const config: KnipConfig = {
 		// Vite/Tailwind plugin chain is referenced via config files
 		'@tailwindcss/vite',
 		'@sveltejs/vite-plugin-svelte',
-		'@sveltejs/adapter-auto',
 		'prettier-plugin-svelte',
 		'prettier-plugin-tailwindcss',
 		'eslint-config-prettier',

@@ -225,23 +225,23 @@ export default ts.config(
 						},
 						{
 							name: 'remixicon',
-							message: 'Only lucide-svelte (via $icons) is permitted — CLAUDE.md rule 5.'
+							message: 'Only @lucide/svelte (via $icons) is permitted — CLAUDE.md rule 5.'
 						},
 						{
 							name: 'boxicons',
-							message: 'Only lucide-svelte (via $icons) is permitted — CLAUDE.md rule 5.'
+							message: 'Only @lucide/svelte (via $icons) is permitted — CLAUDE.md rule 5.'
 						},
 						{
 							name: 'line-awesome',
-							message: 'Only lucide-svelte (via $icons) is permitted — CLAUDE.md rule 5.'
+							message: 'Only @lucide/svelte (via $icons) is permitted — CLAUDE.md rule 5.'
 						},
 						{
 							name: 'react-icons',
-							message: 'Only lucide-svelte (via $icons) is permitted — CLAUDE.md rule 5.'
+							message: 'Only @lucide/svelte (via $icons) is permitted — CLAUDE.md rule 5.'
 						},
 						{
 							name: '@iconify/svelte',
-							message: 'Only lucide-svelte (via $icons) is permitted — CLAUDE.md rule 5.'
+							message: 'Only @lucide/svelte (via $icons) is permitted — CLAUDE.md rule 5.'
 						},
 						{
 							name: 'moment',
@@ -430,7 +430,7 @@ export default ts.config(
 				{
 					paths: [
 						{
-							name: 'lucide-svelte',
+							name: '@lucide/svelte',
 							message:
 								"Import icons from '$icons' (the registry) instead. Add new icons to src/lib/icons/index.ts."
 						},
@@ -478,7 +478,7 @@ export default ts.config(
 								'Components must not import $api/client directly. Use a feature gateway in $features/<name>/api.ts (CLAUDE.md layering rule 1).'
 						},
 						{
-							name: 'lucide-svelte',
+							name: '@lucide/svelte',
 							message: "Import icons from '$icons' (the registry) instead."
 						},
 						{

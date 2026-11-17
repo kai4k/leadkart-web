@@ -5,7 +5,7 @@
 	import { session } from '$features/auth/stores/session.svelte';
 	import type { PrincipalTier } from '$features/auth/capabilities';
 
-	let { onNavigate } = $props<{ onNavigate?: () => void }>();
+	let { onNavigate }: { onNavigate?: () => void } = $props();
 
 	/**
 	 * Active-state matcher — exact match or trailing-slash prefix so

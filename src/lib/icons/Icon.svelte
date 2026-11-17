@@ -19,9 +19,9 @@
 
 	/**
 	 * Icon wrapper consumes the icon-size design tokens and passes
-	 * them to the underlying lucide-svelte (or any) icon component.
+	 * them to the underlying @lucide/svelte (or any) icon component.
 	 *
-	 * The `icon` prop is typed `any` because lucide-svelte's component
+	 * The `icon` prop is typed `any` because @lucide/svelte's component
 	 * type doesn't match Svelte 5's `Component` type cleanly (mixed
 	 * legacy + runes export shape). The structural contract — accepts
 	 * `size: number` + `class: string` + aria-* — IS upheld by every

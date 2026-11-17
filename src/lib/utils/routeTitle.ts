@@ -21,7 +21,7 @@ const ALL_ITEMS = [...PLATFORM_NAV, ...TENANT_ADMIN_NAV, ...TENANT_USER_NAV].fla
 );
 
 /** Icon is typed as NavItem['icon'] — same shape used everywhere else
- *  in the codebase (lucide-svelte's component type doesn't match
+ *  in the codebase (@lucide/svelte's component type doesn't match
  *  Svelte 5's `Component<...>` cleanly; the structural contract is
  *  enforced by the Icon wrapper). */
 type IconComponent = NavItem['icon'];
