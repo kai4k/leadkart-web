@@ -4,13 +4,16 @@
 	import NavProgressBar from '$layouts/NavProgressBar.svelte';
 	import PwaStatusBar from '$layouts/PwaStatusBar.svelte';
 	import { ImpersonationBanner } from '$features/operator/impersonation';
-	import { queryClient } from '#lib/api/query-client.ts';
+	import { renderQueryClient } from '#lib/api/query-client.ts';
 	import { Toaster } from '$ui';
 
 	let { children } = $props();
+
+	// Browser: the tab's one client. Server: a fresh client for this request only.
+	const client = renderQueryClient();
 </script>
 
-<QueryClientProvider client={queryClient}>
+<QueryClientProvider {client}>
 	<NavProgressBar />
 	<ImpersonationBanner />
 	<PwaStatusBar />

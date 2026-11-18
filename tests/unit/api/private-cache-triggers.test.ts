@@ -15,7 +15,7 @@ vi.mock('#lib/features/auth/api.ts', () => ({ logout: logoutRequest }));
 
 import { AuthError, ScopeInvalidError, SESSION_EXPIRED_CODE } from '#lib/api/errors.ts';
 import { exitOperatorScope } from '#lib/api/operator-scope.ts';
-import { queryClient } from '#lib/api/query-client.ts';
+import { createQueryClient } from '#lib/api/query-client.ts';
 import { enterScope } from '#lib/features/operator/scope/api.ts';
 import { session } from '#lib/features/auth/stores/session.svelte.ts';
 
@@ -29,13 +29,15 @@ describe('private cache clearing triggers', () => {
 		vi.stubGlobal('location', { pathname: '/leads', search: '' });
 		const expired = new AuthError(401);
 		expired.code = SESSION_EXPIRED_CODE;
-		queryClient.getQueryCache().config.onError?.(expired, { state: { data: undefined } } as never);
+		createQueryClient()
+			.getQueryCache()
+			.config.onError?.(expired, { state: { data: undefined } } as never);
 		expect(clearPrivateCaches).toHaveBeenCalledTimes(1);
 	});
 
 	it('session guard: scope_invalid clears them', async () => {
 		vi.stubGlobal('location', { pathname: '/operator/scope/members', search: '' });
-		queryClient
+		createQueryClient()
 			.getQueryCache()
 			.config.onError?.(new ScopeInvalidError('expired'), { state: { data: undefined } } as never);
 		await vi.waitFor(() => expect(clearPrivateCaches).toHaveBeenCalled());

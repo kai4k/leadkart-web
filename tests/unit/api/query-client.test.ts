@@ -10,7 +10,7 @@ vi.mock('#lib/utils/private-caches.ts', () => ({ clearPrivateCaches: vi.fn() }))
 vi.mock('#lib/api/client.ts', () => ({ api: { delete: apiDelete } }));
 
 import { ScopeInvalidError } from '#lib/api/errors.ts';
-import { queryClient } from '#lib/api/query-client.ts';
+import { createQueryClient, renderQueryClient } from '#lib/api/query-client.ts';
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -53,7 +53,7 @@ describe('scope guard wiring: operator already on /operator/tenants', () => {
 			return Promise.resolve();
 		});
 
-		const observer = new QueryObserver(queryClient, {
+		const observer = new QueryObserver(createQueryClient(), {
 			queryKey: ['operator', 'tenants'],
 			queryFn,
 			retry: false
@@ -65,5 +65,18 @@ describe('scope guard wiring: operator already on /operator/tenants', () => {
 		expect(apiDelete).toHaveBeenCalledTimes(1);
 		unsubscribe();
 		vi.unstubAllGlobals();
+	});
+});
+
+describe('renderQueryClient', () => {
+	it('returns the one tab-wide client in the browser', () => {
+		expect(renderQueryClient()).toBe(renderQueryClient());
+	});
+
+	it('createQueryClient builds an independent cache each call', () => {
+		const a = createQueryClient();
+		const b = createQueryClient();
+		a.setQueryData(['me', 'capabilities'], { email: 'a@example.com' });
+		expect(b.getQueryData(['me', 'capabilities'])).toBeUndefined();
 	});
 });
