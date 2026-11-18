@@ -9,7 +9,7 @@
  * paths or bodies. Multipart uploads bypass the JSON client and hit
  * `/api/...` directly (BFF still injects cookies + CSRF transparently).
  */
-import { api, parseResponse } from '$api/client';
+import { apiLegacy, parseResponse } from '#lib/api/client.ts';
 import { getCsrfToken } from '$api/csrf';
 import { ApiError } from '$api/errors';
 import {
@@ -88,27 +88,27 @@ function buildProductListQuery(params: ListProductsParams = {}): string {
 // ── Products ─────────────────────────────────────────────────────────
 
 export async function listProducts(params?: ListProductsParams): Promise<ListProductsResponse> {
-	const raw = await api.get<unknown>(buildProductListQuery(params));
+	const raw = await apiLegacy.get<unknown>(buildProductListQuery(params));
 	return parseResponse(listProductsResponseSchema, raw);
 }
 
 export async function getProduct(id: string): Promise<ProductDto> {
-	const raw = await api.get<unknown>(`/v1/inventory/products/${id}`);
+	const raw = await apiLegacy.get<unknown>(`/v1/inventory/products/${id}`);
 	return parseResponse(productDtoSchema, raw);
 }
 
 export async function createProduct(body: CreateProductRequest): Promise<ProductDto> {
-	const raw = await api.post<unknown>('/v1/inventory/products', body);
+	const raw = await apiLegacy.post<unknown>('/v1/inventory/products', body);
 	return parseResponse(productDtoSchema, raw);
 }
 
 export async function updateProduct(id: string, body: UpdateProductRequest): Promise<ProductDto> {
-	const raw = await api.patch<unknown>(`/v1/inventory/products/${id}`, body);
+	const raw = await apiLegacy.patch<unknown>(`/v1/inventory/products/${id}`, body);
 	return parseResponse(productDtoSchema, raw);
 }
 
 export async function deleteProduct(id: string): Promise<ProductDto> {
-	const raw = await api.delete<unknown>(`/v1/inventory/products/${id}`);
+	const raw = await apiLegacy.delete<unknown>(`/v1/inventory/products/${id}`);
 	return parseResponse(productDtoSchema, raw);
 }
 
@@ -129,12 +129,12 @@ export async function listBatches(
 	const path = s
 		? `/v1/inventory/products/${productId}/batches?${s}`
 		: `/v1/inventory/products/${productId}/batches`;
-	const raw = await api.get<unknown>(path);
+	const raw = await apiLegacy.get<unknown>(path);
 	return parseResponse(listBatchesResponseSchema, raw);
 }
 
 export async function createBatch(productId: string, body: CreateBatchRequest): Promise<BatchDto> {
-	const raw = await api.post<unknown>(`/v1/inventory/products/${productId}/batches`, body);
+	const raw = await apiLegacy.post<unknown>(`/v1/inventory/products/${productId}/batches`, body);
 	return parseResponse(batchDtoSchema, raw);
 }
 
@@ -142,12 +142,12 @@ export async function writeOffBatch(
 	batchId: string,
 	body: WriteOffBatchRequest
 ): Promise<BatchDto> {
-	const raw = await api.post<unknown>(`/v1/inventory/batches/${batchId}/write-off`, body);
+	const raw = await apiLegacy.post<unknown>(`/v1/inventory/batches/${batchId}/write-off`, body);
 	return parseResponse(batchDtoSchema, raw);
 }
 
 export async function quarantineBatch(batchId: string): Promise<BatchDto> {
-	const raw = await api.post<unknown>(`/v1/inventory/batches/${batchId}/quarantine`, {});
+	const raw = await apiLegacy.post<unknown>(`/v1/inventory/batches/${batchId}/quarantine`, {});
 	return parseResponse(batchDtoSchema, raw);
 }
 
@@ -173,7 +173,7 @@ export async function listMovements(
 	const path = s
 		? `/v1/inventory/products/${productId}/movements?${s}`
 		: `/v1/inventory/products/${productId}/movements`;
-	const raw = await api.get<unknown>(path);
+	const raw = await apiLegacy.get<unknown>(path);
 	return parseResponse(listStockMovementsResponseSchema, raw);
 }
 
@@ -181,36 +181,36 @@ export async function createMovement(
 	productId: string,
 	body: CreateMovementRequest
 ): Promise<StockMovementDto> {
-	const raw = await api.post<unknown>(`/v1/inventory/products/${productId}/movements`, body);
+	const raw = await apiLegacy.post<unknown>(`/v1/inventory/products/${productId}/movements`, body);
 	return parseResponse(stockMovementDtoSchema, raw);
 }
 
 // ── Reference data ───────────────────────────────────────────────────
 
 export async function listCategories(): Promise<ReferenceListResponse> {
-	const raw = await api.get<unknown>('/v1/inventory/categories');
+	const raw = await apiLegacy.get<unknown>('/v1/inventory/categories');
 	return parseResponse(referenceListResponseSchema, raw);
 }
 
 export async function listTypes(): Promise<ReferenceListResponse> {
-	const raw = await api.get<unknown>('/v1/inventory/types');
+	const raw = await apiLegacy.get<unknown>('/v1/inventory/types');
 	return parseResponse(referenceListResponseSchema, raw);
 }
 
 export async function getGstDefaults(): Promise<GstDefaultsResponse> {
-	const raw = await api.get<unknown>('/v1/inventory/gst-defaults');
+	const raw = await apiLegacy.get<unknown>('/v1/inventory/gst-defaults');
 	return parseResponse(gstDefaultsResponseSchema, raw);
 }
 
 export async function getComputedPrices(productId: string): Promise<ComputedPricesResponse> {
-	const raw = await api.get<unknown>(`/v1/inventory/products/${productId}/computed-prices`);
+	const raw = await apiLegacy.get<unknown>(`/v1/inventory/products/${productId}/computed-prices`);
 	return parseResponse(computedPricesResponseSchema, raw);
 }
 
 // ── Bulk ─────────────────────────────────────────────────────────────
 
 export async function bulkProductAction(body: BulkProductActionRequest): Promise<BulkActionResult> {
-	const raw = await api.post<unknown>('/v1/inventory/products/bulk-action', body);
+	const raw = await apiLegacy.post<unknown>('/v1/inventory/products/bulk-action', body);
 	return parseResponse(bulkActionResultSchema, raw);
 }
 

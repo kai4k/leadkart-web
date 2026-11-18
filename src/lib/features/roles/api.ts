@@ -1,4 +1,4 @@
-import { api, parseResponse } from '$api/client';
+import { apiLegacy, parseResponse } from '#lib/api/client.ts';
 import { listRolesResponseSchema, roleDtoSchema, createRoleResponseSchema } from './schemas';
 import type {
 	ListRolesResponse,
@@ -11,22 +11,22 @@ import type {
 } from './types';
 
 export async function listRoles(): Promise<ListRolesResponse> {
-	const raw = await api.get<unknown>('/v1/roles');
+	const raw = await apiLegacy.get<unknown>('/v1/roles');
 	return parseResponse(listRolesResponseSchema, raw);
 }
 
 export async function getRole(roleId: string): Promise<RoleDto> {
-	const raw = await api.get<unknown>(`/v1/roles/${roleId}`);
+	const raw = await apiLegacy.get<unknown>(`/v1/roles/${roleId}`);
 	return parseResponse(roleDtoSchema, raw);
 }
 
 export async function createRole(req: CreateRoleRequest): Promise<CreateRoleResponse> {
-	const raw = await api.post<unknown>('/v1/roles', req);
+	const raw = await apiLegacy.post<unknown>('/v1/roles', req);
 	return parseResponse(createRoleResponseSchema, raw);
 }
 
 export async function updateRole(roleId: string, req: UpdateRoleRequest): Promise<RoleDto> {
-	const raw = await api.patch<unknown>(`/v1/roles/${roleId}`, req);
+	const raw = await apiLegacy.patch<unknown>(`/v1/roles/${roleId}`, req);
 	return parseResponse(roleDtoSchema, raw);
 }
 
@@ -34,25 +34,25 @@ export async function replaceRolePermissions(
 	roleId: string,
 	req: ReplaceRolePermissionsRequest
 ): Promise<void> {
-	await api.put<void>(`/v1/roles/${roleId}/permissions`, req);
+	await apiLegacy.put<void>(`/v1/roles/${roleId}/permissions`, req);
 }
 
 export async function grantRolePermission(
 	roleId: string,
 	req: RolePermissionRequest
 ): Promise<void> {
-	await api.post<void>(`/v1/roles/${roleId}/permissions/grant`, req);
+	await apiLegacy.post<void>(`/v1/roles/${roleId}/permissions/grant`, req);
 }
 
 export async function revokeRolePermission(
 	roleId: string,
 	req: RolePermissionRequest
 ): Promise<void> {
-	await api.post<void>(`/v1/roles/${roleId}/permissions/revoke`, req);
+	await apiLegacy.post<void>(`/v1/roles/${roleId}/permissions/revoke`, req);
 }
 
 export async function deleteRole(roleId: string): Promise<void> {
-	await api.delete<void>(`/v1/roles/${roleId}`);
+	await apiLegacy.delete<void>(`/v1/roles/${roleId}`);
 }
 
 /**
@@ -69,6 +69,6 @@ export async function setRoleParent(
 	roleId: string,
 	body: { parent_role_id: string | null }
 ): Promise<RoleDto> {
-	const raw = await api.patch<unknown>(`/v1/roles/${roleId}/parent`, body);
+	const raw = await apiLegacy.patch<unknown>(`/v1/roles/${roleId}/parent`, body);
 	return parseResponse(roleDtoSchema, raw);
 }

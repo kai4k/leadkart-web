@@ -1,4 +1,4 @@
-import { api, parseResponse } from '$api/client';
+import { apiLegacy, parseResponse } from '#lib/api/client.ts';
 import { searchResponseSchema, type SearchResponse } from './schemas';
 
 export interface SearchParams {
@@ -12,6 +12,6 @@ export async function omniSearch(params: SearchParams): Promise<SearchResponse> 
 	qs.set('q', params.q);
 	if (params.limit != null) qs.set('limit', String(params.limit));
 	if (params.include) qs.set('include', params.include);
-	const raw = await api.get<unknown>(`/v1/search?${qs}`);
+	const raw = await apiLegacy.get<unknown>(`/v1/search?${qs}`);
 	return parseResponse(searchResponseSchema, raw);
 }

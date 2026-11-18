@@ -2,7 +2,7 @@
  * Gateway for audit activity endpoints per ADR 0038 N2.
  * Each resource that exposes activity uses the same cursor-paginated shape.
  */
-import { api, parseResponse } from '$api/client';
+import { apiLegacy, parseResponse } from '#lib/api/client.ts';
 import { activityListResponseSchema, type ActivityListResponse } from './schemas';
 
 export type ActivityParams = {
@@ -28,7 +28,7 @@ export async function listTenantActivity(
 	tenantId: string,
 	params?: ActivityParams
 ): Promise<ActivityListResponse> {
-	const raw = await api.get<unknown>(buildQuery(`/v1/tenants/${tenantId}/activity`, params));
+	const raw = await apiLegacy.get<unknown>(buildQuery(`/v1/tenants/${tenantId}/activity`, params));
 	return parseResponse(activityListResponseSchema, raw);
 }
 
@@ -37,7 +37,7 @@ export async function listPersonActivity(
 	personId: string,
 	params?: ActivityParams
 ): Promise<ActivityListResponse> {
-	const raw = await api.get<unknown>(
+	const raw = await apiLegacy.get<unknown>(
 		buildQuery(`/v1/platform/persons/${personId}/activity`, params)
 	);
 	return parseResponse(activityListResponseSchema, raw);
@@ -45,6 +45,6 @@ export async function listPersonActivity(
 
 /** GET /v1/auth/me/activity — caller's own activity. */
 export async function listMyActivity(params?: ActivityParams): Promise<ActivityListResponse> {
-	const raw = await api.get<unknown>(buildQuery('/v1/auth/me/activity', params));
+	const raw = await apiLegacy.get<unknown>(buildQuery('/v1/auth/me/activity', params));
 	return parseResponse(activityListResponseSchema, raw);
 }

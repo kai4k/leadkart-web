@@ -27,7 +27,7 @@
  * Auth is handled by the cross-cutting client (`$api/client`) which
  * injects the bearer token + handles 401-silent-refresh.
  */
-import { api, parseResponse } from '$api/client';
+import { apiLegacy, parseResponse } from '#lib/api/client.ts';
 import { tenantSchema } from './schemas';
 import type {
 	Tenant,
@@ -43,7 +43,7 @@ function tenantPath(tenantId: string, suffix = ''): string {
 }
 
 export async function getTenant(tenantId: string): Promise<Tenant> {
-	const raw = await api.get<unknown>(tenantPath(tenantId));
+	const raw = await apiLegacy.get<unknown>(tenantPath(tenantId));
 	return parseResponse(tenantSchema, raw);
 }
 
@@ -51,33 +51,33 @@ export function updateTenantProfile(
 	tenantId: string,
 	body: UpdateTenantProfileRequest
 ): Promise<void> {
-	return api.patch<void>(tenantPath(tenantId, '/profile'), body);
+	return apiLegacy.patch<void>(tenantPath(tenantId, '/profile'), body);
 }
 
 export function updateTenantStatutory(
 	tenantId: string,
 	body: UpdateTenantStatutoryRequest
 ): Promise<void> {
-	return api.patch<void>(tenantPath(tenantId, '/statutory'), body);
+	return apiLegacy.patch<void>(tenantPath(tenantId, '/statutory'), body);
 }
 
 export function updateTenantAdminContact(
 	tenantId: string,
 	body: UpdateTenantAdminContactRequest
 ): Promise<void> {
-	return api.patch<void>(tenantPath(tenantId, '/admin-contact'), body);
+	return apiLegacy.patch<void>(tenantPath(tenantId, '/admin-contact'), body);
 }
 
 export function updateTenantSettings(
 	tenantId: string,
 	body: UpdateTenantSettingsRequest
 ): Promise<void> {
-	return api.patch<void>(tenantPath(tenantId, '/settings'), body);
+	return apiLegacy.patch<void>(tenantPath(tenantId, '/settings'), body);
 }
 
 export function updateTenantDisplayPreferences(
 	tenantId: string,
 	body: UpdateTenantDisplayPreferencesRequest
 ): Promise<void> {
-	return api.patch<void>(tenantPath(tenantId, '/display-preferences'), body);
+	return apiLegacy.patch<void>(tenantPath(tenantId, '/display-preferences'), body);
 }

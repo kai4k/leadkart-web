@@ -1,4 +1,4 @@
-import { api, parseResponse } from '$api/client';
+import { apiLegacy, parseResponse } from '#lib/api/client.ts';
 import {
 	tenantDtoSchema,
 	registerTenantResponseSchema,
@@ -17,7 +17,7 @@ import type {
  *  created records; the seed-admin credentials are the caller's input
  *  and must be conveyed out-of-band (UI surfaces them post-201). */
 export async function registerTenant(req: RegisterTenantRequest): Promise<RegisterTenantResponse> {
-	const raw = await api.post<unknown>('/v1/tenants', req);
+	const raw = await apiLegacy.post<unknown>('/v1/tenants', req);
 	return parseResponse(registerTenantResponseSchema, raw);
 }
 
@@ -25,12 +25,12 @@ export async function suspendTenant(
 	tenantId: string,
 	req: SuspendTenantRequest
 ): Promise<TenantDto> {
-	const raw = await api.post<unknown>(`/v1/tenants/${tenantId}/suspend`, req);
+	const raw = await apiLegacy.post<unknown>(`/v1/tenants/${tenantId}/suspend`, req);
 	return parseResponse(tenantDtoSchema, raw);
 }
 
 export async function activateTenant(tenantId: string): Promise<TenantDto> {
-	const raw = await api.post<unknown>(`/v1/tenants/${tenantId}/activate`, {});
+	const raw = await apiLegacy.post<unknown>(`/v1/tenants/${tenantId}/activate`, {});
 	return parseResponse(tenantDtoSchema, raw);
 }
 
@@ -38,18 +38,18 @@ export async function markForDeletion(
 	tenantId: string,
 	req: MarkForDeletionRequest
 ): Promise<TenantDto> {
-	const raw = await api.post<unknown>(`/v1/tenants/${tenantId}/mark-for-deletion`, req);
+	const raw = await apiLegacy.post<unknown>(`/v1/tenants/${tenantId}/mark-for-deletion`, req);
 	return parseResponse(tenantDtoSchema, raw);
 }
 
 export async function restoreTenant(tenantId: string): Promise<TenantDto> {
-	const raw = await api.post<unknown>(`/v1/tenants/${tenantId}/restore`, {});
+	const raw = await apiLegacy.post<unknown>(`/v1/tenants/${tenantId}/restore`, {});
 	return parseResponse(tenantDtoSchema, raw);
 }
 
 /** List all tenants — operator-scoped (platform.tenants.view).
  *  Calls GET /v1/platform/tenants which returns the full collection. */
 export async function listTenants(): Promise<ListAllTenantsResponse> {
-	const raw = await api.get<unknown>('/v1/platform/tenants');
+	const raw = await apiLegacy.get<unknown>('/v1/platform/tenants');
 	return parseResponse(listAllTenantsResponseSchema, raw);
 }

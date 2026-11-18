@@ -1,4 +1,4 @@
-import { api, parseResponse } from '$api/client';
+import { apiLegacy, parseResponse } from '#lib/api/client.ts';
 import {
 	personDtoSchema,
 	listPersonMembershipsResponseSchema,
@@ -41,13 +41,13 @@ function buildPersonListQuery(params?: PersonListParams): string {
 
 /** List persons with optional email/name search — operator-scoped (platform.users.view). */
 export async function listPersons(params?: PersonListParams): Promise<PersonListResponse> {
-	const raw = await api.get<unknown>(buildPersonListQuery(params));
+	const raw = await apiLegacy.get<unknown>(buildPersonListQuery(params));
 	return parseResponse(personListResponseSchema, raw);
 }
 
 /** Read a Person by ID — operator-scoped (platform.users.view). */
 export async function getPerson(personId: string): Promise<PersonDto> {
-	const raw = await api.get<unknown>(`/v1/platform/persons/${personId}`);
+	const raw = await apiLegacy.get<unknown>(`/v1/platform/persons/${personId}`);
 	return parseResponse(personDtoSchema, raw);
 }
 
@@ -56,20 +56,20 @@ export async function getPerson(personId: string): Promise<PersonDto> {
 export async function listPersonMemberships(
 	personId: string
 ): Promise<ListPersonMembershipsResponse> {
-	const raw = await api.get<unknown>(`/v1/platform/persons/${personId}/memberships`);
+	const raw = await apiLegacy.get<unknown>(`/v1/platform/persons/${personId}/memberships`);
 	return parseResponse(listPersonMembershipsResponseSchema, raw);
 }
 
 /** Globally suspend a Person across ALL tenants — operator-scoped
  *  (platform.users.manage). A required reason is stored for audit. */
 export async function globalSuspend(personId: string, req: GlobalSuspendRequest): Promise<void> {
-	await api.post<void>(`/v1/platform/persons/${personId}/global-suspend`, req);
+	await apiLegacy.post<void>(`/v1/platform/persons/${personId}/global-suspend`, req);
 }
 
 /** Lift an existing global suspension — operator-scoped
  *  (platform.users.manage). Returns 204 No Content. */
 export async function liftGlobalSuspension(personId: string): Promise<void> {
-	await api.post<void>(`/v1/platform/persons/${personId}/lift-global-suspension`, {});
+	await apiLegacy.post<void>(`/v1/platform/persons/${personId}/lift-global-suspension`, {});
 }
 
 /** Irreversibly anonymise a Person (DPDP) — operator-scoped
@@ -79,5 +79,5 @@ export async function anonymisePerson(
 	personId: string,
 	req: AnonymisePersonRequest
 ): Promise<void> {
-	await api.post<void>(`/v1/platform/persons/${personId}/anonymise`, req);
+	await apiLegacy.post<void>(`/v1/platform/persons/${personId}/anonymise`, req);
 }

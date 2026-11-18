@@ -10,7 +10,7 @@
  * scope cookie. Multipart uploads bypass the JSON helper because the
  * body must be `FormData`; the proxy still forwards both untouched.
  */
-import { api, parseResponse } from '$api/client';
+import { apiLegacy, parseResponse } from '#lib/api/client.ts';
 import { getCsrfToken } from '$api/csrf';
 import { ApiError } from '$api/errors';
 import {
@@ -72,41 +72,41 @@ function buildListQuery(params: ListLeadsParams = {}): string {
 }
 
 export async function listLeads(params: ListLeadsParams = {}): Promise<ListLeadsResponse> {
-	const raw = await api.get<unknown>(buildListQuery(params));
+	const raw = await apiLegacy.get<unknown>(buildListQuery(params));
 	return parseResponse(listLeadsResponseSchema, raw);
 }
 
 export async function getLead(id: string): Promise<CrmLeadDto> {
-	const raw = await api.get<unknown>(`/v1/crm/leads/${id}`);
+	const raw = await apiLegacy.get<unknown>(`/v1/crm/leads/${id}`);
 	return parseResponse(crmLeadDtoSchema, raw);
 }
 
 export async function updateLead(id: string, req: UpdateLeadRequest): Promise<CrmLeadDto> {
-	const raw = await api.patch<unknown>(`/v1/crm/leads/${id}`, req);
+	const raw = await apiLegacy.patch<unknown>(`/v1/crm/leads/${id}`, req);
 	return parseResponse(crmLeadDtoSchema, raw);
 }
 
 export async function reassignLead(id: string, req: ReassignLeadRequest): Promise<CrmLeadDto> {
-	const raw = await api.post<unknown>(`/v1/crm/leads/${id}/reassign`, req);
+	const raw = await apiLegacy.post<unknown>(`/v1/crm/leads/${id}/reassign`, req);
 	return parseResponse(crmLeadDtoSchema, raw);
 }
 
 // ── CallLogs ────────────────────────────────────────────────────────
 
 export async function listCallLogs(leadId: string): Promise<ListCallLogsResponse> {
-	const raw = await api.get<unknown>(`/v1/crm/leads/${leadId}/calls`);
+	const raw = await apiLegacy.get<unknown>(`/v1/crm/leads/${leadId}/calls`);
 	return parseResponse(listCallLogsResponseSchema, raw);
 }
 
 export async function logCall(leadId: string, req: LogCallRequest): Promise<CallLogDto> {
-	const raw = await api.post<unknown>(`/v1/crm/leads/${leadId}/calls`, req);
+	const raw = await apiLegacy.post<unknown>(`/v1/crm/leads/${leadId}/calls`, req);
 	return parseResponse(callLogDtoSchema, raw);
 }
 
 // ── Reminders ───────────────────────────────────────────────────────
 
 export async function listLeadReminders(leadId: string): Promise<ListRemindersResponse> {
-	const raw = await api.get<unknown>(`/v1/crm/leads/${leadId}/reminders`);
+	const raw = await apiLegacy.get<unknown>(`/v1/crm/leads/${leadId}/reminders`);
 	return parseResponse(listRemindersResponseSchema, raw);
 }
 
@@ -115,7 +115,7 @@ export async function updateReminder(
 	action: ReminderAction,
 	body: { snooze_until?: string } = {}
 ): Promise<ReminderDto> {
-	const raw = await api.patch<unknown>(`/v1/crm/leads/reminders/${id}`, { action, ...body });
+	const raw = await apiLegacy.patch<unknown>(`/v1/crm/leads/reminders/${id}`, { action, ...body });
 	return parseResponse(reminderDtoSchema, raw);
 }
 
@@ -133,7 +133,7 @@ export async function listReminders(
 	if (params.status) qs.set('status', params.status);
 	if (params.due_window) qs.set('due_window', params.due_window);
 	const q = qs.toString();
-	const raw = await api.get<unknown>(q ? `/v1/crm/reminders?${q}` : '/v1/crm/reminders');
+	const raw = await apiLegacy.get<unknown>(q ? `/v1/crm/reminders?${q}` : '/v1/crm/reminders');
 	return parseResponse(listRemindersResponseSchema, raw);
 }
 
@@ -142,14 +142,14 @@ export async function listReminders(
 export async function listAssignmentHistory(
 	leadId: string
 ): Promise<ListAssignmentHistoryResponse> {
-	const raw = await api.get<unknown>(`/v1/crm/leads/${leadId}/history`);
+	const raw = await apiLegacy.get<unknown>(`/v1/crm/leads/${leadId}/history`);
 	return parseResponse(listAssignmentHistoryResponseSchema, raw);
 }
 
 // ── Bulk action ─────────────────────────────────────────────────────
 
 export async function bulkLeadAction(req: BulkLeadActionRequest): Promise<BulkActionResult> {
-	const raw = await api.post<unknown>('/v1/crm/leads/bulk-action', req);
+	const raw = await apiLegacy.post<unknown>('/v1/crm/leads/bulk-action', req);
 	return parseResponse(bulkActionResultSchema, raw);
 }
 

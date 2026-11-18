@@ -1,139 +1,158 @@
 /**
- * Cross-cutting fetch wrapper for the leadkart-go JSON API.
- *
- * BFF model: browser never injects Authorization headers. The SvelteKit
- * Node proxy (routes/api/[...path]/+server.ts) reads the httpOnly
- * __Host-lk_access cookie and adds Bearer on the server side. This
- * client only needs to:
- *   - Route to /api/* (the BFF proxy path)
- *   - Inject X-CSRF-Token on mutating methods (double-submit-cookie pattern)
- *   - Inject X-Tenant-Id when caller opts in (operator scope override)
- *   - Normalise errors → typed [ApiError]
- *
- * 401 handling: if the BFF proxy's refresh loop failed (token truly expired
- * and refresh exhausted), the proxy returns 401 to the browser. The error
- * is surfaced to the caller via ApiError.fromResponse — typically the
- * session store's logout() is called which redirects to /signin.
- *
- * Per-feature typed wrappers (login, listLeads, etc.) live in
- * lib/features/<x>/api.ts and call into this client.
+ * Browser → BFF (/api/*) client. The BFF proxy adds the Bearer token and X-Tenant-Id.
+ * Two call styles, because Go mutations answer 204 or an id-only 201/200 (backend-checklist #9):
+ *   api.post(path, body)                 → void (any 2xx)
+ *   api.postJson(path, body, schema)     → parsed body (only when the caller needs the id)
+ * Paths are literals; query params go in opts.query.
+ * ONE transport (`send`) serves both `api` and the deprecated `apiLegacy`.
  */
+import type { z } from 'zod';
+import { ApiError, isApiError, SchemaError, type ApiErrorBody } from './errors.ts';
+import { getCsrfToken } from './csrf.ts';
+import { isOperatorScopePath, SCOPE_REQUIRED_HEADER } from './scope-header.ts';
 
-import { ApiError, isApiError, type ApiErrorBody } from './errors';
-import { getCsrfToken } from './csrf';
-import { isOperatorScopePath, SCOPE_REQUIRED_HEADER } from './scope-header';
-import { z } from 'zod';
-
-function resolveBaseUrl(): string {
-	// All API calls go through the BFF proxy at /api/*.
-	// The proxy adds the Bearer header server-side from the httpOnly cookie.
-	return '/api';
+export const DEFAULT_TIMEOUT_MS = 15_000;
+export type QueryValue =
+	| string
+	| number
+	| boolean
+	| null
+	| undefined
+	| readonly (string | number)[];
+export type QueryParams = Readonly<Record<string, QueryValue>>;
+export interface RequestOptions {
+	query?: QueryParams;
+	signal?: AbortSignal;
+	timeoutMs?: number;
+	headers?: Record<string, string>;
 }
+type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
-export interface RequestOptions extends Omit<RequestInit, 'body'> {
-	/** Serialised as JSON body if defined. */
-	json?: unknown;
-}
-
-/** True while the browser is inside the operator scope tree (browser-only). */
-function inOperatorScope(): boolean {
-	return typeof location !== 'undefined' && isOperatorScopePath(location.pathname);
-}
-
-const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-
-/**
- * Issues a typed JSON request through the BFF proxy.
- *
- * Resolves to the parsed JSON body on 2xx; rejects with [ApiError] on
- * non-2xx or transport failures. 401 means the BFF's refresh loop has
- * already failed — surface directly to the caller.
- */
-export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-	const { json, headers, ...rest } = options;
-	const url = `${resolveBaseUrl()}${path.startsWith('/') ? path : `/${path}`}`;
-
-	const finalHeaders = new Headers(headers);
-	if (json !== undefined) {
-		finalHeaders.set('Content-Type', 'application/json');
+export function buildQueryString(query?: QueryParams): string {
+	if (!query) return '';
+	const qs = new URLSearchParams();
+	for (const [key, value] of Object.entries(query)) {
+		if (value === undefined || value === null || value === '') continue;
+		if (Array.isArray(value)) {
+			for (const v of value) if (v !== '') qs.append(key, String(v));
+		} else {
+			qs.set(key, String(value));
+		}
 	}
-	finalHeaders.set('Accept', 'application/json');
-	// Tells the BFF this call needs the operator scope: it answers 409
-	// scope_invalid (instead of running in the home tenant) when the cookie is gone.
-	if (inOperatorScope()) finalHeaders.set(SCOPE_REQUIRED_HEADER, '1');
-
-	// CSRF: read the non-httpOnly lk_csrf cookie and echo as header
-	// on mutations so the BFF proxy can validate the double-submit.
-	const method = (rest.method ?? 'GET').toUpperCase();
-	if (MUTATING.has(method)) {
-		const csrf = getCsrfToken();
-		if (csrf) finalHeaders.set('X-CSRF-Token', csrf);
-	}
-
-	let response: Response;
-	try {
-		response = await fetch(url, {
-			...rest,
-			method,
-			headers: finalHeaders,
-			credentials: 'same-origin', // send cookies; never cross-origin
-			body: json !== undefined ? JSON.stringify(json) : undefined
-		});
-	} catch (cause) {
-		throw ApiError.transport(cause);
-	}
-
-	const text = await response.text();
-	const parsed: unknown = text.length > 0 ? safeJsonParse(text) : null;
-
-	if (!response.ok) {
-		throw ApiError.fromResponse(response, parsed as ApiErrorBody | null);
-	}
-	return parsed as T;
+	const s = qs.toString();
+	return s ? `?${s}` : '';
 }
 
 function safeJsonParse(text: string): unknown {
 	try {
 		return JSON.parse(text);
 	} catch {
-		return null;
+		return undefined;
 	}
 }
+
+async function send(
+	method: Method,
+	path: string,
+	body: unknown,
+	opts: RequestOptions = {}
+): Promise<unknown> {
+	const headers = new Headers(opts.headers);
+	headers.set('Accept', 'application/json');
+	if (body !== undefined) headers.set('Content-Type', 'application/json');
+	// Tells the BFF this call needs the operator scope: it answers 409 scope_invalid
+	// (instead of running in the home tenant) when the cookie is gone.
+	if (typeof location !== 'undefined' && isOperatorScopePath(location.pathname))
+		headers.set(SCOPE_REQUIRED_HEADER, '1');
+	// CSRF double-submit: echo the lk_csrf cookie on mutations.
+	if (method !== 'GET') {
+		const csrf = getCsrfToken();
+		if (csrf) headers.set('X-CSRF-Token', csrf);
+	}
+	const timeout = AbortSignal.timeout(opts.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+	const signal = opts.signal ? AbortSignal.any([opts.signal, timeout]) : timeout;
+	let response: Response;
+	let text: string;
+	try {
+		response = await fetch(
+			`/api${path.startsWith('/') ? path : `/${path}`}${buildQueryString(opts.query)}`,
+			{
+				method,
+				headers,
+				credentials: 'same-origin',
+				body: body === undefined ? undefined : JSON.stringify(body),
+				signal
+			}
+		);
+		text = await response.text();
+	} catch (cause) {
+		if (opts.signal?.aborted) throw opts.signal.reason ?? cause;
+		throw ApiError.transport(cause);
+	}
+	const data = text.length > 0 ? safeJsonParse(text) : undefined;
+	if (!response.ok) throw ApiError.fromResponse(response, (data ?? null) as ApiErrorBody | null);
+	return data;
+}
+
+export function parseWith<S extends z.ZodType>(
+	schema: S,
+	data: unknown,
+	endpoint: string
+): z.output<S> {
+	const result = schema.safeParse(data);
+	if (result.success) return result.data;
+	const issues = result.error.issues.map((i) => ({ path: i.path.join('.'), message: i.message }));
+	if (import.meta.env.DEV)
+		console.error('[api] response does not match the Go contract', endpoint, issues);
+	throw new SchemaError(endpoint, issues);
+}
+
+const voidCall =
+	(method: Method) =>
+	async (path: string, body?: unknown, opts?: RequestOptions): Promise<void> => {
+		await send(method, path, body, opts);
+	};
+const jsonCall =
+	(method: Method) =>
+	async <S extends z.ZodType>(
+		path: string,
+		body: unknown,
+		schema: S,
+		opts?: RequestOptions
+	): Promise<z.output<S>> =>
+		parseWith(schema, await send(method, path, body, opts), `${method} ${path}`);
 
 export const api = {
-	get: <T>(path: string, options?: RequestOptions) =>
-		request<T>(path, { ...options, method: 'GET' }),
-	post: <T>(path: string, json?: unknown, options?: RequestOptions) =>
-		request<T>(path, { ...options, method: 'POST', json }),
-	put: <T>(path: string, json?: unknown, options?: RequestOptions) =>
-		request<T>(path, { ...options, method: 'PUT', json }),
-	patch: <T>(path: string, json?: unknown, options?: RequestOptions) =>
-		request<T>(path, { ...options, method: 'PATCH', json }),
-	delete: <T>(path: string, json?: unknown, options?: RequestOptions) =>
-		request<T>(path, { ...options, method: 'DELETE', json })
+	get: async <S extends z.ZodType>(
+		path: string,
+		schema: S,
+		opts?: RequestOptions
+	): Promise<z.output<S>> =>
+		parseWith(schema, await send('GET', path, undefined, opts), `GET ${path}`),
+	post: voidCall('POST'),
+	put: voidCall('PUT'),
+	patch: voidCall('PATCH'),
+	delete: voidCall('DELETE'),
+	postJson: jsonCall('POST'),
+	putJson: jsonCall('PUT'),
+	patchJson: jsonCall('PATCH'),
+	deleteJson: jsonCall('DELETE')
 };
 
-export { isApiError };
+/** @deprecated Old call style (parsed JSON or null) for gateways not yet re-contracted; deleted in Task 30. */
+export const apiLegacy = {
+	get: <T>(path: string) => send('GET', path, undefined).then((d) => (d ?? null) as T),
+	post: <T>(path: string, json?: unknown) => send('POST', path, json).then((d) => (d ?? null) as T),
+	put: <T>(path: string, json?: unknown) => send('PUT', path, json).then((d) => (d ?? null) as T),
+	patch: <T>(path: string, json?: unknown) =>
+		send('PATCH', path, json).then((d) => (d ?? null) as T),
+	delete: <T>(path: string, json?: unknown) =>
+		send('DELETE', path, json).then((d) => (d ?? null) as T)
+};
 
-/**
- * Parse a raw API response through a Zod schema.
- *
- * On success: returns the validated, typed result.
- * On ZodError: throws a user-facing Error with a clear reload message,
- *   but preserves the original `zodIssues` array on the error object so
- *   devtools-savvy engineers can inspect the exact path mismatch.
- */
-export function parseResponse<S extends z.ZodTypeAny>(schema: S, raw: unknown): z.output<S> {
-	try {
-		return schema.parse(raw);
-	} catch (err) {
-		if (err instanceof z.ZodError) {
-			const fields = err.issues.map((i) => i.path.join('.')).join(', ');
-			const message = `Server response shape unexpected at: ${fields}. This is likely a backend deploy mismatch — please refresh.`;
-			const wrapped = new Error(message);
-			(wrapped as Error & { zodIssues: z.ZodIssue[] }).zodIssues = err.issues;
-			throw wrapped;
-		}
-		throw err;
-	}
+/** @deprecated Use api.get/postJson with a schema; deleted in Task 30. */
+export function parseResponse<S extends z.ZodType>(schema: S, raw: unknown): z.output<S> {
+	return parseWith(schema, raw, 'legacy');
 }
+
+export { isApiError };

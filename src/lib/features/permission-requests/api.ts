@@ -2,7 +2,7 @@
  * Gateway for permission-elevation requests (ADR 0055).
  * All responses are Zod-parsed at the boundary.
  */
-import { api, parseResponse } from '$api/client';
+import { apiLegacy, parseResponse } from '#lib/api/client.ts';
 import {
 	listPermissionRequestsResponseSchema,
 	permissionRequestDtoSchema,
@@ -33,19 +33,19 @@ function buildListQuery(params: ListParams = {}): string {
 export async function listPermissionRequests(
 	params?: ListParams
 ): Promise<ListPermissionRequestsResponse> {
-	const raw = await api.get<unknown>(buildListQuery(params));
+	const raw = await apiLegacy.get<unknown>(buildListQuery(params));
 	return parseResponse(listPermissionRequestsResponseSchema, raw);
 }
 
 export async function getPermissionRequest(id: string): Promise<PermissionRequestDto> {
-	const raw = await api.get<unknown>(`/v1/permission-requests/${id}`);
+	const raw = await apiLegacy.get<unknown>(`/v1/permission-requests/${id}`);
 	return parseResponse(permissionRequestDtoSchema, raw);
 }
 
 export async function createPermissionRequest(
 	req: CreatePermissionRequest
 ): Promise<CreatePermissionRequestResponse> {
-	const raw = await api.post<unknown>('/v1/permission-requests', req);
+	const raw = await apiLegacy.post<unknown>('/v1/permission-requests', req);
 	return parseResponse(createPermissionRequestResponseSchema, raw);
 }
 
@@ -53,16 +53,16 @@ export async function approvePermissionRequest(
 	id: string,
 	body: { decision_reason?: string } = {}
 ): Promise<void> {
-	await api.post<void>(`/v1/permission-requests/${id}/approve`, body);
+	await apiLegacy.post<void>(`/v1/permission-requests/${id}/approve`, body);
 }
 
 export async function denyPermissionRequest(
 	id: string,
 	body: { decision_reason: string }
 ): Promise<void> {
-	await api.post<void>(`/v1/permission-requests/${id}/deny`, body);
+	await apiLegacy.post<void>(`/v1/permission-requests/${id}/deny`, body);
 }
 
 export async function cancelPermissionRequest(id: string): Promise<void> {
-	await api.post<void>(`/v1/permission-requests/${id}/cancel`, {});
+	await apiLegacy.post<void>(`/v1/permission-requests/${id}/cancel`, {});
 }

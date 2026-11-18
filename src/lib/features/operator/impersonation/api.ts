@@ -9,7 +9,7 @@
  * Each function Zod-parses the response at the boundary so upstream
  * callers receive typed DTOs, never raw unknowns.
  */
-import { api, parseResponse } from '$api/client';
+import { apiLegacy, parseResponse } from '#lib/api/client.ts';
 import {
 	createImpersonationSessionResponseSchema,
 	listImpersonationSessionsResponseSchema
@@ -24,17 +24,17 @@ import type {
 export async function startImpersonation(
 	req: CreateImpersonationSessionRequest
 ): Promise<CreateImpersonationSessionResponse> {
-	const raw = await api.post<unknown>('/v1/platform/impersonation/sessions', req);
+	const raw = await apiLegacy.post<unknown>('/v1/platform/impersonation/sessions', req);
 	return parseResponse(createImpersonationSessionResponseSchema, raw);
 }
 
 /** DELETE /v1/platform/impersonation/sessions/{sessionId} — close the session. */
 export async function endImpersonation(sessionId: string): Promise<void> {
-	await api.delete<void>(`/v1/platform/impersonation/sessions/${sessionId}`);
+	await apiLegacy.delete<void>(`/v1/platform/impersonation/sessions/${sessionId}`);
 }
 
 /** GET /v1/platform/impersonation/sessions — list active sessions for the caller. */
 export async function listImpersonationSessions(): Promise<ListImpersonationSessionsResponse> {
-	const raw = await api.get<unknown>('/v1/platform/impersonation/sessions');
+	const raw = await apiLegacy.get<unknown>('/v1/platform/impersonation/sessions');
 	return parseResponse(listImpersonationSessionsResponseSchema, raw);
 }

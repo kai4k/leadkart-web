@@ -23,7 +23,7 @@
  *   - Email-link forgot-password is DISABLED (use reset-with-old).
  *   - Self-service email change is DISABLED.
  */
-import { api, parseResponse } from '$api/client';
+import { apiLegacy, parseResponse } from '#lib/api/client.ts';
 import { ApiError, type ApiErrorBody } from '$api/errors';
 import { userDtoSchema, listSessionsResponseSchema, capabilitiesSchema } from './schemas';
 import type { UserDto, SessionDto, UpdateProfileRequest } from './types';
@@ -66,7 +66,7 @@ export async function logout(): Promise<void> {
  * Goes through /api/[...path] BFF proxy which injects Bearer from cookie.
  */
 export async function getMyCapabilities(): Promise<Capabilities> {
-	const raw = await api.get<unknown>('/v1/auth/me/capabilities');
+	const raw = await apiLegacy.get<unknown>('/v1/auth/me/capabilities');
 	return parseResponse(capabilitiesSchema, raw);
 }
 
@@ -77,7 +77,7 @@ export async function getMyCapabilities(): Promise<Capabilities> {
  * 204 on success; backend may emit 409 if the new email is already in use.
  */
 export async function requestEmailChange(body: { new_email: string }): Promise<void> {
-	await api.post<void>('/v1/auth/request-email-change', body);
+	await apiLegacy.post<void>('/v1/auth/request-email-change', body);
 }
 
 /**
@@ -108,7 +108,7 @@ export function changePassword(body: {
 	current_password: string;
 	new_password: string;
 }): Promise<void> {
-	return api.post<void>('/v1/auth/change-password', body);
+	return apiLegacy.post<void>('/v1/auth/change-password', body);
 }
 
 /**
@@ -177,7 +177,7 @@ async function readBffError(resp: Response): Promise<ApiError> {
  * `membershipId` matches the JWT's `membership_id` claim.
  */
 export async function getMyProfile(membershipId: string): Promise<UserDto> {
-	const raw = await api.get<unknown>(`/v1/users/${membershipId}`);
+	const raw = await apiLegacy.get<unknown>(`/v1/users/${membershipId}`);
 	return parseResponse(userDtoSchema, raw);
 }
 
@@ -188,14 +188,14 @@ export async function updateMyProfile(
 	membershipId: string,
 	patch: UpdateProfileRequest
 ): Promise<void> {
-	await api.patch<void>(`/v1/users/${membershipId}/profile`, patch);
+	await apiLegacy.patch<void>(`/v1/users/${membershipId}/profile`, patch);
 }
 
 /**
  * List active session families for the caller.
  */
 export async function listSessions(): Promise<SessionDto[]> {
-	const raw = await api.get<unknown>('/v1/auth/sessions');
+	const raw = await apiLegacy.get<unknown>('/v1/auth/sessions');
 	return parseResponse(listSessionsResponseSchema, raw).sessions;
 }
 
@@ -203,7 +203,7 @@ export async function listSessions(): Promise<SessionDto[]> {
  * Revoke a single session family by ID. 204 on success.
  */
 export async function revokeSession(familyId: string): Promise<void> {
-	await api.delete<void>(`/v1/auth/sessions/${familyId}`);
+	await apiLegacy.delete<void>(`/v1/auth/sessions/${familyId}`);
 }
 
 /**
@@ -213,6 +213,6 @@ export async function revokeSession(familyId: string): Promise<void> {
 export async function revokeOtherSessions(reason?: string): Promise<{ revoked_count: number }> {
 	const body: { except_current: true; reason?: string } = { except_current: true };
 	if (reason) body.reason = reason;
-	const raw = await api.delete<unknown>('/v1/auth/sessions', body);
+	const raw = await apiLegacy.delete<unknown>('/v1/auth/sessions', body);
 	return parseResponse(z.object({ revoked_count: z.number().int().nonnegative() }), raw);
 }

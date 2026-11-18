@@ -3,7 +3,7 @@
  * at the boundary per CLAUDE.md. Tenant scope is the caller's JWT
  * tenant_id — no tenant_id parameter on any call.
  */
-import { api, parseResponse } from '$api/client';
+import { apiLegacy, parseResponse } from '#lib/api/client.ts';
 import {
 	listUsersResponseSchema,
 	createUserResponseSchema,
@@ -23,17 +23,17 @@ import type {
 } from './types';
 
 export async function listUsers(): Promise<ListUsersResponse> {
-	const raw = await api.get<unknown>('/v1/users');
+	const raw = await apiLegacy.get<unknown>('/v1/users');
 	return parseResponse(listUsersResponseSchema, raw);
 }
 
 export async function getUser(membershipId: string): Promise<UserDto> {
-	const raw = await api.get<unknown>(`/v1/users/${membershipId}`);
+	const raw = await apiLegacy.get<unknown>(`/v1/users/${membershipId}`);
 	return parseResponse(userDtoSchema, raw);
 }
 
 export async function createUser(req: CreateUserRequest): Promise<CreateUserResponse> {
-	const raw = await api.post<unknown>('/v1/users', req);
+	const raw = await apiLegacy.post<unknown>('/v1/users', req);
 	return parseResponse(createUserResponseSchema, raw);
 }
 
@@ -41,39 +41,39 @@ export async function deactivateUser(
 	membershipId: string,
 	body: DeactivateUserRequest
 ): Promise<UserDto> {
-	const raw = await api.post<unknown>(`/v1/users/${membershipId}/deactivate`, body);
+	const raw = await apiLegacy.post<unknown>(`/v1/users/${membershipId}/deactivate`, body);
 	return parseResponse(userDtoSchema, raw);
 }
 
 export async function reactivateUser(membershipId: string): Promise<UserDto> {
-	const raw = await api.post<unknown>(`/v1/users/${membershipId}/reactivate`);
+	const raw = await apiLegacy.post<unknown>(`/v1/users/${membershipId}/reactivate`);
 	return parseResponse(userDtoSchema, raw);
 }
 
 export async function assignRole(membershipId: string, body: AssignUserRoleRequest): Promise<void> {
-	await api.post<void>(`/v1/users/${membershipId}/roles`, body);
+	await apiLegacy.post<void>(`/v1/users/${membershipId}/roles`, body);
 }
 
 export async function revokeRole(membershipId: string, roleId: string): Promise<void> {
-	await api.delete<void>(`/v1/users/${membershipId}/roles/${roleId}`);
+	await apiLegacy.delete<void>(`/v1/users/${membershipId}/roles/${roleId}`);
 }
 
 export async function replacePermissionOverrides(
 	membershipId: string,
 	body: ReplacePermissionOverridesRequest
 ): Promise<void> {
-	await api.patch<void>(`/v1/users/${membershipId}/permission-overrides`, body);
+	await apiLegacy.patch<void>(`/v1/users/${membershipId}/permission-overrides`, body);
 }
 
 export async function assignManager(
 	membershipId: string,
 	body: AssignManagerRequest
 ): Promise<void> {
-	await api.put<void>(`/v1/users/${membershipId}/manager`, body);
+	await apiLegacy.put<void>(`/v1/users/${membershipId}/manager`, body);
 }
 
 export async function removeManager(membershipId: string): Promise<void> {
-	await api.delete<void>(`/v1/users/${membershipId}/manager`);
+	await apiLegacy.delete<void>(`/v1/users/${membershipId}/manager`);
 }
 
 /**
@@ -86,6 +86,6 @@ export async function removeManager(membershipId: string): Promise<void> {
 export async function searchMemberships(q: string): Promise<SearchMembershipsResponse> {
 	const qs = new URLSearchParams();
 	qs.set('q', q);
-	const raw = await api.get<unknown>(`/v1/identity/memberships?${qs.toString()}`);
+	const raw = await apiLegacy.get<unknown>(`/v1/identity/memberships?${qs.toString()}`);
 	return parseResponse(searchMembershipsResponseSchema, raw);
 }
