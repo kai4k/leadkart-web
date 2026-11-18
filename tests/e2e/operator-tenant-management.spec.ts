@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { signInAsTier } from './helpers/sign-in';
 import { resetMock, registerMocks, registerMock, listMockCalls } from './helpers/mock';
+import { mintScopeCookie } from './helpers/scope-cookie';
 import { fakeTenantDto, TEST_TENANT_ID, TEST_TENANT_SLUG } from './helpers/fake-jwt';
 
 /**
@@ -245,7 +246,7 @@ test.describe('Operator scope flow', () => {
 		await setupOperator(page);
 		await registerMocks([
 			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [] } },
-			{ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [] } }
+			{ method: 'GET', path: `/api/v1/tenants/${ACME.id}/activity`, status: 200, body: {} }
 		]);
 		await page.goto('/operator/tenants');
 		await page.getByText('Acme Pharma').first().click();
@@ -294,7 +295,7 @@ test.describe('Operator scope flow', () => {
 		expect(calls.some((c) => c.path.includes('debug'))).toBe(false);
 	});
 
-	test('a tampered scope cookie fails closed: 409, no upstream call, cookie cleared', async ({
+	test('a tampered scope cookie fails closed and stays closed: 409 every time, no upstream call, cookie kept', async ({
 		page,
 		context
 	}) => {
@@ -306,16 +307,80 @@ test.describe('Operator scope flow', () => {
 		await context.addCookies([
 			{ name: 'lk_op_tenant', value: 'e30.tampered', url: 'http://localhost:4173' }
 		]);
+		for (let i = 0; i < 2; i++) {
+			const out = await page.evaluate(async () => {
+				const r = await fetch('/api/v1/users');
+				return { status: r.status, body: (await r.json()) as { error: string } };
+			});
+			expect(out.status).toBe(409);
+			expect(out.body.error).toBe('scope_invalid');
+		}
+		const calls = await listMockCalls();
+		expect(calls.filter((c) => c.path === '/api/v1/users')).toHaveLength(0);
+		const cookies = await context.cookies();
+		expect(cookies.find((c) => c.name === 'lk_op_tenant')).toBeDefined();
+	});
+
+	test('an expired (validly signed) scope fails closed with 409; an unexpired one is accepted', async ({
+		page,
+		context
+	}) => {
+		await setupOperator(page);
+		await registerMocks([
+			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [] } }
+		]);
+		await page.goto('/operator/tenants');
+		const scope = { id: ACME.id, slug: ACME.slug, display_name: ACME.display_name };
+		const probe = () => page.evaluate(async () => (await fetch('/api/v1/users')).status);
+
+		// Positive control: the helper really mints a cookie the app accepts.
+		await context.addCookies([
+			{ name: 'lk_op_tenant', value: mintScopeCookie(scope, 600), url: 'http://localhost:4173' }
+		]);
+		expect(await probe()).toBe(200);
+		expect((await listMockCalls()).at(-1)?.['x-tenant-id']).toBe(ACME.id);
+
+		await context.addCookies([
+			{ name: 'lk_op_tenant', value: mintScopeCookie(scope, -60), url: 'http://localhost:4173' }
+		]);
+		const before = (await listMockCalls()).length;
+		expect(await probe()).toBe(409);
+		expect(await listMockCalls()).toHaveLength(before);
+	});
+
+	test('scope cookie vanishes while in the scope tree: marked calls get 409, no Go call, SPA returns to the tenant list', async ({
+		page,
+		context
+	}) => {
+		await setupOperator(page);
+		await registerMocks([
+			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [] } },
+			{ method: 'GET', path: `/api/v1/tenants/${ACME.id}/activity`, status: 200, body: {} }
+		]);
+		await page.goto('/operator/tenants');
+		await page.getByText('Acme Pharma').first().click();
+		await page.waitForURL(/\/operator\/scope\/profile$/);
+		await page.getByRole('link', { name: 'Members' }).click();
+		await page.waitForURL(/\/operator\/scope\/members$/);
+		await expect(page.getByRole('heading', { level: 1, name: 'Team' })).toBeVisible();
+
+		await context.clearCookies({ name: 'lk_op_tenant' });
+		const before = (await listMockCalls()).length;
+
+		// Proxy rule: the marker plus no valid cookie never reaches Go.
 		const out = await page.evaluate(async () => {
-			const r = await fetch('/api/v1/users');
+			const r = await fetch('/api/v1/users', { headers: { 'x-lk-scope-required': '1' } });
 			return { status: r.status, body: (await r.json()) as { error: string } };
 		});
 		expect(out.status).toBe(409);
 		expect(out.body.error).toBe('scope_invalid');
-		const calls = await listMockCalls();
-		expect(calls.some((c) => c.path === '/api/v1/users')).toBe(false);
-		const cookies = await context.cookies();
-		expect(cookies.find((c) => c.name === 'lk_op_tenant')).toBeUndefined();
+		expect(await listMockCalls()).toHaveLength(before);
+
+		// SPA rule: a real client-side refetch inside the scope tree bounces to the list.
+		await page.getByRole('link', { name: 'Activity' }).click();
+		await page.waitForURL(/\/operator\/tenants$/);
+		const activityCalls = (await listMockCalls()).filter((c) => c.path.endsWith('/activity'));
+		expect(activityCalls).toHaveLength(0);
 	});
 
 	test('direct visit to /operator/scope/profile without scope cookie: redirected to list', async ({

@@ -4,6 +4,8 @@
  * be unit-tested without a server.
  */
 
+import { SCOPE_REQUIRED_HEADER } from '../api/scope-header.ts';
+
 const UPSTREAM_PREFIX = '/api/v1/';
 const SEGMENT_DELIMITERS = new Set(['/', '\\', '?', '#']);
 
@@ -142,4 +144,16 @@ export function upstreamTimeout(parent: AbortSignal | undefined, ms: number): Up
 		}
 	}
 	return { signal: controller.signal, headersReceived: clear };
+}
+
+/**
+ * True when the browser says the request is made from inside the operator
+ * scope tree. The proxy then refuses to run it unless a valid scope cookie
+ * is present (covers the cookie having vanished: `none` would otherwise
+ * run in the operator's home tenant). The header can only make the proxy
+ * stricter, never looser, so trusting a client-supplied value is safe.
+ * It is not forwarded to Go.
+ */
+export function scopeRequired(headers: Headers): boolean {
+	return headers.get(SCOPE_REQUIRED_HEADER) === '1';
 }

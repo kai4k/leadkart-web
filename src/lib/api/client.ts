@@ -21,6 +21,7 @@
 
 import { ApiError, isApiError, type ApiErrorBody } from './errors';
 import { getCsrfToken } from './csrf';
+import { SCOPE_REQUIRED_HEADER } from './scope-header';
 import { z } from 'zod';
 
 function resolveBaseUrl(): string {
@@ -32,6 +33,11 @@ function resolveBaseUrl(): string {
 export interface RequestOptions extends Omit<RequestInit, 'body'> {
 	/** Serialised as JSON body if defined. */
 	json?: unknown;
+}
+
+/** True while the browser is inside the operator scope tree (browser-only). */
+function inOperatorScope(): boolean {
+	return typeof location !== 'undefined' && location.pathname.startsWith('/operator/scope');
 }
 
 const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -52,6 +58,9 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 		finalHeaders.set('Content-Type', 'application/json');
 	}
 	finalHeaders.set('Accept', 'application/json');
+	// Tells the BFF this call needs the operator scope: it answers 409
+	// scope_invalid (instead of running in the home tenant) when the cookie is gone.
+	if (inOperatorScope()) finalHeaders.set(SCOPE_REQUIRED_HEADER, '1');
 
 	// CSRF: read the non-httpOnly lk_csrf cookie and echo as header
 	// on mutations so the BFF proxy can validate the double-submit.

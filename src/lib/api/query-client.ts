@@ -25,6 +25,7 @@ import { QueryClient, QueryCache, MutationCache } from '@tanstack/svelte-query';
 import { ApiError, NetworkError, ServerError, AuthError } from './errors';
 import { goto } from '$app/navigation';
 import { toast } from '$ui';
+import { api } from './client';
 import { createSessionGuard } from './session-guard';
 
 function describeError(err: unknown): string {
@@ -38,6 +39,7 @@ const sessionGuard = createSessionGuard({
 	goto: (url) => goto(url),
 	clearCache: () => queryClient.clear(),
 	notify: (message) => toast.error(message),
+	exitScope: () => api.delete('/operator/scope'),
 	location: () => window.location
 });
 

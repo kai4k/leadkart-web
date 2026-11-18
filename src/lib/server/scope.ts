@@ -30,8 +30,17 @@ const payloadSchema = scopeSchema.extend({ exp: z.number().int() });
 
 export type OperatorScope = z.infer<typeof scopeSchema>;
 
-/** Cookie lifetime and signed expiry share one constant. */
-const SCOPE_TTL_SECONDS = 8 * 3600;
+/** Signed lifetime of a scope. */
+export const SCOPE_TTL_SECONDS = 8 * 3600;
+
+/**
+ * The cookie outlives the signed expiry by an hour. If both were equal the
+ * browser would drop the cookie at the same moment the scope expires, the
+ * server would read `none` and silently run calls in the operator's home
+ * tenant. With the grace hour an expired scope is still presented, read as
+ * `invalid`, and fails closed.
+ */
+export const SCOPE_COOKIE_MAX_AGE_SECONDS = SCOPE_TTL_SECONDS + 3600;
 
 /**
  * `none`: no scope cookie. `invalid`: a cookie is present but failed
@@ -57,7 +66,7 @@ export function setOperatorScope(cookies: Cookies, scope: OperatorScope): void {
 		httpOnly: true,
 		secure: isProd(),
 		sameSite: 'strict',
-		maxAge: SCOPE_TTL_SECONDS
+		maxAge: SCOPE_COOKIE_MAX_AGE_SECONDS
 	});
 }
 

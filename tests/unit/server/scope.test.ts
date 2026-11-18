@@ -1,7 +1,13 @@
 import { createHmac } from 'node:crypto';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { config } from '#lib/server/config.ts';
-import { getOperatorScope, readOperatorScope, setOperatorScope } from '#lib/server/scope.ts';
+import {
+	getOperatorScope,
+	readOperatorScope,
+	SCOPE_COOKIE_MAX_AGE_SECONDS,
+	SCOPE_TTL_SECONDS,
+	setOperatorScope
+} from '#lib/server/scope.ts';
 
 function signed(payload: unknown, secret: string = config.SCOPE_COOKIE_SECRET): string {
 	const p = Buffer.from(JSON.stringify(payload)).toString('base64url');
@@ -32,6 +38,21 @@ const scope = {
 };
 
 describe('operator scope cookie', () => {
+	it('outlives the signed expiry so an expired scope is read as invalid, not none', () => {
+		expect(SCOPE_COOKIE_MAX_AGE_SECONDS).toBeGreaterThan(SCOPE_TTL_SECONDS);
+		let options: { maxAge?: number } = {};
+		setOperatorScope(
+			{
+				get: () => undefined,
+				set: (_n: string, _v: string, o: { maxAge?: number }) => {
+					options = o;
+				}
+			} as never,
+			scope
+		);
+		expect(options.maxAge).toBe(SCOPE_COOKIE_MAX_AGE_SECONDS);
+	});
+
 	it('round-trips a signed value', () => {
 		const j = jar();
 		setOperatorScope(j.api, scope);

@@ -94,7 +94,11 @@ export class ApiError extends Error {
 				break;
 			case 409: {
 				const detail = b?.detail ?? b?.message ?? 'Conflict';
-				err = new ConflictError(detail, traceId);
+				// The BFF's own fail-closed answer ({ error: 'scope_invalid' }), not a domain conflict.
+				err =
+					code === SCOPE_INVALID_CODE
+						? new ScopeInvalidError(detail, traceId)
+						: new ConflictError(detail, traceId);
 				break;
 			}
 			case 422:
@@ -227,6 +231,26 @@ export class ConflictError extends ApiError {
 	) {
 		super(409, traceId);
 		this.name = 'ConflictError';
+		this.message = detail;
+	}
+}
+
+/** Wire code of the BFF's 409: the operator scope cookie is expired, tampered or gone. */
+export const SCOPE_INVALID_CODE = 'scope_invalid';
+
+/**
+ * 409 `scope_invalid` — raised by the BFF proxy, never by Go. Not a domain
+ * conflict: the global handler sends the operator back to /operator/tenants.
+ */
+export class ScopeInvalidError extends ApiError {
+	declare readonly status: 409;
+
+	constructor(
+		public readonly detail: string,
+		traceId?: string
+	) {
+		super(409, traceId, SCOPE_INVALID_CODE);
+		this.name = 'ScopeInvalidError';
 		this.message = detail;
 	}
 }

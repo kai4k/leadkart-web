@@ -7,7 +7,8 @@ import {
 	ValidationError,
 	AuthError,
 	NotFoundError,
-	ConflictError
+	ConflictError,
+	ScopeInvalidError
 } from '#lib/api/errors.ts';
 
 describe('Error subclass hierarchy', () => {
@@ -137,6 +138,24 @@ describe('ApiError.fromResponse — RFC 9457 ProblemDetails mapping', () => {
 		const err = ApiError.fromResponse(makeResponse(409), body);
 		expect(err).toBeInstanceOf(ConflictError);
 		expect((err as unknown as ConflictError).detail).toBe('slug taken');
+	});
+
+	it('maps the BFF scope_invalid 409 ({ error, message }) → ScopeInvalidError, not ConflictError', () => {
+		const err = ApiError.fromResponse(makeResponse(409), {
+			error: 'scope_invalid',
+			message: 'Operator scope expired'
+		});
+		expect(err).toBeInstanceOf(ScopeInvalidError);
+		expect(err).toBeInstanceOf(ApiError);
+		expect(err).not.toBeInstanceOf(ConflictError);
+		expect(err.code).toBe('scope_invalid');
+		expect(err.status).toBe(409);
+	});
+
+	it('a Go 409 with another code stays a ConflictError', () => {
+		expect(ApiError.fromResponse(makeResponse(409), { code: 'slug_taken' })).toBeInstanceOf(
+			ConflictError
+		);
 	});
 
 	it('maps 422 → ValidationError with fields from RFC 9457 body', () => {

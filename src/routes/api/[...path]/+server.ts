@@ -28,13 +28,14 @@ import type { RequestEvent } from './$types';
 import { config } from '#lib/server/config.ts';
 import { ACCESS_COOKIE, CSRF_COOKIE } from '#lib/server/cookies.ts';
 import { isAuthExpired, refreshSession } from '#lib/server/auth-refresh.ts';
-import { clearOperatorScope, readOperatorScope } from '#lib/server/scope.ts';
+import { readOperatorScope } from '#lib/server/scope.ts';
 import { timingSafeEqualString } from '#lib/server/csrf.ts';
 import { jsonError } from '#lib/server/http.ts';
 import {
 	buildUpstreamUrl,
 	isTokenEndpoint,
 	pickResponseHeaders,
+	scopeRequired,
 	scrubsTokens,
 	stripTokenFields,
 	upstreamTimeout
@@ -83,11 +84,12 @@ async function proxy(
 
 	// Operator scope is trusted only from the signed cookie. Any
 	// X-Tenant-Id sent by the browser is ignored: the headers above are
-	// built from scratch. An invalid cookie fails closed — forwarding
-	// without the header would run the call in the operator's home tenant.
+	// built from scratch. Fail closed: an invalid cookie, or a request from
+	// the scope tree with no valid cookie, never runs in the operator's home
+	// tenant. The invalid cookie is NOT cleared, so every later call keeps
+	// getting 409 until the user exits scope or selects a tenant again.
 	const scope = readOperatorScope(cookies);
-	if (scope.state === 'invalid') {
-		clearOperatorScope(cookies);
+	if (scope.state === 'invalid' || (scope.state === 'none' && scopeRequired(request.headers))) {
 		return jsonError(409, 'scope_invalid', 'Operator scope expired — select the tenant again');
 	}
 	if (scope.state === 'valid') upstreamHeaders.set('x-tenant-id', scope.scope.id);
