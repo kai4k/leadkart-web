@@ -75,6 +75,10 @@ Build:
 npm run build   # → ./build/
 ```
 
+### Reverse proxy headers
+
+adapter-node serves `/_app/immutable/*` and `/static` assets before the SvelteKit `handle` hook runs, so they do not get the hook's security headers. The reverse proxy must add `X-Content-Type-Options: nosniff` for those paths (and may add it globally).
+
 ## License
 
 UNLICENSED — proprietary, LeadKart team.
