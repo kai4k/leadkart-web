@@ -23,16 +23,28 @@
  */
 import { QueryClient, QueryCache, MutationCache } from '@tanstack/svelte-query';
 import { ApiError, NetworkError, ServerError, AuthError } from './errors';
+import { goto } from '$app/navigation';
 import { toast } from '$ui';
+import { createSessionGuard } from './session-guard';
 
 function describeError(err: unknown): string {
 	if (err instanceof ApiError) return err.message;
 	return 'Something went wrong';
 }
 
+const sessionGuard = createSessionGuard({
+	// Targets are internal constants plus an encoded `next`; resolve() takes route ids, not query strings.
+	// eslint-disable-next-line svelte/no-navigation-without-resolve
+	goto: (url) => goto(url),
+	clearCache: () => queryClient.clear(),
+	notify: (message) => toast.error(message),
+	location: () => window.location
+});
+
 export const queryClient = new QueryClient({
 	queryCache: new QueryCache({
 		onError: (error, query) => {
+			if (sessionGuard.handle(error)) return;
 			// Only surface background refetch failures — fresh-load errors
 			// are already rendered by the component via query.isError.
 			if (query.state.data !== undefined) {
@@ -44,11 +56,9 @@ export const queryClient = new QueryClient({
 		onError: (error, _vars, _ctx, mutation) => {
 			// Opt-out: pass meta: { skipErrorToast: true } when the calling
 			// dialog renders an inline error and a toast would be noise.
+			// Session errors (401) redirect to /signin; no toast on the way out.
+			if (sessionGuard.handle(error)) return;
 			if (mutation.meta?.skipErrorToast === true) return;
-			// AuthError already triggers a signout redirect; suppress the toast
-			// so the user doesn't see "permission denied" before being kicked
-			// to /signin.
-			if (error instanceof AuthError && error.status === 401) return;
 			toast.error(describeError(error));
 		}
 	}),

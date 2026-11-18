@@ -276,4 +276,59 @@ test.describe('session refresh', () => {
 		expect(widgets).toHaveLength(1);
 		expect(widgets[0].authorization).toBe(`Bearer ${REFRESHED_ACCESS}`);
 	});
+	test('refresh rejected: the proxy relays Go 401 (not a 500) and the session ends', async ({
+		page,
+		context
+	}) => {
+		await signInAsTier(page, { tier: 'tenant-admin' });
+		await registerMock({
+			method: 'POST',
+			path: '/api/v1/auth/refresh',
+			status: 401,
+			body: { code: 'invalid_refresh_token' }
+		});
+		await registerMock({
+			method: 'GET',
+			path: '/api/v1/users',
+			status: 401,
+			headers: EXPIRED_HEADERS,
+			body: EXPIRED_BODY
+		});
+		await dropAccessCookie(context);
+
+		const result = await page.evaluate(async () => {
+			const resp = await fetch('/api/v1/users');
+			return { status: resp.status, body: (await resp.json()) as Record<string, unknown> };
+		});
+
+		expect(result.status).toBe(401);
+		expect(result.body).toHaveProperty('error');
+	});
+
+	test('refresh rejected on a real client query: the SPA lands on /signin', async ({ page }) => {
+		await signInAsTier(page, {
+			tier: 'tenant-admin',
+			permissions: ['tenant.admin', 'identity.users.view', 'identity.users.manage']
+		});
+		await registerMock({ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [] } });
+		await registerMock({
+			method: 'POST',
+			path: '/api/v1/auth/refresh',
+			status: 401,
+			body: { code: 'invalid_refresh_token' }
+		});
+		await registerMock({
+			method: 'GET',
+			path: '/api/v1/users',
+			status: 401,
+			headers: EXPIRED_HEADERS,
+			body: EXPIRED_BODY
+		});
+
+		// The (app) layout load succeeds (access cookie present); the client
+		// query then hits the proxy, which cannot refresh.
+		await page.goto('/settings/users');
+
+		await expect(page).toHaveURL(/\/signin\?next=%2Fsettings%2Fusers$/);
+	});
 });

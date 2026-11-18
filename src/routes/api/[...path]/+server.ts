@@ -101,8 +101,12 @@ async function proxy(
 	}
 
 	if (attempt === 1 && isAuthExpired(upstream)) {
-		await upstream.body?.cancel();
-		if (await refreshSession(cookies)) return proxy(event, 2, body);
+		// Cancel the first body only once a retry is certain: when the refresh
+		// fails, Go's 401 is relayed below and its body must still be readable.
+		if (await refreshSession(cookies)) {
+			await upstream.body?.cancel();
+			return proxy(event, 2, body);
+		}
 	}
 
 	const headers = pickResponseHeaders(upstream.headers);
