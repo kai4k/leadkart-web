@@ -25,7 +25,7 @@ import { QueryClient, QueryCache, MutationCache } from '@tanstack/svelte-query';
 import { ApiError, NetworkError, ServerError, AuthError } from './errors';
 import { goto } from '$app/navigation';
 import { toast } from '$ui';
-import { api } from './client';
+import { exitOperatorScope } from './operator-scope';
 import { createSessionGuard } from './session-guard';
 import { clearPrivateCaches } from '#lib/utils/private-caches.ts';
 
@@ -44,7 +44,7 @@ const sessionGuard = createSessionGuard({
 		void clearPrivateCaches();
 	},
 	notify: (message) => toast.error(message),
-	exitScope: () => api.delete('/operator/scope'),
+	exitScope: exitOperatorScope,
 	location: () => window.location
 });
 

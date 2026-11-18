@@ -22,6 +22,7 @@
  */
 import { ApiError, type ApiErrorBody } from '$api/errors';
 import { getCsrfToken } from '$api/csrf';
+import { exitOperatorScope } from '$api/operator-scope';
 import { clearPrivateCaches } from '#lib/utils/private-caches.ts';
 
 export interface EnterScopeRequest {
@@ -91,29 +92,10 @@ export async function enterScope(req: EnterScopeRequest): Promise<EnterScopeResp
 }
 
 /**
- * Exit tenant scope. Clears the `lk_op_tenant` cookie via DELETE.
- * Throws on non-2xx; callers typically treat any failure as "stay in
- * scope, surface a toast".
+ * Exit tenant scope. Clears the `lk_op_tenant` cookie via DELETE (the one
+ * shared implementation in `$api/operator-scope`). Throws on non-2xx;
+ * callers typically treat any failure as "stay in scope, surface a toast".
  */
-export async function exitScope(): Promise<void> {
-	let resp: Response;
-	try {
-		resp = await fetch(SCOPE_PATH, {
-			method: 'DELETE',
-			headers: {
-				Accept: 'application/json',
-				'X-CSRF-Token': getCsrfToken()
-			},
-			credentials: 'same-origin'
-		});
-	} catch (cause) {
-		throw ApiError.transport(cause);
-	}
-
-	if (!resp.ok) {
-		const body = await readErrorBody(resp);
-		throw ApiError.fromResponse(resp, body);
-	}
-
-	await clearPrivateCaches();
+export function exitScope(): Promise<void> {
+	return exitOperatorScope();
 }
