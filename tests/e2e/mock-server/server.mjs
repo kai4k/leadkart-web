@@ -19,9 +19,9 @@
 import http from 'node:http';
 import { URL } from 'node:url';
 
-/** @type {Array<{method:string,path:string,status:number,body?:unknown,headers?:Record<string,string>}>} */
+/** @type {Array<{method:string,path:string,status:number,body?:unknown,headers?:Record<string,string>,times?:number,used?:number}>} */
 const fixtures = [];
-/** @type {Array<{method:string,path:string,body:string,at:number}>} */
+/** @type {Array<{method:string,path:string,body:string,authorization:string|null,at:number}>} */
 const calls = [];
 
 function findFixture(method, pathname) {
@@ -30,7 +30,14 @@ function findFixture(method, pathname) {
 	// fixture for a given (method, path) takes effect.
 	for (let i = fixtures.length - 1; i >= 0; i--) {
 		const f = fixtures[i];
-		if (f.method === method && f.path === pathname) return f;
+		// `times` limits a fixture to its first N hits, then it falls through
+		// to the earlier fixture for the same route (e.g. one 401, then 200).
+		if (
+			f.method === method &&
+			f.path === pathname &&
+			(f.times === undefined || (f.used ?? 0) < f.times)
+		)
+			return f;
 	}
 	const wildcards = fixtures
 		.filter((f) => f.method === method && f.path.endsWith('*'))
@@ -81,7 +88,13 @@ const server = http.createServer(async (req, res) => {
 	}
 
 	const body = await readBody(req);
-	calls.push({ method, path: pathname, body, at: Date.now() });
+	calls.push({
+		method,
+		path: pathname,
+		body,
+		authorization: req.headers.authorization ?? null,
+		at: Date.now()
+	});
 
 	const fixture = findFixture(method, pathname);
 	if (!fixture) {
@@ -90,6 +103,7 @@ const server = http.createServer(async (req, res) => {
 		return;
 	}
 
+	fixture.used = (fixture.used ?? 0) + 1;
 	const headers = { 'content-type': 'application/json', ...(fixture.headers ?? {}) };
 	res.writeHead(fixture.status, headers);
 	res.end(fixture.body !== undefined ? JSON.stringify(fixture.body) : '');

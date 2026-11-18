@@ -18,11 +18,11 @@ import type { RequestEvent } from '@sveltejs/kit';
 import { config } from '#lib/server/config.ts';
 import { setOperatorScope, clearOperatorScope } from '#lib/server/scope.ts';
 import { timingSafeEqualString } from '#lib/server/csrf.ts';
-import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
+import { ACCESS_COOKIE, CSRF_COOKIE } from '#lib/server/cookies.ts';
 
 function checkCsrf(event: RequestEvent): Response | null {
 	const headerCsrf = event.request.headers.get('x-csrf-token');
-	const cookieCsrf = event.cookies.get('lk_csrf');
+	const cookieCsrf = event.cookies.get(CSRF_COOKIE);
 	if (!headerCsrf || !cookieCsrf || !timingSafeEqualString(headerCsrf, cookieCsrf)) {
 		return Response.json({ error: 'csrf_mismatch' }, { status: 403 });
 	}

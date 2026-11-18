@@ -16,7 +16,7 @@
 
 import type { RequestHandler } from './$types';
 import { config } from '#lib/server/config.ts';
-import { setAuthCookies } from '#lib/server/cookies.ts';
+import { establishSession, tokenPairSchema } from '#lib/server/auth-refresh.ts';
 
 export const POST: RequestHandler = async (event) => {
 	let body: unknown;
@@ -55,12 +55,15 @@ export const POST: RequestHandler = async (event) => {
 		return new Response(errorBody, { status: resp.status, headers });
 	}
 
-	const tokens = (await resp.json()) as {
-		access_token: string;
-		refresh_token: string;
-		must_change_password?: boolean;
-	};
-	setAuthCookies(event.cookies, tokens.access_token, tokens.refresh_token);
+	const parsed = tokenPairSchema.safeParse(await resp.json().catch(() => null));
+	if (!parsed.success) {
+		return Response.json(
+			{ error: 'upstream_unexpected', message: 'Unexpected response from the Go API' },
+			{ status: 502 }
+		);
+	}
+	const tokens = parsed.data;
+	establishSession(event.cookies, tokens);
 
 	// Browser sees only acknowledgement + the force-change hint.
 	return Response.json({ ok: true, must_change_password: tokens.must_change_password ?? false });

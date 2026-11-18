@@ -17,16 +17,10 @@
  */
 import { fail, redirect } from '@sveltejs/kit';
 import { config } from '#lib/server/config.ts';
-import { setAuthCookies } from '#lib/server/cookies.ts';
+import { establishSession, tokenPairSchema } from '#lib/server/auth-refresh.ts';
 import { safeRedirectPath } from '#lib/server/redirect.ts';
 import { loginRequestSchema } from '$features/auth/schemas';
 import type { Actions } from './$types';
-
-interface GoTokens {
-	access_token: string;
-	refresh_token: string;
-	must_change_password?: boolean;
-}
 
 export const actions: Actions = {
 	default: async ({ request, cookies, url }) => {
@@ -77,8 +71,12 @@ export const actions: Actions = {
 			return fail(resp.status, { email, formError: 'auth.errors.unexpected' });
 		}
 
-		const tokens = (await resp.json()) as GoTokens;
-		setAuthCookies(cookies, tokens.access_token, tokens.refresh_token);
+		const parsedTokens = tokenPairSchema.safeParse(await resp.json().catch(() => null));
+		if (!parsedTokens.success) {
+			return fail(502, { email, formError: 'auth.errors.unexpected' });
+		}
+		const tokens = parsedTokens.data;
+		establishSession(cookies, tokens);
 
 		const next = safeRedirectPath(url.searchParams.get('next'), url.origin);
 		const target = tokens.must_change_password

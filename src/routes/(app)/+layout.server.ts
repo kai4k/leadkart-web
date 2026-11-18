@@ -13,48 +13,28 @@
  * Per ADR: docs/superpowers/specs/2026-05-20-bff-cookie-auth-adr.md
  */
 
-import { redirect, type Cookies } from '@sveltejs/kit';
+import { redirect } from '@sveltejs/kit';
 import { config } from '#lib/server/config.ts';
-import { setAuthCookies, clearAuthCookies, ACCESS_COOKIE } from '#lib/server/cookies.ts';
+import { ACCESS_COOKIE, mustChangePassword } from '#lib/server/cookies.ts';
+import { refreshSession } from '#lib/server/auth-refresh.ts';
 import type { LayoutServerLoad } from './$types';
 import type { Capabilities } from '#lib/features/auth/api.ts';
 
-/**
- * Attempts a silent token refresh server-side using the lk_refresh cookie.
- * On success: rotates all three cookies and returns the new access token.
- * On failure: clears cookies and returns null.
- */
-async function tryRefreshServerSide(cookies: Cookies): Promise<string | null> {
-	const refresh = cookies.get('lk_refresh');
-	if (!refresh) return null;
-
-	let resp: Response;
-	try {
-		resp = await fetch(`${config.GO_API_URL}/api/v1/auth/refresh`, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ refresh_token: refresh })
-		});
-	} catch {
-		return null;
-	}
-
-	if (!resp.ok) {
-		clearAuthCookies(cookies);
-		return null;
-	}
-
-	const tokens = (await resp.json()) as { access_token: string; refresh_token: string };
-	setAuthCookies(cookies, tokens.access_token, tokens.refresh_token);
-	return tokens.access_token;
-}
-
 export const load: LayoutServerLoad = async ({ cookies, url }) => {
-	let access = cookies.get(ACCESS_COOKIE());
+	// The access cookie expires after 15 minutes and simply disappears, so a
+	// missing cookie with a live refresh cookie is a silent refresh, not a signout.
+	let access = cookies.get(ACCESS_COOKIE()) ?? (await refreshSession(cookies));
 
 	if (!access) {
 		const next = encodeURIComponent(url.pathname + url.search);
 		throw redirect(303, `/signin?next=${next}`);
+	}
+
+	if (mustChangePassword(cookies) && url.pathname !== '/must-change-password') {
+		throw redirect(
+			303,
+			`/must-change-password?next=${encodeURIComponent(url.pathname + url.search)}`
+		);
 	}
 
 	// Fetch capabilities server-to-server — baked into the initial HTML.
@@ -64,7 +44,7 @@ export const load: LayoutServerLoad = async ({ cookies, url }) => {
 
 	// 401 → attempt one silent refresh
 	if (resp.status === 401) {
-		const newAccess = await tryRefreshServerSide(cookies);
+		const newAccess = await refreshSession(cookies);
 		if (!newAccess) {
 			const next = encodeURIComponent(url.pathname + url.search);
 			throw redirect(303, `/signin?next=${next}`);

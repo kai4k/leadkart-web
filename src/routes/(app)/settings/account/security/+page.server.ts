@@ -11,6 +11,7 @@
  */
 import { fail } from '@sveltejs/kit';
 import { z } from 'zod';
+import { setMustChangePassword } from '#lib/server/cookies.ts';
 import { goFetch, readGoError } from '#lib/server/go.ts';
 import { changePasswordSchema } from '$features/auth/schemas';
 import type { Actions } from './$types';
@@ -56,6 +57,7 @@ export const actions: Actions = {
 		});
 
 		if (resp.ok || resp.status === 204) {
+			setMustChangePassword(cookies, false);
 			return { which: 'changePassword' as const, success: true };
 		}
 

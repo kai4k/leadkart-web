@@ -11,7 +11,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { z } from 'zod';
 import { config } from '#lib/server/config.ts';
-import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
+import { ACCESS_COOKIE, setMustChangePassword } from '#lib/server/cookies.ts';
 import { safeRedirectPath } from '#lib/server/redirect.ts';
 import type { Actions } from './$types';
 
@@ -76,6 +76,7 @@ export const actions: Actions = {
 		}
 
 		if (resp.ok || resp.status === 204) {
+			setMustChangePassword(cookies, false);
 			throw redirect(303, safeRedirectPath(url.searchParams.get('next'), url.origin));
 		}
 

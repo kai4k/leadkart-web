@@ -95,6 +95,30 @@ test.describe('Auth — must_change_password', () => {
 		).toBeVisible();
 	});
 
+	test('must-change user navigating straight to /dashboard is redirected to /must-change-password', async ({
+		page
+	}) => {
+		await registerMocks([
+			{
+				method: 'POST',
+				path: '/api/v1/auth/login',
+				status: 200,
+				body: { ...baseLoginBody, must_change_password: true }
+			},
+			...baseAuthMocks
+		]);
+
+		await page.goto('/signin');
+		await page.getByRole('textbox', { name: /email/i }).fill('test@example.com');
+		await page.getByRole('textbox', { name: /password/i }).fill('TempPassFromAdmin!');
+		await page.getByRole('button', { name: /sign in/i }).click();
+		await page.waitForURL(/\/must-change-password/);
+
+		await page.goto('/dashboard');
+
+		await page.waitForURL(/\/must-change-password\?next=%2Fdashboard$/);
+	});
+
 	test('must-change-password page rotates → redirects to /dashboard', async ({ page }) => {
 		await registerMocks([
 			{

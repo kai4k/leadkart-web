@@ -17,6 +17,8 @@ export interface MockFixture {
 	status: number;
 	body?: unknown;
 	headers?: Record<string, string>;
+	/** Serve this fixture for its first N hits only, then fall back to the previous one. */
+	times?: number;
 }
 
 export async function resetMock(): Promise<void> {
@@ -40,7 +42,7 @@ export async function registerMocks(fixtures: MockFixture[]): Promise<void> {
 }
 
 export async function listMockCalls(): Promise<
-	Array<{ method: string; path: string; body: string; at: number }>
+	Array<{ method: string; path: string; body: string; authorization: string | null; at: number }>
 > {
 	const resp = await fetch(`${MOCK_BASE}/_mock/calls`);
 	return resp.json();

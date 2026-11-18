@@ -22,36 +22,12 @@
 
 import type { RequestEvent } from './$types';
 import { config } from '#lib/server/config.ts';
-import { setAuthCookies, clearAuthCookies, ACCESS_COOKIE } from '#lib/server/cookies.ts';
+import { ACCESS_COOKIE, CSRF_COOKIE } from '#lib/server/cookies.ts';
+import { refreshSession } from '#lib/server/auth-refresh.ts';
 import { getOperatorScope } from '#lib/server/scope.ts';
 import { timingSafeEqualString } from '#lib/server/csrf.ts';
 
 const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-
-async function tryRefresh(event: RequestEvent): Promise<boolean> {
-	const refresh = event.cookies.get('lk_refresh');
-	if (!refresh) return false;
-
-	let resp: Response;
-	try {
-		resp = await fetch(`${config.GO_API_URL}/api/v1/auth/refresh`, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ refresh_token: refresh })
-		});
-	} catch {
-		return false;
-	}
-
-	if (!resp.ok) {
-		clearAuthCookies(event.cookies);
-		return false;
-	}
-
-	const tokens = (await resp.json()) as { access_token: string; refresh_token: string };
-	setAuthCookies(event.cookies, tokens.access_token, tokens.refresh_token);
-	return true;
-}
 
 async function proxy(event: RequestEvent, attempt = 1): Promise<Response> {
 	const { cookies, request, params } = event;
@@ -59,7 +35,7 @@ async function proxy(event: RequestEvent, attempt = 1): Promise<Response> {
 
 	if (MUTATING.has(request.method)) {
 		const headerCsrf = request.headers.get('x-csrf-token');
-		const cookieCsrf = cookies.get('lk_csrf');
+		const cookieCsrf = cookies.get(CSRF_COOKIE);
 		if (!headerCsrf || !cookieCsrf || !timingSafeEqualString(headerCsrf, cookieCsrf)) {
 			return new Response(
 				JSON.stringify({ error: 'csrf_mismatch', message: 'CSRF token missing or invalid' }),
@@ -104,8 +80,8 @@ async function proxy(event: RequestEvent, attempt = 1): Promise<Response> {
 	}
 
 	if (upstream.status === 401 && attempt === 1) {
-		const refreshed = await tryRefresh(event);
-		if (refreshed) return proxy(event, 2);
+		const access = await refreshSession(event.cookies);
+		if (access) return proxy(event, 2);
 	}
 
 	const responseHeaders = new Headers();
