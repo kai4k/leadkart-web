@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { signInAsTier } from './helpers/sign-in';
-import { resetMock, registerMock } from './helpers/mock';
+import { resetMock, registerMock, listMockCalls } from './helpers/mock';
 import { fakeUserDto, TEST_MEMBERSHIP_ID } from './helpers/fake-jwt';
 
 /**
@@ -75,6 +75,32 @@ test.describe('Account security — change password', () => {
 		// with the server's message. Match any visible alert (not just text
 		// containing 'password' — the i18n message wording may differ).
 		await expect(page.locator('[role="alert"]').first()).toBeVisible({ timeout: 5000 });
+	});
+
+	test('wrong current password is not treated as expiry: 1 change call, 0 refresh calls', async ({
+		page
+	}) => {
+		await signInForAccount(page);
+		// Go's credential-failure 401: no WWW-Authenticate header.
+		await registerMock({
+			method: 'POST',
+			path: '/api/v1/auth/change-password',
+			status: 401,
+			body: { error: 'incorrect_current_password' }
+		});
+		await page.goto('/settings/account/security');
+		await page.getByLabel(/current password/i).fill('WrongOldP@ssw0rd!');
+		await page
+			.getByLabel(/new password/i)
+			.first()
+			.fill('N3wP@ssw0rd!');
+		await page.getByLabel(/confirm/i).fill('N3wP@ssw0rd!');
+		await page.getByRole('button', { name: /change password|update password/i }).click();
+
+		await expect(page.getByText("That doesn't match your current password.")).toBeVisible();
+		const calls = await listMockCalls();
+		expect(calls.filter((c) => c.path === '/api/v1/auth/change-password')).toHaveLength(1);
+		expect(calls.filter((c) => c.path === '/api/v1/auth/refresh')).toHaveLength(0);
 	});
 });
 

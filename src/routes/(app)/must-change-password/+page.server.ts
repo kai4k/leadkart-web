@@ -8,10 +8,10 @@
  * Reached when login returns `must_change_password=true`. Successful
  * rotation redirects to `?next=` or `/dashboard`.
  */
-import { fail, redirect } from '@sveltejs/kit';
+import { fail, isRedirect, redirect } from '@sveltejs/kit';
 import { z } from 'zod';
-import { config } from '#lib/server/config.ts';
-import { ACCESS_COOKIE, setMustChangePassword } from '#lib/server/cookies.ts';
+import { goFetch } from '#lib/server/go.ts';
+import { setMustChangePassword } from '#lib/server/cookies.ts';
 import { safeRedirectPath } from '#lib/server/redirect.ts';
 import type { Actions } from './$types';
 
@@ -56,22 +56,16 @@ export const actions: Actions = {
 			});
 		}
 
-		const access = cookies.get(ACCESS_COOKIE());
-		if (!access) {
-			throw redirect(303, '/signin');
-		}
-
+		// goFetch redirects to /signin on a missing/rejected session. Any 401 it
+		// returns here is a wrong current password (an expiry 401 is refreshed).
 		let resp: Response;
 		try {
-			resp = await fetch(`${config.GO_API_URL}/api/v1/auth/change-password`, {
+			resp = await goFetch(cookies, '/v1/auth/change-password', {
 				method: 'POST',
-				headers: {
-					'content-type': 'application/json',
-					authorization: `Bearer ${access}`
-				},
 				body: JSON.stringify(parsed.data)
 			});
-		} catch {
+		} catch (err) {
+			if (isRedirect(err)) throw err;
 			return fail(502, { formErrorKey: 'auth.errors.unexpected' });
 		}
 

@@ -12,6 +12,10 @@ import { signInAsTier } from './helpers/sign-in';
  * refresh token ends the session.
  */
 
+// Go's authn middleware 401: WWW-Authenticate header + `unauthenticated` body.
+const EXPIRED_HEADERS = { 'www-authenticate': 'Bearer' };
+const EXPIRED_BODY = { error: 'unauthenticated' };
+
 const REFRESHED_ACCESS = fakeAccessToken({ jti: 'refreshed-jti' });
 const REFRESHED_REFRESH = fakeRefreshToken('refreshed-family');
 
@@ -78,7 +82,8 @@ test.describe('session refresh', () => {
 			method: 'POST',
 			path: '/api/v1/widgets',
 			status: 401,
-			body: { code: 'token_expired' },
+			headers: EXPIRED_HEADERS,
+			body: EXPIRED_BODY,
 			times: 1
 		});
 		const signedInAccess = await cookieValue(context, 'lk_access');
@@ -224,7 +229,8 @@ test.describe('session refresh', () => {
 			method: 'PATCH',
 			path: profilePath,
 			status: 401,
-			body: { code: 'token_expired' },
+			headers: EXPIRED_HEADERS,
+			body: EXPIRED_BODY,
 			times: 1
 		});
 		await page.goto('/settings/account/profile');
@@ -239,5 +245,35 @@ test.describe('session refresh', () => {
 			`Bearer ${REFRESHED_ACCESS}`
 		]);
 		expect(await refreshCallsOf()).toHaveLength(1);
+	});
+	test('only the access cookie dropped: an /api POST refreshes once and replays with the new Bearer', async ({
+		page,
+		context
+	}) => {
+		await signInAsTier(page, { tier: 'tenant-admin' });
+		await registerRefresh();
+		await registerMock({
+			method: 'POST',
+			path: '/api/v1/widgets',
+			status: 200,
+			body: { id: 'w1' }
+		});
+		await dropAccessCookie(context);
+
+		const result = await page.evaluate(async () => {
+			const csrf = document.cookie.match(/(?:^|; )lk_csrf=([^;]+)/)?.[1] ?? '';
+			const resp = await fetch('/api/v1/widgets', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json', 'x-csrf-token': csrf },
+				body: JSON.stringify({ name: 'after-expiry' })
+			});
+			return { status: resp.status, body: await resp.json() };
+		});
+
+		expect(result).toEqual({ status: 200, body: { id: 'w1' } });
+		expect(await refreshCallsOf()).toHaveLength(1);
+		const widgets = (await listMockCalls()).filter((c) => c.path === '/api/v1/widgets');
+		expect(widgets).toHaveLength(1);
+		expect(widgets[0].authorization).toBe(`Bearer ${REFRESHED_ACCESS}`);
 	});
 });

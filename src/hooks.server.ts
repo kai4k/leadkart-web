@@ -25,16 +25,20 @@ export const init: ServerInit = async () => {
  * present → refresh now. Later `event.cookies.get(...)` calls in the same
  * request see the new value.
  *
- * No path filter beyond /auth/ (signin/logout handle their own session):
+ * Skips NO_REFRESH_PREFIXES (signin/logout/reset handle their own session):
  * static assets and signed-out visitors carry no refresh cookie, and a
  * request that still has its access cookie is skipped, so this does nothing
  * for them.
  */
+// Pre-login / session-ending pages: refreshing here would rotate a refresh
+// token the page is about to discard, orphaning its token family.
+const NO_REFRESH_PREFIXES = ['/auth/', '/signin', '/forgot-password', '/reset-password'];
+
 const sessionRefresh: Handle = async ({ event, resolve }) => {
 	if (
 		!event.cookies.get(ACCESS_COOKIE()) &&
 		event.cookies.get(REFRESH_COOKIE) &&
-		!event.url.pathname.startsWith('/auth/')
+		!NO_REFRESH_PREFIXES.some((prefix) => event.url.pathname.startsWith(prefix))
 	) {
 		await refreshSession(event.cookies);
 	}
