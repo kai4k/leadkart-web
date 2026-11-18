@@ -21,31 +21,68 @@
  * client bundles per SvelteKit's static analysis). Never import this
  * from a `.svelte` file or anything that ends up in the client graph.
  */
-import { GO_API_URL, NODE_ENV } from '$app/env/private';
+import {
+	GO_API_URL,
+	NODE_ENV,
+	ORIGIN,
+	SCOPE_COOKIE_SECRET,
+	UPSTREAM_TIMEOUT_MS
+} from '$app/env/private';
 
 import { building } from '$app/env';
 import { z } from 'zod';
 
-const schema = z.object({
-	/**
-	 * URL the SvelteKit BFF uses to reach the Go API server-to-server.
-	 * Never internet-facing — the Go service sits behind the reverse
-	 * proxy or in the same K8s pod.
-	 */
-	GO_API_URL: z.string().url('GO_API_URL must be a valid URL (e.g. http://localhost:8080)'),
+const DEV_SCOPE_SECRET = 'dev-only-scope-cookie-secret-not-for-production';
 
-	/**
-	 * Drives cookie `Secure` flag and the access-cookie name prefix:
-	 *   - 'production': Secure=true, name '__Host-lk_access' (requires HTTPS)
-	 *   - anything else: Secure=false, name 'lk_access' (HTTP dev / test)
-	 *
-	 * Defaults to 'development' so missing env vars degrade safely (Node
-	 * itself often sets this automatically; dev/test stays HTTP).
-	 */
-	NODE_ENV: z.enum(['development', 'test', 'production']).default('development')
-});
+export const configSchema = z
+	.object({
+		/**
+		 * URL the SvelteKit BFF uses to reach the Go API server-to-server.
+		 * Never internet-facing — the Go service sits behind the reverse
+		 * proxy or in the same K8s pod.
+		 */
+		GO_API_URL: z.string().url('GO_API_URL must be a valid URL (e.g. http://localhost:8080)'),
 
-export type Config = z.infer<typeof schema>;
+		/**
+		 * Drives cookie `Secure` flag and the access-cookie name prefix:
+		 *   - 'production': Secure=true, name '__Host-lk_access' (requires HTTPS)
+		 *   - anything else: Secure=false, name 'lk_access' (HTTP dev / test)
+		 *
+		 * Fail closed: an unset NODE_ENV means production, so cookies get
+		 * `Secure` and the `__Host-` prefix. Local dev and tests set it
+		 * explicitly (`.env.local` sets 'development'; playwright sets 'test').
+		 */
+		NODE_ENV: z.enum(['development', 'test', 'production']).default('production'),
+
+		/** HMAC key for the operator-scope cookie. Required in production. */
+		SCOPE_COOKIE_SECRET: z.string().min(32).optional(),
+
+		/** Public origin, as given to adapter-node. Checked only when set. */
+		ORIGIN: z.string().url().optional(),
+
+		/** Timeout for every BFF → Go request. */
+		UPSTREAM_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000)
+	})
+	.superRefine((v, ctx) => {
+		if (v.NODE_ENV !== 'production') return;
+		if (!v.SCOPE_COOKIE_SECRET) {
+			ctx.addIssue({
+				code: 'custom',
+				path: ['SCOPE_COOKIE_SECRET'],
+				message: 'SCOPE_COOKIE_SECRET (32+ chars) is required in production'
+			});
+		}
+		if (v.ORIGIN && !v.ORIGIN.startsWith('https://')) {
+			ctx.addIssue({
+				code: 'custom',
+				path: ['ORIGIN'],
+				message: 'ORIGIN must be https in production'
+			});
+		}
+	})
+	.transform((v) => ({ ...v, SCOPE_COOKIE_SECRET: v.SCOPE_COOKIE_SECRET ?? DEV_SCOPE_SECRET }));
+
+export type Config = z.infer<typeof configSchema>;
 
 /**
  * During `npm run build`, SvelteKit imports server modules to compile
@@ -58,7 +95,13 @@ export type Config = z.infer<typeof schema>;
  * Zod error if it's missing; the build never depends on it.
  */
 function load(): Config {
-	const parsed = schema.safeParse({ GO_API_URL, NODE_ENV });
+	const parsed = configSchema.safeParse({
+		GO_API_URL,
+		NODE_ENV,
+		SCOPE_COOKIE_SECRET,
+		ORIGIN,
+		UPSTREAM_TIMEOUT_MS
+	});
 
 	if (!parsed.success) {
 		const issues = parsed.error.issues
