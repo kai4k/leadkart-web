@@ -38,6 +38,7 @@ import { asset, resolve } from '$app/paths';
 import {
 	API_CACHE_PREFIX,
 	CLEAR_PRIVATE_CACHES_MESSAGE,
+	isCacheableApiResponse,
 	RUNTIME_CACHE_PREFIX
 } from '#lib/utils/private-caches.ts';
 
@@ -61,6 +62,13 @@ const APP_SHELL: string[] = [
 ];
 
 const API_TIMEOUT_MS = 10_000;
+
+/**
+ * Bumped on every private-cache clear. A handler remembers the epoch it started
+ * in and writes only if it is unchanged, so a response that was in flight when
+ * the user signed out cannot repopulate the cache afterwards.
+ */
+let epoch = 0;
 
 self.addEventListener('install', (event) => {
 	event.waitUntil(
@@ -92,6 +100,7 @@ self.addEventListener('message', (event) => {
 	}
 	if (event.data?.type === CLEAR_PRIVATE_CACHES_MESSAGE) {
 		// Authenticated HTML + API JSON must not outlive the identity/tenant that fetched it.
+		epoch++;
 		event.waitUntil(Promise.all([caches.delete(RUNTIME_CACHE), caches.delete(API_CACHE)]));
 	}
 });
@@ -124,20 +133,22 @@ self.addEventListener('fetch', (event) => {
 });
 
 async function cacheFirst(req: Request, cacheName: string): Promise<Response> {
+	const startedAt = epoch;
 	const cache = await caches.open(cacheName);
 	const cached = await cache.match(req);
 	if (cached) return cached;
 	const fresh = await fetch(req);
-	if (fresh.ok) void cache.put(req, fresh.clone());
+	if (fresh.ok && startedAt === epoch) void cache.put(req, fresh.clone());
 	return fresh;
 }
 
 async function staleWhileRevalidate(req: Request, cacheName: string): Promise<Response> {
+	const startedAt = epoch;
 	const cache = await caches.open(cacheName);
 	const cached = await cache.match(req);
 	const networkPromise = fetch(req)
 		.then((res) => {
-			if (res.ok) void cache.put(req, res.clone());
+			if (res.ok && startedAt === epoch) void cache.put(req, res.clone());
 			return res;
 		})
 		.catch(() => cached ?? Response.error());
@@ -146,13 +157,16 @@ async function staleWhileRevalidate(req: Request, cacheName: string): Promise<Re
 }
 
 async function networkFirstApi(req: Request): Promise<Response> {
+	const startedAt = epoch;
 	const cache = await caches.open(API_CACHE);
 	const controller = new AbortController();
 	const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
 	try {
 		const fresh = await fetch(req, { signal: controller.signal });
 		clearTimeout(timeout);
-		if (fresh.ok) void cache.put(req, fresh.clone());
+		if (fresh.ok && startedAt === epoch && isCacheableApiResponse(new URL(req.url), fresh)) {
+			void cache.put(req, fresh.clone());
+		}
 		return fresh;
 	} catch {
 		clearTimeout(timeout);
@@ -162,10 +176,11 @@ async function networkFirstApi(req: Request): Promise<Response> {
 }
 
 async function networkFirstNavigate(req: Request): Promise<Response> {
+	const startedAt = epoch;
 	const cache = await caches.open(RUNTIME_CACHE);
 	try {
 		const fresh = await fetch(req);
-		if (fresh.ok) void cache.put(req, fresh.clone());
+		if (fresh.ok && startedAt === epoch) void cache.put(req, fresh.clone());
 		return fresh;
 	} catch {
 		const cached = await cache.match(req);

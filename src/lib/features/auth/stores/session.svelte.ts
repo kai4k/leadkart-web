@@ -65,15 +65,19 @@ function createSession(): Session {
 	 * state + ensures +layout.server.ts runs clean with no cookies).
 	 */
 	async function logout(): Promise<void> {
-		await logoutRequest();
-		// Offline caches hold this user's authenticated pages and API data.
-		await clearPrivateCaches();
+		try {
+			await logoutRequest();
+		} finally {
+			// Even when the request fails (offline) the user leaves and the
+			// offline caches holding their pages and API data are dropped.
+			await clearPrivateCaches();
 
-		// Full page reload — ensures SvelteKit re-runs +layout.server.ts
-		// which will find no access cookie and redirect to /signin. Using
-		// window.location.href instead of goto() so the redirect is clean
-		// and the in-memory query cache is fully purged.
-		window.location.href = '/signin';
+			// Full page reload — ensures SvelteKit re-runs +layout.server.ts
+			// which will find no access cookie and redirect to /signin. Using
+			// window.location.href instead of goto() so the redirect is clean
+			// and the in-memory query cache is fully purged.
+			window.location.href = '/signin';
+		}
 	}
 
 	return {

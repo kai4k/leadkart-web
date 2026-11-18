@@ -12,6 +12,17 @@ export const RUNTIME_CACHE_PREFIX = 'lk-runtime-';
 export const API_CACHE_PREFIX = 'lk-api-';
 export const CLEAR_PRIVATE_CACHES_MESSAGE = 'CLEAR_PRIVATE_CACHES';
 
+/**
+ * Which `/api` GET responses the service worker may keep for offline reading:
+ * JSON only, never auth/capability responses and never downloads (CSV exports
+ * carry whole datasets of personal data).
+ */
+export function isCacheableApiResponse(url: URL, response: Response): boolean {
+	if (url.pathname.startsWith('/api/v1/auth/')) return false;
+	if (response.headers.has('content-disposition')) return false;
+	return (response.headers.get('content-type') ?? '').toLowerCase().startsWith('application/json');
+}
+
 const isPrivateCache = (name: string): boolean =>
 	name.startsWith(RUNTIME_CACHE_PREFIX) || name.startsWith(API_CACHE_PREFIX);
 
