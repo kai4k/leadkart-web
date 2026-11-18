@@ -8,7 +8,9 @@ import {
 	AuthError,
 	NotFoundError,
 	ConflictError,
-	ScopeInvalidError
+	ScopeInvalidError,
+	SchemaError,
+	RateLimitError
 } from '#lib/api/errors.ts';
 
 describe('Error subclass hierarchy', () => {
@@ -55,6 +57,7 @@ describe('Error subclass hierarchy', () => {
 			const err = new ValidationError(
 				{ email: 'must be a valid email', password: 'min 8 chars' },
 				422,
+				undefined,
 				'trace-xyz'
 			);
 			expect(err.name).toBe('ValidationError');
@@ -104,114 +107,116 @@ describe('Error subclass hierarchy', () => {
 	});
 });
 
-describe('ApiError.fromResponse — RFC 9457 ProblemDetails mapping', () => {
-	function makeResponse(status: number): Response {
-		return {
-			status,
-			url: '/v1/tenants',
-			statusText: 'Error',
-			ok: false
-		} as unknown as Response;
-	}
+const res = (status: number, headers: Record<string, string> = {}) =>
+	new Response(null, { status, headers });
 
-	it('maps 401 → AuthError(401)', () => {
-		const err = ApiError.fromResponse(makeResponse(401), null);
-		expect(err).toBeInstanceOf(AuthError);
-		expect((err as unknown as AuthError).status).toBe(401);
+describe('ApiError.fromResponse — status mapping', () => {
+	it('maps 401 and 403 to AuthError', () => {
+		expect(ApiError.fromResponse(res(401), null)).toBeInstanceOf(AuthError);
+		expect((ApiError.fromResponse(res(403), null) as AuthError).status).toBe(403);
 	});
-
 	it('carries the BFF session_expired code on the 401 AuthError', () => {
-		const err = ApiError.fromResponse(makeResponse(401), {
-			error: 'session_expired',
-			message: 'Your session has expired'
-		});
+		const err = ApiError.fromResponse(res(401), { error: 'session_expired', message: 'x' });
 		expect(err).toBeInstanceOf(AuthError);
 		expect(err.code).toBe('session_expired');
 	});
-
-	it('maps the BFF refresh_unavailable 503 → retryable ServerError, not an auth error', () => {
-		const err = ApiError.fromResponse(makeResponse(503), {
-			error: 'refresh_unavailable',
-			message: 'Session could not be renewed — try again'
-		});
+	it('maps the BFF refresh_unavailable 503 to a retryable ServerError', () => {
+		const err = ApiError.fromResponse(res(503), { error: 'refresh_unavailable', message: 'x' });
 		expect(err).toBeInstanceOf(ServerError);
-		expect(err).not.toBeInstanceOf(AuthError);
 		expect(err.code).toBe('refresh_unavailable');
 	});
-
-	it('maps 403 → AuthError(403)', () => {
-		const err = ApiError.fromResponse(makeResponse(403), null);
-		expect(err).toBeInstanceOf(AuthError);
-		expect((err as unknown as AuthError).status).toBe(403);
+	it('maps 404 to NotFoundError', () => {
+		expect(ApiError.fromResponse(res(404), null)).toBeInstanceOf(NotFoundError);
 	});
-
-	it('maps 404 → NotFoundError with resource hint from url', () => {
-		const resp = { ...makeResponse(404), url: '/v1/tenants/unknown' } as unknown as Response;
-		const err = ApiError.fromResponse(resp, null);
-		expect(err).toBeInstanceOf(NotFoundError);
-		expect((err as unknown as NotFoundError).resource).toBe('/v1/tenants/unknown');
+	it('a Go 409 with any code stays a ConflictError', () => {
+		expect(ApiError.fromResponse(res(409), { error: 'slug_taken' })).toBeInstanceOf(ConflictError);
 	});
+	it('maps 500 to ServerError and other 4xx to the base ApiError', () => {
+		expect(ApiError.fromResponse(res(500), { error: 'internal_error' })).toBeInstanceOf(
+			ServerError
+		);
+		const e = ApiError.fromResponse(res(418), { message: 'teapot' });
+		expect(e.constructor).toBe(ApiError);
+		expect(e.message).toBe('teapot');
+	});
+	it('ignores the removed code/fields/trace_id keys', () => {
+		const err = ApiError.fromResponse(res(422), {
+			code: 'x',
+			fields: { a: 'b' },
+			trace_id: 't'
+		} as never) as ValidationError;
+		expect(err.code).toBeUndefined();
+		expect(err.fields).toEqual({});
+		expect(err.traceId).toBeUndefined();
+	});
+});
 
-	it('maps 409 → ConflictError with detail from body', () => {
-		const body = { detail: 'slug taken', code: 'conflict' };
-		const err = ApiError.fromResponse(makeResponse(409), body);
+describe('ApiError.fromResponse — Go and BFF envelopes', () => {
+	it('reads the Go code from `error`, text from message then detail', () => {
+		const err = ApiError.fromResponse(res(409), {
+			error: 'lead_terminal',
+			message: '',
+			detail: 'lead is closed'
+		});
 		expect(err).toBeInstanceOf(ConflictError);
-		expect((err as unknown as ConflictError).detail).toBe('slug taken');
+		expect(err.code).toBe('lead_terminal');
+		expect(err.message).toBe('lead is closed');
 	});
-
-	it('maps the BFF scope_invalid 409 ({ error, message }) → ScopeInvalidError, not ConflictError', () => {
-		const err = ApiError.fromResponse(makeResponse(409), {
+	it('maps Go `errors` (string arrays) to first-message fields and keeps the detail', () => {
+		const err = ApiError.fromResponse(res(422), {
+			error: 'validation_failed',
+			detail: 'One or more fields are invalid',
+			errors: { new_password: ['too short', 'no digit'], email: [] }
+		}) as ValidationError;
+		expect(err.fields).toEqual({ new_password: 'too short' });
+		expect(err.detail).toBe('One or more fields are invalid');
+		expect(err.message).toBe('One or more fields are invalid');
+		expect(err.hasFieldErrors).toBe(true);
+	});
+	it('keeps the text of a 400 without field errors', () => {
+		const err = ApiError.fromResponse(res(400), {
+			error: 'invalid_email',
+			message: 'mail: no angle-addr'
+		}) as ValidationError;
+		expect(err.hasFieldErrors).toBe(false);
+		expect(err.message).toBe('mail: no angle-addr');
+		expect(err.code).toBe('invalid_email');
+	});
+	it('maps the BFF envelope { error, message }', () => {
+		const err = ApiError.fromResponse(res(409), {
 			error: 'scope_invalid',
 			message: 'Operator scope expired'
 		});
 		expect(err).toBeInstanceOf(ScopeInvalidError);
+	});
+	it('maps 429 to RateLimitError with Retry-After seconds', () => {
+		const err = ApiError.fromResponse(res(429, { 'retry-after': '30' }), {
+			error: 'rate_limited'
+		}) as RateLimitError;
+		expect(err).toBeInstanceOf(RateLimitError);
+		expect(err.retryAfterSeconds).toBe(30);
+	});
+	it('takes the trace id from X-Correlation-ID', () => {
+		const err = ApiError.fromResponse(res(500, { 'x-correlation-id': 'c-1' }), {
+			error: 'internal_error'
+		});
+		expect(err.traceId).toBe('c-1');
+	});
+	it('maps a TimeoutError DOMException to TimeoutError and anything else to NetworkError', () => {
+		expect(ApiError.transport(new DOMException('t', 'TimeoutError'))).toBeInstanceOf(TimeoutError);
+		expect(ApiError.transport(new TypeError('Failed to fetch'))).toBeInstanceOf(NetworkError);
+	});
+});
+
+describe('SchemaError', () => {
+	it('is an ApiError with a user message and the issues', () => {
+		const err = new SchemaError('GET /v1/users', [
+			{ path: 'users.0.email', message: 'Invalid email' }
+		]);
 		expect(err).toBeInstanceOf(ApiError);
-		expect(err).not.toBeInstanceOf(ConflictError);
-		expect(err.code).toBe('scope_invalid');
-		expect(err.status).toBe(409);
-	});
-
-	it('a Go 409 with another code stays a ConflictError', () => {
-		expect(ApiError.fromResponse(makeResponse(409), { code: 'slug_taken' })).toBeInstanceOf(
-			ConflictError
-		);
-	});
-
-	it('maps 422 → ValidationError with fields from RFC 9457 body', () => {
-		const body = { fields: { email: 'invalid' }, trace_id: 'tr-1' };
-		const err = ApiError.fromResponse(makeResponse(422), body);
-		expect(err).toBeInstanceOf(ValidationError);
-		expect((err as unknown as ValidationError).fields).toEqual({ email: 'invalid' });
-		expect((err as unknown as ValidationError).traceId).toBe('tr-1');
-	});
-
-	it('maps 422 with legacy { code, message } body — empty fields, no crash', () => {
-		const body = { code: 'invalid_body', message: 'bad request' };
-		const err = ApiError.fromResponse(makeResponse(422), body);
-		expect(err).toBeInstanceOf(ValidationError);
-		expect((err as unknown as ValidationError).fields).toEqual({});
-	});
-
-	it('maps 500 → ServerError', () => {
-		const body = { code: 'internal', message: 'boom' };
-		const err = ApiError.fromResponse(makeResponse(500), body);
-		expect(err).toBeInstanceOf(ServerError);
-		expect((err as unknown as ServerError).status).toBe(500);
-	});
-
-	it('maps generic 4xx → ApiError (base)', () => {
-		const err = ApiError.fromResponse(makeResponse(429), null);
-		// Should not be a subclass — just ApiError
-		expect(err).toBeInstanceOf(ApiError);
-		expect(err).not.toBeInstanceOf(AuthError);
-		expect(err).not.toBeInstanceOf(ValidationError);
-		expect(err).not.toBeInstanceOf(ServerError);
-	});
-
-	it('captures trace_id on ApiError base', () => {
-		const body = { trace_id: 'trace-999' };
-		const err = ApiError.fromResponse(makeResponse(429), body);
-		expect(err.traceId).toBe('trace-999');
+		expect(err.code).toBe('schema_mismatch');
+		expect(err.issues).toHaveLength(1);
+		expect(err.message).toMatch(/refresh/i);
 	});
 });
 
@@ -223,9 +228,8 @@ describe('ApiError.transport', () => {
 		expect((err as unknown as NetworkError).cause).toBe(cause);
 	});
 
-	it('wraps abort-controller DOMException into TimeoutError', () => {
-		const abortErr = new DOMException('The operation was aborted.', 'AbortError');
-		const err = ApiError.transport(abortErr);
-		expect(err).toBeInstanceOf(TimeoutError);
+	it('does not map a caller AbortError to TimeoutError', () => {
+		const err = ApiError.transport(new DOMException('aborted', 'AbortError'));
+		expect(err).toBeInstanceOf(NetworkError);
 	});
 });

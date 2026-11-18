@@ -178,4 +178,19 @@ describe('Form.validateField — blur validation', () => {
 		form.validateField('email');
 		expect(form.errors.email).toBeUndefined();
 	});
+
+	it('shows a ValidationError without field errors as the banner', async () => {
+		const form = useForm(z.object({ email: z.string() }), { email: 'x' });
+		await form.submit(makeEvent(), () =>
+			Promise.reject(new ValidationError({}, 400, 'mail: missing @'))
+		);
+		expect(form.bannerError).toBe('mail: missing @');
+		expect(form.errors).toEqual({});
+	});
+
+	it('reset(next) reseeds the values', () => {
+		const form = useForm(testSchema, { email: '', name: '' });
+		form.reset({ email: 'a@b.com', name: 'Zed' });
+		expect(form.values.name).toBe('Zed');
+	});
 });

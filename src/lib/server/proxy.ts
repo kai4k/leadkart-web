@@ -74,7 +74,12 @@ export function stripTokenFields(body: unknown): unknown {
 }
 
 /** No conditional requests are forwarded and responses are no-store, so no etag / last-modified. */
-const FORWARDED_RESPONSE_HEADERS = ['content-type', 'content-disposition', 'retry-after'];
+const FORWARDED_RESPONSE_HEADERS = [
+	'content-type',
+	'content-disposition',
+	'retry-after',
+	'x-correlation-id'
+];
 
 /**
  * A Go `Location` is forwarded only as a same-origin relative `/api/v1/...`

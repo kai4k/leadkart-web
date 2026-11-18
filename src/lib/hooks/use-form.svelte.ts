@@ -51,7 +51,7 @@ export interface Form<TSchema extends AnyObjectSchema> {
 	isSubmitting: boolean;
 	/** True once the user has attempted to submit. Gate for blur-validation. */
 	submitAttempted: boolean;
-	reset(): void;
+	reset(next?: z.input<TSchema>): void;
 	clearErrors(): void;
 	validateField(field: string): void;
 	submit(e: SubmitEvent, submitFn: (values: z.output<TSchema>) => Promise<void>): Promise<void>;
@@ -69,8 +69,8 @@ export function useForm<TSchema extends AnyObjectSchema>(
 	let isSubmitting = $state(false);
 	let submitAttempted = $state(false);
 
-	function reset(): void {
-		values = { ...initial };
+	function reset(next?: z.input<TSchema>): void {
+		values = { ...(next ?? initial) };
 		errors = {};
 		bannerError = null;
 		isSubmitting = false;
@@ -121,12 +121,9 @@ export function useForm<TSchema extends AnyObjectSchema>(
 		try {
 			await submitFn(result.data as z.output<TSchema>);
 		} catch (err) {
-			if (err instanceof ValidationError) {
+			if (err instanceof ValidationError && err.hasFieldErrors) {
 				errors = err.fields as FieldErrors;
 			} else if (err instanceof ApiError) {
-				// ApiError.message is the typed accessor for the wire-level
-				// detail string (RFC 9457 `detail` / legacy `message`); using
-				// it on a known-subclass instance is canon-legal.
 				bannerError = err.message || 'An unexpected error occurred';
 			} else {
 				bannerError = 'An unexpected error occurred';

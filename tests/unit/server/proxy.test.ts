@@ -74,6 +74,7 @@ describe('pickResponseHeaders', () => {
 			new Headers({
 				'content-type': 'application/json',
 				'retry-after': '30',
+				'x-correlation-id': 'c-1',
 				etag: '"abc"',
 				'last-modified': 'Mon, 01 Jan 2024 00:00:00 GMT',
 				'content-disposition': 'attachment; filename="x.csv"',
@@ -85,6 +86,7 @@ describe('pickResponseHeaders', () => {
 		);
 		expect(out.get('content-type')).toBe('application/json');
 		expect(out.get('retry-after')).toBe('30');
+		expect(out.get('x-correlation-id')).toBe('c-1');
 		expect(out.get('content-disposition')).toContain('x.csv');
 		expect(out.get('cache-control')).toBe('no-store');
 		expect(out.get('etag')).toBeNull();
