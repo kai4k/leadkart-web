@@ -66,12 +66,21 @@ export async function POST(event: RequestEvent): Promise<Response> {
 		);
 		if (!resp.ok) return Response.json({ error: 'tenant_lookup_failed' }, { status: 502 });
 		const payload = tenantLookupSchema.safeParse(await resp.json());
-		if (!payload.success) return Response.json({ error: 'tenant_lookup_failed' }, { status: 502 });
+		if (!payload.success) {
+			// Paths only — never log values from the tenant response.
+			console.error(
+				'[operator-scope] tenant lookup shape mismatch',
+				payload.error.issues.map((i) => i.path.join('.'))
+			);
+			return Response.json({ error: 'tenant_lookup_failed' }, { status: 502 });
+		}
 		tenant = payload.data.tenants?.[0];
 	} catch {
 		return Response.json({ error: 'tenant_lookup_failed' }, { status: 502 });
 	}
-	if (!tenant) {
+	// The filter is exact-match on the backend; verify rather than trust it, so
+	// a loose/prefix match can never scope the operator onto a different tenant.
+	if (!tenant || tenant.slug !== slug) {
 		return Response.json({ error: 'tenant_not_found' }, { status: 404 });
 	}
 
@@ -81,8 +90,13 @@ export async function POST(event: RequestEvent): Promise<Response> {
 			slug: tenant.slug,
 			display_name: tenant.display_name
 		});
-	} catch {
-		// Go returned an id that is not a UUID — refuse to sign it.
+	} catch (err) {
+		// Go returned a tenant that fails the scope schema (id not a UUID, or an
+		// over-long slug / display_name) — refuse to sign it. Paths only.
+		console.error(
+			'[operator-scope] tenant lookup shape mismatch',
+			err instanceof z.ZodError ? err.issues.map((i) => i.path.join('.')) : []
+		);
 		return Response.json({ error: 'tenant_lookup_failed' }, { status: 502 });
 	}
 	return new Response(null, { status: 204 });

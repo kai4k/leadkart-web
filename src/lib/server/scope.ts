@@ -12,8 +12,8 @@
 import { createHmac } from 'node:crypto';
 import type { Cookies } from '@sveltejs/kit';
 import { z } from 'zod';
-import { config, isProd } from './config';
-import { timingSafeEqualString } from './csrf';
+import { config, isProd } from './config.ts';
+import { timingSafeEqualString } from './csrf.ts';
 
 const OP_TENANT_COOKIE = 'lk_op_tenant';
 
@@ -25,43 +25,73 @@ const scopeSchema = z.object({
 	display_name: z.string().max(200)
 });
 
+/** The signed payload: the scope plus its expiry (unix seconds). */
+const payloadSchema = scopeSchema.extend({ exp: z.number().int() });
+
 export type OperatorScope = z.infer<typeof scopeSchema>;
+
+/** Cookie lifetime and signed expiry share one constant. */
+const SCOPE_TTL_SECONDS = 8 * 3600;
+
+/**
+ * `none`: no scope cookie. `invalid`: a cookie is present but failed
+ * verification (tampered, secret rotated, expired) — callers must fail
+ * closed, never fall back to the operator's home tenant.
+ */
+export type ScopeReading =
+	| { state: 'none' }
+	| { state: 'valid'; scope: OperatorScope }
+	| { state: 'invalid' };
 
 function sign(payload: string): string {
 	return createHmac('sha256', config.SCOPE_COOKIE_SECRET).update(payload).digest('base64url');
 }
 
 export function setOperatorScope(cookies: Cookies, scope: OperatorScope): void {
-	const payload = Buffer.from(JSON.stringify(scopeSchema.parse(scope))).toString('base64url');
+	const exp = Math.floor(Date.now() / 1000) + SCOPE_TTL_SECONDS;
+	const payload = Buffer.from(JSON.stringify({ ...scopeSchema.parse(scope), exp })).toString(
+		'base64url'
+	);
 	cookies.set(OP_TENANT_COOKIE, `${payload}.${sign(payload)}`, {
 		path: '/',
 		httpOnly: true,
 		secure: isProd(),
 		sameSite: 'strict',
-		maxAge: 8 * 3600
+		maxAge: SCOPE_TTL_SECONDS
 	});
 }
 
 /**
  * httpOnly does not stop a user from writing their own cookie, so the
- * value is only trusted when its HMAC verifies. The id is UUID-checked
- * because it is sent as `X-Tenant-Id` and placed in upstream URL paths.
+ * value is only trusted when its HMAC verifies and it has not expired.
+ * The id is UUID-checked because it is sent as `X-Tenant-Id` and placed
+ * in upstream URL paths.
  */
-export function getOperatorScope(cookies: Cookies): OperatorScope | null {
+export function readOperatorScope(cookies: Cookies): ScopeReading {
 	const raw = cookies.get(OP_TENANT_COOKIE);
-	if (!raw) return null;
+	if (!raw) return { state: 'none' };
 	const dot = raw.lastIndexOf('.');
-	if (dot <= 0) return null;
+	if (dot <= 0) return { state: 'invalid' };
 	const payload = raw.slice(0, dot);
-	if (!timingSafeEqualString(raw.slice(dot + 1), sign(payload))) return null;
+	if (!timingSafeEqualString(raw.slice(dot + 1), sign(payload))) return { state: 'invalid' };
 	try {
-		const parsed = scopeSchema.safeParse(
+		const parsed = payloadSchema.safeParse(
 			JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
 		);
-		return parsed.success ? parsed.data : null;
+		if (!parsed.success || parsed.data.exp < Math.floor(Date.now() / 1000)) {
+			return { state: 'invalid' };
+		}
+		const { id, slug, display_name } = parsed.data;
+		return { state: 'valid', scope: { id, slug, display_name } };
 	} catch {
-		return null;
+		return { state: 'invalid' };
 	}
+}
+
+/** Scope when valid, otherwise null — use `readOperatorScope` where invalid must fail closed. */
+export function getOperatorScope(cookies: Cookies): OperatorScope | null {
+	const reading = readOperatorScope(cookies);
+	return reading.state === 'valid' ? reading.scope : null;
 }
 
 export function clearOperatorScope(cookies: Cookies): void {

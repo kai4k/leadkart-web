@@ -15,16 +15,16 @@
  */
 
 import { redirect } from '@sveltejs/kit';
-import { config } from '#lib/server/config.ts';
 import { ACCESS_COOKIE, mustChangePassword } from '#lib/server/cookies.ts';
-import { refreshSession } from '#lib/server/auth-refresh.ts';
+import { goFetch, readGoJson } from '#lib/server/go.ts';
+// Schema module imported directly: the auth barrel re-exports .svelte components.
+import { capabilitiesSchema } from '#lib/features/auth/schemas.ts';
 import type { LayoutServerLoad } from './$types';
-import type { Capabilities } from '#lib/features/auth/api.ts';
 
 export const load: LayoutServerLoad = async ({ cookies, url }) => {
 	// hooks.server.ts already refreshed an expired access cookie before this
 	// load ran, so a missing cookie here means the session is really gone.
-	let access = cookies.get(ACCESS_COOKIE());
+	const access = cookies.get(ACCESS_COOKIE());
 
 	if (!access) {
 		const next = encodeURIComponent(url.pathname + url.search);
@@ -40,32 +40,22 @@ export const load: LayoutServerLoad = async ({ cookies, url }) => {
 		);
 	}
 
-	// Fetch capabilities server-to-server — baked into the initial HTML.
-	let resp = await fetch(`${config.GO_API_URL}/api/v1/auth/me/capabilities`, {
-		headers: { authorization: `Bearer ${access}` }
+	// goFetch: Bearer + scope header + timeout + one 401 refresh/retry.
+	// requireAuth:false so a failed refresh falls through to the signin redirect below;
+	// scoped:false because capabilities describe the caller, never the scoped tenant.
+	const resp = await goFetch(cookies, '/v1/auth/me/capabilities', {
+		requireAuth: false,
+		scoped: false
 	});
 
-	// 401 → attempt one silent refresh
-	if (resp.status === 401) {
-		const newAccess = await refreshSession(cookies);
-		if (!newAccess) {
-			const next = encodeURIComponent(url.pathname + url.search);
-			throw redirect(303, `/signin?next=${next}`);
-		}
-		access = newAccess;
-		resp = await fetch(`${config.GO_API_URL}/api/v1/auth/me/capabilities`, {
-			headers: { authorization: `Bearer ${access}` }
-		});
-	}
-
-	if (!resp.ok) {
-		// Capabilities endpoint down / unexpected error — redirect to signin.
-		// Don't clear cookies (the user is probably still valid; the endpoint
+	const parsed = resp.ok ? capabilitiesSchema.safeParse(await readGoJson<unknown>(resp)) : null;
+	if (!parsed?.success) {
+		// Capabilities endpoint down / 401 after refresh / unexpected shape — redirect to
+		// signin. Don't clear cookies (the user is probably still valid; the endpoint
 		// may just be temporarily unavailable).
 		const next = encodeURIComponent(url.pathname + url.search);
 		throw redirect(303, `/signin?next=${next}`);
 	}
 
-	const capabilities = (await resp.json()) as Capabilities;
-	return { capabilities };
+	return { capabilities: parsed.data };
 };

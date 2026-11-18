@@ -12,26 +12,30 @@
  */
 
 import { redirect, error } from '@sveltejs/kit';
-import { config } from '#lib/server/config.ts';
-import { clearOperatorScope, getOperatorScope } from '#lib/server/scope.ts';
-import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
+import { clearOperatorScope, readOperatorScope } from '#lib/server/scope.ts';
+import { goFetch, readGoJson } from '#lib/server/go.ts';
+import { tenantDtoSchema } from '#lib/features/operator/tenants/schemas.ts';
 import type { LayoutServerLoad } from './$types';
-import type { TenantDto } from '$features/operator/tenants';
 
 export const load: LayoutServerLoad = async ({ cookies }) => {
-	const scope = getOperatorScope(cookies);
-	if (!scope) throw redirect(303, '/operator/tenants');
+	const reading = readOperatorScope(cookies);
+	if (reading.state !== 'valid') {
+		if (reading.state === 'invalid') clearOperatorScope(cookies);
+		throw redirect(303, '/operator/tenants');
+	}
+	const { scope } = reading;
 
-	const access = cookies.get(ACCESS_COOKIE());
-	if (!access) throw redirect(303, '/signin');
-
-	const resp = await fetch(`${config.GO_API_URL}/api/v1/tenants/${encodeURIComponent(scope.id)}`, {
-		headers: {
-			authorization: `Bearer ${access}`,
-			'x-tenant-id': scope.id
-		},
-		signal: AbortSignal.timeout(config.UPSTREAM_TIMEOUT_MS)
-	});
+	let resp: Response;
+	try {
+		// goFetch adds Bearer, X-Tenant-Id from the scope cookie, the timeout
+		// and the single 401 refresh + retry.
+		resp = await goFetch(cookies, `/v1/tenants/${encodeURIComponent(scope.id)}`);
+	} catch (err) {
+		if (err instanceof DOMException && err.name === 'TimeoutError') {
+			throw error(504, 'Tenant service timed out');
+		}
+		throw err;
+	}
 
 	if (resp.status === 404) {
 		clearOperatorScope(cookies);
@@ -39,6 +43,7 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
 	}
 	if (!resp.ok) throw error(resp.status, 'Failed to load tenant scope');
 
-	const tenant = (await resp.json()) as TenantDto;
-	return { tenant };
+	const parsed = tenantDtoSchema.safeParse(await readGoJson<unknown>(resp));
+	if (!parsed.success) throw error(502, 'Tenant service returned an unexpected response');
+	return { tenant: parsed.data };
 };

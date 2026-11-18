@@ -1,5 +1,12 @@
-import { describe, expect, it } from 'vitest';
-import { getOperatorScope, setOperatorScope } from '#lib/server/scope.ts';
+import { createHmac } from 'node:crypto';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { config } from '#lib/server/config.ts';
+import { getOperatorScope, readOperatorScope, setOperatorScope } from '#lib/server/scope.ts';
+
+function signed(payload: unknown, secret: string = config.SCOPE_COOKIE_SECRET): string {
+	const p = Buffer.from(JSON.stringify(payload)).toString('base64url');
+	return `${p}.${createHmac('sha256', secret).update(p).digest('base64url')}`;
+}
 
 function jar(initial?: string) {
 	let value = initial;
@@ -47,5 +54,54 @@ describe('operator scope cookie', () => {
 
 	it('refuses to sign a non-UUID id (path-injection guard)', () => {
 		expect(() => setOperatorScope(jar().api, { ...scope, id: '../../admin' })).toThrow();
+	});
+
+	describe('readOperatorScope states', () => {
+		afterEach(() => vi.useRealTimers());
+
+		it('none when the cookie is absent', () => {
+			expect(readOperatorScope(jar().api)).toEqual({ state: 'none' });
+			expect(getOperatorScope(jar().api)).toBeNull();
+		});
+
+		it('valid round-trip strips exp', () => {
+			const j = jar();
+			setOperatorScope(j.api, scope);
+			expect(readOperatorScope(j.api)).toEqual({ state: 'valid', scope });
+		});
+
+		it('invalid after the signed expiry passes', () => {
+			vi.useFakeTimers();
+			vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+			const j = jar();
+			setOperatorScope(j.api, scope);
+			vi.setSystemTime(new Date('2026-01-01T07:59:00Z'));
+			expect(readOperatorScope(j.api).state).toBe('valid');
+			vi.setSystemTime(new Date('2026-01-01T08:00:01Z'));
+			expect(readOperatorScope(j.api)).toEqual({ state: 'invalid' });
+			expect(getOperatorScope(j.api)).toBeNull();
+		});
+
+		it('invalid for a signature made with the wrong secret', () => {
+			const exp = Math.floor(Date.now() / 1000) + 60;
+			expect(readOperatorScope(jar(signed({ ...scope, exp }, 'other-secret')).api)).toEqual({
+				state: 'invalid'
+			});
+		});
+
+		it.each(['abc', 'abc.', '.sig'])('invalid for malformed value %s', (raw) => {
+			expect(readOperatorScope(jar(raw).api)).toEqual({ state: 'invalid' });
+		});
+
+		it('invalid for a validly signed payload with a non-UUID id', () => {
+			const exp = Math.floor(Date.now() / 1000) + 60;
+			expect(readOperatorScope(jar(signed({ ...scope, id: '../../admin', exp })).api)).toEqual({
+				state: 'invalid'
+			});
+		});
+
+		it('invalid for a validly signed payload without exp', () => {
+			expect(readOperatorScope(jar(signed(scope)).api)).toEqual({ state: 'invalid' });
+		});
 	});
 });

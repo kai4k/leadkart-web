@@ -257,6 +257,65 @@ test.describe('Operator scope flow', () => {
 		const calls = await listMockCalls();
 		const usersCall = calls.find((c) => c.path === '/api/v1/users' && c.method === 'GET');
 		expect(usersCall).toBeDefined();
+		expect(usersCall?.['x-tenant-id']).toBe(ACME.id);
+		expect(usersCall?.authorization).toMatch(/^Bearer /);
+		// Positive control: the header really is recorded for scoped calls.
+		expect(calls.some((c) => c['x-tenant-id'] === ACME.id)).toBe(true);
+	});
+
+	test('a browser-supplied X-Tenant-Id is ignored: Go sees the cookie tenant', async ({ page }) => {
+		await setupOperator(page);
+		await registerMocks([
+			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [] } }
+		]);
+		await page.goto('/operator/tenants');
+		await page.getByText('Acme Pharma').first().click();
+		await page.waitForURL(/\/operator\/scope\/profile$/);
+
+		const spoofed = '99999999-9999-4999-8999-999999999999';
+		const status = await page.evaluate(async (id) => {
+			const r = await fetch('/api/v1/users', { headers: { 'X-Tenant-Id': id } });
+			return r.status;
+		}, spoofed);
+		expect(status).toBe(200);
+
+		const calls = await listMockCalls();
+		const users = calls.filter((c) => c.path === '/api/v1/users');
+		expect(users.length).toBeGreaterThan(0);
+		expect(users.every((c) => c['x-tenant-id'] === ACME.id)).toBe(true);
+		expect(calls.some((c) => c['x-tenant-id'] === spoofed)).toBe(false);
+	});
+
+	test('an encoded ../ path never reaches Go outside /api/v1/', async ({ page }) => {
+		await setupOperator(page);
+		const resp = await page.request.get('/api/..%2F..%2Fdebug');
+		expect([400, 404]).toContain(resp.status());
+		const calls = await listMockCalls();
+		expect(calls.some((c) => c.path.includes('debug'))).toBe(false);
+	});
+
+	test('a tampered scope cookie fails closed: 409, no upstream call, cookie cleared', async ({
+		page,
+		context
+	}) => {
+		await setupOperator(page);
+		await registerMocks([
+			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [] } }
+		]);
+		await page.goto('/operator/tenants');
+		await context.addCookies([
+			{ name: 'lk_op_tenant', value: 'e30.tampered', url: 'http://localhost:4173' }
+		]);
+		const out = await page.evaluate(async () => {
+			const r = await fetch('/api/v1/users');
+			return { status: r.status, body: (await r.json()) as { error: string } };
+		});
+		expect(out.status).toBe(409);
+		expect(out.body.error).toBe('scope_invalid');
+		const calls = await listMockCalls();
+		expect(calls.some((c) => c.path === '/api/v1/users')).toBe(false);
+		const cookies = await context.cookies();
+		expect(cookies.find((c) => c.name === 'lk_op_tenant')).toBeUndefined();
 	});
 
 	test('direct visit to /operator/scope/profile without scope cookie: redirected to list', async ({
@@ -281,6 +340,8 @@ test.describe('Operator scope flow', () => {
 				url: 'http://localhost:4173'
 			}
 		]);
+		// Guard against a vacuous pass: the forged cookie must really be in the jar.
+		expect((await context.cookies()).some((c) => c.name === 'lk_op_tenant')).toBe(true);
 		await page.goto('/operator/scope/profile');
 		await page.waitForURL(/\/operator\/tenants$/);
 		const calls = await listMockCalls();
