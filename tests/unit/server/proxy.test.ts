@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	buildUpstreamUrl,
 	isTokenEndpoint,
+	isUpstreamTimeout,
 	pickResponseHeaders,
 	scopeRequired,
 	upstreamTimeout,
@@ -152,5 +153,30 @@ describe('scopeRequired', () => {
 		expect(scopeRequired(new Headers({ 'x-lk-scope-required': '1' }))).toBe(true);
 		expect(scopeRequired(new Headers({ 'x-lk-scope-required': '0' }))).toBe(false);
 		expect(scopeRequired(new Headers())).toBe(false);
+	});
+});
+
+describe('isUpstreamTimeout', () => {
+	it('is true for our own time-to-first-byte abort', () => {
+		expect(isUpstreamTimeout(new DOMException('Upstream timed out', 'TimeoutError'))).toBe(true);
+	});
+
+	it("is true for undici's body timeout while streaming", () => {
+		const err = new TypeError('terminated', {
+			cause: Object.assign(new Error('Body Timeout Error'), { code: 'UND_ERR_BODY_TIMEOUT' })
+		});
+		expect(isUpstreamTimeout(err)).toBe(true);
+	});
+
+	it('is false for other failures', () => {
+		expect(isUpstreamTimeout(new TypeError('fetch failed'))).toBe(false);
+		expect(
+			isUpstreamTimeout(
+				new TypeError('x', { cause: Object.assign(new Error(), { code: 'ECONNRESET' }) })
+			)
+		).toBe(false);
+		expect(isUpstreamTimeout(new DOMException('gone', 'AbortError'))).toBe(false);
+		expect(isUpstreamTimeout(new Error('UND_ERR_BODY_TIMEOUT'))).toBe(false);
+		expect(isUpstreamTimeout(null)).toBe(false);
 	});
 });

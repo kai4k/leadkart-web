@@ -14,6 +14,7 @@
 import { redirect, error } from '@sveltejs/kit';
 import { clearOperatorScope, readOperatorScope } from '#lib/server/scope.ts';
 import { goFetch, readGoJson } from '#lib/server/go.ts';
+import { isUpstreamTimeout } from '#lib/server/proxy.ts';
 import { tenantDtoSchema } from '#lib/features/operator/tenants/schemas.ts';
 import type { LayoutServerLoad } from './$types';
 
@@ -31,10 +32,10 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
 		// goFetch adds Bearer, X-Tenant-Id from the scope cookie, the timeout
 		// and the single 401 refresh + retry.
 		resp = await goFetch(cookies, `/v1/tenants/${encodeURIComponent(scope.id)}`);
-		// Body read inside the try: a timeout while streaming is also a 504.
+		// Body read inside the try: undici's body timeout (a stalled stream) is also a 504.
 		tenantJson = resp.ok ? await readGoJson<unknown>(resp) : null;
 	} catch (err) {
-		if (err instanceof DOMException && err.name === 'TimeoutError') {
+		if (isUpstreamTimeout(err)) {
 			throw error(504, 'Tenant service timed out');
 		}
 		throw err;
@@ -44,7 +45,8 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
 		clearOperatorScope(cookies);
 		throw redirect(303, '/operator/tenants');
 	}
-	if (!resp.ok) throw error(resp.status, 'Failed to load tenant scope');
+	// goFetch never follows redirects, so a 3xx lands here: not an error status Kit accepts.
+	if (!resp.ok) throw error(resp.status >= 400 ? resp.status : 502, 'Failed to load tenant scope');
 
 	const parsed = tenantDtoSchema.safeParse(tenantJson);
 	if (!parsed.success) throw error(502, 'Tenant service returned an unexpected response');

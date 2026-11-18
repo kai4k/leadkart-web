@@ -8,6 +8,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import { goFetch, readGoJson, readGoError, flattenGoErrors } from '#lib/server/go.ts';
 import { createRoleRequestSchema } from '$features/roles/schemas';
 import { requireCapability } from '#lib/server/guards.ts';
+import { loadCapabilities } from '#lib/server/capabilities.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 interface CreateRoleResponse {
@@ -21,6 +22,9 @@ export const load: PageServerLoad = async ({ parent }) => {
 
 export const actions: Actions = {
 	default: async ({ request, cookies }) => {
+		// Actions are a separate entry point from the load above: authorise here too.
+		requireCapability((await loadCapabilities(cookies)) ?? undefined, 'identity.roles.create');
+
 		const fd = await request.formData();
 		const payload = {
 			name: (fd.get('name') ?? '').toString(),

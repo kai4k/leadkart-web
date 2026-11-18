@@ -120,6 +120,25 @@ describe('ApiError.fromResponse — RFC 9457 ProblemDetails mapping', () => {
 		expect((err as unknown as AuthError).status).toBe(401);
 	});
 
+	it('carries the BFF session_expired code on the 401 AuthError', () => {
+		const err = ApiError.fromResponse(makeResponse(401), {
+			error: 'session_expired',
+			message: 'Your session has expired'
+		});
+		expect(err).toBeInstanceOf(AuthError);
+		expect(err.code).toBe('session_expired');
+	});
+
+	it('maps the BFF refresh_unavailable 503 → retryable ServerError, not an auth error', () => {
+		const err = ApiError.fromResponse(makeResponse(503), {
+			error: 'refresh_unavailable',
+			message: 'Session could not be renewed — try again'
+		});
+		expect(err).toBeInstanceOf(ServerError);
+		expect(err).not.toBeInstanceOf(AuthError);
+		expect(err.code).toBe('refresh_unavailable');
+	});
+
 	it('maps 403 → AuthError(403)', () => {
 		const err = ApiError.fromResponse(makeResponse(403), null);
 		expect(err).toBeInstanceOf(AuthError);

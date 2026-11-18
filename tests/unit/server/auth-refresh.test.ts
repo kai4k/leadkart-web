@@ -137,10 +137,10 @@ describe('refreshTokens status mapping and caching', () => {
 });
 
 describe('refreshSession', () => {
-	it('returns null without calling Go when there is no refresh cookie', async () => {
+	it('reports none without calling Go when there is no refresh cookie', async () => {
 		const j = statefulJar();
 		const fetchFn = vi.fn();
-		expect(await refreshSession(j.api, fetchFn)).toBeNull();
+		expect(await refreshSession(j.api, fetchFn)).toEqual({ ok: false, reason: 'none' });
 		expect(fetchFn).not.toHaveBeenCalled();
 	});
 
@@ -152,7 +152,7 @@ describe('refreshSession', () => {
 			lk_op_tenant: 'scope'
 		});
 		const fetchFn = vi.fn(() => Promise.resolve(new Response('{}', { status: 401 })));
-		expect(await refreshSession(j.api, fetchFn)).toBeNull();
+		expect(await refreshSession(j.api, fetchFn)).toEqual({ ok: false, reason: 'rejected' });
 		expect(j.deletes).toEqual(
 			expect.arrayContaining(['lk_access', 'lk_refresh', 'lk_csrf', 'lk_mcp', 'lk_op_tenant'])
 		);
@@ -162,7 +162,7 @@ describe('refreshSession', () => {
 	it('unavailable: leaves every cookie in place', async () => {
 		const j = statefulJar({ lk_refresh: 'rs-down', lk_csrf: 'c', lk_op_tenant: 'scope' });
 		const fetchFn = vi.fn(() => Promise.resolve(new Response('', { status: 503 })));
-		expect(await refreshSession(j.api, fetchFn)).toBeNull();
+		expect(await refreshSession(j.api, fetchFn)).toEqual({ ok: false, reason: 'unavailable' });
 		expect(j.deletes).toEqual([]);
 		expect(j.sets).toEqual([]);
 		expect([...j.store.keys()].sort()).toEqual(['lk_csrf', 'lk_op_tenant', 'lk_refresh']);
@@ -173,7 +173,7 @@ describe('refreshSession', () => {
 		const fetchFn = vi.fn(() =>
 			Promise.resolve(ok({ access_token: 'new-a', refresh_token: 'new-r' }))
 		);
-		expect(await refreshSession(j.api, fetchFn)).toBe('new-a');
+		expect(await refreshSession(j.api, fetchFn)).toEqual({ ok: true, access: 'new-a' });
 		expect(j.store.get('lk_access')).toBe('new-a');
 		expect(j.store.get('lk_refresh')).toBe('new-r');
 		expect(j.store.get('lk_csrf')).toBe('keep-me');

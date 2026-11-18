@@ -4,3 +4,8 @@
  * BFF proxy so the name lives in one place.
  */
 export const SCOPE_REQUIRED_HEADER = 'x-lk-scope-required';
+
+/** True for `/operator/scope` and anything below it, but not look-alikes such as `/operator/scopes`. */
+export function isOperatorScopePath(pathname: string): boolean {
+	return pathname === '/operator/scope' || pathname.startsWith('/operator/scope/');
+}

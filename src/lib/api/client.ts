@@ -21,7 +21,7 @@
 
 import { ApiError, isApiError, type ApiErrorBody } from './errors';
 import { getCsrfToken } from './csrf';
-import { SCOPE_REQUIRED_HEADER } from './scope-header';
+import { isOperatorScopePath, SCOPE_REQUIRED_HEADER } from './scope-header';
 import { z } from 'zod';
 
 function resolveBaseUrl(): string {
@@ -37,7 +37,7 @@ export interface RequestOptions extends Omit<RequestInit, 'body'> {
 
 /** True while the browser is inside the operator scope tree (browser-only). */
 function inOperatorScope(): boolean {
-	return typeof location !== 'undefined' && location.pathname.startsWith('/operator/scope');
+	return typeof location !== 'undefined' && isOperatorScopePath(location.pathname);
 }
 
 const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);

@@ -28,12 +28,14 @@ import type { RequestEvent } from './$types';
 import { config } from '#lib/server/config.ts';
 import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
 import { isAuthExpired, refreshSession } from '#lib/server/auth-refresh.ts';
+import { SESSION_EXPIRED_CODE } from '#lib/api/errors.ts';
 import { readOperatorScope } from '#lib/server/scope.ts';
 import { assertCsrf } from '#lib/server/csrf.ts';
 import { jsonError } from '#lib/server/http.ts';
 import {
 	buildUpstreamUrl,
 	isTokenEndpoint,
+	isUpstreamTimeout,
 	pickResponseHeaders,
 	scopeRequired,
 	scrubsTokens,
@@ -44,10 +46,12 @@ import {
 const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const NULL_BODY_STATUSES = new Set([204, 205, 304]);
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+/** A 3xx is relayed only for reads: a 307/308 on a mutation would make the browser replay it elsewhere. */
+const REDIRECTABLE_METHODS = new Set(['GET', 'HEAD']);
 
 /** 504/502 for a failed upstream call, logged without query string, headers or body. */
 function upstreamFailure(err: unknown, method: string, path: string): Response {
-	const timedOut = err instanceof DOMException && err.name === 'TimeoutError';
+	const timedOut = isUpstreamTimeout(err);
 	const status = timedOut ? 504 : 502;
 	console.warn('[bff-proxy]', status, method, `/${path}`);
 	return timedOut
@@ -117,18 +121,32 @@ async function proxy(
 		timeout.headersReceived();
 	}
 
-	if (attempt === 1 && isAuthExpired(upstream)) {
-		// Cancel the first body only once a retry is certain: when the refresh
-		// fails, Go's 401 is relayed below and its body must still be readable.
-		if (await refreshSession(cookies)) {
-			await upstream.body?.cancel();
-			return proxy(event, 2, body);
+	if (isAuthExpired(upstream)) {
+		if (attempt === 1) {
+			const refreshed = await refreshSession(cookies);
+			if (refreshed.ok) {
+				await upstream.body?.cancel();
+				return proxy(event, 2, body);
+			}
+			if (refreshed.reason === 'unavailable') {
+				// Go is down or slow, not the session: keep the cookies and let the
+				// client retry instead of signing the user out.
+				await upstream.body?.cancel();
+				return jsonError(503, 'refresh_unavailable', 'Session could not be renewed — try again');
+			}
 		}
+		// Refresh rejected, no refresh cookie, or the renewed token was refused too:
+		// the session is over. Tagged so the client signs out only for this 401.
+		await upstream.body?.cancel();
+		return jsonError(401, SESSION_EXPIRED_CODE, 'Your session has expired');
 	}
 
 	const headers = pickResponseHeaders(upstream.headers, config.GO_API_URL);
 	if (REDIRECT_STATUSES.has(upstream.status)) {
 		await upstream.body?.cancel();
+		if (!REDIRECTABLE_METHODS.has(request.method)) {
+			return jsonError(502, 'upstream_redirect', 'Go API answered a write with a redirect');
+		}
 		if (!headers.has('location')) {
 			return jsonError(502, 'upstream_redirect', 'Go API returned an unusable redirect');
 		}

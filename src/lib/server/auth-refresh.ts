@@ -90,12 +90,6 @@ export function establishSession(cookies: Cookies, tokens: TokenPair): void {
 }
 
 /**
- * Refresh using the request's cookies. Returns the new access token, or
- * null. A rejected refresh token ends the session (all auth cookies and
- * the operator scope are cleared); an unreachable Go API leaves the
- * cookies alone so the next request can try again.
- */
-/**
  * Go answers 401 for two different things: its authn middleware (expired or
  * invalid token — carries `WWW-Authenticate`, body `unauthenticated`) and
  * credential failures such as a wrong current password (no header). Only
@@ -107,23 +101,34 @@ export function isAuthExpired(resp: Response): boolean {
 	return resp.status === 401 && resp.headers.has('www-authenticate');
 }
 
+export type SessionRefresh =
+	| { ok: true; access: string }
+	/** `none`: no refresh cookie · `rejected`: Go refused it (session ended) · `unavailable`: Go unreachable or failing. */
+	| { ok: false; reason: 'none' | 'rejected' | 'unavailable' };
+
+/**
+ * Refresh using the request's cookies. A rejected refresh token ends the
+ * session (all auth cookies and the operator scope are cleared); an
+ * unreachable Go API leaves the cookies alone so the next request can try
+ * again. Callers use `reason` to tell "sign the user out" from "try again".
+ */
 export async function refreshSession(
 	cookies: Cookies,
 	fetchFn: typeof fetch = fetch
-): Promise<string | null> {
+): Promise<SessionRefresh> {
 	const refresh = cookies.get(REFRESH_COOKIE);
-	if (!refresh) return null;
+	if (!refresh) return { ok: false, reason: 'none' };
 
 	const result = await refreshTokens(refresh, fetchFn);
 	if (result.ok) {
 		setAuthCookies(cookies, result.tokens.access_token, result.tokens.refresh_token, {
 			keepCsrf: true
 		});
-		return result.tokens.access_token;
+		return { ok: true, access: result.tokens.access_token };
 	}
 	if (result.reason === 'rejected') {
 		clearAuthCookies(cookies);
 		clearOperatorScope(cookies);
 	}
-	return null;
+	return { ok: false, reason: result.reason };
 }

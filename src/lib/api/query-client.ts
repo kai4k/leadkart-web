@@ -43,6 +43,7 @@ const sessionGuard = createSessionGuard({
 		// Offline caches hold the ended session's pages and API data.
 		void clearPrivateCaches();
 	},
+	resetCache: () => void queryClient.resetQueries(),
 	notify: (message) => toast.error(message),
 	exitScope: exitOperatorScope,
 	location: () => window.location

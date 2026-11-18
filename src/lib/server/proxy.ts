@@ -157,3 +157,15 @@ export function upstreamTimeout(parent: AbortSignal | undefined, ms: number): Up
 export function scopeRequired(headers: Headers): boolean {
 	return headers.get(SCOPE_REQUIRED_HEADER) === '1';
 }
+
+/**
+ * True when an upstream call failed because Go was too slow: our own
+ * time-to-first-byte abort (`TimeoutError`) or undici's body timeout while a
+ * response was streaming (`TypeError` whose cause is `UND_ERR_BODY_TIMEOUT`).
+ * One definition for the proxy and server loads, so both answer 504.
+ */
+export function isUpstreamTimeout(err: unknown): boolean {
+	if (err instanceof DOMException && err.name === 'TimeoutError') return true;
+	if (!(err instanceof TypeError)) return false;
+	return (err.cause as { code?: unknown } | undefined)?.code === 'UND_ERR_BODY_TIMEOUT';
+}

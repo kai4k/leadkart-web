@@ -13,7 +13,7 @@
  *
  * Per CLAUDE.md rule 6 + the BFF cookie-auth ADR.
  */
-import { redirect, type Cookies } from '@sveltejs/kit';
+import { error, redirect, type Cookies } from '@sveltejs/kit';
 import { isAuthExpired, refreshSession } from './auth-refresh.ts';
 import { config } from './config.ts';
 import { ACCESS_COOKIE, REFRESH_COOKIE } from './cookies.ts';
@@ -96,9 +96,14 @@ export async function goFetch(
 	if (!access || !isAuthExpired(resp)) return resp;
 
 	const renewed = await refreshSession(cookies);
-	if (renewed) {
+	if (renewed.ok) {
 		await resp.body?.cancel();
-		return send(renewed);
+		return send(renewed.access);
+	}
+	if (renewed.reason === 'unavailable') {
+		// The session is fine, Go is not: callers must not read this 401 as "signed out".
+		await resp.body?.cancel();
+		throw error(503, 'Session could not be renewed — try again');
 	}
 	// Refresh token rejected (cookies cleared): the session is over.
 	if (!cookies.get(REFRESH_COOKIE) && init.requireAuth !== false) {

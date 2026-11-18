@@ -13,7 +13,7 @@ vi.mock('$app/state', () => ({ page: { data: {} } }));
 vi.mock('$ui', () => ({ toast: { error: vi.fn() } }));
 vi.mock('#lib/features/auth/api.ts', () => ({ logout: logoutRequest }));
 
-import { AuthError, ScopeInvalidError } from '#lib/api/errors.ts';
+import { AuthError, ScopeInvalidError, SESSION_EXPIRED_CODE } from '#lib/api/errors.ts';
 import { exitOperatorScope } from '#lib/api/operator-scope.ts';
 import { queryClient } from '#lib/api/query-client.ts';
 import { enterScope } from '#lib/features/operator/scope/api.ts';
@@ -27,18 +27,18 @@ beforeEach(() => {
 describe('private cache clearing triggers', () => {
 	it('session guard: an expired session (401) clears them', () => {
 		vi.stubGlobal('location', { pathname: '/leads', search: '' });
-		queryClient
-			.getQueryCache()
-			.config.onError?.(new AuthError(401), { state: { data: undefined } } as never);
+		const expired = new AuthError(401);
+		expired.code = SESSION_EXPIRED_CODE;
+		queryClient.getQueryCache().config.onError?.(expired, { state: { data: undefined } } as never);
 		expect(clearPrivateCaches).toHaveBeenCalledTimes(1);
 	});
 
-	it('session guard: scope_invalid clears them', () => {
+	it('session guard: scope_invalid clears them', async () => {
 		vi.stubGlobal('location', { pathname: '/operator/scope/members', search: '' });
 		queryClient
 			.getQueryCache()
 			.config.onError?.(new ScopeInvalidError('expired'), { state: { data: undefined } } as never);
-		expect(clearPrivateCaches).toHaveBeenCalled();
+		await vi.waitFor(() => expect(clearPrivateCaches).toHaveBeenCalled());
 	});
 
 	it('scope exit clears them after the DELETE', async () => {

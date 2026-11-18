@@ -302,7 +302,72 @@ test.describe('session refresh', () => {
 		});
 
 		expect(result.status).toBe(401);
-		expect(result.body).toHaveProperty('error');
+		expect(result.body).toMatchObject({ error: 'session_expired' });
+	});
+
+	test('refresh unavailable (Go down): 503 refresh_unavailable, session cookies kept', async ({
+		page,
+		context
+	}) => {
+		await signInAsTier(page, { tier: 'tenant-admin' });
+		await registerMock({
+			method: 'POST',
+			path: '/api/v1/auth/refresh',
+			status: 503,
+			body: { error: 'unavailable' }
+		});
+		await registerMock({
+			method: 'GET',
+			path: '/api/v1/users',
+			status: 401,
+			headers: EXPIRED_HEADERS,
+			body: EXPIRED_BODY
+		});
+		const refreshBefore = await cookieValue(context, 'lk_refresh');
+		await dropAccessCookie(context);
+
+		const result = await page.evaluate(async () => {
+			const resp = await fetch('/api/v1/users');
+			return { status: resp.status, body: (await resp.json()) as Record<string, unknown> };
+		});
+
+		expect(result.status).toBe(503);
+		expect(result.body).toMatchObject({ error: 'refresh_unavailable' });
+		expect(await cookieValue(context, 'lk_refresh')).toBe(refreshBefore);
+	});
+
+	test('refresh unavailable on a real client query: the SPA stays on the page, not /signin', async ({
+		page
+	}) => {
+		await signInAsTier(page, {
+			tier: 'tenant-admin',
+			permissions: ['tenant.admin', 'identity.users.view', 'identity.users.manage']
+		});
+		await registerMock({ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [] } });
+		await registerMock({
+			method: 'POST',
+			path: '/api/v1/auth/refresh',
+			status: 503,
+			body: { error: 'unavailable' }
+		});
+		await registerMock({
+			method: 'GET',
+			path: '/api/v1/users',
+			status: 401,
+			headers: EXPIRED_HEADERS,
+			body: EXPIRED_BODY
+		});
+
+		await page.goto('/settings/users');
+		await expect
+			.poll(
+				async () => (await listMockCalls()).filter((c) => c.path === '/api/v1/auth/refresh').length,
+				{ timeout: 10_000 }
+			)
+			.toBeGreaterThan(0);
+		// Retries (2 x backoff) have run out by now; the user was never sent away.
+		await page.waitForTimeout(3500);
+		await expect(page).toHaveURL(/\/settings\/users$/);
 	});
 
 	test('refresh rejected on a real client query: the SPA lands on /signin', async ({ page }) => {

@@ -235,6 +235,12 @@ export class ConflictError extends ApiError {
 	}
 }
 
+/**
+ * Wire code of the BFF's 401: the session is over (refresh rejected or absent).
+ * Only this 401 signs the user out; any other 401 is an ordinary failure of the call.
+ */
+export const SESSION_EXPIRED_CODE = 'session_expired';
+
 /** Wire code of the BFF's 409: the operator scope cookie is expired, tampered or gone. */
 export const SCOPE_INVALID_CODE = 'scope_invalid';
 
