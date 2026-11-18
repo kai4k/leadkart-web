@@ -113,7 +113,6 @@
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"formsnap": "^2.1.0",
-		"mode-watcher": "^1.1.0",
 		"svelte": "^5.57.3",
 		"svelte-i18n": "^4.0.1",
 		"svelte-sonner": "^1.1.1",

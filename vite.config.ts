@@ -48,9 +48,14 @@ export default defineConfig({
 				directives: {
 					'default-src': ['self'],
 					'script-src': ['self'],
-					// Svelte transitions and inline style attributes need this.
-					'style-src': ['self', 'unsafe-inline'],
-					'img-src': ['self', 'data:', 'blob:'],
+					// Svelte 5 transitions use the Web Animations API (no inline <style>).
+					// style-src-attr is needed for style="" attributes (app.html's
+					// display:contents wrapper, Svelte style: directives); style-src-elem
+					// stays 'self' so injected <style> elements are blocked.
+					'style-src': ['self'],
+					'style-src-elem': ['self'],
+					'style-src-attr': ['unsafe-inline'],
+					'img-src': ['self', 'data:'],
 					'font-src': ['self', 'data:'],
 					'connect-src': ['self'],
 					'worker-src': ['self'],
