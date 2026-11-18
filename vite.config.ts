@@ -40,7 +40,27 @@ export default defineConfig({
 		sveltekit({
 			preprocess: vitePreprocess(),
 			adapter: adapter({ out: 'build', precompress: true }),
-			alias: aliases
+			alias: aliases,
+			// Strict CSP. Kit adds per-request nonces to its own inline scripts and
+			// the app.html theme-prime script. script-src is never loosened.
+			csp: {
+				mode: 'auto',
+				directives: {
+					'default-src': ['self'],
+					'script-src': ['self'],
+					// Svelte transitions and inline style attributes need this.
+					'style-src': ['self', 'unsafe-inline'],
+					'img-src': ['self', 'data:', 'blob:'],
+					'font-src': ['self', 'data:'],
+					'connect-src': ['self'],
+					'worker-src': ['self'],
+					'manifest-src': ['self'],
+					'frame-ancestors': ['none'],
+					'base-uri': ['self'],
+					'form-action': ['self'],
+					'object-src': ['none']
+				}
+			}
 		})
 	],
 	resolve: {

@@ -11,7 +11,9 @@ import { sequence, type Handle, type ServerInit } from '@sveltejs/kit/hooks';
 import { waitLocale } from 'svelte-i18n';
 import { initI18n } from '#lib/i18n/index.ts';
 import { refreshSession } from '#lib/server/auth-refresh.ts';
+import { isProd } from '#lib/server/config.ts';
 import { ACCESS_COOKIE, REFRESH_COOKIE } from '#lib/server/cookies.ts';
+import { securityHeaders } from '#lib/server/security-headers.ts';
 
 // svelte-i18n throws on `$_` during SSR unless a locale is set. The server
 // always renders the fallback locale (per-request locale is not built).
@@ -45,4 +47,13 @@ const sessionRefresh: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
-export const handle: Handle = sequence(sessionRefresh);
+/** Baseline security headers on every response (CSP itself is Kit config in vite.config.ts). */
+const securityHeadersHandle: Handle = async ({ event, resolve }) => {
+	const response = await resolve(event);
+	for (const [name, value] of Object.entries(securityHeaders(isProd()))) {
+		response.headers.set(name, value);
+	}
+	return response;
+};
+
+export const handle: Handle = sequence(sessionRefresh, securityHeadersHandle);

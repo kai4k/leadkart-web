@@ -11,7 +11,11 @@
 	let { children } = $props();
 </script>
 
-<ModeWatcher defaultMode="light" />
+<!--
+	The app is light-only (no mode toggle), so ModeWatcher's inline head-priming
+	script is redundant and would violate the nonce-based CSP. Skip it.
+-->
+<ModeWatcher defaultMode="light" disableHeadScriptInjection />
 
 <QueryClientProvider client={queryClient}>
 	<NavProgressBar />

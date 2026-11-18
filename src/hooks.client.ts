@@ -1,3 +1,4 @@
+import '#lib/zod-jitless.ts'; // must precede every schema-defining module
 import type { ClientInit, HandleClientError } from '@sveltejs/kit/hooks';
 
 /**
