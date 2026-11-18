@@ -109,12 +109,16 @@ function syncCaches(qc: ReturnType<typeof useQueryClient>, order: OrderDto): voi
 }
 
 // ── State transitions ───────────────────────────────────────────────
+// Every per-order mutation takes the order id in its variables (never captured
+// at creation): the detail component is reused when only [id] changes, so a
+// captured id would act on the previous order.
 
-export function reviseQuotationMutation(id: string) {
+export function reviseQuotationMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
-		mutationFn: (req: ReviseQuotationRequest) => api.reviseQuotation(id, req),
-		onSuccess: (order) => {
+		mutationFn: ({ id, ...req }: { id: string } & ReviseQuotationRequest) =>
+			api.reviseQuotation(id, req),
+		onSuccess: (order, { id }) => {
 			syncCaches(qc, order);
 			void qc.invalidateQueries({ queryKey: ordersKeys.revisions(id) });
 			toast.success('Quotation revised');
@@ -123,10 +127,11 @@ export function reviseQuotationMutation(id: string) {
 	}));
 }
 
-export function approveQuotationMutation(id: string) {
+export function approveQuotationMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
-		mutationFn: (req: ApproveQuotationRequest = {}) => api.approveQuotation(id, req),
+		mutationFn: ({ id, ...req }: { id: string } & ApproveQuotationRequest) =>
+			api.approveQuotation(id, req),
 		onSuccess: (order) => {
 			syncCaches(qc, order);
 			toast.success('Quotation approved');
@@ -135,11 +140,12 @@ export function approveQuotationMutation(id: string) {
 	}));
 }
 
-export function recordPaymentMutation(id: string) {
+export function recordPaymentMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
-		mutationFn: (req: RecordPaymentRequest) => api.recordPayment(id, req),
-		onSuccess: () => {
+		mutationFn: ({ id, ...req }: { id: string } & RecordPaymentRequest) =>
+			api.recordPayment(id, req),
+		onSuccess: (_payment, { id }) => {
 			// Payment endpoint returns the PaymentDto, not the order — invalidate
 			// detail + payments so both surface the new payment + (for token)
 			// the resulting status flip.
@@ -152,10 +158,10 @@ export function recordPaymentMutation(id: string) {
 	}));
 }
 
-export function confirmOrderMutation(id: string) {
+export function confirmOrderMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
-		mutationFn: () => api.confirmOrder(id),
+		mutationFn: ({ id }: { id: string }) => api.confirmOrder(id),
 		onSuccess: (order) => {
 			syncCaches(qc, order);
 			toast.success('Order confirmed');
@@ -164,10 +170,10 @@ export function confirmOrderMutation(id: string) {
 	}));
 }
 
-export function markPackedMutation(id: string) {
+export function markPackedMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
-		mutationFn: (req: MarkPackedRequest) => api.markPacked(id, req),
+		mutationFn: ({ id, ...req }: { id: string } & MarkPackedRequest) => api.markPacked(id, req),
 		onSuccess: (order) => {
 			syncCaches(qc, order);
 			toast.success('Order marked as packed');
@@ -176,11 +182,11 @@ export function markPackedMutation(id: string) {
 	}));
 }
 
-export function generateInvoiceMutation(id: string) {
+export function generateInvoiceMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
-		mutationFn: () => api.generateInvoice(id),
-		onSuccess: (order) => {
+		mutationFn: ({ id }: { id: string }) => api.generateInvoice(id),
+		onSuccess: (order, { id }) => {
 			syncCaches(qc, order);
 			void qc.invalidateQueries({ queryKey: ordersKeys.invoice(id) });
 			toast.success('Invoice generated');
@@ -189,10 +195,10 @@ export function generateInvoiceMutation(id: string) {
 	}));
 }
 
-export function dispatchOrderMutation(id: string) {
+export function dispatchOrderMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
-		mutationFn: (req: DispatchRequest = {}) => api.dispatchOrder(id, req),
+		mutationFn: ({ id, ...req }: { id: string } & DispatchRequest) => api.dispatchOrder(id, req),
 		onSuccess: (order) => {
 			syncCaches(qc, order);
 			toast.success('Order dispatched');
@@ -201,10 +207,11 @@ export function dispatchOrderMutation(id: string) {
 	}));
 }
 
-export function markDeliveredMutation(id: string) {
+export function markDeliveredMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
-		mutationFn: (req: MarkDeliveredRequest = {}) => api.markDelivered(id, req),
+		mutationFn: ({ id, ...req }: { id: string } & MarkDeliveredRequest) =>
+			api.markDelivered(id, req),
 		onSuccess: (order) => {
 			syncCaches(qc, order);
 			toast.success('Order marked as delivered');
@@ -213,10 +220,10 @@ export function markDeliveredMutation(id: string) {
 	}));
 }
 
-export function completeOrderMutation(id: string) {
+export function completeOrderMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
-		mutationFn: () => api.completeOrder(id),
+		mutationFn: ({ id }: { id: string }) => api.completeOrder(id),
 		onSuccess: (order) => {
 			syncCaches(qc, order);
 			toast.success('Order complete');
@@ -225,11 +232,11 @@ export function completeOrderMutation(id: string) {
 	}));
 }
 
-export function cancelOrderMutation(id: string) {
+export function cancelOrderMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
-		mutationFn: (req: CancelOrderRequest) => api.cancelOrder(id, req),
-		onSuccess: (order) => {
+		mutationFn: ({ id, ...req }: { id: string } & CancelOrderRequest) => api.cancelOrder(id, req),
+		onSuccess: (order, { id }) => {
 			syncCaches(qc, order);
 			void qc.invalidateQueries({ queryKey: ordersKeys.creditNotes(id) });
 			void qc.invalidateQueries({ queryKey: ordersKeys.invoice(id) });

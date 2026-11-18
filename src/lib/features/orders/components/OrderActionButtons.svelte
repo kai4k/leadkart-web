@@ -23,7 +23,6 @@
 		canRecordTokenPayment,
 		canRevise
 	} from '$features/orders/view-models';
-	import { untrack } from 'svelte';
 	import {
 		approveQuotationMutation,
 		completeOrderMutation,
@@ -43,16 +42,12 @@
 
 	let { order, onRevise, onRecordPayment, onMarkPacked, onDispatch, onCancel }: Props = $props();
 
-	// Capture id once. order.id is invariant for the lifetime of this
-	// mounted instance — each order has its own detail route + remount.
-	const orderId = untrack(() => order.id);
-
 	// Mutations whose handlers are 100% local (no extra input dialog).
-	const approveM = approveQuotationMutation(orderId);
-	const confirmM = confirmOrderMutation(orderId);
-	const generateInvoiceM = generateInvoiceMutation(orderId);
-	const markDeliveredM = markDeliveredMutation(orderId);
-	const completeM = completeOrderMutation(orderId);
+	const approveM = approveQuotationMutation();
+	const confirmM = confirmOrderMutation();
+	const generateInvoiceM = generateInvoiceMutation();
+	const markDeliveredM = markDeliveredMutation();
+	const completeM = completeOrderMutation();
 
 	const isRevise = $derived(canRevise(order.status));
 	const isApprove = $derived(canApprove(order.status));
@@ -78,7 +73,7 @@
 		<Button
 			size="sm"
 			loading={approveM.isPending}
-			onclick={() => approveM.mutate({})}
+			onclick={() => approveM.mutate({ id: order.id })}
 			data-testid="action-approve"
 		>
 			<Icon icon={Check} size="sm" /> Approve quotation
@@ -95,7 +90,7 @@
 		<Button
 			size="sm"
 			loading={confirmM.isPending}
-			onclick={() => confirmM.mutate()}
+			onclick={() => confirmM.mutate({ id: order.id })}
 			data-testid="action-confirm"
 		>
 			<Icon icon={Check} size="sm" /> Confirm order
@@ -112,7 +107,7 @@
 		<Button
 			size="sm"
 			loading={generateInvoiceM.isPending}
-			onclick={() => generateInvoiceM.mutate()}
+			onclick={() => generateInvoiceM.mutate({ id: order.id })}
 			data-testid="action-generate-invoice"
 		>
 			Generate invoice
@@ -129,7 +124,7 @@
 		<Button
 			size="sm"
 			loading={markDeliveredM.isPending}
-			onclick={() => markDeliveredM.mutate({})}
+			onclick={() => markDeliveredM.mutate({ id: order.id })}
 			data-testid="action-mark-delivered"
 		>
 			Mark delivered
@@ -146,7 +141,7 @@
 		<Button
 			size="sm"
 			loading={completeM.isPending}
-			onclick={() => completeM.mutate()}
+			onclick={() => completeM.mutate({ id: order.id })}
 			data-testid="action-complete"
 		>
 			<Icon icon={CheckCircle2} size="sm" /> Complete

@@ -2,7 +2,6 @@
 	MarkPackedDialog — captures box count for the packed transition.
 -->
 <script lang="ts">
-	import { untrack } from 'svelte';
 	import { Alert, Button, Dialog } from '$ui';
 	import { NumberInput } from '$form';
 	import { useForm } from '#lib/hooks/index.ts';
@@ -16,20 +15,23 @@
 	};
 	let { orderId, open = $bindable(false), onOpenChange }: Props = $props();
 
-	const packM = markPackedMutation(untrack(() => orderId));
+	const packM = markPackedMutation();
 	const form = useForm(markPackedRequestSchema, { box_count: 1 });
 
 	async function handleSubmit(e: SubmitEvent) {
 		await form.submit(e, async (values) => {
 			await new Promise<void>((resolve, reject) => {
-				packM.mutate(values, {
-					onSuccess: () => {
-						onOpenChange(false);
-						form.reset();
-						resolve();
-					},
-					onError: (err) => reject(err)
-				});
+				packM.mutate(
+					{ id: orderId, ...values },
+					{
+						onSuccess: () => {
+							onOpenChange(false);
+							form.reset();
+							resolve();
+						},
+						onError: (err) => reject(err)
+					}
+				);
 			});
 		});
 	}

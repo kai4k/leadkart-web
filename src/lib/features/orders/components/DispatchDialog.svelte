@@ -4,7 +4,6 @@
 	endpoint creates a consignment in the Dispatch service via outbox.
 -->
 <script lang="ts">
-	import { untrack } from 'svelte';
 	import { Alert, Button, Dialog } from '$ui';
 	import { TextField } from '$form';
 	import { useForm } from '#lib/hooks/index.ts';
@@ -18,7 +17,7 @@
 	};
 	let { orderId, open = $bindable(false), onOpenChange }: Props = $props();
 
-	const dispatchM = dispatchOrderMutation(untrack(() => orderId));
+	const dispatchM = dispatchOrderMutation();
 	const form = useForm(dispatchRequestSchema, {
 		carrier: '',
 		tracking_number: '',
@@ -28,14 +27,17 @@
 	async function handleSubmit(e: SubmitEvent) {
 		await form.submit(e, async (values) => {
 			await new Promise<void>((resolve, reject) => {
-				dispatchM.mutate(values, {
-					onSuccess: () => {
-						onOpenChange(false);
-						form.reset();
-						resolve();
-					},
-					onError: (err) => reject(err)
-				});
+				dispatchM.mutate(
+					{ id: orderId, ...values },
+					{
+						onSuccess: () => {
+							onOpenChange(false);
+							form.reset();
+							resolve();
+						},
+						onError: (err) => reject(err)
+					}
+				);
 			});
 		});
 	}

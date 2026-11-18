@@ -3,7 +3,6 @@
 	mutation; the parent owns `open` so the action button can open it.
 -->
 <script lang="ts">
-	import { untrack } from 'svelte';
 	import { Alert, Button, Dialog } from '$ui';
 	import { TextField } from '$form';
 	import { useForm } from '#lib/hooks/index.ts';
@@ -18,7 +17,7 @@
 	};
 	let { orderId, open = $bindable(false), onOpenChange, onCancelled }: Props = $props();
 
-	const cancelM = cancelOrderMutation(untrack(() => orderId));
+	const cancelM = cancelOrderMutation();
 	const form = useForm(cancelOrderRequestSchema, { reason: '' });
 
 	async function handleSubmit(e: SubmitEvent) {
@@ -29,15 +28,18 @@
 		const synthetic = e ?? (new Event('submit') as unknown as SubmitEvent);
 		await form.submit(synthetic, async (values) => {
 			await new Promise<void>((resolve, reject) => {
-				cancelM.mutate(values, {
-					onSuccess: () => {
-						onOpenChange(false);
-						form.reset();
-						onCancelled?.();
-						resolve();
-					},
-					onError: (err) => reject(err)
-				});
+				cancelM.mutate(
+					{ id: orderId, ...values },
+					{
+						onSuccess: () => {
+							onOpenChange(false);
+							form.reset();
+							onCancelled?.();
+							resolve();
+						},
+						onError: (err) => reject(err)
+					}
+				);
 			});
 		});
 	}

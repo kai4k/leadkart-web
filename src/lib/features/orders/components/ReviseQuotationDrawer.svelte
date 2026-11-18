@@ -42,7 +42,7 @@
 		onSearchCatalogue
 	}: Props = $props();
 
-	const reviseM = reviseQuotationMutation(untrack(() => order.id));
+	const reviseM = reviseQuotationMutation();
 
 	function seedRows(): DraftItem[] {
 		return order.current_items.map((it) => ({
@@ -103,39 +103,42 @@
 	async function onSubmit(e: SubmitEvent) {
 		await form.submit(e, async (values: ReviseQuotationRequest) => {
 			await new Promise<void>((resolve, reject) => {
-				reviseM.mutate(values, {
-					onSuccess: () => {
-						onOpenChange(false);
-						resolve();
-					},
-					onError: (err) => {
-						// ValidationError → form.errors (handled by useForm).
-						// Map every other typed subclass to a human banner.
-						if (err instanceof ValidationError) {
-							reject(err);
-						} else if (err instanceof ConflictError) {
-							reject(
-								new Error(
-									err.detail || 'This order was revised by someone else — reload and try again.'
-								)
-							);
-						} else if (err instanceof AuthError) {
-							reject(
-								new Error(
-									err.status === 403
-										? "You don't have permission to revise quotations."
-										: 'Your session expired. Sign in again.'
-								)
-							);
-						} else if (err instanceof NotFoundError) {
-							reject(new Error('This order was deleted or moved.'));
-						} else if (err instanceof NetworkError) {
-							reject(new Error('Check your network connection and try again.'));
-						} else {
-							reject(new Error('Failed to revise. Please try again.'));
+				reviseM.mutate(
+					{ id: order.id, ...values },
+					{
+						onSuccess: () => {
+							onOpenChange(false);
+							resolve();
+						},
+						onError: (err) => {
+							// ValidationError → form.errors (handled by useForm).
+							// Map every other typed subclass to a human banner.
+							if (err instanceof ValidationError) {
+								reject(err);
+							} else if (err instanceof ConflictError) {
+								reject(
+									new Error(
+										err.detail || 'This order was revised by someone else — reload and try again.'
+									)
+								);
+							} else if (err instanceof AuthError) {
+								reject(
+									new Error(
+										err.status === 403
+											? "You don't have permission to revise quotations."
+											: 'Your session expired. Sign in again.'
+									)
+								);
+							} else if (err instanceof NotFoundError) {
+								reject(new Error('This order was deleted or moved.'));
+							} else if (err instanceof NetworkError) {
+								reject(new Error('Check your network connection and try again.'));
+							} else {
+								reject(new Error('Failed to revise. Please try again.'));
+							}
 						}
 					}
-				});
+				);
 			});
 		});
 	}

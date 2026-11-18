@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { resetMock, registerMock, registerMocks } from './helpers/mock';
+import { listMockCalls, resetMock, registerMock, registerMocks } from './helpers/mock';
 import { signInAsTier } from './helpers/sign-in';
 import { TEST_TENANT_ID, TEST_MEMBERSHIP_ID } from './helpers/fake-jwt';
 
@@ -613,6 +613,66 @@ test.describe('Orders — detail page', () => {
 		await expect(page.locator('[data-sonner-toast]').getByText(/quotation revised/i)).toBeVisible({
 			timeout: 5000
 		});
+	});
+
+	test('action after client-side navigation between orders hits the order on screen', async ({
+		page
+	}) => {
+		// SvelteKit reuses the detail component when only [id] changes. With B cached
+		// the page never passes through a loading state, so any id captured at mount
+		// would stay on the previous order.
+		await signInAsTier(page, { tier: 'tenant-admin', permissions: PERMS });
+		const orderA = makeOrder({ id: ORDER_DRAFT, order_number: 'ORD-A', status: 'quotation_draft' });
+		const orderB = makeOrder({
+			id: ORDER_DRAFT_2,
+			order_number: 'ORD-B',
+			status: 'quotation_draft'
+		});
+		await detailFixtures(ORDER_DRAFT, orderA);
+		await detailFixtures(ORDER_DRAFT_2, orderB);
+		await registerMocks([
+			{
+				method: 'GET',
+				path: '/api/v1/orders',
+				status: 200,
+				body: { items: [orderA, orderB], has_more: false }
+			},
+			{
+				method: 'POST',
+				path: `/api/v1/orders/${ORDER_DRAFT}/approve-quotation`,
+				status: 200,
+				body: { ...orderA, status: 'quotation_approved' }
+			},
+			{
+				method: 'POST',
+				path: `/api/v1/orders/${ORDER_DRAFT_2}/approve-quotation`,
+				status: 200,
+				body: { ...orderB, status: 'quotation_approved' }
+			}
+		]);
+		// Warm the cache for B: A -> list -> B.
+		await page.goto(`/orders/${ORDER_DRAFT}`);
+		await expect(page.getByTestId('order-number')).toContainText('ORD-A');
+		await page.getByRole('link', { name: /back to orders/i }).click();
+		await page.getByText('ORD-B').click();
+		await expect(page.getByTestId('order-number')).toContainText('ORD-B');
+		// Client-side hop B -> A (same route, only [id] changes).
+		await page.evaluate((href) => {
+			const a = document.createElement('a');
+			a.href = href;
+			a.id = 'hop-to-a';
+			document.body.appendChild(a);
+			a.click();
+		}, `/orders/${ORDER_DRAFT}`);
+		await expect(page.getByTestId('order-number')).toContainText('ORD-A');
+		await page.getByTestId('action-approve').click();
+		await expect(page.locator('[data-sonner-toast]').getByText(/quotation approved/i)).toBeVisible({
+			timeout: 5000
+		});
+		const approvals = (await listMockCalls())
+			.filter((c) => c.method === 'POST' && c.path.endsWith('/approve-quotation'))
+			.map((c) => c.path);
+		expect(approvals).toEqual([`/api/v1/orders/${ORDER_DRAFT}/approve-quotation`]);
 	});
 
 	test('out-of-order transition guard: dispatched action NOT shown on a draft order', async ({

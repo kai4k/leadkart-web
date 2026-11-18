@@ -7,4 +7,6 @@
 
 <svelte:head><title>Order · LeadKart</title></svelte:head>
 
-<OrderDetail {id} />
+{#key id}
+	<OrderDetail {id} />
+{/key}

@@ -24,7 +24,7 @@
 	};
 	let { order, open = $bindable(false), onOpenChange, defaultKind }: Props = $props();
 
-	const recordM = recordPaymentMutation(untrack(() => order.id));
+	const recordM = recordPaymentMutation();
 
 	const initialKind: PaymentKind = $derived(
 		defaultKind ?? (order.status === 'quotation_approved' ? 'token' : 'full')
@@ -58,14 +58,17 @@
 	async function handleSubmit(e: SubmitEvent) {
 		await form.submit(e, async (values) => {
 			await new Promise<void>((resolve, reject) => {
-				recordM.mutate(values, {
-					onSuccess: () => {
-						onOpenChange(false);
-						form.reset();
-						resolve();
-					},
-					onError: (err) => reject(err)
-				});
+				recordM.mutate(
+					{ id: order.id, ...values },
+					{
+						onSuccess: () => {
+							onOpenChange(false);
+							form.reset();
+							resolve();
+						},
+						onError: (err) => reject(err)
+					}
+				);
 			});
 		});
 	}
