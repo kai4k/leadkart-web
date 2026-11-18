@@ -1,6 +1,7 @@
 /**
- * svelte-i18n setup — lazy-loaded locales registered at hooks.client
- * boot. Default locale: English. Hindi staged for v0.3+ when the BRD
+ * svelte-i18n setup — one `initI18n`, called from both hooks.client (init)
+ * and hooks.server (init). The server always uses the fallback locale
+ * (no `window`/`navigator` there); the client picks from the browser. Default locale: English. Hindi staged for v0.3+ when the BRD
  * says first multi-locale tenant lands.
  *
  * Per svelte-i18n docs: register locales with `register()` then call
@@ -23,6 +24,9 @@ export function initI18n(): void {
 	// no-floating-promises per the rule's docs).
 	void init({
 		fallbackLocale: FALLBACK_LOCALE,
-		initialLocale: getLocaleFromNavigator() ?? FALLBACK_LOCALE
+		initialLocale:
+			typeof window === 'undefined'
+				? FALLBACK_LOCALE
+				: (getLocaleFromNavigator() ?? FALLBACK_LOCALE)
 	});
 }

@@ -114,9 +114,18 @@ test.describe('Auth — must_change_password', () => {
 		await page.getByRole('button', { name: /sign in/i }).click();
 		await page.waitForURL(/\/must-change-password/);
 
+		const pageErrors: Error[] = [];
+		page.on('pageerror', (e) => pageErrors.push(e));
+
+		// Hard navigation: the redirect target is server-rendered, which needs
+		// svelte-i18n initialised on the server.
 		await page.goto('/dashboard');
 
 		await page.waitForURL(/\/must-change-password\?next=%2Fdashboard$/);
+		await expect(
+			page.getByRole('heading', { level: 1, name: /set a new password/i })
+		).toBeVisible();
+		expect(pageErrors).toEqual([]);
 	});
 
 	test('must-change-password page rotates → redirects to /dashboard', async ({ page }) => {

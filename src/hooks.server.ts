@@ -7,9 +7,18 @@
  * The refresh itself lives in `#lib/server/auth-refresh.ts` (single
  * implementation, single-flight).
  */
-import { sequence, type Handle } from '@sveltejs/kit/hooks';
+import { sequence, type Handle, type ServerInit } from '@sveltejs/kit/hooks';
+import { waitLocale } from 'svelte-i18n';
+import { initI18n } from '#lib/i18n/index.ts';
 import { refreshSession } from '#lib/server/auth-refresh.ts';
 import { ACCESS_COOKIE, REFRESH_COOKIE } from '#lib/server/cookies.ts';
+
+// svelte-i18n throws on `$_` during SSR unless a locale is set. The server
+// always renders the fallback locale (per-request locale is not built).
+export const init: ServerInit = async () => {
+	initI18n();
+	await waitLocale();
+};
 
 /**
  * Silent refresh: access cookie gone (15-minute expiry) + refresh cookie
