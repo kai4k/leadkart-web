@@ -82,7 +82,9 @@ export const actions: Actions = {
 
 		const next = safeRedirectPath(url.searchParams.get('next'), url.origin);
 		const target = tokens.must_change_password
-			? `/must-change-password?next=${encodeURIComponent(next)}`
+			? next === '/dashboard'
+				? '/must-change-password'
+				: `/must-change-password?next=${encodeURIComponent(next)}`
 			: next;
 
 		// SvelteKit form actions throw redirect() to navigate post-action.

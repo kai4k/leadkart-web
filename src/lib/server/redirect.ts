@@ -28,5 +28,9 @@ export function safeRedirectPath(
 		return fallback;
 	}
 	if (url.origin !== origin) return fallback;
-	return url.pathname + url.search + url.hash;
+	// Validate the OUTPUT too: dot-segment normalisation turns `/.//evil.com`
+	// and `/%2e//evil.com` into `//evil.com`, which a browser reads as another host.
+	const path = url.pathname + url.search + url.hash;
+	if (!path.startsWith('/') || path.startsWith('//')) return fallback;
+	return path;
 }

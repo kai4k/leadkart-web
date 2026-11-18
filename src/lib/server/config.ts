@@ -34,53 +34,75 @@ import { z } from 'zod';
 
 const DEV_SCOPE_SECRET = 'dev-only-scope-cookie-secret-not-for-production';
 
-export const configSchema = z
-	.object({
-		/**
-		 * URL the SvelteKit BFF uses to reach the Go API server-to-server.
-		 * Never internet-facing — the Go service sits behind the reverse
-		 * proxy or in the same K8s pod.
-		 */
-		GO_API_URL: z.string().url('GO_API_URL must be a valid URL (e.g. http://localhost:8080)'),
+/** Empty env values (`KEY=` in a copied .env file) mean "unset". */
+const emptyToUndefined = (v: unknown) => (v === '' ? undefined : v);
 
-		/**
-		 * Drives cookie `Secure` flag and the access-cookie name prefix:
-		 *   - 'production': Secure=true, name '__Host-lk_access' (requires HTTPS)
-		 *   - anything else: Secure=false, name 'lk_access' (HTTP dev / test)
-		 *
-		 * Fail closed: an unset NODE_ENV means production, so cookies get
-		 * `Secure` and the `__Host-` prefix. Local dev and tests set it
-		 * explicitly (`.env.local` sets 'development'; playwright sets 'test').
-		 */
-		NODE_ENV: z.enum(['development', 'test', 'production']).default('production'),
+/**
+ * `allowDevSecret` is Kit's `dev` flag (vite dev server). Only then may the
+ * public in-source fallback sign the operator-scope cookie; every built
+ * server (preview, e2e, production) must supply SCOPE_COOKIE_SECRET.
+ */
+export function createConfigSchema({ allowDevSecret }: { allowDevSecret: boolean }) {
+	return z
+		.object({
+			/**
+			 * URL the SvelteKit BFF uses to reach the Go API server-to-server.
+			 * Never internet-facing — the Go service sits behind the reverse
+			 * proxy or in the same K8s pod.
+			 */
+			GO_API_URL: z.string().url('GO_API_URL must be a valid URL (e.g. http://localhost:8080)'),
 
-		/** HMAC key for the operator-scope cookie. Required in production. */
-		SCOPE_COOKIE_SECRET: z.string().min(32).optional(),
+			/**
+			 * Drives cookie `Secure` flag and the access-cookie name prefix:
+			 *   - 'production': Secure=true, name '__Host-lk_access' (requires HTTPS)
+			 *   - anything else: Secure=false, name 'lk_access' (HTTP dev / test)
+			 *
+			 * Fail closed: an unset NODE_ENV means production, so cookies get
+			 * `Secure` and the `__Host-` prefix. Local dev and tests set it
+			 * explicitly (`.env.local` sets 'development'; playwright sets 'test').
+			 */
+			NODE_ENV: z.enum(['development', 'test', 'production']).default('production'),
 
-		/** Public origin, as given to adapter-node. Checked only when set. */
-		ORIGIN: z.string().url().optional(),
+			/** HMAC key for the operator-scope cookie. Required unless `allowDevSecret`. */
+			SCOPE_COOKIE_SECRET: z.preprocess(emptyToUndefined, z.string().min(32).optional()),
 
-		/** Timeout for every BFF → Go request. */
-		UPSTREAM_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000)
-	})
-	.superRefine((v, ctx) => {
-		if (v.NODE_ENV !== 'production') return;
-		if (!v.SCOPE_COOKIE_SECRET) {
-			ctx.addIssue({
-				code: 'custom',
-				path: ['SCOPE_COOKIE_SECRET'],
-				message: 'SCOPE_COOKIE_SECRET (32+ chars) is required in production'
-			});
-		}
-		if (v.ORIGIN && !v.ORIGIN.startsWith('https://')) {
-			ctx.addIssue({
-				code: 'custom',
-				path: ['ORIGIN'],
-				message: 'ORIGIN must be https in production'
-			});
-		}
-	})
-	.transform((v) => ({ ...v, SCOPE_COOKIE_SECRET: v.SCOPE_COOKIE_SECRET ?? DEV_SCOPE_SECRET }));
+			/** Public origin, as given to adapter-node. Checked only when set. */
+			ORIGIN: z.preprocess(
+				emptyToUndefined,
+				z
+					.string()
+					.url()
+					.refine((v) => new URL(v).origin === v, 'ORIGIN must be a bare origin (no path)')
+					.optional()
+			),
+
+			/** Timeout for every BFF → Go request. */
+			UPSTREAM_TIMEOUT_MS: z.preprocess(
+				emptyToUndefined,
+				z.coerce.number().int().positive().default(10_000)
+			)
+		})
+		.superRefine((v, ctx) => {
+			if (!v.SCOPE_COOKIE_SECRET && !allowDevSecret) {
+				ctx.addIssue({
+					code: 'custom',
+					path: ['SCOPE_COOKIE_SECRET'],
+					message: 'SCOPE_COOKIE_SECRET (32+ chars) is required'
+				});
+			}
+			if (v.NODE_ENV === 'production' && v.ORIGIN && !v.ORIGIN.startsWith('https://')) {
+				ctx.addIssue({
+					code: 'custom',
+					path: ['ORIGIN'],
+					message: 'ORIGIN must be https in production'
+				});
+			}
+		})
+		.transform((v) => ({ ...v, SCOPE_COOKIE_SECRET: v.SCOPE_COOKIE_SECRET ?? DEV_SCOPE_SECRET }));
+}
+
+/** Strict default: no dev fallback secret. */
+export const configSchema = createConfigSchema({ allowDevSecret: false });
 
 export type Config = z.infer<typeof configSchema>;
 
@@ -95,7 +117,7 @@ export type Config = z.infer<typeof configSchema>;
  * Zod error if it's missing; the build never depends on it.
  */
 function load(): Config {
-	const parsed = configSchema.safeParse({
+	const parsed = createConfigSchema({ allowDevSecret: dev }).safeParse({
 		GO_API_URL,
 		// Schema default is 'production' (fail closed); under `vite dev` a fresh
 		// clone without .env.local should still work.
