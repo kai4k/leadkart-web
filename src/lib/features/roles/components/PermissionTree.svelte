@@ -79,7 +79,10 @@
 							<span class="label text-fg font-mono text-xs">{entry.name}</span>
 						</label>
 						<Tooltip.Root>
-							<Tooltip.Trigger class="text-fg-subtle hover:text-fg-muted">
+							<Tooltip.Trigger
+								class="text-fg-subtle hover:text-fg-muted"
+								aria-label="About {entry.name}"
+							>
 								<Icon icon={Info} size="sm" />
 							</Tooltip.Trigger>
 							<Tooltip.Content>{entry.description}</Tooltip.Content>

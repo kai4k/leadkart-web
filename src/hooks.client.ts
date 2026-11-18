@@ -1,4 +1,4 @@
-import type { HandleClientError } from '@sveltejs/kit/hooks';
+import type { ClientInit, HandleClientError } from '@sveltejs/kit/hooks';
 
 /**
  * Client-side hooks per SvelteKit 3 canon. Initialises i18n on first paint.
@@ -11,9 +11,15 @@ import type { HandleClientError } from '@sveltejs/kit/hooks';
  *
  * https://svelte.dev/docs/kit/hooks#shared-hooks-handleerror
  */
+import { waitLocale } from 'svelte-i18n';
 import { initI18n } from '#lib/i18n/index.ts';
 
-initI18n();
+// Kit's client `init` hook is awaited before hydration, so the locale is
+// set before first paint (module-level init raced the first format call).
+export const init: ClientInit = async () => {
+	initI18n();
+	await waitLocale();
+};
 
 export const handleError: HandleClientError = ({ kind, error, event }) => {
 	// Kit 3 routes expected (`error(...)`) errors through this hook too.

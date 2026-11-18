@@ -4,11 +4,11 @@
 	import { Alert, Button } from '$ui';
 
 	/**
-	 * Tenant Settings error boundary — climbs to here when a load
-	 * function under /settings/tenant/* throws, rather than the (app)
-	 * group's +error.svelte. Keeps the user inside the AppShell with
-	 * a settings-aware retry path instead of bouncing them to a
-	 * generic full-page error.
+	 * Tenant Settings error boundary — renders when a page load or
+	 * action under /settings/tenant/* throws. NOTE: errors thrown by this
+	 * directory's own +layout.server.ts load are rendered by the PARENT
+	 * error page (`(app)/+error.svelte`), since a layout's error cannot be
+	 * caught by a boundary at the same level.
 	 *
 	 * Per CLAUDE.md route-group rule: every layout group ships its
 	 * own +error.svelte so error UI matches the surrounding layout.

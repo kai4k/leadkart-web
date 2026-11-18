@@ -1,5 +1,6 @@
 <script lang="ts">
 	import '../app.css';
+	import { Tooltip } from '$ui';
 	import { theme } from '#lib/hooks/use-theme.svelte.ts';
 
 	let { children } = $props();
@@ -17,4 +18,6 @@
 
 <a href="#main-content" class="skip-link">Skip to main content</a>
 
-{@render children()}
+<Tooltip.Provider delayDuration={200}>
+	{@render children()}
+</Tooltip.Provider>

@@ -36,6 +36,11 @@ const PAIRS = [
 	// Muted text — large-text AA acceptable
 	{ fg: 'color-fg-muted', bg: 'color-bg', min: 4.5, label: 'muted text on canvas' },
 	{ fg: 'color-fg-muted', bg: 'color-bg-elevated', min: 4.5, label: 'muted text on card' },
+	{ fg: 'color-fg-muted', bg: 'color-bg-muted', min: 4.5, label: 'muted text on muted/hover bg' },
+	{ fg: 'color-fg-subtle', bg: 'color-bg', min: 4.5, label: 'subtle text on canvas' },
+	{ fg: 'color-fg-subtle', bg: 'color-bg-elevated', min: 4.5, label: 'subtle text on card' },
+	{ fg: 'color-fg-subtle', bg: 'color-bg-subtle', min: 4.5, label: 'subtle text on subtle bg' },
+	{ fg: 'color-fg-subtle', bg: 'color-bg-muted', min: 4.5, label: 'subtle text on muted/hover bg' },
 	// Foreground on primary fill (buttons, badges)
 	{ fg: 'color-primary-fg', bg: 'color-primary', min: 4.5, label: 'on-primary text' },
 	// Semantic colour pairs (soft-fill badges, alerts)

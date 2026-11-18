@@ -29,7 +29,7 @@ import {
 	UPSTREAM_TIMEOUT_MS
 } from '$app/env/private';
 
-import { building } from '$app/env';
+import { building, dev } from '$app/env';
 import { z } from 'zod';
 
 const DEV_SCOPE_SECRET = 'dev-only-scope-cookie-secret-not-for-production';
@@ -97,7 +97,9 @@ export type Config = z.infer<typeof configSchema>;
 function load(): Config {
 	const parsed = configSchema.safeParse({
 		GO_API_URL,
-		NODE_ENV,
+		// Schema default is 'production' (fail closed); under `vite dev` a fresh
+		// clone without .env.local should still work.
+		NODE_ENV: NODE_ENV || (dev ? 'development' : undefined),
 		SCOPE_COOKIE_SECRET,
 		ORIGIN,
 		UPSTREAM_TIMEOUT_MS
