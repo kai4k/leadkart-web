@@ -5,7 +5,10 @@ const apiDelete = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 const logoutRequest = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 const goto = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 
-vi.mock('#lib/utils/private-caches.ts', () => ({ clearPrivateCaches }));
+vi.mock('#lib/utils/private-caches.ts', () => ({
+	clearPrivateCaches,
+	IMPERSONATION_SESSION_KEY: 'leadkart-impersonation-session'
+}));
 vi.mock('$api/client', () => ({ api: { delete: apiDelete } }));
 vi.mock('$api/csrf', () => ({ getCsrfToken: () => 'csrf' }));
 vi.mock('$app/navigation', () => ({ goto }));
@@ -15,7 +18,11 @@ vi.mock('#lib/features/auth/api.ts', () => ({ logout: logoutRequest }));
 
 import { AuthError, ScopeInvalidError, SESSION_EXPIRED_CODE } from '#lib/api/errors.ts';
 import { exitOperatorScope } from '#lib/api/operator-scope.ts';
-import { createQueryClient } from '#lib/api/query-client.ts';
+import {
+	clearUserBrowserState,
+	createQueryClient,
+	renderQueryClient
+} from '#lib/api/query-client.ts';
 import { enterScope } from '#lib/features/operator/scope/api.ts';
 import { session } from '#lib/features/auth/stores/session.svelte.ts';
 
@@ -81,5 +88,23 @@ describe('private cache clearing triggers', () => {
 		await session.logout();
 		expect(clearPrivateCaches).toHaveBeenCalledTimes(1);
 		expect(loc.href).toBe('/signin');
+	});
+
+	it('clearUserBrowserState drops the query cache, the impersonation marker and the caches', async () => {
+		const client = renderQueryClient();
+		client.setQueryData(['me', 'capabilities'], { email: 'previous@example.com' });
+		window.localStorage.setItem('leadkart-impersonation-session', 'sess-1');
+		await clearUserBrowserState();
+		expect(client.getQueryData(['me', 'capabilities'])).toBeUndefined();
+		expect(window.localStorage.getItem('leadkart-impersonation-session')).toBeNull();
+		expect(clearPrivateCaches).toHaveBeenCalledTimes(1);
+	});
+
+	it('logout clears the browser query cache too', async () => {
+		const client = renderQueryClient();
+		client.setQueryData(['me', 'capabilities'], { email: 'previous@example.com' });
+		vi.stubGlobal('window', { location: { href: '/dashboard' } });
+		await session.logout();
+		expect(client.getQueryData(['me', 'capabilities'])).toBeUndefined();
 	});
 });

@@ -25,7 +25,7 @@ export const init: ServerInit = async () => {
 /**
  * Silent refresh: access cookie gone (15-minute expiry) + refresh cookie
  * present → refresh now. Later `event.cookies.get(...)` calls in the same
- * request see the new value.
+ * request see the new value; the outcome is kept on `event.locals.refreshOutcome`.
  *
  * Skips NO_REFRESH_PREFIXES (signin/logout/reset handle their own session):
  * static assets and signed-out visitors carry no refresh cookie, and a
@@ -42,7 +42,9 @@ const sessionRefresh: Handle = async ({ event, resolve }) => {
 		event.cookies.get(REFRESH_COOKIE) &&
 		!NO_REFRESH_PREFIXES.some((prefix) => event.url.pathname.startsWith(prefix))
 	) {
-		await refreshSession(event.cookies);
+		const outcome = await refreshSession(event.cookies);
+		// Loads tell "Go is down" (503) from "signed out" (redirect) by this.
+		event.locals.refreshOutcome = outcome.ok ? 'renewed' : outcome.reason;
 	}
 	return resolve(event);
 };

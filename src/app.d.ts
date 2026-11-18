@@ -5,7 +5,13 @@ import type { Capabilities } from '#lib/features/auth/api.ts';
 declare global {
 	namespace App {
 		// interface Error {}
-		// interface Locals {}
+		interface Locals {
+			/**
+			 * Outcome of the silent refresh in hooks.server.ts; unset when none was
+			 * attempted. `unavailable` = Go could not be reached: the session may be fine.
+			 */
+			refreshOutcome?: 'renewed' | 'none' | 'rejected' | 'unavailable';
+		}
 		interface PageData {
 			/**
 			 * SSR-bootstrapped capabilities from the (app) root layout server load.

@@ -1,8 +1,7 @@
 import { startImpersonation, endImpersonation, listImpersonationSessions } from '../api';
 import { ApiError } from '$api/errors';
+import { IMPERSONATION_SESSION_KEY as ACTIVE_SESSION_KEY } from '#lib/utils/private-caches.ts';
 import type { ImpersonationSessionDto, CreateImpersonationSessionRequest } from '../types';
-
-const ACTIVE_SESSION_KEY = 'leadkart-impersonation-session';
 
 type ImpersonationStatus = 'idle' | 'loading' | 'active' | 'mutating' | 'error';
 

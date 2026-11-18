@@ -3,14 +3,15 @@
 	import NavProgressBar from '$layouts/NavProgressBar.svelte';
 
 	import { onMount } from 'svelte';
-	import { clearPrivateCaches } from '#lib/utils/private-caches.ts';
+	import { clearUserBrowserState } from '#lib/api/query-client.ts';
 
 	let { children } = $props();
 
 	// Every arrival at an auth page means no session (or a new one is about to
-	// start): offline copies of the previous user's pages and data must go.
+	// start): the previous user's cached queries, offline pages and data must go,
+	// including when the session was ended by a server redirect.
 	onMount(() => {
-		void clearPrivateCaches();
+		void clearUserBrowserState();
 	});
 </script>
 

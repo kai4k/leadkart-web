@@ -3,7 +3,7 @@
  * defaults; who gets which instance is decided here too:
  *
  *   browser: one long-lived client for the whole tab (`renderQueryClient`
- *            returns it; the session guard acts on it).
+ *            returns it; the session guard and `clearUserBrowserState` act on it).
  *   server:  a fresh client per request (`renderQueryClient` builds one and
  *            drops it when the render ends). The Node process renders every
  *            user's pages, so a shared server cache hands one user's data
@@ -38,7 +38,7 @@ import { toast } from '$ui';
 import { ApiError, NetworkError, ServerError, AuthError } from './errors';
 import { exitOperatorScope } from './operator-scope';
 import { createSessionGuard } from './session-guard';
-import { clearPrivateCaches } from '#lib/utils/private-caches.ts';
+import { clearPrivateCaches, IMPERSONATION_SESSION_KEY } from '#lib/utils/private-caches.ts';
 
 function describeError(err: unknown): string {
 	if (err instanceof ApiError) return err.message;
@@ -51,11 +51,7 @@ export function createQueryClient(): QueryClient {
 		// Targets are internal constants plus an encoded `next`; resolve() takes route ids, not query strings.
 		// eslint-disable-next-line svelte/no-navigation-without-resolve
 		goto: (url) => goto(url),
-		clearCache: () => {
-			client.clear();
-			// Offline caches hold the ended session's pages and API data.
-			void clearPrivateCaches();
-		},
+		clearCache: () => void clearUserBrowserState(),
 		resetCache: () => void client.resetQueries(),
 		notify: (message) => toast.error(message),
 		exitScope: exitOperatorScope,
@@ -119,4 +115,20 @@ export function renderQueryClient(): QueryClient {
 	// and gc timers; drop both once the render is done.
 	onDestroy(() => client.clear());
 	return client;
+}
+
+/**
+ * Clear everything user-specific the browser holds: the query cache, the
+ * service-worker private caches and the impersonation-session marker. The ONE
+ * implementation behind logout, the session guard and arrival on an auth page
+ * (a session ended by a server redirect never ran the client guard).
+ */
+export async function clearUserBrowserState(): Promise<void> {
+	browserClient?.clear();
+	try {
+		window.localStorage.removeItem(IMPERSONATION_SESSION_KEY);
+	} catch {
+		// Storage can be unavailable (privacy mode); clearing is best-effort.
+	}
+	await clearPrivateCaches();
 }

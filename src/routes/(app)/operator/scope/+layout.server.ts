@@ -9,16 +9,22 @@
  * cookie); resolving it happens on the BFF, never in the browser. The
  * tenant DTO returned here is the only place pages get the active
  * tenant data — they never receive a slug or UUID via URL params.
+ *
+ * Guarded like /operator/tenants: a non-platform user holding a (stale or
+ * replayed) scope cookie is sent to /dashboard before any scoped Go call.
  */
 
 import { redirect, error } from '@sveltejs/kit';
 import { clearOperatorScope, readOperatorScope } from '#lib/server/scope.ts';
 import { goFetch, readGoJson } from '#lib/server/go.ts';
+import { OPERATOR_SCOPE_PERMISSION, requireCapability } from '#lib/server/guards.ts';
 import { isUpstreamTimeout } from '#lib/server/proxy.ts';
 import { tenantDtoSchema } from '#lib/features/operator/tenants/schemas.ts';
 import type { LayoutServerLoad } from './$types';
 
-export const load: LayoutServerLoad = async ({ cookies }) => {
+export const load: LayoutServerLoad = async ({ cookies, parent }) => {
+	requireCapability((await parent()).capabilities, OPERATOR_SCOPE_PERMISSION);
+
 	const reading = readOperatorScope(cookies);
 	if (reading.state !== 'valid') {
 		if (reading.state === 'invalid') clearOperatorScope(cookies);

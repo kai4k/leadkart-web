@@ -2,10 +2,12 @@
  * (app) group auth guard + capabilities bootstrap — runs server-side on
  * every request to the (app) route group.
  *
- * Checks the __Host-lk_access cookie. If absent → redirect to /signin.
- * Fetches GET /api/v1/auth/me/capabilities server-to-server (loadCapabilities).
- * An expired access cookie is refreshed in hooks.server.ts before this runs; a
- * 401 there triggers one more refresh + retry.
+ * Checks the access cookie. hooks.server.ts refreshes an expired one before
+ * this runs; if it is still absent: refresh rejected or no refresh cookie →
+ * redirect to /signin; Go unreachable during that refresh → 503 (the session
+ * may be fine, so the user is not signed out).
+ * Fetches GET /api/v1/auth/me/capabilities server-to-server (loadCapabilities);
+ * a 401 there triggers one more refresh + retry.
  *
  * The returned `capabilities` object is baked into the initial HTML
  * (SvelteKit SSR serialisation) so the first paint has no loading
@@ -15,16 +17,19 @@
  */
 
 import { redirect } from '@sveltejs/kit';
+import { assertRefreshReachable } from '#lib/server/auth-refresh.ts';
 import { ACCESS_COOKIE, mustChangePassword } from '#lib/server/cookies.ts';
 import { loadCapabilities } from '#lib/server/capabilities.ts';
+import { clearOperatorScope, readOperatorScope } from '#lib/server/scope.ts';
 import type { LayoutServerLoad } from './$types';
 
-export const load: LayoutServerLoad = async ({ cookies, url }) => {
-	// hooks.server.ts already refreshed an expired access cookie before this
-	// load ran, so a missing cookie here means the session is really gone.
+export const load: LayoutServerLoad = async ({ cookies, url, locals }) => {
+	// hooks.server.ts already tried to refresh an expired access cookie. Still
+	// missing: Go down → 503; otherwise the session is really gone.
 	const access = cookies.get(ACCESS_COOKIE());
 
 	if (!access) {
+		assertRefreshReachable(locals);
 		const next = encodeURIComponent(url.pathname + url.search);
 		throw redirect(303, `/signin?next=${next}`);
 	}
@@ -36,6 +41,18 @@ export const load: LayoutServerLoad = async ({ cookies, url }) => {
 			303,
 			`/must-change-password?next=${encodeURIComponent(url.pathname + url.search)}`
 		);
+	}
+
+	// An expired/tampered scope cookie makes every scoped /api call answer 409. A
+	// navigation is a safe place to drop it, so a failed client-side scope exit
+	// cannot loop 409 → DELETE → /signin. /operator/scope clears it itself (and
+	// redirects). The state is checked first so `url` is only read (and tracked
+	// as a load dependency) when there is something to clear.
+	if (
+		readOperatorScope(cookies).state === 'invalid' &&
+		!url.pathname.startsWith('/operator/scope')
+	) {
+		clearOperatorScope(cookies);
 	}
 
 	// Go answered without usable capabilities (401 after refresh, non-2xx,

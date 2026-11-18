@@ -336,6 +336,41 @@ test.describe('session refresh', () => {
 		expect(await cookieValue(context, 'lk_refresh')).toBe(refreshBefore);
 	});
 
+	test('refresh unavailable on a full navigation: 503 error page, cookies kept, reload recovers', async ({
+		page,
+		context
+	}) => {
+		await signInAsTier(page, { tier: 'tenant-admin' });
+		await registerMock({
+			method: 'POST',
+			path: '/api/v1/auth/refresh',
+			status: 503,
+			body: { error: 'unavailable' }
+		});
+		const refreshBefore = await cookieValue(context, 'lk_refresh');
+		await dropAccessCookie(context);
+
+		// Go being down is not "signed out": no bounce to /signin.
+		const app = await page.goto('/dashboard');
+		expect(app?.status()).toBe(503);
+		await expect(page).toHaveURL(/\/dashboard$/);
+		const root = await page.goto('/');
+		expect(root?.status()).toBe(503);
+		await expect(page).toHaveURL(/\/$/);
+		expect(await cookieValue(context, 'lk_refresh')).toBe(refreshBefore);
+
+		// Go is healthy again: the same tab recovers on reload.
+		await registerMock({
+			method: 'POST',
+			path: '/api/v1/auth/refresh',
+			status: 200,
+			body: { access_token: REFRESHED_ACCESS, refresh_token: REFRESHED_REFRESH }
+		});
+		await page.goto('/dashboard');
+		await expect(page).toHaveURL(/\/dashboard$/);
+		await expect(page.getByRole('heading', { level: 1, name: 'My Dashboard' })).toBeVisible();
+	});
+
 	test('refresh unavailable on a real client query: the SPA stays on the page, not /signin', async ({
 		page
 	}) => {

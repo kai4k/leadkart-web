@@ -10,7 +10,10 @@ vi.mock('svelte', async (importOriginal) => ({
 }));
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 vi.mock('$ui', () => ({ toast: { error: vi.fn() } }));
-vi.mock('#lib/utils/private-caches.ts', () => ({ clearPrivateCaches: vi.fn() }));
+vi.mock('#lib/utils/private-caches.ts', () => ({
+	clearPrivateCaches: vi.fn(),
+	IMPERSONATION_SESSION_KEY: 'leadkart-impersonation-session'
+}));
 vi.mock('#lib/api/client.ts', () => ({ api: { delete: vi.fn() } }));
 
 import { renderQueryClient } from '#lib/api/query-client.ts';

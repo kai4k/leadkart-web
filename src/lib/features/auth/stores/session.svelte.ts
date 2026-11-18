@@ -21,7 +21,7 @@
  */
 
 import { page } from '$app/state';
-import { clearPrivateCaches } from '#lib/utils/private-caches.ts';
+import { clearUserBrowserState } from '#lib/api/query-client.ts';
 import { logout as logoutRequest, type Capabilities } from '../api';
 import type { SessionPrincipal } from '../types';
 
@@ -68,9 +68,9 @@ function createSession(): Session {
 		try {
 			await logoutRequest();
 		} finally {
-			// Even when the request fails (offline) the user leaves and the
-			// offline caches holding their pages and API data are dropped.
-			await clearPrivateCaches();
+			// Even when the request fails (offline) the user leaves and everything
+			// user-specific in the browser (query cache, offline caches) is dropped.
+			await clearUserBrowserState();
 
 			// Full page reload — ensures SvelteKit re-runs +layout.server.ts
 			// which will find no access cookie and redirect to /signin. Using

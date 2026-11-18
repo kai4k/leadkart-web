@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+	assertRefreshReachable,
 	establishSession,
 	isAuthExpired,
 	refreshSession,
@@ -226,5 +227,19 @@ describe('isAuthExpired', () => {
 		expect(
 			isAuthExpired(new Response('{}', { status: 403, headers: { 'www-authenticate': 'x' } }))
 		).toBe(false);
+	});
+});
+
+describe('assertRefreshReachable', () => {
+	it('answers 503 when the hook could not reach Go to refresh', () => {
+		expect(() => assertRefreshReachable({ refreshOutcome: 'unavailable' })).toThrow(
+			expect.objectContaining({ status: 503 })
+		);
+	});
+
+	it('lets every other outcome through (the caller redirects to /signin)', () => {
+		for (const refreshOutcome of [undefined, 'none', 'rejected', 'renewed'] as const) {
+			expect(() => assertRefreshReachable({ refreshOutcome })).not.toThrow();
+		}
 	});
 });

@@ -1,6 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import { signInAsTier } from './helpers/sign-in';
-import { listMockCalls, resetMock } from './helpers/mock';
+import { mintScopeCookie } from './helpers/scope-cookie';
+import { fakeTenantDto, TEST_TENANT_SLUG } from './helpers/fake-jwt';
+import { listMockCalls, registerMock, resetMock } from './helpers/mock';
 
 /**
  * Server-side capability guards (requireCapability in +page.server.ts).
@@ -71,4 +73,69 @@ test.describe('Server-side capability guards', () => {
 			expect(await dataCalls(route.dataPath)).toBe(0);
 		});
 	}
+});
+
+const OTHER_TENANT_ID = '00000000-0000-4000-8000-0000000000b2';
+
+test.describe('Operator scope is platform-only at the BFF', () => {
+	test.beforeEach(async () => {
+		await resetMock();
+	});
+
+	test('a tenant-tier user POSTing /api/operator/scope gets 403 and no scope cookie', async ({
+		page,
+		context
+	}) => {
+		await signInAsTier(page, { tier: 'tenant-admin', permissions: ['tenant.admin'] });
+		await page.waitForLoadState('networkidle');
+		const lookupsBefore = (await listMockCalls()).filter(
+			(c) => c.path === '/api/v1/tenants'
+		).length;
+		const result = await page.evaluate(async (slug) => {
+			const csrf = document.cookie.match(/(?:^|; )lk_csrf=([^;]+)/)?.[1] ?? '';
+			const resp = await fetch('/api/operator/scope', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json', 'x-csrf-token': decodeURIComponent(csrf) },
+				body: JSON.stringify({ slug })
+			});
+			return { status: resp.status, body: (await resp.json()) as { error?: string } };
+		}, TEST_TENANT_SLUG);
+		expect(result.status).toBe(403);
+		expect(result.body.error).toBe('forbidden');
+		expect((await context.cookies()).some((c) => c.name === 'lk_op_tenant')).toBe(false);
+		// Refused before the tenant lookup ever reached Go.
+		const lookupsAfter = (await listMockCalls()).filter((c) => c.path === '/api/v1/tenants').length;
+		expect(lookupsAfter).toBe(lookupsBefore);
+	});
+
+	test('a tenant-tier user with a valid scope cookie visiting /operator/scope/profile lands on /dashboard', async ({
+		page,
+		context
+	}) => {
+		// A real (signed, unexpired) scope for a tenant Go would serve: only the
+		// platform gate can keep this user out.
+		const other = fakeTenantDto({ id: OTHER_TENANT_ID, slug: 'beta', display_name: 'Beta' });
+		await signInAsTier(page, { tier: 'tenant-admin', permissions: ['tenant.admin'] });
+		await registerMock({
+			method: 'GET',
+			path: `/api/v1/tenants/${OTHER_TENANT_ID}`,
+			status: 200,
+			body: other
+		});
+		await context.addCookies([
+			{
+				name: 'lk_op_tenant',
+				value: mintScopeCookie({ id: OTHER_TENANT_ID, slug: 'beta', display_name: 'Beta' }, 600),
+				url: 'http://localhost:4173'
+			}
+		]);
+		const tenantLoads = async () =>
+			(await listMockCalls()).filter((c) => c.path === `/api/v1/tenants/${OTHER_TENANT_ID}`).length;
+		await page.waitForLoadState('networkidle');
+		const before = await tenantLoads();
+		await page.goto('/operator/scope/profile');
+		await page.waitForURL(/\/dashboard$/);
+		// The scope layout never loaded the scoped tenant for this user.
+		expect(await tenantLoads()).toBe(before);
+	});
 });

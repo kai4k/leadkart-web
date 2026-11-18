@@ -12,15 +12,27 @@
  *
  * CSRF: enforced (double-submit cookie pattern, same shape as the
  * /api/[...path] proxy).
+ *
+ * Authorisation: entering a tenant's scope needs the same platform permission
+ * as the /operator/tenants page. A JSON endpoint answers 403, never a redirect.
+ * An ended session is a 401 tagged `session_expired` so the client guard sends
+ * the user to /signin.
  */
 
-import type { RequestEvent } from '@sveltejs/kit';
+import { isHttpError, type RequestEvent } from '@sveltejs/kit';
 import { z } from 'zod';
+import { SESSION_EXPIRED_CODE } from '#lib/api/errors.ts';
 import { setOperatorScope, clearOperatorScope } from '#lib/server/scope.ts';
 import { assertCsrf } from '#lib/server/csrf.ts';
 import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
+import { loadCapabilities } from '#lib/server/capabilities.ts';
 import { goFetch } from '#lib/server/go.ts';
+import { hasRequiredCapability, OPERATOR_SCOPE_PERMISSION } from '#lib/server/guards.ts';
 import { jsonError } from '#lib/server/http.ts';
+import { isUpstreamTimeout } from '#lib/server/proxy.ts';
+
+const sessionExpired = (): Response =>
+	jsonError(401, SESSION_EXPIRED_CODE, 'Your session has expired');
 
 const tenantLookupSchema = z.object({
 	tenants: z
@@ -32,8 +44,21 @@ export async function POST(event: RequestEvent): Promise<Response> {
 	const csrfFail = assertCsrf(event);
 	if (csrfFail) return csrfFail;
 
-	if (!event.cookies.get(ACCESS_COOKIE())) {
-		return jsonError(401, 'unauthenticated', 'Sign in to continue');
+	if (!event.cookies.get(ACCESS_COOKIE())) return sessionExpired();
+
+	let capabilities;
+	try {
+		capabilities = await loadCapabilities(event.cookies);
+	} catch (err) {
+		// Go unreachable (503) or too slow (504): the session is fine, say so as JSON.
+		if (!isHttpError(err)) throw err;
+		return err.status === 504
+			? jsonError(504, 'upstream_timeout', 'Go API did not respond in time')
+			: jsonError(err.status, 'upstream_unavailable', 'Service temporarily unavailable');
+	}
+	if (!capabilities) return sessionExpired();
+	if (!hasRequiredCapability(capabilities, OPERATOR_SCOPE_PERMISSION)) {
+		return jsonError(403, 'forbidden', 'Tenant scope requires platform access');
 	}
 
 	let body: { slug?: string };
@@ -58,7 +83,7 @@ export async function POST(event: RequestEvent): Promise<Response> {
 			scoped: false,
 			requireAuth: false
 		});
-		if (resp.status === 401) return jsonError(401, 'unauthenticated', 'Sign in to continue');
+		if (resp.status === 401) return sessionExpired();
 		if (!resp.ok) return jsonError(502, 'tenant_lookup_failed', 'Tenant lookup failed');
 		const payload = tenantLookupSchema.safeParse(await resp.json());
 		if (!payload.success) {
@@ -71,7 +96,7 @@ export async function POST(event: RequestEvent): Promise<Response> {
 		}
 		tenant = payload.data.tenants?.[0];
 	} catch (err) {
-		return err instanceof DOMException && err.name === 'TimeoutError'
+		return isUpstreamTimeout(err)
 			? jsonError(504, 'upstream_timeout', 'Go API did not respond in time')
 			: jsonError(502, 'tenant_lookup_failed', 'Tenant lookup failed');
 	}

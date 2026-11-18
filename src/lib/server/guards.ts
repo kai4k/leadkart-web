@@ -3,10 +3,28 @@ import { redirect } from '@sveltejs/kit';
 import { hasCapability, type Capabilities } from '#lib/features/auth/capabilities.ts';
 
 /**
+ * The permission the /operator/tenants page requires. Entering (and staying in)
+ * a tenant's operator scope requires the same one.
+ */
+export const OPERATOR_SCOPE_PERMISSION = 'platform.tenants.view';
+
+/**
+ * Non-redirecting check for JSON endpoints (which answer 403, never a
+ * redirect) and the one rule behind `requireCapability`. `null` is what
+ * `loadCapabilities` returns when Go gave no usable capabilities.
+ */
+export function hasRequiredCapability(
+	caps: Capabilities | null | undefined,
+	permission: string
+): boolean {
+	return hasCapability(caps ?? undefined, permission);
+}
+
+/**
  * Server-side route guard. Runs in a `+page.server.ts` / `+layout.server.ts`
  * load, so an unauthorised user never receives the page or its data.
  * Behaviour matches the old client guard: back to the dashboard.
  */
-export function requireCapability(caps: Capabilities | undefined, permission: string): void {
-	if (!hasCapability(caps, permission)) redirect(303, '/dashboard');
+export function requireCapability(caps: Capabilities | null | undefined, permission: string): void {
+	if (!hasRequiredCapability(caps, permission)) redirect(303, '/dashboard');
 }

@@ -414,6 +414,20 @@ test.describe('Operator scope flow', () => {
 			false
 		);
 	});
+
+	test('an invalid scope cookie is cleared on any navigation outside /operator/scope', async ({
+		page,
+		context
+	}) => {
+		await setupOperator(page);
+		await context.addCookies([
+			{ name: 'lk_op_tenant', value: 'tampered.signature', url: 'http://localhost:4173' }
+		]);
+		await page.goto('/dashboard');
+		await expect(page).toHaveURL(/\/dashboard$/);
+		// Cleared server-side, so a failed client-side scope exit cannot loop on 409s.
+		expect((await context.cookies()).some((c) => c.name === 'lk_op_tenant')).toBe(false);
+	});
 });
 
 test.describe('CSRF protection', () => {

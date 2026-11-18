@@ -12,6 +12,9 @@ export const RUNTIME_CACHE_PREFIX = 'lk-runtime-';
 export const API_CACHE_PREFIX = 'lk-api-';
 export const CLEAR_PRIVATE_CACHES_MESSAGE = 'CLEAR_PRIVATE_CACHES';
 
+/** localStorage entry naming the operator's active impersonation session (user-specific). */
+export const IMPERSONATION_SESSION_KEY = 'leadkart-impersonation-session';
+
 /**
  * Which `/api` GET responses the service worker may keep for offline reading:
  * JSON only, never auth/capability responses and never downloads (CSV exports

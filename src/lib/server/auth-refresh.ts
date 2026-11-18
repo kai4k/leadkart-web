@@ -14,7 +14,7 @@
  * rotated token being presented again within a few seconds.
  */
 import { createHash } from 'node:crypto';
-import type { Cookies } from '@sveltejs/kit';
+import { error, type Cookies } from '@sveltejs/kit';
 import { z } from 'zod';
 import { config } from './config.ts';
 import {
@@ -131,4 +131,13 @@ export async function refreshSession(
 		clearOperatorScope(cookies);
 	}
 	return { ok: false, reason: result.reason };
+}
+
+/**
+ * For loads that found no access cookie: if the hook's refresh could not reach
+ * Go, the session is not known to be over, so answer 503 (cookies kept, a
+ * reload retries) instead of sending the user to /signin.
+ */
+export function assertRefreshReachable(locals: App.Locals): void {
+	if (locals.refreshOutcome === 'unavailable') error(503, 'Service temporarily unavailable');
 }
