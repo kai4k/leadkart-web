@@ -17,6 +17,7 @@ import { redirect, type Cookies } from '@sveltejs/kit';
 import { isAuthExpired, refreshSession } from './auth-refresh.ts';
 import { config } from './config.ts';
 import { ACCESS_COOKIE, REFRESH_COOKIE } from './cookies.ts';
+import { upstreamTimeout } from './proxy.ts';
 import { clearOperatorScope, readOperatorScope } from './scope.ts';
 
 export interface GoRequestInit extends Omit<RequestInit, 'headers' | 'body'> {
@@ -69,12 +70,22 @@ export async function goFetch(
 		headers['content-type'] = 'application/json';
 	}
 
-	const send = (token: string | undefined): Promise<Response> =>
-		fetch(`${config.GO_API_URL}/api${path}`, {
-			...init,
-			signal: init.signal ?? AbortSignal.timeout(config.UPSTREAM_TIMEOUT_MS),
-			headers: token ? { ...headers, authorization: `Bearer ${token}` } : headers
-		});
+	// Redirects are never followed (a 3xx reaches the caller as a non-2xx) and
+	// the timeout bounds time-to-first-byte only.
+	const send = async (token: string | undefined): Promise<Response> => {
+		const timeout = upstreamTimeout(init.signal ?? undefined, config.UPSTREAM_TIMEOUT_MS);
+		try {
+			return await fetch(`${config.GO_API_URL}/api${path}`, {
+				...init,
+				redirect: 'manual',
+				signal: timeout.signal,
+				headers: token ? { ...headers, authorization: `Bearer ${token}` } : headers
+			});
+		} finally {
+			// Headers in (or the call failed): stop the clock either way.
+			timeout.headersReceived();
+		}
+	};
 
 	const resp = await send(access);
 	if (!access || !isAuthExpired(resp)) return resp;

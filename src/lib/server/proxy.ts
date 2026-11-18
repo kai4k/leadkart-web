@@ -71,27 +71,75 @@ export function stripTokenFields(body: unknown): unknown {
 	return Object.fromEntries(Object.entries(body).filter(([key]) => !TOKEN_FIELDS.has(key)));
 }
 
-const FORWARDED_RESPONSE_HEADERS = [
-	'content-type',
-	'content-disposition',
-	'retry-after',
-	'etag',
-	'last-modified',
-	'location'
-];
+/** No conditional requests are forwarded and responses are no-store, so no etag / last-modified. */
+const FORWARDED_RESPONSE_HEADERS = ['content-type', 'content-disposition', 'retry-after'];
+
+/**
+ * A Go `Location` is forwarded only as a same-origin relative `/api/v1/...`
+ * path: an absolute URL must be on the Go origin (and is stripped to
+ * path + query, so the internal host never leaks); anything else is dropped.
+ */
+function sanitiseLocation(value: string, goOrigin: string): string | null {
+	let url: URL;
+	try {
+		url = new URL(value, goOrigin);
+	} catch {
+		return null;
+	}
+	if (url.origin !== goOrigin || !url.pathname.startsWith(UPSTREAM_PREFIX)) return null;
+	return url.pathname + url.search;
+}
 
 /** Allowlist of upstream response headers. Authenticated responses are never cached. */
-export function pickResponseHeaders(upstream: Headers): Headers {
+export function pickResponseHeaders(upstream: Headers, goBaseUrl: string): Headers {
 	const out = new Headers();
 	for (const name of FORWARDED_RESPONSE_HEADERS) {
 		const value = upstream.get(name);
 		if (value) out.set(name, value);
 	}
+	const location = upstream.get('location');
+	if (location) {
+		const safe = sanitiseLocation(location, new URL(goBaseUrl).origin);
+		if (safe) out.set('location', safe);
+	}
 	out.set('cache-control', 'no-store');
 	return out;
 }
 
-/** Abort when the browser disconnects or the upstream takes too long. */
-export function upstreamSignal(request: Request, ms: number): AbortSignal {
-	return AbortSignal.any([request.signal, AbortSignal.timeout(ms)]);
+export interface UpstreamTimeout {
+	signal: AbortSignal;
+	/** Call as soon as the response headers arrive: the timeout bounds time-to-first-byte only. */
+	headersReceived: () => void;
+}
+
+/**
+ * Abort signal for an upstream call. Fires with a `TimeoutError` when no
+ * response headers arrive within `ms`, and follows `parent` (the browser
+ * request) so a disconnect cancels the upstream call. Unlike
+ * `AbortSignal.timeout`, the clock stops once headers are in, so a long
+ * streamed export is never cut off.
+ */
+export function upstreamTimeout(parent: AbortSignal | undefined, ms: number): UpstreamTimeout {
+	const controller = new AbortController();
+	const timer = setTimeout(() => {
+		controller.abort(new DOMException('Upstream timed out', 'TimeoutError'));
+	}, ms);
+	const clear = (): void => clearTimeout(timer);
+
+	if (parent) {
+		if (parent.aborted) {
+			clear();
+			controller.abort(parent.reason);
+		} else {
+			parent.addEventListener(
+				'abort',
+				() => {
+					clear();
+					controller.abort(parent.reason);
+				},
+				{ once: true }
+			);
+		}
+	}
+	return { signal: controller.signal, headersReceived: clear };
 }

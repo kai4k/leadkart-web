@@ -37,11 +37,22 @@ import {
 	pickResponseHeaders,
 	scrubsTokens,
 	stripTokenFields,
-	upstreamSignal
+	upstreamTimeout
 } from '#lib/server/proxy.ts';
 
 const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const NULL_BODY_STATUSES = new Set([204, 205, 304]);
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+
+/** 504/502 for a failed upstream call, logged without query string, headers or body. */
+function upstreamFailure(err: unknown, method: string, path: string): Response {
+	const timedOut = err instanceof DOMException && err.name === 'TimeoutError';
+	const status = timedOut ? 504 : 502;
+	console.warn('[bff-proxy]', status, method, `/${path}`);
+	return timedOut
+		? jsonError(504, 'upstream_timeout', 'Go API did not respond in time')
+		: jsonError(502, 'upstream_unavailable', 'Go API is unreachable');
+}
 
 async function proxy(
 	event: RequestEvent,
@@ -86,18 +97,25 @@ async function proxy(
 		? (bufferedBody ?? (await request.arrayBuffer()))
 		: undefined;
 
+	// Redirects are never followed: a 3xx from Go must not make the BFF fetch
+	// another host with the tenant header attached.
+	const timeout = upstreamTimeout(request.signal, config.UPSTREAM_TIMEOUT_MS);
 	let upstream: Response;
 	try {
 		upstream = await fetch(upstreamUrl, {
 			method: request.method,
 			headers: upstreamHeaders,
 			body: body ?? null,
-			signal: upstreamSignal(request, config.UPSTREAM_TIMEOUT_MS)
+			redirect: 'manual',
+			signal: timeout.signal
 		});
 	} catch (err) {
-		return err instanceof DOMException && err.name === 'TimeoutError'
-			? jsonError(504, 'upstream_timeout', 'Go API did not respond in time')
-			: jsonError(502, 'upstream_unavailable', 'Go API is unreachable');
+		// The browser went away: nothing to report and nobody to answer.
+		if (request.signal.aborted) return new Response(null, { status: 499 });
+		return upstreamFailure(err, request.method, path);
+	} finally {
+		// Headers in (or the call failed): stop the clock either way.
+		timeout.headersReceived();
 	}
 
 	if (attempt === 1 && isAuthExpired(upstream)) {
@@ -109,7 +127,14 @@ async function proxy(
 		}
 	}
 
-	const headers = pickResponseHeaders(upstream.headers);
+	const headers = pickResponseHeaders(upstream.headers, config.GO_API_URL);
+	if (REDIRECT_STATUSES.has(upstream.status)) {
+		await upstream.body?.cancel();
+		if (!headers.has('location')) {
+			return jsonError(502, 'upstream_redirect', 'Go API returned an unusable redirect');
+		}
+		return new Response(null, { status: upstream.status, headers });
+	}
 	if (NULL_BODY_STATUSES.has(upstream.status)) {
 		return new Response(null, { status: upstream.status, headers });
 	}

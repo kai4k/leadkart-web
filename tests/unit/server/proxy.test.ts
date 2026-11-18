@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	buildUpstreamUrl,
 	isTokenEndpoint,
 	pickResponseHeaders,
+	upstreamTimeout,
 	scrubsTokens,
 	stripTokenFields
 } from '#lib/server/proxy.ts';
@@ -63,6 +64,8 @@ describe('token handling', () => {
 	});
 });
 
+const GO = 'http://go.internal:8080';
+
 describe('pickResponseHeaders', () => {
 	it('forwards the allowlist, adds no-store, and drops everything else', () => {
 		const out = pickResponseHeaders(
@@ -70,19 +73,75 @@ describe('pickResponseHeaders', () => {
 				'content-type': 'application/json',
 				'retry-after': '30',
 				etag: '"abc"',
+				'last-modified': 'Mon, 01 Jan 2024 00:00:00 GMT',
 				'content-disposition': 'attachment; filename="x.csv"',
 				'set-cookie': 'evil=1',
 				server: 'go',
 				'x-internal-trace': 't'
-			})
+			}),
+			GO
 		);
 		expect(out.get('content-type')).toBe('application/json');
 		expect(out.get('retry-after')).toBe('30');
-		expect(out.get('etag')).toBe('"abc"');
 		expect(out.get('content-disposition')).toContain('x.csv');
 		expect(out.get('cache-control')).toBe('no-store');
+		expect(out.get('etag')).toBeNull();
+		expect(out.get('last-modified')).toBeNull();
 		expect(out.get('set-cookie')).toBeNull();
 		expect(out.get('server')).toBeNull();
 		expect(out.get('x-internal-trace')).toBeNull();
+	});
+
+	const location = (value: string) =>
+		pickResponseHeaders(new Headers({ location: value }), GO).get('location');
+
+	it('rewrites a same-origin absolute Location to a relative /api/v1 path', () => {
+		expect(location(`${GO}/api/v1/users/1?x=2`)).toBe('/api/v1/users/1?x=2');
+	});
+	it('keeps a relative /api/v1 Location', () => {
+		expect(location('/api/v1/things/9')).toBe('/api/v1/things/9');
+	});
+	it('drops a foreign-host Location', () => {
+		expect(location('http://evil.example/api/v1/users')).toBeNull();
+		expect(location('//evil.example/api/v1/users')).toBeNull();
+	});
+	it('drops a Location outside /api/v1/', () => {
+		expect(location('/admin')).toBeNull();
+		expect(location(`${GO}/healthz`)).toBeNull();
+		expect(location('/api/v1/../../x')).toBeNull();
+	});
+});
+
+describe('upstreamTimeout', () => {
+	beforeEach(() => vi.useFakeTimers());
+	afterEach(() => vi.useRealTimers());
+
+	it('aborts with TimeoutError at ms when headers have not arrived', () => {
+		const { signal } = upstreamTimeout(undefined, 1000);
+		vi.advanceTimersByTime(999);
+		expect(signal.aborted).toBe(false);
+		vi.advanceTimersByTime(1);
+		expect(signal.aborted).toBe(true);
+		expect((signal.reason as DOMException).name).toBe('TimeoutError');
+	});
+
+	it('does not abort after headersReceived()', () => {
+		const t = upstreamTimeout(undefined, 1000);
+		t.headersReceived();
+		vi.advanceTimersByTime(60_000);
+		expect(t.signal.aborted).toBe(false);
+	});
+
+	it('aborts when the request signal aborts, with the request reason', () => {
+		const ctl = new AbortController();
+		const { signal } = upstreamTimeout(ctl.signal, 1000);
+		ctl.abort();
+		expect(signal.aborted).toBe(true);
+		expect((signal.reason as DOMException).name).toBe('AbortError');
+	});
+
+	it('is already aborted when the request signal is', () => {
+		const { signal } = upstreamTimeout(AbortSignal.abort(), 1000);
+		expect(signal.aborted).toBe(true);
 	});
 });
