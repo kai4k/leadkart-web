@@ -69,7 +69,11 @@ describe('safeRedirectPath', () => {
 		['absolute URL', 'https://evil.com/x'],
 		['javascript scheme', 'javascript:alert(1)'],
 		['no leading slash', 'leads'],
-		['newline', '/leads\nSet-Cookie: x=1']
+		['newline', '/leads\nSet-Cookie: x=1'],
+		['dot segment that normalises to //', '/.//evil.com'],
+		['dot-dot segment that normalises to //', '/..//evil.com'],
+		['encoded dot segment (sent as %252e)', '/%2e//evil.com'],
+		['parent traversal that normalises to //', '/a/..//evil.com']
 	])('rejects %s', (_label, value) => {
 		expect(safeRedirectPath(value, origin)).toBe('/dashboard');
 	});
@@ -118,7 +122,12 @@ export function safeRedirectPath(
 		return fallback;
 	}
 	if (url.origin !== origin) return fallback;
-	return url.pathname + url.search + url.hash;
+
+	// Validate the OUTPUT too: dot-segment normalisation turns `/.//evil.com`
+	// and `/%2e//evil.com` into `//evil.com`, which a browser reads as another host.
+	const path = url.pathname + url.search + url.hash;
+	if (!path.startsWith('/') || path.startsWith('//')) return fallback;
+	return path;
 }
 ```
 
