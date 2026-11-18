@@ -109,15 +109,15 @@ test.describe('Roles list — positive', () => {
 			.getByRole('button', { name: /create role/i })
 			.first()
 			.click();
-		await expect(page.getByRole('heading', { name: 'Create role' })).toBeVisible();
+		await page.waitForURL(/\/settings\/roles\/new$/);
+		await expect(page.getByRole('heading', { level: 1, name: 'Create role' })).toBeVisible();
 
-		await page.getByLabel(/^name$/i).fill('Dispatch Lead');
+		await page.getByLabel('Role name').fill('Dispatch Lead');
 		await page.getByLabel(/hierarchy level/i).fill('6');
-		// Footer submit button (scoped via form= attribute)
-		await page.locator('button[type="submit"][form="create-role-form"]').click();
+		await page.locator('#main-content form').getByRole('button', { name: 'Create role' }).click();
 
-		// Toast "Role created" appears via the mutation hook
-		await expect(page.getByText('Role created', { exact: true })).toBeVisible({ timeout: 5000 });
+		// Form action 303-redirects to the new role detail page.
+		await page.waitForURL(/\/settings\/roles\/role-new$/, { timeout: 5000 });
 	});
 });
 
@@ -168,9 +168,9 @@ test.describe('Roles list — negative', () => {
 			.getByRole('button', { name: /create role/i })
 			.first()
 			.click();
-		await page.getByLabel(/^name$/i).fill('ab'); // too short (schema min 3)
-		// Footer submit button via form= attribute
-		await page.locator('button[type="submit"][form="create-role-form"]').click();
+		await page.waitForURL(/\/settings\/roles\/new$/);
+		await page.getByLabel('Role name').fill('ab'); // too short (schema min 3)
+		await page.locator('#main-content form').getByRole('button', { name: 'Create role' }).click();
 
 		// Field-level error appears: TextField marks the input aria-invalid
 		// and renders a body-sm text-danger-700 paragraph.

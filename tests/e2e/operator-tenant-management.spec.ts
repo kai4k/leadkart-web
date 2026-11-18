@@ -174,7 +174,7 @@ test.describe('Register tenant — form validation', () => {
 		// Global mutation-error toast also surfaces (role=status from Toaster).
 		// Default behaviour: every mutation error → toast unless the mutation
 		// hook opts out via meta. The form's inline banner is additional.
-		await expect(page.locator('[role="status"]').first()).toBeVisible({ timeout: 5000 });
+		await expect(page.locator('[data-sonner-toast]').first()).toBeVisible({ timeout: 5000 });
 	});
 });
 
@@ -188,9 +188,14 @@ test.describe('Loading + feedback canon', () => {
 			tier: 'tenant-admin',
 			permissions: ['tenant.admin']
 		});
-		// Don't register a tenant fetch — the layout's pending state should
-		// surface the skeleton (aria-busy="true").
-		await page.goto('/settings/tenant/profile');
+		// /settings/tenant/* is now SSR-loaded (no client pending state).
+		// Exercise the skeleton canon on a TanStack-backed detail route and
+		// hold the browser's query open so the pending branch is observable.
+		await page.route('**/api/v1/roles/role-x', async (route) => {
+			await new Promise((r) => setTimeout(r, 2000));
+			await route.continue();
+		});
+		await page.goto('/settings/roles/role-x');
 		await expect(page.locator('[aria-busy="true"]').first()).toBeVisible({ timeout: 3000 });
 	});
 });

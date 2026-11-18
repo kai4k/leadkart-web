@@ -256,7 +256,7 @@ test.describe('Orders — detail page', () => {
 		});
 		await page.goto(`/orders/${ORDER_DRAFT}`);
 		await page.getByTestId('action-approve').click();
-		await expect(page.getByRole('status').getByText(/quotation approved/i)).toBeVisible({
+		await expect(page.locator('[data-sonner-toast]').getByText(/quotation approved/i)).toBeVisible({
 			timeout: 5000
 		});
 		await expect(page.getByTestId('action-record-token')).toBeVisible();
@@ -338,7 +338,7 @@ test.describe('Orders — detail page', () => {
 
 		await page.getByTestId('action-record-token').click();
 		await page.getByTestId('record-payment-submit').click();
-		await expect(page.getByRole('status').getByText(/payment recorded/i)).toBeVisible({
+		await expect(page.locator('[data-sonner-toast]').getByText(/payment recorded/i)).toBeVisible({
 			timeout: 5000
 		});
 		await expect(page.getByTestId('action-confirm')).toBeVisible({ timeout: 5000 });
@@ -364,7 +364,7 @@ test.describe('Orders — detail page', () => {
 			body: confirmed
 		});
 		await page.getByTestId('action-confirm').click();
-		await expect(page.getByRole('status').getByText(/order confirmed/i)).toBeVisible({
+		await expect(page.locator('[data-sonner-toast]').getByText(/order confirmed/i)).toBeVisible({
 			timeout: 5000
 		});
 		await expect(page.getByTestId('action-mark-packed')).toBeVisible();
@@ -391,7 +391,7 @@ test.describe('Orders — detail page', () => {
 		});
 		await page.getByTestId('action-mark-packed').click();
 		await page.getByTestId('mark-packed-submit').click();
-		await expect(page.getByRole('status').getByText(/marked as packed/i)).toBeVisible({
+		await expect(page.locator('[data-sonner-toast]').getByText(/marked as packed/i)).toBeVisible({
 			timeout: 5000
 		});
 		await expect(page.getByTestId('action-generate-invoice')).toBeVisible();
@@ -433,7 +433,7 @@ test.describe('Orders — detail page', () => {
 		await page.getByTestId('action-generate-invoice').click();
 		// Toast uses role=status for screen readers; scope to disambiguate
 		// from the "Invoice generated" timestamp label in the Activity tab.
-		await expect(page.getByRole('status').getByText(/invoice generated/i)).toBeVisible({
+		await expect(page.locator('[data-sonner-toast]').getByText(/invoice generated/i)).toBeVisible({
 			timeout: 5000
 		});
 		await page.getByRole('tab', { name: /^invoice$/i }).click();
@@ -463,7 +463,7 @@ test.describe('Orders — detail page', () => {
 		await page.getByTestId('dispatch-carrier').fill('BlueDart');
 		await page.getByTestId('dispatch-tracking-number').fill('BD-12345');
 		await page.getByTestId('dispatch-submit').click();
-		await expect(page.getByRole('status').getByText(/order dispatched/i)).toBeVisible({
+		await expect(page.locator('[data-sonner-toast]').getByText(/order dispatched/i)).toBeVisible({
 			timeout: 5000
 		});
 	});
@@ -488,9 +488,11 @@ test.describe('Orders — detail page', () => {
 			body: delivered
 		});
 		await page.getByTestId('action-mark-delivered').click();
-		await expect(page.getByRole('status').getByText(/marked as delivered/i)).toBeVisible({
-			timeout: 5000
-		});
+		await expect(page.locator('[data-sonner-toast]').getByText(/marked as delivered/i)).toBeVisible(
+			{
+				timeout: 5000
+			}
+		);
 	});
 
 	test('complete after full payment recorded', async ({ page }) => {
@@ -527,7 +529,7 @@ test.describe('Orders — detail page', () => {
 			body: complete
 		});
 		await page.getByTestId('action-complete').click();
-		await expect(page.getByRole('status').getByText(/order complete/i)).toBeVisible({
+		await expect(page.locator('[data-sonner-toast]').getByText(/order complete/i)).toBeVisible({
 			timeout: 5000
 		});
 	});
@@ -564,7 +566,7 @@ test.describe('Orders — detail page', () => {
 		});
 		await page.getByTestId('cancel-reason').fill('Customer error');
 		await page.getByTestId('cancel-order-submit').click();
-		await expect(page.getByRole('status').getByText(/order cancelled/i)).toBeVisible({
+		await expect(page.locator('[data-sonner-toast]').getByText(/order cancelled/i)).toBeVisible({
 			timeout: 5000
 		});
 	});
@@ -608,7 +610,7 @@ test.describe('Orders — detail page', () => {
 		await page.getByTestId('action-revise').click();
 		await page.getByTestId('revise-notes').fill('Adjusted qty');
 		await page.getByTestId('revise-submit').click();
-		await expect(page.getByRole('status').getByText(/quotation revised/i)).toBeVisible({
+		await expect(page.locator('[data-sonner-toast]').getByText(/quotation revised/i)).toBeVisible({
 			timeout: 5000
 		});
 	});
