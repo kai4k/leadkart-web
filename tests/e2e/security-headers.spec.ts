@@ -77,8 +77,12 @@ const PERMS = [
 
 const EMPTY_PAGE = { items: [], has_more: false };
 
-/** Collects every CSP violation signal for a page. */
-function watchViolations(page: Page) {
+/**
+ * Collects every CSP violation signal for a page. The DOM listener reports
+ * through an exposed binding, so a violation fired right before a navigation
+ * is not lost with the old document.
+ */
+async function watchViolations(page: Page) {
 	const violations: string[] = [];
 	page.on('console', (msg) => {
 		if (/Content Security Policy|Refused to|violates the following/i.test(msg.text())) {
@@ -86,32 +90,51 @@ function watchViolations(page: Page) {
 		}
 	});
 	page.on('pageerror', (err) => violations.push(`pageerror: ${err.message}`));
-	void page.addInitScript(() => {
-		const w = window as unknown as { __cspViolations: string[] };
-		w.__cspViolations = [];
+	await page.exposeFunction('__lkCsp', (v: string) => violations.push(`dom: ${v}`));
+	await page.addInitScript(() => {
 		document.addEventListener('securitypolicyviolation', (e) => {
-			w.__cspViolations.push(
-				`${e.violatedDirective} blocked=${e.blockedURI} src=${e.sourceFile}:${e.lineNumber} sample=${e.sample}`
+			(window as unknown as { __lkCsp: (v: string) => void }).__lkCsp(
+				`${e.disposition} ${e.violatedDirective} ${e.blockedURI} ${e.sourceFile ?? ''}:${e.lineNumber ?? ''}`
 			);
 		});
 	});
-	return async (label: string) => {
-		const dom = await page.evaluate(
-			() => (window as unknown as { __cspViolations?: string[] }).__cspViolations ?? []
-		);
-		expect([...violations, ...dom.map((v) => `dom: ${v}`)], `CSP violations on ${label}`).toEqual(
-			[]
-		);
+	return {
+		violations,
+		/** Settle hydration + late violations, then assert none were recorded. */
+		async assertClean(label: string) {
+			await page.waitForLoadState('networkidle');
+			expect(violations, `CSP violations on ${label}`).toEqual([]);
+		}
 	};
 }
 
 test.describe('security headers + CSP', () => {
+	let watcher: Awaited<ReturnType<typeof watchViolations>> | undefined;
+
 	test.beforeEach(async () => {
+		watcher = undefined;
 		await resetMock();
 	});
 
+	// Final sweep: anything fired after the last in-test assertion still fails the test.
+	test.afterEach(async () => {
+		await watcher?.assertClean('end of test');
+	});
+
+	test('the collector records a deliberate violation (not vacuous)', async ({ page }) => {
+		const { violations } = (watcher = await watchViolations(page));
+		await page.goto('/signin');
+		await page.evaluate(() => {
+			const s = document.createElement('script');
+			s.textContent = 'window.__x = 1';
+			document.head.appendChild(s);
+		});
+		await expect.poll(() => violations.join('; ')).toMatch(/enforce script-src/);
+		violations.length = 0; // expected; keep afterEach from failing this test
+	});
+
 	test('signed-out pages send security headers and a CSP, with no violations', async ({ page }) => {
-		const assertClean = watchViolations(page);
+		const { assertClean } = (watcher = await watchViolations(page));
 		const response = await page.goto('/signin');
 		const headers = response!.headers();
 		expect(headers['x-content-type-options']).toBe('nosniff');
@@ -131,7 +154,7 @@ test.describe('security headers + CSP', () => {
 	});
 
 	test('tenant-admin app pages and overlays raise no violations', async ({ page }) => {
-		const assertClean = watchViolations(page);
+		const { assertClean } = (watcher = await watchViolations(page));
 		await signInAsTier(page, { tier: 'tenant-admin', permissions: PERMS });
 		await registerMocks([
 			{
@@ -218,7 +241,7 @@ test.describe('security headers + CSP', () => {
 	});
 
 	test('operator pages and command palette raise no violations', async ({ page }) => {
-		const assertClean = watchViolations(page);
+		const { assertClean } = (watcher = await watchViolations(page));
 		const acme = fakeTenantDto({
 			id: '00000000-0000-4000-8000-0000000000a1',
 			slug: 'acme-pharma',
@@ -242,11 +265,10 @@ test.describe('security headers + CSP', () => {
 		await expect(page.locator('#main-content')).toBeVisible();
 		await assertClean('/operator/tenants');
 
-		// The shortcut only works once the page has hydrated; retry until it opens.
-		await expect(async () => {
-			await page.keyboard.press('Control+k');
-			await expect(page.getByRole('dialog')).toBeVisible({ timeout: 1000 });
-		}).toPass({ timeout: 10_000 });
+		// The search trigger renders only after hydration for users who can search.
+		await expect(page.getByRole('button', { name: /search/i }).first()).toBeVisible();
+		await page.keyboard.press('Control+k');
+		await expect(page.getByRole('dialog')).toBeVisible();
 		await assertClean('command palette');
 	});
 });
