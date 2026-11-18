@@ -14,9 +14,9 @@
  *   export const api = new Zodios(endpoints);
  *   export function createApiClient(baseUrl, options) { ... }
  *
- * We slice off line 1 (Zodios import) and everything from
- * `const endpoints = makeApi([` onward, keeping the z import + the
- * schema constants + the exported `schemas` map.
+ * We slice off line 1 (Zodios import) and replace the `makeApi([...])` call
+ * and everything after it with a plain exported `endpoints` array, keeping
+ * the z import + the schema constants + the exported `schemas` map.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { argv } from 'node:process';
@@ -41,6 +41,26 @@ if (endpointsStart === -1) {
 	console.error('Expected `const endpoints = makeApi([` block — output shape changed?');
 	process.exit(1);
 }
+const endpointsEnd = raw.indexOf('\n]);', endpointsStart);
+if (endpointsEnd === -1) {
+	console.error('Expected the makeApi([...]) block to end with `]);`');
+	process.exit(1);
+}
+const arrayBody = raw.slice(
+	endpointsStart + '\nconst endpoints = makeApi('.length,
+	endpointsEnd + '\n]'.length
+);
+const endpointsBlock = `
+/** One operation in api/openapi.yaml. \`path\` uses \`:param\` segments; \`response\` is the main 2xx schema (z.void() for 204). */
+export interface GeneratedEndpoint {
+	readonly method: 'get' | 'post' | 'put' | 'patch' | 'delete';
+	readonly path: string;
+	readonly response: z.ZodType;
+	readonly [key: string]: unknown;
+}
+
+export const endpoints: readonly GeneratedEndpoint[] = ${arrayBody};
+`;
 let body = raw.slice(0, endpointsStart).trim();
 
 // Export every `const Foo = z....` so feature modules can re-import the
@@ -70,7 +90,7 @@ const cleaned = `/**
  * we use TanStack Query, not Zodios.
  */
 ${body}
-`;
+${endpointsBlock}`;
 
 writeFileSync(path, cleaned, 'utf8');
 console.log(`[strip-zodios] cleaned ${path}`);

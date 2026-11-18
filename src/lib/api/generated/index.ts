@@ -12,4 +12,5 @@
  */
 
 export * from './openapi-zod';
+export type { GeneratedEndpoint } from './openapi-zod';
 export type { paths, components, operations } from './openapi-types';

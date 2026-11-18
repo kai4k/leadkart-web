@@ -54,7 +54,10 @@ const config: KnipConfig = {
 		// Tailwind 4 — consumed via `@import 'tailwindcss'` in app.css
 		'tailwindcss',
 		// postcss — peer of stylelint declaration-strict-value plugin, resolved by stylelint itself
-		'postcss'
+		'postcss',
+		// OpenAPI generators — spawned via npx from scripts/openapi-codegen.mjs
+		'openapi-typescript',
+		'openapi-zod-client'
 	]
 };
 

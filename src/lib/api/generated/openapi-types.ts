@@ -166,7 +166,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path?: never;
 				cookie?: never;
 			};
@@ -204,7 +214,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path?: never;
 				cookie?: never;
 			};
@@ -247,7 +267,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path?: never;
 				cookie?: never;
 			};
@@ -303,7 +333,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path?: never;
 				cookie?: never;
 			};
@@ -348,7 +388,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path?: never;
 				cookie?: never;
 			};
@@ -600,7 +650,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path?: never;
 				cookie?: never;
 			};
@@ -693,7 +753,17 @@ export interface paths {
 		patch: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					tenantId: components['parameters']['TenantId'];
 				};
@@ -740,7 +810,17 @@ export interface paths {
 		patch: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					tenantId: components['parameters']['TenantId'];
 				};
@@ -782,7 +862,17 @@ export interface paths {
 		patch: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					tenantId: components['parameters']['TenantId'];
 				};
@@ -824,7 +914,17 @@ export interface paths {
 		patch: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					tenantId: components['parameters']['TenantId'];
 				};
@@ -866,7 +966,17 @@ export interface paths {
 		patch: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					tenantId: components['parameters']['TenantId'];
 				};
@@ -907,7 +1017,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					tenantId: components['parameters']['TenantId'];
 				};
@@ -949,7 +1069,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					tenantId: components['parameters']['TenantId'];
 				};
@@ -993,7 +1123,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					tenantId: components['parameters']['TenantId'];
 				};
@@ -1035,7 +1175,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					tenantId: components['parameters']['TenantId'];
 				};
@@ -1191,7 +1341,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path?: never;
 				cookie?: never;
 			};
@@ -1274,7 +1434,17 @@ export interface paths {
 		patch: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					userId: components['parameters']['UserId'];
 				};
@@ -1311,7 +1481,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					userId: components['parameters']['UserId'];
 				};
@@ -1351,7 +1531,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					userId: components['parameters']['UserId'];
 				};
@@ -1387,7 +1577,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					userId: components['parameters']['UserId'];
 				};
@@ -1475,7 +1675,17 @@ export interface paths {
 		patch: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					userId: components['parameters']['UserId'];
 				};
@@ -1516,7 +1726,17 @@ export interface paths {
 		put: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					userId: components['parameters']['UserId'];
 				};
@@ -1585,7 +1805,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					userId: components['parameters']['UserId'];
 				};
@@ -1643,7 +1873,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path?: never;
 				cookie?: never;
 			};
@@ -1734,7 +1974,17 @@ export interface paths {
 		patch: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					roleId: components['parameters']['RoleId'];
 				};
@@ -1783,22 +2033,39 @@ export interface paths {
 		head?: never;
 		/**
 		 * Set or clear the role's parent (single-parent hierarchy)
-		 * @description ADR 0054 — single-parent role hierarchy. The role's effective
-		 *     permission set is its own grants UNION every ancestor's grants
-		 *     walked transitively via `parent_role_id`.
+		 * @description ADR 0058 (Wave 9.4, supersedes ADR 0054) — single-parent
+		 *     organizational hierarchy backed by a dedicated
+		 *     `identity.role_hierarchy_edges` aggregate. Permission
+		 *     resolution stays flat per role; the hierarchy is consumed by
+		 *     approval workflows + reporting.
 		 *
 		 *     Pass `{"parent_role_id": null}` (or omit / empty string) to
 		 *     clear the parent (role becomes a root). Pass a UUID referencing
 		 *     a role in the SAME tenant to set / re-point the parent.
 		 *
-		 *     Cycle prevention runs at three layers (domain pre-check + DB
-		 *     trigger + repository pre-validation); all three surface as
-		 *     422 `role_hierarchy_cycle` or `role_hierarchy_cross_tenant`.
+		 *     Cycle prevention + cross-tenant safety are declarative at the
+		 *     DB layer (composite FK + cycle trigger). Surfaces as 422
+		 *     `role_hierarchy_cycle` / `role_hierarchy_cross_tenant`, 400
+		 *     `role_hierarchy_self_reference`, 409
+		 *     `role_hierarchy_edge_already_exists`.
+		 *
+		 *     Optional `reason` (10-1024 chars) is recorded onto the new
+		 *     edge OR the cleared edge for audit.
 		 */
 		patch: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					roleId: components['parameters']['RoleId'];
 				};
@@ -1817,7 +2084,22 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				404: components['responses']['NotFound'];
+				/**
+				 * @description Role already has an active parent edge (single-parent
+				 *     invariant: at most one active edge per child). Caller
+				 *     should reload to discover the existing edge before
+				 *     retrying.
+				 */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				422: components['responses']['Unprocessable'];
 			};
 		};
@@ -1840,7 +2122,17 @@ export interface paths {
 		put: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					roleId: components['parameters']['RoleId'];
 				};
@@ -1883,7 +2175,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					roleId: components['parameters']['RoleId'];
 				};
@@ -1925,7 +2227,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					roleId: components['parameters']['RoleId'];
 				};
@@ -2132,7 +2444,17 @@ export interface paths {
 		patch: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					personId: components['parameters']['PersonId'];
 				};
@@ -2173,7 +2495,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					personId: components['parameters']['PersonId'];
 				};
@@ -2215,7 +2547,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					personId: components['parameters']['PersonId'];
 				};
@@ -2253,7 +2595,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					personId: components['parameters']['PersonId'];
 				};
@@ -2400,7 +2752,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path?: never;
 				cookie?: never;
 			};
@@ -2581,7 +2943,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path?: never;
 				cookie?: never;
 			};
@@ -2680,7 +3052,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					requestId: components['parameters']['PermissionRequestId'];
 				};
@@ -2744,7 +3126,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					requestId: components['parameters']['PermissionRequestId'];
 				};
@@ -2809,7 +3201,17 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
 				path: {
 					requestId: components['parameters']['PermissionRequestId'];
 				};
@@ -2834,6 +3236,3789 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/platform/unverified-contacts': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List unverified contacts (Platform-only)
+		 * @description Cursor-paginated list of contacts. Optional `status` filter.
+		 */
+		get: {
+			parameters: {
+				query?: {
+					status?: 'new' | 'in_call' | 'verified' | 'rejected' | 'busy';
+					/** @description Opaque base64-encoded keyset cursor. Omit for first page. */
+					cursor?: components['parameters']['Cursor'];
+					page_size?: components['parameters']['PageSize'];
+				};
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description OK */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ListUnverifiedContactsResponse'];
+					};
+				};
+				401: components['responses']['Unauthorized'];
+				403: components['responses']['Forbidden'];
+			};
+		};
+		put?: never;
+		/**
+		 * Create a raw unverified contact
+		 * @description Lead Agent registers a new prospect for verification.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path?: never;
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['CreateUnverifiedContactRequest'];
+				};
+			};
+			responses: {
+				/** @description Created */
+				201: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['CreateUnverifiedContactResponse'];
+					};
+				};
+				401: components['responses']['Unauthorized'];
+				403: components['responses']['Forbidden'];
+				422: components['responses']['ValidationError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/platform/unverified-contacts/{id}/calls': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Log a verification call outcome
+		 * @description Records one call attempt against the contact. When `outcome=busy`,
+		 *     callback window fields are required; otherwise they MUST be omitted.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					/** @description Generic resource path-parameter (Platform module routes). */
+					id: components['parameters']['PathID'];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['LogVerificationCallRequest'];
+				};
+			};
+			responses: {
+				/** @description Logged */
+				201: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['LogVerificationCallResponse'];
+					};
+				};
+				401: components['responses']['Unauthorized'];
+				403: components['responses']['Forbidden'];
+				404: components['responses']['NotFound'];
+				422: components['responses']['ValidationError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/platform/unverified-contacts/{id}/verify': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Promote contact to a marketplace PlatformLead
+		 * @description Refuses with 409 (`contact_already_terminal`) when the contact
+		 *     is already in a terminal state (Verified or Rejected) — the
+		 *     handler will NOT emit a duplicate `LeadVerifiedV1` /
+		 *     fabricate a phantom PlatformLead. Per ADR 0059 review-pass
+		 *     H11.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					/** @description Generic resource path-parameter (Platform module routes). */
+					id: components['parameters']['PathID'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Promoted; new PlatformLead ID returned */
+				201: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['VerifyUnverifiedContactResponse'];
+					};
+				};
+				401: components['responses']['Unauthorized'];
+				403: components['responses']['Forbidden'];
+				404: components['responses']['NotFound'];
+				/** @description Contact already in a terminal state (Verified or Rejected) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				422: components['responses']['ValidationError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/platform/unverified-contacts/{id}/reject': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Terminally reject an unverified contact */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					/** @description Generic resource path-parameter (Platform module routes). */
+					id: components['parameters']['PathID'];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['RejectUnverifiedContactRequest'];
+				};
+			};
+			responses: {
+				/** @description Rejected */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				401: components['responses']['Unauthorized'];
+				403: components['responses']['Forbidden'];
+				404: components['responses']['NotFound'];
+				422: components['responses']['ValidationError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/platform/marketplace/leads': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Browse marketplace leads (tenant-facing)
+		 * @description Cursor-paginated list of UNSOLD platform leads. All filters optional.
+		 *     `product_ranges` + `dosage_forms` are CSV (`?product_ranges=Cardiac,Diabetic`)
+		 *     and match ANY-overlap via GIN.
+		 */
+		get: {
+			parameters: {
+				query?: {
+					state?: string;
+					city?: string;
+					district?: string;
+					pincode?: string;
+					business_type?: 'PCD' | 'ThirdParty';
+					medicine_system?: 'Allopathic' | 'Ayurvedic';
+					order_value?: 'Below5000' | 'Upto25000' | 'Upto50000' | 'Above50000';
+					buy_timeline?: 'WithinWeek' | 'Within15Days' | 'WithinMonth';
+					has_drug_licence?: boolean;
+					has_gst?: boolean;
+					gst_verified?: boolean;
+					/** @description Comma-separated */
+					product_ranges?: string;
+					/** @description Comma-separated */
+					dosage_forms?: string;
+					/** @description Opaque base64-encoded keyset cursor. Omit for first page. */
+					cursor?: components['parameters']['Cursor'];
+					page_size?: components['parameters']['PageSize'];
+				};
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description OK */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['BrowseMarketplaceResponse'];
+					};
+				};
+				401: components['responses']['Unauthorized'];
+				403: components['responses']['Forbidden'];
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/platform/marketplace/leads/{id}/purchase': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Purchase a marketplace lead with credits
+		 * @description Debits 1 credit from the caller's tenant lead-credit balance + transfers
+		 *     the lead to the tenant's CRM (via the LeadPurchasedV1 event consumed by CRM).
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					/** @description Generic resource path-parameter (Platform module routes). */
+					id: components['parameters']['PathID'];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['PurchaseLeadRequest'];
+				};
+			};
+			responses: {
+				/** @description Purchased */
+				201: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['PurchaseLeadResponse'];
+					};
+				};
+				401: components['responses']['Unauthorized'];
+				403: components['responses']['Forbidden'];
+				404: components['responses']['NotFound'];
+				/** @description Lead already sold OR credit-row concurrency conflict */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				422: components['responses']['ValidationError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/platform/lead-credits/topup': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Top up a tenant's lead-credit balance (Platform-only) */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path?: never;
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['TopupLeadCreditsRequest'];
+				};
+			};
+			responses: {
+				/** @description Topped up */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['TopupLeadCreditsResponse'];
+					};
+				};
+				401: components['responses']['Unauthorized'];
+				403: components['responses']['Forbidden'];
+				422: components['responses']['ValidationError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/platform/lead-credits/balance': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get current tenant's lead-credit balance */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description OK */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['LeadCreditBalanceResponse'];
+					};
+				};
+				401: components['responses']['Unauthorized'];
+				403: components['responses']['Forbidden'];
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/inventory/products': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List Products (cursor-paginated)
+		 * @description Requires `inventory.catalog.read` OR `inventory.catalog.manage`.
+		 *     Returns the live (non-deleted) products for the caller's tenant
+		 *     ordered (created_at, id) DESC. Filters narrow the result set.
+		 */
+		get: {
+			parameters: {
+				query?: {
+					/** @description Opaque base64-encoded keyset cursor. Omit for first page. */
+					cursor?: components['parameters']['Cursor'];
+					page_size?: components['parameters']['PageSize'];
+					/** @description When 'true', restricts to is_active products. */
+					active?: 'true' | 'false';
+					dosage_form?: string;
+					manufacturer?: string;
+					/** @description pg_trgm fuzzy match on (sku || name) per ADR 0040. */
+					search?: string;
+				};
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Page of products */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ListProductsResponse'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+			};
+		};
+		put?: never;
+		/**
+		 * Create a Product
+		 * @description Requires `inventory.catalog.manage`. SKU is canonicalised
+		 *     upper-case + trimmed before per-tenant uniqueness check. 409 on
+		 *     SKU collision. 422 on field-validation failure.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path?: never;
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['CreateProductRequest'];
+				};
+			};
+			responses: {
+				/** @description Product created */
+				201: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['CreateProductResponse'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				/** @description SKU already exists in this tenant */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				422: components['responses']['Unprocessable'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/inventory/products/{productId}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get a Product by ID
+		 * @description Requires `inventory.catalog.read`. Cross-tenant access surfaces
+		 *     as 404 per ADR 0044 enumeration-safety.
+		 */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					productId: components['parameters']['ProductId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Product view */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ProductDto'];
+					};
+				};
+				404: components['responses']['NotFound'];
+			};
+		};
+		put?: never;
+		post?: never;
+		/**
+		 * Soft-delete a Product
+		 * @description Requires `inventory.catalog.manage`. Idempotent — repeat calls
+		 *     return 204. REJECTED with 409 `product_has_live_stock` if any
+		 *     live batch with quantity_on_hand > 0 exists.
+		 */
+		delete: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					productId: components['parameters']['ProductId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Deleted (or already deleted) */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				/** @description Product has live batches with non-zero stock */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+			};
+		};
+		options?: never;
+		head?: never;
+		/**
+		 * Update a Product
+		 * @description Requires `inventory.catalog.manage`. Supplied-key partial update —
+		 *     only fields present in the JSON body are applied (omitted fields
+		 *     retain their prior value). JSON `null` is NOT distinguishable from
+		 *     omission on the wire, so clearing a field is not supported; this
+		 *     deliberately differs from RFC 7396 merge-patch semantics. 422 on
+		 *     invariant failure (out-of-range GST bps, oversized name, etc).
+		 */
+		patch: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					productId: components['parameters']['ProductId'];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['UpdateProductRequest'];
+				};
+			};
+			responses: {
+				/** @description Updated */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				404: components['responses']['NotFound'];
+				/** @description Product is deleted */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				422: components['responses']['Unprocessable'];
+			};
+		};
+		trace?: never;
+	};
+	'/api/v1/inventory/products/{productId}/batches': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List Batches for a Product (cursor-paginated, FEFO-ordered)
+		 * @description Requires `inventory.stock.read` OR `inventory.stock.manage`.
+		 *     Returns live batches ordered by expiry_date DESC. Expired batches
+		 *     excluded by default (pass `include_expired=true` to include).
+		 */
+		get: {
+			parameters: {
+				query?: {
+					/** @description Opaque base64-encoded keyset cursor. Omit for first page. */
+					cursor?: components['parameters']['Cursor'];
+					page_size?: components['parameters']['PageSize'];
+					include_expired?: 'true' | 'false';
+				};
+				header?: never;
+				path: {
+					productId: components['parameters']['ProductId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Page of batches */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ListBatchesResponse'];
+					};
+				};
+			};
+		};
+		put?: never;
+		/**
+		 * Add a Batch to a Product
+		 * @description Requires `inventory.stock.manage`. The parent product MUST exist
+		 *     in the caller's tenant scope (cross-tenant or missing → 404).
+		 *     batch_number is unique per product on live rows.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					productId: components['parameters']['ProductId'];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['AddBatchRequest'];
+				};
+			};
+			responses: {
+				/** @description Batch added */
+				201: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['AddBatchResponse'];
+					};
+				};
+				404: components['responses']['NotFound'];
+				/** @description batch_number already exists for this product */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				422: components['responses']['Unprocessable'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/inventory/products/{productId}/fefo-batches': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List FEFO-ordered live batches for a Product
+		 * @description Requires `inventory.stock.read` OR `inventory.stock.manage`.
+		 *     Returns LIVE, in-stock, not-yet-expired batches for the
+		 *     supplied product, ordered (expiry_date ASC, id ASC) per BRD §6.5
+		 *     First-Expired-First-Out canon. No pagination — feeds the
+		 *     dispatch picker which needs the full eligible set to compute
+		 *     multi-batch allocations against a single order quantity.
+		 */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					productId: components['parameters']['ProductId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description FEFO-ordered batch list */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['FefoBatchesResponse'];
+					};
+				};
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/inventory/batches/{batchId}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get a Batch by ID
+		 * @description Requires `inventory.stock.read` OR `inventory.stock.manage`.
+		 *     Cross-tenant access surfaces as 404 per ADR 0044.
+		 */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					batchId: components['parameters']['BatchId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Batch view */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['BatchDto'];
+					};
+				};
+				404: components['responses']['NotFound'];
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/inventory/batches/{batchId}/movements': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List Stock Movements for a Batch (cursor-paginated)
+		 * @description Requires `inventory.stock.read` OR `inventory.stock.manage`.
+		 *     Append-only ledger ordered (occurred_at, id) DESC. Optional
+		 *     `type` filter narrows to one movement type.
+		 */
+		get: {
+			parameters: {
+				query?: {
+					/** @description Opaque base64-encoded keyset cursor. Omit for first page. */
+					cursor?: components['parameters']['Cursor'];
+					page_size?: components['parameters']['PageSize'];
+					type?: 'inbound' | 'outbound' | 'adjustment' | 'reservation' | 'release';
+				};
+				header?: never;
+				path: {
+					batchId: components['parameters']['BatchId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Page of movements */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ListMovementsResponse'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+			};
+		};
+		put?: never;
+		/**
+		 * Log a Stock Movement
+		 * @description Requires `inventory.stock.manage`. Persists the movement + bumps
+		 *     the batch's quantity_on_hand atomically (single tx). Idempotency
+		 *     via `X-Command-Id` per ADR 0031.
+		 *
+		 *     Quantity is the POSITIVE magnitude — direction is implicit in
+		 *     Type (Outbound subtracts). Adjustment writes the positive
+		 *     magnitude in slice 1; future `direction` field for up/down.
+		 *
+		 *     Rejections (409): insufficient_stock (Outbound > on-hand),
+		 *     batch_expired (Inbound on expired batch), conflict (concurrent
+		 *     modification after retry cap).
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					batchId: components['parameters']['BatchId'];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['LogMovementRequest'];
+				};
+			};
+			responses: {
+				/** @description Movement logged */
+				201: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['LogMovementResponse'];
+					};
+				};
+				404: components['responses']['NotFound'];
+				/** @description Insufficient stock / batch expired / concurrency conflict */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				422: components['responses']['Unprocessable'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/crm/leads': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List CRM leads (cursor-paginated, filterable)
+		 * @description Returns a cursor-paginated page of CRM leads in the caller's tenant.
+		 *
+		 *     Filters (all optional): stage, temperature, assignee, city, pincode,
+		 *     business_type, medicine_system, name (pg_trgm partial match),
+		 *     product_range (repeatable — AND semantics on text[] GIN), dosage_form
+		 *     (repeatable).
+		 *
+		 *     Callers WITHOUT `crm.leads.read_all` see only leads assigned to
+		 *     themselves; callers WITH it see the full tenant set per ADR 0060.
+		 */
+		get: {
+			parameters: {
+				query?: {
+					/** @description Opaque base64-encoded keyset cursor. Omit for first page. */
+					cursor?: components['parameters']['Cursor'];
+					page_size?: components['parameters']['PageSize'];
+					stage?: 'new' | 'contacted' | 'interested' | 'negotiation' | 'converted' | 'lost';
+					temperature?: 'hot' | 'warm' | 'cold' | 'dead';
+					assignee?: string;
+					city?: string;
+					pincode?: string;
+					business_type?: 'PCD' | 'ThirdParty';
+					medicine_system?: 'Allopathic' | 'Ayurvedic';
+					/** @description pg_trgm partial-match on contact_name */
+					name?: string;
+					product_range?: string[];
+					dosage_form?: string[];
+				};
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Cursor-paginated lead page */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ListLeadsResponse'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/crm/leads/{leadId}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get one CRM lead by ID */
+		get: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					leadId: components['parameters']['LeadId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description The lead */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['CrmLeadDto'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/crm/leads/{leadId}/assign': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Assign or reassign a lead
+		 * @description Sets the lead's current assignee. Atomic with an append to the
+		 *     AssignmentHistory audit table. Emits `crm.lead_assigned.v1`.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					leadId: components['parameters']['LeadId'];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['AssignLeadRequest'];
+				};
+			};
+			responses: {
+				/** @description Assigned */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['AssignLeadResponse'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Lead is in a terminal stage (converted / lost) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/crm/leads/{leadId}/stage': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Advance lead through the stage state machine
+		 * @description Non-terminal transitions only: New → Contacted → Interested →
+		 *     Negotiation. Use `/convert` or `/lose` for terminal transitions.
+		 *     Emits `crm.lead_stage_changed.v1`.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					leadId: components['parameters']['LeadId'];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['ChangeStageRequest'];
+				};
+			};
+			responses: {
+				/** @description Stage updated */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Lead is in a terminal stage OR transition is not allowed */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				422: components['responses']['Unprocessable'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/crm/leads/{leadId}/temperature': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Change the lead's qualitative temperature axis
+		 * @description Independent of stage — Hot/Warm/Cold/Dead transition at any
+		 *     non-terminal stage. Emits `crm.lead_temperature_changed.v1`.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					leadId: components['parameters']['LeadId'];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['ChangeTemperatureRequest'];
+				};
+			};
+			responses: {
+				/** @description Temperature updated */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Lead is in a terminal stage */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/crm/leads/{leadId}/calls': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Log a call against a lead
+		 * @description Creates a CallLog row + emits `crm.call_logged.v1`. Refused on
+		 *     terminal leads (converted / lost).
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					leadId: components['parameters']['LeadId'];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['LogCallRequest'];
+				};
+			};
+			responses: {
+				/** @description Call logged */
+				201: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['LogCallResponse'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Lead is in a terminal stage */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/crm/leads/{leadId}/convert': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Terminal-convert a lead (won)
+		 * @description Sets the lead to `converted`. Emits `crm.lead_converted.v1` —
+		 *     this is the future Orders module's create-trigger per ADR 0060.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					leadId: components['parameters']['LeadId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Converted */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Lead is already in a terminal stage */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/tasks/work-items': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List work items (cursor-paginated, filterable)
+		 * @description Cursor-paginated list. Callers WITHOUT `tasks.work_items.read_all`
+		 *     see only their own tasks (a `?assignee=` that points elsewhere
+		 *     returns 403).
+		 */
+		get: {
+			parameters: {
+				query?: {
+					/** @description Opaque base64-encoded keyset cursor. Omit for first page. */
+					cursor?: components['parameters']['Cursor'];
+					page_size?: components['parameters']['PageSize'];
+					state?: 'pending' | 'in_progress' | 'completed' | 'overdue' | 'cancelled';
+					type?: 'manual' | 'callback_reminder' | 'reorder_reminder' | 'follow_up' | 'custom';
+					priority?: 'low' | 'medium' | 'high' | 'urgent';
+					assignee?: string;
+					batch_id?: string;
+					due_before?: string;
+					due_after?: string;
+				};
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Cursor-paginated work-item page */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ListWorkItemsResponse'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				403: components['responses']['Forbidden'];
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		put?: never;
+		/**
+		 * Create a manual work item
+		 * @description Creates a new manual task in the caller's tenant. The caller's
+		 *     membership becomes the AssignedByMembershipID; the request body's
+		 *     `assigned_to_membership_id` must reference an active membership in
+		 *     the same tenant (otherwise 422 `assignee_inactive`). Emits
+		 *     `tasks.work_item_created.v1`.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path?: never;
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['CreateWorkItemRequest'];
+				};
+			};
+			responses: {
+				/** @description Work item created */
+				201: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['CreateWorkItemResponse'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				422: components['responses']['Unprocessable'];
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/tasks/work-items/dashboard': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Dashboard counts (today / upcoming / overdue / completed-today / total-pending)
+		 * @description Returns the BRD §6.8 dashboard tallies. By default scoped to the
+		 *     caller's own tasks; pass `?include_team=true` to expand to the
+		 *     actor's subordinate scope via the hierarchy traversal (requires
+		 *     `tasks.work_items.read_all`).
+		 */
+		get: {
+			parameters: {
+				query?: {
+					include_team?: boolean;
+				};
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Dashboard counts */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['DashboardResponse'];
+					};
+				};
+				401: components['responses']['Unauthorized'];
+				403: components['responses']['Forbidden'];
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/tasks/work-items/{workItemId}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get a single work item */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					workItemId: components['parameters']['WorkItemId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Work item */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['WorkItemDto'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/tasks/work-items/{workItemId}/start': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Flip work item to in_progress */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					workItemId: components['parameters']['WorkItemId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Started */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Work item is in a terminal / overdue state */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/tasks/work-items/{workItemId}/complete': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Terminal-complete a work item */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					workItemId: components['parameters']['WorkItemId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Completed */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Cannot complete a cancelled task */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/tasks/work-items/{workItemId}/cancel': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Terminal-cancel a work item (with required reason) */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					workItemId: components['parameters']['WorkItemId'];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['CancelWorkItemRequest'];
+				};
+			};
+			responses: {
+				/** @description Cancelled */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Cannot cancel a completed task */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				/** @description Reason missing */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/tasks/work-items/{workItemId}/reassign': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Reassign a work item (hierarchy-gated per BRD §6.7)
+		 * @description Moves the task to a new membership. The caller must hold
+		 *     `tasks.work_items.reassign` AND the new assignee must be in the
+		 *     caller's subordinate scope (or be the caller themselves). 403
+		 *     `reassign_forbidden` otherwise.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					workItemId: components['parameters']['WorkItemId'];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['ReassignWorkItemRequest'];
+				};
+			};
+			responses: {
+				/** @description Reassigned */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				403: components['responses']['Forbidden'];
+				404: components['responses']['NotFound'];
+				/** @description Cannot reassign a terminal task */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				/** @description New assignee not active in tenant */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/dispatch/consignment-notes': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get the consignment note attached to an order
+		 * @description Returns the single note for the given `order_id`, or 404.
+		 */
+		get: {
+			parameters: {
+				query: {
+					order_id: string;
+				};
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Consignment note */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ConsignmentNoteDto'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		put?: never;
+		/**
+		 * Create a consignment-note slot (manual)
+		 * @description Creates a pending ConsignmentNote for an order. Normally the
+		 *     OrderPacked subscriber mints the slot automatically; this route
+		 *     covers operator-driven creation. Idempotent on (tenant, order):
+		 *     a pre-existing note returns 200 with `already_existed: true`.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path?: never;
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['CreateConsignmentNoteRequest'];
+				};
+			};
+			responses: {
+				/** @description Consignment note already existed for this order (idempotent) */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['CreateConsignmentNoteResponse'];
+					};
+				};
+				/** @description Consignment note created */
+				201: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['CreateConsignmentNoteResponse'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				422: components['responses']['Unprocessable'];
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/dispatch/consignment-notes/{consignmentNoteId}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get a single consignment note */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					consignmentNoteId: components['parameters']['ConsignmentNoteId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Consignment note */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ConsignmentNoteDto'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/dispatch/consignment-notes/{consignmentNoteId}/dispatch': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Mark dispatched (pending → dispatched, captures docket number) */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					consignmentNoteId: components['parameters']['ConsignmentNoteId'];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['MarkDispatchedRequest'];
+				};
+			};
+			responses: {
+				/** @description Dispatched */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Invalid status transition */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				422: components['responses']['Unprocessable'];
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/dispatch/consignment-notes/{consignmentNoteId}/in-transit': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Mark in-transit (dispatched → in_transit) */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					consignmentNoteId: components['parameters']['ConsignmentNoteId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description In transit */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Invalid status transition */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/dispatch/consignment-notes/{consignmentNoteId}/delivered': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Mark delivered (terminal-success; triggers the Orders saga) */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					consignmentNoteId: components['parameters']['ConsignmentNoteId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Delivered */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Invalid status transition */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/dispatch/consignment-notes/{consignmentNoteId}/failed': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Mark failed (terminal-failure, with required reason) */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					consignmentNoteId: components['parameters']['ConsignmentNoteId'];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['MarkFailedRequest'];
+				};
+			};
+			responses: {
+				/** @description Failed */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Invalid status transition */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				422: components['responses']['Unprocessable'];
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/orders/quotations': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Create a draft quotation */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path?: never;
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['CreateQuotationRequest'];
+				};
+			};
+			responses: {
+				/** @description Quotation created */
+				201: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['CreateQuotationResponse'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				422: components['responses']['Unprocessable'];
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/orders/quotations/{quotationId}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get a quotation */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					quotationId: components['parameters']['QuotationId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Quotation */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['QuotationDto'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/orders/quotations/{quotationId}/revise': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Append a quotation revision */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					quotationId: components['parameters']['QuotationId'];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['ReviseQuotationRequest'];
+				};
+			};
+			responses: {
+				/** @description Revised */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Quotation is terminal */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				422: components['responses']['Unprocessable'];
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/orders/quotations/{quotationId}/approve': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Approve a quotation (seeds the Order) */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					quotationId: components['parameters']['QuotationId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Approved; Order created */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ApproveQuotationResponse'];
+					};
+				};
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Quotation already rejected */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				422: components['responses']['Unprocessable'];
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/orders/quotations/{quotationId}/reject': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Reject a quotation (with reason) */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					quotationId: components['parameters']['QuotationId'];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['RejectQuotationRequest'];
+				};
+			};
+			responses: {
+				/** @description Rejected */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Quotation already approved */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/orders/orders/{orderId}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get an order */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					orderId: components['parameters']['OrderId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Order */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['OrderDto'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/orders/orders/{orderId}/token-payment': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Record the token payment + advance to token_paid */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					orderId: components['parameters']['OrderId'];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['RecordTokenPaymentRequest'];
+				};
+			};
+			responses: {
+				/** @description Recorded */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Invalid transition or duplicate payment reference */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				422: components['responses']['Unprocessable'];
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/orders/orders/{orderId}/confirm': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Confirm an order (token_paid → confirmed) */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					orderId: components['parameters']['OrderId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Confirmed */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Invalid state transition */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/orders/orders/{orderId}/pack': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Pack an order (confirmed → packed) */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					orderId: components['parameters']['OrderId'];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['PackOrderRequest'];
+				};
+			};
+			responses: {
+				/** @description Packed */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Invalid state transition */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/orders/orders/{orderId}/invoice': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get the order's invoice */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					orderId: components['parameters']['OrderId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Invoice */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['InvoiceDto'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		put?: never;
+		/** Invoice an order (packed → invoiced, gapless number) */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					orderId: components['parameters']['OrderId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Invoiced */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['InvoiceOrderResponse'];
+					};
+				};
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Invalid transition or invoice already exists */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/orders/orders/{orderId}/cancel': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Cancel an order (with reason) */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					orderId: components['parameters']['OrderId'];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['CancelOrderRequest'];
+				};
+			};
+			responses: {
+				/** @description Cancelled */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Order already terminal */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/orders/orders/{orderId}/complete': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Complete an order (delivered → complete) */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					orderId: components['parameters']['OrderId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Completed */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Invalid state transition */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/orders/orders/{orderId}/payments': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** List an order's payments */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					orderId: components['parameters']['OrderId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Payments */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ListPaymentsResponse'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		put?: never;
+		/** Record a payment receipt (balance / full / refund) */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					orderId: components['parameters']['OrderId'];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['RecordPaymentRequest'];
+				};
+			};
+			responses: {
+				/** @description Recorded */
+				201: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['RecordPaymentResponse'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				/** @description Duplicate external reference */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				422: components['responses']['Unprocessable'];
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/orders/orders/{orderId}/credit-notes': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Mint an operator credit note against the order's invoice
+		 * @description Post-delivery return (BRD §A-014). Mints a credit_note (partial amount
+		 *     allowed) against the order's invoice with a gapless number. Requires
+		 *     `orders.orders.manage`. 404 if the order has no invoice.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					orderId: components['parameters']['OrderId'];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['MintCreditNoteRequest'];
+				};
+			};
+			responses: {
+				/** @description Credit note minted */
+				201: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['MintCreditNoteResponse'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				422: components['responses']['Unprocessable'];
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/crm/leads/{leadId}/lose': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Terminal-lose a lead (with required reason)
+		 * @description Sets the lead to `lost`. `reason` is REQUIRED (audit doctrine).
+		 *     Emits `crm.lead_lost.v1`.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					leadId: components['parameters']['LeadId'];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['LoseLeadRequest'];
+				};
+			};
+			responses: {
+				/** @description Lost */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Lead is already in a terminal stage */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				/** @description Reason missing */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/crm/leads/{leadId}/reminders': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Create a manual reminder against a lead
+		 * @description Creates a `manual` Reminder owned by the supplied assignee.
+		 *     `callback` + `mature_lead` reminders are auto-created by the
+		 *     CallLogged subscriber (BRD §4.5) + the mature-lead daily scan
+		 *     (BRD §4.7) respectively; the HTTP surface only mints manual ones.
+		 *     Emits `crm.reminder_created.v1`.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					leadId: components['parameters']['LeadId'];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['CreateReminderRequest'];
+				};
+			};
+			responses: {
+				/** @description Reminder created */
+				201: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['CreateReminderResponse'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Invalid due_at / assignee */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/crm/reminders': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List pending reminders (cursor-paginated)
+		 * @description Returns a cursor-paginated page of pending reminders in the
+		 *     caller's tenant, sorted by `due_at` ASC (overdue first,
+		 *     upcoming after). Filters: `type`, `assignee`, `lead_id`.
+		 *
+		 *     Callers WITHOUT `crm.leads.read_all` see only their own
+		 *     assignee bucket per ADR 0060.
+		 */
+		get: {
+			parameters: {
+				query?: {
+					/** @description Opaque base64-encoded keyset cursor. Omit for first page. */
+					cursor?: components['parameters']['Cursor'];
+					page_size?: components['parameters']['PageSize'];
+					type?: 'callback' | 'mature_lead' | 'manual';
+					assignee?: string;
+					lead_id?: string;
+				};
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Cursor-paginated reminder page */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ListRemindersResponse'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				/** @description Caller probed another assignee without crm.leads.read_all */
+				403: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/crm/reminders/{reminderId}/sent': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Mark a pending reminder as sent (terminal)
+		 * @description Flips state to `sent`. Refused on already-terminal reminders.
+		 *     Emits `crm.reminder_marked_sent.v1`.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					reminderId: components['parameters']['ReminderId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Marked sent */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Reminder is already in a terminal state */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/crm/reminders/{reminderId}/cancel': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Cancel a pending reminder (terminal; reason required)
+		 * @description Flips state to `cancelled`. `reason` is REQUIRED (audit
+		 *     doctrine). Refused on already-terminal reminders. Emits
+		 *     `crm.reminder_cancelled.v1`.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					reminderId: components['parameters']['ReminderId'];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['CancelReminderRequest'];
+				};
+			};
+			responses: {
+				/** @description Cancelled */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Reminder is already in a terminal state */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				/** @description Reason missing */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/notifications': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List the caller's notification inbox (cursor-paginated)
+		 * @description Returns the authenticated membership's own notifications, newest first.
+		 *     Optional `?state=` and `?category=` filters. Recipient scoping is
+		 *     enforced server-side — a caller only ever sees their own inbox.
+		 */
+		get: {
+			parameters: {
+				query?: {
+					/** @description Opaque base64-encoded keyset cursor. Omit for first page. */
+					cursor?: components['parameters']['Cursor'];
+					page_size?: components['parameters']['PageSize'];
+					state?: 'unread' | 'read' | 'dismissed';
+					category?:
+						| 'lead_assigned'
+						| 'lead_converted'
+						| 'order_confirmed'
+						| 'order_delivered'
+						| 'work_item_assigned'
+						| 'work_item_overdue'
+						| 'stock_expiring'
+						| 'stock_below_reorder'
+						| 'reminder';
+				};
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Cursor-paginated notification page */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ListNotificationsResponse'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/notifications/unread-count': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Unread notification count for the caller (badge) */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Unread count */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['UnreadCountResponse'];
+					};
+				};
+				401: components['responses']['Unauthorized'];
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/notifications/read-all': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Mark every unread notification read */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Count of notifications flipped to read */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['MarkAllReadResponse'];
+					};
+				};
+				401: components['responses']['Unauthorized'];
+				500: components['responses']['InternalServerError'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/notifications/{notificationId}/read': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Mark one notification read */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					notificationId: components['parameters']['NotificationId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Marked read */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				/** @description Cannot mark a dismissed notification read */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/notifications/{notificationId}/dismiss': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Dismiss one notification */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+					 *     the server replays the original response within the
+					 *     idempotency-store retention window (24h, Stripe canon). Per
+					 *     ADR 0031 — required by every state-mutating endpoint (POST /
+					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+					 *     (token operations are idempotent at the token-family level).
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+				};
+				path: {
+					notificationId: components['parameters']['NotificationId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Dismissed */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
 			};
 		};
 		delete?: never;
@@ -3135,10 +7320,11 @@ export interface components {
 			created_at: string;
 			/**
 			 * Format: uuid
-			 * @description ADR 0054 — single-parent hierarchy. Omitted when the role is
-			 *     a root (no inheritance). When present, the role's effective
-			 *     permission set is its own grants UNION every ancestor's
-			 *     grants walked transitively.
+			 * @description ADR 0058 (Wave 9.4) — populated from the active edge in
+			 *     `identity.role_hierarchy_edges` via JOIN at read time.
+			 *     Omitted when the role is a root (no active edge). Permission
+			 *     resolution stays flat per role; the hierarchy is consumed
+			 *     by approval workflows + reporting, NOT by the resolver.
 			 */
 			parent_role_id?: string;
 		};
@@ -3150,9 +7336,11 @@ export interface components {
 			hierarchy_level: number;
 			/**
 			 * Format: uuid
-			 * @description ADR 0054 — optional parent for the new role. Omit / empty
-			 *     = root (no inheritance). Cross-tenant + cycle prevention
-			 *     runs at the DB-trigger layer.
+			 * @description ADR 0058 (Wave 9.4) — optional parent for the new role.
+			 *     Omit / empty = root (no edge created). When set the role
+			 *     + the rolehierarchy.Edge are inserted in one transaction;
+			 *     cross-tenant + self-reference + cycle prevention runs at
+			 *     the DB layer (composite FK + check + cycle trigger).
 			 */
 			parent_role_id?: string;
 		};
@@ -3176,14 +7364,21 @@ export interface components {
 			permission: string;
 		};
 		/**
-		 * @description ADR 0054 — PATCH body for `/api/v1/roles/{roleId}/parent`.
-		 *     Pass `null` (or empty string) to clear the parent (role
-		 *     becomes a root); pass a UUID referencing a role in the same
-		 *     tenant to set / re-point the parent.
+		 * @description ADR 0058 (Wave 9.4) — PATCH body for
+		 *     `/api/v1/roles/{roleId}/parent`. Pass `null` (or empty string)
+		 *     to clear the parent (role becomes a root by soft-deleting any
+		 *     active edge); pass a UUID referencing a role in the same
+		 *     tenant to atomically replace any existing edge.
 		 */
 		SetRoleParentRequest: {
 			/** Format: uuid */
 			parent_role_id: string | null;
+			/**
+			 * @description Optional audit text recorded on the new edge (when setting)
+			 *     OR the cleared edge (when clearing). When supplied must be
+			 *     10-1024 characters per the DB CHECK constraint.
+			 */
+			reason?: string;
 		};
 		PersonDto: {
 			/** Format: uuid */
@@ -3382,6 +7577,808 @@ export interface components {
 			has_more: boolean;
 			next_cursor?: string;
 		};
+		CreateUnverifiedContactRequest: {
+			contact_name: string;
+			mobile_e164: string;
+			email?: string;
+			pincode: string;
+			city: string;
+			district: string;
+			state: string;
+			street?: string;
+			has_drug_licence: boolean;
+			has_gst: boolean;
+			/** @description Required when has_gst=true; GSTIN format */
+			gst_number?: string;
+			has_pan: boolean;
+			/** @description Required when has_pan=true; PAN format */
+			pan_number?: string;
+			/** @enum {string} */
+			business_type: 'PCD' | 'ThirdParty';
+			/** @enum {string} */
+			medicine_system: 'Allopathic' | 'Ayurvedic';
+			product_ranges?: string[];
+			dosage_forms?: string[];
+			/** @enum {string} */
+			order_value: 'Below5000' | 'Upto25000' | 'Upto50000' | 'Above50000';
+			/** @enum {string} */
+			buy_timeline: 'WithinWeek' | 'Within15Days' | 'WithinMonth';
+		};
+		CreateUnverifiedContactResponse: {
+			/** Format: uuid */
+			contact_id: string;
+		};
+		LogVerificationCallRequest: {
+			/** @enum {string} */
+			outcome: 'verified' | 'rejected' | 'busy' | 'no_answer' | 'wrong_number';
+			notes?: string;
+			/**
+			 * Format: date-time
+			 * @description Required when outcome=busy
+			 */
+			callback_window_start_at?: string;
+			/**
+			 * Format: date-time
+			 * @description Required when outcome=busy
+			 */
+			callback_window_end_at?: string;
+		};
+		LogVerificationCallResponse: {
+			/**
+			 * Format: uuid
+			 * @description ID of the verification-call row written to platform.verification_calls.
+			 */
+			call_id: string;
+		};
+		CrmLeadDto: {
+			/** Format: uuid */
+			id: string;
+			/** Format: uuid */
+			tenant_id: string;
+			/** @enum {string} */
+			stage: 'new' | 'contacted' | 'interested' | 'negotiation' | 'converted' | 'lost';
+			/** @enum {string} */
+			temperature: 'hot' | 'warm' | 'cold' | 'dead';
+			contact_name: string;
+			/** @description BRD §5 — +91 followed by 10 digits */
+			phone_e164: string;
+			city?: string;
+			district?: string;
+			state?: string;
+			pincode?: string;
+			/** @enum {string} */
+			business_type?: '' | 'PCD' | 'ThirdParty';
+			/** @enum {string} */
+			medicine_system?: '' | 'Allopathic' | 'Ayurvedic';
+			/** @enum {string} */
+			order_value?: '' | 'Below5000' | 'Upto25000' | 'Upto50000' | 'Above50000';
+			/** @enum {string} */
+			buy_timeline?: '' | 'WithinWeek' | 'Within15Days' | 'WithinMonth';
+			has_drug_licence: boolean;
+			has_gst: boolean;
+			gst_verified: boolean;
+			product_ranges?: string[];
+			dosage_forms?: string[];
+			/** @description Non-filterable supplementary fields per BRD §6.3 (street, gst_number, pan_number, email, notes). Never used in WHERE clauses. */
+			extra_profile?: {
+				[key: string]: unknown;
+			};
+			/** Format: uuid */
+			assignee_membership_id?: string;
+			/** Format: date-time */
+			assigned_at?: string;
+			/**
+			 * Format: uuid
+			 * @description platform.lead-purchased.v1 idempotency key
+			 */
+			source_purchase_id?: string;
+			/** Format: uuid */
+			source_platform_lead_id?: string;
+			/** Format: date-time */
+			converted_at?: string;
+			/** Format: uuid */
+			converted_by_membership_id?: string;
+			/** Format: date-time */
+			lost_at?: string;
+			/** Format: uuid */
+			lost_by_membership_id?: string;
+			lost_reason?: string;
+			/** Format: date-time */
+			created_at: string;
+			/** Format: uuid */
+			created_by_membership_id?: string;
+		};
+		ListLeadsResponse: {
+			items: components['schemas']['CrmLeadDto'][];
+			has_more: boolean;
+			next_cursor?: string;
+		};
+		AssignLeadRequest: {
+			/** Format: uuid */
+			assignee_membership_id: string;
+			reason?: string;
+		};
+		AssignLeadResponse: {
+			/** Format: uuid */
+			assignment_id?: string;
+			/** Format: uuid */
+			assignee_membership_id: string;
+		};
+		ChangeStageRequest: {
+			/** @enum {string} */
+			new_stage: 'new' | 'contacted' | 'interested' | 'negotiation';
+			reason?: string;
+		};
+		ChangeTemperatureRequest: {
+			/** @enum {string} */
+			new_temperature: 'hot' | 'warm' | 'cold' | 'dead';
+		};
+		LogCallRequest: {
+			/** @enum {string} */
+			outcome:
+				| 'connected'
+				| 'no_answer'
+				| 'busy'
+				| 'wrong_number'
+				| 'not_interested'
+				| 'interested'
+				| 'callback_requested'
+				| 'converted'
+				| 'other';
+			notes?: string;
+		};
+		LogCallResponse: {
+			/** Format: uuid */
+			call_id: string;
+		};
+		ReminderDto: {
+			/** Format: uuid */
+			id: string;
+			/** Format: uuid */
+			tenant_id: string;
+			/** Format: uuid */
+			lead_id: string;
+			/** Format: uuid */
+			assigned_to_membership_id: string;
+			/** Format: uuid */
+			created_by_membership_id?: string;
+			/**
+			 * Format: uuid
+			 * @description populated only for type=callback
+			 */
+			source_call_log_id?: string;
+			/** @enum {string} */
+			type: 'callback' | 'mature_lead' | 'manual';
+			/** @enum {string} */
+			state: 'pending' | 'sent' | 'cancelled';
+			/** Format: date-time */
+			due_at: string;
+			notes?: string;
+			/** Format: date-time */
+			sent_at?: string;
+			/** Format: uuid */
+			marked_sent_by_membership_id?: string;
+			/** Format: date-time */
+			cancelled_at?: string;
+			/** Format: uuid */
+			cancelled_by_membership_id?: string;
+			cancel_reason?: string;
+			/** Format: date-time */
+			created_at: string;
+		};
+		ListRemindersResponse: {
+			items: components['schemas']['ReminderDto'][];
+			has_more: boolean;
+			next_cursor?: string;
+		};
+		CreateReminderRequest: {
+			/** Format: uuid */
+			assigned_to_membership_id: string;
+			/** Format: date-time */
+			due_at: string;
+			notes?: string;
+		};
+		CreateReminderResponse: {
+			/** Format: uuid */
+			reminder_id: string;
+		};
+		CancelReminderRequest: {
+			reason: string;
+		};
+		VerifyUnverifiedContactResponse: {
+			/** Format: uuid */
+			platform_lead_id: string;
+		};
+		RejectUnverifiedContactRequest: {
+			reason: string;
+		};
+		UnverifiedContactDto: {
+			/** Format: uuid */
+			id: string;
+			/** @enum {string} */
+			state: 'new' | 'in_call' | 'verified' | 'rejected' | 'busy';
+			contact_name: string;
+			mobile_e164: string;
+			city?: string;
+			state_geo?: string;
+			/** Format: date-time */
+			created_at: string;
+			/** Format: uuid */
+			created_by_membership_id: string;
+		};
+		ListUnverifiedContactsResponse: {
+			items: components['schemas']['UnverifiedContactDto'][];
+			has_more: boolean;
+			next_cursor?: string;
+		};
+		MarketplaceLeadDto: {
+			/** Format: uuid */
+			id: string;
+			contact_name: string;
+			city: string;
+			district: string;
+			state: string;
+			pincode: string;
+			has_drug_licence: boolean;
+			has_gst: boolean;
+			gst_verified: boolean;
+			has_pan: boolean;
+			business_type: string;
+			medicine_system: string;
+			product_ranges?: string[];
+			dosage_forms?: string[];
+			order_value: string;
+			buy_timeline: string;
+			/** Format: date-time */
+			verified_at: string;
+		};
+		BrowseMarketplaceResponse: {
+			items: components['schemas']['MarketplaceLeadDto'][];
+			has_more: boolean;
+			next_cursor?: string;
+		};
+		PurchaseLeadRequest: {
+			/**
+			 * Format: int64
+			 * @description INR paise. Forensic price field. Slice 1 always charges 1 credit per lead.
+			 */
+			amount_paisa: number;
+		};
+		PurchaseLeadResponse: {
+			/**
+			 * Format: uuid
+			 * @description Correlation ID also carried on LeadPurchasedV1
+			 */
+			purchase_id: string;
+			/** Format: uuid */
+			platform_lead_id: string;
+		};
+		TopupLeadCreditsRequest: {
+			/** Format: uuid */
+			tenant_id: string;
+			/** Format: int64 */
+			delta: number;
+			reason: string;
+		};
+		TopupLeadCreditsResponse: {
+			/** Format: uuid */
+			tenant_id: string;
+			/** Format: int64 */
+			new_balance: number;
+		};
+		LeadCreditBalanceResponse: {
+			/** Format: uuid */
+			tenant_id: string;
+			/** Format: int64 */
+			balance: number;
+		};
+		ProductDto: {
+			/** Format: uuid */
+			id: string;
+			/** Format: uuid */
+			tenant_id: string;
+			sku: string;
+			name: string;
+			dosage_form: string;
+			pack_size: string;
+			/** @description Indian HSN code; 4..10 digits */
+			hsn_code: string;
+			/** @description GST rate in basis points (1200 = 12%) */
+			gst_rate_bps: number;
+			manufacturer?: string;
+			is_active: boolean;
+			/** Format: date-time */
+			created_at: string;
+			/** Format: date-time */
+			updated_at: string;
+		};
+		CreateProductRequest: {
+			sku: string;
+			name: string;
+			dosage_form: string;
+			pack_size: string;
+			hsn_code: string;
+			gst_rate_bps: number;
+			manufacturer?: string;
+		};
+		CreateProductResponse: {
+			/** Format: uuid */
+			product_id: string;
+		};
+		/** @description Partial-update payload — only fields present in the JSON body are applied (omitted fields retain prior value). JSON null is treated as omission; field clearing is not supported. Deliberately NOT RFC 7396 merge-patch semantics. */
+		UpdateProductRequest: {
+			name?: string;
+			gst_rate_bps?: number;
+			is_active?: boolean;
+			manufacturer?: string;
+		};
+		ListProductsResponse: {
+			items: components['schemas']['ProductDto'][];
+			has_more: boolean;
+			next_cursor?: string;
+		};
+		BatchDto: {
+			/** Format: uuid */
+			id: string;
+			/** Format: uuid */
+			product_id: string;
+			/** Format: uuid */
+			tenant_id: string;
+			batch_number: string;
+			/** Format: date-time */
+			manufacture_date: string;
+			/** Format: date-time */
+			expiry_date: string;
+			manufacturer_name: string;
+			manufacturing_licence_number: string;
+			/**
+			 * Format: int64
+			 * @description Maximum Retail Price in paise (1 INR = 100 paise; Stripe canon)
+			 */
+			mrp_paise: number;
+			/** Format: int64 */
+			purchase_price_paise: number;
+			/** Format: int64 */
+			quantity_on_hand: number;
+			/**
+			 * Format: int64
+			 * @description Optimistic-concurrency token (Vernon IDDD ch.10)
+			 */
+			version: number;
+			/** Format: date-time */
+			created_at: string;
+			/** Format: date-time */
+			updated_at: string;
+		};
+		AddBatchRequest: {
+			batch_number: string;
+			/** Format: date-time */
+			manufacture_date: string;
+			/** Format: date-time */
+			expiry_date: string;
+			manufacturer_name: string;
+			manufacturing_licence_number: string;
+			/** Format: int64 */
+			mrp_paise: number;
+			/** Format: int64 */
+			purchase_price_paise: number;
+		};
+		AddBatchResponse: {
+			/** Format: uuid */
+			batch_id: string;
+		};
+		FefoBatchesResponse: {
+			items: components['schemas']['BatchDto'][];
+		};
+		ListBatchesResponse: {
+			items: components['schemas']['BatchDto'][];
+			has_more: boolean;
+			next_cursor?: string;
+		};
+		MovementDto: {
+			/** Format: uuid */
+			id: string;
+			/** Format: uuid */
+			batch_id: string;
+			/** Format: uuid */
+			product_id: string;
+			/** Format: uuid */
+			tenant_id: string;
+			/** @enum {string} */
+			type: 'inbound' | 'outbound' | 'adjustment' | 'reservation' | 'release';
+			/**
+			 * Format: int64
+			 * @description Signed delta; Outbound is negative.
+			 */
+			quantity: number;
+			/** Format: int64 */
+			quantity_on_hand_after: number;
+			reason: string;
+			/** Format: uuid */
+			actor_membership_id: string;
+			/** @description Optional opaque external reference (future OrderID, PurchaseOrderID). */
+			source_reference?: string;
+			/** Format: date-time */
+			occurred_at: string;
+		};
+		LogMovementRequest: {
+			/** @enum {string} */
+			type: 'inbound' | 'outbound' | 'adjustment' | 'reservation' | 'release';
+			/**
+			 * Format: int64
+			 * @description Positive magnitude; direction implicit in type.
+			 */
+			quantity: number;
+			reason: string;
+			source_reference?: string;
+		};
+		LogMovementResponse: {
+			/** Format: uuid */
+			movement_id: string;
+			/** Format: int64 */
+			quantity_on_hand_after: number;
+		};
+		ListMovementsResponse: {
+			items: components['schemas']['MovementDto'][];
+			has_more: boolean;
+			next_cursor?: string;
+		};
+		LoseLeadRequest: {
+			reason: string;
+		};
+		WorkItemDto: {
+			/** Format: uuid */
+			id: string;
+			/** Format: uuid */
+			tenant_id: string;
+			/** @enum {string} */
+			type: 'manual' | 'callback_reminder' | 'reorder_reminder' | 'follow_up' | 'custom';
+			/** @enum {string} */
+			priority: 'low' | 'medium' | 'high' | 'urgent';
+			/** @enum {string} */
+			state: 'pending' | 'in_progress' | 'completed' | 'overdue' | 'cancelled';
+			title: string;
+			description?: string;
+			/** Format: uuid */
+			assigned_to_membership_id: string;
+			/** Format: uuid */
+			assigned_by_membership_id: string;
+			/** Format: date-time */
+			due_at: string;
+			/** Format: date-time */
+			completed_at?: string;
+			/** Format: date-time */
+			cancelled_at?: string;
+			cancellation_reason?: string;
+			/** Format: uuid */
+			batch_id?: string;
+			source_module?: string;
+			source_entity_type?: string;
+			source_entity_id?: string;
+			/** Format: date-time */
+			created_at: string;
+			/** Format: uuid */
+			created_by_membership_id: string;
+		};
+		ListWorkItemsResponse: {
+			items: components['schemas']['WorkItemDto'][];
+			has_more: boolean;
+			next_cursor?: string;
+		};
+		CreateWorkItemRequest: {
+			/** @enum {string} */
+			type: 'manual' | 'callback_reminder' | 'reorder_reminder' | 'follow_up' | 'custom';
+			/** @enum {string} */
+			priority?: 'low' | 'medium' | 'high' | 'urgent';
+			title: string;
+			description?: string;
+			/** Format: uuid */
+			assigned_to_membership_id: string;
+			/** Format: uuid */
+			batch_id?: string;
+			/** Format: date-time */
+			due_at: string;
+		};
+		CreateWorkItemResponse: {
+			/** Format: uuid */
+			work_item_id: string;
+		};
+		CancelWorkItemRequest: {
+			reason: string;
+		};
+		ReassignWorkItemRequest: {
+			/** Format: uuid */
+			new_assignee_membership_id: string;
+			reason?: string;
+		};
+		DashboardResponse: {
+			today: number;
+			upcoming: number;
+			overdue: number;
+			completed_today: number;
+			total_pending: number;
+		};
+		ConsignmentNoteDto: {
+			/** Format: uuid */
+			id: string;
+			/** Format: uuid */
+			tenant_id: string;
+			/** Format: uuid */
+			order_id: string;
+			/** @enum {string} */
+			status: 'pending' | 'dispatched' | 'in_transit' | 'delivered' | 'failed';
+			carrier_name: string;
+			docket_number?: string;
+			/** Format: int32 */
+			box_count: number;
+			/** Format: int64 */
+			weight_grams: number;
+			/** Format: date-time */
+			expected_delivery_at?: string;
+			/** Format: date-time */
+			dispatched_at?: string;
+			/** Format: date-time */
+			in_transit_at?: string;
+			/** Format: date-time */
+			delivered_at?: string;
+			/** Format: date-time */
+			failed_at?: string;
+			failure_reason?: string;
+			/** Format: date-time */
+			created_at: string;
+			/** Format: uuid */
+			created_by_membership_id: string;
+		};
+		CreateConsignmentNoteRequest: {
+			/** Format: uuid */
+			order_id: string;
+			carrier_name: string;
+			/** Format: int32 */
+			box_count: number;
+			/** Format: int64 */
+			weight_grams: number;
+			/** Format: date-time */
+			expected_delivery_at?: string;
+		};
+		CreateConsignmentNoteResponse: {
+			/** Format: uuid */
+			consignment_note_id: string;
+			already_existed: boolean;
+		};
+		MarkDispatchedRequest: {
+			docket_number: string;
+		};
+		MarkFailedRequest: {
+			reason: string;
+		};
+		OrderLineItemDto: {
+			/** Format: uuid */
+			product_id: string;
+			sku: string;
+			description?: string;
+			/** Format: int32 */
+			quantity: number;
+			/** Format: int64 */
+			unit_mrp_paise?: number;
+			/** Format: int64 */
+			unit_sale_paise: number;
+			/** Format: int32 */
+			gst_rate_bps: number;
+		};
+		CreateQuotationRequest: {
+			/** Format: uuid */
+			customer_lead_id: string;
+			items: components['schemas']['OrderLineItemDto'][];
+			note?: string;
+		};
+		CreateQuotationResponse: {
+			/** Format: uuid */
+			quotation_id: string;
+		};
+		ReviseQuotationRequest: {
+			items: components['schemas']['OrderLineItemDto'][];
+			note?: string;
+		};
+		RejectQuotationRequest: {
+			reason: string;
+		};
+		ApproveQuotationResponse: {
+			/** Format: uuid */
+			order_id: string;
+		};
+		QuotationDto: {
+			/** Format: uuid */
+			id: string;
+			/** Format: uuid */
+			tenant_id: string;
+			/** Format: uuid */
+			customer_lead_id: string;
+			/** @enum {string} */
+			state: 'draft' | 'approved' | 'rejected';
+			/** Format: int64 */
+			revision_number: number;
+			items: components['schemas']['OrderLineItemDto'][];
+			rejection_reason?: string;
+			/** Format: date-time */
+			created_at: string;
+		};
+		OrderDto: {
+			/** Format: uuid */
+			id: string;
+			/** Format: uuid */
+			tenant_id: string;
+			/** Format: uuid */
+			approved_quotation_id: string;
+			/** Format: uuid */
+			customer_lead_id: string;
+			/** @enum {string} */
+			state:
+				| 'quotation_draft'
+				| 'quotation_approved'
+				| 'token_paid'
+				| 'confirmed'
+				| 'packed'
+				| 'invoiced'
+				| 'dispatched'
+				| 'delivered'
+				| 'complete'
+				| 'cancelled';
+			items: components['schemas']['OrderLineItemDto'][];
+			/** Format: int64 */
+			subtotal_paise: number;
+			/** Format: int64 */
+			tax_paise: number;
+			/** Format: int64 */
+			grand_total_paise: number;
+			/** Format: uuid */
+			invoice_id?: string;
+			/** Format: uuid */
+			consignment_note_id?: string;
+			/** Format: date-time */
+			confirmed_at?: string;
+			/** Format: date-time */
+			packed_at?: string;
+			/** Format: date-time */
+			invoiced_at?: string;
+			/** Format: date-time */
+			dispatched_at?: string;
+			/** Format: date-time */
+			delivered_at?: string;
+			/** Format: date-time */
+			completed_at?: string;
+			/** Format: date-time */
+			cancelled_at?: string;
+			cancellation_reason?: string;
+			/** Format: date-time */
+			created_at: string;
+		};
+		RecordTokenPaymentRequest: {
+			/** @enum {string} */
+			method: 'upi' | 'neft' | 'rtgs' | 'imps' | 'cheque' | 'cash' | 'card_offline';
+			/** Format: int64 */
+			amount_paise: number;
+			external_reference?: string;
+			notes?: string;
+		};
+		PackOrderRequest: {
+			carrier_name: string;
+			/** Format: int32 */
+			box_count: number;
+			/** Format: int64 */
+			weight_grams: number;
+			/** Format: date-time */
+			expected_delivery_at?: string;
+		};
+		InvoiceOrderResponse: {
+			/** Format: uuid */
+			invoice_id: string;
+			number_display: string;
+		};
+		CancelOrderRequest: {
+			reason: string;
+		};
+		RecordPaymentRequest: {
+			/** @enum {string} */
+			kind: 'token' | 'full' | 'refund';
+			/** @enum {string} */
+			method: 'upi' | 'neft' | 'rtgs' | 'imps' | 'cheque' | 'cash' | 'card_offline';
+			/** Format: int64 */
+			amount_paise: number;
+			external_reference?: string;
+			notes?: string;
+			/** Format: date-time */
+			received_at?: string;
+		};
+		RecordPaymentResponse: {
+			/** Format: uuid */
+			payment_id: string;
+		};
+		MintCreditNoteRequest: {
+			reason: string;
+			/** Format: int64 */
+			amount_paise: number;
+		};
+		MintCreditNoteResponse: {
+			/** Format: uuid */
+			credit_note_id: string;
+			number_display: string;
+		};
+		PaymentDto: {
+			/** Format: uuid */
+			id: string;
+			/** Format: uuid */
+			order_id: string;
+			/** @enum {string} */
+			kind: 'token' | 'full' | 'refund';
+			/** @enum {string} */
+			method: 'upi' | 'neft' | 'rtgs' | 'imps' | 'cheque' | 'cash' | 'card_offline';
+			/** Format: int64 */
+			amount_paise: number;
+			external_reference?: string;
+			/** Format: date-time */
+			received_at: string;
+		};
+		ListPaymentsResponse: {
+			payments: components['schemas']['PaymentDto'][];
+		};
+		InvoiceDto: {
+			/** Format: uuid */
+			id: string;
+			/** Format: uuid */
+			order_id: string;
+			number_display: string;
+			items: components['schemas']['OrderLineItemDto'][];
+			/** Format: int64 */
+			subtotal_paise: number;
+			/** Format: int64 */
+			tax_paise: number;
+			/** Format: int64 */
+			grand_total_paise: number;
+			/** Format: date-time */
+			issued_at: string;
+		};
+		NotificationDto: {
+			/** Format: uuid */
+			id: string;
+			/** @enum {string} */
+			category:
+				| 'lead_assigned'
+				| 'lead_converted'
+				| 'order_confirmed'
+				| 'order_delivered'
+				| 'work_item_assigned'
+				| 'work_item_overdue'
+				| 'stock_expiring'
+				| 'stock_below_reorder'
+				| 'reminder';
+			title: string;
+			body?: string;
+			/** @enum {string} */
+			state: 'unread' | 'read' | 'dismissed';
+			source_module?: string;
+			source_entity_type?: string;
+			source_entity_id?: string;
+			deep_link?: string;
+			/** Format: date-time */
+			created_at: string;
+			/** Format: date-time */
+			read_at?: string;
+			/** Format: date-time */
+			dismissed_at?: string;
+		};
+		ListNotificationsResponse: {
+			items: components['schemas']['NotificationDto'][];
+			has_more: boolean;
+			next_cursor?: string;
+		};
+		UnreadCountResponse: {
+			/** Format: int64 */
+			unread_count: number;
+		};
+		MarkAllReadResponse: {
+			/** Format: int64 */
+			marked_read: number;
+		};
 	};
 	responses: {
 		/** @description Malformed request (invalid body, bad param shape) */
@@ -3420,6 +8417,24 @@ export interface components {
 				'application/json': components['schemas']['ErrorResponse'];
 			};
 		};
+		/** @description Authenticated but missing the required permission */
+		Forbidden: {
+			headers: {
+				[name: string]: unknown;
+			};
+			content: {
+				'application/json': components['schemas']['ErrorResponse'];
+			};
+		};
+		/** @description Field-level validation failure (RFC 9457 with `errors` map) */
+		ValidationError: {
+			headers: {
+				[name: string]: unknown;
+			};
+			content: {
+				'application/json': components['schemas']['ErrorResponse'];
+			};
+		};
 		/** @description Server error */
 		InternalServerError: {
 			headers: {
@@ -3431,6 +8446,15 @@ export interface components {
 		};
 	};
 	parameters: {
+		/**
+		 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
+		 *     the server replays the original response within the
+		 *     idempotency-store retention window (24h, Stripe canon). Per
+		 *     ADR 0031 — required by every state-mutating endpoint (POST /
+		 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
+		 *     (token operations are idempotent at the token-family level).
+		 */
+		XCommandId: string;
 		/** @description Opaque base64-encoded keyset cursor. Omit for first page. */
 		Cursor: string;
 		PageSize: number;
@@ -3439,6 +8463,17 @@ export interface components {
 		RoleId: string;
 		PersonId: string;
 		PermissionRequestId: string;
+		/** @description Generic resource path-parameter (Platform module routes). */
+		PathID: string;
+		LeadId: string;
+		WorkItemId: string;
+		ReminderId: string;
+		NotificationId: string;
+		ProductId: string;
+		BatchId: string;
+		ConsignmentNoteId: string;
+		QuotationId: string;
+		OrderId: string;
 	};
 	requestBodies: never;
 	headers: never;
