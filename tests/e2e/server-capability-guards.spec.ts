@@ -1,5 +1,6 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { signInAsTier } from './helpers/sign-in';
+import { clientNavigate } from './helpers/navigation';
 import { mintScopeCookie } from './helpers/scope-cookie';
 import { fakeTenantDto, TEST_TENANT_SLUG } from './helpers/fake-jwt';
 import { listMockCalls, registerMock, resetMock } from './helpers/mock';
@@ -30,18 +31,6 @@ const ROUTES = [
 async function dataCalls(dataPath: string): Promise<number> {
 	const calls = await listMockCalls();
 	return calls.filter((c) => c.path === dataPath || c.path.startsWith(`${dataPath}?`)).length;
-}
-
-/** Client-side navigation: click a same-origin anchor so SvelteKit's router handles it. */
-async function clientNavigate(page: Page, href: string): Promise<void> {
-	await page.evaluate((h) => {
-		const a = document.createElement('a');
-		a.href = h;
-		a.id = 'e2e-client-nav';
-		a.textContent = 'go';
-		document.body.append(a);
-	}, href);
-	await page.locator('#e2e-client-nav').click();
 }
 
 test.describe('Server-side capability guards', () => {

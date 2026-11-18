@@ -42,12 +42,13 @@ describe('private cache clearing triggers', () => {
 		expect(clearPrivateCaches).toHaveBeenCalledTimes(1);
 	});
 
-	it('session guard: scope_invalid clears them', async () => {
+	it('session guard: scope_invalid exits the scope, and the exit clears them', async () => {
 		vi.stubGlobal('location', { pathname: '/operator/scope/members', search: '' });
 		createQueryClient()
 			.getQueryCache()
 			.config.onError?.(new ScopeInvalidError('expired'), { state: { data: undefined } } as never);
 		await vi.waitFor(() => expect(clearPrivateCaches).toHaveBeenCalled());
+		expect(apiDelete).toHaveBeenCalledWith('/operator/scope');
 	});
 
 	it('scope exit clears them after the DELETE', async () => {

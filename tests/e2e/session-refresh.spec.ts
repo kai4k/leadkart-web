@@ -394,14 +394,15 @@ test.describe('session refresh', () => {
 		});
 
 		await page.goto('/settings/users');
+		// First attempt + 2 retries (ServerError), each one a refresh attempt.
 		await expect
 			.poll(
 				async () => (await listMockCalls()).filter((c) => c.path === '/api/v1/auth/refresh').length,
-				{ timeout: 10_000 }
+				{ timeout: 15_000 }
 			)
-			.toBeGreaterThan(0);
-		// Retries (2 x backoff) have run out by now; the user was never sent away.
-		await page.waitForTimeout(3500);
+			.toBeGreaterThanOrEqual(3);
+		// The query has settled as an error (the guard has had its say): the user was never sent away.
+		await expect(page.getByRole('alert').filter({ hasText: "Couldn't load" })).toBeVisible();
 		await expect(page).toHaveURL(/\/settings\/users$/);
 	});
 

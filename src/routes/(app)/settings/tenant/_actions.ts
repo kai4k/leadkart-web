@@ -3,6 +3,8 @@
  * All actions follow the same shape — read form data, validate with a
  * Zod schema, PATCH a sub-resource of /v1/tenants/{tenant_id}/*, and
  * return fail() / { success } accordingly.
+ *
+ * Authorisation is enforced by the Go API only: there is no BFF-side permission check (no permission string exists yet; tracked in docs/superpowers/plans/2026-11-18-phase-1c-worklist.md item 4).
  */
 import { fail, redirect, type Cookies } from '@sveltejs/kit';
 import type { z } from 'zod';

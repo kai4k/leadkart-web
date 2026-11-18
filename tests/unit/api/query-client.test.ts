@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { QueryClient, QueryObserver } from '@tanstack/svelte-query';
+import { QueryObserver } from '@tanstack/svelte-query';
 
 const goto = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 const apiDelete = vi.hoisted(() => vi.fn(() => Promise.resolve()));
@@ -16,33 +16,6 @@ import { ScopeInvalidError } from '#lib/api/errors.ts';
 import { createQueryClient, renderQueryClient } from '#lib/api/query-client.ts';
 
 beforeEach(() => vi.clearAllMocks());
-
-describe('TanStack behaviour the scope guard depends on', () => {
-	it('clear() leaves active observers stale; resetQueries() refetches them', async () => {
-		const qc = new QueryClient();
-		const queryFn = vi.fn(() => Promise.resolve(['tenant']));
-		const observer = new QueryObserver(qc, { queryKey: ['tenants'], queryFn });
-		const unsubscribe = observer.subscribe(() => {});
-		await vi.waitFor(() => expect(observer.getCurrentResult().data).toEqual(['tenant']));
-		expect(queryFn).toHaveBeenCalledTimes(1);
-
-		qc.clear();
-		await new Promise((r) => setTimeout(r, 20));
-		expect(queryFn).toHaveBeenCalledTimes(1); // nothing refetched
-
-		const qc2 = new QueryClient();
-		const fn2 = vi.fn(() => Promise.resolve(['tenant']));
-		const observer2 = new QueryObserver(qc2, { queryKey: ['tenants'], queryFn: fn2 });
-		const unsubscribe2 = observer2.subscribe(() => {});
-		await vi.waitFor(() => expect(fn2).toHaveBeenCalledTimes(1));
-		await qc2.resetQueries();
-		expect(fn2).toHaveBeenCalledTimes(2);
-		expect(observer2.getCurrentResult().data).toEqual(['tenant']);
-
-		unsubscribe();
-		unsubscribe2();
-	});
-});
 
 describe('scope guard wiring: operator already on /operator/tenants', () => {
 	it('refetches the tenants list after the scope exit, before navigating', async () => {

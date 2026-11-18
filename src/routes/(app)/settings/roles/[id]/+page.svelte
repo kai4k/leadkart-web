@@ -54,6 +54,23 @@
 	}
 
 	const roleId = $derived(data.roleId);
+	// The banner belongs to the role on screen: navigating to another role clears it.
+	$effect.pre(() => {
+		void roleId;
+		error = null;
+		saved = false;
+	});
+	// Save callbacks report only while their role is still the one shown.
+	function bannerFor(id: string, fallback: string) {
+		return {
+			onSuccess: () => {
+				if (id === roleId) saved = true;
+			},
+			onError: (err: unknown) => {
+				if (id === roleId) error = describeError(err, fallback);
+			}
+		};
+	}
 	const query = $derived(roleDetailQuery(roleId));
 	const role = $derived(query.data ?? null);
 	const breadcrumbs = $derived<BreadcrumbItem[]>([
@@ -96,10 +113,7 @@
 
 		parentMutation.mutate(
 			{ id: role.id, parent_role_id: selectedParent || null },
-			{
-				onSuccess: () => (saved = true),
-				onError: (err: unknown) => (error = describeError(err, 'Failed to update parent.'))
-			}
+			bannerFor(role.id, 'Failed to update parent.')
 		);
 	}
 
@@ -130,10 +144,7 @@
 				id: role.id,
 				req: { name: name.trim(), hierarchy_level: hierarchyLevel }
 			},
-			{
-				onSuccess: () => (saved = true),
-				onError: (err) => (error = describeError(err, 'Failed to save.'))
-			}
+			bannerFor(role.id, 'Failed to save.')
 		);
 	}
 
@@ -144,10 +155,7 @@
 
 		replacePermsMutation.mutate(
 			{ id: role.id, permissions: selectedPerms },
-			{
-				onSuccess: () => (saved = true),
-				onError: (err) => (error = describeError(err, 'Failed to save permissions.'))
-			}
+			bannerFor(role.id, 'Failed to save permissions.')
 		);
 	}
 </script>

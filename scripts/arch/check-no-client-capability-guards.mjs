@@ -2,10 +2,17 @@
 /**
  * No-client-capability-guard gate (Phase 1b, BFF hardening).
  *
- * A route component must not redirect on a capability check inside
- * $effect: the server has already rendered the page and fired its queries
- * by then. Capability guards belong in +page.server.ts / +layout.server.ts
- * via requireCapability() from #lib/server/guards.ts.
+ * A component must not redirect on a capability check: by the time client
+ * code runs (`$effect`, `$effect.pre`, `$derived` + effect, `onMount`, …) the
+ * server has already rendered the page and fired its queries. Capability
+ * guards belong in +page.server.ts / +layout.server.ts via guardPage() /
+ * requireCapability() from #lib/server/guards.ts.
+ *
+ * File-level rule (no attempt to parse which block does what): a route
+ * component (src/routes/**\/*.svelte) or feature component
+ * (src/lib/features/**\/*.svelte) that both calls `goto(` and references
+ * `hasCapability` / `myCapabilitiesQuery` / `capabilities` fails, unless it is
+ * in ALLOWLIST below. Comments are ignored.
  *
  * Exit code: 0 on clean, 1 on any violation.
  */
@@ -15,29 +22,62 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 
-const files = globSync('src/routes/**/*.svelte', { cwd: ROOT });
+/**
+ * Files that legitimately do both. Each entry: why its `goto` is not a guard.
+ * Adding a file here needs the same justification.
+ */
+const ALLOWLIST = [
+	// goto syncs the URL filters / opens a lead row; capabilities only hide action buttons.
+	'src/routes/(app)/leads/+page.svelte',
+	// goto opens a tenant from a membership row; capabilities only hide manage/anonymise actions.
+	'src/lib/features/operator/people/components/PersonDetail.svelte',
+	// goto syncs the URL filters; capabilities only hide create/view/manage actions.
+	'src/lib/features/operator/tenants/components/TenantsList.svelte'
+];
+
+const CAPABILITY = /\bhasCapability\b|\bmyCapabilitiesQuery\b|\bcapabilities\b/;
+const GOTO = /\bgoto\s*\(/;
+
+/** Drop HTML, block and line comments so prose never trips the rule. */
+function stripComments(src) {
+	return src
+		.replace(/<!--[\s\S]*?-->/g, '')
+		.replace(/\/\*[\s\S]*?\*\//g, '')
+		.replace(/(^|[^:'"`])\/\/.*$/gm, '$1');
+}
+
+const files = globSync(['src/routes/**/*.svelte', 'src/lib/features/**/*.svelte'], { cwd: ROOT })
+	.map((f) => f.replaceAll('\\', '/'))
+	.filter((f) => !f.endsWith('.stories.svelte'));
 
 const violations = [];
 for (const rel of files) {
-	const src = readFileSync(join(ROOT, rel), 'utf8');
-	const effects = src.match(/\$effect\(\s*\(\)\s*=>\s*\{[\s\S]*?\r?\n\t\}\);/g) ?? [];
-	if (effects.some((e) => /hasCapability|capabilities/.test(e) && /goto\(/.test(e))) {
-		violations.push(rel.replaceAll('\\', '/'));
-	}
+	if (ALLOWLIST.includes(rel)) continue;
+	const src = stripComments(readFileSync(join(ROOT, rel), 'utf8'));
+	if (GOTO.test(src) && CAPABILITY.test(src)) violations.push(rel);
 }
 
-if (violations.length === 0) {
+const stale = ALLOWLIST.filter((f) => !files.includes(f));
+
+if (violations.length === 0 && stale.length === 0) {
 	console.log(
-		`✓ check-no-client-capability-guards: ${files.length} route component(s), no client-side capability redirects.`
+		`✓ check-no-client-capability-guards: ${files.length} component(s), no client-side capability redirects (${ALLOWLIST.length} allowlisted).`
 	);
 	process.exit(0);
 }
 
-console.error(
-	`✗ check-no-client-capability-guards: ${violations.length} file(s) guard on the client:\n`
-);
-for (const v of violations) console.error(`  ${v}`);
-console.error(
-	'\nFix: move the check to +page.server.ts / +layout.server.ts with requireCapability() (#lib/server/guards.ts).'
-);
+if (violations.length > 0) {
+	console.error(
+		`✗ check-no-client-capability-guards: ${violations.length} file(s) both navigate and read capabilities:\n`
+	);
+	for (const v of violations) console.error(`  ${v}`);
+	console.error(
+		'\nFix: move the check to +page.server.ts / +layout.server.ts with guardPage() / requireCapability() (#lib/server/guards.ts).' +
+			'\nIf the goto is not a guard, add the file to ALLOWLIST with a comment saying why.'
+	);
+}
+if (stale.length > 0) {
+	console.error(`✗ check-no-client-capability-guards: allowlisted file(s) no longer exist:\n`);
+	for (const s of stale) console.error(`  ${s}`);
+}
 process.exit(1);

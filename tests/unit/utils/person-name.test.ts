@@ -44,6 +44,6 @@ describe('initials', () => {
 	});
 	it('returns the fallback (default "?") for blank input', () => {
 		expect(initials('   ')).toBe('?');
-		expect(initials('', '')).toBe('');
+		expect(initials('')).toBe('?');
 	});
 });

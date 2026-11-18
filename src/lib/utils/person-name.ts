@@ -26,12 +26,12 @@ export function displayName(person: NamedPerson, opts: DisplayNameOptions = {}):
 
 /**
  * Avatar monogram: first letter of the first and last word (one word -> its
- * first letter), uppercased. Blank input yields `fallback`.
+ * first letter), uppercased. Blank input yields '?'.
  */
-export function initials(name: string, fallback = '?'): string {
+export function initials(name: string): string {
 	const words = name.trim().split(/\s+/).filter(Boolean);
 	const first = words[0]?.[0];
-	if (!first) return fallback;
+	if (!first) return '?';
 	const last = words[words.length - 1]?.[0] ?? first;
 	return (words.length === 1 ? first : first + last).toUpperCase();
 }

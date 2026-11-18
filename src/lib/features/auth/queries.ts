@@ -4,7 +4,7 @@
  * myCapabilitiesQuery — server-driven capability discovery per ADR 0038 N1.
  * myProfileQuery      — caller's own membership profile (GET /v1/users/:id).
  * mySessionsQuery     — caller's active session families.
- * updateMyProfileMutation, revokeSessionMutation, revokeOtherSessionsMutation.
+ * revokeSessionMutation, revokeOtherSessionsMutation.
  *
  * API note: @tanstack/svelte-query v6 uses Accessor<Options> — options
  * must be wrapped in a function `() => ({ ... })`. Results are Svelte 5
@@ -14,7 +14,7 @@ import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-qu
 import { page } from '$app/state';
 import { toast } from '$ui';
 import * as api from './api';
-import type { UpdateProfileRequest, SessionDto } from './types';
+import type { SessionDto } from './types';
 import type { Capabilities } from './capabilities';
 export { hasCapability } from './capabilities';
 
@@ -60,18 +60,6 @@ export function myProfileQuery(membershipId: string) {
 		queryFn: () => api.getMyProfile(membershipId),
 		enabled: Boolean(membershipId),
 		staleTime: 2 * 60_000
-	}));
-}
-
-/** PATCH the caller's profile and invalidate the cached profile. */
-export function updateMyProfileMutation(membershipId: string) {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: (patch: UpdateProfileRequest) => api.updateMyProfile(membershipId, patch),
-		onSuccess: () => {
-			void qc.invalidateQueries({ queryKey: profileKey(membershipId) });
-			toast.success('Profile updated');
-		}
 	}));
 }
 

@@ -18,9 +18,15 @@ import { initI18n } from '#lib/i18n/index.ts';
 
 // Kit's client `init` hook is awaited before hydration, so the locale is
 // set before first paint (module-level init raced the first format call).
+// A locale chunk that fails to load must not block hydration: the page
+// hydrates with the SSR text and svelte-i18n falls back to message ids.
 export const init: ClientInit = async () => {
 	initI18n();
-	await waitLocale();
+	try {
+		await waitLocale();
+	} catch (error) {
+		console.error('[i18n] locale failed to load; hydrating without it', error);
+	}
 };
 
 export const handleError: HandleClientError = ({ kind, error, event }) => {

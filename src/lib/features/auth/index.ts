@@ -27,7 +27,6 @@ export type { Capabilities } from './api';
 export {
 	myCapabilitiesQuery,
 	myProfileQuery,
-	updateMyProfileMutation,
 	mySessionsQuery,
 	revokeSessionMutation,
 	revokeOtherSessionsMutation,
