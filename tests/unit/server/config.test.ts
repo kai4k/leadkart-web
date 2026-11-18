@@ -3,10 +3,14 @@ import { configSchema, createConfigSchema } from '#lib/server/config.ts';
 
 const base = { GO_API_URL: 'http://localhost:8080' };
 const withSecret = { ...base, SCOPE_COOKIE_SECRET: 'x'.repeat(32) };
+// Production also needs a way to know its public origin.
+const prodOrigin = { ORIGIN: 'https://app.example.com' };
+const issuesOf = (r: { success: boolean; error?: { issues: Array<{ message: string }> } }) =>
+	r.success ? [] : (r.error?.issues.map((i) => i.message) ?? []);
 
 describe('configSchema', () => {
 	it('defaults NODE_ENV to production (fail closed)', () => {
-		const out = configSchema.safeParse({ ...base, SCOPE_COOKIE_SECRET: 'x'.repeat(32) });
+		const out = configSchema.safeParse({ ...withSecret, ...prodOrigin });
 		expect(out.success && out.data.NODE_ENV).toBe('production');
 	});
 
@@ -44,13 +48,14 @@ describe('configSchema', () => {
 	});
 
 	it('treats an empty UPSTREAM_TIMEOUT_MS as unset', () => {
-		const out = configSchema.safeParse({ ...withSecret, UPSTREAM_TIMEOUT_MS: '' });
+		const out = configSchema.safeParse({ ...withSecret, ...prodOrigin, UPSTREAM_TIMEOUT_MS: '' });
 		expect(out.success && out.data.UPSTREAM_TIMEOUT_MS).toBe(10_000);
 	});
 
 	it('treats an empty ORIGIN as unset in production', () => {
 		const out = configSchema.safeParse({ ...withSecret, NODE_ENV: 'production', ORIGIN: '' });
-		expect(out.success).toBe(true);
+		expect(out.success).toBe(false);
+		expect(issuesOf(out).join()).toMatch(/ORIGIN or both PROTOCOL_HEADER and HOST_HEADER/);
 	});
 
 	it('requires ORIGIN to be a bare origin', () => {
@@ -76,5 +81,64 @@ describe('configSchema', () => {
 	it('defaults the upstream timeout to 10 s', () => {
 		const out = configSchema.safeParse({ ...withSecret, NODE_ENV: 'test' });
 		expect(out.success && out.data.UPSTREAM_TIMEOUT_MS).toBe(10_000);
+	});
+});
+
+describe('configSchema: production origin', () => {
+	const prod = { ...withSecret, NODE_ENV: 'production' };
+
+	it('fails with a clear message when neither ORIGIN nor the proxy headers are set', () => {
+		const out = configSchema.safeParse(prod);
+		expect(out.success).toBe(false);
+		expect(issuesOf(out).join()).toMatch(/ORIGIN or both PROTOCOL_HEADER and HOST_HEADER/);
+	});
+
+	it('accepts ORIGIN alone', () => {
+		expect(configSchema.safeParse({ ...prod, ...prodOrigin }).success).toBe(true);
+	});
+
+	it('accepts PROTOCOL_HEADER + HOST_HEADER together, not one of them', () => {
+		const headers = { PROTOCOL_HEADER: 'x-forwarded-proto', HOST_HEADER: 'x-forwarded-host' };
+		expect(configSchema.safeParse({ ...prod, ...headers }).success).toBe(true);
+		expect(configSchema.safeParse({ ...prod, PROTOCOL_HEADER: 'x-forwarded-proto' }).success).toBe(
+			false
+		);
+		expect(configSchema.safeParse({ ...prod, HOST_HEADER: 'x-forwarded-host' }).success).toBe(
+			false
+		);
+	});
+
+	it('does not require an origin outside production', () => {
+		expect(configSchema.safeParse({ ...withSecret, NODE_ENV: 'test' }).success).toBe(true);
+	});
+});
+
+describe('configSchema: no test or dev secret in production', () => {
+	const prod = { ...base, ...prodOrigin, NODE_ENV: 'production' };
+
+	it('rejects the e2e-only secret family in production', () => {
+		const out = configSchema.safeParse({
+			...prod,
+			SCOPE_COOKIE_SECRET: 'e2e-only-scope-cookie-secret-0123456789abcdef'
+		});
+		expect(out.success).toBe(false);
+		expect(issuesOf(out).join()).toMatch(/test\/dev secret/);
+	});
+
+	it('rejects the public dev secret in production', () => {
+		const out = configSchema.safeParse({
+			...prod,
+			SCOPE_COOKIE_SECRET: 'dev-only-scope-cookie-secret-not-for-production'
+		});
+		expect(out.success).toBe(false);
+	});
+
+	it('still lets the e2e build (NODE_ENV=test) use the e2e secret', () => {
+		const out = configSchema.safeParse({
+			...base,
+			NODE_ENV: 'test',
+			SCOPE_COOKIE_SECRET: 'e2e-only-scope-cookie-secret-0123456789abcdef'
+		});
+		expect(out.success).toBe(true);
 	});
 });

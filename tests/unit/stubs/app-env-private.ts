@@ -8,3 +8,5 @@ export const NODE_ENV: string | undefined = 'test';
 export const SCOPE_COOKIE_SECRET: string | undefined = 'vitest-scope-cookie-secret-0123456789';
 export const ORIGIN: string | undefined = undefined;
 export const UPSTREAM_TIMEOUT_MS: string | undefined = undefined;
+export const PROTOCOL_HEADER: string | undefined = undefined;
+export const HOST_HEADER: string | undefined = undefined;

@@ -1,12 +1,12 @@
 # leadkart-web
 
-LeadKart SaaS web frontend — Svelte 5 + SvelteKit 2 + Tailwind 4 SPA targeting the [`leadkart-go`](https://github.com/kai4k/leadkart-go) JSON API.
+LeadKart SaaS web frontend — Svelte 5 + SvelteKit + Tailwind 4, served by an adapter-node BFF in front of the [`leadkart-go`](https://github.com/kai4k/leadkart-go) JSON API.
 
 ## Stack
 
 | Concern    | Choice                                                                                    |
 | ---------- | ----------------------------------------------------------------------------------------- |
-| Framework  | SvelteKit 2 (adapter-static for SPA, no SSR)                                              |
+| Framework  | SvelteKit (adapter-node BFF: SSR first paint, client-side routing after)                  |
 | Components | Svelte 5 (runes — `$state`, `$props`, `$derived`)                                         |
 | Styling    | Tailwind 4 (`@tailwindcss/vite` plugin, CSS-first `@theme`)                               |
 | Build      | Vite 6                                                                                    |
@@ -30,7 +30,7 @@ src/
 │  ├─ i18n/            # svelte-i18n setup + locales/{en,hi}.json
 │  ├─ utils/           # cn, format, validation
 │  ├─ types/           # cross-feature types
-│  └─ server/          # server-only files (none today — pure SPA)
+│  └─ server/          # server-only BFF code: config, cookies, Go calls, guards
 ├─ routes/
 │  ├─ (auth)/          # signin, signup, forgot, reset, verify
 │  └─ (app)/           # dashboard + signed-in shell, auth-guarded
@@ -47,33 +47,49 @@ Sources for the layout: SvelteKit "Project Structure" docs, Geoff Rich blog, sha
 
 ```bash
 npm install
-npm run dev          # http://localhost:5173 — proxies /api/* to localhost:8080
+npm run dev          # http://localhost:5173 — the BFF calls Go at GO_API_URL (.env.local)
 npm run check        # svelte-check + tsc
 npm run lint         # prettier --check + eslint
 npm run test         # vitest
 npm run test:e2e     # playwright (requires `npm run build` first)
+npm run preview:e2e  # the built server with the e2e-only env (NODE_ENV=test; never for deploys)
 ```
 
 ## API integration
 
-Dev: vite proxies `/api/*` → `http://localhost:8080` (the leadkart-go API). No CORS. Production: set `PUBLIC_API_BASE_URL` at build time to the deployed leadkart-go URL.
+The browser talks only to the SvelteKit server (BFF), never to Go. Browser calls go to `/api/*`, which `src/routes/api/[...path]/+server.ts` forwards to `GO_API_URL` with the Bearer token read from the httpOnly access cookie, the operator scope as `X-Tenant-Id`, the CSRF check and one silent refresh on an expired token. Server loads and form actions call Go the same way through `#lib/server/go.ts`. There is no Vite `/api` proxy, in dev either.
 
-Auth: bearer JWT in `Authorization` header. Token persisted to `localStorage` keyed `leadkart-session`. Refresh handled by `lib/features/auth/api.ts` (TODO: silent-refresh interceptor on 401).
+Auth state lives only in httpOnly cookies set by the BFF; the browser never sees a token. Full contract: `docs/superpowers/specs/2026-05-20-bff-cookie-auth-adr.md`.
 
 ## Deployment
 
-`adapter-static` produces a pure static bundle. Deploy targets:
+`npm run build` produces an adapter-node server in `./build/`; run it with `node build/index.js`. The build needs no runtime environment. The environment below is validated once when the server starts (the `init` hook): a missing or invalid value stops the process with a message naming the key.
 
-- Cloudflare Pages
-- Vercel (static)
-- S3 + CloudFront
-- Netlify
+| Variable                          | Required                                | Purpose                                                                                                                                                                                   |
+| --------------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GO_API_URL`                      | yes                                     | Internal URL of the Go API (server-to-server; Go is never internet-facing).                                                                                                               |
+| `SCOPE_COOKIE_SECRET`             | yes                                     | HMAC key (32+ chars) signing `lk_op_tenant`. Generate with `openssl rand -base64 48`. Production rejects the published e2e (`e2e-only…`) and dev secrets.                                 |
+| `NODE_ENV`                        | no (unset = `production`)               | `production` gives `Secure` cookies and the `__Host-` access cookie (HTTPS only). Fails closed.                                                                                           |
+| `ORIGIN`                          | production: this **or** the two headers | Public https origin (no path), e.g. `https://app.example.com`. Without it or the headers below, SvelteKit's origin check rejects every form action, sign-in included, behind a TLS proxy. |
+| `PROTOCOL_HEADER` + `HOST_HEADER` | production: both, **or** `ORIGIN`       | e.g. `x-forwarded-proto` / `x-forwarded-host`. **Only when a trusted reverse proxy overwrites these headers on every request**; otherwise clients can spoof them and forge the origin.    |
+| `ADDRESS_HEADER` / `XFF_DEPTH`    | no                                      | Client IP behind a proxy (e.g. `x-forwarded-for` and the number of trusted proxies). Same trusted-proxy rule.                                                                             |
+| `PORT`                            | no (default 3000)                       | Listen port.                                                                                                                                                                              |
+| `BODY_SIZE_LIMIT`                 | no (default 512K)                       | Maximum request body size, e.g. for CSV uploads.                                                                                                                                          |
+| `UPSTREAM_TIMEOUT_MS`             | no (default 10000)                      | Time-to-first-byte timeout for every BFF to Go request (504 on expiry).                                                                                                                   |
 
-Build:
+`PORT`, `BODY_SIZE_LIMIT`, `ADDRESS_HEADER` and `XFF_DEPTH` are read by adapter-node itself. `.env.example` lists the same keys. `npm run preview:e2e` runs the build with the published e2e secret and `NODE_ENV=test`; it is for the test suite only.
 
-```bash
-npm run build   # → ./build/
-```
+### Cookies
+
+All set by the BFF with `SameSite=Strict` and `Path=/`, and `Secure` in production:
+
+| Cookie                                              | httpOnly | Holds                                                                                  |
+| --------------------------------------------------- | -------- | -------------------------------------------------------------------------------------- |
+| `__Host-lk_access` (prod) / `lk_access` (dev, test) | yes      | Access JWT.                                                                            |
+| `lk_refresh`                                        | yes      | Refresh token.                                                                         |
+| `lk_csrf`                                           | no       | CSRF token, echoed as `X-CSRF-Token` on mutating requests (double-submit).             |
+| `lk_op_tenant`                                      | yes      | Signed operator scope (the tenant a platform operator is acting on). Never in the URL. |
+| `lk_mcp`                                            | yes      | "Must change password" marker (page redirects only).                                   |
 
 ### Reverse proxy headers
 

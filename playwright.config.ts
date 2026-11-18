@@ -16,8 +16,9 @@ import { defineConfig, devices } from '@playwright/test';
  * Two backend servers run in parallel:
  *   1. Mock Go API (:9999) — programmatic fixtures via /_mock/* control
  *      plane. The BFF calls this for every server-to-server fetch.
- *   2. SvelteKit preview (:4173) — adapter-node build, GO_API_URL points
- *      at the mock above.
+ *   2. SvelteKit adapter-node build (:4173) — the same env as `npm run
+ *      preview:e2e`, GO_API_URL pointing at the mock above. The e2e-only
+ *      scope secret is rejected by config when NODE_ENV=production.
  *
  * `reuseExistingServer: !process.env.CI` — local dev reuses a running
  * server for fast iteration; CI always starts fresh.

@@ -5,10 +5,10 @@
  * `config.X` here instead of reaching into `$app/env/private` directly.
  *
  * Why this matters:
- *   - Boot-time validation: if a required var is missing or malformed,
- *     the SvelteKit handle hook throws immediately on first request with
- *     a Zod error pointing at the offending key. No "undefined/api/v1/..."
- *     mystery in production logs.
+ *   - Boot-time validation: the server `init` hook (hooks.server.ts) reads
+ *     `config` once, so a missing or malformed var stops the process at
+ *     startup with a Zod error pointing at the offending key. No
+ *     "undefined/api/v1/..." mystery in production logs.
  *   - Single source of truth: rename a key here and grep one file, not
  *     eight. Documentation lives next to the schema.
  *   - Typed downstream: `config.GO_API_URL` is `string`, not
@@ -23,8 +23,10 @@
  */
 import {
 	GO_API_URL,
+	HOST_HEADER,
 	NODE_ENV,
 	ORIGIN,
+	PROTOCOL_HEADER,
 	SCOPE_COOKIE_SECRET,
 	UPSTREAM_TIMEOUT_MS
 } from '$app/env/private';
@@ -33,6 +35,8 @@ import { building, dev } from '$app/env';
 import { z } from 'zod';
 
 const DEV_SCOPE_SECRET = 'dev-only-scope-cookie-secret-not-for-production';
+/** Prefix of the published e2e secret (`preview:e2e`, playwright.config.ts). */
+const E2E_SECRET_PREFIX = 'e2e-only';
 
 /** Empty env values (`KEY=` in a copied .env file) mean "unset". */
 const emptyToUndefined = (v: unknown) => (v === '' ? undefined : v);
@@ -76,6 +80,14 @@ export function createConfigSchema({ allowDevSecret }: { allowDevSecret: boolean
 					.optional()
 			),
 
+			/**
+			 * adapter-node reads these to build the request origin behind a
+			 * TLS-terminating proxy. Validated here only for presence: production
+			 * needs ORIGIN or both, or Kit's origin check rejects every form action.
+			 */
+			PROTOCOL_HEADER: z.preprocess(emptyToUndefined, z.string().optional()),
+			HOST_HEADER: z.preprocess(emptyToUndefined, z.string().optional()),
+
 			/** Timeout for every BFF → Go request. */
 			UPSTREAM_TIMEOUT_MS: z.preprocess(
 				emptyToUndefined,
@@ -90,11 +102,29 @@ export function createConfigSchema({ allowDevSecret }: { allowDevSecret: boolean
 					message: 'SCOPE_COOKIE_SECRET (32+ chars) is required'
 				});
 			}
-			if (v.NODE_ENV === 'production' && v.ORIGIN && !v.ORIGIN.startsWith('https://')) {
+			if (v.NODE_ENV !== 'production') return;
+			if (v.ORIGIN && !v.ORIGIN.startsWith('https://')) {
 				ctx.addIssue({
 					code: 'custom',
 					path: ['ORIGIN'],
 					message: 'ORIGIN must be https in production'
+				});
+			}
+			if (!v.ORIGIN && !(v.PROTOCOL_HEADER && v.HOST_HEADER)) {
+				ctx.addIssue({
+					code: 'custom',
+					path: ['ORIGIN'],
+					message:
+						'production needs ORIGIN or both PROTOCOL_HEADER and HOST_HEADER — without one, ' +
+						"SvelteKit's origin check rejects every form action (including sign-in) behind a TLS proxy"
+				});
+			}
+			const secret = v.SCOPE_COOKIE_SECRET;
+			if (secret && (secret.startsWith(E2E_SECRET_PREFIX) || secret === DEV_SCOPE_SECRET)) {
+				ctx.addIssue({
+					code: 'custom',
+					path: ['SCOPE_COOKIE_SECRET'],
+					message: 'SCOPE_COOKIE_SECRET is a published test/dev secret — generate a real one'
 				});
 			}
 		})
@@ -110,11 +140,11 @@ export type Config = z.infer<typeof configSchema>;
  * During `npm run build`, SvelteKit imports server modules to compile
  * the route tree. Production env vars aren't available in that phase
  * (and shouldn't be — the build artifact is environment-agnostic).
- * `building === true` lets us defer validation to first request.
+ * `building === true` defers validation to runtime.
  *
- * Production-deploy contract: the BFF process must have GO_API_URL set
- * in its runtime environment. The first request will surface a clear
- * Zod error if it's missing; the build never depends on it.
+ * Production-deploy contract: the BFF process must have its env set at
+ * startup. `validateConfig()` runs from the server `init` hook (which Kit
+ * does not run at build), so a bad environment fails boot loudly.
  */
 function load(): Config {
 	const parsed = createConfigSchema({ allowDevSecret: dev }).safeParse({
@@ -124,6 +154,8 @@ function load(): Config {
 		NODE_ENV: NODE_ENV || (dev ? 'development' : undefined),
 		SCOPE_COOKIE_SECRET,
 		ORIGIN,
+		PROTOCOL_HEADER,
+		HOST_HEADER,
 		UPSTREAM_TIMEOUT_MS
 	});
 
@@ -163,6 +195,11 @@ export const config = new Proxy({} as Config, {
 		return get()[key as keyof Config];
 	}
 });
+
+/** Read the config once at server start (the `init` hook): throws on a bad environment. */
+export function validateConfig(): void {
+	get();
+}
 
 export const isProd = (): boolean => {
 	if (building) return false;

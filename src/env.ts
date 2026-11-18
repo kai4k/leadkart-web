@@ -11,5 +11,7 @@ export const variables = defineEnvVars({
 	NODE_ENV: { schema: (input) => input },
 	SCOPE_COOKIE_SECRET: { schema: (input) => input },
 	ORIGIN: { schema: (input) => input },
+	PROTOCOL_HEADER: { schema: (input) => input },
+	HOST_HEADER: { schema: (input) => input },
 	UPSTREAM_TIMEOUT_MS: { schema: (input) => input }
 });

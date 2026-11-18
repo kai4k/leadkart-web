@@ -11,7 +11,7 @@
  *
  * Why this gate exists:
  *   - This bug landed once (2026-05-26) and wasted ~30 min diagnosing
- *     because e2e tests run against `npm run preview` (production
+ *     because e2e tests run against `npm run preview:e2e` (production
  *     adapter-node) where the Vite proxy never executes. Dev was the
  *     only context where the bug was reachable.
  *   - Canon defense: encode the lesson here so it can't regress.
