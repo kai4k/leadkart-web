@@ -20,8 +20,6 @@
 		roleBadgeVariant,
 		isProtectedRole
 	} from '$features/roles';
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 	import {
 		ValidationError,
@@ -65,12 +63,6 @@
 	]);
 	const protectedRole = $derived(role ? isProtectedRole(role) : false);
 	const capsQuery = myCapabilitiesQuery();
-
-	$effect(() => {
-		if (capsQuery.data && !hasCapability(capsQuery.data, 'identity.roles.view')) {
-			goto(resolve('dashboard'), { replace: true });
-		}
-	});
 
 	const canUpdate = $derived(
 		!protectedRole && hasCapability(capsQuery.data, 'identity.roles.update')

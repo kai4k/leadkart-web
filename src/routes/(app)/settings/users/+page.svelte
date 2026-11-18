@@ -1,16 +1,6 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
 	import { UsersList } from '$features/users';
-	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 	import { Breadcrumbs, type BreadcrumbItem } from '$ui';
-
-	const capsQuery = myCapabilitiesQuery();
-	$effect(() => {
-		if (capsQuery.data && !hasCapability(capsQuery.data, 'identity.users.view')) {
-			goto(resolve('dashboard'), { replace: true });
-		}
-	});
 
 	const breadcrumbs: BreadcrumbItem[] = [{ label: 'Settings' }, { label: 'Team' }];
 </script>

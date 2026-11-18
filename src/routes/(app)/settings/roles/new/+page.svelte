@@ -5,7 +5,6 @@
 	import { resolve } from '$app/paths';
 	import { Alert, Breadcrumbs, Button, Card, type BreadcrumbItem } from '$ui';
 	import { NumberInput, TextField } from '$form';
-	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 	import type { ActionData } from './$types';
 
 	/**
@@ -17,13 +16,6 @@
 
 	let { form }: { form: ActionData } = $props();
 	let loading = $state(false);
-
-	const capsQuery = myCapabilitiesQuery();
-	$effect(() => {
-		if (capsQuery.data && !hasCapability(capsQuery.data, 'identity.roles.manage')) {
-			goto(resolve('dashboard'), { replace: true });
-		}
-	});
 
 	function err(field: string): string | undefined {
 		const v = (form as { errors?: Record<string, string | string[] | undefined> } | null)?.errors?.[

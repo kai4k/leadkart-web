@@ -190,7 +190,7 @@ test.describe('Roles tier guard', () => {
 	}) => {
 		await signInAsTier(page, { tier: 'tenant-user' });
 		await page.goto('/settings/roles');
-		// Settings/roles page has an effect that redirects to /dashboard
+		// +page.server.ts requireCapability redirects to /dashboard
 		await page.waitForURL(/\/dashboard$/);
 	});
 });

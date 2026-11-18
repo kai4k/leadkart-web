@@ -1,12 +1,9 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
 	import { Alert, Breadcrumbs, Card, EmptyState, Skeleton, type BreadcrumbItem } from '$ui';
 	import { Users } from '$icons';
 	import { usersListQuery } from '$features/users/queries';
 	import { buildOrgTree } from '$features/users/view-models-hierarchy';
 	import { OrgTreeNode } from '$features/users';
-	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 
 	/**
 	 * Org chart — renders the tenant's reporting structure as a tree
@@ -16,13 +13,6 @@
 	 * Per BRD §6.7: single-parent reporting, ReportsTo nullable, recursive
 	 * subordinate visibility. The tree mirrors that structure exactly.
 	 */
-
-	const capsQuery = myCapabilitiesQuery();
-	$effect(() => {
-		if (capsQuery.data && !hasCapability(capsQuery.data, 'identity.users.view')) {
-			goto(resolve('dashboard'), { replace: true });
-		}
-	});
 
 	const listQuery = usersListQuery();
 	const users = $derived(listQuery.data?.users ?? []);

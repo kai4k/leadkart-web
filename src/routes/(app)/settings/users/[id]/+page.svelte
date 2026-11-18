@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
 	import { SvelteURL } from 'svelte/reactivity';
 	import type { ResolvedPathname } from '$app/types';
 	import { Alert, Avatar, Badge, Breadcrumbs, Dropdown, Skeleton, type BreadcrumbItem } from '$ui';
@@ -10,7 +9,6 @@
 	import { rolesListQuery } from '$features/roles';
 	import { userStatusBadge } from '$features/users/view-models';
 	import { displayName, initials } from '$features/auth/view-models';
-	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 	import {
 		DeactivateUserDialog,
 		RoleAssignmentDrawer,
@@ -21,13 +19,6 @@
 
 	const membershipId = $derived(page.params.id ?? '');
 	const tab = $derived(page.url.searchParams.get('tab') ?? 'overview');
-
-	const capsQuery = myCapabilitiesQuery();
-	$effect(() => {
-		if (capsQuery.data && !hasCapability(capsQuery.data, 'identity.users.view')) {
-			goto(resolve('dashboard'), { replace: true });
-		}
-	});
 
 	const userQuery = userDetailQuery(() => membershipId);
 	const usersListQ = usersListQuery();
