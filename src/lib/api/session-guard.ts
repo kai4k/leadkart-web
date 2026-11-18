@@ -28,7 +28,7 @@ export interface SessionGuard {
 	handle: (error: unknown) => boolean;
 }
 
-export const SCOPE_EXPIRED_MESSAGE = 'Operator scope expired — select the tenant again';
+const SCOPE_EXPIRED_MESSAGE = 'Operator scope expired — select the tenant again';
 
 export function createSessionGuard(deps: SessionGuardDeps): SessionGuard {
 	let redirecting = false;
