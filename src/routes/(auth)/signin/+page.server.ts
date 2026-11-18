@@ -18,6 +18,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { config } from '#lib/server/config.ts';
 import { setAuthCookies } from '#lib/server/cookies.ts';
+import { safeRedirectPath } from '#lib/server/redirect.ts';
 import { loginRequestSchema } from '$features/auth/schemas';
 import type { Actions } from './$types';
 
@@ -25,13 +26,6 @@ interface GoTokens {
 	access_token: string;
 	refresh_token: string;
 	must_change_password?: boolean;
-}
-
-function safeNextPath(raw: string | null): string {
-	if (!raw) return '/dashboard';
-	const decoded = decodeURIComponent(raw);
-	// Only allow same-origin paths (defence against open-redirect).
-	return decoded.startsWith('/') && !decoded.startsWith('//') ? decoded : '/dashboard';
 }
 
 export const actions: Actions = {
@@ -86,9 +80,10 @@ export const actions: Actions = {
 		const tokens = (await resp.json()) as GoTokens;
 		setAuthCookies(cookies, tokens.access_token, tokens.refresh_token);
 
+		const next = safeRedirectPath(url.searchParams.get('next'), url.origin);
 		const target = tokens.must_change_password
-			? `/must-change-password${url.searchParams.get('next') ? `?next=${url.searchParams.get('next')}` : ''}`
-			: safeNextPath(url.searchParams.get('next'));
+			? `/must-change-password?next=${encodeURIComponent(next)}`
+			: next;
 
 		// SvelteKit form actions throw redirect() to navigate post-action.
 		throw redirect(303, target);

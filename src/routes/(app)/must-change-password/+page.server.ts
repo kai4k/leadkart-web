@@ -12,6 +12,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import { z } from 'zod';
 import { config } from '#lib/server/config.ts';
 import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
+import { safeRedirectPath } from '#lib/server/redirect.ts';
 import type { Actions } from './$types';
 
 const schema = z.object({
@@ -22,11 +23,6 @@ const schema = z.object({
 interface GoErrorBody {
 	code?: string;
 	message?: string;
-}
-
-function safeNextPath(raw: string | null): string {
-	if (!raw) return '/dashboard';
-	return raw.startsWith('/') && !raw.startsWith('//') ? raw : '/dashboard';
 }
 
 export const actions: Actions = {
@@ -80,7 +76,7 @@ export const actions: Actions = {
 		}
 
 		if (resp.ok || resp.status === 204) {
-			throw redirect(303, safeNextPath(url.searchParams.get('next')));
+			throw redirect(303, safeRedirectPath(url.searchParams.get('next'), url.origin));
 		}
 
 		const body = (await resp.json().catch(() => ({}))) as GoErrorBody;
