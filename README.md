@@ -77,7 +77,7 @@ npm run build   # → ./build/
 
 ### Reverse proxy headers
 
-adapter-node serves `/_app/immutable/*` and `/static` assets before the SvelteKit `handle` hook runs, so they do not get the hook's security headers. The reverse proxy must add `X-Content-Type-Options: nosniff` for those paths (and may add it globally).
+The `handle` hook adds the security headers, but SvelteKit answers some requests before `handle` runs (the trailing-slash 308, an unknown `/_app/*` 404, the static error page), and adapter-node serves the build assets (`/_app/immutable/*`) and the files in `static/` (served at the site root) before `handle` as well. None of those get the hook's headers, so the reverse proxy should add `X-Content-Type-Options: nosniff` and `X-Frame-Options: DENY` globally.
 
 ## License
 

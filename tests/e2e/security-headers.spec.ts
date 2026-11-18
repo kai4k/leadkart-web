@@ -100,8 +100,14 @@ async function watchViolations(page: Page) {
 	});
 	return {
 		violations,
-		/** Settle hydration + late violations, then assert none were recorded. */
+		/**
+		 * Wait for hydration (the root layout's marker), let the browser flush one
+		 * frame (a violation raised by an in-page interaction is reported
+		 * asynchronously), then assert none were recorded.
+		 */
 		async assertClean(label: string) {
+			await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
+			await page.evaluate(() => new Promise(requestAnimationFrame));
 			await page.waitForLoadState('networkidle');
 			expect(violations, `CSP violations on ${label}`).toEqual([]);
 		}
@@ -151,6 +157,15 @@ test.describe('security headers + CSP', () => {
 		await page.goto('/forgot-password');
 		await expect(page.locator('form')).toBeVisible();
 		await assertClean('/forgot-password');
+	});
+
+	test('a signed-out request is redirected with the security headers on the 303', async ({
+		request
+	}) => {
+		const response = await request.get('/dashboard', { maxRedirects: 0 });
+		expect(response.status()).toBe(303);
+		expect(response.headers()['x-content-type-options']).toBe('nosniff');
+		expect(response.headers()['x-frame-options']).toBe('DENY');
 	});
 
 	test('tenant-admin app pages and overlays raise no violations', async ({ page }) => {
@@ -204,6 +219,7 @@ test.describe('security headers + CSP', () => {
 		const appResponse = await page.goto('/dashboard');
 		expect(appResponse!.headers()['content-security-policy']).toContain("script-src 'self'");
 		expect(appResponse!.headers()['x-frame-options']).toBe('DENY');
+		expect(appResponse!.headers()['cache-control']).toBe('private, no-store');
 		await assertClean('/dashboard');
 
 		for (const path of [
@@ -265,8 +281,10 @@ test.describe('security headers + CSP', () => {
 		await expect(page.locator('#main-content')).toBeVisible();
 		await assertClean('/operator/tenants');
 
-		// The search trigger renders only after hydration for users who can search.
-		await expect(page.getByRole('button', { name: /search/i }).first()).toBeVisible();
+		// The trigger is server-rendered, so seeing it proves nothing about hydration;
+		// the Ctrl+K handler attaches only once the page has hydrated.
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
+		await expect(page.getByRole('button', { name: 'Search (Cmd+K)', exact: true })).toBeVisible();
 		await page.keyboard.press('Control+k');
 		await expect(page.getByRole('dialog')).toBeVisible();
 		await assertClean('command palette');

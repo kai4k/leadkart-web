@@ -1,9 +1,16 @@
 <script lang="ts">
 	import '../app.css';
+	import { onMount } from 'svelte';
 	import { Tooltip } from '$ui';
 	import { theme } from '#lib/hooks/use-theme.svelte.ts';
 
 	let { children } = $props();
+
+	// Children mount before their parent, so this runs once the whole tree is
+	// hydrated. E2E checks wait for it: SSR-rendered controls prove nothing.
+	onMount(() => {
+		document.documentElement.dataset.hydrated = 'true';
+	});
 
 	// Reflect customiser state on <html> on mount AND on every change.
 	// The effect re-runs whenever any $state field on the theme store

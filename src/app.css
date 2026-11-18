@@ -2,8 +2,8 @@
 @import 'tw-animate-css';
 
 /* Dark mode variant — applied only when an ancestor has `.dark` class.
- * Light-only by default; ModeWatcher in (app)/+layout.svelte handles
- * future-toggle plumbing + FOUC. */
+ * Light-only today (nothing sets the class yet); a future dark-mode toggle
+ * must add the class before first paint to avoid a flash. */
 @custom-variant dark (&:is(.dark *));
 
 @import './styles/index.css';
