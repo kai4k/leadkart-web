@@ -62,7 +62,8 @@ export const actions: Actions = {
 		try {
 			resp = await goFetch(cookies, '/v1/auth/change-password', {
 				method: 'POST',
-				body: JSON.stringify(parsed.data)
+				body: JSON.stringify(parsed.data),
+				scoped: false
 			});
 		} catch (err) {
 			if (isRedirect(err)) throw err;

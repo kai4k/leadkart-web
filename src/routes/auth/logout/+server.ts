@@ -12,16 +12,13 @@
 
 import type { RequestHandler } from './$types';
 import { config } from '#lib/server/config.ts';
-import { clearAuthCookies, CSRF_COOKIE, REFRESH_COOKIE } from '#lib/server/cookies.ts';
+import { clearAuthCookies, REFRESH_COOKIE } from '#lib/server/cookies.ts';
 import { clearOperatorScope } from '#lib/server/scope.ts';
-import { timingSafeEqualString } from '#lib/server/csrf.ts';
+import { assertCsrf } from '#lib/server/csrf.ts';
 
 export const POST: RequestHandler = async (event) => {
-	const headerCsrf = event.request.headers.get('x-csrf-token');
-	const cookieCsrf = event.cookies.get(CSRF_COOKIE);
-	if (!headerCsrf || !cookieCsrf || !timingSafeEqualString(headerCsrf, cookieCsrf)) {
-		return Response.json({ error: 'csrf_mismatch' }, { status: 403 });
-	}
+	const csrfFail = assertCsrf(event);
+	if (csrfFail) return csrfFail;
 
 	const refresh = event.cookies.get(REFRESH_COOKIE);
 	if (refresh) {

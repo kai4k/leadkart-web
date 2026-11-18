@@ -53,7 +53,8 @@ export const actions: Actions = {
 
 		const resp = await goFetch(cookies, '/v1/auth/change-password', {
 			method: 'POST',
-			body: JSON.stringify(parsed.data)
+			body: JSON.stringify(parsed.data),
+			scoped: false
 		});
 
 		if (resp.ok || resp.status === 204) {
@@ -108,7 +109,8 @@ export const actions: Actions = {
 
 		const resp = await goFetch(cookies, '/v1/auth/request-email-change', {
 			method: 'POST',
-			body: JSON.stringify({ new_email: parsed.data })
+			body: JSON.stringify({ new_email: parsed.data }),
+			scoped: false
 		});
 
 		if (resp.ok || resp.status === 204) {

@@ -14,7 +14,7 @@
  * Per ADR: docs/superpowers/specs/2026-05-20-bff-cookie-auth-adr.md
  */
 
-import { redirect } from '@sveltejs/kit';
+import { error, isHttpError, isRedirect, redirect } from '@sveltejs/kit';
 import { ACCESS_COOKIE, mustChangePassword } from '#lib/server/cookies.ts';
 import { goFetch, readGoJson } from '#lib/server/go.ts';
 // Schema module imported directly: the auth barrel re-exports .svelte components.
@@ -40,19 +40,28 @@ export const load: LayoutServerLoad = async ({ cookies, url }) => {
 		);
 	}
 
-	// goFetch: Bearer + scope header + timeout + one 401 refresh/retry.
+	// goFetch: Bearer + timeout + one 401 refresh/retry.
 	// requireAuth:false so a failed refresh falls through to the signin redirect below;
 	// scoped:false because capabilities describe the caller, never the scoped tenant.
-	const resp = await goFetch(cookies, '/v1/auth/me/capabilities', {
-		requireAuth: false,
-		scoped: false
-	});
+	let body: unknown;
+	try {
+		const resp = await goFetch(cookies, '/v1/auth/me/capabilities', {
+			requireAuth: false,
+			scoped: false
+		});
+		body = resp.ok ? await readGoJson<unknown>(resp) : null;
+	} catch (err) {
+		// Go unreachable or too slow (network error / timeout): the user's session is
+		// fine, so a signin bounce would be wrong. Render the root error page instead.
+		if (isRedirect(err) || isHttpError(err)) throw err;
+		throw error(503, 'Service temporarily unavailable');
+	}
 
-	const parsed = resp.ok ? capabilitiesSchema.safeParse(await readGoJson<unknown>(resp)) : null;
+	const parsed = body === null ? null : capabilitiesSchema.safeParse(body);
 	if (!parsed?.success) {
-		// Capabilities endpoint down / 401 after refresh / unexpected shape — redirect to
-		// signin. Don't clear cookies (the user is probably still valid; the endpoint
-		// may just be temporarily unavailable).
+		// Go answered but not with usable capabilities (401 after refresh, non-2xx,
+		// unexpected shape) — redirect to signin. Don't clear cookies: the user may
+		// still be valid and the endpoint merely misbehaving.
 		const next = encodeURIComponent(url.pathname + url.search);
 		throw redirect(303, `/signin?next=${next}`);
 	}

@@ -2,7 +2,7 @@
  * /settings/account/profile — load + form action.
  *
  * Load: GET /v1/users/{membershipId} server-side via goFetch
- *       (cookie → Bearer + scope header injection).
+ *       (cookie → Bearer; scoped:false — the caller's own profile, never the operator scope).
  * Action: PATCH /v1/users/{membershipId}/profile with form data.
  *
  * The caller's membership_id is extracted from the JWT access cookie
@@ -28,7 +28,7 @@ function getMembershipId(cookies: Parameters<typeof goFetch>[0]): string {
 
 export const load: PageServerLoad = async ({ cookies }) => {
 	const membershipId = getMembershipId(cookies);
-	const resp = await goFetch(cookies, `/v1/users/${membershipId}`);
+	const resp = await goFetch(cookies, `/v1/users/${membershipId}`, { scoped: false });
 	if (!resp.ok) {
 		throw redirect(303, '/dashboard');
 	}
@@ -56,7 +56,8 @@ export const actions: Actions = {
 
 		const resp = await goFetch(cookies, `/v1/users/${membershipId}/profile`, {
 			method: 'PATCH',
-			body: JSON.stringify(parsed.data)
+			body: JSON.stringify(parsed.data),
+			scoped: false
 		});
 
 		if (!resp.ok) {

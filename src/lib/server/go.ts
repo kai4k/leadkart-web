@@ -56,6 +56,11 @@ export async function goFetch(
 		...(init.headers ?? {}),
 		accept: 'application/json'
 	};
+	// The scope cookie is the only source of X-Tenant-Id; a caller-supplied
+	// header (any casing) is dropped.
+	for (const name of Object.keys(headers)) {
+		if (name.toLowerCase() === 'x-tenant-id') delete headers[name];
+	}
 
 	// Fail closed: a present-but-invalid scope cookie must never silently run
 	// the call in the operator's home tenant.

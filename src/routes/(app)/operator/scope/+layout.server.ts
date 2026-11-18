@@ -26,10 +26,13 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
 	const { scope } = reading;
 
 	let resp: Response;
+	let tenantJson: unknown;
 	try {
 		// goFetch adds Bearer, X-Tenant-Id from the scope cookie, the timeout
 		// and the single 401 refresh + retry.
 		resp = await goFetch(cookies, `/v1/tenants/${encodeURIComponent(scope.id)}`);
+		// Body read inside the try: a timeout while streaming is also a 504.
+		tenantJson = resp.ok ? await readGoJson<unknown>(resp) : null;
 	} catch (err) {
 		if (err instanceof DOMException && err.name === 'TimeoutError') {
 			throw error(504, 'Tenant service timed out');
@@ -43,7 +46,7 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
 	}
 	if (!resp.ok) throw error(resp.status, 'Failed to load tenant scope');
 
-	const parsed = tenantDtoSchema.safeParse(await readGoJson<unknown>(resp));
+	const parsed = tenantDtoSchema.safeParse(tenantJson);
 	if (!parsed.success) throw error(502, 'Tenant service returned an unexpected response');
 	return { tenant: parsed.data };
 };

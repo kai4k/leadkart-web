@@ -4,8 +4,8 @@
  * the httpOnly __Host-lk_access cookie.
  *
  * Responsibilities:
- *   1. CSRF validation on mutating methods (POST/PUT/PATCH/DELETE) using
- *      constant-time comparison (timingSafeEqual).
+ *   1. CSRF validation on mutating methods (POST/PUT/PATCH/DELETE) via
+ *      assertCsrf (constant-time comparison).
  *   2. Bearer token injection for server-to-server calls to Go.
  *   3. Operator scope: auto-inject X-Tenant-Id from the lk_op_tenant
  *      cookie when present. The browser NEVER ships an X-Tenant-Id
@@ -26,10 +26,10 @@
 
 import type { RequestEvent } from './$types';
 import { config } from '#lib/server/config.ts';
-import { ACCESS_COOKIE, CSRF_COOKIE } from '#lib/server/cookies.ts';
+import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
 import { isAuthExpired, refreshSession } from '#lib/server/auth-refresh.ts';
 import { readOperatorScope } from '#lib/server/scope.ts';
-import { timingSafeEqualString } from '#lib/server/csrf.ts';
+import { assertCsrf } from '#lib/server/csrf.ts';
 import { jsonError } from '#lib/server/http.ts';
 import {
 	buildUpstreamUrl,
@@ -64,11 +64,8 @@ async function proxy(
 	const path = params.path;
 
 	if (MUTATING.has(request.method)) {
-		const headerCsrf = request.headers.get('x-csrf-token');
-		const cookieCsrf = cookies.get(CSRF_COOKIE);
-		if (!headerCsrf || !cookieCsrf || !timingSafeEqualString(headerCsrf, cookieCsrf)) {
-			return jsonError(403, 'csrf_mismatch', 'CSRF token missing or invalid');
-		}
+		const csrfFail = assertCsrf(event);
+		if (csrfFail) return csrfFail;
 	}
 
 	if (isTokenEndpoint(path)) return jsonError(404, 'not_found', 'Not found');
