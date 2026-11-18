@@ -16,7 +16,7 @@
 
 import { redirect, error } from '@sveltejs/kit';
 import { clearOperatorScope, readOperatorScope } from '#lib/server/scope.ts';
-import { goFetch, readGoJson } from '#lib/server/go.ts';
+import { goErrorStatus, goFetch, readGoJson } from '#lib/server/go.ts';
 import { OPERATOR_SCOPE_PERMISSION, requireCapability } from '#lib/server/guards.ts';
 import { isUpstreamTimeout } from '#lib/server/proxy.ts';
 import { tenantDtoSchema } from '#lib/features/operator/tenants/schemas.ts';
@@ -51,8 +51,7 @@ export const load: LayoutServerLoad = async ({ cookies, parent }) => {
 		clearOperatorScope(cookies);
 		throw redirect(303, '/operator/tenants');
 	}
-	// goFetch never follows redirects, so a 3xx lands here: not an error status Kit accepts.
-	if (!resp.ok) throw error(resp.status >= 400 ? resp.status : 502, 'Failed to load tenant scope');
+	if (!resp.ok) throw error(goErrorStatus(resp), 'Failed to load tenant scope');
 
 	const parsed = tenantDtoSchema.safeParse(tenantJson);
 	if (!parsed.success) throw error(502, 'Tenant service returned an unexpected response');

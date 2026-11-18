@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Cookies } from '@sveltejs/kit';
-import { goFetch } from '#lib/server/go.ts';
+import { goErrorStatus, goFetch } from '#lib/server/go.ts';
 
 function jar(values: Record<string, string>): Cookies {
 	const store = new Map(Object.entries(values));
@@ -49,5 +49,18 @@ describe('goFetch', () => {
 
 		await expect(goFetch(cookies, '/v1/users')).rejects.toMatchObject({ status: 503 });
 		expect(cookies.get('lk_refresh')).toBe('unavail-refresh');
+	});
+});
+
+describe('goErrorStatus', () => {
+	it('keeps 4xx/5xx statuses', () => {
+		expect(goErrorStatus(new Response(null, { status: 404 }))).toBe(404);
+		expect(goErrorStatus(new Response(null, { status: 503 }))).toBe(503);
+	});
+
+	it('maps an unfollowed 3xx (not a status error()/fail() accept) to 502', () => {
+		for (const status of [301, 302, 303, 307, 308]) {
+			expect(goErrorStatus(new Response(null, { status }))).toBe(502);
+		}
 	});
 });

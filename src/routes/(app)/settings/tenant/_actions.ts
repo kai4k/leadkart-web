@@ -6,7 +6,7 @@
  */
 import { fail, redirect, type Cookies } from '@sveltejs/kit';
 import type { z } from 'zod';
-import { goFetch, readGoError, flattenGoErrors } from '#lib/server/go.ts';
+import { goErrorStatus, goFetch, readGoError, flattenGoErrors } from '#lib/server/go.ts';
 import { decodeJwtPrincipal } from '$api/jwt';
 import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
 
@@ -48,5 +48,5 @@ export async function patchTenant<P>({
 	if (resp.status === 422) {
 		return fail(422, { values: payload, errors: flattenGoErrors(body) });
 	}
-	return fail(resp.status, { values: payload, bannerError: body.detail ?? 'Save failed' });
+	return fail(goErrorStatus(resp), { values: payload, bannerError: body.detail ?? 'Save failed' });
 }

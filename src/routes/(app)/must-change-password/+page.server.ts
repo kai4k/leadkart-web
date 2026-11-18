@@ -10,7 +10,7 @@
  */
 import { fail, isRedirect, redirect } from '@sveltejs/kit';
 import { z } from 'zod';
-import { goFetch } from '#lib/server/go.ts';
+import { goErrorStatus, goFetch } from '#lib/server/go.ts';
 import { setMustChangePassword } from '#lib/server/cookies.ts';
 import { safeRedirectPath } from '#lib/server/redirect.ts';
 import type { Actions } from './$types';
@@ -92,6 +92,6 @@ export const actions: Actions = {
 		if (resp.status === 422) {
 			return fail(422, { fieldKeys: { new: 'auth.resetPassword.errors.weak' } });
 		}
-		return fail(resp.status, { formErrorKey: 'auth.errors.unexpected' });
+		return fail(goErrorStatus(resp), { formErrorKey: 'auth.errors.unexpected' });
 	}
 };

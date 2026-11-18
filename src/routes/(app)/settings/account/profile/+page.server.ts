@@ -13,7 +13,13 @@
  * without a manual invalidate() call.
  */
 import { fail, redirect } from '@sveltejs/kit';
-import { goFetch, readGoJson, readGoError, flattenGoErrors } from '#lib/server/go.ts';
+import {
+	goErrorStatus,
+	goFetch,
+	readGoJson,
+	readGoError,
+	flattenGoErrors
+} from '#lib/server/go.ts';
 import { updateProfileRequestSchema } from '$features/auth/schemas';
 import { decodeJwtPrincipal } from '$api/jwt';
 import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
@@ -65,7 +71,10 @@ export const actions: Actions = {
 			if (resp.status === 422) {
 				return fail(422, { values: patch, errors: flattenGoErrors(body) });
 			}
-			return fail(resp.status, { values: patch, bannerError: body.detail ?? 'Save failed' });
+			return fail(goErrorStatus(resp), {
+				values: patch,
+				bannerError: body.detail ?? 'Save failed'
+			});
 		}
 
 		return { success: true };

@@ -1,7 +1,3 @@
-import { requireCapability } from '#lib/server/guards.ts';
-import type { PageServerLoad } from './$types';
+import { guardPage, OPERATOR_SCOPE_PERMISSION } from '#lib/server/guards.ts';
 
-export const load: PageServerLoad = async ({ parent }) => {
-	const { capabilities } = await parent();
-	requireCapability(capabilities, 'platform.tenants.view');
-};
+export const load = guardPage(OPERATOR_SCOPE_PERMISSION);

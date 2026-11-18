@@ -112,6 +112,15 @@ export async function goFetch(
 	return resp;
 }
 
+/**
+ * Status to report for a non-2xx Go response via `error()` / `fail()`.
+ * goFetch never follows redirects, so a 3xx reaches callers; Kit accepts only
+ * 4xx/5xx there, and a Go redirect is a bad gateway answer anyway: 502.
+ */
+export function goErrorStatus(resp: Response): number {
+	return resp.status >= 400 ? resp.status : 502;
+}
+
 /** Parse a Go JSON response. Returns `null` on 204 / empty bodies. */
 export async function readGoJson<T>(resp: Response): Promise<T | null> {
 	if (resp.status === 204) return null;

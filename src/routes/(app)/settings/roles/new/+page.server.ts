@@ -5,25 +5,28 @@
  * can immediately assign permissions.
  */
 import { fail, redirect } from '@sveltejs/kit';
-import { goFetch, readGoJson, readGoError, flattenGoErrors } from '#lib/server/go.ts';
+import {
+	goErrorStatus,
+	goFetch,
+	readGoJson,
+	readGoError,
+	flattenGoErrors
+} from '#lib/server/go.ts';
 import { createRoleRequestSchema } from '$features/roles/schemas';
-import { requireCapability } from '#lib/server/guards.ts';
+import { guardPage, requireCapability } from '#lib/server/guards.ts';
 import { loadCapabilities } from '#lib/server/capabilities.ts';
-import type { Actions, PageServerLoad } from './$types';
+import type { Actions } from './$types';
 
 interface CreateRoleResponse {
 	role_id: string;
 }
 
-export const load: PageServerLoad = async ({ parent }) => {
-	const { capabilities } = await parent();
-	requireCapability(capabilities, 'identity.roles.create');
-};
+export const load = guardPage('identity.roles.create');
 
 export const actions: Actions = {
 	default: async ({ request, cookies }) => {
 		// Actions are a separate entry point from the load above: authorise here too.
-		requireCapability((await loadCapabilities(cookies)) ?? undefined, 'identity.roles.create');
+		requireCapability(await loadCapabilities(cookies), 'identity.roles.create');
 
 		const fd = await request.formData();
 		const payload = {
@@ -53,6 +56,9 @@ export const actions: Actions = {
 		if (resp.status === 422) {
 			return fail(422, { values: payload, errors: flattenGoErrors(errBody) });
 		}
-		return fail(resp.status, { values: payload, bannerError: errBody.detail ?? 'Create failed' });
+		return fail(goErrorStatus(resp), {
+			values: payload,
+			bannerError: errBody.detail ?? 'Create failed'
+		});
 	}
 };

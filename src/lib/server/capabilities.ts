@@ -8,14 +8,15 @@ import { error, isHttpError, isRedirect, type Cookies } from '@sveltejs/kit';
 import type { z } from 'zod';
 import { capabilitiesSchema } from '#lib/features/auth/schemas.ts';
 import { goFetch, readGoJson } from './go.ts';
+import { isUpstreamTimeout } from './proxy.ts';
 
 type Capabilities = z.output<typeof capabilitiesSchema>;
 
 /**
  * Capabilities of the signed-in caller, or `null` when Go answered without
- * usable ones (401 after refresh, non-2xx, unexpected shape). Throws 503 when
- * Go is unreachable or too slow: the session is fine, so callers must not
- * bounce the user to /signin.
+ * usable ones (401 after refresh, non-2xx, unexpected shape). Throws 504 when
+ * Go is too slow and 503 when it is unreachable: the session is fine, so
+ * callers must not bounce the user to /signin.
  *
  * `requireAuth: false` so a failed refresh yields `null` instead of a redirect;
  * `scoped: false` because capabilities describe the caller, never the scoped tenant.
@@ -30,6 +31,7 @@ export async function loadCapabilities(cookies: Cookies): Promise<Capabilities |
 		body = resp.ok ? await readGoJson<unknown>(resp) : null;
 	} catch (err) {
 		if (isRedirect(err) || isHttpError(err)) throw err;
+		if (isUpstreamTimeout(err)) throw error(504, 'Go API did not respond in time');
 		throw error(503, 'Service temporarily unavailable');
 	}
 	const parsed = body === null ? null : capabilitiesSchema.safeParse(body);

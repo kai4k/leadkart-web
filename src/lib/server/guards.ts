@@ -28,3 +28,16 @@ export function hasRequiredCapability(
 export function requireCapability(caps: Capabilities | null | undefined, permission: string): void {
 	if (!hasRequiredCapability(caps, permission)) redirect(303, '/dashboard');
 }
+
+/**
+ * A `+page.server.ts` load that only guards the page:
+ *   export const load = guardPage('identity.users.view');
+ * Capabilities come from the (app) layout load via `parent()`.
+ */
+export function guardPage(
+	permission: string
+): (event: { parent: () => Promise<{ capabilities?: Capabilities }> }) => Promise<void> {
+	return async ({ parent }) => {
+		requireCapability((await parent()).capabilities, permission);
+	};
+}

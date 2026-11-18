@@ -12,7 +12,7 @@
 import { fail } from '@sveltejs/kit';
 import { z } from 'zod';
 import { setMustChangePassword } from '#lib/server/cookies.ts';
-import { goFetch, readGoError } from '#lib/server/go.ts';
+import { goErrorStatus, goFetch, readGoError } from '#lib/server/go.ts';
 import { changePasswordSchema } from '$features/auth/schemas';
 import type { Actions } from './$types';
 
@@ -88,7 +88,7 @@ export const actions: Actions = {
 				fieldKeys: { new: 'auth.resetPassword.errors.weak' }
 			});
 		}
-		return fail(resp.status, {
+		return fail(goErrorStatus(resp), {
 			which: 'changePassword' as const,
 			formErrorKey: 'auth.errors.unexpected'
 		});
@@ -133,13 +133,13 @@ export const actions: Actions = {
 			});
 		}
 		if (resp.status === 401 || resp.status === 403) {
-			return fail(resp.status, {
+			return fail(goErrorStatus(resp), {
 				which: 'changeEmail' as const,
 				email: newEmail,
 				formErrorKey: 'auth.errors.unexpected'
 			});
 		}
-		return fail(resp.status, {
+		return fail(goErrorStatus(resp), {
 			which: 'changeEmail' as const,
 			email: newEmail,
 			formErrorKey: 'auth.errors.unexpected'
