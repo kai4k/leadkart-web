@@ -69,5 +69,3 @@ export const replacePermissionOverridesRequestSchema = z
 	.strict();
 
 export const assignManagerRequestSchema = z.object({ manager_id: z.string() }).strict();
-
-export { roleDtoSchema, listRolesResponseSchema } from '#lib/features/roles/schemas.ts';

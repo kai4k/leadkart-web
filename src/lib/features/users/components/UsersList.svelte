@@ -253,7 +253,7 @@
 
 {#snippet memberCell(user: UserDto)}
 	<div class="cluster cluster-tight">
-		<Avatar initials={initials(user)} size="md" />
+		<Avatar initials={initials(displayName(user))} size="md" />
 		<div class="stack stack-tight min-w-0">
 			<span class="body-base text-fg truncate font-medium">{displayName(user)}</span>
 			<span class="caption text-fg-muted truncate">{user.email}</span>

@@ -23,3 +23,15 @@ export function displayName(person: NamedPerson, opts: DisplayNameOptions = {}):
 		? person.email
 		: (person.email.split('@')[0] ?? person.email);
 }
+
+/**
+ * Avatar monogram: first letter of the first and last word (one word -> its
+ * first letter), uppercased. Blank input yields `fallback`.
+ */
+export function initials(name: string, fallback = '?'): string {
+	const words = name.trim().split(/\s+/).filter(Boolean);
+	const first = words[0]?.[0];
+	if (!first) return fallback;
+	const last = words[words.length - 1]?.[0] ?? first;
+	return (words.length === 1 ? first : first + last).toUpperCase();
+}

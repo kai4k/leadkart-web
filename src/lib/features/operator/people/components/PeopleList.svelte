@@ -10,6 +10,7 @@
 	import type { PersonDto } from '../types';
 	import { ApiError } from '$api/errors';
 	import { resolve } from '$app/paths';
+	import { initials } from '#lib/utils/person-name.ts';
 
 	const DEBOUNCE_MS = 300;
 
@@ -41,12 +42,6 @@
 		query.isPending ? 'loading' : query.isError ? 'error' : persons.length === 0 ? 'empty' : 'ready'
 	);
 
-	function personInitials(name: string): string {
-		const parts = name.trim().split(/\s+/);
-		if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-		return name.slice(0, 2).toUpperCase();
-	}
-
 	const columns: DataTableColumn<PersonDto>[] = [
 		{
 			id: 'person',
@@ -73,7 +68,7 @@
 {#snippet personCell(p: PersonDto)}
 	{@const name = personDisplayName(p)}
 	<div class="cluster cluster-tight">
-		<Avatar initials={personInitials(name)} size="md" />
+		<Avatar initials={initials(name)} size="md" />
 		<div class="stack stack-tight min-w-0">
 			<a
 				href={resolve('/(app)/operator/persons/[id]', { id: p.id })}

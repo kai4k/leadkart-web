@@ -93,7 +93,7 @@ module.exports = {
 			to: {
 				// Feature barrels (index.ts) are banned too: they drag in components/queries, so
 				// purity could be bypassed through them. Reach pure leaves (src/lib/utils/*) instead.
-				path: '^(src/lib/api/|\\$app/|src/lib/features/.*/(api|service|stores)|src/lib/features/.*/index\\.ts$|src/routes/)'
+				path: '^(src/lib/api/|\\$app/|src/lib/features/.*/(api|service|stores|queries)|src/lib/features/.*/index\\.ts$|src/routes/)'
 			}
 		},
 		// ─── CLAUDE.md feature isolation (arch test #8) ──────────

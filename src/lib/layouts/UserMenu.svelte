@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { Dropdown } from '$ui';
+	import { initials } from '#lib/utils/person-name.ts';
 	import { session, myCapabilitiesQuery } from '$features/auth';
 
 	/**
@@ -31,20 +32,15 @@
 	 * the .NET LeadKart UserAvatar logic + Stripe / Linear / Vercel
 	 * canon for missing-display-name avatars.
 	 */
-	const initials = $derived.by(() => {
-		const email = capsQuery.data?.email;
-		if (!email) return '?';
-		const local = email.split('@')[0] ?? '';
-		const parts = local.split(/[._-]+/).filter(Boolean);
-		if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-		if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-		return '?';
+	const monogram = $derived.by(() => {
+		const local = capsQuery.data?.email?.split('@')[0] ?? '';
+		return initials(local.split(/[._-]+/).join(' '));
 	});
 </script>
 
 <Dropdown.Root>
 	<Dropdown.Trigger class="lk-avatar-btn" aria-label="User menu">
-		<span class="caption font-semibold">{initials}</span>
+		<span class="caption font-semibold">{monogram}</span>
 	</Dropdown.Trigger>
 	<Dropdown.Menu align="end" class="lk-user-popover w-56">
 		<div class="lk-user-popover-header">

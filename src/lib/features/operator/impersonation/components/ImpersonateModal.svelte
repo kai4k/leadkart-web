@@ -3,6 +3,8 @@
 	import { Alert, Button, Dialog } from '$ui';
 	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 	import { impersonation } from '../stores/impersonation.svelte';
+	// Type-only; deliberately bypasses the tenants barrel to avoid a cycle
+	// (tenants barrel -> TenantsList -> impersonation -> ImpersonateModal -> tenants).
 	import type { TenantDto } from '../../tenants/types';
 
 	type Props = { open: boolean; tenant: TenantDto | null; onOpenChange: (open: boolean) => void };

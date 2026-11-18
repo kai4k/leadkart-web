@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-	displayName,
-	initials,
-	lastSeenLabel,
-	isCurrentSession
-} from '#lib/features/auth/view-models.ts';
+import { displayName, lastSeenLabel, isCurrentSession } from '#lib/features/auth/view-models.ts';
 import type { UserDto, SessionDto } from '#lib/features/auth/types.ts';
 
 const baseUser: UserDto = {
@@ -33,15 +28,6 @@ describe('displayName', () => {
 	});
 	it('uses just first name when last is blank', () => {
 		expect(displayName({ ...baseUser, last_name: '' })).toBe('Ada');
-	});
-});
-
-describe('initials', () => {
-	it('returns two-letter monogram from first + last', () => {
-		expect(initials(baseUser)).toBe('AL');
-	});
-	it('falls back to email[0] when no name', () => {
-		expect(initials({ ...baseUser, first_name: '', last_name: '' })).toBe('A');
 	});
 });
 

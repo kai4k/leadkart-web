@@ -26,6 +26,7 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { cn, type WithElementRef } from '#lib/utils/cn.ts';
+	import { initials } from '#lib/utils/person-name.ts';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>> & {
 		members: AvatarGroupMember[];
@@ -44,15 +45,6 @@
 
 	const visible = $derived(members.slice(0, max));
 	const overflow = $derived(Math.max(0, members.length - max));
-
-	function initials(name: string): string {
-		const parts = name.trim().split(/\s+/);
-		const first = parts[0];
-		if (!first) return '?';
-		if (parts.length === 1) return first.slice(0, 2).toUpperCase();
-		const last = parts[parts.length - 1] ?? first;
-		return `${first[0] ?? ''}${last[0] ?? ''}`.toUpperCase();
-	}
 </script>
 
 <div

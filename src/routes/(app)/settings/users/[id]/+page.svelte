@@ -83,7 +83,7 @@
 	{:else if user && status}
 		<header class="cluster cluster-spread items-start">
 			<div class="cluster cluster-tight items-start">
-				<Avatar initials={initials(user)} size="lg" />
+				<Avatar initials={initials(displayName(user))} size="lg" />
 				<div class="stack stack-tight">
 					<div class="cluster cluster-tight">
 						<h1 class="h2">{displayName(user)}</h1>

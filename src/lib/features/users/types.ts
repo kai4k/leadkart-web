@@ -20,4 +20,4 @@ export type ReplacePermissionOverridesRequest = z.output<
 	typeof replacePermissionOverridesRequestSchema
 >;
 export type AssignManagerRequest = z.output<typeof assignManagerRequestSchema>;
-export type { RoleDto, ListRolesResponse } from '#lib/features/roles/types.ts';
+export type { RoleDto } from '#lib/features/roles/types.ts';

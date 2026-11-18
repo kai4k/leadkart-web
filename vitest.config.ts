@@ -12,10 +12,7 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			...Object.fromEntries(
-				Object.entries(aliases).flatMap(([key, target]) => [
-					[key, resolve(__dirname, target)],
-					[`${key}/*`, resolve(__dirname, target, '*')]
-				])
+				Object.entries(aliases).map(([key, target]) => [key, resolve(__dirname, target)])
 			),
 			// SvelteKit virtual modules — stubbed via `vi.mock(...)` in
 			// individual tests but vite still needs a resolvable alias

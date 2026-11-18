@@ -3,24 +3,9 @@
  * to render-ready shapes. No async, no side effects, no DOM access.
  * Per CLAUDE.md gateway → service → VM → component layering.
  */
-import type { UserDto, SessionDto } from './types';
+import type { SessionDto } from './types';
 
-export { displayName } from '#lib/utils/person-name.ts';
-
-/**
- * Two-letter monogram for Avatar. Uppercased.
- */
-export function initials(user: UserDto): string {
-	const first = user.first_name.trim();
-	const last = user.last_name.trim();
-	const f = first[0];
-	const l = last[0];
-	if (f && l) return `${f}${l}`.toUpperCase();
-	if (f) return f.toUpperCase();
-	if (l) return l.toUpperCase();
-	const e = user.email[0];
-	return e ? e.toUpperCase() : '?';
-}
+export { displayName, initials } from '#lib/utils/person-name.ts';
 
 /**
  * Relative time label: "just now" / "N minutes ago" / "N hours ago"

@@ -233,7 +233,7 @@
 									href={resolve('/(app)/settings/users/[id]', { id: report.membership_id })}
 									class="hover:bg-bg-muted -mx-2 flex items-center gap-3 rounded-md px-2 py-2 transition-colors"
 								>
-									<Avatar initials={initials(report)} size="sm" />
+									<Avatar initials={initials(displayName(report))} size="sm" />
 									<div class="stack stack-tight min-w-0 flex-1">
 										<span class="body-sm text-fg truncate font-medium">
 											{displayName(report)}
