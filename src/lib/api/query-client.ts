@@ -27,6 +27,7 @@ import { goto } from '$app/navigation';
 import { toast } from '$ui';
 import { api } from './client';
 import { createSessionGuard } from './session-guard';
+import { clearPrivateCaches } from '#lib/utils/private-caches.ts';
 
 function describeError(err: unknown): string {
 	if (err instanceof ApiError) return err.message;
@@ -37,7 +38,11 @@ const sessionGuard = createSessionGuard({
 	// Targets are internal constants plus an encoded `next`; resolve() takes route ids, not query strings.
 	// eslint-disable-next-line svelte/no-navigation-without-resolve
 	goto: (url) => goto(url),
-	clearCache: () => queryClient.clear(),
+	clearCache: () => {
+		queryClient.clear();
+		// Offline caches hold the ended session's pages and API data.
+		void clearPrivateCaches();
+	},
 	notify: (message) => toast.error(message),
 	exitScope: () => api.delete('/operator/scope'),
 	location: () => window.location

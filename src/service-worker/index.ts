@@ -24,8 +24,9 @@
  *    - `install` → precache app shell, skipWaiting so the new SW takes
  *      over immediately on next reload.
  *    - `activate` → claim clients + delete old caches.
- *    - `message` → handle SKIP_WAITING from the update-prompt UI so
- *      the user can force-apply a pending update.
+ *    - `message` → SKIP_WAITING from the update-prompt UI (force-apply a
+ *      pending update); CLEAR_PRIVATE_CACHES on logout / session end /
+ *      operator scope change (drops the runtime + API caches).
  *
  * Industry refs: Workbox recipes, Stripe Dashboard SW, GitHub PWA SW,
  * SvelteKit "Service workers" docs.
@@ -34,11 +35,16 @@ import { self } from '$app/service-worker';
 import { version } from '$app/env';
 import { assets, immutable } from '$app/manifest';
 import { asset, resolve } from '$app/paths';
+import {
+	API_CACHE_PREFIX,
+	CLEAR_PRIVATE_CACHES_MESSAGE,
+	RUNTIME_CACHE_PREFIX
+} from '#lib/utils/private-caches.ts';
 
 const CACHE_PREFIX = 'lk';
 const APP_SHELL_CACHE = `${CACHE_PREFIX}-shell-${version}`;
-const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime-${version}`;
-const API_CACHE = `${CACHE_PREFIX}-api-${version}`;
+const RUNTIME_CACHE = `${RUNTIME_CACHE_PREFIX}${version}`;
+const API_CACHE = `${API_CACHE_PREFIX}${version}`;
 
 /**
  * `immutable` paths are plain build-output strings, not typed routes.
@@ -83,6 +89,10 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('message', (event) => {
 	if (event.data?.type === 'SKIP_WAITING') {
 		void self.skipWaiting();
+	}
+	if (event.data?.type === CLEAR_PRIVATE_CACHES_MESSAGE) {
+		// Authenticated HTML + API JSON must not outlive the identity/tenant that fetched it.
+		event.waitUntil(Promise.all([caches.delete(RUNTIME_CACHE), caches.delete(API_CACHE)]));
 	}
 });
 

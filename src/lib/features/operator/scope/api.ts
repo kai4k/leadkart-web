@@ -22,6 +22,7 @@
  */
 import { ApiError, type ApiErrorBody } from '$api/errors';
 import { getCsrfToken } from '$api/csrf';
+import { clearPrivateCaches } from '#lib/utils/private-caches.ts';
 
 export interface EnterScopeRequest {
 	slug: string;
@@ -74,6 +75,9 @@ export async function enterScope(req: EnterScopeRequest): Promise<EnterScopeResp
 		throw ApiError.fromResponse(resp, body);
 	}
 
+	// Another tenant's context starts here: drop offline copies of the previous one.
+	await clearPrivateCaches();
+
 	// 204 No Content or empty body → return {} (the resolved tenant lives
 	// in the cookie, not the body — callers don't need it).
 	if (resp.status === 204) return {};
@@ -110,4 +114,6 @@ export async function exitScope(): Promise<void> {
 		const body = await readErrorBody(resp);
 		throw ApiError.fromResponse(resp, body);
 	}
+
+	await clearPrivateCaches();
 }

@@ -21,7 +21,8 @@
  */
 
 import { page } from '$app/state';
-import type { Capabilities } from '../api';
+import { clearPrivateCaches } from '#lib/utils/private-caches.ts';
+import { logout as logoutRequest, type Capabilities } from '../api';
 import type { SessionPrincipal } from '../types';
 
 export interface Session {
@@ -64,20 +65,9 @@ function createSession(): Session {
 	 * state + ensures +layout.server.ts runs clean with no cookies).
 	 */
 	async function logout(): Promise<void> {
-		// Read the CSRF cookie (non-httpOnly) to echo as X-CSRF-Token header
-		const csrf =
-			typeof document !== 'undefined'
-				? (document.cookie.match(/(?:^|; )lk_csrf=([^;]+)/)?.[1] ?? '')
-				: '';
-
-		await fetch('/auth/logout', {
-			method: 'POST',
-			headers: {
-				'content-type': 'application/json',
-				...(csrf ? { 'x-csrf-token': csrf } : {})
-			},
-			credentials: 'same-origin'
-		});
+		await logoutRequest();
+		// Offline caches hold this user's authenticated pages and API data.
+		await clearPrivateCaches();
 
 		// Full page reload — ensures SvelteKit re-runs +layout.server.ts
 		// which will find no access cookie and redirect to /signin. Using
