@@ -14,9 +14,10 @@
  * Per CLAUDE.md rule 6 + the BFF cookie-auth ADR.
  */
 import { redirect, type Cookies } from '@sveltejs/kit';
-import { config } from './config';
-import { ACCESS_COOKIE } from './cookies';
-import { getOperatorScope } from './scope';
+import { refreshSession } from './auth-refresh.ts';
+import { config } from './config.ts';
+import { ACCESS_COOKIE } from './cookies.ts';
+import { getOperatorScope } from './scope.ts';
 
 export interface GoRequestInit extends Omit<RequestInit, 'headers'> {
 	headers?: Record<string, string>;
@@ -31,7 +32,8 @@ export interface GoRequestInit extends Omit<RequestInit, 'headers'> {
  *
  * The path MUST start with `/v1/` (the Go API root). Auth + scope
  * headers are injected automatically. The caller handles non-2xx
- * responses (this helper only handles the auth-cookie missing case).
+ * responses. A 401 from Go triggers one silent refresh + one retry with the
+ * new Bearer; every body passed here is a string/undefined, so replay is safe.
  */
 export async function goFetch(
 	cookies: Cookies,
@@ -49,7 +51,6 @@ export async function goFetch(
 		...(init.headers ?? {}),
 		accept: 'application/json'
 	};
-	if (access) headers.authorization = `Bearer ${access}`;
 
 	const scope = getOperatorScope(cookies);
 	if (scope) headers['x-tenant-id'] = scope.id;
@@ -58,7 +59,17 @@ export async function goFetch(
 		headers['content-type'] = 'application/json';
 	}
 
-	return fetch(`${config.GO_API_URL}/api${path}`, { ...init, headers });
+	const send = (token: string | undefined): Promise<Response> =>
+		fetch(`${config.GO_API_URL}/api${path}`, {
+			...init,
+			headers: token ? { ...headers, authorization: `Bearer ${token}` } : headers
+		});
+
+	const resp = await send(access);
+	if (resp.status !== 401 || !access) return resp;
+
+	const renewed = await refreshSession(cookies);
+	return renewed ? send(renewed) : resp;
 }
 
 /** Parse a Go JSON response. Returns `null` on 204 / empty bodies. */

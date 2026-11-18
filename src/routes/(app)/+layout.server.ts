@@ -4,7 +4,8 @@
  *
  * Checks the __Host-lk_access cookie. If absent → redirect to /signin.
  * Fetches GET /api/v1/auth/me/capabilities server-to-server using the
- * JWT as Bearer. On 401 → attempts silent refresh (once) before redirect.
+ * JWT as Bearer. An expired access cookie is refreshed in hooks.server.ts
+ * before this runs; a 401 here triggers one more refresh + retry.
  *
  * The returned `capabilities` object is baked into the initial HTML
  * (SvelteKit SSR serialisation) so the first paint has no loading
@@ -21,15 +22,17 @@ import type { LayoutServerLoad } from './$types';
 import type { Capabilities } from '#lib/features/auth/api.ts';
 
 export const load: LayoutServerLoad = async ({ cookies, url }) => {
-	// The access cookie expires after 15 minutes and simply disappears, so a
-	// missing cookie with a live refresh cookie is a silent refresh, not a signout.
-	let access = cookies.get(ACCESS_COOKIE()) ?? (await refreshSession(cookies));
+	// hooks.server.ts already refreshed an expired access cookie before this
+	// load ran, so a missing cookie here means the session is really gone.
+	let access = cookies.get(ACCESS_COOKIE());
 
 	if (!access) {
 		const next = encodeURIComponent(url.pathname + url.search);
 		throw redirect(303, `/signin?next=${next}`);
 	}
 
+	// lk_mcp is a UX gate only (page redirects). /api/* calls are not blocked
+	// by it; the Go API must enforce forced password change itself.
 	if (mustChangePassword(cookies) && url.pathname !== '/must-change-password') {
 		throw redirect(
 			303,

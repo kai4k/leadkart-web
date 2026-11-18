@@ -1,5 +1,5 @@
 import { expect, test, type BrowserContext } from '@playwright/test';
-import { fakeAccessToken, fakeRefreshToken } from './helpers/fake-jwt';
+import { fakeAccessToken, fakeRefreshToken, TEST_MEMBERSHIP_ID } from './helpers/fake-jwt';
 import { listMockCalls, registerMock, resetMock } from './helpers/mock';
 import { signInAsTier } from './helpers/sign-in';
 
@@ -59,10 +59,7 @@ test.describe('session refresh', () => {
 		expect(cookies.find((c) => c.name === 'lk_refresh')?.value).toBe(REFRESHED_REFRESH);
 	});
 
-	test('proxy mutation survives an expired access token: 401 → refresh → body replayed', async ({
-		page,
-		context
-	}) => {
+	test('proxy mutation rejected with 401 → refresh → body replayed', async ({ page, context }) => {
 		await signInAsTier(page, { tier: 'tenant-admin' });
 		await registerMock({
 			method: 'POST',
@@ -76,7 +73,7 @@ test.describe('session refresh', () => {
 			status: 200,
 			body: { id: 'w1' }
 		});
-		// Go rejects the first (token-less) attempt, accepts the replay.
+		// Go rejects the first attempt, accepts the replay.
 		await registerMock({
 			method: 'POST',
 			path: '/api/v1/widgets',
@@ -84,7 +81,7 @@ test.describe('session refresh', () => {
 			body: { code: 'token_expired' },
 			times: 1
 		});
-		await dropAccessCookie(context);
+		const signedInAccess = await cookieValue(context, 'lk_access');
 
 		const result = await page.evaluate(async () => {
 			const csrf = document.cookie.match(/(?:^|; )lk_csrf=([^;]+)/)?.[1] ?? '';
@@ -100,7 +97,8 @@ test.describe('session refresh', () => {
 		const calls = await listMockCalls();
 		const widgetCalls = calls.filter((c) => c.method === 'POST' && c.path === '/api/v1/widgets');
 		expect(widgetCalls).toHaveLength(2);
-		expect(widgetCalls[0].authorization).toBeNull();
+		// Go rejects the still-present (stale) access token; the retry carries the new one.
+		expect(widgetCalls[0].authorization).toBe(`Bearer ${signedInAccess}`);
 		expect(widgetCalls[1].authorization).toBe(`Bearer ${REFRESHED_ACCESS}`);
 		expect(widgetCalls[1].body).toBe(JSON.stringify({ name: 'replayed' }));
 		expect(
@@ -144,5 +142,102 @@ test.describe('session refresh', () => {
 		const names = (await context.cookies()).map((c) => c.name);
 		expect(names).not.toContain('lk_refresh');
 		expect(names).not.toContain('lk_csrf');
+	});
+
+	async function registerRefresh(): Promise<void> {
+		await registerMock({
+			method: 'POST',
+			path: '/api/v1/auth/refresh',
+			status: 200,
+			body: { access_token: REFRESHED_ACCESS, refresh_token: REFRESHED_REFRESH }
+		});
+	}
+
+	const refreshCallsOf = async () =>
+		(await listMockCalls()).filter((c) => c.method === 'POST' && c.path === '/api/v1/auth/refresh');
+
+	test('a child load refreshes via the hook instead of bouncing to /signin', async ({
+		page,
+		context
+	}) => {
+		await signInAsTier(page, { tier: 'tenant-user' });
+		await registerRefresh();
+		await dropAccessCookie(context);
+
+		await page.goto('/settings/account/profile');
+
+		await expect(page).toHaveURL(/\/settings\/account\/profile$/);
+		await expect(page.getByLabel(/designation/i)).toBeVisible();
+		expect(await refreshCallsOf()).toHaveLength(1);
+		expect(await cookieValue(context, 'lk_access')).toBe(REFRESHED_ACCESS);
+	});
+
+	test('a form action submitted with an expired access cookie succeeds', async ({
+		page,
+		context
+	}) => {
+		await signInAsTier(page, { tier: 'tenant-user' });
+		await registerRefresh();
+		await registerMock({
+			method: 'PATCH',
+			path: `/api/v1/users/${TEST_MEMBERSHIP_ID}/profile`,
+			status: 200,
+			body: {}
+		});
+		await page.goto('/settings/account/profile');
+		await page.getByLabel(/designation/i).fill('Regional Manager');
+		await dropAccessCookie(context);
+
+		await page.getByRole('button', { name: /save changes/i }).click();
+
+		await expect(page.getByText('Profile saved.')).toBeVisible();
+		await expect(page).toHaveURL(/\/settings\/account\/profile/);
+		const patches = (await listMockCalls()).filter((c) => c.method === 'PATCH');
+		expect(patches).toHaveLength(1);
+		expect(patches[0].authorization).toBe(`Bearer ${REFRESHED_ACCESS}`);
+		expect(JSON.parse(patches[0].body)).toMatchObject({ designation: 'Regional Manager' });
+		expect(await refreshCallsOf()).toHaveLength(1);
+	});
+
+	test('the root page lands on the dashboard after the access cookie expires', async ({
+		page,
+		context
+	}) => {
+		await signInAsTier(page, { tier: 'tenant-admin' });
+		await registerRefresh();
+		await dropAccessCookie(context);
+
+		await page.goto('/');
+
+		await expect(page).toHaveURL(/\/dashboard$/);
+	});
+
+	test('goFetch retries once with a refreshed token when Go answers 401', async ({
+		page,
+		context
+	}) => {
+		await signInAsTier(page, { tier: 'tenant-user' });
+		await registerRefresh();
+		const profilePath = `/api/v1/users/${TEST_MEMBERSHIP_ID}/profile`;
+		await registerMock({ method: 'PATCH', path: profilePath, status: 200, body: {} });
+		await registerMock({
+			method: 'PATCH',
+			path: profilePath,
+			status: 401,
+			body: { code: 'token_expired' },
+			times: 1
+		});
+		await page.goto('/settings/account/profile');
+		const staleAccess = await cookieValue(context, 'lk_access');
+
+		await page.getByRole('button', { name: /save changes/i }).click();
+
+		await expect(page.getByText('Profile saved.')).toBeVisible();
+		const patches = (await listMockCalls()).filter((c) => c.method === 'PATCH');
+		expect(patches.map((c) => c.authorization)).toEqual([
+			`Bearer ${staleAccess}`,
+			`Bearer ${REFRESHED_ACCESS}`
+		]);
+		expect(await refreshCallsOf()).toHaveLength(1);
 	});
 });

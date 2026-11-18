@@ -40,7 +40,12 @@ function findFixture(method, pathname) {
 			return f;
 	}
 	const wildcards = fixtures
-		.filter((f) => f.method === method && f.path.endsWith('*'))
+		.filter(
+			(f) =>
+				f.method === method &&
+				f.path.endsWith('*') &&
+				(f.times === undefined || (f.used ?? 0) < f.times)
+		)
 		.map((f) => ({ f, prefix: f.path.slice(0, -1) }))
 		.filter(({ prefix }) => pathname.startsWith(prefix))
 		.sort((a, b) => b.prefix.length - a.prefix.length);

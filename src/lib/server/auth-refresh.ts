@@ -7,15 +7,23 @@
  * short grace window so a request that was already in flight with the
  * old cookie gets the same new pair instead of a second rotation.
  *
+ * An `unavailable` result is never cached: a one-second Go blip must not
+ * turn into ten seconds of forced failures.
+ *
  * The map is per process. With several BFF instances, Go must tolerate a
  * rotated token being presented again within a few seconds.
  */
 import { createHash } from 'node:crypto';
 import type { Cookies } from '@sveltejs/kit';
 import { z } from 'zod';
-import { config } from './config';
-import { clearAuthCookies, REFRESH_COOKIE, setAuthCookies, setMustChangePassword } from './cookies';
-import { clearOperatorScope } from './scope';
+import { config } from './config.ts';
+import {
+	clearAuthCookies,
+	REFRESH_COOKIE,
+	setAuthCookies,
+	setMustChangePassword
+} from './cookies.ts';
+import { clearOperatorScope } from './scope.ts';
 
 export const tokenPairSchema = z.object({
 	access_token: z.string().min(1),
@@ -62,10 +70,15 @@ export function refreshTokens(
 
 	const pending = callRefresh(refresh, fetchFn);
 	inflight.set(key, pending);
-	void pending.finally(() => {
+	const cleanup = (result?: RefreshResult): void => {
+		if (!result || (!result.ok && result.reason === 'unavailable')) {
+			inflight.delete(key);
+			return;
+		}
 		const timer = setTimeout(() => inflight.delete(key), GRACE_MS);
 		timer.unref?.();
-	});
+	};
+	pending.then(cleanup, () => cleanup());
 	return pending;
 }
 

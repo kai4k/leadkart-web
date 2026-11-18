@@ -41,10 +41,13 @@ describe('auth cookies', () => {
 		expect(paths).toEqual(expect.arrayContaining(['/', '/auth/refresh']));
 	});
 
-	it('keeps an existing csrf cookie when keepCsrf is set', () => {
+	it('keeps the existing csrf value but renews its expiry when keepCsrf is set', () => {
 		const c = fakeCookies({ lk_csrf: 'existing' });
 		setAuthCookies(c.jar, 'acc', 'ref', { keepCsrf: true });
-		expect(c.sets.find((s) => s.name === 'lk_csrf')).toBeUndefined();
+		const csrf = c.sets.find((s) => s.name === 'lk_csrf');
+		expect(csrf?.value).toBe('existing');
+		expect(csrf?.opts.maxAge).toBe(30 * 24 * 3600);
+		expect(csrf?.opts.httpOnly).toBe(false);
 	});
 
 	it('still mints a csrf cookie with keepCsrf when none exists', () => {

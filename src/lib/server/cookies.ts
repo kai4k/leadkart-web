@@ -55,11 +55,13 @@ export function setAuthCookies(
 		maxAge: REFRESH_MAX_AGE
 	});
 	// Rotating csrf on refresh would break requests already in flight with
-	// the old header, so a refresh keeps the existing value.
-	if (opts.keepCsrf && cookies.get(CSRF_COOKIE)) return;
-	// Lives as long as the session: a 15-minute csrf cookie made every
+	// the old header, so a refresh keeps the existing VALUE — but re-sets it
+	// so its expiry renews with the session instead of lapsing 30 days after
+	// login. Lives as long as the session: a 15-minute csrf cookie made every
 	// mutation fail with 403 once the first access token expired.
-	const csrf = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url');
+	const existing = opts.keepCsrf ? cookies.get(CSRF_COOKIE) : undefined;
+	const csrf =
+		existing ?? Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url');
 	cookies.set(CSRF_COOKIE, csrf, {
 		path: '/',
 		httpOnly: false,
@@ -77,7 +79,13 @@ export function clearAuthCookies(cookies: Cookies): void {
 	cookies.delete(MCP_COOKIE, { path: '/' });
 }
 
-/** Forced password change pending (set at login, cleared on success). */
+/**
+ * Forced password change pending (set at login, cleared on success).
+ *
+ * UX gate only: the (app) layout uses it to redirect pages. API calls through
+ * /api/* are NOT blocked by it, so the Go API must itself enforce forced
+ * password change.
+ */
 export function setMustChangePassword(cookies: Cookies, on: boolean): void {
 	if (!on) {
 		cookies.delete(MCP_COOKIE, { path: '/' });

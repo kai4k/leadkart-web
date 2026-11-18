@@ -7,7 +7,8 @@ import type { ClientInit, HandleClientError } from '@sveltejs/kit/hooks';
  * reshaped into a safe message for the nearest +error.svelte. In production
  * this is the integration point for an APM/error-tracking service (Sentry).
  *
- * Server-side auth/BFF hooks live in hooks.server.ts.
+ * Server-side hooks (silent session refresh, server i18n init) live in
+ * hooks.server.ts.
  *
  * https://svelte.dev/docs/kit/hooks#shared-hooks-handleerror
  */
