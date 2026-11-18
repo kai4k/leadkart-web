@@ -13,8 +13,7 @@
  *
  * Per CLAUDE.md rule 6 + the BFF cookie-auth ADR.
  */
-import { redirect } from '@sveltejs/kit';
-import type { Cookies } from '@sveltejs/kit';
+import { redirect, type Cookies } from '@sveltejs/kit';
 import { config } from './config';
 import { ACCESS_COOKIE } from './cookies';
 import { getOperatorScope } from './scope';

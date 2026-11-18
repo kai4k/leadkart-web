@@ -4,23 +4,20 @@
 	import { resolve } from '$app/paths';
 	import { SvelteURL } from 'svelte/reactivity';
 	import type { ResolvedPathname } from '$app/types';
-	import { Alert, Avatar, Badge, Breadcrumbs, Dropdown, Skeleton } from '$ui';
-	import type { BreadcrumbItem } from '$ui';
+	import { Alert, Avatar, Badge, Breadcrumbs, Dropdown, Skeleton, type BreadcrumbItem } from '$ui';
 	import { Icon, Lock, MoreVertical, Shield, UserMinus, UserPlus, Users } from '$icons';
-	import {
-		userDetailQuery,
-		usersListQuery,
-		rolesCatalogQuery,
-		reactivateUserMutation
-	} from '$features/users/queries';
+	import { userDetailQuery, usersListQuery, reactivateUserMutation } from '$features/users/queries';
+	import { rolesListQuery } from '$features/roles';
 	import { userStatusBadge } from '$features/users/view-models';
 	import { displayName, initials } from '$features/auth/view-models';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
-	import { DeactivateUserDialog } from '$features/users';
-	import { RoleAssignmentDrawer } from '$features/users';
-	import { ManagerSelectorDrawer } from '$features/users';
-	import { PermissionOverridesPanel } from '$features/users';
-	import { UserDetailTabs } from '$features/users';
+	import {
+		DeactivateUserDialog,
+		RoleAssignmentDrawer,
+		ManagerSelectorDrawer,
+		PermissionOverridesPanel,
+		UserDetailTabs
+	} from '$features/users';
 
 	const membershipId = $derived(page.params.id ?? '');
 	const tab = $derived(page.url.searchParams.get('tab') ?? 'overview');
@@ -34,7 +31,7 @@
 
 	const userQuery = userDetailQuery(() => membershipId);
 	const usersListQ = usersListQuery();
-	const rolesQuery = rolesCatalogQuery();
+	const rolesQuery = rolesListQuery();
 
 	const user = $derived(userQuery.data ?? null);
 	const userList = $derived(usersListQ.data?.users ?? []);

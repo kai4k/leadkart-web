@@ -1,6 +1,5 @@
 <script lang="ts" module>
-	import type { VariantProps } from 'class-variance-authority';
-	import { cva } from 'class-variance-authority';
+	import { type VariantProps, cva } from 'class-variance-authority';
 
 	export const kanbanColumnHeaderVariants = cva(
 		'inline-flex h-1.5 w-12 flex-shrink-0 rounded-full',
@@ -32,12 +31,10 @@
 	 * drop (parse payload, dispatch onCardMove from context). Columns
 	 * highlight while a card is dragged over (data-drag-over attribute).
 	 */
-	import { getContext } from 'svelte';
-	import type { Snippet } from 'svelte';
+	import { getContext, type Snippet } from 'svelte';
 	import { Badge } from '../badge';
 	import { cn } from '#lib/utils/cn.ts';
-	import { KANBAN_CTX } from './kanban-state.svelte';
-	import type { KanbanDragState } from './kanban-state.svelte';
+	import { KANBAN_CTX, type KanbanDragState } from './kanban-state.svelte';
 	import type { KanbanMove } from './KanbanBoard.svelte';
 
 	type KanbanContext = {

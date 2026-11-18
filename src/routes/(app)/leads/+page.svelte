@@ -13,8 +13,7 @@
 	import { resolve } from '$app/paths';
 	import type { ResolvedPathname } from '$app/types';
 	import { SvelteURL } from 'svelte/reactivity';
-	import { ResourceListPage } from '#lib/components/data/index.ts';
-	import type { BulkAction } from '#lib/components/data/index.ts';
+	import { ResourceListPage, type BulkAction } from '#lib/components/data/index.ts';
 	import { Tabs } from '$ui';
 	import BulkUploadDrawerShared from '#lib/components/data/BulkUploadDrawer.svelte';
 	import { TextField } from '$form';
@@ -34,9 +33,7 @@
 		bulkUploadPreviewMutation
 	} from '$features/leads/queries';
 	import { myCapabilitiesQuery } from '$features/auth/queries';
-	import { LeadsKanban } from '$features/leads';
-	import { LeadsTable } from '$features/leads';
-	import { EditLeadDrawer } from '$features/leads';
+	import { LeadsKanban, LeadsTable, EditLeadDrawer } from '$features/leads';
 	import { STAGE_META, TEMPERATURE_META } from '$features/leads/view-models';
 	import type {
 		CrmLeadDto,

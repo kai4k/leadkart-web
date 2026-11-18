@@ -13,9 +13,8 @@
  *
  * Exit code: 0 on clean, 1 on any undefined token reference.
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, globSync } from 'node:fs';
 import { join } from 'node:path';
-import { globSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));

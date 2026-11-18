@@ -8,10 +8,13 @@
 	import { Alert, Button, Dialog } from '$ui';
 	import { NumberInput, RadioGroup, RadioItem, Select, TextField } from '$form';
 	import { useForm } from '#lib/hooks/index.ts';
-	import { recordPaymentRequestSchema, type PaymentKind } from '$features/orders/schemas';
+	import {
+		recordPaymentRequestSchema,
+		type PaymentKind,
+		type OrderDto
+	} from '$features/orders/schemas';
 	import { recordPaymentMutation } from '$features/orders/queries';
 	import { outstandingBalance } from '$features/orders/view-models';
-	import type { OrderDto } from '$features/orders/schemas';
 
 	type Props = {
 		order: OrderDto;

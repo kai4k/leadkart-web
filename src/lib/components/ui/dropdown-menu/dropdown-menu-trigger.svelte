@@ -1,8 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { DropdownMenu as DropdownMenuPrimitive } from 'bits-ui';
-	import Button from '../button/button.svelte';
-	import type { ButtonVariant, ButtonSize } from '../button/button.svelte';
+	import Button, { type ButtonVariant, type ButtonSize } from '../button/button.svelte';
 
 	/**
 	 * Dropdown.Trigger — bits-ui primitive wrapped to absorb the

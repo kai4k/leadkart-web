@@ -5,19 +5,7 @@
  */
 import type { UserDto, SessionDto } from './types';
 
-/**
- * Human display name for a user. Falls back to the email local-part
- * when both first + last are blank (rare but possible during the
- * pre-profile-fill window).
- */
-export function displayName(user: UserDto): string {
-	const first = user.first_name.trim();
-	const last = user.last_name.trim();
-	if (first && last) return `${first} ${last}`;
-	if (first) return first;
-	if (last) return last;
-	return user.email.split('@')[0] ?? user.email;
-}
+export { displayName } from '#lib/utils/person-name.ts';
 
 /**
  * Two-letter monogram for Avatar. Uppercased.

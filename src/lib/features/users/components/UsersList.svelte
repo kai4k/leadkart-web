@@ -4,8 +4,16 @@
 	import { resolve } from '$app/paths';
 	import { SvelteURL } from 'svelte/reactivity';
 	import type { ResolvedPathname } from '$app/types';
-	import { Avatar, Badge, Button, DataTable, Dropdown, EmptyState, Pagination } from '$ui';
-	import type { DataTableColumn } from '$ui';
+	import {
+		Avatar,
+		Badge,
+		Button,
+		DataTable,
+		Dropdown,
+		EmptyState,
+		Pagination,
+		type DataTableColumn
+	} from '$ui';
 	import {
 		MoreVertical,
 		Plus,
@@ -19,10 +27,10 @@
 	} from '$icons';
 	import {
 		usersListQuery,
-		rolesCatalogQuery,
 		reactivateUserMutation,
 		deactivateUserMutation
 	} from '$features/users/queries';
+	import { rolesListQuery } from '$features/roles';
 	import { userStatusBadge, userRoleBadges, canDeactivate } from '$features/users/view-models';
 	import { displayName, initials } from '$features/auth';
 	import type { UserDto } from '$features/users/types';
@@ -73,7 +81,7 @@
 	}
 
 	const listQuery = usersListQuery();
-	const rolesQuery = rolesCatalogQuery();
+	const rolesQuery = rolesListQuery();
 	const reactivate = reactivateUserMutation();
 	const deactivate = deactivateUserMutation();
 

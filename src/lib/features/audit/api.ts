@@ -3,8 +3,7 @@
  * Each resource that exposes activity uses the same cursor-paginated shape.
  */
 import { api, parseResponse } from '$api/client';
-import { activityListResponseSchema } from './schemas';
-import type { ActivityListResponse } from './schemas';
+import { activityListResponseSchema, type ActivityListResponse } from './schemas';
 
 export type ActivityParams = {
 	cursor?: string | null;

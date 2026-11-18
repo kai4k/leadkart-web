@@ -1,8 +1,8 @@
 <!-- src/lib/components/data/ResourceListPage.svelte -->
 <script lang="ts" module>
 	import type { Component, Snippet } from 'svelte';
-	import type { BulkAction } from './BulkActionBar.svelte';
-	import type { FilterBarField } from './FilterBar.svelte';
+	import BulkActionBar, { type BulkAction } from './BulkActionBar.svelte';
+	import FilterBar, { type FilterBarField } from './FilterBar.svelte';
 
 	export interface ResourceListAction {
 		label: string;
@@ -21,9 +21,7 @@
 	import { Icon } from '$icons';
 	import { cn } from '#lib/utils/cn.ts';
 	import Toolbar from './Toolbar.svelte';
-	import FilterBar from './FilterBar.svelte';
 	import FilterChips from './FilterChips.svelte';
-	import BulkActionBar from './BulkActionBar.svelte';
 
 	/**
 	 * ResourceListPage — page-level template composing every primitive

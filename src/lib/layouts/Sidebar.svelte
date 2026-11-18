@@ -2,8 +2,7 @@
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { navForTier } from '#lib/config/nav.ts';
-	import { session } from '$features/auth';
-	import type { PrincipalTier } from '$features/auth/capabilities';
+	import { session, type PrincipalTier } from '$features/auth';
 
 	let { onNavigate }: { onNavigate?: () => void } = $props();
 

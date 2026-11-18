@@ -13,11 +13,9 @@
 	 * to swap columns, dispatched via the same onCardMove hook. We keep
 	 * this minimal: Space announces the card; ArrowRight/Left move it.
 	 */
-	import { getContext } from 'svelte';
-	import type { Snippet } from 'svelte';
+	import { getContext, type Snippet } from 'svelte';
 	import { cn } from '#lib/utils/cn.ts';
-	import { KANBAN_CTX } from './kanban-state.svelte';
-	import type { KanbanDragState } from './kanban-state.svelte';
+	import { KANBAN_CTX, type KanbanDragState } from './kanban-state.svelte';
 	import type { KanbanMove } from './KanbanBoard.svelte';
 
 	type KanbanContext = {

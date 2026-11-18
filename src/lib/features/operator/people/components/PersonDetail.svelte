@@ -4,7 +4,7 @@
 	import { SvelteMap } from 'svelte/reactivity';
 	import { Alert, Avatar, Badge, Button, Card, CopyButton, Skeleton } from '$ui';
 	import { ArrowRight, Pause, Play, UserMinus, Icon } from '$icons';
-	import { tenantsListQuery } from '../../tenants/queries';
+	import { tenantsListQuery } from '../../tenants';
 	import {
 		personDetailQuery,
 		personMembershipsQuery,

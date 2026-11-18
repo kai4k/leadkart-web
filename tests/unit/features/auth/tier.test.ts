@@ -6,8 +6,7 @@
  * variant routing. Pin every branch.
  */
 import { describe, expect, it } from 'vitest';
-import { hasCapability, deriveTier } from '#lib/features/auth/capabilities.ts';
-import type { Capabilities } from '#lib/features/auth/capabilities.ts';
+import { hasCapability, deriveTier, type Capabilities } from '#lib/features/auth/capabilities.ts';
 
 function caps(overrides: Partial<Capabilities> = {}): Capabilities {
 	return {

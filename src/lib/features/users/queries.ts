@@ -21,7 +21,6 @@ const usersKeys = {
 	all: ['users'] as const,
 	list: () => [...usersKeys.all, 'list'] as const,
 	detail: (id: string) => [...usersKeys.all, 'detail', id] as const,
-	roles: () => ['roles', 'catalog'] as const,
 	membershipSearch: (q: string) => [...usersKeys.all, 'membership-search', q] as const
 };
 
@@ -66,13 +65,6 @@ export function userDetailQuery(getId: () => string) {
 			enabled: Boolean(id)
 		};
 	});
-}
-
-export function rolesCatalogQuery() {
-	return createQuery(() => ({
-		queryKey: usersKeys.roles(),
-		queryFn: () => api.listRoles()
-	}));
 }
 
 export function createUserMutation() {

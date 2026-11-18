@@ -24,8 +24,7 @@
  * silenced by adding `// i18n-allow` on the line above the string, OR
  * by wrapping in $_(). False negatives still get caught at PR review.
  */
-import { readFileSync } from 'node:fs';
-import { globSync } from 'node:fs';
+import { readFileSync, globSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 

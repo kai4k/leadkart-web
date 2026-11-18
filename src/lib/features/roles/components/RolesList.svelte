@@ -1,10 +1,16 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Badge, Button, DataTable, Dropdown, EmptyState, Pagination } from '$ui';
-	import type { DataTableColumn } from '$ui';
+	import {
+		Badge,
+		Button,
+		DataTable,
+		Dropdown,
+		EmptyState,
+		Pagination,
+		type DataTableColumn
+	} from '$ui';
 	import { Plus, Shield, MoreVertical, Trash2, Edit, Icon } from '$icons';
 	import { rolesListQuery } from '$features/roles/queries';
-	import { usersListQuery } from '$features/users';
 	import type { RoleDto } from '$features/roles/types';
 	import { roleBadgeVariant, isProtectedRole, roleMemberCount } from '$features/roles/view-models';
 	import { getListErrorMessage } from '$api/error-messages';
@@ -12,14 +18,14 @@
 	import { resolve } from '$app/paths';
 	import DeleteRoleDialog from './DeleteRoleDialog.svelte';
 
+	let { roster }: { roster: ReadonlyArray<{ role_ids: string[]; status: string }> } = $props();
+
 	let deleteOpen = $state(false);
 	let targetRole = $state<RoleDto | null>(null);
 
 	const rolesQuery = rolesListQuery();
-	const usersQuery = usersListQuery();
 
 	const roleList = $derived(rolesQuery.data?.roles ?? []);
-	const userList = $derived(usersQuery.data?.users ?? []);
 	const pagination = createListPagination(() => roleList);
 
 	const tableState = $derived(
@@ -46,7 +52,7 @@
 		{
 			id: 'members',
 			header: 'Members',
-			accessor: (r) => roleMemberCount(r, userList),
+			accessor: (r) => roleMemberCount(r, roster),
 			hideBelow: 'md'
 		},
 		{

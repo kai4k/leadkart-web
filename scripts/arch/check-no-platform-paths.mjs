@@ -12,8 +12,7 @@
  *
  * Exit code: 0 on clean, 1 on any banned path reference.
  */
-import { readFileSync } from 'node:fs';
-import { globSync } from 'node:fs';
+import { readFileSync, globSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 

@@ -9,11 +9,10 @@
 	 */
 	import { Dialog, Button, Alert } from '$ui';
 	import { Select, NumberInput } from '$form';
-	import { logCallSchema } from '../schemas';
+	import { logCallSchema, type CallOutcome } from '../schemas';
 	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 	import { logCallMutation } from '../queries';
 	import { CALL_OUTCOME_LABEL } from '../view-models';
-	import type { CallOutcome } from '../schemas';
 
 	type Props = {
 		leadId: string;

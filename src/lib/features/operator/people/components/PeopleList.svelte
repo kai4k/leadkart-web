@@ -3,8 +3,7 @@
 	import { goto } from '$app/navigation';
 	import type { ResolvedPathname } from '$app/types';
 	import { SvelteURL } from 'svelte/reactivity';
-	import { Avatar, Badge, DataTable, EmptyState } from '$ui';
-	import type { DataTableColumn } from '$ui';
+	import { Avatar, Badge, DataTable, EmptyState, type DataTableColumn } from '$ui';
 	import { Users, Search, Icon } from '$icons';
 	import { personsListQuery } from '../queries';
 	import { personDisplayName, personLifecycleBadge } from '../view-models';

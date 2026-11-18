@@ -3,8 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { UsersList } from '$features/users';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
-	import { Breadcrumbs } from '$ui';
-	import type { BreadcrumbItem } from '$ui';
+	import { Breadcrumbs, type BreadcrumbItem } from '$ui';
 
 	const capsQuery = myCapabilitiesQuery();
 	$effect(() => {

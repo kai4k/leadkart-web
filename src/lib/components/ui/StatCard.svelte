@@ -8,8 +8,7 @@
 	 * matched-shape skeleton so layout doesn't shift on data arrival.
 	 */
 
-	import type { VariantProps } from 'class-variance-authority';
-	import { cva } from 'class-variance-authority';
+	import { type VariantProps, cva } from 'class-variance-authority';
 
 	export const statCardAccentVariants = cva('', {
 		variants: {

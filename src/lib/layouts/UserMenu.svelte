@@ -3,8 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { Dropdown } from '$ui';
-	import { session } from '$features/auth';
-	import { myCapabilitiesQuery } from '$features/auth/queries';
+	import { session, myCapabilitiesQuery } from '$features/auth';
 
 	/**
 	 * UserMenu — avatar trigger + menu popover. Composes the canonical

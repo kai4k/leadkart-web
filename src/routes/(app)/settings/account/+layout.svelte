@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import type { ResolvedPathname } from '$app/types';
-	import { Alert, Breadcrumbs, Skeleton } from '$ui';
-	import type { BreadcrumbItem } from '$ui';
+	import { Alert, Breadcrumbs, Skeleton, type BreadcrumbItem } from '$ui';
 	import { myCapabilitiesQuery, myProfileQuery } from '$features/auth/queries';
 	import { displayName } from '$features/auth/view-models';
 	import { cn } from '#lib/utils/cn.ts';

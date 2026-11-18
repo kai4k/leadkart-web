@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Bell, Command, PanelLeft, Search, Settings, Icon } from '$icons';
+	import { Bell, Command, PanelLeft, Search, Settings, Icon, ChevronRight } from '$icons';
 	import { routeContext } from '#lib/utils/routeTitle.ts';
 	import UserMenu from './UserMenu.svelte';
-	import { ChevronRight } from '$icons';
 	import { CommandPalette } from '$features/search';
-	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
+	import { myCapabilitiesQuery, hasCapability } from '$features/auth';
 
 	/**
 	 * Topbar — Linear/Vercel-minimal shape:

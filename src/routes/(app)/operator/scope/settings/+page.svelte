@@ -1,8 +1,10 @@
 <script lang="ts">
-	import { TenantActionPanel } from '$features/operator/tenants';
-	import { SuspendDialog } from '$features/operator/tenants';
-	import { MarkForDeletionDialog } from '$features/operator/tenants';
-	import type { TenantDto } from '$features/operator/tenants';
+	import {
+		TenantActionPanel,
+		SuspendDialog,
+		MarkForDeletionDialog,
+		type TenantDto
+	} from '$features/operator/tenants';
 	import type { LayoutData } from '../$types';
 
 	let { data }: { data: LayoutData } = $props();

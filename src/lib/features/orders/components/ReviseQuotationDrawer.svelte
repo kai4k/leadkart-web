@@ -11,14 +11,14 @@
 	import { useForm } from '#lib/hooks/index.ts';
 	import {
 		reviseQuotationRequestSchema,
-		type ReviseQuotationRequest
+		type ReviseQuotationRequest,
+		type OrderDto
 	} from '$features/orders/schemas';
 	import { reviseQuotationMutation } from '$features/orders/queries';
 	import OrderItemsEditor, {
 		type BatchCatalogueEntry,
 		type DraftItem
 	} from './OrderItemsEditor.svelte';
-	import type { OrderDto } from '$features/orders/schemas';
 	import {
 		ValidationError,
 		ConflictError,

@@ -11,8 +11,7 @@
 		Users
 	} from '#lib/icons/index.ts';
 	import { Alert, Card, Spinner } from '$ui';
-	import { myCapabilitiesQuery } from '$features/auth';
-	import { deriveTier } from '$features/auth';
+	import { myCapabilitiesQuery, deriveTier } from '$features/auth';
 	import { ApiError } from '$api/errors';
 	import { platformStatsQuery } from '$features/operator';
 

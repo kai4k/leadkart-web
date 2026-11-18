@@ -10,7 +10,14 @@
 	import { Drawer, Button, Alert } from '$ui';
 	import { Select, Switch, TagInput, TextField } from '$form';
 	import { Icon, X } from '$icons';
-	import { updateLeadSchema, type CrmLeadDto } from '../schemas';
+	import {
+		updateLeadSchema,
+		type CrmLeadDto,
+		type BuyTimeline,
+		type OrderValueBand,
+		type LeadStage,
+		type LeadTemperature
+	} from '../schemas';
 	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 	import { updateLeadMutation } from '../queries';
 	import {
@@ -19,7 +26,6 @@
 		STAGE_META,
 		TEMPERATURE_META
 	} from '../view-models';
-	import type { BuyTimeline, OrderValueBand, LeadStage, LeadTemperature } from '../schemas';
 
 	type Props = {
 		lead: CrmLeadDto | null;

@@ -1,12 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { PersonDetail } from '$features/operator/people';
-	import { personDetailQuery } from '$features/operator/people';
-	import { personDisplayName } from '$features/operator/people';
+	import { PersonDetail, personDetailQuery, personDisplayName } from '$features/operator/people';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
-	import { Breadcrumbs } from '$ui';
-	import type { BreadcrumbItem } from '$ui';
+	import { Breadcrumbs, type BreadcrumbItem } from '$ui';
 
 	let { data } = $props();
 

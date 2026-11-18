@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Alert, Breadcrumbs, Card, EmptyState, Skeleton } from '$ui';
-	import type { BreadcrumbItem } from '$ui';
+	import { Alert, Breadcrumbs, Card, EmptyState, Skeleton, type BreadcrumbItem } from '$ui';
 	import { Users } from '$icons';
 	import { usersListQuery } from '$features/users/queries';
 	import { buildOrgTree } from '$features/users/view-models-hierarchy';

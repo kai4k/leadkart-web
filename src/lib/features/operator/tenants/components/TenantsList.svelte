@@ -3,8 +3,16 @@
 	import { goto } from '$app/navigation';
 	import type { ResolvedPathname } from '$app/types';
 	import { SvelteURL } from 'svelte/reactivity';
-	import { Alert, Badge, Button, DataTable, Dropdown, EmptyState, Spinner } from '$ui';
-	import type { DataTableColumn } from '$ui';
+	import {
+		Alert,
+		Badge,
+		Button,
+		DataTable,
+		Dropdown,
+		EmptyState,
+		Spinner,
+		type DataTableColumn
+	} from '$ui';
 	import {
 		Building2,
 		Eye,
@@ -33,7 +41,7 @@
 	import CreateTenantDrawer from './CreateTenantDrawer.svelte';
 	import SuspendDialog from './SuspendDialog.svelte';
 	import MarkForDeletionDialog from './MarkForDeletionDialog.svelte';
-	import ImpersonateModal from '../../impersonation/components/ImpersonateModal.svelte';
+	import { ImpersonateModal } from '../../impersonation';
 	import type { TenantDto } from '../types';
 	import { createListPagination } from '#lib/hooks/index.ts';
 

@@ -5,8 +5,7 @@
 	import { resolve } from '$app/paths';
 	import type { ResolvedPathname } from '$app/types';
 	import { useQueryClient } from '@tanstack/svelte-query';
-	import { Badge, Breadcrumbs, Button } from '$ui';
-	import type { BreadcrumbItem } from '$ui';
+	import { Badge, Breadcrumbs, Button, type BreadcrumbItem } from '$ui';
 	import { Building2, Icon, Users, Shield, Settings, Activity, UserCog, LogOut } from '$icons';
 	import { exitScope as exitScopeApi } from '$features/operator/scope';
 	import type { LayoutData } from './$types';

@@ -4,8 +4,7 @@
  * Zod schema, PATCH a sub-resource of /v1/tenants/{tenant_id}/*, and
  * return fail() / { success } accordingly.
  */
-import { fail, redirect } from '@sveltejs/kit';
-import type { Cookies } from '@sveltejs/kit';
+import { fail, redirect, type Cookies } from '@sveltejs/kit';
 import type { z } from 'zod';
 import { goFetch, readGoError, flattenGoErrors } from '#lib/server/go.ts';
 import { decodeJwtPrincipal } from '$api/jwt';

@@ -10,7 +10,7 @@
 	 * Industry refs: Linear status picker, GitHub issue state, Asana task
 	 * status, Notion select-property inline picker.
 	 */
-	import type { BadgeVariant } from './badge';
+	import { type BadgeVariant, Badge } from './badge';
 
 	export type StatusPillOption = {
 		value: string;
@@ -70,7 +70,6 @@
 <script lang="ts">
 	import { Check, ChevronDown, Icon } from '#lib/icons/index.ts';
 	import { cn } from '#lib/utils/cn.ts';
-	import { Badge } from './badge';
 	import * as Dropdown from './dropdown-menu';
 
 	type Props = {

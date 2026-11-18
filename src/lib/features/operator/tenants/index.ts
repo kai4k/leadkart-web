@@ -20,4 +20,5 @@ export {
 	canMarkForDeletion,
 	canRestore
 } from './view-models.ts';
+export { tenantsListQuery } from './queries.ts';
 export type { TenantDto } from './types.ts';

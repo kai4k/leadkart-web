@@ -17,8 +17,7 @@
 	import { Button } from './button';
 	import { Icon, AlertTriangle, Info, AlertCircle } from '$icons';
 	import { cn } from '#lib/utils/cn.ts';
-	import type { Snippet } from 'svelte';
-	import type { Component } from 'svelte';
+	import type { Snippet, Component } from 'svelte';
 
 	type Props = {
 		open: boolean;

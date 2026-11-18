@@ -28,8 +28,11 @@
 		formatPrice,
 		stockLevelBadge
 	} from '$features/inventory/view-models';
-	import type { ProductDto, DrugSchedule } from '$features/inventory/schemas';
-	import { drugScheduleSchema } from '$features/inventory/schemas';
+	import {
+		type ProductDto,
+		type DrugSchedule,
+		drugScheduleSchema
+	} from '$features/inventory/schemas';
 	import type { ListProductsParams, ProductSort } from '$features/inventory/api';
 	import { AuthError, NetworkError } from '$api/errors';
 	import { buildProductFilterConfig, type ProductFilters } from './ProductFilters.svelte';

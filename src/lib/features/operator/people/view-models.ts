@@ -1,16 +1,11 @@
 import type { PersonDto } from './types';
+import { displayName } from '#lib/utils/person-name.ts';
 
 export type LifecycleVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
 
-/** Returns the display name for a Person: "First Last", or falls back
- *  to a single name part, or the email when both names are blank. */
+/** Display name for a Person; falls back to the full email when both names are blank. */
 export function personDisplayName(p: PersonDto): string {
-	const first = p.first_name.trim();
-	const last = p.last_name.trim();
-	if (first && last) return `${first} ${last}`;
-	if (first) return first;
-	if (last) return last;
-	return p.email;
+	return displayName(p, { emailFallback: 'full' });
 }
 
 /** Returns the lifecycle badge label + variant for a Person.

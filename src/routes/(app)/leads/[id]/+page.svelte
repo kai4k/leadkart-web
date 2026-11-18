@@ -7,8 +7,7 @@
 	 * goes through TanStack hooks, every mutation lives in `queries.ts`.
 	 */
 	import { page } from '$app/state';
-	import { Tabs, Skeleton } from '$ui';
-	import { Button } from '$ui';
+	import { Tabs, Skeleton, Button } from '$ui';
 	import { Icon, Plus } from '$icons';
 	import { useUrlTab } from '#lib/hooks/index.ts';
 	import {
@@ -17,15 +16,17 @@
 		leadRemindersQuery,
 		leadHistoryQuery
 	} from '$features/leads/queries';
-	import { LeadDetailHeader } from '$features/leads';
-	import { LeadProfileCard } from '$features/leads';
-	import { LeadComplianceCard } from '$features/leads';
-	import { CallLogTimeline } from '$features/leads';
-	import { LogCallDialog } from '$features/leads';
-	import { RemindersList } from '$features/leads';
-	import { ReassignmentHistory } from '$features/leads';
-	import { EditLeadDrawer } from '$features/leads';
-	import { ReassignDialog } from '$features/leads';
+	import {
+		LeadDetailHeader,
+		LeadProfileCard,
+		LeadComplianceCard,
+		CallLogTimeline,
+		LogCallDialog,
+		RemindersList,
+		ReassignmentHistory,
+		EditLeadDrawer,
+		ReassignDialog
+	} from '$features/leads';
 	import { AuthError, NetworkError, NotFoundError } from '$api/errors';
 
 	const id = $derived(page.params.id ?? '');

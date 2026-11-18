@@ -13,7 +13,7 @@
  * rejects them on AssignManager) but the UI must never hang.
  */
 import type { UserDto } from './types';
-import { displayName } from '$features/auth';
+import { displayName } from '#lib/utils/person-name.ts';
 
 export interface OrgNode {
 	user: UserDto;

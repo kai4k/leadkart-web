@@ -4,8 +4,7 @@
 	import { resolve } from '$app/paths';
 	import { SvelteURL } from 'svelte/reactivity';
 	import type { ResolvedPathname } from '$app/types';
-	import { Badge, Button, DataTable, EmptyState } from '$ui';
-	import type { DataTableColumn } from '$ui';
+	import { Badge, Button, DataTable, EmptyState, type DataTableColumn } from '$ui';
 	import { Icon, Inbox, Plus } from '$icons';
 	import { permissionRequestsListQuery } from '$features/permission-requests/queries';
 	import { stateBadge, daysOrIndefinite } from '$features/permission-requests/view-models';

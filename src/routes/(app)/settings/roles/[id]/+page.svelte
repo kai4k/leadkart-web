@@ -1,18 +1,27 @@
 <script lang="ts">
-	import { Alert, Badge, Breadcrumbs, Button, Card, CopyButton, Skeleton } from '$ui';
-	import type { BreadcrumbItem } from '$ui';
+	import {
+		Alert,
+		Badge,
+		Breadcrumbs,
+		Button,
+		Card,
+		CopyButton,
+		Skeleton,
+		type BreadcrumbItem
+	} from '$ui';
 	import { Select, TextField } from '#lib/components/form/index.ts';
-	import { PermissionTree } from '$features/roles';
 	import {
 		roleDetailQuery,
 		rolesListQuery,
 		updateRoleMutation,
 		replaceRolePermissionsMutation,
-		setRoleParentMutation
-	} from '$features/roles/queries';
+		setRoleParentMutation,
+		PermissionTree,
+		roleBadgeVariant,
+		isProtectedRole
+	} from '$features/roles';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { roleBadgeVariant, isProtectedRole } from '$features/roles/view-models';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 	import {
 		ValidationError,
@@ -66,7 +75,6 @@
 	const canUpdate = $derived(
 		!protectedRole && hasCapability(capsQuery.data, 'identity.roles.update')
 	);
-
 	const updateMutation = $derived(updateRoleMutation());
 	const replacePermsMutation = $derived(replaceRolePermissionsMutation());
 	const parentMutation = $derived(setRoleParentMutation());
@@ -82,7 +90,6 @@
 			(r) => r.id !== roleId && !r.is_system_default && !r.is_super_admin
 		)
 	);
-
 	let selectedParent = $state('');
 	$effect(() => {
 		if (role) selectedParent = role.parent_role_id ?? '';

@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import type { ResolvedPathname } from '$app/types';
-	import { Breadcrumbs } from '$ui';
-	import type { BreadcrumbItem } from '$ui';
+	import { Breadcrumbs, type BreadcrumbItem } from '$ui';
 	import { tenantDisplayName, tenantStatusBadge } from '$features/tenant/view-models';
 	import { cn } from '#lib/utils/cn.ts';
 	import type { LayoutData } from './$types';

@@ -3,7 +3,7 @@
  * No async, no DOM, no side effects.
  */
 import type { UserDto, RoleDto } from './types';
-import { displayName } from '$features/auth';
+import { displayName } from '#lib/utils/person-name.ts';
 
 export type StatusVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
 

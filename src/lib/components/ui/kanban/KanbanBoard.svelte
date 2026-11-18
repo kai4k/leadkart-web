@@ -31,8 +31,7 @@
 	 * Industry refs: Trello, Linear Cycle board, Jira board, GitHub
 	 * Projects beta.
 	 */
-	import { setContext } from 'svelte';
-	import type { Snippet } from 'svelte';
+	import { setContext, type Snippet } from 'svelte';
 	import { cn } from '#lib/utils/cn.ts';
 	import { createKanbanDragState, KANBAN_CTX } from './kanban-state.svelte';
 

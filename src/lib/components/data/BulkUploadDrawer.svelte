@@ -30,8 +30,7 @@
 	lang="ts"
 	generics="TPreview extends BulkUploadPreviewShape, TResult extends BulkUploadResultShape"
 >
-	import { Drawer, Button, Alert, Badge, Stepper } from '$ui';
-	import type { StepperState } from '$ui';
+	import { Drawer, Button, Alert, Badge, Stepper, type StepperState } from '$ui';
 	import { Icon, Upload, CheckCircle2, X, Trash2 } from '$icons';
 	import { ApiError } from '$api/errors';
 

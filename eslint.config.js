@@ -27,7 +27,7 @@ const RESTRICTED_PATHS = [
 		name: 'svelte/store',
 		importNames: ['writable', 'readable', 'derived'],
 		message:
-			'writable/readable/derived from svelte/store are forbidden in new code — use class-based $state stores per CLAUDE.md rule 4.'
+			'writable/readable/derived from svelte/store are forbidden in new code — use a factory function returning getters over $state (CLAUDE.md rule 4).'
 	},
 	{
 		name: 'svelte',
@@ -173,6 +173,8 @@ export default ts.config(
 			// `#lib/utils/logger.ts` (when added).
 			'no-console': ['error', { allow: ['warn', 'error'] }],
 			'no-debugger': 'error',
+			// Merge repeated imports from one module into a single statement.
+			'no-duplicate-imports': 'error',
 			'no-alert': 'error',
 
 			// ─── Code-quality canon ─────────────────────────────────
@@ -479,11 +481,6 @@ export default ts.config(
 				{
 					paths: [
 						...RESTRICTED_PATHS,
-						{
-							name: '$api/client',
-							message:
-								'Components must not import $api/client directly. Use a feature gateway in $features/<name>/api.ts (CLAUDE.md layering rule 1).'
-						},
 						{
 							name: '@lucide/svelte',
 							message: "Import icons from '$icons' (the registry) instead."

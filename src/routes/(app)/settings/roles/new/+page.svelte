@@ -3,8 +3,7 @@
 	import { untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Alert, Breadcrumbs, Button, Card } from '$ui';
-	import type { BreadcrumbItem } from '$ui';
+	import { Alert, Breadcrumbs, Button, Card, type BreadcrumbItem } from '$ui';
 	import { NumberInput, TextField } from '$form';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 	import type { ActionData } from './$types';

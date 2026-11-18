@@ -88,10 +88,12 @@ module.exports = {
 			comment:
 				'ViewModel files (*view-models.ts, src/lib/features/**/view-models/**) must be pure — no DOM, no SvelteKit nav/state, no API.',
 			from: {
-				path: '(view-models|viewmodels)\\.ts$|/view-models/'
+				path: '(^|/)(view-models|viewmodels)[a-z-]*\\.ts$|/view-models/'
 			},
 			to: {
-				path: '^(src/lib/api/|\\$app/|src/lib/features/.*/(api|service|stores)|src/routes/)'
+				// Feature barrels (index.ts) are banned too: they drag in components/queries, so
+				// purity could be bypassed through them. Reach pure leaves (src/lib/utils/*) instead.
+				path: '^(src/lib/api/|\\$app/|src/lib/features/.*/(api|service|stores)|src/lib/features/.*/index\\.ts$|src/routes/)'
 			}
 		},
 		// ─── CLAUDE.md feature isolation (arch test #8) ──────────
@@ -155,12 +157,12 @@ module.exports = {
 			name: 'layouts-no-feature-import',
 			severity: 'error',
 			comment:
-				'lib/layouts/* must not import from lib/features/* except auth (session shell) and the search barrel (command palette).',
+				'lib/layouts/* must not import from lib/features/* except the auth (session shell) and search (command palette) barrels.',
 			from: { path: '^src/lib/layouts/' },
 			to: {
 				path: '^src/lib/features/',
-				// Shell-level features: auth (whole feature), search (barrel only).
-				pathNot: '^src/lib/features/auth/|^src/lib/features/search/index\\.ts$'
+				// Shell-level features: auth + search, barrel only.
+				pathNot: '^src/lib/features/(auth|search)/index\\.ts$'
 			}
 		}
 	],
@@ -181,8 +183,8 @@ module.exports = {
 		},
 		tsPreCompilationDeps: true,
 		// tsconfig.json extends the generated `$app/tsconfig` (svelte-kit sync), which
-		// depcruise cannot follow — tsconfig.depcruise.json carries the `$` aliases explicitly.
-		tsConfig: { fileName: 'tsconfig.depcruise.json' },
+		// depcruise cannot follow — the shared `$` aliases come in via depcruise.resolve.cjs.
+		webpackConfig: { fileName: 'depcruise.resolve.cjs' },
 		enhancedResolveOptions: {
 			exportsFields: ['exports'],
 			conditionNames: ['import', 'require', 'node', 'default', 'svelte'],
