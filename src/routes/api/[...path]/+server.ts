@@ -11,7 +11,11 @@
  *      cookie when present. The browser NEVER ships an X-Tenant-Id
  *      header — the BFF is the only writer.
  *   4. Transparent 401 → refresh → retry (once).
- *   5. Pass-through of request body, query params, content-type, accept.
+ *   5. Path validation (buildUpstreamUrl): only plain /api/v1/... paths
+ *      reach Go; token-issuing endpoints are blocked, and the
+ *      impersonation-start response is scrubbed of token fields.
+ *   6. Header allowlists both ways, upstream timeout, streamed responses.
+ *   7. Fail closed on an invalid operator-scope cookie (409 scope_invalid).
  *
  * The browser never reads a JWT, never knows the active tenant UUID,
  * never sees a slug in a URL path it didn't choose to type. The proxy
@@ -23,13 +27,27 @@
 import type { RequestEvent } from './$types';
 import { config } from '#lib/server/config.ts';
 import { ACCESS_COOKIE, CSRF_COOKIE } from '#lib/server/cookies.ts';
-import { refreshSession } from '#lib/server/auth-refresh.ts';
-import { getOperatorScope } from '#lib/server/scope.ts';
+import { isAuthExpired, refreshSession } from '#lib/server/auth-refresh.ts';
+import { clearOperatorScope, readOperatorScope } from '#lib/server/scope.ts';
 import { timingSafeEqualString } from '#lib/server/csrf.ts';
+import { jsonError } from '#lib/server/http.ts';
+import {
+	buildUpstreamUrl,
+	isTokenEndpoint,
+	pickResponseHeaders,
+	scrubsTokens,
+	stripTokenFields,
+	upstreamSignal
+} from '#lib/server/proxy.ts';
 
 const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+const NULL_BODY_STATUSES = new Set([204, 205, 304]);
 
-async function proxy(event: RequestEvent, attempt = 1): Promise<Response> {
+async function proxy(
+	event: RequestEvent,
+	attempt = 1,
+	bufferedBody?: ArrayBuffer
+): Promise<Response> {
 	const { cookies, request, params } = event;
 	const path = params.path;
 
@@ -37,65 +55,66 @@ async function proxy(event: RequestEvent, attempt = 1): Promise<Response> {
 		const headerCsrf = request.headers.get('x-csrf-token');
 		const cookieCsrf = cookies.get(CSRF_COOKIE);
 		if (!headerCsrf || !cookieCsrf || !timingSafeEqualString(headerCsrf, cookieCsrf)) {
-			return new Response(
-				JSON.stringify({ error: 'csrf_mismatch', message: 'CSRF token missing or invalid' }),
-				{ status: 403, headers: { 'content-type': 'application/json' } }
-			);
+			return jsonError(403, 'csrf_mismatch', 'CSRF token missing or invalid');
 		}
 	}
 
-	const upstreamUrl = `${config.GO_API_URL}/api/${path}${new URL(request.url).search}`;
-	const upstreamHeaders = new Headers();
+	if (isTokenEndpoint(path)) return jsonError(404, 'not_found', 'Not found');
 
+	const upstreamUrl = buildUpstreamUrl(config.GO_API_URL, path, new URL(request.url).search);
+	if (!upstreamUrl) return jsonError(400, 'invalid_path', 'Invalid API path');
+
+	const upstreamHeaders = new Headers({ accept: 'application/json' });
 	const access = cookies.get(ACCESS_COOKIE());
 	if (access) upstreamHeaders.set('authorization', `Bearer ${access}`);
+	const contentType = request.headers.get('content-type');
+	if (contentType) upstreamHeaders.set('content-type', contentType);
 
-	const ct = request.headers.get('content-type');
-	if (ct) upstreamHeaders.set('content-type', ct);
-	upstreamHeaders.set('accept', 'application/json');
-
-	// Operator-scope tenant override is ONLY trusted from the cookie.
-	// We deliberately ignore any X-Tenant-Id header sent by the browser
-	// — the BFF is authoritative for scope.
-	const scope = getOperatorScope(cookies);
-	if (scope) upstreamHeaders.set('x-tenant-id', scope.id);
-
-	let body: ArrayBuffer | undefined;
-	if (MUTATING.has(request.method)) {
-		body = await request.clone().arrayBuffer();
+	// Operator scope is trusted only from the signed cookie. Any
+	// X-Tenant-Id sent by the browser is ignored: the headers above are
+	// built from scratch. An invalid cookie fails closed — forwarding
+	// without the header would run the call in the operator's home tenant.
+	const scope = readOperatorScope(cookies);
+	if (scope.state === 'invalid') {
+		clearOperatorScope(cookies);
+		return jsonError(409, 'scope_invalid', 'Operator scope expired — select the tenant again');
 	}
+	if (scope.state === 'valid') upstreamHeaders.set('x-tenant-id', scope.scope.id);
+
+	// Buffered once so the request can be replayed after a refresh.
+	const body = MUTATING.has(request.method)
+		? (bufferedBody ?? (await request.arrayBuffer()))
+		: undefined;
 
 	let upstream: Response;
 	try {
 		upstream = await fetch(upstreamUrl, {
 			method: request.method,
 			headers: upstreamHeaders,
-			body: body ?? null
+			body: body ?? null,
+			signal: upstreamSignal(request, config.UPSTREAM_TIMEOUT_MS)
 		});
-	} catch {
-		return new Response(
-			JSON.stringify({ error: 'upstream_unavailable', message: 'Go API is unreachable' }),
-			{ status: 502, headers: { 'content-type': 'application/json' } }
-		);
+	} catch (err) {
+		return err instanceof DOMException && err.name === 'TimeoutError'
+			? jsonError(504, 'upstream_timeout', 'Go API did not respond in time')
+			: jsonError(502, 'upstream_unavailable', 'Go API is unreachable');
 	}
 
-	if (upstream.status === 401 && attempt === 1) {
-		const access = await refreshSession(event.cookies);
-		if (access) return proxy(event, 2);
+	if (attempt === 1 && isAuthExpired(upstream)) {
+		await upstream.body?.cancel();
+		if (await refreshSession(cookies)) return proxy(event, 2, body);
 	}
 
-	const responseHeaders = new Headers();
-	const upstreamCt = upstream.headers.get('content-type');
-	if (upstreamCt) responseHeaders.set('content-type', upstreamCt);
-
-	// Per the Fetch spec, Response constructor rejects a body on 204/205/304.
-	// Stream the upstream body only when the status permits one.
-	const NULL_BODY_STATUSES = new Set([204, 205, 304]);
+	const headers = pickResponseHeaders(upstream.headers);
 	if (NULL_BODY_STATUSES.has(upstream.status)) {
-		return new Response(null, { status: upstream.status, headers: responseHeaders });
+		return new Response(null, { status: upstream.status, headers });
 	}
-	const responseBody = await upstream.arrayBuffer();
-	return new Response(responseBody, { status: upstream.status, headers: responseHeaders });
+	if (upstream.ok && scrubsTokens(request.method, path)) {
+		const data: unknown = await upstream.json().catch(() => null);
+		return Response.json(stripTokenFields(data), { status: upstream.status, headers });
+	}
+	// Streamed straight through: no buffering of large exports.
+	return new Response(upstream.body, { status: upstream.status, headers });
 }
 
 export const GET = (e: RequestEvent) => proxy(e);

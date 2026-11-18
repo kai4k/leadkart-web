@@ -14,15 +14,19 @@
  * Per CLAUDE.md rule 6 + the BFF cookie-auth ADR.
  */
 import { redirect, type Cookies } from '@sveltejs/kit';
-import { refreshSession } from './auth-refresh.ts';
+import { isAuthExpired, refreshSession } from './auth-refresh.ts';
 import { config } from './config.ts';
-import { ACCESS_COOKIE } from './cookies.ts';
-import { getOperatorScope } from './scope.ts';
+import { ACCESS_COOKIE, REFRESH_COOKIE } from './cookies.ts';
+import { clearOperatorScope, readOperatorScope } from './scope.ts';
 
-export interface GoRequestInit extends Omit<RequestInit, 'headers'> {
+export interface GoRequestInit extends Omit<RequestInit, 'headers' | 'body'> {
 	headers?: Record<string, string>;
+	/** String only: the request is replayed after a refresh, so a stream body is not allowed. */
+	body?: string;
 	/** When true (default), throw redirect(303, '/signin') on missing access cookie. */
 	requireAuth?: boolean;
+	/** When false, ignore the operator scope cookie (no X-Tenant-Id, no fail-closed redirect). Default true. */
+	scoped?: boolean;
 }
 
 /**
@@ -32,7 +36,7 @@ export interface GoRequestInit extends Omit<RequestInit, 'headers'> {
  *
  * The path MUST start with `/v1/` (the Go API root). Auth + scope
  * headers are injected automatically. The caller handles non-2xx
- * responses. A 401 from Go triggers one silent refresh + one retry with the
+ * responses. An expiry 401 from Go (see `isAuthExpired`) triggers one silent refresh + one retry with the
  * new Bearer; every body passed here is a string/undefined, so replay is safe.
  */
 export async function goFetch(
@@ -52,8 +56,14 @@ export async function goFetch(
 		accept: 'application/json'
 	};
 
-	const scope = getOperatorScope(cookies);
-	if (scope) headers['x-tenant-id'] = scope.id;
+	// Fail closed: a present-but-invalid scope cookie must never silently run
+	// the call in the operator's home tenant.
+	const scope = init.scoped === false ? { state: 'none' as const } : readOperatorScope(cookies);
+	if (scope.state === 'invalid') {
+		clearOperatorScope(cookies);
+		throw redirect(303, '/operator/tenants');
+	}
+	if (scope.state === 'valid') headers['x-tenant-id'] = scope.scope.id;
 
 	if (init.body && !headers['content-type']) {
 		headers['content-type'] = 'application/json';
@@ -62,14 +72,23 @@ export async function goFetch(
 	const send = (token: string | undefined): Promise<Response> =>
 		fetch(`${config.GO_API_URL}/api${path}`, {
 			...init,
+			signal: init.signal ?? AbortSignal.timeout(config.UPSTREAM_TIMEOUT_MS),
 			headers: token ? { ...headers, authorization: `Bearer ${token}` } : headers
 		});
 
 	const resp = await send(access);
-	if (resp.status !== 401 || !access) return resp;
+	if (!access || !isAuthExpired(resp)) return resp;
 
 	const renewed = await refreshSession(cookies);
-	return renewed ? send(renewed) : resp;
+	if (renewed) {
+		await resp.body?.cancel();
+		return send(renewed);
+	}
+	// Refresh token rejected (cookies cleared): the session is over.
+	if (!cookies.get(REFRESH_COOKIE) && init.requireAuth !== false) {
+		throw redirect(303, '/signin');
+	}
+	return resp;
 }
 
 /** Parse a Go JSON response. Returns `null` on 204 / empty bodies. */

@@ -95,6 +95,18 @@ export function establishSession(cookies: Cookies, tokens: TokenPair): void {
  * the operator scope are cleared); an unreachable Go API leaves the
  * cookies alone so the next request can try again.
  */
+/**
+ * Go answers 401 for two different things: its authn middleware (expired or
+ * invalid token — carries `WWW-Authenticate`, body `unauthenticated`) and
+ * credential failures such as a wrong current password (no header). Only
+ * the first means "refresh and retry"; refreshing on the second would
+ * rotate the token family and replay the request for nothing. One rule,
+ * used by goFetch and the /api proxy.
+ */
+export function isAuthExpired(resp: Response): boolean {
+	return resp.status === 401 && resp.headers.has('www-authenticate');
+}
+
 export async function refreshSession(
 	cookies: Cookies,
 	fetchFn: typeof fetch = fetch

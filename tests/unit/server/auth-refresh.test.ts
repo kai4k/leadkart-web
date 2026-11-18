@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { establishSession, refreshSession, refreshTokens } from '#lib/server/auth-refresh.ts';
+import {
+	establishSession,
+	isAuthExpired,
+	refreshSession,
+	refreshTokens
+} from '#lib/server/auth-refresh.ts';
 import { mustChangePassword } from '#lib/server/cookies.ts';
 
 const ok = (body: unknown) =>
@@ -199,5 +204,27 @@ describe('mustChangePassword', () => {
 		expect(mustChangePassword(statefulJar({ lk_mcp: '1' }).api)).toBe(true);
 		expect(mustChangePassword(statefulJar({ lk_mcp: '0' }).api)).toBe(false);
 		expect(mustChangePassword(statefulJar().api)).toBe(false);
+	});
+});
+
+describe('isAuthExpired', () => {
+	it('is true for the authn-middleware 401 (WWW-Authenticate present)', () => {
+		const resp = new Response('{"error":"unauthenticated"}', {
+			status: 401,
+			headers: { 'www-authenticate': 'Bearer' }
+		});
+		expect(isAuthExpired(resp)).toBe(true);
+	});
+
+	it('is false for a credential-failure 401 without the header', () => {
+		expect(
+			isAuthExpired(new Response('{"error":"incorrect_current_password"}', { status: 401 }))
+		).toBe(false);
+	});
+
+	it('is false for non-401 statuses even with the header', () => {
+		expect(
+			isAuthExpired(new Response('{}', { status: 403, headers: { 'www-authenticate': 'x' } }))
+		).toBe(false);
 	});
 });
