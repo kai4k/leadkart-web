@@ -25,11 +25,12 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
 	const access = cookies.get(ACCESS_COOKIE());
 	if (!access) throw redirect(303, '/signin');
 
-	const resp = await fetch(`${config.GO_API_URL}/api/v1/tenants/${scope.id}`, {
+	const resp = await fetch(`${config.GO_API_URL}/api/v1/tenants/${encodeURIComponent(scope.id)}`, {
 		headers: {
 			authorization: `Bearer ${access}`,
 			'x-tenant-id': scope.id
-		}
+		},
+		signal: AbortSignal.timeout(config.UPSTREAM_TIMEOUT_MS)
 	});
 
 	if (resp.status === 404) {

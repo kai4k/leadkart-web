@@ -42,7 +42,14 @@ export async function registerMocks(fixtures: MockFixture[]): Promise<void> {
 }
 
 export async function listMockCalls(): Promise<
-	Array<{ method: string; path: string; body: string; authorization: string | null; at: number }>
+	Array<{
+		method: string;
+		path: string;
+		body: string;
+		authorization: string | null;
+		'x-tenant-id': string | null;
+		at: number;
+	}>
 > {
 	const resp = await fetch(`${MOCK_BASE}/_mock/calls`);
 	return resp.json();

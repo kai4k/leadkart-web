@@ -15,10 +15,17 @@
  */
 
 import type { RequestEvent } from '@sveltejs/kit';
+import { z } from 'zod';
 import { config } from '#lib/server/config.ts';
 import { setOperatorScope, clearOperatorScope } from '#lib/server/scope.ts';
 import { timingSafeEqualString } from '#lib/server/csrf.ts';
 import { ACCESS_COOKIE, CSRF_COOKIE } from '#lib/server/cookies.ts';
+
+const tenantLookupSchema = z.object({
+	tenants: z
+		.array(z.object({ id: z.string(), slug: z.string(), display_name: z.string() }))
+		.optional()
+});
 
 function checkCsrf(event: RequestEvent): Response | null {
 	const headerCsrf = event.request.headers.get('x-csrf-token');
@@ -48,25 +55,36 @@ export async function POST(event: RequestEvent): Promise<Response> {
 	// Canonical slug lookup per backend ADR 0052 — Stripe-style filter
 	// query returning ListTenantsResponse. Slug uniqueness is a DB
 	// invariant; the list is either empty (→ 404) or a single hit.
-	const resp = await fetch(`${config.GO_API_URL}/api/v1/tenants?slug=${encodeURIComponent(slug)}`, {
-		headers: { authorization: `Bearer ${access}` }
-	});
-	if (!resp.ok) {
+	let tenant;
+	try {
+		const resp = await fetch(
+			`${config.GO_API_URL}/api/v1/tenants?slug=${encodeURIComponent(slug)}`,
+			{
+				headers: { authorization: `Bearer ${access}` },
+				signal: AbortSignal.timeout(config.UPSTREAM_TIMEOUT_MS)
+			}
+		);
+		if (!resp.ok) return Response.json({ error: 'tenant_lookup_failed' }, { status: 502 });
+		const payload = tenantLookupSchema.safeParse(await resp.json());
+		if (!payload.success) return Response.json({ error: 'tenant_lookup_failed' }, { status: 502 });
+		tenant = payload.data.tenants?.[0];
+	} catch {
 		return Response.json({ error: 'tenant_lookup_failed' }, { status: 502 });
 	}
-	const payload = (await resp.json()) as {
-		tenants?: Array<{ id: string; slug: string; display_name: string }>;
-	};
-	const tenant = payload.tenants?.[0];
 	if (!tenant) {
 		return Response.json({ error: 'tenant_not_found' }, { status: 404 });
 	}
 
-	setOperatorScope(event.cookies, {
-		id: tenant.id,
-		slug: tenant.slug,
-		display_name: tenant.display_name
-	});
+	try {
+		setOperatorScope(event.cookies, {
+			id: tenant.id,
+			slug: tenant.slug,
+			display_name: tenant.display_name
+		});
+	} catch {
+		// Go returned an id that is not a UUID — refuse to sign it.
+		return Response.json({ error: 'tenant_lookup_failed' }, { status: 502 });
+	}
 	return new Response(null, { status: 204 });
 }
 

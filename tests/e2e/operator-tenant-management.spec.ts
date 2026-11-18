@@ -25,13 +25,13 @@ import { fakeTenantDto, TEST_TENANT_ID, TEST_TENANT_SLUG } from './helpers/fake-
  */
 
 const ACME = fakeTenantDto({
-	id: 'tid-aaa',
+	id: '00000000-0000-4000-8000-0000000000a1',
 	slug: 'acme-pharma',
 	display_name: 'Acme Pharma',
 	legal_name: 'Acme Pharma Pvt Ltd'
 });
 const BETA = fakeTenantDto({
-	id: 'tid-bbb',
+	id: '00000000-0000-4000-8000-0000000000b1',
 	slug: 'beta-meds',
 	display_name: 'Beta Meds',
 	legal_name: 'Beta Meds Ltd'
@@ -216,7 +216,7 @@ test.describe('Operator scope flow', () => {
 		expect(u.pathname).toBe('/operator/scope/profile');
 		expect(u.search).toBe('');
 		expect(page.url()).not.toContain('acme-pharma');
-		expect(page.url()).not.toContain('tid-aaa');
+		expect(page.url()).not.toContain('00000000-0000-4000-8000-0000000000a1');
 
 		await expect(page.getByRole('heading', { level: 1, name: 'Acme Pharma' })).toBeVisible();
 		await expect(page.getByRole('link', { name: 'Profile' })).toBeVisible();
@@ -267,6 +267,27 @@ test.describe('Operator scope flow', () => {
 		await page.goto('/operator/scope/profile');
 		await page.waitForURL(/\/operator\/tenants$/);
 	});
+
+	test('hand-written unsigned scope cookie is ignored: id never sent upstream', async ({
+		page,
+		context
+	}) => {
+		await setupOperator(page);
+		const forgedId = '99999999-9999-4999-8999-999999999999';
+		await context.addCookies([
+			{
+				name: 'lk_op_tenant',
+				value: JSON.stringify({ id: forgedId, slug: 'evil', display_name: 'Evil' }),
+				url: 'http://localhost:4173'
+			}
+		]);
+		await page.goto('/operator/scope/profile');
+		await page.waitForURL(/\/operator\/tenants$/);
+		const calls = await listMockCalls();
+		expect(calls.some((c) => c.path.includes(forgedId) || c['x-tenant-id'] === forgedId)).toBe(
+			false
+		);
+	});
 });
 
 test.describe('CSRF protection', () => {
@@ -312,7 +333,7 @@ test.describe('Lifecycle: platform-tenant guard', () => {
 		page
 	}) => {
 		const PLATFORM = fakeTenantDto({
-			id: 'tid-platform',
+			id: '00000000-0000-4000-8000-0000000000c1',
 			slug: 'platform',
 			display_name: 'LeadKart',
 			legal_name: 'LeadKart Platform Pvt Ltd'

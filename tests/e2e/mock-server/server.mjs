@@ -21,7 +21,7 @@ import { URL } from 'node:url';
 
 /** @type {Array<{method:string,path:string,status:number,body?:unknown,headers?:Record<string,string>,times?:number,used?:number}>} */
 const fixtures = [];
-/** @type {Array<{method:string,path:string,body:string,authorization:string|null,at:number}>} */
+/** @type {Array<{method:string,path:string,body:string,authorization:string|null,'x-tenant-id':string|null,at:number}>} */
 const calls = [];
 
 function findFixture(method, pathname) {
@@ -93,6 +93,7 @@ const server = http.createServer(async (req, res) => {
 		path: pathname,
 		body,
 		authorization: req.headers.authorization ?? null,
+		'x-tenant-id': req.headers['x-tenant-id'] ?? null,
 		at: Date.now()
 	});
 
