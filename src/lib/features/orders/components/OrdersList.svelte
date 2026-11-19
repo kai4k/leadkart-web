@@ -21,6 +21,7 @@
 	import OrderStatusBadge from './OrderStatusBadge.svelte';
 	import type { OrderDto } from '$features/orders/schemas';
 	import { getListErrorMessage } from '$api/error-messages';
+	import { stoppedEarly } from '#lib/api/pagination.ts';
 
 	// ── URL state ────────────────────────────────────────────────────
 	const urlFilters = createUrlFilters<OrderListFilters>({
@@ -227,6 +228,8 @@
 {#snippet footer()}
 	{#if listQuery.isFetchingNextPage}
 		<p class="caption text-fg-muted py-4 text-center" aria-live="polite">Loading more…</p>
+	{:else if stoppedEarly(listQuery.data?.pages.at(-1), listQuery.hasNextPage)}
+		<p class="caption text-fg-subtle py-4 text-center">Couldn't load more results.</p>
 	{:else if !listQuery.hasNextPage && orders.length > 0}
 		<p class="caption text-fg-subtle py-4 text-center">End of results</p>
 	{/if}

@@ -7,8 +7,7 @@ vi.mock('#lib/server/capabilities.ts', () => ({ loadCapabilities }));
 vi.mock('#lib/server/go.ts', () => ({
 	goFetch,
 	readGoJson: vi.fn(),
-	readGoError: vi.fn(),
-	flattenGoErrors: vi.fn()
+	readGoFailure: vi.fn()
 }));
 
 import { actions } from '../../../src/routes/(app)/settings/roles/new/+page.server.ts';

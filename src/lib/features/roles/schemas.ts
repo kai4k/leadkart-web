@@ -1,6 +1,7 @@
 /**
  * Zod schemas for the tenant role-management feature.
  */
+import { z } from 'zod';
 import {
 	CreateRoleRequest,
 	CreateRoleResponse,
@@ -23,12 +24,22 @@ export const ROLE_LEVEL_MAX = CreateRoleRequest.shape.hierarchy_level.maxValue ?
  */
 export const ROLE_LEVEL_MIN = Math.max(1, CreateRoleRequest.shape.hierarchy_level.minValue ?? 1);
 
-/** Name / level bounds are the generated ones (Go: name 2-100, level 0-99). */
-export const createRoleRequestSchema = CreateRoleRequest.strict();
+/** Name bounds are the contract's (Go: 2-100); the inputs' minlength / maxlength read these. */
+export const ROLE_NAME_MIN = CreateRoleRequest.shape.name.minLength ?? 2;
+export const ROLE_NAME_MAX = CreateRoleRequest.shape.name.maxLength ?? 100;
+
+/** The contract allows level 0, but Go rejects it for a created or re-levelled role (the Owner's level). */
+const levelField = z.number().int().min(ROLE_LEVEL_MIN).max(ROLE_LEVEL_MAX);
+
+export const createRoleRequestSchema = CreateRoleRequest.extend({
+	hierarchy_level: levelField
+}).strict();
 
 export const createRoleResponseSchema = CreateRoleResponse;
 
-export const updateRoleRequestSchema = UpdateRoleRequest.strict();
+export const updateRoleRequestSchema = UpdateRoleRequest.extend({
+	hierarchy_level: levelField.nullable().optional()
+}).strict();
 
 export const replaceRolePermissionsRequestSchema = ReplaceRolePermissionsRequest.strict();
 

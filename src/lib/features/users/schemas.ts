@@ -18,7 +18,6 @@ import {
 	ReplaceUserPermissionOverridesRequest
 } from '#lib/api/generated/index.ts';
 import { formEmailField, reasonField } from '#lib/api/request-schema.ts';
-import { responseEmail } from '#lib/api/response-schema.ts';
 import { userDtoSchema } from '#lib/features/auth/schemas.ts';
 
 export { userDtoSchema };
@@ -37,7 +36,7 @@ export const membershipSearchResultSchema = z.object({
 	person_id: z.string(),
 	first_name: z.string(),
 	last_name: z.string(),
-	email: responseEmail
+	email: z.string()
 });
 
 export const searchMembershipsResponseSchema = z.object({

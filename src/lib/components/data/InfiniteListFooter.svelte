@@ -3,7 +3,8 @@
 	 * InfiniteListFooter — the bottom of every cursor-paged list: the scroll sentinel the
 	 * infinite-list hook observes, an always-mounted polite status region (its text changes, so
 	 * screen readers announce "Loading more…"), a real "Load more" button for keyboard and
-	 * screen-reader users, and one end-of-list line.
+	 * screen-reader users, and one end-of-list line (or, when the cursor repeated and the list is
+	 * incomplete, the truncation note instead: a stopped list must not look finished).
 	 *
 	 * Focus: the button stays focusable while a page loads (`aria-disabled`, not `disabled`), since
 	 * tabbing to it brings the sentinel into view and starts the load itself. When the last page
@@ -22,9 +23,11 @@
 	const status = $derived(
 		list.isFetchingNextPage
 			? 'Loading more…'
-			: !list.hasNextPage && list.items.length > 0
-				? 'End of list'
-				: ''
+			: list.truncated
+				? "Couldn't load more results."
+				: !list.hasNextPage && list.items.length > 0
+					? 'End of list'
+					: ''
 	);
 
 	// Runs before the DOM update that removes the button, while it still has focus to be checked.

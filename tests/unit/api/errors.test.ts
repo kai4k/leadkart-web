@@ -103,10 +103,13 @@ describe('Error subclass hierarchy', () => {
 	});
 
 	describe('ConflictError', () => {
-		it('carries detail', () => {
-			const err = new ConflictError('slug already taken');
+		it("carries Go's text as `detail`, never as the message", () => {
+			const err = new ConflictError(undefined, undefined, 'slug already taken');
 			expect(err.name).toBe('ConflictError');
 			expect(err.detail).toBe('slug already taken');
+			expect(err.message).toBe(
+				'This change conflicts with the current state. Refresh and try again.'
+			);
 		});
 	});
 });
@@ -141,7 +144,7 @@ describe('ApiError.fromResponse — status mapping', () => {
 		);
 		const e = ApiError.fromResponse(res(418), { message: 'teapot' });
 		expect(e.constructor).toBe(ApiError);
-		expect(e.message).toBe('teapot');
+		expect(e.message).toBe('The request could not be completed. Please try again.');
 	});
 	it('ignores the removed code/fields/trace_id keys', () => {
 		const err = ApiError.fromResponse(res(422), {
@@ -164,7 +167,8 @@ describe('ApiError.fromResponse — Go and BFF envelopes', () => {
 		});
 		expect(err).toBeInstanceOf(ConflictError);
 		expect(err.code).toBe('lead_terminal');
-		expect(err.message).toBe('lead is closed');
+		expect((err as ConflictError).detail).toBe('lead is closed');
+		expect(err.message).not.toContain('lead is closed');
 	});
 	it('maps Go `errors` (string arrays) to first-message fields and keeps the detail', () => {
 		const err = ApiError.fromResponse(res(422), {
@@ -174,16 +178,17 @@ describe('ApiError.fromResponse — Go and BFF envelopes', () => {
 		}) as ValidationError;
 		expect(err.fields).toEqual({ new_password: 'too short' });
 		expect(err.detail).toBe('One or more fields are invalid');
-		expect(err.message).toBe('One or more fields are invalid');
+		expect(err.message).toBe('Check the highlighted fields.');
 		expect(err.hasFieldErrors).toBe(true);
 	});
-	it('keeps the text of a 400 without field errors', () => {
+	it('keeps the text of a 400 without field errors in `detail`, not the message', () => {
 		const err = ApiError.fromResponse(res(400), {
 			error: 'invalid_email',
 			message: 'mail: no angle-addr'
 		}) as ValidationError;
 		expect(err.hasFieldErrors).toBe(false);
-		expect(err.message).toBe('mail: no angle-addr');
+		expect(err.detail).toBe('mail: no angle-addr');
+		expect(err.message).toBe('The request was not accepted. Check the values and try again.');
 		expect(err.code).toBe('invalid_email');
 	});
 	it('maps the BFF envelope { error, message }', () => {
@@ -338,11 +343,13 @@ describe('NotFoundError copy', () => {
 		expect(err.message).not.toMatch(/http|uuid/);
 		expect(err.resource).toBe('http://host/api/v1/users/0b1c-uuid');
 	});
-	it("uses Go's text when present", () => {
-		expect(
-			ApiError.fromResponse(res(404), { error: 'user_not_found', message: 'User not found' })
-				.message
-		).toBe('User not found');
+	it("keeps Go's text in `detail`, shows the fixed line", () => {
+		const err = ApiError.fromResponse(res(404), {
+			error: 'user_not_found',
+			message: 'User not found'
+		}) as NotFoundError;
+		expect(err.message).toBe('This item no longer exists.');
+		expect(err.detail).toBe('User not found');
 	});
 });
 
@@ -364,13 +371,13 @@ describe('fromResponse robustness', () => {
 		expect(ApiError.fromResponse(res(500), 'oops' as never)).toBeInstanceOf(ServerError);
 		expect(ApiError.fromResponse(res(400), 7 as never)).toBeInstanceOf(ValidationError);
 	});
-	it('a 409 without Go text leaves ConflictError.detail undefined (callers keep their own fallback)', () => {
+	it('a 409 shows the fixed conflict line; Go text, when sent, is only `detail`', () => {
 		const err = ApiError.fromResponse(res(409), { error: 'x' }) as ConflictError;
 		expect(err.detail).toBeUndefined();
 		expect(err.message).toMatch(/conflicts/i);
-		expect((ApiError.fromResponse(res(409), { message: 'taken' }) as ConflictError).detail).toBe(
-			'taken'
-		);
+		const withText = ApiError.fromResponse(res(409), { message: 'taken' }) as ConflictError;
+		expect(withText.detail).toBe('taken');
+		expect(withText.message).toBe(err.message);
 	});
 	it('403 csrf_mismatch gets reload copy', () => {
 		const err = ApiError.fromResponse(res(403), {
@@ -380,13 +387,16 @@ describe('fromResponse robustness', () => {
 		expect(err).toBeInstanceOf(AuthError);
 		expect(err.message).toMatch(/reload the page/i);
 	});
-	it('a 401 that is not session_expired shows the message; session_expired and bare 401 stay generic', () => {
+	it('a 401 shows allowlisted copy for a known code, otherwise the generic line (never Go text)', () => {
 		expect(
 			ApiError.fromResponse(res(401), {
 				error: 'incorrect_current_password',
 				message: 'Current password is incorrect'
 			}).message
-		).toBe('Current password is incorrect');
+		).toBe('Your current password is incorrect.');
+		expect(
+			ApiError.fromResponse(res(401), { error: 'some_new_code', message: 'raw go text' }).message
+		).toBe('Sign in to continue.');
 		expect(ApiError.fromResponse(res(401), null).message).toBe('Sign in to continue.');
 		expect(
 			ApiError.fromResponse(res(401), { error: 'session_expired', message: 'Session expired' })
@@ -425,9 +435,13 @@ describe('403 code to copy map', () => {
 		expect(err.message).toBe(copy);
 		expect(err.code).toBe(code);
 	});
-	it('an unknown 403 code keeps Go text', () => {
-		const err = ApiError.fromResponse(res(403), { error: 'insufficient_rank', message: 'nope' });
-		expect(err.message).toBe('nope');
+	it("an unknown 403 code shows the generic line; Go's text is `detail`", () => {
+		const err = ApiError.fromResponse(res(403), {
+			error: 'some_new_code',
+			message: 'nope'
+		}) as AuthError;
+		expect(err.message).toBe("You don't have permission to do this.");
+		expect(err.detail).toBe('nope');
 	});
 });
 
@@ -442,7 +456,21 @@ describe('code to copy map (Go codes with fixed user copy)', () => {
 			'invalid_search_include',
 			'The request was not accepted. Check the values and try again.'
 		],
-		[409, 'tenant_not_active', 'This tenant is not active. Changes are disabled.']
+		[409, 'tenant_not_active', 'This tenant is not active. Changes are disabled.'],
+		[
+			409,
+			'tenant_has_dependents',
+			"This tenant still has members or data, so it can't be deleted yet."
+		],
+		[422, 'permission_not_requestable', "This permission can't be requested."],
+		[403, 'insufficient_rank', 'You can only make this change for people below your level.'],
+		[409, 'last_owner_protected', 'A company must keep at least one active owner.'],
+		[409, 'owner_protected', "An owner's administrator access can't be removed."],
+		[409, 'role_system_default', "Built-in roles can't be changed or deleted."],
+		[422, 'manager_not_eligible', "This person can't be set as the manager."],
+		[422, 'role_parent_not_eligible', 'The parent role must be more senior.'],
+		[403, 'impersonation_not_allowed', 'Not available during an impersonation session.'],
+		[401, 'incorrect_current_password', 'Your current password is incorrect.']
 	])('%i %s shows fixed copy whatever Go says', (status, code, copy) => {
 		const err = ApiError.fromResponse(res(status), { error: code, message: 'raw Go text' });
 		expect(err.message).toBe(copy);
@@ -546,14 +574,62 @@ describe('describeError', () => {
 		});
 		it('with field errors keeps the field text (it also reaches the form fields)', () => {
 			const err = ApiError.fromResponse(res(422), { errors: { email: ['Email is taken'] } });
-			expect(describeError(err, { status: { 422: 'ignored' } })).toBe('Email is taken');
+			expect(describeError(err, { status: { 422: 'ignored' } })).toBe(
+				'Check the highlighted fields.'
+			);
+			expect((err as ValidationError).fields).toEqual({ email: 'Email is taken' });
 		});
 	});
-	it('409 override applies only when Go sent no text', () => {
+	it("the caller's 409 line wins over Go's text; with no caller line the generic line shows", () => {
 		expect(describeError(ApiError.fromResponse(res(409), null), opts)).toBe('Already done.');
-		expect(describeError(ApiError.fromResponse(res(409), { message: 'Slug taken' }), opts)).toBe(
-			'Slug taken'
+		const withText = ApiError.fromResponse(res(409), { message: 'Slug taken' });
+		expect(describeError(withText, opts)).toBe('Already done.');
+		expect(describeError(withText)).toBe(
+			'This change conflicts with the current state. Refresh and try again.'
 		);
+	});
+	it("a caller's own 400 line beats the generic invalid_search_include copy", () => {
+		const err = ApiError.fromResponse(res(400), { error: 'invalid_search_include' });
+		expect(describeError(err, { status: { 400: 'Pick a search type.' } })).toBe(
+			'Pick a search type.'
+		);
+		expect(describeError(err)).toBe(
+			'The request was not accepted. Check the values and try again.'
+		);
+	});
+});
+
+describe('no backend-authored text reaches a user by default', () => {
+	const RAW = 'RAW-GO-TEXT internal detail';
+	// A status/code Go might add tomorrow: nothing allowlists it, so its text must never show.
+	it.each([400, 401, 403, 404, 409, 418, 422, 423, 500, 502])(
+		'%i with an unknown code: message and describeError never carry Go text',
+		(status) => {
+			const err = ApiError.fromResponse(new Response(null, { status }), {
+				error: 'brand_new_code',
+				message: RAW,
+				detail: RAW,
+				title: RAW
+			});
+			expect(err.message).not.toContain('RAW-GO-TEXT');
+			expect(describeError(err)).not.toContain('RAW-GO-TEXT');
+			expect(err.message.length).toBeGreaterThan(0);
+		}
+	);
+
+	it('a ValidationError with field errors says so generically; the fields keep their text for the form', () => {
+		const err = ApiError.fromResponse(new Response(null, { status: 422 }), {
+			message: RAW,
+			errors: { name: ['name is too short'] }
+		}) as ValidationError;
+		expect(err.message).toBe('Check the highlighted fields.');
+		expect(err.fields).toEqual({ name: 'name is too short' });
+	});
+
+	it('the unknown-status ApiError uses a fixed line, not statusText or title', () => {
+		const r = new Response(null, { status: 418, statusText: 'I am a teapot' });
+		const err = ApiError.fromResponse(r, { title: RAW });
+		expect(err.message).toBe('The request could not be completed. Please try again.');
 	});
 });
 

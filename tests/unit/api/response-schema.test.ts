@@ -1,9 +1,11 @@
 /**
  * Response data is never format-checked beyond its type (Go's email.New accepts addresses
- * Zod's `.email()` rejects). Every response schema that carries an email must take them all;
- * the login form (a request schema) keeps its format check.
+ * Zod's `.email()` rejects). Since the Go spec dropped `format: email` from its response DTOs the
+ * rule is structural: the GENERATED DTOs accept them, no per-schema override. If a resync
+ * reintroduces the format on a response, the first describe fails and a helper is due again.
  */
 import { describe, expect, it } from 'vitest';
+import { CapabilitiesDto, PersonDto, SearchPersonHit, UserDto } from '#lib/api/generated/index.ts';
 import {
 	capabilitiesSchema,
 	loginRequestSchema,
@@ -36,6 +38,45 @@ const user = (email: string) => ({
 	last_name: 'Lovelace',
 	status: 'active',
 	role_ids: []
+});
+
+const capsBase = {
+	person_id: UUID(1),
+	membership_id: UUID(2),
+	tenant_id: UUID(3),
+	tenant_slug: 'acme',
+	is_platform: false,
+	is_super_user: false,
+	permissions: [],
+	effective_permissions: [],
+	roles: []
+};
+const person = {
+	id: UUID(2),
+	first_name: 'Ada',
+	last_name: 'Lovelace',
+	is_active: true,
+	is_anonymised: false,
+	is_globally_suspended: false,
+	created_at: '2026-01-01T00:00:00Z',
+	global_suspension_reason: ''
+};
+const hit = {
+	id: UUID(2),
+	first_name: 'Ada',
+	last_name: 'Lovelace',
+	created_at: '2026-01-01T00:00:00Z'
+};
+
+describe.each(GO_ONLY_ADDRESSES)('the generated response DTOs accept %s as they are', (email) => {
+	it.each([
+		['CapabilitiesDto', CapabilitiesDto, { ...capsBase, email }],
+		['UserDto', UserDto, user(email)],
+		['PersonDto', PersonDto, { ...person, email }],
+		['SearchPersonHit', SearchPersonHit, { ...hit, email }]
+	])('%s', (_name, schema, value) => {
+		expect(schema.safeParse(value).success).toBe(true);
+	});
 });
 
 describe.each(GO_ONLY_ADDRESSES)('response schemas accept %s', (email) => {

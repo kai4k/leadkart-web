@@ -16,12 +16,10 @@ import {
 	PersonDto
 } from '#lib/api/generated/index.ts';
 import { reasonField } from '#lib/api/request-schema.ts';
-import { responseEmail } from '#lib/api/response-schema.ts';
 import { userDtoSchema } from '#lib/features/auth/schemas.ts';
 
 /** The suspension reason is omitzero in Go; an absent value is read as ''. */
 export const personDtoSchema = PersonDto.extend({
-	email: responseEmail,
 	global_suspension_reason: z.string().default('')
 });
 

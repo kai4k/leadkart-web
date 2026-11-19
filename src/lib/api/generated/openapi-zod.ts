@@ -53,7 +53,7 @@ export const CapabilitiesDto = z
 		membership_id: z.string().uuid(),
 		tenant_id: z.string().uuid(),
 		tenant_slug: z.string(),
-		email: z.string().email().optional(),
+		email: z.string().optional(),
 		first_name: z.string().optional(),
 		last_name: z.string().optional(),
 		is_platform: z.boolean(),
@@ -172,15 +172,22 @@ export const RegisterTenantResponse = z
 	.passthrough();
 export const UpdateTenantProfileRequest = z
 	.object({ legal_name: z.string().max(200), display_name: z.string().max(200) })
-	.partial()
 	.passthrough();
 export const UpdateTenantStatutoryRequest = z
 	.object({ gst_number: z.string(), pan_number: z.string(), drug_licence_number: z.string() })
-	.partial()
+	.passthrough();
+export const AdminAddressInput = z
+	.object({
+		street: z.string(),
+		city: z.string(),
+		district: z.string(),
+		state: z.string(),
+		state_code: z.string(),
+		pincode: z.string()
+	})
 	.passthrough();
 export const UpdateTenantAdminContactRequest = z
-	.object({ phone: z.string(), address: AdminAddressDto })
-	.partial()
+	.object({ phone: z.string(), address: AdminAddressInput })
 	.passthrough();
 export const UpdateTenantSettingsRequest = z
 	.object({ password_policy: PasswordPolicyDto })
@@ -192,7 +199,6 @@ export const UpdateTenantDisplayPreferencesRequest = z
 		date_format: z.string(),
 		currency: z.string()
 	})
-	.partial()
 	.passthrough();
 export const SuspendTenantRequest = z.object({ reason: z.string().min(1) }).passthrough();
 export const MarkTenantForDeletionRequest = z.object({ reason: z.string().min(1) }).passthrough();
@@ -201,7 +207,7 @@ export const UserDto = z
 		membership_id: z.string().uuid(),
 		person_id: z.string().uuid(),
 		tenant_id: z.string().uuid(),
-		email: z.string().email(),
+		email: z.string(),
 		first_name: z.string(),
 		last_name: z.string(),
 		status: z.enum(['active', 'inactive']),
@@ -234,13 +240,11 @@ export const CreateUserResponse = z
 	.passthrough();
 export const UpdateUserProfileRequest = z
 	.object({ designation: z.string(), department: z.string(), status_message: z.string() })
-	.partial()
 	.passthrough();
 export const DeactivateUserRequest = z.object({ reason: z.string().min(1) }).passthrough();
 export const AssignUserRoleRequest = z.object({ role_id: z.string().uuid() }).passthrough();
 export const ReplaceUserPermissionOverridesRequest = z
 	.object({ granted: z.array(z.string()), revoked: z.array(z.string()) })
-	.partial()
 	.passthrough();
 export const AssignUserManagerRequest = z.object({ manager_id: z.string().uuid() }).passthrough();
 export const RoleDto = z
@@ -286,7 +290,7 @@ export const ListAllTenantsResponse = z.object({ tenants: z.array(TenantDto) }).
 export const PersonDto = z
 	.object({
 		id: z.string().uuid(),
-		email: z.string().email(),
+		email: z.string(),
 		first_name: z.string(),
 		last_name: z.string(),
 		is_active: z.boolean(),
@@ -357,7 +361,7 @@ export const ListImpersonationSessionsResponse = z
 export const SearchPersonHit = z
 	.object({
 		id: z.string().uuid(),
-		email: z.string().email(),
+		email: z.string(),
 		first_name: z.string(),
 		last_name: z.string(),
 		created_at: z.string().datetime({ offset: true })
@@ -1033,6 +1037,7 @@ export const schemas = {
 	RegisterTenantResponse,
 	UpdateTenantProfileRequest,
 	UpdateTenantStatutoryRequest,
+	AdminAddressInput,
 	UpdateTenantAdminContactRequest,
 	UpdateTenantSettingsRequest,
 	UpdateTenantDisplayPreferencesRequest,
@@ -1578,6 +1583,11 @@ be used to probe which tenants exist.
 		method: 'get',
 		path: '/api/v1/crm/leads/:leadId',
 		alias: 'getApiv1crmleadsLeadId',
+		description: `Single-lead access follows the list rule: a caller without &#x60;crm.leads.read_all&#x60;
+(and without operator reach) reaches only a lead assigned to their own
+membership; any other lead answers 404 &#x60;lead_not_found&#x60;, exactly like a lead that
+does not exist.
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -1635,6 +1645,11 @@ be used to probe which tenants exist.
 		alias: 'postApiv1crmleadsLeadIdassign',
 		description: `Sets the lead&#x27;s current assignee. Atomic with an append to the
 AssignmentHistory audit table. Emits &#x60;crm.lead_assigned.v1&#x60;.
+Single-lead access follows the list rule: a caller without &#x60;crm.leads.read_all&#x60;
+(and without operator reach) reaches only a lead assigned to their own
+membership; any other lead answers 404 &#x60;lead_not_found&#x60;, exactly like a lead that
+does not exist.
+The response echoes the canonical (lower-case, hyphenated) &#x60;assignee_membership_id&#x60;.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -1699,6 +1714,10 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 		alias: 'postApiv1crmleadsLeadIdcalls',
 		description: `Creates a CallLog row + emits &#x60;crm.call_logged.v1&#x60;. Refused on
 terminal leads (converted / lost).
+Single-lead access follows the list rule: a caller without &#x60;crm.leads.read_all&#x60;
+(and without operator reach) reaches only a lead assigned to their own
+membership; any other lead answers 404 &#x60;lead_not_found&#x60;, exactly like a lead that
+does not exist.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -1763,6 +1782,10 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 		alias: 'postApiv1crmleadsLeadIdconvert',
 		description: `Sets the lead to &#x60;converted&#x60;. Emits &#x60;crm.lead_converted.v1&#x60; —
 this is the future Orders module&#x27;s create-trigger per ADR 0060.
+Single-lead access follows the list rule: a caller without &#x60;crm.leads.read_all&#x60;
+(and without operator reach) reaches only a lead assigned to their own
+membership; any other lead answers 404 &#x60;lead_not_found&#x60;, exactly like a lead that
+does not exist.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -1822,6 +1845,10 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 		alias: 'postApiv1crmleadsLeadIdlose',
 		description: `Sets the lead to &#x60;lost&#x60;. &#x60;reason&#x60; is REQUIRED (audit doctrine).
 Emits &#x60;crm.lead_lost.v1&#x60;.
+Single-lead access follows the list rule: a caller without &#x60;crm.leads.read_all&#x60;
+(and without operator reach) reaches only a lead assigned to their own
+membership; any other lead answers 404 &#x60;lead_not_found&#x60;, exactly like a lead that
+does not exist.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -1894,6 +1921,10 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 CallLogged subscriber (BRD §4.5) + the mature-lead daily scan
 (BRD §4.7) respectively; the HTTP surface only mints manual ones.
 Emits &#x60;crm.reminder_created.v1&#x60;.
+Single-lead access follows the list rule: a caller without &#x60;crm.leads.read_all&#x60;
+(and without operator reach) reaches only a lead assigned to their own
+membership; any other lead answers 404 &#x60;lead_not_found&#x60;, exactly like a lead that
+does not exist.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -1968,6 +1999,10 @@ exempt: the path is authoritative there, with or without the header.
 		description: `Non-terminal transitions only: New → Contacted → Interested →
 Negotiation. Use &#x60;/convert&#x60; or &#x60;/lose&#x60; for terminal transitions.
 Emits &#x60;crm.lead_stage_changed.v1&#x60;.
+Single-lead access follows the list rule: a caller without &#x60;crm.leads.read_all&#x60;
+(and without operator reach) reaches only a lead assigned to their own
+membership; any other lead answers 404 &#x60;lead_not_found&#x60;, exactly like a lead that
+does not exist.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -2037,6 +2072,10 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 		alias: 'postApiv1crmleadsLeadIdtemperature',
 		description: `Independent of stage — Hot/Warm/Cold/Dead transition at any
 non-terminal stage. Emits &#x60;crm.lead_temperature_changed.v1&#x60;.
+Single-lead access follows the list rule: a caller without &#x60;crm.leads.read_all&#x60;
+(and without operator reach) reaches only a lead assigned to their own
+membership; any other lead answers 404 &#x60;lead_not_found&#x60;, exactly like a lead that
+does not exist.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -2192,6 +2231,9 @@ be used to probe which tenants exist.
 		description: `Flips state to &#x60;cancelled&#x60;. &#x60;reason&#x60; is REQUIRED (audit
 doctrine). Refused on already-terminal reminders. Emits
 &#x60;crm.reminder_cancelled.v1&#x60;.
+A caller without &#x60;crm.leads.read_all&#x60; (and without operator reach) reaches only a
+reminder assigned to their own membership; any other reminder answers 404
+&#x60;reminder_not_found&#x60;.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -2261,6 +2303,9 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 		alias: 'postApiv1crmremindersReminderIdsent',
 		description: `Flips state to &#x60;sent&#x60;. Refused on already-terminal reminders.
 Emits &#x60;crm.reminder_marked_sent.v1&#x60;.
+A caller without &#x60;crm.leads.read_all&#x60; (and without operator reach) reaches only a
+reminder assigned to their own membership; any other reminder answers 404
+&#x60;reminder_not_found&#x60;.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -4395,6 +4440,10 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 		method: 'post',
 		path: '/api/v1/orders/quotations',
 		alias: 'postApiv1ordersquotations',
+		description: `&#x60;customer_lead_id&#x60; and every &#x60;items[].product_id&#x60; must be UUIDs (any RFC 4122
+spelling; stored and echoed in canonical form). A malformed one is 400
+&#x60;invalid_body&#x60;; an absent one is the domain&#x27;s 422 validation error.
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -4658,6 +4707,9 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 		method: 'post',
 		path: '/api/v1/orders/quotations/:quotationId/revise',
 		alias: 'postApiv1ordersquotationsQuotationIdrevise',
+		description: `Every &#x60;items[].product_id&#x60; must be a UUID (any RFC 4122 spelling, stored in
+canonical form); a malformed one is 400 &#x60;invalid_body&#x60;.
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -4732,8 +4784,11 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 		description: `Caller (the requester) asks for a time-bound elevated permission.
 The named approver is the requester&#x27;s current manager
 (&#x60;tenant_memberships.reports_to&#x60;). If the requester has no
-manager, only Platform operators can approve.
+manager, only an operator holding operator authority can approve.
 At most one pending request per (membership, permission) tuple.
+&#x60;tenant.admin&#x60;, platform-reserved permissions and names outside the catalogue are not
+requestable: they are conferred by role only, and the request is refused with 422
+(&#x60;permission_not_requestable&#x60;).
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -4867,7 +4922,11 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 		alias: 'postApiv1permissionRequestsRequestIdapprove',
 		description: `Transitions Pending → Approved AND lands a time-bound grant on
 the requester&#x27;s membership overlay (single transaction). Caller
-MUST be either the requester&#x27;s manager OR carry &#x60;is_platform&#x3D;true&#x60;.
+MUST be either the requester&#x27;s manager OR hold operator authority (a super user, or a
+platform operator holding &#x60;platform.tenants.view&#x60;; membership of the platform tenant alone
+does not count). A stored request whose permission is not requestable (for example one
+submitted before that rule existed) is refused with 422 (&#x60;permission_not_requestable&#x60;) and
+stays pending; the approver can deny it and the requester can cancel it.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -4900,7 +4959,7 @@ MUST be either the requester&#x27;s manager OR carry &#x60;is_platform&#x3D;true
 		errors: [
 			{
 				status: 403,
-				description: `Caller is not the manager and not a Platform operator, OR &#x60;X-Tenant-Id&#x60; selected a foreign tenant (&#x60;tenant_scope_not_supported&#x60;)`,
+				description: `Caller is not the manager and holds no operator authority, OR &#x60;X-Tenant-Id&#x60; selected a foreign tenant (&#x60;tenant_scope_not_supported&#x60;)`,
 				schema: ErrorResponse
 			},
 			{
@@ -4973,7 +5032,8 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 		path: '/api/v1/permission-requests/:requestId/deny',
 		alias: 'postApiv1permissionRequestsRequestIddeny',
 		description: `Transitions Pending → Denied. &#x60;decision_reason&#x60; is REQUIRED on
-Deny per ADR 0055 audit canon. Same caller-authorization as Approve.
+Deny per ADR 0055 audit canon. Same caller-authorization as Approve (the requester&#x27;s
+manager, or operator authority; platform-tenant membership alone does not count).
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -5002,7 +5062,7 @@ Deny per ADR 0055 audit canon. Same caller-authorization as Approve.
 		errors: [
 			{
 				status: 403,
-				description: `Caller is not the manager and not a Platform operator, OR &#x60;X-Tenant-Id&#x60; selected a foreign tenant (&#x60;tenant_scope_not_supported&#x60;)`,
+				description: `Caller is not the manager and holds no operator authority, OR &#x60;X-Tenant-Id&#x60; selected a foreign tenant (&#x60;tenant_scope_not_supported&#x60;)`,
 				schema: ErrorResponse
 			},
 			{
@@ -5032,7 +5092,7 @@ pinned to the target tenant. Frontend uses this token for the
 session lifetime (≤4h). The original operator&#x27;s regular JWT is
 unaffected.
 
-Requires &#x60;platform.tenants.manage&#x60; (there is no dedicated impersonation permission) held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+Requires &#x60;platform.impersonation.manage&#x60; held by a platform-tenant operator; platform-tenant membership alone, and &#x60;platform.tenants.manage&#x60;, are refused with 403 &#x60;forbidden&#x60; (a session mints a &#x60;tenant.admin&#x60; token for the target tenant, so it has its own permission; &#x60;tenant.admin&#x60; never implies it).
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -5070,7 +5130,7 @@ Requires &#x60;platform.tenants.manage&#x60; (there is no dedicated impersonatio
 		method: 'get',
 		path: '/api/v1/platform/impersonation/sessions',
 		alias: 'getApiv1platformimpersonationsessions',
-		description: `Requires &#x60;platform.tenants.manage&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+		description: `Requires &#x60;platform.impersonation.manage&#x60; held by a platform-tenant operator; platform-tenant membership alone, and &#x60;platform.tenants.manage&#x60;, are refused with 403 &#x60;forbidden&#x60;.
 `,
 		requestFormat: 'json',
 		response: ListImpersonationSessionsResponse,
@@ -5091,7 +5151,10 @@ by POST /api/v1/platform/impersonation/sessions is invalidated
 on the next request (security_stamp comparison via the
 impersonation-session resolver).
 
-Requires &#x60;platform.tenants.manage&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+Needs only the platform anchor (a slug-anchored, non-impersonation platform operator), not
+&#x60;platform.impersonation.manage&#x60;: only the session&#x27;s own operator can end it (any other
+session id is the idempotent 204 no-op), so an operator who lost the permission can still
+close the session they opened. Principals that are not platform operators are refused with 403 &#x60;forbidden&#x60;.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -5590,6 +5653,11 @@ Requires &#x60;platform.users.manage&#x60; held by a platform-tenant operator; p
 		response: z.void(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `Authenticated but missing the required permission`,
 				schema: ErrorResponse
@@ -5653,6 +5721,12 @@ Requires &#x60;platform.users.manage&#x60; held by a platform-tenant operator; p
 active SuperAdmin role refuse with 422
 (&#x60;platform_tenant_undeletable&#x60;).
 
+The transition to &#x60;deleted&#x60;, its &#x60;tenant_deleted&#x60; outbox event and the row delete
+run in ONE transaction. A tenant that still has dependent records (members, roles,
+...) is refused with 409 &#x60;tenant_has_dependents&#x60;: nothing is changed, the tenant
+keeps its status and no event is published. Remove or reassign the dependents first;
+there is no cascade.
+
 Requires &#x60;identity.tenants.delete&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
 The tenant comes from the path only: &#x60;X-Tenant-Id&#x60; is never applied here, and a
 value that differs from the path tenant is 400 &#x60;tenant_scope_conflict&#x60;. The
@@ -5692,6 +5766,11 @@ take them.
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `The tenant still has dependent records (&#x60;tenant_has_dependents&#x60;); nothing was changed`,
 				schema: ErrorResponse
 			},
 			{
@@ -7005,6 +7084,10 @@ for v0.2 frontend-contract compatibility per ADR 0049).
 
 v0.2 supports &#x60;slug&#x60; only; future filters (&#x60;status&#x60;, &#x60;created_after&#x60;)
 land per Stripe listing-endpoint canon.
+
+Requires &#x60;identity.tenants.view&#x60; (held by a tenant admin through &#x60;tenant.admin&#x60;, in the
+caller&#x27;s own tenant) or &#x60;platform.tenants.view&#x60;; a caller holding neither is refused with
+403 &#x60;forbidden&#x60;. The response carries the tenant&#x27;s full profile.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -7019,6 +7102,11 @@ land per Stripe listing-endpoint canon.
 			{
 				status: 400,
 				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
 				schema: ErrorResponse
 			}
 		]
@@ -7171,7 +7259,9 @@ be used to probe which tenants exist.
 		method: 'patch',
 		path: '/api/v1/tenants/:tenantId/admin-contact',
 		alias: 'patchApiv1tenantsTenantIdadminContact',
-		description: `Requires &#x60;identity.tenants.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+		description: `A malformed phone or postal address is 422 &#x60;validation_failed&#x60; with an &#x60;errors&#x60;
+entry under &#x60;phone&#x60; or &#x60;address&#x60;.
+Requires &#x60;identity.tenants.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -7198,6 +7288,11 @@ be used to probe which tenants exist.
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
 			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
@@ -7302,6 +7397,11 @@ be used to probe which tenants exist.
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
 			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
@@ -7422,6 +7522,11 @@ be used to probe which tenants exist.
 		response: z.void(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
 effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
@@ -7531,6 +7636,11 @@ be used to probe which tenants exist.
 		response: z.void(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
 effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
@@ -7563,6 +7673,8 @@ be used to probe which tenants exist.
 		description: `Empty strings clear the corresponding declaration; the aggregate
 accepts a zero Statutory VO for tenants that haven&#x27;t yet
 onboarded their compliance IDs.
+A malformed GST, PAN or drug-licence number is 422 &#x60;validation_failed&#x60; with an
+&#x60;errors&#x60; entry under &#x60;gst_number&#x60;, &#x60;pan_number&#x60; or &#x60;drug_licence_number&#x60;.
 Requires &#x60;identity.tenants.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
 `,
 		requestFormat: 'json',
@@ -7590,6 +7702,11 @@ Requires &#x60;identity.tenants.update&#x60; (satisfied by &#x60;tenant.admin&#x
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
 			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
@@ -8009,7 +8126,7 @@ be used to probe which tenants exist.
 		method: 'patch',
 		path: '/api/v1/users/:userId/permission-overrides',
 		alias: 'patchApiv1usersUserIdpermissionOverrides',
-		description: `Empty arrays clear the corresponding overlay. Permission names
+		description: `Both arrays are required; empty arrays clear the corresponding overlay. Permission names
 MUST match the closed &#x60;permission.IdentityPermissions&#x60; catalogue;
 unknown names surface as 422 (&#x60;permission_unknown&#x60;).
 Requires &#x60;identity.users.update_permissions&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;). Conferring a permission the caller does not hold is rejected with &#x60;grant_exceeds_authority&#x60;.
@@ -8039,6 +8156,11 @@ Requires &#x60;identity.users.update_permissions&#x60; (satisfied by &#x60;tenan
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
 			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
@@ -8096,6 +8218,11 @@ be used to probe which tenants exist.
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
 			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the

@@ -4,6 +4,9 @@ import {
 	listRolesResponseSchema,
 	ROLE_LEVEL_MAX,
 	ROLE_LEVEL_MIN,
+	ROLE_NAME_MAX,
+	ROLE_NAME_MIN,
+	updateRoleRequestSchema,
 	roleDtoSchema
 } from '#lib/features/roles/schemas.ts';
 
@@ -38,5 +41,31 @@ describe('role level bounds (derived from the generated contract, not repeated i
 	it('the contract accepts the max and rejects one above it', () => {
 		expect(createRoleRequestSchema.safeParse(req(ROLE_LEVEL_MAX)).success).toBe(true);
 		expect(createRoleRequestSchema.safeParse(req(ROLE_LEVEL_MAX + 1)).success).toBe(false);
+	});
+});
+
+describe('role bounds the forms and the schemas share', () => {
+	it('level 0 is the system Owner level: Go rejects it for a created or re-levelled role', () => {
+		expect(createRoleRequestSchema.safeParse({ name: 'Sales', hierarchy_level: 0 }).success).toBe(
+			false
+		);
+		expect(createRoleRequestSchema.safeParse({ name: 'Sales', hierarchy_level: 1 }).success).toBe(
+			true
+		);
+		expect(updateRoleRequestSchema.safeParse({ hierarchy_level: 0 }).success).toBe(false);
+		expect(updateRoleRequestSchema.safeParse({ hierarchy_level: ROLE_LEVEL_MIN }).success).toBe(
+			true
+		);
+		expect(updateRoleRequestSchema.safeParse({ hierarchy_level: null }).success).toBe(true);
+		expect(updateRoleRequestSchema.safeParse({ name: 'Sales' }).success).toBe(true);
+	});
+	it('the name bounds are the contract ones (Go: 2-100), exported for the inputs', () => {
+		expect([ROLE_NAME_MIN, ROLE_NAME_MAX]).toEqual([2, 100]);
+		expect(createRoleRequestSchema.safeParse({ name: 'ab', hierarchy_level: 5 }).success).toBe(
+			true
+		);
+		expect(createRoleRequestSchema.safeParse({ name: 'a', hierarchy_level: 5 }).success).toBe(
+			false
+		);
 	});
 });

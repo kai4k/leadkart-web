@@ -620,6 +620,10 @@ export interface paths {
 		 *
 		 *     v0.2 supports `slug` only; future filters (`status`, `created_after`)
 		 *     land per Stripe listing-endpoint canon.
+		 *
+		 *     Requires `identity.tenants.view` (held by a tenant admin through `tenant.admin`, in the
+		 *     caller's own tenant) or `platform.tenants.view`; a caller holding neither is refused with
+		 *     403 `forbidden`. The response carries the tenant's full profile.
 		 */
 		get: {
 			parameters: {
@@ -643,6 +647,7 @@ export interface paths {
 					};
 				};
 				400: components['responses']['BadRequest'];
+				403: components['responses']['Forbidden'];
 			};
 		};
 		put?: never;
@@ -898,6 +903,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
@@ -923,6 +929,8 @@ export interface paths {
 		 * @description Empty strings clear the corresponding declaration; the aggregate
 		 *     accepts a zero Statutory VO for tenants that haven't yet
 		 *     onboarded their compliance IDs.
+		 *     A malformed GST, PAN or drug-licence number is 422 `validation_failed` with an
+		 *     `errors` entry under `gst_number`, `pan_number` or `drug_licence_number`.
 		 *     Requires `identity.tenants.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
 		 */
 		patch: {
@@ -1007,6 +1015,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
@@ -1029,7 +1038,9 @@ export interface paths {
 		head?: never;
 		/**
 		 * Update tenant admin phone + postal address
-		 * @description Requires `identity.tenants.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 * @description A malformed phone or postal address is 422 `validation_failed` with an `errors`
+		 *     entry under `phone` or `address`.
+		 *     Requires `identity.tenants.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
 		 */
 		patch: {
 			parameters: {
@@ -1113,6 +1124,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
@@ -1219,6 +1231,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
@@ -1325,6 +1338,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
@@ -1774,6 +1788,10 @@ export interface paths {
 		 *     access to this tenant" (response bodies byte-identical). Per
 		 *     ADR 0044 enumeration safety; same canon as GitHub
 		 *     `/orgs/{slug}`, Stripe customer lookup, Auth0 user lookup.
+		 *
+		 *     Requires `identity.tenants.view` (held by a tenant admin through `tenant.admin`, in the
+		 *     caller's own tenant) or `platform.tenants.view`; a caller holding neither is refused with
+		 *     403 `forbidden` before any lookup.
 		 */
 		get: {
 			parameters: {
@@ -1796,6 +1814,7 @@ export interface paths {
 					};
 				};
 				400: components['responses']['BadRequest'];
+				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 			};
 		};
@@ -2280,6 +2299,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['TenantScopeForbidden'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -2721,7 +2741,7 @@ export interface paths {
 		head?: never;
 		/**
 		 * Replace user's granted + revoked permission overlays atomically
-		 * @description Empty arrays clear the corresponding overlay. Permission names
+		 * @description Both arrays are required; empty arrays clear the corresponding overlay. Permission names
 		 *     MUST match the closed `permission.IdentityPermissions` catalogue;
 		 *     unknown names surface as 422 (`permission_unknown`).
 		 *     Requires `identity.users.update_permissions` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`). Conferring a permission the caller does not hold is rejected with `grant_exceeds_authority`.
@@ -2808,6 +2828,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
@@ -4070,6 +4091,12 @@ export interface paths {
 		 *     active SuperAdmin role refuse with 422
 		 *     (`platform_tenant_undeletable`).
 		 *
+		 *     The transition to `deleted`, its `tenant_deleted` outbox event and the row delete
+		 *     run in ONE transaction. A tenant that still has dependent records (members, roles,
+		 *     ...) is refused with 409 `tenant_has_dependents`: nothing is changed, the tenant
+		 *     keeps its status and no event is published. Remove or reassign the dependents first;
+		 *     there is no cascade.
+		 *
 		 *     Requires `identity.tenants.delete` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
 		 *     The tenant comes from the path only: `X-Tenant-Id` is never applied here, and a
 		 *     value that differs from the path tenant is 400 `tenant_scope_conflict`. The
@@ -4147,6 +4174,15 @@ export interface paths {
 				400: components['responses']['TenantScopeInvalid'];
 				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
+				/** @description The tenant still has dependent records (`tenant_has_dependents`); nothing was changed */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				422: components['responses']['Unprocessable'];
 			};
 		};
@@ -4293,6 +4329,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
@@ -4561,7 +4598,7 @@ export interface paths {
 		};
 		/**
 		 * List impersonation sessions
-		 * @description Requires `platform.tenants.manage` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
+		 * @description Requires `platform.impersonation.manage` held by a platform-tenant operator; platform-tenant membership alone, and `platform.tenants.manage`, are refused with 403 `forbidden`.
 		 */
 		get: {
 			parameters: {
@@ -4593,7 +4630,7 @@ export interface paths {
 		 *     session lifetime (≤4h). The original operator's regular JWT is
 		 *     unaffected.
 		 *
-		 *     Requires `platform.tenants.manage` (there is no dedicated impersonation permission) held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
+		 *     Requires `platform.impersonation.manage` held by a platform-tenant operator; platform-tenant membership alone, and `platform.tenants.manage`, are refused with 403 `forbidden` (a session mints a `tenant.admin` token for the target tenant, so it has its own permission; `tenant.admin` never implies it).
 		 */
 		post: {
 			parameters: {
@@ -4663,7 +4700,10 @@ export interface paths {
 		 *     on the next request (security_stamp comparison via the
 		 *     impersonation-session resolver).
 		 *
-		 *     Requires `platform.tenants.manage` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
+		 *     Needs only the platform anchor (a slug-anchored, non-impersonation platform operator), not
+		 *     `platform.impersonation.manage`: only the session's own operator can end it (any other
+		 *     session id is the idempotent 204 no-op), so an operator who lost the permission can still
+		 *     close the session they opened. Principals that are not platform operators are refused with 403 `forbidden`.
 		 */
 		delete: {
 			parameters: {
@@ -4854,8 +4894,11 @@ export interface paths {
 		 * @description Caller (the requester) asks for a time-bound elevated permission.
 		 *     The named approver is the requester's current manager
 		 *     (`tenant_memberships.reports_to`). If the requester has no
-		 *     manager, only Platform operators can approve.
+		 *     manager, only an operator holding operator authority can approve.
 		 *     At most one pending request per (membership, permission) tuple.
+		 *     `tenant.admin`, platform-reserved permissions and names outside the catalogue are not
+		 *     requestable: they are conferred by role only, and the request is refused with 422
+		 *     (`permission_not_requestable`).
 		 */
 		post: {
 			parameters: {
@@ -5067,7 +5110,11 @@ export interface paths {
 		 * Approve a pending request (manager or platform operator)
 		 * @description Transitions Pending → Approved AND lands a time-bound grant on
 		 *     the requester's membership overlay (single transaction). Caller
-		 *     MUST be either the requester's manager OR carry `is_platform=true`.
+		 *     MUST be either the requester's manager OR hold operator authority (a super user, or a
+		 *     platform operator holding `platform.tenants.view`; membership of the platform tenant alone
+		 *     does not count). A stored request whose permission is not requestable (for example one
+		 *     submitted before that rule existed) is refused with 422 (`permission_not_requestable`) and
+		 *     stays pending; the approver can deny it and the requester can cancel it.
 		 */
 		post: {
 			parameters: {
@@ -5151,7 +5198,7 @@ export interface paths {
 					};
 					content?: never;
 				};
-				/** @description Caller is not the manager and not a Platform operator, OR `X-Tenant-Id` selected a foreign tenant (`tenant_scope_not_supported`) */
+				/** @description Caller is not the manager and holds no operator authority, OR `X-Tenant-Id` selected a foreign tenant (`tenant_scope_not_supported`) */
 				403: {
 					headers: {
 						[name: string]: unknown;
@@ -5191,7 +5238,8 @@ export interface paths {
 		/**
 		 * Deny a pending request (manager or platform operator)
 		 * @description Transitions Pending → Denied. `decision_reason` is REQUIRED on
-		 *     Deny per ADR 0055 audit canon. Same caller-authorization as Approve.
+		 *     Deny per ADR 0055 audit canon. Same caller-authorization as Approve (the requester's
+		 *     manager, or operator authority; platform-tenant membership alone does not count).
 		 */
 		post: {
 			parameters: {
@@ -5275,7 +5323,7 @@ export interface paths {
 					};
 					content?: never;
 				};
-				/** @description Caller is not the manager and not a Platform operator, OR `X-Tenant-Id` selected a foreign tenant (`tenant_scope_not_supported`) */
+				/** @description Caller is not the manager and holds no operator authority, OR `X-Tenant-Id` selected a foreign tenant (`tenant_scope_not_supported`) */
 				403: {
 					headers: {
 						[name: string]: unknown;
@@ -7201,7 +7249,13 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Get one CRM lead by ID */
+		/**
+		 * Get one CRM lead by ID
+		 * @description Single-lead access follows the list rule: a caller without `crm.leads.read_all`
+		 *     (and without operator reach) reaches only a lead assigned to their own
+		 *     membership; any other lead answers 404 `lead_not_found`, exactly like a lead that
+		 *     does not exist.
+		 */
 		get: {
 			parameters: {
 				query?: never;
@@ -7309,6 +7363,11 @@ export interface paths {
 		 * Assign or reassign a lead
 		 * @description Sets the lead's current assignee. Atomic with an append to the
 		 *     AssignmentHistory audit table. Emits `crm.lead_assigned.v1`.
+		 *     Single-lead access follows the list rule: a caller without `crm.leads.read_all`
+		 *     (and without operator reach) reaches only a lead assigned to their own
+		 *     membership; any other lead answers 404 `lead_not_found`, exactly like a lead that
+		 *     does not exist.
+		 *     The response echoes the canonical (lower-case, hyphenated) `assignee_membership_id`.
 		 */
 		post: {
 			parameters: {
@@ -7429,6 +7488,10 @@ export interface paths {
 		 * @description Non-terminal transitions only: New → Contacted → Interested →
 		 *     Negotiation. Use `/convert` or `/lose` for terminal transitions.
 		 *     Emits `crm.lead_stage_changed.v1`.
+		 *     Single-lead access follows the list rule: a caller without `crm.leads.read_all`
+		 *     (and without operator reach) reaches only a lead assigned to their own
+		 *     membership; any other lead answers 404 `lead_not_found`, exactly like a lead that
+		 *     does not exist.
 		 */
 		post: {
 			parameters: {
@@ -7547,6 +7610,10 @@ export interface paths {
 		 * Change the lead's qualitative temperature axis
 		 * @description Independent of stage — Hot/Warm/Cold/Dead transition at any
 		 *     non-terminal stage. Emits `crm.lead_temperature_changed.v1`.
+		 *     Single-lead access follows the list rule: a caller without `crm.leads.read_all`
+		 *     (and without operator reach) reaches only a lead assigned to their own
+		 *     membership; any other lead answers 404 `lead_not_found`, exactly like a lead that
+		 *     does not exist.
 		 */
 		post: {
 			parameters: {
@@ -7664,6 +7731,10 @@ export interface paths {
 		 * Log a call against a lead
 		 * @description Creates a CallLog row + emits `crm.call_logged.v1`. Refused on
 		 *     terminal leads (converted / lost).
+		 *     Single-lead access follows the list rule: a caller without `crm.leads.read_all`
+		 *     (and without operator reach) reaches only a lead assigned to their own
+		 *     membership; any other lead answers 404 `lead_not_found`, exactly like a lead that
+		 *     does not exist.
 		 */
 		post: {
 			parameters: {
@@ -7783,6 +7854,10 @@ export interface paths {
 		 * Terminal-convert a lead (won)
 		 * @description Sets the lead to `converted`. Emits `crm.lead_converted.v1` —
 		 *     this is the future Orders module's create-trigger per ADR 0060.
+		 *     Single-lead access follows the list rule: a caller without `crm.leads.read_all`
+		 *     (and without operator reach) reaches only a lead assigned to their own
+		 *     membership; any other lead answers 404 `lead_not_found`, exactly like a lead that
+		 *     does not exist.
 		 */
 		post: {
 			parameters: {
@@ -9507,7 +9582,12 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Create a draft quotation */
+		/**
+		 * Create a draft quotation
+		 * @description `customer_lead_id` and every `items[].product_id` must be UUIDs (any RFC 4122
+		 *     spelling; stored and echoed in canonical form). A malformed one is 400
+		 *     `invalid_body`; an absent one is the domain's 422 validation error.
+		 */
 		post: {
 			parameters: {
 				query?: never;
@@ -9708,7 +9788,11 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Append a quotation revision */
+		/**
+		 * Append a quotation revision
+		 * @description Every `items[].product_id` must be a UUID (any RFC 4122 spelling, stored in
+		 *     canonical form); a malformed one is 400 `invalid_body`.
+		 */
 		post: {
 			parameters: {
 				query?: never;
@@ -11210,6 +11294,10 @@ export interface paths {
 		 * Terminal-lose a lead (with required reason)
 		 * @description Sets the lead to `lost`. `reason` is REQUIRED (audit doctrine).
 		 *     Emits `crm.lead_lost.v1`.
+		 *     Single-lead access follows the list rule: a caller without `crm.leads.read_all`
+		 *     (and without operator reach) reaches only a lead assigned to their own
+		 *     membership; any other lead answers 404 `lead_not_found`, exactly like a lead that
+		 *     does not exist.
 		 */
 		post: {
 			parameters: {
@@ -11339,6 +11427,10 @@ export interface paths {
 		 *     CallLogged subscriber (BRD §4.5) + the mature-lead daily scan
 		 *     (BRD §4.7) respectively; the HTTP surface only mints manual ones.
 		 *     Emits `crm.reminder_created.v1`.
+		 *     Single-lead access follows the list rule: a caller without `crm.leads.read_all`
+		 *     (and without operator reach) reaches only a lead assigned to their own
+		 *     membership; any other lead answers 404 `lead_not_found`, exactly like a lead that
+		 *     does not exist.
 		 */
 		post: {
 			parameters: {
@@ -11568,6 +11660,9 @@ export interface paths {
 		 * Mark a pending reminder as sent (terminal)
 		 * @description Flips state to `sent`. Refused on already-terminal reminders.
 		 *     Emits `crm.reminder_marked_sent.v1`.
+		 *     A caller without `crm.leads.read_all` (and without operator reach) reaches only a
+		 *     reminder assigned to their own membership; any other reminder answers 404
+		 *     `reminder_not_found`.
 		 */
 		post: {
 			parameters: {
@@ -11682,6 +11777,9 @@ export interface paths {
 		 * @description Flips state to `cancelled`. `reason` is REQUIRED (audit
 		 *     doctrine). Refused on already-terminal reminders. Emits
 		 *     `crm.reminder_cancelled.v1`.
+		 *     A caller without `crm.leads.read_all` (and without operator reach) reaches only a
+		 *     reminder assigned to their own membership; any other reminder answers 404
+		 *     `reminder_not_found`.
 		 */
 		post: {
 			parameters: {
@@ -12134,7 +12232,6 @@ export interface components {
 			/** Format: uuid */
 			tenant_id: string;
 			tenant_slug: string;
-			/** Format: email */
 			email?: string;
 			first_name?: string;
 			last_name?: string;
@@ -12236,27 +12333,41 @@ export interface components {
 			max_failed_attempts: number;
 			lockout_minutes: number;
 		};
+		/** @description Full replace. Every field is required; a body that omits one is 400 `invalid_body` (the `errors` map names it) and nothing is changed. */
 		UpdateTenantProfileRequest: {
-			legal_name?: string;
-			display_name?: string;
+			legal_name: string;
+			display_name: string;
 		};
+		/** @description Full replace. Every field is required (an empty string clears that declaration); a body that omits one is 400 `invalid_body` and nothing is changed. */
 		UpdateTenantStatutoryRequest: {
-			gst_number?: string;
-			pan_number?: string;
-			drug_licence_number?: string;
+			gst_number: string;
+			pan_number: string;
+			drug_licence_number: string;
 		};
+		/** @description Full replace. `phone` and `address` (with every address field) are required; a body that omits one is 400 `invalid_body` (the `errors` map names it, e.g. `address.pincode`) and nothing is changed. */
 		UpdateTenantAdminContactRequest: {
-			phone?: string;
-			address?: components['schemas']['AdminAddressDto'];
+			phone: string;
+			address: components['schemas']['AdminAddressInput'];
 		};
+		/** @description The admin address as written by PATCH admin-contact. Every field is required (an empty string clears it). */
+		AdminAddressInput: {
+			street: string;
+			city: string;
+			district: string;
+			state: string;
+			state_code: string;
+			pincode: string;
+		};
+		/** @description Full replace. `password_policy` and each of its fields are required; a body that omits one is 400 `invalid_body` and nothing is changed. */
 		UpdateTenantSettingsRequest: {
 			password_policy: components['schemas']['PasswordPolicyDto'];
 		};
+		/** @description Full replace. Every field is required; a body that omits one is 400 `invalid_body` and nothing is changed. */
 		UpdateTenantDisplayPreferencesRequest: {
-			locale?: string;
-			time_zone?: string;
-			date_format?: string;
-			currency?: string;
+			locale: string;
+			time_zone: string;
+			date_format: string;
+			currency: string;
 		};
 		SuspendTenantRequest: {
 			reason: string;
@@ -12271,7 +12382,6 @@ export interface components {
 			person_id: string;
 			/** Format: uuid */
 			tenant_id: string;
-			/** Format: email */
 			email: string;
 			first_name: string;
 			last_name: string;
@@ -12308,10 +12418,11 @@ export interface components {
 			membership_id: string;
 			person_existed: boolean;
 		};
+		/** @description Full replace. Every field is required (an empty string clears it); a body that omits one is 400 `invalid_body` and nothing is changed. */
 		UpdateUserProfileRequest: {
-			designation?: string;
-			department?: string;
-			status_message?: string;
+			designation: string;
+			department: string;
+			status_message: string;
 		};
 		DeactivateUserRequest: {
 			reason: string;
@@ -12324,9 +12435,10 @@ export interface components {
 			/** Format: uuid */
 			manager_id: string;
 		};
+		/** @description Atomic replace of both overlays. Both arrays are required (an empty array clears that overlay, `null` is not accepted); a body that omits one is 400 `invalid_body` and nothing is changed. */
 		ReplaceUserPermissionOverridesRequest: {
-			granted?: string[];
-			revoked?: string[];
+			granted: string[];
+			revoked: string[];
 		};
 		RoleDto: {
 			/** Format: uuid */
@@ -12405,7 +12517,6 @@ export interface components {
 		PersonDto: {
 			/** Format: uuid */
 			id: string;
-			/** Format: email */
 			email: string;
 			first_name: string;
 			last_name: string;
@@ -12500,7 +12611,6 @@ export interface components {
 		SearchPersonHit: {
 			/** Format: uuid */
 			id: string;
-			/** Format: email */
 			email: string;
 			first_name: string;
 			last_name: string;
@@ -12553,7 +12663,7 @@ export interface components {
 			request_id: string;
 			/**
 			 * Format: uuid
-			 * @description Requester current manager. Empty when the requester has no manager — only Platform operators can approve.
+			 * @description Requester current manager. Empty when the requester has no manager — only an operator holding operator authority can approve.
 			 */
 			approver_membership_id?: string;
 			/** @enum {string} */

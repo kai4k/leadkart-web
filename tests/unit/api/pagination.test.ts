@@ -5,6 +5,8 @@ import {
 	MAX_PAGE_SIZE,
 	nextCursor,
 	nextPage,
+	nextPageParam,
+	stoppedEarly,
 	toPage,
 	type Page
 } from '#lib/api/pagination.ts';
@@ -61,6 +63,31 @@ describe('nextPage (the ONE cursor rule: fetchAllPages and the infinite-list hoo
 		});
 		expect(err).toHaveBeenCalledTimes(1);
 		err.mockRestore();
+	});
+});
+
+describe('nextPageParam (the infinite-query adapter)', () => {
+	it('says a repeated cursor once per page object, however often TanStack asks', () => {
+		const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const last = { items: [], has_more: true, next_cursor: 'A' };
+		for (let i = 0; i < 5; i++)
+			expect(nextPageParam(last, [], 'A', [undefined, 'A'])).toBeUndefined();
+		expect(err).toHaveBeenCalledTimes(1);
+		nextPageParam({ ...last }, [], 'A', [undefined, 'A']);
+		expect(err).toHaveBeenCalledTimes(2);
+		err.mockRestore();
+	});
+});
+
+describe('stoppedEarly (a stopped cursor must not look like the end)', () => {
+	it('true when the last page pointed on but the query has no next page', () => {
+		expect(stoppedEarly({ has_more: true, next_cursor: 'A' }, false)).toBe(true);
+	});
+	it('false on a real last page, while more pages exist, or before any page', () => {
+		expect(stoppedEarly({ has_more: false }, false)).toBe(false);
+		expect(stoppedEarly({ has_more: true }, false)).toBe(false);
+		expect(stoppedEarly({ has_more: true, next_cursor: 'A' }, true)).toBe(false);
+		expect(stoppedEarly(undefined, false)).toBe(false);
 	});
 });
 

@@ -169,8 +169,11 @@ test.describe('Register tenant — form validation', () => {
 		// Footer submit button (last in DOM, scoped to drawer)
 		await page.locator('button[type="submit"][form="register-tenant-form"]').click();
 
-		// Form-level banner appears with the server message
-		await expect(page.getByText(/slug.*exists/i).first()).toBeVisible({ timeout: 5000 });
+		// Form-level banner: the fixed conflict line, never Go's own text
+		await expect(page.getByText(/conflicts with the current state/i).first()).toBeVisible({
+			timeout: 5000
+		});
+		await expect(page.getByText(/slug.*exists/i)).toHaveCount(0);
 		// The drawer renders the error itself, so the mutation opts out of the global toast.
 		await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
 	});

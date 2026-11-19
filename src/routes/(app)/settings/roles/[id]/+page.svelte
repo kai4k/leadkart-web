@@ -20,7 +20,9 @@
 		roleBadgeVariant,
 		isProtectedRole,
 		ROLE_LEVEL_MAX,
-		ROLE_LEVEL_MIN
+		ROLE_LEVEL_MIN,
+		ROLE_NAME_MAX,
+		ROLE_NAME_MIN
 	} from '$features/roles';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 	import { describeError } from '$api/errors';
@@ -211,8 +213,8 @@
 					label="Name"
 					name="name"
 					bind:value={name}
-					minlength={3}
-					maxlength={100}
+					minlength={ROLE_NAME_MIN}
+					maxlength={ROLE_NAME_MAX}
 					disabled={!canUpdate}
 				/>
 				<label class="stack stack-tight">

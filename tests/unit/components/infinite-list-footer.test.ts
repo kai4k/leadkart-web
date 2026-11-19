@@ -4,7 +4,7 @@ import InfiniteListFooter from '#lib/components/data/InfiniteListFooter.svelte';
 import { createFakeInfiniteQuery } from './fake-infinite-query.svelte.ts';
 
 // The footer reads the infinite-list object; this one is a reactive double of it.
-function fakeList(opts: { hasNextPage?: boolean } = {}) {
+function fakeList(opts: { hasNextPage?: boolean; truncated?: boolean } = {}) {
 	const query = createFakeInfiniteQuery({ hasNextPage: opts.hasNextPage ?? true });
 	const list = {
 		query,
@@ -17,7 +17,8 @@ function fakeList(opts: { hasNextPage?: boolean } = {}) {
 		},
 		get isFetchingNextPage() {
 			return query.isFetchingNextPage;
-		}
+		},
+		truncated: opts.truncated ?? false
 	};
 	return { list, query };
 }
@@ -111,6 +112,15 @@ describe('InfiniteListFooter', () => {
 		flushSync();
 		await tick();
 		expect(document.activeElement).toBe(document.body);
+	});
+
+	it('a stopped cursor shows the truncation note, never "End of list"', () => {
+		const { list } = fakeList({ hasNextPage: false, truncated: true });
+		render(list);
+		const text = target.querySelector('[aria-live="polite"]')?.textContent ?? '';
+		expect(text).toContain("Couldn't load more results.");
+		expect(text).not.toContain('End of list');
+		expect(target.querySelector('button')).toBeNull();
 	});
 
 	it('shows one end-of-list line and no button on the last page', () => {

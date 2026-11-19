@@ -21,7 +21,7 @@
  * disconnects the observer on component teardown.
  */
 import { createInfiniteQuery, type CreateInfiniteQueryResult } from '@tanstack/svelte-query';
-import { nextPageParam, type Page } from '#lib/api/pagination.ts';
+import { nextPageParam, stoppedEarly, type Page } from '#lib/api/pagination.ts';
 
 export type InfiniteListState = 'pending' | 'error' | 'empty' | 'ready';
 
@@ -59,6 +59,8 @@ export interface InfiniteList<T> {
 	readonly isFetching: boolean;
 	readonly isFetchingNextPage: boolean;
 	readonly hasNextPage: boolean;
+	/** The cursor rule stopped on a repeated cursor: the list is incomplete, not finished. */
+	readonly truncated: boolean;
 }
 
 export function createInfiniteList<T>(options: InfiniteListOptions<T>): InfiniteList<T> {
@@ -134,6 +136,9 @@ export function createInfiniteList<T>(options: InfiniteListOptions<T>): Infinite
 		},
 		get hasNextPage() {
 			return query.hasNextPage ?? false;
+		},
+		get truncated() {
+			return stoppedEarly(query.data?.pages.at(-1), query.hasNextPage ?? false);
 		}
 	};
 }

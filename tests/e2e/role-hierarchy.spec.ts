@@ -181,12 +181,13 @@ test.describe('Role hierarchy editor', () => {
 
 		await clientNavigate(page, `/settings/roles/${PARENT_ROLE.id}`);
 		await expect(heading(PARENT_ROLE.name)).toBeVisible();
-		// The page keeps the same mutation: it is still pending for the child.
-		await expect(saveParent).toHaveAttribute('aria-busy', 'true');
+		// Leaving the role detached the mutation (the page stays mounted): the parent role's
+		// button is idle and the child's save reports through the global toast, not a banner here.
+		await expect(saveParent).not.toHaveAttribute('aria-busy', 'true');
 		const settled = page.waitForResponse(`**/api/v1/roles/${CHILD_ROLE.id}/parent`);
 		await release?.();
 		await settled;
-		// Settled (its callbacks have run) and the parent role's page shows no banner.
+		// Settled, and the parent role's page shows no banner.
 		await expect(saveParent).not.toHaveAttribute('aria-busy', 'true');
 		await expect(saved).toHaveCount(0);
 	});

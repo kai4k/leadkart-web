@@ -2,8 +2,8 @@ import { z } from 'zod';
 import { ChangePasswordRequest } from '#lib/api/generated/index.ts';
 
 /**
- * Field rules several request (form) schemas share. Response data is never format-checked
- * (`response-schema.ts`); these are the rules a user's input must meet before it is sent.
+ * Field rules several request (form) schemas share: what a user's input must meet before it is sent.
+ * Response data is never format-checked (the generated DTOs carry no `format: email`).
  */
 
 /** "Why are you doing this": required, capped at 500. Suspend, delete, anonymise, deactivate, write-off. */

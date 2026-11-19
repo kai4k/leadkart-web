@@ -70,9 +70,11 @@ test.describe('Forgot password — request', () => {
 		).toBeVisible({ timeout: 5000 });
 	});
 
-	test('invalid email format: client-side field error, no POST fires', async ({ page }) => {
+	// A malformed address is NOT rejected: Go answers it like an unknown one (204), so the form must not
+	// reveal more than Go does. Only an empty field is refused.
+	test('empty email: field error, no POST fires', async ({ page }) => {
 		await page.goto('/forgot-password');
-		await page.getByLabel(/email/i).fill('not-an-email');
+		await page.getByLabel(/email/i).fill('   ');
 		await page.getByRole('button', { name: /send reset link/i }).click();
 		await expect(page.locator('input[aria-invalid="true"]').first()).toBeVisible({
 			timeout: 3000

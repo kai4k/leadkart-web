@@ -225,8 +225,11 @@ test.describe('Tenant user management — negative', () => {
 		await page.getByLabel(/initial password/i).fill('Sup3rSecret!');
 		await page.getByRole('button', { name: /create user/i }).click();
 
-		// Error banner surfaces the 409 message
-		await expect(page.getByText(/membership.*exists/i).first()).toBeVisible({ timeout: 5000 });
+		// Error banner: the fixed conflict line, never Go's own text
+		await expect(page.getByText(/conflicts with the current state/i).first()).toBeVisible({
+			timeout: 5000
+		});
+		await expect(page.getByText(/membership.*exists/i)).toHaveCount(0);
 	});
 
 	test('list 500: surfaces error in DataTable error state', async ({ page }) => {

@@ -14,7 +14,6 @@
  */
 import { z } from 'zod';
 import { formEmailField } from '#lib/api/request-schema.ts';
-import { responseEmail } from '#lib/api/response-schema.ts';
 
 // ── Enums ───────────────────────────────────────────────────────────
 
@@ -114,7 +113,7 @@ export const crmLeadDtoSchema = z.object({
 	// Contact (locked)
 	contact_name: z.string().min(1).max(200),
 	mobile_number: mobileNumberSchema,
-	email: responseEmail.nullable().optional(),
+	email: z.string().nullable().optional(),
 
 	// Address (pin/city/district/state locked; street editable)
 	address: leadAddressSchema,

@@ -5,7 +5,7 @@
 	import { resolve } from '$app/paths';
 	import { Alert, Breadcrumbs, Button, Card, type BreadcrumbItem } from '$ui';
 	import { NumberInput, TextField } from '$form';
-	import { ROLE_LEVEL_MAX, ROLE_LEVEL_MIN } from '$features/roles';
+	import { ROLE_LEVEL_MAX, ROLE_LEVEL_MIN, ROLE_NAME_MAX, ROLE_NAME_MIN } from '$features/roles';
 	import type { ActionData } from './$types';
 
 	/**
@@ -83,8 +83,8 @@
 					hint="A short, descriptive name. Visible to members on permission requests."
 					name="name"
 					bind:value={name}
-					minlength={3}
-					maxlength={100}
+					minlength={ROLE_NAME_MIN}
+					maxlength={ROLE_NAME_MAX}
 					required
 					error={err('name')}
 				/>

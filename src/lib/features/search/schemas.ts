@@ -8,9 +8,8 @@ import {
 	SearchResponse as SearchResponseContract,
 	SearchTenantHit as SearchTenantHitContract
 } from '#lib/api/generated/index.ts';
-import { responseEmail } from '#lib/api/response-schema.ts';
 
-export const searchPersonHitSchema = SearchPersonHitContract.extend({ email: responseEmail });
+export const searchPersonHitSchema = SearchPersonHitContract;
 export const searchTenantHitSchema = SearchTenantHitContract;
 export const searchResponseSchema = SearchResponseContract.extend({
 	persons: z.array(searchPersonHitSchema)

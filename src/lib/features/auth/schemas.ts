@@ -10,7 +10,6 @@ import {
 	UserDto
 } from '#lib/api/generated/index.ts';
 import { lookupEmailField, newPasswordField } from '#lib/api/request-schema.ts';
-import { responseEmail, responseEmailOptional } from '#lib/api/response-schema.ts';
 
 /**
  * CapabilitiesDto — GET /v1/auth/me/capabilities, straight from the generated
@@ -20,7 +19,7 @@ import { responseEmail, responseEmailOptional } from '#lib/api/response-schema.t
  * client-side via `deriveTier()` in capabilities.ts from `is_platform`,
  * `is_super_user` and `permissions`.
  */
-export const capabilitiesSchema = CapabilitiesDto.extend({ email: responseEmailOptional });
+export const capabilitiesSchema = CapabilitiesDto;
 
 /**
  * Auth feature Zod schemas — each response schema IS the generated one,
@@ -51,7 +50,6 @@ export const changePasswordSchema = ChangePasswordRequest.extend({
  * Go, so an absent value is read as ''.
  */
 export const userDtoSchema = UserDto.extend({
-	email: responseEmail,
 	designation: z.string().default(''),
 	department: z.string().default(''),
 	status_message: z.string().default('')

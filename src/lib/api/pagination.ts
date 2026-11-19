@@ -43,6 +43,18 @@ export function nextCursor(page: CursorPage): string | undefined {
 /** What follows a page: the cursor to request, or why there is none. */
 export type NextPage = { cursor: string } | { cursor: undefined; reason: 'last' | 'repeated' };
 
+function resolveNextPage(page: CursorPage, requested: ReadonlySet<string>): NextPage {
+	const cursor = nextCursor(page);
+	if (cursor === undefined) return { cursor: undefined, reason: 'last' };
+	if (requested.has(cursor)) return { cursor: undefined, reason: 'repeated' };
+	return { cursor };
+}
+function reportRepeated(next: NextPage): void {
+	if (import.meta.env.DEV && next.cursor === undefined && next.reason === 'repeated') {
+		console.error('[api] pagination repeated a cursor; stopping the read');
+	}
+}
+
 /**
  * THE cursor rule, shared by `fetchAllPages` and the infinite-list hook: the next cursor, or the
  * reason to stop. `requested` holds every cursor already asked for; a page that points back at one
@@ -50,20 +62,17 @@ export type NextPage = { cursor: string } | { cursor: undefined; reason: 'last' 
  * `console.error`) instead of looping.
  */
 export function nextPage(page: CursorPage, requested: ReadonlySet<string>): NextPage {
-	const cursor = nextCursor(page);
-	if (cursor === undefined) return { cursor: undefined, reason: 'last' };
-	if (requested.has(cursor)) {
-		if (import.meta.env.DEV) {
-			console.error('[api] pagination repeated a cursor; stopping the read', cursor);
-		}
-		return { cursor: undefined, reason: 'repeated' };
-	}
-	return { cursor };
+	const next = resolveNextPage(page, requested);
+	reportRepeated(next);
+	return next;
 }
+
+/** Pages already reported as repeating: TanStack asks about the same last page many times per render. */
+const reportedRepeats = new WeakSet<object>();
+
 /**
- * TanStack's getNextPageParam for every cursor-paged infinite query: 
-extPage over the cursors
- * the query has already requested (its pageParams).
+ * TanStack's getNextPageParam for every cursor-paged infinite query: the cursor rule over the
+ * cursors the query has already requested (its pageParams). A repeat is reported once per page.
  */
 export function nextPageParam(
 	last: CursorPage,
@@ -71,7 +80,24 @@ export function nextPageParam(
 	_lastParam: string | undefined,
 	allParams: ReadonlyArray<string | undefined>
 ): string | undefined {
-	return nextPage(last, new Set(allParams.filter((p): p is string => p !== undefined))).cursor;
+	const next = resolveNextPage(
+		last,
+		new Set(allParams.filter((p): p is string => p !== undefined))
+	);
+	if (next.cursor === undefined && next.reason === 'repeated' && !reportedRepeats.has(last)) {
+		reportedRepeats.add(last);
+		reportRepeated(next);
+	}
+	return next.cursor;
+}
+
+/**
+ * True when the last page pointed on (`has_more` with a cursor) but the query has no next page:
+ * the cursor rule stopped on a repeated cursor. That is not the end of the list, and the footer must
+ * not say it is.
+ */
+export function stoppedEarly(last: CursorPage | undefined, hasNextPage: boolean): boolean {
+	return last !== undefined && nextCursor(last) !== undefined && !hasNextPage;
 }
 export interface AllPages<T> {
 	items: T[];

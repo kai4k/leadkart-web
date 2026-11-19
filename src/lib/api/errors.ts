@@ -36,8 +36,10 @@ const GO_SCOPE_EXIT_CODES: ReadonlySet<string> = new Set([
 const VALIDATION_FALLBACK_COPY = 'The request was not accepted. Check the values and try again.';
 /**
  * THE code → copy map: Go (and BFF) codes whose user text is fixed, whatever Go says. Raw Go text is
- * technical or empty (enumeration safety). None of the `tenant_scope_*` ones exits the operator
- * scope (the operator stays in context and must be told the truth).
+ * technical or empty (enumeration safety), so it is NEVER shown: a code that is not in this map gets
+ * the generic line for its status, and Go's text stays in the error's `detail` for logs and support.
+ * Adding a code here is the one way to give it its own wording. None of the `tenant_scope_*` ones exits
+ * the operator scope (the operator stays in context and must be told the truth).
  * Precedence is in `describeError`: a caller's own line for the status never replaces a code
  * here, except the plain `forbidden` (CALLER_LINE_WINS_CODES).
  */
@@ -58,13 +60,32 @@ const CODE_COPY: ReadonlyMap<string, string> = new Map([
 	],
 	['tenant_not_active', 'This tenant is not active. Changes are disabled.'],
 	['forbidden', "You don't have permission to do this."],
+	['insufficient_rank', 'You can only make this change for people below your level.'],
+	['impersonation_not_allowed', 'Not available during an impersonation session.'],
+	['tenant_has_dependents', "This tenant still has members or data, so it can't be deleted yet."],
+	['permission_not_requestable', "This permission can't be requested."],
+	['last_owner_protected', 'A company must keep at least one active owner.'],
+	['owner_protected', "An owner's administrator access can't be removed."],
+	['role_system_default', "Built-in roles can't be changed or deleted."],
+	['manager_not_eligible', "This person can't be set as the manager."],
+	['role_parent_not_eligible', 'The parent role must be more senior.'],
+	['incorrect_current_password', 'Your current password is incorrect.'],
 	['grant_exceeds_authority', "You can't grant a permission or role above your own."],
 	['self_modification_forbidden', "You can't make this change to your own account."],
 	['search_category_forbidden', "You don't have access to that search category."],
 	['invalid_search_include', VALIDATION_FALLBACK_COPY]
 ]);
 /** Codes whose copy is the least specific one there is: the caller's own line for the status is better. */
-const CALLER_LINE_WINS_CODES: ReadonlySet<string> = new Set(['forbidden']);
+const CALLER_LINE_WINS_CODES: ReadonlySet<string> = new Set([
+	'forbidden',
+	'invalid_search_include'
+]);
+const FORBIDDEN_COPY = "You don't have permission to do this.";
+const CONFLICT_COPY = 'This change conflicts with the current state. Refresh and try again.';
+const FIELDS_COPY = 'Check the highlighted fields.';
+const NOT_FOUND_COPY = 'This item no longer exists.';
+const SIGN_IN_COPY = 'Sign in to continue.';
+const REQUEST_FAILED_COPY = 'The request could not be completed. Please try again.';
 const SERVER_ERROR_COPY = 'Something went wrong on our side. Please try again.';
 /** 503/504 (the BFF's own: Go unreachable / too slow) and the BFF's 502 `upstream_unavailable`. */
 export const UNREACHABLE_COPY =
@@ -136,11 +157,10 @@ export class ApiError extends Error {
 				err = new ValidationError(flattenFieldErrors(body?.errors), response.status, text, traceId);
 				break;
 			case 401:
-				// session_expired (BFF) stays generic; other 401s (incorrect_current_password, ...) speak for themselves.
-				err = new AuthError(401, traceId, code === SESSION_EXPIRED_CODE ? undefined : text);
+				err = new AuthError(401, traceId, text);
 				break;
 			case 403:
-				err = new AuthError(403, traceId, copy ?? text);
+				err = new AuthError(403, traceId, text);
 				break;
 			case 404:
 				err = new NotFoundError(response.url || 'unknown resource', traceId, text);
@@ -149,7 +169,7 @@ export class ApiError extends Error {
 				err =
 					code === SCOPE_INVALID_CODE
 						? new ScopeInvalidError(text, traceId)
-						: new ConflictError(copy ?? text, traceId);
+						: new ConflictError(copy, traceId, text);
 				break;
 			case 429:
 				err = new RateLimitError(retryAfter, traceId);
@@ -159,7 +179,7 @@ export class ApiError extends Error {
 					err = new ServerError(response.status, body, traceId);
 				} else {
 					err = new ApiError(response.status, traceId);
-					err.message = text ?? firstText(body?.title) ?? (response.statusText || 'Request failed');
+					err.message = REQUEST_FAILED_COPY;
 				}
 		}
 		if (code) err.code = code;
@@ -197,8 +217,7 @@ export class ValidationError extends ApiError {
 		this.name = 'ValidationError';
 		this.fields = fields;
 		this.detail = detail;
-		this.message =
-			detail ?? Object.values(fields)[0] ?? 'Some details are not valid. Check them and try again.';
+		this.message = Object.keys(fields).length > 0 ? FIELDS_COPY : VALIDATION_FALLBACK_COPY;
 	}
 	get hasFieldErrors(): boolean {
 		return Object.keys(this.fields).length > 0;
@@ -283,13 +302,14 @@ export class ServerError extends ApiError {
 export class AuthError extends ApiError {
 	declare readonly status: 401 | 403;
 
-	/** `detail` is Go's own text (403: forbidden, self_modification_forbidden, ...; 401 other than session_expired: incorrect_current_password, ...). */
+	/** Go's own text, for logs and support; never shown (`message` is fixed copy). */
+	readonly detail: string | undefined;
+
 	constructor(status: 401 | 403, traceId?: string, detail?: string) {
 		super(status, traceId);
 		this.name = 'AuthError';
-		this.message =
-			detail ??
-			(status === 401 ? 'Sign in to continue.' : "You don't have permission for this action.");
+		this.detail = detail;
+		this.message = status === 401 ? SIGN_IN_COPY : FORBIDDEN_COPY;
 	}
 }
 
@@ -297,28 +317,32 @@ export class AuthError extends ApiError {
 export class NotFoundError extends ApiError {
 	declare readonly status: 404;
 
+	/** Go's own text, for logs and support; never shown. */
+	readonly detail: string | undefined;
+
 	constructor(
 		public readonly resource: string,
 		traceId?: string,
-		text?: string
+		detail?: string
 	) {
 		super(404, traceId);
 		this.name = 'NotFoundError';
-		this.message = text ?? 'This item no longer exists.';
+		this.detail = detail;
+		this.message = NOT_FOUND_COPY;
 	}
 }
 
 /** 409 — conflict (slug taken, duplicate record, etc.). */
 export class ConflictError extends ApiError {
 	declare readonly status: 409;
-	/** Go's text; undefined when Go sent none, so callers' `err.detail || '<specific copy>'` fallbacks work. */
+	/** Go's own text, for logs and support; never shown. `copy` is a code's allowlisted wording (CODE_COPY). */
 	readonly detail: string | undefined;
 
-	constructor(detail?: string, traceId?: string) {
+	constructor(copy?: string, traceId?: string, detail?: string) {
 		super(409, traceId);
 		this.name = 'ConflictError';
 		this.detail = detail;
-		this.message = detail ?? 'This conflicts with the current state. Refresh and try again.';
+		this.message = copy ?? CONFLICT_COPY;
 	}
 }
 
@@ -347,7 +371,7 @@ export interface DescribeErrorOptions {
 	fallback?: string;
 	/**
 	 * The caller's own line per status ("You don't have permission to suspend tenants."). It replaces
-	 * Go's generic text, never a known-code copy (tenant-context refusals), and a 409 only when Go sent no text.
+	 * the generic line for its status, never a known-code copy (tenant-context refusals).
 	 */
 	status?: { 400?: string; 401?: string; 403?: string; 404?: string; 409?: string; 422?: string };
 }
@@ -362,10 +386,10 @@ type OwnLineStatus = 400 | 401 | 403 | 404 | 409 | 422;
  *      line for the status replaces (it is more specific). So a caller's 403 line never beats a
  *      `tenant_scope_*` code, `grant_exceeds_authority` or `self_modification_forbidden`.
  *   3. a dead operator scope / an error without status → its own message
- *   4. a validation error: with field errors its message (the fields also reach the form); without,
- *      the caller's 400/422 line, else the generic "request was not accepted" line (never Go's raw text)
- *   5. the caller's own line for the status (a 409 only when Go sent no text)
- *   6. the error's own message
+ *   4. a validation error: with field errors "Check the highlighted fields." (the fields reach the form);
+ *      without, the caller's 400/422 line, else the generic "request was not accepted" line
+ *   5. the caller's own line for the status
+ *   6. the error's own message (fixed copy; Go's text is never one: it lives in `detail`)
  */
 export function describeError(err: unknown, opts: DescribeErrorOptions = {}): string {
 	if (!(err instanceof ApiError)) return opts.fallback ?? 'Something went wrong';
@@ -377,7 +401,7 @@ export function describeError(err: unknown, opts: DescribeErrorOptions = {}): st
 	if (err instanceof ValidationError) {
 		return err.hasFieldErrors ? err.message : (own ?? VALIDATION_FALLBACK_COPY);
 	}
-	if (own === undefined || (err instanceof ConflictError && err.detail !== undefined)) {
+	if (own === undefined) {
 		return err.message;
 	}
 	return own;

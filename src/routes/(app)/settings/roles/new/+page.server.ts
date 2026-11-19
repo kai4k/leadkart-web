@@ -5,13 +5,7 @@
  * can immediately assign permissions.
  */
 import { fail, redirect } from '@sveltejs/kit';
-import {
-	goErrorStatus,
-	goFetch,
-	readGoJson,
-	readGoError,
-	flattenGoErrors
-} from '#lib/server/go.ts';
+import { goFetch, readGoFailure, readGoJson } from '#lib/server/go.ts';
 import { createRoleRequestSchema } from '$features/roles/schemas';
 import { guardPage, requireCapability } from '#lib/server/guards.ts';
 import { loadCapabilities } from '#lib/server/capabilities.ts';
@@ -52,13 +46,10 @@ export const actions: Actions = {
 			throw redirect(303, `/settings/roles/${body.role_id}`);
 		}
 
-		const errBody = await readGoError(resp);
-		if (resp.status === 422) {
-			return fail(422, { values: payload, errors: flattenGoErrors(errBody) });
+		const failure = await readGoFailure(resp, { fallback: 'Create failed' });
+		if (Object.keys(failure.fields).length > 0) {
+			return fail(failure.status, { values: payload, errors: failure.fields });
 		}
-		return fail(goErrorStatus(resp), {
-			values: payload,
-			bannerError: errBody.detail ?? 'Create failed'
-		});
+		return fail(failure.status, { values: payload, bannerError: failure.message });
 	}
 };
