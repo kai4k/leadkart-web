@@ -32,7 +32,7 @@ export interface InfiniteListOptions<T> {
 	/** Reactive query key — recomputed on every read for proper invalidation. */
 	queryKey: () => readonly unknown[];
 	/** Page fetcher. `cursor` is the pageParam threaded by TanStack. */
-	queryFn: (ctx: { cursor: string | undefined }) => Promise<InfinitePage<T>>;
+	queryFn: (ctx: { cursor: string | undefined; signal: AbortSignal }) => Promise<InfinitePage<T>>;
 	/** Gate the query on a reactive predicate. Defaults to `() => true`. */
 	enabled?: () => boolean;
 	/**
@@ -70,7 +70,8 @@ export function createInfiniteList<T>(options: InfiniteListOptions<T>): Infinite
 
 	const query = createInfiniteQuery(() => ({
 		queryKey: options.queryKey(),
-		queryFn: ({ pageParam }) => options.queryFn({ cursor: pageParam as string | undefined }),
+		queryFn: ({ pageParam, signal }) =>
+			options.queryFn({ cursor: pageParam as string | undefined, signal }),
 		initialPageParam: undefined as string | undefined,
 		getNextPageParam: (last: InfinitePage<T>) =>
 			last.has_more ? (last.next_cursor ?? undefined) : undefined,

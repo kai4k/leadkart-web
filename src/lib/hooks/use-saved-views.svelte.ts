@@ -59,16 +59,7 @@ export function createSavedViews<TFilters extends UrlFiltersBase>(
 		views,
 		activate(viewId) {
 			const v = views.find((x) => x.id === viewId);
-			if (!v) return;
-			for (const key in v.filters) {
-				const k = key as keyof TFilters & string;
-				const value = v.filters[k];
-				if (value !== undefined) {
-					urlFilters.setFilter(k, value as TFilters[typeof k]);
-				} else {
-					urlFilters.clearFilter(k);
-				}
-			}
+			if (v) urlFilters.setMany(v.filters, { clearOthers: true });
 		},
 		isActive,
 		get activeId() {

@@ -63,6 +63,8 @@ export interface UrlFilters<TFilters extends UrlFiltersBase> {
 	readonly hasActive: boolean;
 	setFilter<K extends keyof TFilters & string>(key: K, value: TFilters[K]): void;
 	clearFilter<K extends keyof TFilters & string>(key: K): void;
+	/** Apply several filters in ONE navigation. `clearOthers` first drops every schema key. */
+	setMany(patch: Partial<TFilters>, opts?: { clearOthers?: boolean }): void;
 	clearAll(): void;
 	clearValue<K extends keyof TFilters & string>(key: K, value: string): void;
 }
@@ -85,6 +87,20 @@ export function createUrlFilters<TFilters extends UrlFiltersBase>(
 			reset: false,
 			replace: true
 		});
+	}
+
+	function applyValue(next: SvelteURLSearchParams, key: string, value: UrlFilterValue): void {
+		const field = schema[key as keyof TFilters];
+		if (field.type === 'string[]') {
+			next.delete(key);
+			if (isStringArray(value)) {
+				for (const v of value) if (v != null && v !== '') next.append(key, v);
+			}
+		} else if (value === undefined || value === null || value === '') {
+			next.delete(key);
+		} else {
+			next.set(key, String(value));
+		}
 	}
 
 	function readFilters(): TFilters {
@@ -134,17 +150,13 @@ export function createUrlFilters<TFilters extends UrlFiltersBase>(
 		},
 		setFilter(key, value) {
 			const next = cloneParams();
-			const field = schema[key];
-			if (field.type === 'string[]') {
-				next.delete(key);
-				if (isStringArray(value)) {
-					for (const v of value) if (v != null && v !== '') next.append(key, v);
-				}
-			} else if (value === undefined || value === null || value === '') {
-				next.delete(key);
-			} else {
-				next.set(key, String(value));
-			}
+			applyValue(next, key, value);
+			commit(next);
+		},
+		setMany(patch, opts = {}) {
+			const next = cloneParams();
+			if (opts.clearOthers) for (const key in schema) next.delete(key);
+			for (const key in patch) applyValue(next, key, patch[key] as UrlFilterValue);
 			commit(next);
 		},
 		clearFilter(key) {
