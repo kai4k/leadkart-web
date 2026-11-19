@@ -93,7 +93,7 @@ test.describe('People list — negative', () => {
 			method: 'GET',
 			path: '/api/v1/platform/persons',
 			status: 500,
-			body: { code: 'internal_error', message: 'person list failed' }
+			body: { error: 'internal_error', message: 'person list failed' }
 		});
 		await page.goto('/operator/persons');
 		await expect(page.locator('[role="alert"]').first()).toBeVisible({ timeout: 5000 });
@@ -105,7 +105,7 @@ test.describe('People list — negative', () => {
 			method: 'GET',
 			path: '/api/v1/platform/persons/nonexistent-id',
 			status: 404,
-			body: { code: 'not_found', message: 'person not found' }
+			body: { error: 'not_found', message: 'person not found' }
 		});
 		await page.goto('/operator/persons/nonexistent-id');
 		await expect(page.locator('[role="alert"]').first()).toBeVisible({ timeout: 5000 });

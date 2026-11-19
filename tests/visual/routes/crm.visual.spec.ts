@@ -36,7 +36,7 @@ for (const vp of VIEWPORTS) {
 				mocks: [
 					{
 						method: 'GET',
-						path: '/api/v1/leads',
+						path: '/api/v1/crm/leads', // unvalidated until Tasks 16-19
 						status: 200,
 						body: { leads: [], next_cursor: null }
 					}
@@ -80,7 +80,7 @@ for (const vp of VIEWPORTS) {
 				mocks: [
 					{
 						method: 'GET',
-						path: '/api/v1/products',
+						path: '/api/v1/inventory/products', // unvalidated until Tasks 24-26
 						status: 200,
 						body: { products: [], next_cursor: null }
 					}

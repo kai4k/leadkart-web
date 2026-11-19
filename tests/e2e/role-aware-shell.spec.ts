@@ -96,7 +96,7 @@ test.describe('Auth negative paths', () => {
 			method: 'POST',
 			path: '/api/v1/auth/login',
 			status: 401,
-			body: { code: 'invalid_credentials', message: 'Invalid email or password' }
+			body: { error: 'invalid_credentials', message: 'Invalid email or password' }
 		});
 
 		await page.goto('/signin');
@@ -135,7 +135,7 @@ test.describe('Auth negative paths', () => {
 				method: 'GET',
 				path: '/api/v1/auth/me/capabilities',
 				status: 500,
-				body: { code: 'internal_error', message: 'something exploded' }
+				body: { error: 'internal_error', message: 'something exploded' }
 			}
 		]);
 		await page.goto('/signin');

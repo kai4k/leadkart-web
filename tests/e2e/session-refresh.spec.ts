@@ -1,5 +1,10 @@
 import { expect, test, type BrowserContext } from '@playwright/test';
-import { fakeAccessToken, fakeRefreshToken, TEST_MEMBERSHIP_ID } from './helpers/fake-jwt';
+import {
+	fakeAccessToken,
+	fakeLoginResponse,
+	fakeRefreshToken,
+	TEST_MEMBERSHIP_ID
+} from './helpers/fake-jwt';
 import { listMockCalls, registerMock, resetMock } from './helpers/mock';
 import { signInAsTier } from './helpers/sign-in';
 
@@ -14,6 +19,8 @@ import { signInAsTier } from './helpers/sign-in';
 
 // Go's authn middleware 401: WWW-Authenticate header + `unauthenticated` body.
 const EXPIRED_HEADERS = { 'www-authenticate': 'Bearer' };
+// A real Go route that takes a POST (the proxy path under test is generic).
+const ROLE_ID = '00000000-0000-4000-8000-0000000000d1';
 const EXPIRED_BODY = { error: 'unauthenticated' };
 
 const REFRESHED_ACCESS = fakeAccessToken({ jti: 'refreshed-jti' });
@@ -45,7 +52,11 @@ test.describe('session refresh', () => {
 			method: 'POST',
 			path: '/api/v1/auth/refresh',
 			status: 200,
-			body: { access_token: REFRESHED_ACCESS, refresh_token: REFRESHED_REFRESH }
+			body: {
+				...fakeLoginResponse(),
+				access_token: REFRESHED_ACCESS,
+				refresh_token: REFRESHED_REFRESH
+			}
 		});
 		const signedInRefresh = await cookieValue(context, 'lk_refresh');
 		await dropAccessCookie(context);
@@ -69,18 +80,22 @@ test.describe('session refresh', () => {
 			method: 'POST',
 			path: '/api/v1/auth/refresh',
 			status: 200,
-			body: { access_token: REFRESHED_ACCESS, refresh_token: REFRESHED_REFRESH }
+			body: {
+				...fakeLoginResponse(),
+				access_token: REFRESHED_ACCESS,
+				refresh_token: REFRESHED_REFRESH
+			}
 		});
 		await registerMock({
 			method: 'POST',
-			path: '/api/v1/widgets',
+			path: '/api/v1/roles',
 			status: 200,
-			body: { id: 'w1' }
+			body: { role_id: ROLE_ID }
 		});
 		// Go rejects the first attempt, accepts the replay.
 		await registerMock({
 			method: 'POST',
-			path: '/api/v1/widgets',
+			path: '/api/v1/roles',
 			status: 401,
 			headers: EXPIRED_HEADERS,
 			body: EXPIRED_BODY,
@@ -90,7 +105,7 @@ test.describe('session refresh', () => {
 
 		const result = await page.evaluate(async () => {
 			const csrf = document.cookie.match(/(?:^|; )lk_csrf=([^;]+)/)?.[1] ?? '';
-			const resp = await fetch('/api/v1/widgets', {
+			const resp = await fetch('/api/v1/roles', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json', 'x-csrf-token': csrf },
 				body: JSON.stringify({ name: 'replayed' })
@@ -98,9 +113,9 @@ test.describe('session refresh', () => {
 			return { status: resp.status, body: await resp.json() };
 		});
 
-		expect(result).toEqual({ status: 200, body: { id: 'w1' } });
+		expect(result).toEqual({ status: 200, body: { role_id: ROLE_ID } });
 		const calls = await listMockCalls();
-		const widgetCalls = calls.filter((c) => c.method === 'POST' && c.path === '/api/v1/widgets');
+		const widgetCalls = calls.filter((c) => c.method === 'POST' && c.path === '/api/v1/roles');
 		expect(widgetCalls).toHaveLength(2);
 		// Go rejects the still-present (stale) access token; the retry carries the new one.
 		expect(widgetCalls[0].authorization).toBe(`Bearer ${signedInAccess}`);
@@ -137,7 +152,7 @@ test.describe('session refresh', () => {
 			method: 'POST',
 			path: '/api/v1/auth/refresh',
 			status: 401,
-			body: { code: 'invalid_refresh_token' }
+			body: { error: 'invalid_refresh_token' }
 		});
 		await dropAccessCookie(context);
 
@@ -154,7 +169,11 @@ test.describe('session refresh', () => {
 			method: 'POST',
 			path: '/api/v1/auth/refresh',
 			status: 200,
-			body: { access_token: REFRESHED_ACCESS, refresh_token: REFRESHED_REFRESH }
+			body: {
+				...fakeLoginResponse(),
+				access_token: REFRESHED_ACCESS,
+				refresh_token: REFRESHED_REFRESH
+			}
 		});
 	}
 
@@ -186,8 +205,7 @@ test.describe('session refresh', () => {
 		await registerMock({
 			method: 'PATCH',
 			path: `/api/v1/users/${TEST_MEMBERSHIP_ID}/profile`,
-			status: 200,
-			body: {}
+			status: 204
 		});
 		await page.goto('/settings/account/profile');
 		await page.getByLabel(/designation/i).fill('Regional Manager');
@@ -224,7 +242,7 @@ test.describe('session refresh', () => {
 		await signInAsTier(page, { tier: 'tenant-user' });
 		await registerRefresh();
 		const profilePath = `/api/v1/users/${TEST_MEMBERSHIP_ID}/profile`;
-		await registerMock({ method: 'PATCH', path: profilePath, status: 200, body: {} });
+		await registerMock({ method: 'PATCH', path: profilePath, status: 204 });
 		await registerMock({
 			method: 'PATCH',
 			path: profilePath,
@@ -254,15 +272,15 @@ test.describe('session refresh', () => {
 		await registerRefresh();
 		await registerMock({
 			method: 'POST',
-			path: '/api/v1/widgets',
+			path: '/api/v1/roles',
 			status: 200,
-			body: { id: 'w1' }
+			body: { role_id: ROLE_ID }
 		});
 		await dropAccessCookie(context);
 
 		const result = await page.evaluate(async () => {
 			const csrf = document.cookie.match(/(?:^|; )lk_csrf=([^;]+)/)?.[1] ?? '';
-			const resp = await fetch('/api/v1/widgets', {
+			const resp = await fetch('/api/v1/roles', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json', 'x-csrf-token': csrf },
 				body: JSON.stringify({ name: 'after-expiry' })
@@ -270,9 +288,9 @@ test.describe('session refresh', () => {
 			return { status: resp.status, body: await resp.json() };
 		});
 
-		expect(result).toEqual({ status: 200, body: { id: 'w1' } });
+		expect(result).toEqual({ status: 200, body: { role_id: ROLE_ID } });
 		expect(await refreshCallsOf()).toHaveLength(1);
-		const widgets = (await listMockCalls()).filter((c) => c.path === '/api/v1/widgets');
+		const widgets = (await listMockCalls()).filter((c) => c.path === '/api/v1/roles');
 		expect(widgets).toHaveLength(1);
 		expect(widgets[0].authorization).toBe(`Bearer ${REFRESHED_ACCESS}`);
 	});
@@ -285,7 +303,7 @@ test.describe('session refresh', () => {
 			method: 'POST',
 			path: '/api/v1/auth/refresh',
 			status: 401,
-			body: { code: 'invalid_refresh_token' }
+			body: { error: 'invalid_refresh_token' }
 		});
 		await registerMock({
 			method: 'GET',
@@ -364,7 +382,11 @@ test.describe('session refresh', () => {
 			method: 'POST',
 			path: '/api/v1/auth/refresh',
 			status: 200,
-			body: { access_token: REFRESHED_ACCESS, refresh_token: REFRESHED_REFRESH }
+			body: {
+				...fakeLoginResponse(),
+				access_token: REFRESHED_ACCESS,
+				refresh_token: REFRESHED_REFRESH
+			}
 		});
 		await page.goto('/dashboard');
 		await expect(page).toHaveURL(/\/dashboard$/);
@@ -416,7 +438,7 @@ test.describe('session refresh', () => {
 			method: 'POST',
 			path: '/api/v1/auth/refresh',
 			status: 401,
-			body: { code: 'invalid_refresh_token' }
+			body: { error: 'invalid_refresh_token' }
 		});
 		await registerMock({
 			method: 'GET',

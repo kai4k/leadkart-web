@@ -195,8 +195,8 @@ for (const vp of VIEWPORTS) {
 									designation: 'Sales Lead'
 								}),
 								fakeUserDto({
-									membership_id: 'mem-bbb',
-									person_id: 'per-bbb',
+									membership_id: '00000000-0000-4000-8000-000000000b02',
+									person_id: '00000000-0000-4000-8000-000000000a02',
 									first_name: 'Bob',
 									last_name: 'Brown',
 									email: 'bob@acme.test',

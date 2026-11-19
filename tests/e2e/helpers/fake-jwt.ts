@@ -20,8 +20,9 @@
  *   GET /v1/auth/sessions         → fakeSessionDto()
  *   GET /v1/tenants/:id           → fakeTenantDto()
  *
- * All shapes are derived directly from the Zod schemas in
- * src/lib/features/auth/schemas.ts so they parse without errors.
+ * Every builder returns a body that parses with Go's GENERATED schema
+ * (src/lib/api/generated; asserted in tests/unit/contract/fixture-contract.test.ts),
+ * so the web's own schemas are exercised on bodies Go could really send.
  */
 
 export const TEST_TENANT_ID = '00000000-0000-4000-8000-000000000001';
@@ -288,14 +289,4 @@ export function fakeTenantDto(overrides?: Partial<TenantDto>): TenantDto {
 		currency: 'INR',
 		...overrides
 	};
-}
-
-/**
- * Cursor-paginated empty result for list endpoints.
- * The key must match what the page's query returns.
- */
-export function fakeEmptyListResponse(
-	key: 'users' | 'tenants' | 'roles' | 'sessions' | 'memberships' | 'items'
-) {
-	return { [key]: [], next_cursor: null };
 }

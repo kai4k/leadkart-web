@@ -19,8 +19,7 @@
 
 import type { Page } from '@playwright/test';
 import {
-	fakeAccessToken,
-	fakeRefreshToken,
+	fakeLoginResponse,
 	fakeCapabilitiesResponse,
 	fakeUserDto,
 	fakeSessionDto,
@@ -90,12 +89,7 @@ export async function signInAsTier(page: Page, opts: SignInOpts): Promise<void> 
 			method: 'POST',
 			path: '/api/v1/auth/login',
 			status: 200,
-			body: {
-				access_token: fakeAccessToken(claimOverrides),
-				refresh_token: fakeRefreshToken(),
-				access_token_expires_at: new Date(Date.now() + 3_600_000).toISOString(),
-				token_type: 'Bearer'
-			}
+			body: fakeLoginResponse(claimOverrides)
 		},
 		{ method: 'GET', path: '/api/v1/auth/me/capabilities', status: 200, body: capabilities },
 		{ method: 'GET', path: `/api/v1/users/${membershipId}`, status: 200, body: user },

@@ -207,7 +207,7 @@ test.describe('Tenant user management — negative', () => {
 				path: '/api/v1/users',
 				status: 409,
 				body: {
-					code: 'membership_exists',
+					error: 'membership_exists',
 					message: 'A membership already exists for this email in this tenant'
 				}
 			}
@@ -235,7 +235,7 @@ test.describe('Tenant user management — negative', () => {
 			method: 'GET',
 			path: '/api/v1/users',
 			status: 500,
-			body: { code: 'internal_error', message: 'user list lookup failed' }
+			body: { error: 'internal_error', message: 'user list lookup failed' }
 		});
 		await page.goto('/settings/users');
 		// DataTable surfaces the typed ServerError copy via the shared describer; server

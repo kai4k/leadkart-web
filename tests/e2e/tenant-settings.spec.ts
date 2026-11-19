@@ -134,7 +134,7 @@ test.describe('Tenant settings — negative', () => {
 			method: 'GET',
 			path: `/api/v1/tenants/${TEST_TENANT_ID}`,
 			status: 500,
-			body: { code: 'internal_error', message: 'tenant lookup failed' }
+			body: { error: 'internal_error', message: 'tenant lookup failed' }
 		});
 		await page.goto('/settings/tenant/profile');
 		await expect(page.getByText(/could not load tenant settings/i)).toBeVisible();

@@ -28,7 +28,8 @@ export default defineConfig({
 	},
 	test: {
 		// Two projects, so each test runs in the environment its code runs in:
-		//   server: tests/unit/server/** (BFF modules) in plain node, default (node) resolve
+		//   server: tests/unit/server/** (BFF modules) and tests/unit/contract/** (read files, no DOM)
+		//           in plain node, default (node) resolve
 		//           conditions, no DOM: a browser global used on the server fails here.
 		//   client: everything else in jsdom with Svelte's client runtime (`browser` condition,
 		//           kept next to Vite's own client conditions) so component tests can mount().
@@ -38,7 +39,7 @@ export default defineConfig({
 				test: {
 					name: 'server',
 					environment: 'node',
-					include: ['tests/unit/server/**/*.test.ts']
+					include: ['tests/unit/server/**/*.test.ts', 'tests/unit/contract/**/*.test.ts']
 				}
 			},
 			{
@@ -49,7 +50,7 @@ export default defineConfig({
 					environment: 'jsdom',
 					setupFiles: ['./tests/unit/setup.ts'],
 					include: ['tests/unit/**/*.test.ts', 'src/**/*.test.ts'],
-					exclude: ['tests/unit/server/**']
+					exclude: ['tests/unit/server/**', 'tests/unit/contract/**']
 				}
 			}
 		],

@@ -68,8 +68,8 @@ test.describe('Impersonation — positive', () => {
 				session_id: '00000000-0000-4000-8000-000000000102',
 				expires_at_utc: new Date(Date.now() + 30 * 60_000).toISOString(),
 				access_token: 'fake.scoped.jwt',
-				refresh_token: 'fake.scoped.refresh',
-				target_tenant: { id: TARGET.id, slug: TARGET.slug, display_name: TARGET.display_name }
+				access_token_expires_at_utc: new Date(Date.now() + 30 * 60_000).toISOString(),
+				token_type: 'Bearer'
 			}
 		});
 
@@ -114,7 +114,7 @@ test.describe('Impersonation — negative', () => {
 			path: '/api/v1/platform/impersonation/sessions',
 			status: 403,
 			body: {
-				code: 'permission_denied',
+				error: 'permission_denied',
 				message: 'platform.users.impersonate required'
 			}
 		});

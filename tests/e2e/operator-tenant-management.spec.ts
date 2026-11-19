@@ -105,7 +105,7 @@ test.describe('Operator tenants list', () => {
 			method: 'GET',
 			path: '/api/v1/platform/tenants',
 			status: 500,
-			body: { code: 'internal_error', message: 'tenant list lookup failed' }
+			body: { error: 'internal_error', message: 'tenant list lookup failed' }
 		});
 		await page.goto('/operator/tenants');
 		// DataTable surfaces the typed ServerError copy via its `error` prop (the shared
@@ -152,7 +152,7 @@ test.describe('Register tenant — form validation', () => {
 			method: 'POST',
 			path: '/api/v1/tenants',
 			status: 409,
-			body: { code: 'slug_exists', message: 'A tenant with this slug already exists' }
+			body: { error: 'slug_exists', message: 'A tenant with this slug already exists' }
 		});
 
 		await page.goto('/operator/tenants');

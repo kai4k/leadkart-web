@@ -5,8 +5,13 @@
  * before navigating. The BFF then hits the mock for every server-to-server
  * call, so what reaches the browser is identical to a real backend response.
  *
+ * Every fixture is validated against Go's generated contract at registration
+ * (see ./contract.ts): a fixture Go could not send throws here.
+ *
  * Always call `resetMock()` in beforeEach to clear state from prior tests.
  */
+
+import { assertFixtures } from './contract.ts';
 
 const MOCK_BASE = process.env.MOCK_BASE ?? 'http://localhost:9999';
 
@@ -26,6 +31,7 @@ export async function resetMock(): Promise<void> {
 }
 
 export async function registerMock(fixture: MockFixture): Promise<void> {
+	assertFixtures([fixture]);
 	await fetch(`${MOCK_BASE}/_mock/register`, {
 		method: 'POST',
 		headers: { 'content-type': 'application/json' },
@@ -34,6 +40,7 @@ export async function registerMock(fixture: MockFixture): Promise<void> {
 }
 
 export async function registerMocks(fixtures: MockFixture[]): Promise<void> {
+	assertFixtures(fixtures);
 	await fetch(`${MOCK_BASE}/_mock/registerMany`, {
 		method: 'POST',
 		headers: { 'content-type': 'application/json' },
@@ -45,6 +52,8 @@ export async function listMockCalls(): Promise<
 	Array<{
 		method: string;
 		path: string;
+		/** The raw query string, `?a=b` (empty when there is none). */
+		query: string;
 		body: string;
 		authorization: string | null;
 		'x-tenant-id': string | null;

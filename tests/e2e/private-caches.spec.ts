@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { fakeCapabilitiesResponse } from './helpers/fake-jwt';
 import { registerMock, resetMock } from './helpers/mock';
 import { signInAsTier } from './helpers/sign-in';
 import { API_CACHE_PREFIX, RUNTIME_CACHE_PREFIX } from '../../src/lib/utils/private-caches.ts';
@@ -93,7 +94,7 @@ test.describe('private service-worker caches', () => {
 			method: 'GET',
 			path: '/api/v1/auth/me/capabilities',
 			status: 200,
-			body: { permissions: [] }
+			body: fakeCapabilitiesResponse()
 		});
 
 		const statuses = await page.evaluate(async () => {
