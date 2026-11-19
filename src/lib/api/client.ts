@@ -3,15 +3,22 @@
  * Two call styles, because Go mutations answer 204 or an id-only 201/200 (backend-checklist #9):
  *   api.post(path, body)                 → void (any 2xx)
  *   api.postJson(path, body, schema)     → parsed body (only when the caller needs the id)
- * Paths are literals; query params go in opts.query.
+ * Paths are literals; query params go in opts.query (arrays serialise as
+ * repeated keys: `{ s: ['a','b'] }` -> `?s=a&s=b`; NaN/Infinity throw).
+ * Timeouts: reads default to DEFAULT_TIMEOUT_MS, which MUST stay above 3 x the BFF's
+ * UPSTREAM_TIMEOUT_MS (attempt -> refresh -> retry; see timeouts.ts). Mutations have NO
+ * default client timeout (the BFF bounds them); `timeoutMs` overrides, 0/Infinity = none.
  * ONE transport (`send`) serves both `api` and the deprecated `apiLegacy`.
  */
 import type { z } from 'zod';
 import { ApiError, isApiError, SchemaError, type ApiErrorBody } from './errors.ts';
+import { requestSignal } from './abort.ts';
+import { DEFAULT_READ_TIMEOUT_MS } from './timeouts.ts';
 import { getCsrfToken } from './csrf.ts';
 import { isOperatorScopePath, SCOPE_REQUIRED_HEADER } from './scope-header.ts';
 
-export const DEFAULT_TIMEOUT_MS = 15_000;
+/** Default client timeout for reads. Must exceed 3 x the BFF upstream timeout; see timeouts.ts. */
+export const DEFAULT_TIMEOUT_MS = DEFAULT_READ_TIMEOUT_MS;
 export type QueryValue =
 	| string
 	| number
@@ -28,15 +35,21 @@ export interface RequestOptions {
 }
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
+function queryScalar(key: string, value: unknown): string {
+	if (typeof value === 'number' && !Number.isFinite(value))
+		throw new TypeError(`buildQueryString: non-finite number for "${key}" (${String(value)})`);
+	return String(value);
+}
+
 export function buildQueryString(query?: QueryParams): string {
 	if (!query) return '';
 	const qs = new URLSearchParams();
 	for (const [key, value] of Object.entries(query)) {
 		if (value === undefined || value === null || value === '') continue;
 		if (Array.isArray(value)) {
-			for (const v of value) if (v !== '') qs.append(key, String(v));
+			for (const v of value) if (v !== '') qs.append(key, queryScalar(key, v));
 		} else {
-			qs.set(key, String(value));
+			qs.set(key, queryScalar(key, value));
 		}
 	}
 	const s = qs.toString();
@@ -55,7 +68,8 @@ async function send(
 	method: Method,
 	path: string,
 	body: unknown,
-	opts: RequestOptions = {}
+	opts: RequestOptions = {},
+	expectJson = false
 ): Promise<unknown> {
 	const headers = new Headers(opts.headers);
 	headers.set('Accept', 'application/json');
@@ -69,8 +83,10 @@ async function send(
 		const csrf = getCsrfToken();
 		if (csrf) headers.set('X-CSRF-Token', csrf);
 	}
-	const timeout = AbortSignal.timeout(opts.timeoutMs ?? DEFAULT_TIMEOUT_MS);
-	const signal = opts.signal ? AbortSignal.any([opts.signal, timeout]) : timeout;
+	const { signal, dispose } = requestSignal(
+		opts.signal,
+		opts.timeoutMs ?? (method === 'GET' ? DEFAULT_TIMEOUT_MS : undefined)
+	);
 	let response: Response;
 	let text: string;
 	try {
@@ -88,9 +104,15 @@ async function send(
 	} catch (cause) {
 		if (opts.signal?.aborted) throw opts.signal.reason ?? cause;
 		throw ApiError.transport(cause);
+	} finally {
+		dispose();
 	}
 	const data = text.length > 0 ? safeJsonParse(text) : undefined;
 	if (!response.ok) throw ApiError.fromResponse(response, (data ?? null) as ApiErrorBody | null);
+	if (expectJson && data === undefined)
+		throw new SchemaError(`${method} ${path}`, [], {
+			message: `expected a JSON body, got ${response.status} with an empty/non-JSON body`
+		});
 	return data;
 }
 
@@ -120,7 +142,7 @@ const jsonCall =
 		schema: S,
 		opts?: RequestOptions
 	): Promise<z.output<S>> =>
-		parseWith(schema, await send(method, path, body, opts), `${method} ${path}`);
+		parseWith(schema, await send(method, path, body, opts, true), `${method} ${path}`);
 
 export const api = {
 	get: async <S extends z.ZodType>(
@@ -128,7 +150,7 @@ export const api = {
 		schema: S,
 		opts?: RequestOptions
 	): Promise<z.output<S>> =>
-		parseWith(schema, await send('GET', path, undefined, opts), `GET ${path}`),
+		parseWith(schema, await send('GET', path, undefined, opts, true), `GET ${path}`),
 	post: voidCall('POST'),
 	put: voidCall('PUT'),
 	patch: voidCall('PATCH'),

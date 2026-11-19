@@ -147,12 +147,17 @@ export interface SchemaIssue {
 export class SchemaError extends ApiError {
 	readonly endpoint: string;
 	readonly issues: readonly SchemaIssue[];
-	constructor(endpoint: string, issues: readonly SchemaIssue[]) {
+	constructor(
+		endpoint: string,
+		issues: readonly SchemaIssue[],
+		opts?: { message?: string /* overrides the generic copy */ }
+	) {
 		super(undefined, undefined, SCHEMA_MISMATCH_CODE);
 		this.name = 'SchemaError';
 		this.endpoint = endpoint;
 		this.issues = issues;
 		this.message =
+			opts?.message ??
 			'The server sent data this page does not understand. Refresh the page; if it keeps happening, contact support.';
 	}
 }

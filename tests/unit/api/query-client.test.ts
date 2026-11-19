@@ -12,7 +12,7 @@ vi.mock('#lib/utils/private-caches.ts', () => ({
 }));
 vi.mock('#lib/api/client.ts', () => ({ api: { delete: apiDelete } }));
 
-import { ScopeInvalidError } from '#lib/api/errors.ts';
+import { NetworkError, ScopeInvalidError, TimeoutError } from '#lib/api/errors.ts';
 import { createQueryClient, renderQueryClient } from '#lib/api/query-client.ts';
 
 beforeEach(() => vi.clearAllMocks());
@@ -54,5 +54,25 @@ describe('renderQueryClient', () => {
 		const b = createQueryClient();
 		a.setQueryData(['me', 'capabilities'], { email: 'a@example.com' });
 		expect(b.getQueryData(['me', 'capabilities'])).toBeUndefined();
+	});
+});
+
+describe('retry policy', () => {
+	const retry = () => {
+		const r = createQueryClient().getDefaultOptions().queries?.retry;
+		if (typeof r !== 'function') throw new Error('retry must be a function');
+		return r;
+	};
+	it('retries a TimeoutError once for queries', () => {
+		expect(retry()(0, new TimeoutError())).toBe(true);
+		expect(retry()(1, new TimeoutError())).toBe(false);
+	});
+	it('still retries network faults twice and never retries 4xx', () => {
+		expect(retry()(1, new NetworkError(new TypeError('x')))).toBe(true);
+		expect(retry()(2, new NetworkError(new TypeError('x')))).toBe(false);
+		expect(retry()(0, new ScopeInvalidError('x'))).toBe(false);
+	});
+	it('never retries mutations', () => {
+		expect(createQueryClient().getDefaultOptions().mutations?.retry).toBe(false);
 	});
 });

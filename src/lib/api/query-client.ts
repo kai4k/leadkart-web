@@ -17,6 +17,7 @@
  *
  * Retry policy (per spec §B.1.1):
  *   - NetworkError / ServerError: up to 2 retries (transport fault, retryable)
+ *   - TimeoutError: ONE retry (queries are GETs; a hung read is worth one more try)
  *   - AuthError: no retry (401 = not authed, 403 = not permitted)
  *   - Everything else: no retry (4xx are caller faults)
  * Mutations are never auto-retried (not idempotent by default).
@@ -35,7 +36,7 @@ import { onDestroy } from 'svelte';
 import { browser } from '$app/env';
 import { goto } from '$app/navigation';
 import { toast } from '$ui';
-import { ApiError, NetworkError, ServerError, AuthError } from './errors';
+import { ApiError, NetworkError, ServerError, AuthError, TimeoutError } from './errors';
 import { exitOperatorScope } from './operator-scope';
 import { createSessionGuard } from './session-guard';
 import { clearPrivateCaches, IMPERSONATION_SESSION_KEY } from '#lib/utils/private-caches.ts';
@@ -85,6 +86,7 @@ export function createQueryClient(): QueryClient {
 				gcTime: 5 * 60_000,
 				retry: (failureCount, error) => {
 					if (error instanceof AuthError) return false;
+					if (error instanceof TimeoutError) return failureCount < 1;
 					if (error instanceof NetworkError || error instanceof ServerError) {
 						return failureCount < 2;
 					}

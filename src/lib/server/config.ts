@@ -33,6 +33,7 @@ import {
 
 import { building, dev } from '$app/env';
 import { z } from 'zod';
+import { DEFAULT_UPSTREAM_TIMEOUT_MS } from '#lib/api/timeouts.ts';
 
 const DEV_SCOPE_SECRET = 'dev-only-scope-cookie-secret-not-for-production';
 /** Prefix of the published e2e secret (`preview:e2e`, playwright.config.ts). */
@@ -88,10 +89,14 @@ export function createConfigSchema({ allowDevSecret }: { allowDevSecret: boolean
 			PROTOCOL_HEADER: z.preprocess(emptyToUndefined, z.string().optional()),
 			HOST_HEADER: z.preprocess(emptyToUndefined, z.string().optional()),
 
-			/** Timeout for every BFF → Go request. */
+			/**
+			 * Timeout for every BFF → Go request. The proxy may chain up to three of them
+			 * (attempt → refresh → retry), so the browser client's read timeout must exceed
+			 * 3 × this (see `#lib/api/timeouts.ts`); raise this and that budget together.
+			 */
 			UPSTREAM_TIMEOUT_MS: z.preprocess(
 				emptyToUndefined,
-				z.coerce.number().int().positive().default(10_000)
+				z.coerce.number().int().positive().default(DEFAULT_UPSTREAM_TIMEOUT_MS)
 			)
 		})
 		.superRefine((v, ctx) => {
