@@ -11,12 +11,18 @@
  */
 import { createQuery } from '@tanstack/svelte-query';
 import { createResourceMutation } from '#lib/api/mutations.ts';
+import { queryRoots } from '#lib/api/query-keys.ts';
 import * as api from './api';
-import { bulkSetStatus, bulkSummary, type BulkStatusAction } from './service';
-import type { CreateUserRequest, ReplacePermissionOverridesRequest } from './types';
+import { bulkSetStatus } from './service';
+import { bulkSummary } from './view-models';
+import type {
+	BulkStatusAction,
+	CreateUserRequest,
+	ReplacePermissionOverridesRequest
+} from './types';
 
 const usersKeys = {
-	all: ['users'] as const,
+	all: queryRoots.users,
 	list: () => [...usersKeys.all, 'list'] as const,
 	detail: (id: string) => [...usersKeys.all, 'detail', id] as const,
 	membershipSearch: (q: string) => [...usersKeys.all, 'membership-search', q] as const
@@ -97,14 +103,16 @@ export function reactivateUserMutation() {
 
 /**
  * Bulk deactivate/reactivate over many ids as ONE mutation: one summary toast, one invalidation.
- * Rejects (global error toast) only when every id failed.
+ * Rejects (global error toast) only when every id failed; a partial failure toasts a warning.
  */
 export function bulkUserStatusMutation() {
 	return createResourceMutation({
 		fn: ({ action, ids }: { action: BulkStatusAction; ids: readonly string[] }) =>
 			bulkSetStatus(action, ids),
 		invalidate: ({ ids }) => [...ids.map(usersKeys.detail), usersKeys.list()],
-		successToast: ({ action }, result) => bulkSummary(action, result)
+		successToast: ({ action }, result) => bulkSummary(action, result),
+		// A partial failure is not a clean success.
+		successToastVariant: (_vars, result) => (result.failed > 0 ? 'warning' : 'success')
 	});
 }
 

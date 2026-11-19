@@ -53,6 +53,7 @@ export async function fetchAllPages<T>(
 ): Promise<AllPages<T>> {
 	const { maxPages = 50, signal } = opts;
 	const items: T[] = [];
+	const seen = new Set<string>();
 	let cursor: string | undefined;
 	for (let i = 0; i < maxPages; i++) {
 		signal?.throwIfAborted();
@@ -60,8 +61,14 @@ export async function fetchAllPages<T>(
 		items.push(...page.items);
 		const next = nextCursor(page);
 		if (next === undefined) return { items, truncated: false };
-		// A server echoing the cursor it was just given would repeat this page until the cap.
-		if (next === cursor) return { items, truncated: true };
+		// A cursor seen before (an echo, or A -> B -> A) would repeat pages until the cap, with duplicates.
+		if (seen.has(next)) {
+			if (import.meta.env.DEV) {
+				console.error('[api] pagination repeated a cursor; stopping the read', next);
+			}
+			return { items, truncated: true };
+		}
+		seen.add(next);
 		cursor = next;
 	}
 	signal?.throwIfAborted();

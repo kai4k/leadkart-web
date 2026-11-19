@@ -21,3 +21,11 @@ export type ReplacePermissionOverridesRequest = z.output<
 >;
 export type AssignManagerRequest = z.output<typeof assignManagerRequestSchema>;
 export type { RoleDto } from '#lib/features/roles/types.ts';
+
+export type BulkStatusAction = 'deactivate' | 'reactivate';
+export interface BulkStatusResult {
+	succeeded: number;
+	failed: number;
+	/** The ids whose call failed, so the caller can leave exactly those selected. */
+	failedIds: string[];
+}

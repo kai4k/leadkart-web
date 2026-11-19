@@ -12,6 +12,7 @@
  */
 import { createQuery, useQueryClient } from '@tanstack/svelte-query';
 import { page } from '$app/state';
+import { queryRoots } from '#lib/api/query-keys.ts';
 import { useOptimisticMutation } from '#lib/hooks/index.ts';
 import * as api from './api';
 import type { SessionDto } from './types';
@@ -20,7 +21,7 @@ export { hasCapability } from './capabilities';
 
 export const capabilitiesKey = ['me', 'capabilities'] as const;
 const profileKey = (membershipId: string) => ['me', 'profile', membershipId] as const;
-const sessionsKey = ['me', 'sessions'] as const;
+const sessionsKey = queryRoots.mySessions;
 
 // ── Capabilities ───────────────────────────────────────────────────
 

@@ -4,13 +4,7 @@
  * reported once, not per row.
  */
 import * as api from './api';
-
-export type BulkStatusAction = 'deactivate' | 'reactivate';
-
-export interface BulkStatusResult {
-	succeeded: number;
-	failed: number;
-}
+import type { BulkStatusAction, BulkStatusResult } from './types';
 
 const BULK_DEACTIVATE_REASON = 'Bulk deactivate';
 
@@ -22,6 +16,7 @@ export async function bulkSetStatus(
 	action: BulkStatusAction,
 	ids: readonly string[]
 ): Promise<BulkStatusResult> {
+	if (ids.length === 0) return { succeeded: 0, failed: 0, failedIds: [] };
 	const results = await Promise.allSettled(
 		ids.map((id) =>
 			action === 'deactivate'
@@ -31,11 +26,9 @@ export async function bulkSetStatus(
 	);
 	const failures = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
 	if (failures.length > 0 && failures.length === results.length) throw failures[0].reason;
-	return { succeeded: results.length - failures.length, failed: failures.length };
-}
-
-/** "3 deactivated, 1 failed" / "2 reactivated". */
-export function bulkSummary(action: BulkStatusAction, r: BulkStatusResult): string {
-	const done = `${r.succeeded} ${action === 'deactivate' ? 'deactivated' : 'reactivated'}`;
-	return r.failed > 0 ? `${done}, ${r.failed} failed` : done;
+	return {
+		succeeded: results.length - failures.length,
+		failed: failures.length,
+		failedIds: ids.filter((_, i) => results[i]?.status === 'rejected')
+	};
 }

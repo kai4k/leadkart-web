@@ -14,7 +14,7 @@ vi.mock('@tanstack/svelte-query', async (importOriginal) => {
 		createMutation: (opts: () => never) => new actual.MutationObserver(h.qc, opts())
 	};
 });
-const toastMock = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
+const toastMock = vi.hoisted(() => ({ success: vi.fn(), warning: vi.fn(), error: vi.fn() }));
 vi.mock('$ui', () => ({ toast: toastMock }));
 const gw = vi.hoisted(() => ({
 	deactivateUser: vi.fn(),
@@ -103,11 +103,11 @@ describe('roles mutations (real QueryClient)', () => {
 		await m.mutate({ id: 'r1', req: {} });
 		expect(invalidated).toEqual([['roles']]);
 	});
-	it('delete also invalidates the users list (members lose the role)', async () => {
+	it('delete invalidates the whole users root (list and detail views show role names)', async () => {
 		roleGw.deleteRole.mockResolvedValue(undefined);
 		const m = deleteRoleMutation() as unknown as M<string>;
 		await m.mutate('r1');
-		expect(invalidated).toEqual([['roles'], ['users', 'list']]);
+		expect(invalidated).toEqual([['roles'], ['users']]);
 	});
 	it('set-parent invalidates the roles prefix', async () => {
 		roleGw.setRoleParent.mockResolvedValue(undefined);
@@ -148,21 +148,28 @@ describe('bulk member status (I-2)', () => {
 			{ action: 'deactivate' | 'reactivate'; ids: string[] }
 		>;
 
-	it('settles every id when the 2nd rejects: resolves, ONE summary toast, all keys invalidated', async () => {
+	it('settles every id when the 2nd rejects: resolves, ONE warning toast (not success), all keys invalidated', async () => {
 		gw.deactivateUser
 			.mockResolvedValueOnce(undefined)
 			.mockRejectedValueOnce(new Error('nope'))
 			.mockResolvedValueOnce(undefined);
 		const result = await bulk().mutate({ action: 'deactivate', ids: ['a', 'b', 'c'] });
-		expect(result).toEqual({ succeeded: 2, failed: 1 });
-		expect(toastMock.success).toHaveBeenCalledTimes(1);
-		expect(toastMock.success.mock.calls[0][0]).toBe('2 deactivated, 1 failed');
+		expect(result).toEqual({ succeeded: 2, failed: 1, failedIds: ['b'] });
+		expect(toastMock.warning).toHaveBeenCalledTimes(1);
+		expect(toastMock.warning.mock.calls[0]?.[0]).toBe('2 deactivated, 1 failed');
+		expect(toastMock.success).not.toHaveBeenCalled();
 		expect(invalidated).toEqual([
 			['users', 'detail', 'a'],
 			['users', 'detail', 'b'],
 			['users', 'detail', 'c'],
 			['users', 'list']
 		]);
+	});
+	it('an empty id list makes no call and shows no toast', async () => {
+		await bulk().mutate({ action: 'deactivate', ids: [] });
+		expect(gw.deactivateUser).not.toHaveBeenCalled();
+		expect(toastMock.success).not.toHaveBeenCalled();
+		expect(toastMock.warning).not.toHaveBeenCalled();
 	});
 	it('reactivate reports a clean count', async () => {
 		gw.reactivateUser.mockResolvedValue(undefined);

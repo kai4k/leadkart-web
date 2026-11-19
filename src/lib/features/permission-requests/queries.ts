@@ -7,13 +7,14 @@
  */
 import { createQuery } from '@tanstack/svelte-query';
 import { createResourceMutation } from '#lib/api/mutations.ts';
+import { queryRoots } from '#lib/api/query-keys.ts';
 import { createInfiniteList, type InfiniteList } from '#lib/hooks/index.ts';
 import * as api from './api';
 import type { CreatePermissionRequest, PermissionRequestDto } from './schemas';
 import type { ListRole } from './api';
 
 const permissionRequestsKeys = {
-	all: ['permission-requests'] as const,
+	all: queryRoots.permissionRequests,
 	list: (role: ListRole = 'requester') => [...permissionRequestsKeys.all, 'list', role] as const,
 	detail: (id: string) => [...permissionRequestsKeys.all, 'detail', id] as const
 };

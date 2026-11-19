@@ -3,10 +3,12 @@ import { MutationObserver, QueryClient } from '@tanstack/svelte-query';
 
 const toastMock = vi.hoisted(() => ({
 	success: vi.fn(),
+	warning: vi.fn(),
 	error: vi.fn()
 }));
+const gotoMock = vi.hoisted(() => vi.fn((_url: string) => Promise.resolve()));
 vi.mock('$ui', () => ({ toast: toastMock }));
-vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
+vi.mock('$app/navigation', () => ({ goto: gotoMock }));
 vi.mock('#lib/utils/private-caches.ts', () => ({
 	clearPrivateCaches: vi.fn(),
 	IMPERSONATION_SESSION_KEY: 'leadkart-impersonation-session'
@@ -104,10 +106,11 @@ describe('resourceMutationOptions', () => {
 		await vi.waitFor(() => expect(undo).toHaveBeenCalledWith('v', 1));
 	});
 
-	it('a failing undo toasts one error with the global copy and never rejects unhandled', async () => {
+	it('a failing undo reaches the global handler: one error toast, no unhandled rejection', async () => {
 		const unhandled = vi.fn();
 		process.on('unhandledRejection', unhandled);
-		const opts = resourceMutationOptions(new QueryClient(), {
+		const qc = createQueryClient();
+		const opts = resourceMutationOptions(qc, {
 			fn: (_: string) => Promise.resolve(1),
 			invalidate: () => [],
 			successToast: 'Done',
@@ -124,6 +127,40 @@ describe('resourceMutationOptions', () => {
 		await new Promise((r) => setTimeout(r, 10));
 		process.off('unhandledRejection', unhandled);
 		expect(unhandled).not.toHaveBeenCalled();
+	});
+
+	it('a 401 during undo goes through the session guard (sign-in redirect), not a generic toast', async () => {
+		const qc = createQueryClient();
+		const opts = resourceMutationOptions(qc, {
+			fn: (_: string) => Promise.resolve(1),
+			invalidate: () => [],
+			successToast: 'Done',
+			undo: () =>
+				Promise.reject(
+					ApiError.fromResponse(new Response(null, { status: 401 }), { error: 'session_expired' })
+				)
+		});
+		await opts.onSuccess(1, 'v');
+		const [, toastOpts] = toastMock.success.mock.calls[0] as [
+			string,
+			{ action: { onClick: () => void } }
+		];
+		toastOpts.action.onClick();
+		await vi.waitFor(() => expect(gotoMock).toHaveBeenCalledTimes(1));
+		expect(String(gotoMock.mock.calls[0]?.[0])).toMatch(/^\/signin\?next=/);
+		expect(toastMock.error).not.toHaveBeenCalled();
+	});
+
+	it('the warning variant is used when successToastVariant says so', async () => {
+		const opts = resourceMutationOptions(new QueryClient(), {
+			fn: (_: string) => Promise.resolve({ failed: 1 }),
+			invalidate: () => [],
+			successToast: () => '2 done, 1 failed',
+			successToastVariant: (_v, d) => (d.failed > 0 ? 'warning' : 'success')
+		});
+		await opts.onSuccess({ failed: 1 }, 'v');
+		expect(toastMock.warning).toHaveBeenCalledWith('2 done, 1 failed', undefined);
+		expect(toastMock.success).not.toHaveBeenCalled();
 	});
 
 	it('a failing mutation produces exactly one error toast through the real query client', async () => {

@@ -9,11 +9,12 @@
  */
 import { createQuery } from '@tanstack/svelte-query';
 import { createResourceMutation } from '#lib/api/mutations.ts';
+import { queryRoots } from '#lib/api/query-keys.ts';
 import * as api from './api';
 import type { UpdateRoleRequest } from './types';
 
 const rolesKeys = {
-	all: ['roles'] as const,
+	all: queryRoots.roles,
 	list: () => [...rolesKeys.all, 'list'] as const,
 	detail: (id: string) => [...rolesKeys.all, 'detail', id] as const
 };
@@ -59,9 +60,9 @@ export function replaceRolePermissionsMutation() {
 export function deleteRoleMutation() {
 	return createResourceMutation({
 		fn: (id: string) => api.deleteRole(id),
-		// Deleting a role unassigns it from its members, so the users list changes too
-		// (users/queries.ts usersKeys.list; a cross-feature key stays a literal here).
-		invalidate: () => [rolesKeys.all, ['users', 'list']],
+		// Deleting a role unassigns it from its members, so every users view changes too
+		// (list and detail both show role names): the whole users root.
+		invalidate: () => [rolesKeys.all, queryRoots.users],
 		successToast: 'Role deleted',
 		inlineErrors: true
 	});

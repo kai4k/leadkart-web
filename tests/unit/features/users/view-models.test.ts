@@ -4,7 +4,8 @@ import {
 	userRoleBadges,
 	managerLabel,
 	canDeactivate,
-	canRevokeRole
+	canRevokeRole,
+	bulkSummary
 } from '#lib/features/users/view-models.ts';
 import type { UserDto, RoleDto } from '#lib/features/users/types.ts';
 
@@ -78,5 +79,24 @@ describe('canRevokeRole', () => {
 	});
 	it('true for normal role', () => {
 		expect(canRevokeRole(role)).toBe(true);
+	});
+});
+
+describe('bulkSummary', () => {
+	it('reads "N deactivated" or "N reactivated"', () => {
+		expect(bulkSummary('deactivate', { succeeded: 3, failed: 0, failedIds: [] })).toBe(
+			'3 deactivated'
+		);
+		expect(bulkSummary('reactivate', { succeeded: 2, failed: 0, failedIds: [] })).toBe(
+			'2 reactivated'
+		);
+	});
+	it('appends the failures', () => {
+		expect(bulkSummary('deactivate', { succeeded: 2, failed: 1, failedIds: ['b'] })).toBe(
+			'2 deactivated, 1 failed'
+		);
+	});
+	it('is empty when nothing was attempted', () => {
+		expect(bulkSummary('deactivate', { succeeded: 0, failed: 0, failedIds: [] })).toBe('');
 	});
 });

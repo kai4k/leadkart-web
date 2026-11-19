@@ -92,15 +92,17 @@
 	// here for type-safety; the runtime store only ever sees the rowKey value.
 	const selection = createBulkSelection<{ id: string }>();
 
-	// One mutation settles every id and toasts one summary (success or all-failed error);
-	// the selection is cleared either way.
+	// One mutation settles every id and toasts one summary. Succeeded rows leave the selection;
+	// failed rows stay selected so the action can be retried. When every id failed the whole
+	// selection stays (the global handler reports the error).
 	async function runBulk(action: 'deactivate' | 'reactivate') {
+		const ids = Array.from(selection.selected);
+		if (ids.length === 0) return;
 		try {
-			await bulkStatus.mutateAsync({ action, ids: Array.from(selection.selected) });
+			const { failedIds } = await bulkStatus.mutateAsync({ action, ids });
+			for (const id of ids) if (!failedIds.includes(id)) selection.selected.delete(id);
 		} catch {
 			// reported by the global mutation handler
-		} finally {
-			selection.clear();
 		}
 	}
 

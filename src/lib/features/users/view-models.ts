@@ -2,7 +2,7 @@
  * Pure transforms — UserDto / RoleDto → render-ready shapes.
  * No async, no DOM, no side effects.
  */
-import type { UserDto, RoleDto } from './types';
+import type { UserDto, RoleDto, BulkStatusAction, BulkStatusResult } from './types';
 import { displayName } from '#lib/utils/person-name.ts';
 
 export type StatusVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
@@ -41,4 +41,11 @@ export function canDeactivate(user: UserDto): boolean {
 
 export function canRevokeRole(role: RoleDto): boolean {
 	return !role.is_super_admin;
+}
+
+/** "3 deactivated, 1 failed" / "2 reactivated"; empty when nothing was attempted (no toast). */
+export function bulkSummary(action: BulkStatusAction, r: BulkStatusResult): string {
+	if (r.succeeded + r.failed === 0) return '';
+	const done = `${r.succeeded} ${action === 'deactivate' ? 'deactivated' : 'reactivated'}`;
+	return r.failed > 0 ? `${done}, ${r.failed} failed` : done;
 }

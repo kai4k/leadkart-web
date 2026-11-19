@@ -34,8 +34,9 @@ function hasNestedApi(dir) {
 }
 
 // Features without an HTTP surface (purely composed / computed). These
-// don't ship api.ts but still need index.ts as the public barrel.
-const NO_API_REQUIRED = new Set(['dashboard']);
+// don't ship api.ts but still need index.ts as the public barrel. (tenant: its settings
+// forms save through SvelteKit server actions, not a browser gateway.)
+const NO_API_REQUIRED = new Set(['dashboard', 'tenant']);
 
 const errors = [];
 for (const f of features) {

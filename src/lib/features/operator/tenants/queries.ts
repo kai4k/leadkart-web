@@ -18,11 +18,12 @@
 import { createQuery } from '@tanstack/svelte-query';
 import { refreshAll } from '$app/navigation';
 import { createResourceMutation } from '#lib/api/mutations.ts';
+import { queryRoots } from '#lib/api/query-keys.ts';
 import * as api from './api';
 import type { RegisterTenantRequest } from './types';
 
 const tenantsKeys = {
-	all: ['tenants'] as const,
+	all: queryRoots.tenants,
 	list: () => [...tenantsKeys.all, 'list'] as const,
 	detail: (id: string) => [...tenantsKeys.all, 'detail', id] as const
 };
@@ -43,7 +44,9 @@ export function registerTenantMutation() {
 	return createResourceMutation({
 		fn: (req: RegisterTenantRequest) => api.registerTenant(req),
 		invalidate: () => [tenantsKeys.all],
-		successToast: 'Tenant registered'
+		successToast: 'Tenant registered',
+		// CreateTenantDrawer shows the error in its form banner.
+		inlineErrors: true
 	});
 }
 

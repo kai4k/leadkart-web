@@ -65,6 +65,21 @@ describe('fetchAllPages', () => {
 		expect(out).toEqual({ items: [1, 2], truncated: true });
 		expect(fetchPage).toHaveBeenCalledTimes(2);
 	});
+	it('stops on a repeated cursor that is not an immediate echo (A, B, A) and says so in DEV', async () => {
+		const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const next = ['A', 'B', 'A', 'B'];
+		let n = 0;
+		const fetchPage = vi
+			.fn()
+			.mockImplementation(() =>
+				Promise.resolve({ items: [n], has_more: true, next_cursor: next[n++] })
+			);
+		const out = await fetchAllPages(fetchPage, { maxPages: 50 });
+		expect(out.truncated).toBe(true);
+		expect(fetchPage).toHaveBeenCalledTimes(3);
+		expect(err).toHaveBeenCalledTimes(1);
+		err.mockRestore();
+	});
 	it('is not truncated when the cap lands exactly on the last page', async () => {
 		const fetchPage = vi.fn().mockResolvedValueOnce({ items: [1], has_more: false });
 		await expect(fetchAllPages(fetchPage, { maxPages: 1 })).resolves.toEqual({

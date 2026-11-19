@@ -33,12 +33,14 @@ import {
 	type QueryKey
 } from '@tanstack/svelte-query';
 import { toast } from '$ui';
-import { describeError } from './errors.ts';
 
 export interface ResourceMutationOptions<TVars, TData> {
 	fn: (vars: TVars) => Promise<TData>;
 	invalidate: (vars: TVars, data: TData) => readonly QueryKey[];
+	/** An empty string shows no toast. */
 	successToast?: string | ((vars: TVars, data: TData) => string);
+	/** `warning` for a partial success; defaults to `success`. */
+	successToastVariant?: (vars: TVars, data: TData) => 'success' | 'warning';
 	inlineErrors?: boolean;
 	onSuccess?: (vars: TVars, data: TData) => void | Promise<void>;
 	/** Adds an Undo button to the success toast (needs `successToast`). */
@@ -64,19 +66,23 @@ export function resourceMutationOptions<TVars, TData>(
 				typeof o.successToast === 'function' ? o.successToast(vars, data) : o.successToast;
 			if (copy) {
 				const undo = o.undo;
-				toast.success(
+				const show =
+					o.successToastVariant?.(vars, data) === 'warning' ? toast.warning : toast.success;
+				show(
 					copy,
 					undo
 						? {
 								duration: o.toastDurationMs ?? 10_000,
 								action: {
 									label: 'Undo',
-									// A failed undo has no mutation to carry it to the global handler:
-									// report it with the same copy instead of an unhandled rejection.
+									// The undo runs as a mutation of its own, so a failure reaches the
+									// MutationCache's one global handler (session guard, then toast).
 									onClick: () => {
-										void Promise.resolve()
-											.then(() => undo(vars, data))
-											.catch((err: unknown) => toast.error(describeError(err)));
+										void qc
+											.getMutationCache()
+											.build(qc, { mutationFn: async () => undo(vars, data) })
+											.execute(undefined)
+											.catch(() => {}); // already reported by that handler
 									}
 								}
 							}
