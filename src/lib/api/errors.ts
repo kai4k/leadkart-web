@@ -32,10 +32,24 @@ const GO_SCOPE_EXIT_CODES: ReadonlySet<string> = new Set([
 	'invalid_tenant_scope',
 	'tenant_scope_not_found'
 ]);
-const SCOPE_NOT_SUPPORTED_CODE = 'tenant_scope_not_supported';
 const TENANT_NOT_ACTIVE_CODE = 'tenant_not_active';
-const SCOPE_NOT_SUPPORTED_COPY =
-	'Not available while acting in a tenant. Exit the tenant context first.';
+/**
+ * Go 403 codes whose copy is fixed. None of the `tenant_scope_*` ones exits the operator scope
+ * (the operator stays in context and must be told the truth), and a caller's generic 403 line
+ * never replaces them (see describeError).
+ */
+const FORBIDDEN_CODE_COPY: ReadonlyMap<string, string> = new Map([
+	[CSRF_MISMATCH_CODE, 'Your session token is out of date — reload the page and try again.'],
+	[
+		'tenant_scope_not_supported',
+		'Not available while acting in a tenant. Exit the tenant context first.'
+	],
+	[
+		'tenant_scope_read_only',
+		'Read-only while acting in a tenant. Exit the tenant context to make this change.'
+	],
+	['tenant_scope_forbidden', "You don't have permission to act in another tenant."]
+]);
 const TENANT_SUSPENDED_COPY = 'This tenant is suspended. Changes are disabled.';
 const MAX_RETRY_AFTER_SECONDS = 86_400;
 const IMF_FIXDATE =
@@ -107,15 +121,7 @@ export class ApiError extends Error {
 				err = new AuthError(401, traceId, code === SESSION_EXPIRED_CODE ? undefined : text);
 				break;
 			case 403:
-				err = new AuthError(
-					403,
-					traceId,
-					code === CSRF_MISMATCH_CODE
-						? 'Your session token is out of date — reload the page and try again.'
-						: code === SCOPE_NOT_SUPPORTED_CODE
-							? SCOPE_NOT_SUPPORTED_COPY
-							: text
-				);
+				err = new AuthError(403, traceId, (code && FORBIDDEN_CODE_COPY.get(code)) || text);
 				break;
 			case 404:
 				err = new NotFoundError(response.url || 'unknown resource', traceId, text);
@@ -313,9 +319,27 @@ export class ScopeInvalidError extends ApiError {
 	}
 }
 
-/** The one user-facing line for any failure; every error toast (global handler, undo) uses it. */
-export function describeError(err: unknown): string {
-	return err instanceof ApiError ? err.message : 'Something went wrong';
+export interface DescribeErrorOptions {
+	/** Line for anything that is not an `ApiError` (a thrown string, a bug). Default "Something went wrong". */
+	fallback?: string;
+	/**
+	 * The caller's own line per status ("You don't have permission to suspend tenants."). It replaces
+	 * Go's generic text, never a known-code copy (tenant-context refusals), and a 409 only when Go sent no text.
+	 */
+	status?: { 401?: string; 403?: string; 404?: string; 409?: string };
+}
+
+/** The one user-facing line for any failure: toasts, inline banners, list errors. */
+export function describeError(err: unknown, opts: DescribeErrorOptions = {}): string {
+	if (!(err instanceof ApiError)) return opts.fallback ?? 'Something went wrong';
+	const known = err.code === undefined ? undefined : FORBIDDEN_CODE_COPY.get(err.code);
+	if (known !== undefined) return known;
+	if (err instanceof ScopeInvalidError || err.status === undefined) return err.message;
+	const own = opts.status?.[err.status as 401 | 403 | 404 | 409];
+	if (own === undefined || (err instanceof ConflictError && err.detail !== undefined)) {
+		return err.message;
+	}
+	return own;
 }
 
 // ── Legacy compat ─────────────────────────────────────────────────────────

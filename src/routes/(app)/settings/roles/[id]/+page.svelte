@@ -21,13 +21,7 @@
 		isProtectedRole
 	} from '$features/roles';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
-	import {
-		ValidationError,
-		ConflictError,
-		AuthError,
-		NotFoundError,
-		NetworkError
-	} from '$api/errors';
+	import { describeError } from '$api/errors';
 
 	let { data } = $props();
 
@@ -36,22 +30,6 @@
 	let selectedPerms = $state<string[]>([]);
 	let error = $state<string | null>(null);
 	let saved = $state(false);
-
-	function describeError(err: unknown, fallback: string): string {
-		if (err instanceof ValidationError) {
-			// Surface the first per-field message in this composite form.
-			const first = Object.values(err.fields)[0];
-			return first ?? fallback;
-		}
-		if (err instanceof ConflictError) return err.detail || 'Conflicts with the current state.';
-		if (err instanceof AuthError)
-			return err.status === 403
-				? "You don't have permission for this action."
-				: 'Your session expired. Sign in again.';
-		if (err instanceof NotFoundError) return 'This role was deleted or moved.';
-		if (err instanceof NetworkError) return 'Check your network connection and try again.';
-		return fallback;
-	}
 
 	const roleId = $derived(data.roleId);
 	// The banner belongs to the role on screen: navigating to another role clears it.
@@ -67,7 +45,15 @@
 				if (id === roleId) saved = true;
 			},
 			onError: (err: unknown) => {
-				if (id === roleId) error = describeError(err, fallback);
+				if (id === roleId)
+					error = describeError(err, {
+						fallback,
+						status: {
+							403: "You don't have permission for this action.",
+							404: 'This role was deleted or moved.',
+							409: 'Conflicts with the current state.'
+						}
+					});
 			}
 		};
 	}

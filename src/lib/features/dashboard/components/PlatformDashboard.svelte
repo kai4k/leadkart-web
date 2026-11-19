@@ -12,7 +12,7 @@
 	} from '#lib/icons/index.ts';
 	import { Alert, Card, Spinner } from '$ui';
 	import { myCapabilitiesQuery, deriveTier } from '$features/auth';
-	import { ApiError } from '$api/errors';
+	import { describeError } from '$api/errors';
 	import { platformStatsQuery } from '$features/operator';
 
 	/**
@@ -40,9 +40,7 @@
 	const statsLoading = $derived(statsQuery.isPending);
 	const statsError = $derived(
 		statsQuery.isError
-			? statsQuery.error instanceof ApiError
-				? statsQuery.error.message
-				: 'Failed to load platform stats'
+			? describeError(statsQuery.error, { fallback: 'Failed to load platform stats' })
 			: null
 	);
 

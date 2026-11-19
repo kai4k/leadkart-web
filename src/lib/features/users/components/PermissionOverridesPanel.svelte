@@ -3,13 +3,7 @@
 	import { replacePermissionOverridesMutation } from '$features/users/queries';
 	import type { UserDto } from '$features/users/types';
 	import { displayName } from '$features/auth';
-	import {
-		ValidationError,
-		ConflictError,
-		AuthError,
-		NotFoundError,
-		NetworkError
-	} from '$api/errors';
+	import { ValidationError, describeError } from '$api/errors';
 
 	type Props = {
 		open: boolean;
@@ -74,19 +68,15 @@
 						revokedError = err.fields.revoked ?? null;
 						bannerError =
 							grantedError || revokedError ? null : 'One or more permission names are invalid.';
-					} else if (err instanceof ConflictError) {
-						bannerError = err.detail || 'These overrides conflict with the current role set.';
-					} else if (err instanceof AuthError) {
-						bannerError =
-							err.status === 403
-								? "You don't have permission to manage permission overrides."
-								: 'Your session expired. Sign in again.';
-					} else if (err instanceof NotFoundError) {
-						bannerError = 'This user was deleted or moved.';
-					} else if (err instanceof NetworkError) {
-						bannerError = 'Check your network connection and try again.';
 					} else {
-						bannerError = 'Failed to save overrides. Please try again.';
+						bannerError = describeError(err, {
+							fallback: 'Failed to save overrides. Please try again.',
+							status: {
+								403: "You don't have permission to manage permission overrides.",
+								404: 'This user was deleted or moved.',
+								409: 'These overrides conflict with the current role set.'
+							}
+						});
 					}
 				}
 			}

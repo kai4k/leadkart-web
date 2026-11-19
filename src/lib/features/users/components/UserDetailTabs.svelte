@@ -7,7 +7,7 @@
 	import { displayName, initials } from '$features/auth';
 	import { removeManagerMutation } from '../queries';
 	import { personActivityQuery, ActivityTimeline } from '$features/audit';
-	import { ApiError } from '$api/errors';
+	import { describeError } from '$api/errors';
 	import { resolve } from '$app/paths';
 
 	/**
@@ -266,9 +266,7 @@
 					data={activityQuery.data}
 					isPending={activityQuery.isPending}
 					isError={activityQuery.isError}
-					errorMessage={activityQuery.error instanceof ApiError
-						? activityQuery.error.message
-						: 'Failed to load activity'}
+					errorMessage={describeError(activityQuery.error, { fallback: 'Failed to load activity' })}
 				/>
 			</Card.Content>
 		</Card.Root>

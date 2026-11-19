@@ -17,7 +17,7 @@
  *   //              error={form.errors.field1}
  *   // On submit:   form.submit(e, async (values) => mutation.mutate(values))
  */
-import { ApiError, ValidationError } from '$api/errors';
+import { describeError, ValidationError } from '$api/errors';
 import type { z } from 'zod';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- z.ZodObject's generic args are intentionally any-typed at the call-site of useForm
@@ -123,10 +123,8 @@ export function useForm<TSchema extends AnyObjectSchema>(
 		} catch (err) {
 			if (err instanceof ValidationError && err.hasFieldErrors) {
 				errors = err.fields as FieldErrors;
-			} else if (err instanceof ApiError) {
-				bannerError = err.message || 'An unexpected error occurred';
 			} else {
-				bannerError = 'An unexpected error occurred';
+				bannerError = describeError(err, { fallback: 'An unexpected error occurred' });
 			}
 		} finally {
 			isSubmitting = false;

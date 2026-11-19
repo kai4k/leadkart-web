@@ -76,6 +76,8 @@ describe('session guard — scope codes', () => {
 	const res = (status: number) => new Response(null, { status });
 	it.each([
 		['tenant_scope_not_supported', 403],
+		['tenant_scope_read_only', 403],
+		['tenant_scope_forbidden', 403],
 		['tenant_scope_conflict', 400],
 		['tenant_not_active', 409]
 	])('%s (%i) from Go does not leave the scope', (code, status) => {

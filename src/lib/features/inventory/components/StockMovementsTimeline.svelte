@@ -7,7 +7,7 @@
 		movementReasonAccent,
 		movementReasonLabel
 	} from '$features/inventory/view-models';
-	import { AuthError, NetworkError, NotFoundError } from '$api/errors';
+	import { describeError } from '$api/errors';
 
 	/**
 	 * StockMovementsTimeline — cursor-paginated audit log of every
@@ -29,13 +29,14 @@
 	const errorCopy = $derived.by(() => {
 		const err = query.error;
 		if (!err) return '';
-		if (err instanceof NetworkError) return 'Check your network connection and try again.';
-		if (err instanceof AuthError)
-			return err.status === 403
-				? "You don't have permission to view stock movements."
-				: 'Your session expired. Sign in again.';
-		if (err instanceof NotFoundError) return 'This product was deleted or moved.';
-		return 'Something went wrong. Please try again.';
+		return describeError(err, {
+			fallback: 'Something went wrong. Please try again.',
+			status: {
+				401: 'Your session expired. Sign in again.',
+				403: "You don't have permission to view stock movements.",
+				404: 'This product was deleted or moved.'
+			}
+		});
 	});
 </script>
 

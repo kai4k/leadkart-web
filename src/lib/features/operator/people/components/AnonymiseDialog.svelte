@@ -2,13 +2,7 @@
 	import { ConfirmDialog, Alert } from '$ui';
 	import { anonymisePersonMutation } from '../queries';
 	import type { PersonDto } from '../types';
-	import {
-		ValidationError,
-		ConflictError,
-		AuthError,
-		NotFoundError,
-		NetworkError
-	} from '$api/errors';
+	import { ValidationError, describeError } from '$api/errors';
 
 	type Props = { open: boolean; person: PersonDto | null; onOpenChange: (open: boolean) => void };
 	let { open = $bindable(false), person, onOpenChange }: Props = $props();
@@ -40,19 +34,15 @@
 					if (err instanceof ValidationError) {
 						reasonError = err.fields.reason ?? null;
 						bannerError = reasonError ? null : 'The server rejected this request.';
-					} else if (err instanceof ConflictError) {
-						bannerError = err.detail || 'This person is already anonymised.';
-					} else if (err instanceof AuthError) {
-						bannerError =
-							err.status === 403
-								? "You don't have permission to anonymise people."
-								: 'Your session expired. Sign in again.';
-					} else if (err instanceof NotFoundError) {
-						bannerError = 'This person was deleted or moved.';
-					} else if (err instanceof NetworkError) {
-						bannerError = 'Check your network connection and try again.';
 					} else {
-						bannerError = 'Anonymisation failed. Please try again.';
+						bannerError = describeError(err, {
+							fallback: 'Anonymisation failed. Please try again.',
+							status: {
+								403: "You don't have permission to anonymise people.",
+								404: 'This person was deleted or moved.',
+								409: 'This person is already anonymised.'
+							}
+						});
 					}
 				}
 			}

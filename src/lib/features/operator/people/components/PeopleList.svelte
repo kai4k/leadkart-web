@@ -8,7 +8,7 @@
 	import { personsListQuery } from '../queries';
 	import { personDisplayName, personLifecycleBadge } from '../view-models';
 	import type { PersonDto } from '../types';
-	import { ApiError } from '$api/errors';
+	import { describeError } from '$api/errors';
 	import { resolve } from '$app/paths';
 	import { initials } from '#lib/utils/person-name.ts';
 
@@ -115,7 +115,7 @@
 		rows={persons}
 		rowKey={(p) => p.id}
 		state={tableState}
-		error={query.error instanceof ApiError ? query.error.message : null}
+		error={query.error ? describeError(query.error) : null}
 	>
 		{#snippet emptyState()}
 			<EmptyState

@@ -32,7 +32,7 @@
 >
 	import { Drawer, Button, Alert, Badge, Stepper, type StepperState } from '$ui';
 	import { Icon, Upload, CheckCircle2, X, Trash2 } from '$icons';
-	import { ApiError } from '$api/errors';
+	import { describeError } from '$api/errors';
 
 	/**
 	 * BulkUploadDrawer — generic three-step (upload → preview → commit)
@@ -142,7 +142,7 @@
 			preview = p;
 			step = 'preview';
 		} catch (err) {
-			previewError = err instanceof ApiError ? err.message : 'Preview failed.';
+			previewError = describeError(err, { fallback: 'Preview failed.' });
 		} finally {
 			previewLoading = false;
 		}
@@ -159,7 +159,7 @@
 			step = 'result';
 			onComplete?.(r);
 		} catch (err) {
-			commitError = err instanceof ApiError ? err.message : 'Commit failed.';
+			commitError = describeError(err, { fallback: 'Commit failed.' });
 		} finally {
 			commitLoading = false;
 		}

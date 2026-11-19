@@ -1,5 +1,5 @@
 import { startImpersonation, endImpersonation, listImpersonationSessions } from '../api';
-import { ApiError } from '$api/errors';
+import { describeError } from '$api/errors';
 import { IMPERSONATION_SESSION_KEY as ACTIVE_SESSION_KEY } from '#lib/utils/private-caches.ts';
 import type { ImpersonationSessionDto, CreateImpersonationSessionRequest } from '../types';
 
@@ -61,7 +61,7 @@ function createImpersonation(): Impersonation {
 			}
 		} catch (e) {
 			status = 'error';
-			error = e instanceof ApiError ? e.message : 'Failed to load impersonation sessions';
+			error = describeError(e, { fallback: 'Failed to load impersonation sessions' });
 		}
 	}
 
@@ -75,7 +75,7 @@ function createImpersonation(): Impersonation {
 			await reconcile();
 		} catch (e) {
 			status = 'error';
-			error = e instanceof ApiError ? e.message : 'Failed to start impersonation';
+			error = describeError(e, { fallback: 'Failed to start impersonation' });
 			throw e;
 		}
 	}
@@ -90,7 +90,7 @@ function createImpersonation(): Impersonation {
 			status = 'idle';
 		} catch (e) {
 			status = 'error';
-			error = e instanceof ApiError ? e.message : 'Failed to end impersonation';
+			error = describeError(e, { fallback: 'Failed to end impersonation' });
 			throw e;
 		}
 	}

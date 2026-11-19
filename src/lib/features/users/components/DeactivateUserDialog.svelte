@@ -4,13 +4,7 @@
 	import { deactivateUserMutation } from '$features/users/queries';
 	import type { UserDto } from '$features/users/types';
 	import { displayName } from '$features/auth';
-	import {
-		ValidationError,
-		ConflictError,
-		AuthError,
-		NotFoundError,
-		NetworkError
-	} from '$api/errors';
+	import { ValidationError, describeError } from '$api/errors';
 
 	type Props = {
 		open: boolean;
@@ -42,19 +36,15 @@
 					if (err instanceof ValidationError) {
 						reasonError = err.fields.reason ?? null;
 						bannerError = reasonError ? null : 'The server rejected this request.';
-					} else if (err instanceof ConflictError) {
-						bannerError = err.detail || 'This user is already deactivated.';
-					} else if (err instanceof AuthError) {
-						bannerError =
-							err.status === 403
-								? "You don't have permission to deactivate this user."
-								: 'Your session expired. Sign in again.';
-					} else if (err instanceof NotFoundError) {
-						bannerError = 'This user was deleted or moved.';
-					} else if (err instanceof NetworkError) {
-						bannerError = 'Check your network connection and try again.';
 					} else {
-						bannerError = 'Failed to deactivate. Please try again.';
+						bannerError = describeError(err, {
+							fallback: 'Failed to deactivate. Please try again.',
+							status: {
+								403: "You don't have permission to deactivate this user.",
+								404: 'This user was deleted or moved.',
+								409: 'This user is already deactivated.'
+							}
+						});
 					}
 				}
 			}

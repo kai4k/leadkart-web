@@ -2,13 +2,7 @@
 	import { ConfirmDialog, Alert } from '$ui';
 	import { deleteRoleMutation } from '$features/roles/queries';
 	import type { RoleDto } from '$features/roles/types';
-	import {
-		ValidationError,
-		ConflictError,
-		AuthError,
-		NotFoundError,
-		NetworkError
-	} from '$api/errors';
+	import { describeError } from '$api/errors';
 
 	type Props = { open: boolean; role: RoleDto | null; onOpenChange: (open: boolean) => void };
 	let { open = $bindable(false), role, onOpenChange }: Props = $props();
@@ -29,23 +23,14 @@
 				onOpenChange(false);
 			},
 			onError: (err) => {
-				if (err instanceof ValidationError) {
-					bannerError = 'The server rejected the delete request.';
-				} else if (err instanceof ConflictError) {
-					bannerError =
-						err.detail || 'This role is still assigned to users — revoke it everywhere first.';
-				} else if (err instanceof AuthError) {
-					bannerError =
-						err.status === 403
-							? "You don't have permission to delete roles."
-							: 'Your session expired. Sign in again.';
-				} else if (err instanceof NotFoundError) {
-					bannerError = 'This role was already deleted.';
-				} else if (err instanceof NetworkError) {
-					bannerError = 'Check your network connection and try again.';
-				} else {
-					bannerError = 'Failed to delete role. Please try again.';
-				}
+				bannerError = describeError(err, {
+					fallback: 'Failed to delete role. Please try again.',
+					status: {
+						403: "You don't have permission to delete roles.",
+						404: 'This role was already deleted.',
+						409: 'This role is still assigned to users — revoke it everywhere first.'
+					}
+				});
 			}
 		});
 	}

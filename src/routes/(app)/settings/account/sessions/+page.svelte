@@ -2,7 +2,7 @@
 	import { Alert, Skeleton } from '$ui';
 	import { SessionsList } from '$features/auth';
 	import { mySessionsQuery } from '$features/auth/queries';
-	import { ApiError } from '$api/errors';
+	import { describeError } from '$api/errors';
 
 	const sessionsQuery = mySessionsQuery();
 </script>
@@ -15,9 +15,7 @@
 	</div>
 {:else if sessionsQuery.isError}
 	<Alert variant="danger"
-		>{sessionsQuery.error instanceof ApiError
-			? sessionsQuery.error.message
-			: 'Failed to load sessions'}</Alert
+		>{describeError(sessionsQuery.error, { fallback: 'Failed to load sessions' })}</Alert
 	>
 {:else}
 	<SessionsList />

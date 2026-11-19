@@ -7,7 +7,7 @@
 		revokeOtherSessionsMutation
 	} from '$features/auth/queries';
 	import { isCurrentSession, lastSeenLabel } from '$features/auth/view-models';
-	import { ApiError } from '$api/errors';
+	import { describeError } from '$api/errors';
 
 	/**
 	 * SessionsList — one Card row per session family.
@@ -61,9 +61,7 @@
 
 	{#if sessionsQuery.isError}
 		<Alert variant="danger"
-			>{sessionsQuery.error instanceof ApiError
-				? sessionsQuery.error.message
-				: 'Failed to load sessions'}</Alert
+			>{describeError(sessionsQuery.error, { fallback: 'Failed to load sessions' })}</Alert
 		>
 	{/if}
 

@@ -15,7 +15,7 @@
  *
  * Returns `null` when there is no error so the template can `{#if listErrorCopy}`.
  */
-import { AuthError, NetworkError, NotFoundError } from './errors';
+import { describeError } from './errors';
 
 /**
  * Map an `ApiError` subclass to a user-facing copy line. Returns `null`
@@ -28,16 +28,12 @@ import { AuthError, NetworkError, NotFoundError } from './errors';
  */
 export function getListErrorMessage(err: unknown, resourceNoun: string): string | null {
 	if (!err) return null;
-	if (err instanceof NetworkError) {
-		return 'Check your network connection and try again.';
-	}
-	if (err instanceof AuthError) {
-		return err.status === 403
-			? `You don't have permission to view ${resourceNoun}.`
-			: 'Your session expired. Sign in again.';
-	}
-	if (err instanceof NotFoundError) {
-		return 'This resource was deleted or moved.';
-	}
-	return 'Something went wrong. Please try again.';
+	return describeError(err, {
+		fallback: 'Something went wrong. Please try again.',
+		status: {
+			401: 'Your session expired. Sign in again.',
+			403: `You don't have permission to view ${resourceNoun}.`,
+			404: 'This resource was deleted or moved.'
+		}
+	});
 }

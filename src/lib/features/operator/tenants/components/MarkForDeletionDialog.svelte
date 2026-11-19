@@ -2,13 +2,7 @@
 	import { ConfirmDialog, Alert } from '$ui';
 	import { markForDeletionMutation } from '../queries';
 	import type { TenantDto } from '../types';
-	import {
-		ValidationError,
-		ConflictError,
-		AuthError,
-		NotFoundError,
-		NetworkError
-	} from '$api/errors';
+	import { ValidationError, describeError } from '$api/errors';
 
 	type Props = {
 		open: boolean;
@@ -46,19 +40,15 @@
 					if (err instanceof ValidationError) {
 						reasonError = err.fields.reason ?? null;
 						bannerError = reasonError ? null : 'The server rejected this request.';
-					} else if (err instanceof ConflictError) {
-						bannerError = err.detail || 'This tenant is already marked for deletion.';
-					} else if (err instanceof AuthError) {
-						bannerError =
-							err.status === 403
-								? "You don't have permission to mark tenants for deletion."
-								: 'Your session expired. Sign in again.';
-					} else if (err instanceof NotFoundError) {
-						bannerError = 'This tenant was deleted or moved.';
-					} else if (err instanceof NetworkError) {
-						bannerError = 'Check your network connection and try again.';
 					} else {
-						bannerError = 'Failed to mark for deletion. Please try again.';
+						bannerError = describeError(err, {
+							fallback: 'Failed to mark for deletion. Please try again.',
+							status: {
+								403: "You don't have permission to mark tenants for deletion.",
+								404: 'This tenant was deleted or moved.',
+								409: 'This tenant is already marked for deletion.'
+							}
+						});
 					}
 				}
 			}

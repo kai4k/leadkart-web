@@ -35,7 +35,7 @@
 		tenantLifecycleBadge
 	} from '../view-models';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth';
-	import { AuthError, NetworkError, NotFoundError } from '$api/errors';
+	import { NetworkError } from '$api/errors';
 	import { getListErrorMessage } from '$api/error-messages';
 	import { enterScopeMutation } from '$features/operator/scope';
 	import CreateTenantDrawer from './CreateTenantDrawer.svelte';
@@ -335,29 +335,15 @@
 		{#snippet emptyState()}
 			{#if query.isError}
 				{@const err = query.error}
-				{#if err instanceof NetworkError}
-					<Alert variant="warning" title="Connection problem">
-						We couldn't reach the server. Check your network.
-						<Button variant="ghost" size="sm" onclick={() => query.refetch()} class="mt-2"
-							>Retry</Button
-						>
-					</Alert>
-				{:else}
-					<Alert variant="danger" title="Failed to load tenants">
-						{#if err instanceof AuthError}
-							{err.status === 403
-								? "You don't have permission to view tenants."
-								: 'Your session expired. Sign in again.'}
-						{:else if err instanceof NotFoundError}
-							This resource was deleted or moved.
-						{:else}
-							Something went wrong. Please try again.
-						{/if}
-						<Button variant="ghost" size="sm" onclick={() => query.refetch()} class="mt-2"
-							>Retry</Button
-						>
-					</Alert>
-				{/if}
+				<Alert
+					variant={err instanceof NetworkError ? 'warning' : 'danger'}
+					title={err instanceof NetworkError ? 'Connection problem' : 'Failed to load tenants'}
+				>
+					{listErrorCopy}
+					<Button variant="ghost" size="sm" onclick={() => query.refetch()} class="mt-2"
+						>Retry</Button
+					>
+				</Alert>
 			{:else}
 				<EmptyState
 					icon={Building2}

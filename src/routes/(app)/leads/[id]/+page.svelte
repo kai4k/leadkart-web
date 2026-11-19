@@ -27,7 +27,7 @@
 		EditLeadDrawer,
 		ReassignDialog
 	} from '$features/leads';
-	import { AuthError, NetworkError, NotFoundError } from '$api/errors';
+	import { describeError } from '$api/errors';
 
 	const id = $derived(page.params.id ?? '');
 	const detail = $derived(leadDetailQuery(id));
@@ -60,13 +60,14 @@
 	const detailErrorCopy = $derived.by(() => {
 		const err = detail.error;
 		if (!err) return '';
-		if (err instanceof NetworkError) return 'Check your network connection and try again.';
-		if (err instanceof AuthError)
-			return err.status === 403
-				? "You don't have permission to view this lead."
-				: 'Your session expired. Sign in again.';
-		if (err instanceof NotFoundError) return 'This lead was deleted or moved.';
-		return 'Something went wrong. Please try again.';
+		return describeError(err, {
+			fallback: 'Something went wrong. Please try again.',
+			status: {
+				401: 'Your session expired. Sign in again.',
+				403: "You don't have permission to view this lead.",
+				404: 'This lead was deleted or moved.'
+			}
+		});
 	});
 </script>
 

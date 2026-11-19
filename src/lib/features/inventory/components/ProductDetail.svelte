@@ -5,7 +5,7 @@
 	import { useUrlTab } from '#lib/hooks/index.ts';
 	import { productDetailQuery, deleteProductMutation } from '$features/inventory/queries';
 	import { computePriceWithGst, formatPrice } from '$features/inventory/view-models';
-	import { AuthError, NetworkError, NotFoundError } from '$api/errors';
+	import { describeError } from '$api/errors';
 	import ProductDetailHeader from './ProductDetailHeader.svelte';
 	import ProductIdentityCard from './ProductIdentityCard.svelte';
 	import ProductCommercialCard from './ProductCommercialCard.svelte';
@@ -59,13 +59,14 @@
 	const errorCopy = $derived.by(() => {
 		const err = query.error;
 		if (!err) return 'Unknown error';
-		if (err instanceof NetworkError) return 'Check your network connection and try again.';
-		if (err instanceof AuthError)
-			return err.status === 403
-				? "You don't have permission to view this product."
-				: 'Your session expired. Sign in again.';
-		if (err instanceof NotFoundError) return 'This product was deleted or moved.';
-		return 'Something went wrong. Please try again.';
+		return describeError(err, {
+			fallback: 'Something went wrong. Please try again.',
+			status: {
+				401: 'Your session expired. Sign in again.',
+				403: "You don't have permission to view this product.",
+				404: 'This product was deleted or moved.'
+			}
+		});
 	});
 </script>
 

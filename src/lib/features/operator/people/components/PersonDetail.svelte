@@ -22,7 +22,7 @@
 	import GlobalSuspendDialog from './GlobalSuspendDialog.svelte';
 	import AnonymiseDialog from './AnonymiseDialog.svelte';
 	import { personActivityQuery, ActivityTimeline } from '$features/audit';
-	import { ApiError } from '$api/errors';
+	import { describeError } from '$api/errors';
 	import { initials } from '#lib/utils/person-name.ts';
 
 	type Props = { personId: string };
@@ -50,9 +50,7 @@
 	const memberships = $derived(membershipsQuery.data?.memberships ?? []);
 	const isLoading = $derived(query.isPending);
 	const isError = $derived(query.isError);
-	const errorMsg = $derived(
-		query.error instanceof ApiError ? query.error.message : 'Failed to load person'
-	);
+	const errorMsg = $derived(describeError(query.error, { fallback: 'Failed to load person' }));
 	const isPending = $derived(liftMutation.isPending);
 
 	const capsQuery = myCapabilitiesQuery();
@@ -224,9 +222,9 @@
 					data={activityQuery?.data ?? null}
 					isPending={activityQuery?.isPending ?? true}
 					isError={activityQuery?.isError ?? false}
-					errorMessage={activityQuery?.error instanceof ApiError
-						? activityQuery.error.message
-						: 'Failed to load activity'}
+					errorMessage={describeError(activityQuery?.error, {
+						fallback: 'Failed to load activity'
+					})}
 				/>
 			</Card.Content>
 		</Card.Root>

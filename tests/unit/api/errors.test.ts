@@ -11,7 +11,8 @@ import {
 	ScopeInvalidError,
 	SchemaError,
 	RateLimitError,
-	parseRetryAfter
+	parseRetryAfter,
+	describeError
 } from '#lib/api/errors.ts';
 import { SCOPE_EXPIRED_MESSAGE } from '#lib/api/scope-header.ts';
 
@@ -391,5 +392,75 @@ describe('fromResponse robustness', () => {
 		expect(err.retryAfterSeconds).toBe(120);
 		expect(ApiError.fromResponse(res(500, { 'retry-after': '5' }), null).retryAfterSeconds).toBe(5);
 		expect(ApiError.fromResponse(res(423), null).retryAfterSeconds).toBeUndefined();
+	});
+});
+
+describe('403 code to copy map', () => {
+	const res = (status: number) => new Response(null, { status });
+	it.each([
+		['csrf_mismatch', 'Your session token is out of date — reload the page and try again.'],
+		[
+			'tenant_scope_not_supported',
+			'Not available while acting in a tenant. Exit the tenant context first.'
+		],
+		[
+			'tenant_scope_read_only',
+			'Read-only while acting in a tenant. Exit the tenant context to make this change.'
+		],
+		['tenant_scope_forbidden', "You don't have permission to act in another tenant."]
+	])('%s becomes an AuthError 403 with fixed copy and keeps its code', (code, copy) => {
+		const err = ApiError.fromResponse(res(403), { error: code, message: 'raw Go text' });
+		expect(err).toBeInstanceOf(AuthError);
+		expect(err.status).toBe(403);
+		expect(err.message).toBe(copy);
+		expect(err.code).toBe(code);
+	});
+	it('an unknown 403 code keeps Go text', () => {
+		const err = ApiError.fromResponse(res(403), { error: 'forbidden', message: 'nope' });
+		expect(err.message).toBe('nope');
+	});
+});
+
+describe('describeError', () => {
+	const res = (status: number) => new Response(null, { status });
+	const opts = {
+		fallback: 'Failed to do it.',
+		status: {
+			403: "You don't have permission to do it.",
+			404: 'Gone.',
+			409: 'Already done.'
+		}
+	};
+	it('non-ApiError uses the fallback, default "Something went wrong"', () => {
+		expect(describeError(new Error('x'), opts)).toBe('Failed to do it.');
+		expect(describeError('x')).toBe('Something went wrong');
+	});
+	it('an ApiError speaks with its own message by default', () => {
+		expect(describeError(new NetworkError(new TypeError('x')))).toBe(
+			new NetworkError(null).message
+		);
+	});
+	it("a plain 403 returns the caller's line", () => {
+		const err = ApiError.fromResponse(res(403), { error: 'forbidden', message: 'Go text' });
+		expect(describeError(err, opts)).toBe("You don't have permission to do it.");
+	});
+	it.each(['tenant_scope_not_supported', 'tenant_scope_read_only', 'tenant_scope_forbidden'])(
+		'%s keeps the context copy even when the caller passes its own 403 line',
+		(code) => {
+			const err = ApiError.fromResponse(res(403), { error: code });
+			expect(describeError(err, opts)).toBe(err.message);
+			expect(describeError(err, opts)).not.toBe(opts.status[403]);
+		}
+	);
+	it('404 override applies; a scope-dead 404 keeps the scope copy', () => {
+		expect(describeError(ApiError.fromResponse(res(404), null), opts)).toBe('Gone.');
+		const dead = ApiError.fromResponse(res(404), { error: 'tenant_scope_not_found' });
+		expect(describeError(dead, opts)).toBe(SCOPE_EXPIRED_MESSAGE);
+	});
+	it('409 override applies only when Go sent no text', () => {
+		expect(describeError(ApiError.fromResponse(res(409), null), opts)).toBe('Already done.');
+		expect(describeError(ApiError.fromResponse(res(409), { message: 'Slug taken' }), opts)).toBe(
+			'Slug taken'
+		);
 	});
 });

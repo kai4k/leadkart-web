@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { tenantActivityQuery } from '#lib/features/audit/queries.ts';
 	import { ActivityTimeline } from '$features/audit';
-	import { ApiError } from '$api/errors';
+	import { describeError } from '$api/errors';
 	import type { LayoutData } from '../$types';
 
 	let { data }: { data: LayoutData } = $props();
@@ -15,7 +15,5 @@
 	data={activityQuery.data ?? null}
 	isPending={activityQuery.isPending}
 	isError={activityQuery.isError}
-	errorMessage={activityQuery.error instanceof ApiError
-		? activityQuery.error.message
-		: 'Failed to load activity'}
+	errorMessage={describeError(activityQuery.error, { fallback: 'Failed to load activity' })}
 />

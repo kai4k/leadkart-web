@@ -5,13 +5,7 @@
 	import type { UserDto, RoleDto } from '$features/users/types';
 	import { canRevokeRole } from '$features/users/view-models';
 	import { displayName } from '$features/auth';
-	import {
-		ValidationError,
-		ConflictError,
-		AuthError,
-		NotFoundError,
-		NetworkError
-	} from '$api/errors';
+	import { describeError } from '$api/errors';
 
 	type Props = {
 		roleList: RoleDto[];
@@ -29,26 +23,17 @@
 
 	function handleError(err: unknown, mode: 'assign' | 'revoke'): void {
 		const verbing = mode === 'assign' ? 'assign' : 'revoke';
-		if (err instanceof ValidationError) {
-			bannerError = `Couldn't ${verbing} the role — server rejected the request.`;
-		} else if (err instanceof ConflictError) {
-			bannerError =
-				err.detail ||
-				(mode === 'assign'
-					? 'This role is already assigned.'
-					: "This role can't be revoked while it's the user's last permission source.");
-		} else if (err instanceof AuthError) {
-			bannerError =
-				err.status === 403
-					? `You don't have permission to ${verbing} roles.`
-					: 'Your session expired. Sign in again.';
-		} else if (err instanceof NotFoundError) {
-			bannerError = 'This role or user no longer exists.';
-		} else if (err instanceof NetworkError) {
-			bannerError = 'Check your network connection and try again.';
-		} else {
-			bannerError = `Failed to ${verbing} role. Please try again.`;
-		}
+		bannerError = describeError(err, {
+			fallback: `Failed to ${verbing} role. Please try again.`,
+			status: {
+				403: `You don't have permission to ${verbing} roles.`,
+				404: 'This role or user no longer exists.',
+				409:
+					mode === 'assign'
+						? 'This role is already assigned.'
+						: "This role can't be revoked while it's the user's last permission source."
+			}
+		});
 	}
 
 	async function onAssign(roleId: string) {

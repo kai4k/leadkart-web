@@ -19,13 +19,7 @@
 		type BatchCatalogueEntry,
 		type DraftItem
 	} from './OrderItemsEditor.svelte';
-	import {
-		ValidationError,
-		ConflictError,
-		AuthError,
-		NotFoundError,
-		NetworkError
-	} from '$api/errors';
+	import { ValidationError, describeError } from '$api/errors';
 
 	type Props = {
 		order: OrderDto;
@@ -115,26 +109,19 @@
 							// Map every other typed subclass to a human banner.
 							if (err instanceof ValidationError) {
 								reject(err);
-							} else if (err instanceof ConflictError) {
-								reject(
-									new Error(
-										err.detail || 'This order was revised by someone else — reload and try again.'
-									)
-								);
-							} else if (err instanceof AuthError) {
-								reject(
-									new Error(
-										err.status === 403
-											? "You don't have permission to revise quotations."
-											: 'Your session expired. Sign in again.'
-									)
-								);
-							} else if (err instanceof NotFoundError) {
-								reject(new Error('This order was deleted or moved.'));
-							} else if (err instanceof NetworkError) {
-								reject(new Error('Check your network connection and try again.'));
 							} else {
-								reject(new Error('Failed to revise. Please try again.'));
+								reject(
+									new Error(
+										describeError(err, {
+											fallback: 'Failed to revise. Please try again.',
+											status: {
+												403: "You don't have permission to revise quotations.",
+												404: 'This order was deleted or moved.',
+												409: 'This order was revised by someone else — reload and try again.'
+											}
+										})
+									)
+								);
 							}
 						}
 					}
