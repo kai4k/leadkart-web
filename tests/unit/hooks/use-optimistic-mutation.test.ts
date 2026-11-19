@@ -74,4 +74,19 @@ describe('useOptimisticMutation', () => {
 		expect(qc.getQueryData(['x', 'list', 'p1'])).toEqual({ rows: [1] });
 		expect(spy).toHaveBeenCalledWith({ queryKey: ['x', 'detail', 'a'] });
 	});
+
+	it('snapshots lists before applyOptimistic, so rollback is not overwritten by an optimistic snapshot', async () => {
+		const key = ['x', 'list', 'p1'];
+		qc.setQueryData(key, { rows: [1] });
+		// applyOptimistic touches a key that is ALSO under the projectInLists prefix.
+		const { opts } = build({
+			applyOptimistic: () => qc.setQueryData(key, { rows: ['optimistic'] }),
+			rollback: () => qc.setQueryData(key, { rows: [1] }),
+			projectInLists: { queryKey: () => [['x', 'list']], project: (old: unknown) => old }
+		});
+		const ctx = await opts.onMutate({ id: 'a' });
+		expect(qc.getQueryData(key)).toEqual({ rows: ['optimistic'] });
+		opts.onError(new Error('no'), { id: 'a' }, ctx);
+		expect(qc.getQueryData(key)).toEqual({ rows: [1] });
+	});
 });

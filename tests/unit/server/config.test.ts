@@ -82,6 +82,33 @@ describe('configSchema', () => {
 		const out = configSchema.safeParse({ ...withSecret, NODE_ENV: 'test' });
 		expect(out.success && out.data.UPSTREAM_TIMEOUT_MS).toBe(10_000);
 	});
+
+	it('fails boot when hops x upstream timeout reaches the client read timeout (any NODE_ENV)', () => {
+		// 3 hops x 15 s = 45 s >= the 35 s client read timeout.
+		for (const NODE_ENV of ['test', 'development']) {
+			const out = configSchema.safeParse({ ...withSecret, NODE_ENV, UPSTREAM_TIMEOUT_MS: '15000' });
+			expect(out.success).toBe(false);
+			const msg = issuesOf(out).join();
+			expect(msg).toMatch(/UPSTREAM_TIMEOUT_MS/);
+			expect(msg).toContain('45000');
+			expect(msg).toContain('35000');
+		}
+	});
+
+	it('accepts the largest timeout that still fits under the client read timeout', () => {
+		const out = configSchema.safeParse({
+			...withSecret,
+			NODE_ENV: 'test',
+			UPSTREAM_TIMEOUT_MS: '11666'
+		});
+		expect(out.success).toBe(true);
+		const edge = configSchema.safeParse({
+			...withSecret,
+			NODE_ENV: 'test',
+			UPSTREAM_TIMEOUT_MS: '11667'
+		});
+		expect(edge.success).toBe(false);
+	});
 });
 
 describe('configSchema: production origin', () => {

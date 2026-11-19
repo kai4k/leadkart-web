@@ -44,7 +44,8 @@ export interface AllPages<T> {
 }
 /**
  * Reads every page (cap: maxPages x page size, 10,000 rows at 200). For Go lists with no
- * server-side search (users). Aborting `signal` stops between pages and rejects with its reason.
+ * server-side search (users). A repeated cursor stops the read as `truncated`, like the cap
+ * (callers already warn on `truncated`). Aborting `signal` stops between pages and rejects with its reason.
  */
 export async function fetchAllPages<T>(
 	fetchPage: (cursor: string | undefined) => Promise<Page<T>>,
@@ -57,8 +58,11 @@ export async function fetchAllPages<T>(
 		signal?.throwIfAborted();
 		const page = await fetchPage(cursor);
 		items.push(...page.items);
-		cursor = nextCursor(page);
-		if (cursor === undefined) return { items, truncated: false };
+		const next = nextCursor(page);
+		if (next === undefined) return { items, truncated: false };
+		// A server echoing the cursor it was just given would repeat this page until the cap.
+		if (next === cursor) return { items, truncated: true };
+		cursor = next;
 	}
 	signal?.throwIfAborted();
 	return { items, truncated: true };

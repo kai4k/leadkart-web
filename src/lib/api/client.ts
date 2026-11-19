@@ -11,7 +11,7 @@
  * ONE transport (`send`) serves both `api` and the deprecated `apiLegacy`.
  */
 import type { z } from 'zod';
-import { ApiError, isApiError, SchemaError, type ApiErrorBody } from './errors.ts';
+import { ApiError, isApiError, SchemaError, TimeoutError, type ApiErrorBody } from './errors.ts';
 import { requestSignal } from './abort.ts';
 import { DEFAULT_READ_TIMEOUT_MS } from './timeouts.ts';
 import { getCsrfToken } from './csrf.ts';
@@ -41,6 +41,12 @@ function queryScalar(key: string, value: unknown): string {
 	return String(value);
 }
 
+/**
+ * Query serialiser. An array value becomes REPEATED keys (`{ s: ['a','b'] }` -> `?s=a&s=b`), the
+ * form Go's multi-value parameters read. An endpoint where Go expects ONE comma-separated value
+ * (e.g. search `include=a,b`) must be joined by its gateway before it reaches here (the search
+ * gateway passes `include` as a pre-joined string); never rely on this function to comma-join.
+ */
 export function buildQueryString(query?: QueryParams): string {
 	if (!query) return '';
 	const qs = new URLSearchParams();
@@ -83,7 +89,7 @@ async function send(
 		const csrf = getCsrfToken();
 		if (csrf) headers.set('X-CSRF-Token', csrf);
 	}
-	const { signal, dispose } = requestSignal(
+	const { signal, timedOut, dispose } = requestSignal(
 		opts.signal,
 		opts.timeoutMs ?? (method === 'GET' ? DEFAULT_TIMEOUT_MS : undefined)
 	);
@@ -103,6 +109,8 @@ async function send(
 		text = await response.text();
 	} catch (cause) {
 		if (opts.signal?.aborted) throw opts.signal.reason ?? cause;
+		// The deadline's own signal decides, not the rejection reason (a stalled body read may reject with anything).
+		if (timedOut()) throw new TimeoutError();
 		throw ApiError.transport(cause);
 	} finally {
 		dispose();

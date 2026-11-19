@@ -45,13 +45,24 @@ describe('fetchAllPages', () => {
 		expect(fetchPage).toHaveBeenNthCalledWith(2, 'n1');
 	});
 	it('reports truncated when the page cap stops it with more available', async () => {
+		const fetchPage = vi.fn().mockImplementation((cursor?: string) =>
+			Promise.resolve({
+				items: [cursor ?? 'first'],
+				has_more: true,
+				next_cursor: `c${cursor ? cursor.length : 0}`
+			})
+		);
+		const out = await fetchAllPages(fetchPage, { maxPages: 2 });
+		expect(out).toEqual({ items: ['first', 'c0'], truncated: true });
+		expect(fetchPage).toHaveBeenCalledTimes(2);
+	});
+	it('stops and reports truncated when the server echoes the cursor it was just given', async () => {
 		const fetchPage = vi
 			.fn()
-			.mockImplementation((cursor?: string) =>
-				Promise.resolve({ items: [cursor ?? 'first'], has_more: true, next_cursor: 'next' })
-			);
-		const out = await fetchAllPages(fetchPage, { maxPages: 2 });
-		expect(out).toEqual({ items: ['first', 'next'], truncated: true });
+			.mockResolvedValueOnce({ items: [1], has_more: true, next_cursor: 'same' })
+			.mockResolvedValue({ items: [2], has_more: true, next_cursor: 'same' });
+		const out = await fetchAllPages(fetchPage, { maxPages: 50 });
+		expect(out).toEqual({ items: [1, 2], truncated: true });
 		expect(fetchPage).toHaveBeenCalledTimes(2);
 	});
 	it('is not truncated when the cap lands exactly on the last page', async () => {

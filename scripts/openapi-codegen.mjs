@@ -19,6 +19,8 @@ import { dirname, join, resolve } from 'node:path';
 
 const OUT = 'src/lib/api/generated';
 const SOURCE_FILE = `${OUT}/SOURCE.json`;
+/** `git show` of the full spec; spawnSync's 1 MB default would reject a large one. */
+const MAX_OUTPUT_BYTES = 64 * 1024 * 1024;
 const SPEC_PATH_IN_REPO = 'api/openapi.yaml';
 const goDir = resolve(process.env.LEADKART_GO_DIR ?? '../leadkart-go');
 const args = new Set(process.argv.slice(2));
@@ -33,8 +35,21 @@ function fail(message) {
 
 /** Runs a command with an args array (no shell, so paths with spaces/metacharacters are safe). */
 function run(cmd, cmdArgs, opts = {}) {
-	const r = spawnSync(cmd, cmdArgs, { encoding: 'utf8', shell: false, ...opts });
-	if (r.error) fail(`${cmd} failed to start: ${r.error.message}`);
+	const r = spawnSync(cmd, cmdArgs, {
+		encoding: 'utf8',
+		shell: false,
+		maxBuffer: MAX_OUTPUT_BYTES,
+		...opts
+	});
+	if (r.error) {
+		// spawnSync reports an overflowing stdout/stderr as an error too; it did start.
+		const tooLarge = r.error.code === 'ENOBUFS';
+		fail(
+			tooLarge
+				? `${cmd} output exceeded ${MAX_OUTPUT_BYTES / 1024 / 1024} MB: ${r.error.message}`
+				: `${cmd} failed to start: ${r.error.message}`
+		);
+	}
 	return r;
 }
 const git = (...gitArgs) => run('git', ['-C', goDir, ...gitArgs]);

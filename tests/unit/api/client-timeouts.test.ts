@@ -110,14 +110,14 @@ describe('anySignal / requestSignal', () => {
 		try {
 			const a = new AbortController();
 			const b = new AbortController();
-			const s = anySignal([a.signal, b.signal]);
+			const s = anySignal([a.signal, b.signal]).signal;
 			expect(s.aborted).toBe(false);
 			b.abort('why');
 			expect(s.aborted).toBe(true);
 			expect(s.reason).toBe('why');
 			const pre = new AbortController();
 			pre.abort('early');
-			expect(anySignal([pre.signal, a.signal]).reason).toBe('early');
+			expect(anySignal([pre.signal, a.signal]).signal.reason).toBe('early');
 		} finally {
 			AbortSignal.any = original;
 		}
@@ -127,6 +127,59 @@ describe('anySignal / requestSignal', () => {
 		const c = new AbortController();
 		expect(requestSignal(c.signal, undefined).signal).toBe(c.signal);
 		expect(requestSignal(undefined, 0).signal).toBeUndefined();
+	});
+});
+
+describe('timer and listener hygiene', () => {
+	const ok = () => new Response('{}', { headers: { 'content-type': 'application/json' } });
+
+	it('leaves no timer behind after success or after an error', async () => {
+		vi.stubGlobal('fetch', vi.fn().mockResolvedValue(ok()));
+		await api.get('/v1/x', z.unknown());
+		expect(vi.getTimerCount()).toBe(0);
+		vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+		await api.get('/v1/x', z.unknown()).catch(() => {});
+		expect(vi.getTimerCount()).toBe(0);
+	});
+
+	it('the fallback combiner removes its listener from the caller signal after success', async () => {
+		vi.stubGlobal('fetch', vi.fn().mockResolvedValue(ok()));
+		const original = AbortSignal.any;
+		// @ts-expect-error simulate Safari < 17.4
+		AbortSignal.any = undefined;
+		try {
+			const caller = new AbortController();
+			const add = vi.spyOn(caller.signal, 'addEventListener');
+			const remove = vi.spyOn(caller.signal, 'removeEventListener');
+			await api.get('/v1/x', z.unknown(), { signal: caller.signal });
+			expect(add).toHaveBeenCalledTimes(1);
+			expect(remove).toHaveBeenCalledTimes(1);
+			expect(remove.mock.calls[0][1]).toBe(add.mock.calls[0][1]);
+		} finally {
+			AbortSignal.any = original;
+		}
+	});
+
+	it('a stall while reading the body times out, whatever the rejection reason is', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn((_url: string, init?: RequestInit) =>
+				Promise.resolve({
+					ok: true,
+					status: 200,
+					headers: new Headers(),
+					text: () =>
+						new Promise<string>((_resolve, reject) =>
+							init?.signal?.addEventListener('abort', () => reject(new Error('stream reset')), {
+								once: true
+							})
+						)
+				} as unknown as Response)
+			)
+		);
+		const p = api.get('/v1/x', z.unknown()).catch((e: unknown) => e);
+		await vi.advanceTimersByTimeAsync(DEFAULT_TIMEOUT_MS);
+		expect(await p).toBeInstanceOf(TimeoutError);
 	});
 });
 

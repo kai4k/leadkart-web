@@ -4,6 +4,7 @@
  * be unit-tested without a server.
  */
 
+import { deadlineSignal } from '../api/abort.ts';
 import { SCOPE_REQUIRED_HEADER } from '../api/scope-header.ts';
 
 const UPSTREAM_PREFIX = '/api/v1/';
@@ -124,31 +125,12 @@ export interface UpstreamTimeout {
  * response headers arrive within `ms`, and follows `parent` (the browser
  * request) so a disconnect cancels the upstream call. Unlike
  * `AbortSignal.timeout`, the clock stops once headers are in, so a long
- * streamed export is never cut off.
+ * streamed export is never cut off. The signal keeps following `parent` after
+ * that (the listeners live and die with the request).
  */
 export function upstreamTimeout(parent: AbortSignal | undefined, ms: number): UpstreamTimeout {
-	const controller = new AbortController();
-	const timer = setTimeout(() => {
-		controller.abort(new DOMException('Upstream timed out', 'TimeoutError'));
-	}, ms);
-	const clear = (): void => clearTimeout(timer);
-
-	if (parent) {
-		if (parent.aborted) {
-			clear();
-			controller.abort(parent.reason);
-		} else {
-			parent.addEventListener(
-				'abort',
-				() => {
-					clear();
-					controller.abort(parent.reason);
-				},
-				{ once: true }
-			);
-		}
-	}
-	return { signal: controller.signal, headersReceived: clear };
+	const { signal, stopTimer } = deadlineSignal(parent, ms);
+	return { signal, headersReceived: stopTimer };
 }
 
 /**

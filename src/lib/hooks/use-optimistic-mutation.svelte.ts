@@ -86,16 +86,21 @@ export function useOptimisticMutation<TVars, TData = unknown, TContext = unknown
 		onMutate: async (vars: TVars) => {
 			await Promise.all(options.cancelKeys(vars).map((key) => qc.cancelQueries({ queryKey: key })));
 
-			const userCtx = await options.onMutate(vars);
-			options.applyOptimistic(vars, userCtx);
-
+			// Every snapshot is taken BEFORE anything is applied: a key touched by both
+			// `applyOptimistic` and the list projection must restore its original value.
+			const listPrefixes = options.projectInLists?.queryKey() ?? [];
 			const listSnapshots: Array<readonly [readonly unknown[], unknown]> = [];
+			for (const prefix of listPrefixes) {
+				for (const [matchedKey, data] of qc.getQueriesData({ queryKey: prefix })) {
+					listSnapshots.push([matchedKey, data]);
+				}
+			}
+			const userCtx = await options.onMutate(vars);
+
+			options.applyOptimistic(vars, userCtx);
 			if (options.projectInLists) {
 				const project = options.projectInLists.project;
-				for (const prefix of options.projectInLists.queryKey()) {
-					for (const [matchedKey, data] of qc.getQueriesData({ queryKey: prefix })) {
-						listSnapshots.push([matchedKey, data]);
-					}
+				for (const prefix of listPrefixes) {
 					qc.setQueriesData({ queryKey: prefix }, (old: unknown) =>
 						old === undefined ? old : project(old, vars)
 					);

@@ -33,7 +33,11 @@ import {
 
 import { building, dev } from '$app/env';
 import { z } from 'zod';
-import { DEFAULT_UPSTREAM_TIMEOUT_MS } from '#lib/api/timeouts.ts';
+import {
+	BFF_MAX_UPSTREAM_HOPS,
+	DEFAULT_READ_TIMEOUT_MS,
+	DEFAULT_UPSTREAM_TIMEOUT_MS
+} from '#lib/api/timeouts.ts';
 
 const DEV_SCOPE_SECRET = 'dev-only-scope-cookie-secret-not-for-production';
 /** Prefix of the published e2e secret (`preview:e2e`, playwright.config.ts). */
@@ -105,6 +109,18 @@ export function createConfigSchema({ allowDevSecret }: { allowDevSecret: boolean
 					code: 'custom',
 					path: ['SCOPE_COOKIE_SECRET'],
 					message: 'SCOPE_COOKIE_SECRET (32+ chars) is required'
+				});
+			}
+			// The browser aborting mid-refresh makes Go's refresh-token reuse detection end the
+			// session (see api/timeouts.ts), so this holds in every environment.
+			if (BFF_MAX_UPSTREAM_HOPS * v.UPSTREAM_TIMEOUT_MS >= DEFAULT_READ_TIMEOUT_MS) {
+				ctx.addIssue({
+					code: 'custom',
+					path: ['UPSTREAM_TIMEOUT_MS'],
+					message:
+						`UPSTREAM_TIMEOUT_MS (${v.UPSTREAM_TIMEOUT_MS}) x ${BFF_MAX_UPSTREAM_HOPS} upstream hops = ` +
+						`${BFF_MAX_UPSTREAM_HOPS * v.UPSTREAM_TIMEOUT_MS} ms must stay below the client read timeout ` +
+						`(${DEFAULT_READ_TIMEOUT_MS} ms); lower UPSTREAM_TIMEOUT_MS`
 				});
 			}
 			if (v.NODE_ENV !== 'production') return;
