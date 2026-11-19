@@ -41,8 +41,9 @@ jobs:
       - name: Prettier + ESLint
         # NODE_OPTIONS heap bump prevents GC thrash on the 7GB runner
         # during typescript-eslint's TS-program load.
-        # --cache + --concurrency=auto (set in package.json script)
-        # halve the runtime; cache hit-rate determines warm/cold delta.
+        # package.json pins --concurrency=off: each ESLint worker builds its own
+        # full TS project (~2.2 GB RSS), so workers do not fit a 7 GB runner.
+        # Cold ~2 min / ~3 GB single-threaded; the .eslintcache makes warm runs seconds.
         env:
           NODE_OPTIONS: --max-old-space-size=6144
         run: npm run lint

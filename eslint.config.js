@@ -8,6 +8,17 @@ import ts from 'typescript-eslint';
 
 const gitignorePath = fileURLToPath(new URL('./.gitignore', import.meta.url));
 
+/**
+ * extraFileExtensions for EVERY block that enables projectService (.ts and .svelte).
+ *
+ * typescript-eslint's project service applies this setting globally and, when it
+ * differs from the previous file's value, reloads the whole TS project (a full
+ * program rebuild, seconds + GBs each). Blocks that disagreed ([] for .ts vs
+ * ['.svelte'] for .svelte) made every .ts<->.svelte file alternation reload the
+ * project: 18 files = 6 reloads = 35 s; the full repo never finished. Keep one value.
+ */
+const PROJECT_SERVICE_EXTENSIONS = ['.svelte'];
+
 /** Shared no-restricted-imports bans. Flat config REPLACES rule options per block, so every block that sets the rule must spread these. */
 const RESTRICTED_PATHS = [
 	{
@@ -130,12 +141,13 @@ export default ts.config(
 	// (every node_module type-def + every source file) for type-aware
 	// rules. That's the #1 ESLint perf cost.
 	//
-	// Scoping projectService + type-aware rules to .ts files ONLY (not
-	// .svelte) cuts ESLint runtime ~30-50% because:
-	//   - .svelte files never gain anything from type-aware rules under
-	//     svelte-eslint-parser (the parser's TS-program integration is
-	//     slow + the rules trigger false positives on Svelte 5 runes)
-	//   - skipping the TS-program load for 230+ Svelte files is the win
+	// Type-aware RULES stay .ts-only (the .svelte block turns the async ones off:
+	// they false-positive on event-handler callbacks). projectService itself is
+	// enabled for .svelte too so svelte/* rules get type info.
+	//
+	// PERF INVARIANT: both blocks must pass the SAME extraFileExtensions
+	// (PROJECT_SERVICE_EXTENSIONS). typescript-eslint reloads the entire TS
+	// project whenever that value changes between consecutive files.
 	//
 	// `.svelte.ts` files (Svelte 5 class-stores + hooks) ARE matched by
 	// the `**/*.ts` glob here, so they get full type-aware coverage.
@@ -146,6 +158,8 @@ export default ts.config(
 			globals: { ...globals.browser, ...globals.node },
 			parserOptions: {
 				projectService: true,
+				// MUST equal the .svelte block's value — see PROJECT_SERVICE_EXTENSIONS.
+				extraFileExtensions: PROJECT_SERVICE_EXTENSIONS,
 				tsconfigRootDir: import.meta.dirname
 			}
 		},
@@ -285,20 +299,12 @@ export default ts.config(
 			eqeqeq: ['error', 'always', { null: 'ignore' }]
 		}
 	},
-	// ─── Svelte files — no projectService (perf optimisation) ──────
-	// projectService was previously enabled here, but every type-aware
-	// rule it enabled is disabled below for .svelte files. Removing it
-	// drops the dominant ESLint cost: svelte-eslint-parser's TS-program
-	// integration over 230+ .svelte files.
-	//
-	// `.svelte.ts` (Svelte 5 class-stores + hooks) ARE matched by the
-	// **/*.ts block above which DOES set projectService — those files
-	// keep full type-aware coverage.
+	// ─── Svelte files — same project service as .ts (see invariant above) ─
 	{
 		files: ['**/*.svelte'],
 		languageOptions: {
 			parserOptions: {
-				extraFileExtensions: ['.svelte'],
+				extraFileExtensions: PROJECT_SERVICE_EXTENSIONS,
 				parser: ts.parser,
 				projectService: true,
 				tsconfigRootDir: import.meta.dirname
