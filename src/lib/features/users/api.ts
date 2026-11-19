@@ -9,6 +9,7 @@ import {
 	fetchAllPages,
 	MAX_PAGE_SIZE,
 	toPage,
+	type AllPages,
 	type CursorParams,
 	type Page
 } from '#lib/api/pagination.ts';
@@ -37,9 +38,11 @@ export async function listUsersPage(p: CursorParams, signal?: AbortSignal): Prom
 	);
 }
 
-/** Every active member, following next_cursor (the directory has no server-side search). */
-export function listAllUsers(signal?: AbortSignal): Promise<UserDto[]> {
-	return fetchAllPages((cursor) => listUsersPage({ cursor, page_size: MAX_PAGE_SIZE }, signal));
+/** Every active member, following next_cursor (the directory has no server-side search). `truncated` = the page cap stopped the read. */
+export function listAllUsers(signal?: AbortSignal): Promise<AllPages<UserDto>> {
+	return fetchAllPages((cursor) => listUsersPage({ cursor, page_size: MAX_PAGE_SIZE }, signal), {
+		signal
+	});
 }
 
 export function getUser(membershipId: string, signal?: AbortSignal): Promise<UserDto> {

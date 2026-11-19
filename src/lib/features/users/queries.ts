@@ -41,12 +41,19 @@ export function membershipSearchQuery(getQuery: () => string) {
 	});
 }
 
+const usersListOptions = () => ({
+	queryKey: usersKeys.list(),
+	queryFn: ({ signal }: { signal: AbortSignal }) => api.listAllUsers(signal)
+});
+
 /** Every active member (all pages) — `data: UserDto[]`. */
 export function usersListQuery() {
-	return createQuery(() => ({
-		queryKey: usersKeys.list(),
-		queryFn: ({ signal }) => api.listAllUsers(signal)
-	}));
+	return createQuery(() => ({ ...usersListOptions(), select: (r) => r.items }));
+}
+
+/** True when the page cap stopped the read, so `usersListQuery` data is incomplete (same cache entry). */
+export function usersListTruncatedQuery() {
+	return createQuery(() => ({ ...usersListOptions(), select: (r) => r.truncated }));
 }
 
 /** Single-membership detail — GET /v1/users/{membershipId}. */

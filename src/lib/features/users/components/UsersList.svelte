@@ -5,6 +5,7 @@
 	import { SvelteURL } from 'svelte/reactivity';
 	import type { ResolvedPathname } from '$app/types';
 	import {
+		Alert,
 		Avatar,
 		Badge,
 		Button,
@@ -28,6 +29,7 @@
 	} from '$icons';
 	import {
 		usersListQuery,
+		usersListTruncatedQuery,
 		reactivateUserMutation,
 		deactivateUserMutation
 	} from '$features/users/queries';
@@ -82,6 +84,7 @@
 	}
 
 	const listQuery = usersListQuery();
+	const truncatedQuery = usersListTruncatedQuery();
 	const rolesQuery = rolesListQuery();
 	const reactivate = reactivateUserMutation();
 	const deactivate = deactivateUserMutation();
@@ -339,6 +342,12 @@
 			<Button onclick={() => (createOpen = true)}><Icon icon={Plus} size="sm" /> Add member</Button>
 		</div>
 	</header>
+
+	{#if truncatedQuery.data}
+		<Alert variant="warning">
+			Showing the first {userList.length} members. The team is larger than this list can load.
+		</Alert>
+	{/if}
 
 	<nav class="cluster cluster-tight" aria-label="Filter members by status">
 		{#each statusOptions as opt (opt.value)}

@@ -1,9 +1,23 @@
 import { describe, expect, it, vi } from 'vitest';
-import { cursorQuery, fetchAllPages, toPage } from '#lib/api/pagination.ts';
+import {
+	cursorQuery,
+	fetchAllPages,
+	MAX_PAGE_SIZE,
+	nextCursor,
+	toPage,
+	type Page
+} from '#lib/api/pagination.ts';
 
 describe('pagination', () => {
 	it('cursorQuery passes only cursor and page_size', () => {
 		expect(cursorQuery({ cursor: 'c', page_size: 50 })).toEqual({ cursor: 'c', page_size: 50 });
+	});
+	it('cursorQuery clamps page_size to 1..MAX_PAGE_SIZE and drops junk', () => {
+		expect(cursorQuery({ page_size: 10_000 }).page_size).toBe(MAX_PAGE_SIZE);
+		expect(cursorQuery({ page_size: 0 }).page_size).toBe(1);
+		expect(cursorQuery({ page_size: 12.7 }).page_size).toBe(12);
+		expect(cursorQuery({ page_size: NaN }).page_size).toBeUndefined();
+		expect(cursorQuery({}).page_size).toBeUndefined();
 	});
 	it('toPage normalises any envelope key and an omitted next_cursor', () => {
 		expect(toPage({ users: [1], has_more: false }, 'users')).toEqual({
@@ -12,12 +26,50 @@ describe('pagination', () => {
 			next_cursor: undefined
 		});
 	});
-	it('fetchAllPages follows next_cursor until has_more is false', async () => {
+	it('nextCursor is the cursor only while there is more', () => {
+		const page = (p: Partial<Page<number>>): Page<number> => ({ items: [], has_more: false, ...p });
+		expect(nextCursor(page({ has_more: true, next_cursor: 'n' }))).toBe('n');
+		expect(nextCursor(page({ has_more: false, next_cursor: 'n' }))).toBeUndefined();
+		expect(nextCursor(page({ has_more: true }))).toBeUndefined();
+		expect(nextCursor(page({ has_more: true, next_cursor: '' }))).toBeUndefined();
+	});
+});
+
+describe('fetchAllPages', () => {
+	it('follows next_cursor until has_more is false', async () => {
 		const fetchPage = vi
 			.fn()
 			.mockResolvedValueOnce({ items: [1, 2], has_more: true, next_cursor: 'n1' })
 			.mockResolvedValueOnce({ items: [3], has_more: false });
-		await expect(fetchAllPages(fetchPage)).resolves.toEqual([1, 2, 3]);
+		await expect(fetchAllPages(fetchPage)).resolves.toEqual({ items: [1, 2, 3], truncated: false });
 		expect(fetchPage).toHaveBeenNthCalledWith(2, 'n1');
+	});
+	it('reports truncated when the page cap stops it with more available', async () => {
+		const fetchPage = vi
+			.fn()
+			.mockImplementation((cursor?: string) =>
+				Promise.resolve({ items: [cursor ?? 'first'], has_more: true, next_cursor: 'next' })
+			);
+		const out = await fetchAllPages(fetchPage, { maxPages: 2 });
+		expect(out).toEqual({ items: ['first', 'next'], truncated: true });
+		expect(fetchPage).toHaveBeenCalledTimes(2);
+	});
+	it('is not truncated when the cap lands exactly on the last page', async () => {
+		const fetchPage = vi.fn().mockResolvedValueOnce({ items: [1], has_more: false });
+		await expect(fetchAllPages(fetchPage, { maxPages: 1 })).resolves.toEqual({
+			items: [1],
+			truncated: false
+		});
+	});
+	it('stops fetching once the signal aborts', async () => {
+		const ctrl = new AbortController();
+		const fetchPage = vi.fn().mockImplementation(() => {
+			ctrl.abort(new DOMException('cancelled', 'AbortError'));
+			return Promise.resolve({ items: [1], has_more: true, next_cursor: 'n' });
+		});
+		await expect(fetchAllPages(fetchPage, { signal: ctrl.signal })).rejects.toMatchObject({
+			name: 'AbortError'
+		});
+		expect(fetchPage).toHaveBeenCalledTimes(1);
 	});
 });

@@ -28,7 +28,8 @@ describe('users gateway', () => {
 			.mockResolvedValueOnce(json({ users: [user('b')], has_more: false }));
 		vi.stubGlobal('fetch', fetchMock);
 		const all = await listAllUsers();
-		expect(all.map((u) => u.membership_id)).toEqual(['a', 'b']);
+		expect(all.truncated).toBe(false);
+		expect(all.items.map((u) => u.membership_id)).toEqual(['a', 'b']);
 		expect(fetchMock.mock.calls[0]![0]).toBe('/api/v1/users?page_size=200');
 		expect(fetchMock.mock.calls[1]![0]).toBe('/api/v1/users?cursor=n1&page_size=200');
 	});

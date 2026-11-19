@@ -40,7 +40,6 @@ const config: KnipConfig = {
 		'src/lib/hooks/index.ts!',
 		'src/lib/api/errors.ts!',
 		'src/lib/api/client.ts!',
-		'src/lib/api/pagination.ts!',
 		// Storybook stories — entries consumed by Storybook's filesystem
 		// loader (.storybook/main.ts globs them). knip can't see that wire.
 		'src/lib/**/*.stories.@(ts|svelte)!'

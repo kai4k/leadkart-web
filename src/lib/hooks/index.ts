@@ -21,7 +21,6 @@ export {
 export {
 	createInfiniteList,
 	type InfiniteList,
-	type InfinitePage,
 	type InfiniteListState,
 	type InfiniteListOptions,
 	type InfiniteListQuery

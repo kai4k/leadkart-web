@@ -10,9 +10,9 @@
  * must be wrapped in a function `() => ({ ... })`. Results are Svelte 5
  * reactive state accessed directly (no `$` prefix needed).
  */
-import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
+import { createQuery, useQueryClient } from '@tanstack/svelte-query';
 import { page } from '$app/state';
-import { toast } from '$ui';
+import { useOptimisticMutation } from '#lib/hooks/index.ts';
 import * as api from './api';
 import type { SessionDto } from './types';
 import type { Capabilities } from './capabilities';
@@ -74,58 +74,58 @@ export function mySessionsQuery() {
 	}));
 }
 
-/** Revoke a single session family. Optimistic: removes from list immediately. */
+/** Revoke a single session family. Optimistic: removes it from the list immediately. */
 export function revokeSessionMutation() {
 	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: (familyId: string) => api.revokeSession(familyId),
-		onMutate: async (familyId: string) => {
-			await qc.cancelQueries({ queryKey: sessionsKey });
-			const previous = qc.getQueryData<SessionDto[]>(sessionsKey);
+	return useOptimisticMutation<string, void, { previous?: SessionDto[] }>({
+		fn: (familyId) => api.revokeSession(familyId),
+		cancelKeys: () => [sessionsKey],
+		onMutate: () => ({ previous: qc.getQueryData<SessionDto[]>(sessionsKey) }),
+		applyOptimistic: (familyId, { previous }) => {
 			if (previous) {
 				qc.setQueryData<SessionDto[]>(
 					sessionsKey,
 					previous.filter((s) => s.family_id !== familyId)
 				);
 			}
-			return { previous };
 		},
-		onError: (_err: unknown, _vars: string, ctx: { previous?: SessionDto[] } | undefined) => {
-			if (ctx?.previous) qc.setQueryData<SessionDto[]>(sessionsKey, ctx.previous);
+		rollback: (_familyId, { previous }) => {
+			if (previous) qc.setQueryData<SessionDto[]>(sessionsKey, previous);
 		},
-		onSuccess: () => {
-			void qc.invalidateQueries({ queryKey: sessionsKey });
-			toast.success('Session revoked');
-		}
-	}));
+		invalidate: () => [sessionsKey],
+		successToast: 'Session revoked'
+	});
 }
 
-/** Revoke all other session families. Returns the count of revoked sessions. */
-export function revokeOtherSessionsMutation(currentFamilyId: string | null) {
+/**
+ * Revoke every session family except `keepFamilyId` (the caller's own, when known).
+ * The id travels in the variables: `mutate({ keepFamilyId })`.
+ */
+export function revokeOtherSessionsMutation() {
 	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: () => api.revokeOtherSessions('user_revoked_others'),
-		onMutate: async () => {
-			await qc.cancelQueries({ queryKey: sessionsKey });
-			const previous = qc.getQueryData<SessionDto[]>(sessionsKey);
-			if (previous && currentFamilyId) {
+	return useOptimisticMutation<
+		{ keepFamilyId: string | null },
+		{ revoked_count: number },
+		{ previous?: SessionDto[] }
+	>({
+		fn: () => api.revokeOtherSessions('user_revoked_others'),
+		cancelKeys: () => [sessionsKey],
+		onMutate: () => ({ previous: qc.getQueryData<SessionDto[]>(sessionsKey) }),
+		applyOptimistic: ({ keepFamilyId }, { previous }) => {
+			if (previous && keepFamilyId) {
 				qc.setQueryData<SessionDto[]>(
 					sessionsKey,
-					previous.filter((s) => s.family_id === currentFamilyId)
+					previous.filter((s) => s.family_id === keepFamilyId)
 				);
 			}
-			return { previous };
 		},
-		onError: (_err: unknown, _vars: void, ctx: { previous?: SessionDto[] } | undefined) => {
-			if (ctx?.previous) qc.setQueryData<SessionDto[]>(sessionsKey, ctx.previous);
+		rollback: (_vars, { previous }) => {
+			if (previous) qc.setQueryData<SessionDto[]>(sessionsKey, previous);
 		},
-		onSuccess: ({ revoked_count }) => {
-			void qc.invalidateQueries({ queryKey: sessionsKey });
-			if (revoked_count > 0) {
-				toast.success(`Signed out ${revoked_count} other device${revoked_count === 1 ? '' : 's'}`);
-			} else {
-				toast.success('No other sessions to revoke');
-			}
-		}
-	}));
+		invalidate: () => [sessionsKey],
+		successToast: (_vars, { revoked_count }) =>
+			revoked_count > 0
+				? `Signed out ${revoked_count} other device${revoked_count === 1 ? '' : 's'}`
+				: 'No other sessions to revoke'
+	});
 }

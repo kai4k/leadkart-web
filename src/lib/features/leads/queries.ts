@@ -14,12 +14,8 @@
 import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 import * as api from './api';
 import { toast } from '$ui';
-import {
-	createInfiniteList,
-	useOptimisticMutation,
-	type InfiniteList,
-	type InfinitePage
-} from '#lib/hooks/index.ts';
+import { createInfiniteList, useOptimisticMutation, type InfiniteList } from '#lib/hooks/index.ts';
+import type { Page } from '#lib/api/pagination.ts';
 import type {
 	CrmLeadDto,
 	ListLeadsParams,
@@ -35,7 +31,7 @@ import type { CrossReminderParams } from './api';
 
 /** Shape TanStack stores for a `createInfiniteQuery` of leads. */
 type LeadsInfiniteCache = {
-	pages: InfinitePage<CrmLeadDto>[];
+	pages: Page<CrmLeadDto>[];
 	pageParams: unknown[];
 };
 
@@ -53,7 +49,7 @@ type LeadsInfiniteCache = {
  */
 function projectLeadsListCache(cache: unknown, mapRow: (lead: CrmLeadDto) => CrmLeadDto): unknown {
 	if (!cache || typeof cache !== 'object') return cache;
-	const c = cache as Partial<LeadsInfiniteCache> & Partial<InfinitePage<CrmLeadDto>>;
+	const c = cache as Partial<LeadsInfiniteCache> & Partial<Page<CrmLeadDto>>;
 	if (Array.isArray(c.pages)) {
 		return {
 			...c,
@@ -151,7 +147,7 @@ export function changeStageMutation() {
 		CrmLeadDto,
 		{ prevDetail?: CrmLeadDto }
 	>({
-		mutationFn: ({ id, stage }) => api.updateLead(id, { stage }),
+		fn: ({ id, stage }) => api.updateLead(id, { stage }),
 		// Cancel BOTH the row's detail query AND every list query — a
 		// late list refetch would otherwise overwrite the optimistic
 		// kanban projection mid-flip.
@@ -172,9 +168,9 @@ export function changeStageMutation() {
 		rollback: ({ id }, ctx) => {
 			if (ctx.prevDetail) qc.setQueryData(leadsKeys.detail(id), ctx.prevDetail);
 		},
-		invalidateKeys: () => [leadsKeys.lists()],
-		successToast: (lead) => `Stage changed · ${lead.stage}`,
-		undo: async (lead, vars) => {
+		invalidate: () => [leadsKeys.lists()],
+		successToast: (_vars, lead) => `Stage changed · ${lead.stage}`,
+		undo: async (vars, lead) => {
 			await api.updateLead(lead.id, { stage: vars.previous });
 			void qc.invalidateQueries({ queryKey: leadsKeys.all });
 		}
@@ -188,7 +184,7 @@ export function changeTemperatureMutation() {
 		CrmLeadDto,
 		{ prevDetail?: CrmLeadDto }
 	>({
-		mutationFn: ({ id, temperature }) => api.updateLead(id, { temperature }),
+		fn: ({ id, temperature }) => api.updateLead(id, { temperature }),
 		// Cancel BOTH the row's detail query AND every list query.
 		cancelKeys: () => [[...leadsKeys.all, 'detail'], leadsKeys.lists()],
 		onMutate: ({ id }) => ({
@@ -207,9 +203,9 @@ export function changeTemperatureMutation() {
 		rollback: ({ id }, ctx) => {
 			if (ctx.prevDetail) qc.setQueryData(leadsKeys.detail(id), ctx.prevDetail);
 		},
-		invalidateKeys: () => [leadsKeys.lists()],
-		successToast: (lead) => `Temperature changed · ${lead.temperature}`,
-		undo: async (lead, vars) => {
+		invalidate: () => [leadsKeys.lists()],
+		successToast: (_vars, lead) => `Temperature changed · ${lead.temperature}`,
+		undo: async (vars, lead) => {
 			await api.updateLead(lead.id, { temperature: vars.previous });
 			void qc.invalidateQueries({ queryKey: leadsKeys.all });
 		}

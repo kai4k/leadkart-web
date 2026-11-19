@@ -25,7 +25,7 @@ export function anySignal(signals: readonly AbortSignal[]): AbortSignal {
 }
 
 /** A timeout in ms that is a real limit (0, Infinity, NaN, undefined mean "none"). */
-export function isFiniteTimeout(ms: number | undefined): ms is number {
+function isFiniteTimeout(ms: number | undefined): ms is number {
 	return typeof ms === 'number' && Number.isFinite(ms) && ms > 0;
 }
 

@@ -19,12 +19,7 @@
  * disconnects the observer on component teardown.
  */
 import { createInfiniteQuery, type CreateInfiniteQueryResult } from '@tanstack/svelte-query';
-
-export interface InfinitePage<T> {
-	items: T[];
-	has_more: boolean;
-	next_cursor?: string;
-}
+import { nextCursor, type Page } from '#lib/api/pagination.ts';
 
 export type InfiniteListState = 'pending' | 'error' | 'empty' | 'ready';
 
@@ -32,7 +27,7 @@ export interface InfiniteListOptions<T> {
 	/** Reactive query key — recomputed on every read for proper invalidation. */
 	queryKey: () => readonly unknown[];
 	/** Page fetcher. `cursor` is the pageParam threaded by TanStack. */
-	queryFn: (ctx: { cursor: string | undefined; signal: AbortSignal }) => Promise<InfinitePage<T>>;
+	queryFn: (ctx: { cursor: string | undefined; signal: AbortSignal }) => Promise<Page<T>>;
 	/** Gate the query on a reactive predicate. Defaults to `() => true`. */
 	enabled?: () => boolean;
 	/**
@@ -49,7 +44,7 @@ export interface InfiniteListOptions<T> {
  * `data.pages`, etc. directly when the high-level wrapper isn't enough.
  */
 export type InfiniteListQuery<T> = CreateInfiniteQueryResult<
-	{ pages: InfinitePage<T>[]; pageParams: (string | undefined)[] },
+	{ pages: Page<T>[]; pageParams: (string | undefined)[] },
 	Error
 >;
 
@@ -73,8 +68,7 @@ export function createInfiniteList<T>(options: InfiniteListOptions<T>): Infinite
 		queryFn: ({ pageParam, signal }) =>
 			options.queryFn({ cursor: pageParam as string | undefined, signal }),
 		initialPageParam: undefined as string | undefined,
-		getNextPageParam: (last: InfinitePage<T>) =>
-			last.has_more ? (last.next_cursor ?? undefined) : undefined,
+		getNextPageParam: (last: Page<T>) => nextCursor(last),
 		enabled: enabled()
 	})) as InfiniteListQuery<T>;
 

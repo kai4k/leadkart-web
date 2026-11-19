@@ -21,7 +21,7 @@
 	const currentFamilyId: string | null = null;
 	const sessionsQuery = mySessionsQuery();
 	const revokeMutation = revokeSessionMutation();
-	const revokeOthersMutation = $derived(revokeOtherSessionsMutation(currentFamilyId));
+	const revokeOthersMutation = revokeOtherSessionsMutation();
 
 	const sessionList = $derived(sessionsQuery.data ?? []);
 
@@ -37,7 +37,7 @@
 	}
 
 	async function onRevokeOthers() {
-		revokeOthersMutation.mutate();
+		revokeOthersMutation.mutate({ keepFamilyId: currentFamilyId });
 	}
 </script>
 
