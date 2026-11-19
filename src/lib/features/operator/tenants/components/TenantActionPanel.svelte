@@ -9,11 +9,9 @@
 	type Props = {
 		tenant: TenantDto;
 		onAction: (action: 'suspend' | 'mark', tenant: TenantDto) => void;
-		/** Inside the operator scope tree the tenant is server-loaded: reload it after the change. */
-		reloadPageData?: boolean;
 	};
 
-	let { tenant, onAction, reloadPageData = false }: Props = $props();
+	let { tenant, onAction }: Props = $props();
 
 	const capsQuery = myCapabilitiesQuery();
 	const canManage = $derived(hasCapability(capsQuery.data, 'platform.tenants.manage'));
@@ -21,13 +19,8 @@
 	 *  ensureNotPlatformTenant. Hide the buttons rather than let them 422. */
 	const isPlatformTenant = $derived(tenant.slug === 'platform');
 
-	const lifecycleOpts = {
-		get reloadPageData() {
-			return reloadPageData;
-		}
-	};
-	const activateMutation = activateTenantMutation(lifecycleOpts);
-	const restoreMutation = restoreTenantMutation(lifecycleOpts);
+	const activateMutation = activateTenantMutation();
+	const restoreMutation = restoreTenantMutation();
 
 	const isPending = $derived(activateMutation.isPending || restoreMutation.isPending);
 

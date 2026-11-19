@@ -4,7 +4,8 @@
  * `items` getter is the flattened page array; consumer renders `items`
  * and binds the `sentinelRef` to a `<div bind:this>` placed at the
  * bottom of the list. When the sentinel scrolls into view we call
- * `query.fetchNextPage()`.
+ * `query.fetchNextPage()`. After each page lands the observer is rebuilt, so a sentinel that
+ * is still in view fetches again.
  *
  * Cursor-based pagination contract (leadkart-go):
  *   page shape = `{ items, has_more, next_cursor? }`
@@ -77,6 +78,9 @@ export function createInfiniteList<T>(options: InfiniteListOptions<T>): Infinite
 	$effect(() => {
 		const el = sentinelRef;
 		if (!el) return;
+		// Tracked on purpose: when a page lands a fresh observer reports whether the sentinel is
+		// still in view (an observer only fires on a change, so without this a tall viewport stalls).
+		void query.data?.pages.length;
 		const observer = new IntersectionObserver(
 			(entries) => {
 				for (const entry of entries) {

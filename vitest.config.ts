@@ -10,6 +10,8 @@ import { aliases } from './aliases.js';
 export default defineConfig({
 	plugins: [svelte()],
 	resolve: {
+		// Svelte's client runtime, so component tests can mount() into jsdom.
+		conditions: ['browser'],
 		alias: {
 			...Object.fromEntries(
 				Object.entries(aliases).map(([key, target]) => [key, resolve(__dirname, target)])
@@ -21,6 +23,7 @@ export default defineConfig({
 			'$app/env/private': resolve(__dirname, 'tests/unit/stubs/app-env-private.ts'),
 			'$app/env': resolve(__dirname, 'tests/unit/stubs/app-env.ts'),
 			'$app/navigation': resolve(__dirname, 'tests/unit/stubs/app-navigation.ts'),
+			'$app/paths': resolve(__dirname, 'tests/unit/stubs/app-paths.ts'),
 			'$app/state': resolve(__dirname, 'tests/unit/stubs/app-state.ts')
 		}
 	},

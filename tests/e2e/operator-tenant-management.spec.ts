@@ -108,13 +108,12 @@ test.describe('Operator tenants list', () => {
 			body: { code: 'internal_error', message: 'tenant list lookup failed' }
 		});
 		await page.goto('/operator/tenants');
-		// DataTable surfaces canonical "Something went wrong" copy via its
-		// `error` prop — typed listErrorCopy derives from the ApiError
-		// subclass, not server message strings (CLAUDE.md rule 12).
+		// DataTable surfaces the typed ServerError copy via its `error` prop (the shared
+		// describer), not the server's message string (CLAUDE.md rule 12).
 		await expect(
 			page
 				.locator('#main-content')
-				.getByText(/something went wrong/i)
+				.getByText(/server error/i)
 				.first()
 		).toBeVisible({
 			timeout: 5000
@@ -172,10 +171,8 @@ test.describe('Register tenant — form validation', () => {
 
 		// Form-level banner appears with the server message
 		await expect(page.getByText(/slug.*exists/i).first()).toBeVisible({ timeout: 5000 });
-		// Global mutation-error toast also surfaces (role=status from Toaster).
-		// Default behaviour: every mutation error → toast unless the mutation
-		// hook opts out via meta. The form's inline banner is additional.
-		await expect(page.locator('[data-sonner-toast]').first()).toBeVisible({ timeout: 5000 });
+		// The drawer renders the error itself, so the mutation opts out of the global toast.
+		await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
 	});
 });
 

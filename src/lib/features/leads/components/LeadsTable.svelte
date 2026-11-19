@@ -13,6 +13,7 @@
 	import { resolve } from '$app/paths';
 	import { Skeleton, EmptyState, StatusPill } from '$ui';
 	import { Icon, Inbox } from '$icons';
+	import { InfiniteListFooter } from '#lib/components/data/index.ts';
 	import type { BulkSelection, InfiniteList, KeyboardListNav } from '#lib/hooks/index.ts';
 	import type { CrmLeadDto, LeadStage, LeadTemperature } from '../schemas';
 	import {
@@ -218,18 +219,7 @@
 		</table>
 	</div>
 
-	<!-- Infinite scroll sentinel -->
-	<div bind:this={list.sentinelRef} class="h-px w-full" aria-hidden="true"></div>
-
-	{#if list.isFetchingNextPage}
-		<div class="cluster justify-center py-4">
-			<span class="caption text-fg-muted">Loading more…</span>
-		</div>
-	{:else if !list.hasNextPage && rows.length > 0}
-		<div class="cluster justify-center py-4">
-			<span class="caption text-fg-subtle">— end of list —</span>
-		</div>
-	{/if}
+	<InfiniteListFooter {list} />
 {/if}
 
 <span class="hidden"><Icon icon={Inbox} size="xs" /></span>

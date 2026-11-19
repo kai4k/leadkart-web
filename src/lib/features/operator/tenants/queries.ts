@@ -8,7 +8,7 @@
  *     and the network round-trip is fast enough to skip.
  *   - Toasts in the mutation hook, not the calling component.
  *   - Lifecycle calls answer 204; inside the scope tree the layout's tenant comes
- *     from a server load, so `reloadPageData` also runs `refreshAll()`.
+ *     from a server load, so the lifecycle helper also runs `refreshAll()` there.
  *
  * Active-tenant resolution is now server-side: the /operator/scope/*
  * layout reads the lk_op_tenant cookie and fetches the canonical
@@ -18,6 +18,7 @@
 import { createQuery } from '@tanstack/svelte-query';
 import { refreshAll } from '$app/navigation';
 import { createResourceMutation } from '#lib/api/mutations.ts';
+import { isOperatorScopePath } from '#lib/api/scope-header.ts';
 import { queryRoots } from '#lib/api/query-keys.ts';
 import * as api from './api';
 import type { RegisterTenantRequest } from './types';
@@ -27,11 +28,6 @@ const tenantsKeys = {
 	list: () => [...tenantsKeys.all, 'list'] as const,
 	detail: (id: string) => [...tenantsKeys.all, 'detail', id] as const
 };
-
-/** Lifecycle hooks accept this; pass `reloadPageData` from the scope tree (server-loaded tenant). */
-export interface LifecycleMutationOptions {
-	reloadPageData?: boolean;
-}
 
 export function tenantsListQuery() {
 	return createQuery(() => ({
@@ -50,11 +46,13 @@ export function registerTenantMutation() {
 	});
 }
 
-/** Shared by the four lifecycle hooks: invalidate the tenants tree, optionally reload server data. */
+/**
+ * Shared by the four lifecycle hooks: invalidate the tenants tree and, inside the operator
+ * scope tree (where the tenant comes from a server load), reload that server data.
+ */
 function lifecycleMutation<TVars extends { id: string } | string>(
 	fn: (vars: TVars) => Promise<void>,
 	successToast: string,
-	opts: LifecycleMutationOptions,
 	inlineErrors = false
 ) {
 	return createResourceMutation({
@@ -62,32 +60,30 @@ function lifecycleMutation<TVars extends { id: string } | string>(
 		invalidate: () => [tenantsKeys.all],
 		successToast,
 		inlineErrors,
-		onSuccess: () => (opts.reloadPageData ? refreshAll() : undefined)
+		onSuccess: () => (isOperatorScopePath(window.location.pathname) ? refreshAll() : undefined)
 	});
 }
 
-export function suspendTenantMutation(opts: LifecycleMutationOptions = {}) {
+export function suspendTenantMutation() {
 	return lifecycleMutation(
 		({ id, reason }: { id: string; reason: string }) => api.suspendTenant(id, { reason }),
 		'Tenant suspended',
-		opts,
 		true
 	);
 }
 
-export function activateTenantMutation(opts: LifecycleMutationOptions = {}) {
-	return lifecycleMutation((id: string) => api.activateTenant(id), 'Tenant activated', opts);
+export function activateTenantMutation() {
+	return lifecycleMutation((id: string) => api.activateTenant(id), 'Tenant activated');
 }
 
-export function markForDeletionMutation(opts: LifecycleMutationOptions = {}) {
+export function markForDeletionMutation() {
 	return lifecycleMutation(
 		({ id, reason }: { id: string; reason: string }) => api.markForDeletion(id, { reason }),
 		'Tenant marked for deletion',
-		opts,
 		true
 	);
 }
 
-export function restoreTenantMutation(opts: LifecycleMutationOptions = {}) {
-	return lifecycleMutation((id: string) => api.restoreTenant(id), 'Tenant restored', opts);
+export function restoreTenantMutation() {
+	return lifecycleMutation((id: string) => api.restoreTenant(id), 'Tenant restored');
 }

@@ -7,6 +7,7 @@
 		Card,
 		CopyButton,
 		Skeleton,
+		toast,
 		type BreadcrumbItem
 	} from '$ui';
 	import { Select, TextField } from '#lib/components/form/index.ts';
@@ -45,15 +46,20 @@
 				if (id === roleId) saved = true;
 			},
 			onError: (err: unknown) => {
-				if (id === roleId)
-					error = describeError(err, {
-						fallback,
-						status: {
-							403: "You don't have permission for this action.",
-							404: 'This role was deleted or moved.',
-							409: 'Conflicts with the current state.'
-						}
-					});
+				// The banner shows only the role on screen; a failure for a role the user has
+				// since left would otherwise be silent, so it goes to a toast.
+				if (id !== roleId) {
+					toast.error(describeError(err, { fallback }));
+					return;
+				}
+				error = describeError(err, {
+					fallback,
+					status: {
+						403: "You don't have permission for this action.",
+						404: 'This role was deleted or moved.',
+						409: 'Conflicts with the current state.'
+					}
+				});
 			}
 		};
 	}
@@ -70,9 +76,10 @@
 	const canUpdate = $derived(
 		!protectedRole && hasCapability(capsQuery.data, 'identity.roles.update')
 	);
-	const updateMutation = $derived(updateRoleMutation());
-	const replacePermsMutation = $derived(replaceRolePermissionsMutation());
-	const parentMutation = $derived(setRoleParentMutation());
+	// Created once: the role id travels in the mutation variables.
+	const updateMutation = updateRoleMutation();
+	const replacePermsMutation = replaceRolePermissionsMutation();
+	const parentMutation = setRoleParentMutation();
 	const isMutating = $derived(
 		updateMutation.isPending || replacePermsMutation.isPending || parentMutation.isPending
 	);

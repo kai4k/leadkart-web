@@ -6,6 +6,7 @@
 	import type { ResolvedPathname } from '$app/types';
 	import { Badge, Button, DataTable, EmptyState, type DataTableColumn } from '$ui';
 	import { Icon, Inbox, Plus } from '$icons';
+	import { InfiniteListFooter } from '#lib/components/data/index.ts';
 	import { permissionRequestsInfiniteQuery } from '$features/permission-requests/queries';
 	import { stateBadge, daysOrIndefinite } from '$features/permission-requests/view-models';
 	import type { PermissionRequestDto } from '$features/permission-requests/schemas';
@@ -160,14 +161,7 @@
 		{/snippet}
 	</DataTable.Root>
 
-	<!-- Infinite scroll sentinel: the same pattern as the leads list -->
-	<div bind:this={list.sentinelRef} class="h-px w-full" aria-hidden="true"></div>
-
-	{#if list.isFetchingNextPage}
-		<p class="caption text-fg-muted text-center" aria-live="polite">Loading more…</p>
-	{:else if !list.hasNextPage && requests.length > 0}
-		<p class="caption text-fg-subtle text-center">End of results</p>
-	{/if}
+	<InfiniteListFooter {list} />
 </div>
 
 <CreatePermissionRequestDrawer bind:open={createOpen} onOpenChange={(o) => (createOpen = o)} />
