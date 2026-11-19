@@ -313,6 +313,11 @@ export class ScopeInvalidError extends ApiError {
 	}
 }
 
+/** The one user-facing line for any failure; every error toast (global handler, undo) uses it. */
+export function describeError(err: unknown): string {
+	return err instanceof ApiError ? err.message : 'Something went wrong';
+}
+
 // ── Legacy compat ─────────────────────────────────────────────────────────
 
 /** Type predicate — narrows `unknown` to `ApiError` safely. */

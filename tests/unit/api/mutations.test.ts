@@ -1,11 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { MutationCache, MutationObserver, QueryClient } from '@tanstack/svelte-query';
+import { MutationObserver, QueryClient } from '@tanstack/svelte-query';
 
 const toastMock = vi.hoisted(() => ({
 	success: vi.fn(),
 	error: vi.fn()
 }));
 vi.mock('$ui', () => ({ toast: toastMock }));
+vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
+vi.mock('#lib/utils/private-caches.ts', () => ({
+	clearPrivateCaches: vi.fn(),
+	IMPERSONATION_SESSION_KEY: 'leadkart-impersonation-session'
+}));
+vi.mock('#lib/api/client.ts', () => ({ api: { delete: vi.fn() } }));
+import { createQueryClient } from '#lib/api/query-client.ts';
+import { ApiError } from '#lib/api/errors.ts';
 import { resourceMutationOptions } from '#lib/api/mutations.ts';
 
 beforeEach(() => vi.clearAllMocks());
@@ -93,19 +101,34 @@ describe('resourceMutationOptions', () => {
 		expect(toastOpts.duration).toBe(7_000);
 		expect(toastOpts.action.label).toBe('Undo');
 		toastOpts.action.onClick();
-		expect(undo).toHaveBeenCalledWith('v', 1);
+		await vi.waitFor(() => expect(undo).toHaveBeenCalledWith('v', 1));
 	});
 
-	it('a failing mutation produces exactly one error toast through a real MutationCache', async () => {
-		const errorToast = vi.fn();
-		const cache = new MutationCache({
-			onError: (error, _v, _c, mutation) => {
-				if (mutation.meta?.skipErrorToast === true) return;
-				errorToast(error);
-			}
+	it('a failing undo toasts one error with the global copy and never rejects unhandled', async () => {
+		const unhandled = vi.fn();
+		process.on('unhandledRejection', unhandled);
+		const opts = resourceMutationOptions(new QueryClient(), {
+			fn: (_: string) => Promise.resolve(1),
+			invalidate: () => [],
+			successToast: 'Done',
+			undo: () => Promise.reject(new ApiError(500))
 		});
-		const qc = new QueryClient({ mutationCache: cache });
-		const failing = () => Promise.reject(new Error('boom'));
+		await opts.onSuccess(1, 'v');
+		const [, toastOpts] = toastMock.success.mock.calls[0] as [
+			string,
+			{ action: { onClick: () => void } }
+		];
+		toastOpts.action.onClick();
+		await vi.waitFor(() => expect(toastMock.error).toHaveBeenCalledTimes(1));
+		expect(toastMock.error).toHaveBeenCalledWith('An unexpected error occurred.');
+		await new Promise((r) => setTimeout(r, 10));
+		process.off('unhandledRejection', unhandled);
+		expect(unhandled).not.toHaveBeenCalled();
+	});
+
+	it('a failing mutation produces exactly one error toast through the real query client', async () => {
+		const qc = createQueryClient();
+		const failing = () => Promise.reject(new ApiError(500));
 		for (const inlineErrors of [false, true]) {
 			const observer = new MutationObserver(
 				qc,
@@ -113,7 +136,7 @@ describe('resourceMutationOptions', () => {
 			);
 			await observer.mutate(undefined as never).catch(() => {});
 		}
-		expect(errorToast).toHaveBeenCalledTimes(1);
-		expect(toastMock.error).not.toHaveBeenCalled();
+		expect(toastMock.error).toHaveBeenCalledTimes(1);
+		expect(toastMock.error).toHaveBeenCalledWith('An unexpected error occurred.');
 	});
 });

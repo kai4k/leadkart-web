@@ -12,6 +12,7 @@
 import { createQuery } from '@tanstack/svelte-query';
 import { createResourceMutation } from '#lib/api/mutations.ts';
 import * as api from './api';
+import { bulkSetStatus, bulkSummary, type BulkStatusAction } from './service';
 import type { CreateUserRequest, ReplacePermissionOverridesRequest } from './types';
 
 const usersKeys = {
@@ -72,7 +73,8 @@ export function createUserMutation() {
 	return createResourceMutation({
 		fn: (req: CreateUserRequest) => api.createUser(req),
 		invalidate: () => [usersKeys.list()],
-		successToast: 'Member added'
+		successToast: 'Member added',
+		inlineErrors: true
 	});
 }
 
@@ -93,11 +95,25 @@ export function reactivateUserMutation() {
 	});
 }
 
+/**
+ * Bulk deactivate/reactivate over many ids as ONE mutation: one summary toast, one invalidation.
+ * Rejects (global error toast) only when every id failed.
+ */
+export function bulkUserStatusMutation() {
+	return createResourceMutation({
+		fn: ({ action, ids }: { action: BulkStatusAction; ids: readonly string[] }) =>
+			bulkSetStatus(action, ids),
+		invalidate: ({ ids }) => [...ids.map(usersKeys.detail), usersKeys.list()],
+		successToast: ({ action }, result) => bulkSummary(action, result)
+	});
+}
+
 export function assignRoleMutation() {
 	return createResourceMutation({
 		fn: ({ id, roleId }: { id: string; roleId: string }) => api.assignRole(id, { role_id: roleId }),
 		invalidate: ({ id }) => [usersKeys.detail(id), usersKeys.list()],
-		successToast: 'Role assigned'
+		successToast: 'Role assigned',
+		inlineErrors: true
 	});
 }
 
@@ -105,7 +121,8 @@ export function revokeRoleMutation() {
 	return createResourceMutation({
 		fn: ({ id, roleId }: { id: string; roleId: string }) => api.revokeRole(id, roleId),
 		invalidate: ({ id }) => [usersKeys.detail(id), usersKeys.list()],
-		successToast: 'Role revoked'
+		successToast: 'Role revoked',
+		inlineErrors: true
 	});
 }
 
@@ -114,7 +131,8 @@ export function replacePermissionOverridesMutation() {
 		fn: ({ id, body }: { id: string; body: ReplacePermissionOverridesRequest }) =>
 			api.replacePermissionOverrides(id, body),
 		invalidate: ({ id }) => [usersKeys.detail(id)],
-		successToast: 'Permission overrides saved'
+		successToast: 'Permission overrides saved',
+		inlineErrors: true
 	});
 }
 
@@ -123,14 +141,17 @@ export function assignManagerMutation() {
 		fn: ({ id, managerId }: { id: string; managerId: string }) =>
 			api.assignManager(id, { manager_id: managerId }),
 		invalidate: ({ id }) => [usersKeys.detail(id), usersKeys.list()],
-		successToast: 'Manager assigned'
+		successToast: 'Manager assigned',
+		inlineErrors: true
 	});
 }
 
-export function removeManagerMutation() {
+/** `inlineErrors`: the caller renders the failure itself (the drawer does; the detail tab does not). */
+export function removeManagerMutation({ inlineErrors = false }: { inlineErrors?: boolean } = {}) {
 	return createResourceMutation({
 		fn: (id: string) => api.removeManager(id),
 		invalidate: (id) => [usersKeys.detail(id), usersKeys.list()],
-		successToast: 'Manager removed'
+		successToast: 'Manager removed',
+		inlineErrors
 	});
 }

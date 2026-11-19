@@ -36,7 +36,7 @@
 	);
 
 	const assignMutation = assignManagerMutation();
-	const removeMutation = removeManagerMutation();
+	const removeMutation = removeManagerMutation({ inlineErrors: true });
 
 	const isPending = $derived(assignMutation.isPending || removeMutation.isPending);
 

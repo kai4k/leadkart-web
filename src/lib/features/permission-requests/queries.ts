@@ -36,7 +36,8 @@ export function createPermissionRequestMutation() {
 	return createResourceMutation({
 		fn: (req: CreatePermissionRequest) => api.createPermissionRequest(req),
 		invalidate: () => [permissionRequestsKeys.all],
-		successToast: 'Request submitted'
+		successToast: 'Request submitted',
+		inlineErrors: true
 	});
 }
 

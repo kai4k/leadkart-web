@@ -33,6 +33,7 @@ import {
 	type QueryKey
 } from '@tanstack/svelte-query';
 import { toast } from '$ui';
+import { describeError } from './errors.ts';
 
 export interface ResourceMutationOptions<TVars, TData> {
 	fn: (vars: TVars) => Promise<TData>;
@@ -68,7 +69,16 @@ export function resourceMutationOptions<TVars, TData>(
 					undo
 						? {
 								duration: o.toastDurationMs ?? 10_000,
-								action: { label: 'Undo', onClick: () => undo(vars, data) }
+								action: {
+									label: 'Undo',
+									// A failed undo has no mutation to carry it to the global handler:
+									// report it with the same copy instead of an unhandled rejection.
+									onClick: () => {
+										void Promise.resolve()
+											.then(() => undo(vars, data))
+											.catch((err: unknown) => toast.error(describeError(err)));
+									}
+								}
 							}
 						: o.toastDurationMs
 							? { duration: o.toastDurationMs }

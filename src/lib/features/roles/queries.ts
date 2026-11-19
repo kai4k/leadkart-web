@@ -36,8 +36,10 @@ export function roleDetailQuery(roleId: string) {
 export function updateRoleMutation() {
 	return createResourceMutation({
 		fn: ({ id, req }: { id: string; req: UpdateRoleRequest }) => api.updateRole(id, req),
-		invalidate: ({ id }) => [rolesKeys.detail(id), rolesKeys.all],
-		successToast: 'Role updated'
+		// `all` is a prefix of `detail`: invalidating both cancels and restarts the detail refetch.
+		invalidate: () => [rolesKeys.all],
+		successToast: 'Role updated',
+		inlineErrors: true
 	});
 }
 
@@ -46,15 +48,19 @@ export function replaceRolePermissionsMutation() {
 		fn: ({ id, permissions }: { id: string; permissions: string[] }) =>
 			api.replaceRolePermissions(id, { permissions }),
 		invalidate: ({ id }) => [rolesKeys.detail(id), rolesKeys.list()],
-		successToast: 'Permissions saved'
+		successToast: 'Permissions saved',
+		inlineErrors: true
 	});
 }
 
 export function deleteRoleMutation() {
 	return createResourceMutation({
 		fn: (id: string) => api.deleteRole(id),
-		invalidate: () => [rolesKeys.all],
-		successToast: 'Role deleted'
+		// Deleting a role unassigns it from its members, so the users list changes too
+		// (users/queries.ts usersKeys.list; a cross-feature key stays a literal here).
+		invalidate: () => [rolesKeys.all, ['users', 'list']],
+		successToast: 'Role deleted',
+		inlineErrors: true
 	});
 }
 
@@ -64,6 +70,7 @@ export function setRoleParentMutation() {
 			api.setRoleParent(id, { parent_role_id }),
 		invalidate: () => [rolesKeys.all],
 		successToast: ({ parent_role_id }) =>
-			parent_role_id ? 'Parent role set' : 'Parent role cleared'
+			parent_role_id ? 'Parent role set' : 'Parent role cleared',
+		inlineErrors: true
 	});
 }

@@ -36,15 +36,10 @@ import { onDestroy } from 'svelte';
 import { browser } from '$app/env';
 import { goto } from '$app/navigation';
 import { toast } from '$ui';
-import { ApiError, NetworkError, ServerError, AuthError, TimeoutError } from './errors';
+import { describeError, NetworkError, ServerError, AuthError, TimeoutError } from './errors';
 import { exitOperatorScope } from './operator-scope';
 import { createSessionGuard } from './session-guard';
 import { clearPrivateCaches, IMPERSONATION_SESSION_KEY } from '#lib/utils/private-caches.ts';
-
-function describeError(err: unknown): string {
-	if (err instanceof ApiError) return err.message;
-	return 'Something went wrong';
-}
 
 /** A client with the app's defaults and the session guard wired to it. */
 export function createQueryClient(): QueryClient {

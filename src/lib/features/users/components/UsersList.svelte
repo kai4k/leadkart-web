@@ -13,7 +13,6 @@
 		Dropdown,
 		EmptyState,
 		Pagination,
-		toast,
 		type DataTableColumn
 	} from '$ui';
 	import {
@@ -31,7 +30,7 @@
 		usersListQuery,
 		usersListTruncatedQuery,
 		reactivateUserMutation,
-		deactivateUserMutation
+		bulkUserStatusMutation
 	} from '$features/users/queries';
 	import { rolesListQuery } from '$features/roles';
 	import { userStatusBadge, userRoleBadges, canDeactivate } from '$features/users/view-models';
@@ -87,13 +86,25 @@
 	const truncatedQuery = usersListTruncatedQuery();
 	const rolesQuery = rolesListQuery();
 	const reactivate = reactivateUserMutation();
-	const deactivate = deactivateUserMutation();
+	const bulkStatus = bulkUserStatusMutation();
 
 	// DataTable normalises rows to `{ id }` at runtime via rowKey, so the
 	// selection store keys on membership_id strings even though UserDto
 	// doesn't carry an `id` field. The store contract requires SelectableItem
 	// here for type-safety; the runtime store only ever sees the rowKey value.
 	const selection = createBulkSelection<{ id: string }>();
+
+	// One mutation settles every id and toasts one summary (success or all-failed error);
+	// the selection is cleared either way.
+	async function runBulk(action: 'deactivate' | 'reactivate') {
+		try {
+			await bulkStatus.mutateAsync({ action, ids: Array.from(selection.selected) });
+		} catch {
+			// reported by the global mutation handler
+		} finally {
+			selection.clear();
+		}
+	}
 
 	const bulkActions: BulkAction[] = [
 		{
@@ -107,48 +118,13 @@
 					'Selected members lose access immediately. You can reactivate them later from this list.',
 				confirmLabel: 'Deactivate'
 			},
-			onClick: async () => {
-				const ids = Array.from(selection.selected);
-				await Promise.all(
-					ids.map(
-						(id) =>
-							new Promise<void>((resolve) => {
-								deactivate.mutate(
-									{ id, reason: 'Bulk deactivate' },
-									{
-										onSuccess: () => resolve(),
-										// the mutation shows errors inline (dialog), so the bulk path toasts them itself
-										onError: (err) => {
-											toast.error(err.message);
-											resolve();
-										}
-									}
-								);
-							})
-					)
-				);
-				selection.clear();
-			}
+			onClick: () => runBulk('deactivate')
 		},
 		{
 			id: 'reactivate',
 			label: 'Reactivate',
 			icon: UserPlus as never,
-			onClick: async () => {
-				const ids = Array.from(selection.selected);
-				await Promise.all(
-					ids.map(
-						(id) =>
-							new Promise<void>((resolve) => {
-								reactivate.mutate(id, {
-									onSuccess: () => resolve(),
-									onError: () => resolve()
-								});
-							})
-					)
-				);
-				selection.clear();
-			}
+			onClick: () => runBulk('reactivate')
 		}
 	];
 
