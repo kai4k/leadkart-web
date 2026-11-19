@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clearAuthCookies, setAuthCookies } from '#lib/server/cookies.ts';
+import { clearAuthCookies, setAuthCookies, setMustChangePassword } from '#lib/server/cookies.ts';
 
 type Call = { name: string; value?: string; opts: Record<string, unknown> };
 function fakeCookies(existing: Record<string, string> = {}) {
@@ -34,6 +34,18 @@ describe('auth cookies', () => {
 		expect(csrf?.opts.httpOnly).toBe(false);
 	});
 
+	it("matches Go's lifetimes: 10 min access, 14 days refresh / csrf / must-change-password", () => {
+		const c = fakeCookies();
+		setAuthCookies(c.jar, 'acc', 'ref');
+		const maxAge = (name: string) => c.sets.find((s) => s.name === name)?.opts.maxAge;
+		expect(maxAge('lk_access')).toBe(600);
+		expect(maxAge('lk_refresh')).toBe(1_209_600);
+		expect(maxAge('lk_csrf')).toBe(1_209_600);
+		const mcp = fakeCookies();
+		setMustChangePassword(mcp.jar, true);
+		expect(mcp.sets.find((s) => s.name === 'lk_mcp')?.opts.maxAge).toBe(1_209_600);
+	});
+
 	it('clears the refresh cookie on both the new and the legacy path', () => {
 		const c = fakeCookies();
 		clearAuthCookies(c.jar);
@@ -46,7 +58,7 @@ describe('auth cookies', () => {
 		setAuthCookies(c.jar, 'acc', 'ref', { keepCsrf: true });
 		const csrf = c.sets.find((s) => s.name === 'lk_csrf');
 		expect(csrf?.value).toBe('existing');
-		expect(csrf?.opts.maxAge).toBe(30 * 24 * 3600);
+		expect(csrf?.opts.maxAge).toBe(14 * 24 * 3600);
 		expect(csrf?.opts.httpOnly).toBe(false);
 	});
 

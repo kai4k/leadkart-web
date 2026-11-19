@@ -179,7 +179,7 @@ describe('refreshSession', () => {
 		expect(j.store.get('lk_refresh')).toBe('new-r');
 		expect(j.store.get('lk_csrf')).toBe('keep-me');
 		const csrf = j.sets.find((s) => s.name === 'lk_csrf');
-		expect(csrf?.opts.maxAge).toBe(30 * 24 * 3600);
+		expect(csrf?.opts.maxAge).toBe(14 * 24 * 3600);
 	});
 });
 

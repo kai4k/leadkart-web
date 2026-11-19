@@ -26,8 +26,10 @@ export const REFRESH_COOKIE = 'lk_refresh';
 export const CSRF_COOKIE = 'lk_csrf';
 const MCP_COOKIE = 'lk_mcp';
 
-const ACCESS_MAX_AGE = 15 * 60;
-const REFRESH_MAX_AGE = 30 * 24 * 3600;
+/** Go access JWT lifetime (internal/identity/app/jwt/jwt.go:30). */
+const ACCESS_MAX_AGE = 10 * 60;
+/** Go refresh family: 14 days, rolling — every refresh re-sets the cookie (backend-checklist #13). */
+const REFRESH_MAX_AGE = 14 * 24 * 3600;
 /** Path used before 2026-11; cleared on logout so stale cookies disappear. */
 const LEGACY_REFRESH_PATH = '/auth/refresh';
 
@@ -56,8 +58,8 @@ export function setAuthCookies(
 	});
 	// Rotating csrf on refresh would break requests already in flight with
 	// the old header, so a refresh keeps the existing VALUE — but re-sets it
-	// so its expiry renews with the session instead of lapsing 30 days after
-	// login. Lives as long as the session: a 15-minute csrf cookie made every
+	// so its expiry renews with the session instead of lapsing 14 days after
+	// login (rolling, like the refresh cookie). Lives as long as the session: a 10-minute csrf cookie made every
 	// mutation fail with 403 once the first access token expired.
 	const existing = opts.keepCsrf ? cookies.get(CSRF_COOKIE) : undefined;
 	const csrf =

@@ -26,7 +26,7 @@ export const init: ServerInit = async () => {
 };
 
 /**
- * Silent refresh: access cookie gone (15-minute expiry) + refresh cookie
+ * Silent refresh: access cookie gone (10-minute expiry) + refresh cookie
  * present → refresh now. Later `event.cookies.get(...)` calls in the same
  * request see the new value; the outcome is kept on `event.locals.refreshOutcome`.
  *
