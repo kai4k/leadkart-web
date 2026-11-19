@@ -23,6 +23,12 @@ describe('getListErrorMessage', () => {
 			expect(copy).not.toMatch(/don't have permission to view/);
 		}
 	);
+	it('a 400/422 without field errors never shows Go text', () => {
+		const err = ApiError.fromResponse(res(400), { message: 'role_id must be a UUID' });
+		expect(getListErrorMessage(err, 'roles')).toBe(
+			'The request was not accepted. Check the values and try again.'
+		);
+	});
 	it('401, 404 and unknown errors keep their list copy', () => {
 		expect(getListErrorMessage(ApiError.fromResponse(res(401), null), 'x')).toBe(
 			'Your session expired. Sign in again.'

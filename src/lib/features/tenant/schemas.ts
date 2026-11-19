@@ -20,20 +20,13 @@ export const adminAddressSchema = AdminAddressDto;
 export const passwordPolicySchema = PasswordPolicyDto;
 
 /**
- * Tenant lifecycle status as Go emits it (identity/domain/tenant/status.go).
- * The OpenAPI spec still lists `marked_for_deletion` / `hard_deleted`, which Go
- * never sends — the generated enum is corrected here until the spec is fixed.
+ * Tenant lifecycle status: the generated enum is Go's own
+ * (`pending | active | suspended | pending_deletion | deleted`).
  */
-export const tenantStatusSchema = z.enum([
-	'pending',
-	'active',
-	'suspended',
-	'pending_deletion',
-	'deleted'
-]);
+export const tenantStatusSchema = TenantDto.shape.status;
 export type TenantStatus = z.output<typeof tenantStatusSchema>;
 
-export const tenantSchema = TenantDto.extend({ status: tenantStatusSchema });
+export const tenantSchema = TenantDto;
 
 export const updateTenantProfileSchema = z.object({
 	legal_name: z.string().min(1, 'Legal name is required'),

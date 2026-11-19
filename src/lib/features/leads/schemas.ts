@@ -13,6 +13,7 @@
  * Go API validates UUIDs server-side; we accept any string here.
  */
 import { z } from 'zod';
+import { responseEmail } from '#lib/api/response-schema.ts';
 
 // ── Enums ───────────────────────────────────────────────────────────
 
@@ -112,7 +113,7 @@ export const crmLeadDtoSchema = z.object({
 	// Contact (locked)
 	contact_name: z.string().min(1).max(200),
 	mobile_number: mobileNumberSchema,
-	email: z.string().email().nullable().optional(),
+	email: responseEmail.nullable().optional(),
 
 	// Address (pin/city/district/state locked; street editable)
 	address: leadAddressSchema,

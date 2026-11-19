@@ -34,6 +34,14 @@ export async function loadCapabilities(cookies: Cookies): Promise<Capabilities |
 		if (isUpstreamTimeout(err)) throw error(504, 'Go API did not respond in time');
 		throw error(503, 'Service temporarily unavailable');
 	}
-	const parsed = body === null ? null : capabilitiesSchema.safeParse(body);
-	return parsed?.success ? parsed.data : null;
+	if (body === null) return null;
+	const parsed = capabilitiesSchema.safeParse(body);
+	if (parsed.success) return parsed.data;
+	// A contract mismatch must be visible, not a silent sign-out loop. Paths and Zod's messages
+	// only — never the values (they are the caller's identity).
+	const issues = parsed.error.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`);
+	console.error(
+		`[capabilities] Go's capabilities response does not match the contract: ${issues.join('; ')}`
+	);
+	return null;
 }

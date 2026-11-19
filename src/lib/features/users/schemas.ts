@@ -17,6 +17,7 @@ import {
 	ListUsersResponse,
 	ReplaceUserPermissionOverridesRequest
 } from '#lib/api/generated/index.ts';
+import { responseEmail } from '#lib/api/response-schema.ts';
 import { userDtoSchema } from '#lib/features/auth/schemas.ts';
 
 export { userDtoSchema };
@@ -35,7 +36,7 @@ export const membershipSearchResultSchema = z.object({
 	person_id: z.string(),
 	first_name: z.string(),
 	last_name: z.string(),
-	email: z.string().email()
+	email: responseEmail
 });
 
 export const searchMembershipsResponseSchema = z.object({

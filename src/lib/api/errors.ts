@@ -32,13 +32,16 @@ const GO_SCOPE_EXIT_CODES: ReadonlySet<string> = new Set([
 	'invalid_tenant_scope',
 	'tenant_scope_not_found'
 ]);
-const TENANT_NOT_ACTIVE_CODE = 'tenant_not_active';
+/** The generic "your input was refused" line: validation errors without field errors, `invalid_search_include`. */
+const VALIDATION_FALLBACK_COPY = 'The request was not accepted. Check the values and try again.';
 /**
- * Go 403 codes whose copy is fixed. None of the `tenant_scope_*` ones exits the operator scope
- * (the operator stays in context and must be told the truth), and a caller's generic 403 line
- * never replaces them (see describeError).
+ * THE code → copy map: Go (and BFF) codes whose user text is fixed, whatever Go says. Raw Go text is
+ * technical or empty (enumeration safety). None of the `tenant_scope_*` ones exits the operator
+ * scope (the operator stays in context and must be told the truth).
+ * Precedence is in `describeError`: a caller's own line for the status never replaces a code
+ * here, except the plain `forbidden` (CALLER_LINE_WINS_CODES).
  */
-const FORBIDDEN_CODE_COPY: ReadonlyMap<string, string> = new Map([
+const CODE_COPY: ReadonlyMap<string, string> = new Map([
 	[CSRF_MISMATCH_CODE, 'Your session token is out of date — reload the page and try again.'],
 	[
 		'tenant_scope_not_supported',
@@ -48,9 +51,23 @@ const FORBIDDEN_CODE_COPY: ReadonlyMap<string, string> = new Map([
 		'tenant_scope_read_only',
 		'Read-only while acting in a tenant. Exit the tenant context to make this change.'
 	],
-	['tenant_scope_forbidden', "You don't have permission to act in another tenant."]
+	['tenant_scope_forbidden', "You don't have permission to act in another tenant."],
+	[
+		'tenant_scope_conflict',
+		'This action targets a different tenant than the one you are acting in. Exit the tenant context and try again.'
+	],
+	['tenant_not_active', 'This tenant is not active. Changes are disabled.'],
+	['forbidden', "You don't have permission to do this."],
+	['grant_exceeds_authority', "You can't grant a permission or role above your own."],
+	['self_modification_forbidden', "You can't make this change to your own account."],
+	['search_category_forbidden', "You don't have access to that search category."],
+	['invalid_search_include', VALIDATION_FALLBACK_COPY]
 ]);
-const TENANT_SUSPENDED_COPY = 'This tenant is suspended. Changes are disabled.';
+/** Codes whose copy is the least specific one there is: the caller's own line for the status is better. */
+const CALLER_LINE_WINS_CODES: ReadonlySet<string> = new Set(['forbidden']);
+const SERVER_ERROR_COPY = 'Something went wrong on our side. Please try again.';
+/** 503/504 (the BFF's own: Go unreachable / too slow) and the BFF's 502 `upstream_unavailable`. */
+const UNREACHABLE_COPY = 'The service is not reachable right now. Please try again in a moment.';
 const MAX_RETRY_AFTER_SECONDS = 86_400;
 const IMF_FIXDATE =
 	/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{2} (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4} \d{2}:\d{2}:\d{2} GMT$/;
@@ -104,6 +121,7 @@ export class ApiError extends Error {
 		const text = firstText(body?.message, body?.detail);
 		const traceId = response.headers.get(CORRELATION_ID_HEADER) ?? undefined;
 		const retryAfter = parseRetryAfter(response.headers.get('retry-after'));
+		const copy = code === undefined ? undefined : CODE_COPY.get(code);
 		let err: ApiError;
 		if (code !== undefined && GO_SCOPE_EXIT_CODES.has(code)) {
 			err = new ScopeInvalidError(text, traceId, response.status);
@@ -121,7 +139,7 @@ export class ApiError extends Error {
 				err = new AuthError(401, traceId, code === SESSION_EXPIRED_CODE ? undefined : text);
 				break;
 			case 403:
-				err = new AuthError(403, traceId, (code && FORBIDDEN_CODE_COPY.get(code)) || text);
+				err = new AuthError(403, traceId, copy ?? text);
 				break;
 			case 404:
 				err = new NotFoundError(response.url || 'unknown resource', traceId, text);
@@ -130,10 +148,7 @@ export class ApiError extends Error {
 				err =
 					code === SCOPE_INVALID_CODE
 						? new ScopeInvalidError(text, traceId)
-						: new ConflictError(
-								code === TENANT_NOT_ACTIVE_CODE ? TENANT_SUSPENDED_COPY : text,
-								traceId
-							);
+						: new ConflictError(copy ?? text, traceId);
 				break;
 			case 429:
 				err = new RateLimitError(retryAfter, traceId);
@@ -147,6 +162,9 @@ export class ApiError extends Error {
 				}
 		}
 		if (code) err.code = code;
+		// A 400 (tenant_scope_conflict, invalid_search_include) speaks the fixed copy too; Go's text
+		// stays in `ValidationError.detail`.
+		if (copy !== undefined) err.message = copy;
 		err.retryAfterSeconds ??= retryAfter;
 		return err;
 	}
@@ -252,7 +270,11 @@ export class ServerError extends ApiError {
 	) {
 		super(status, traceId);
 		this.name = 'ServerError';
-		this.message = 'Server error — our team has been notified. Please try again.';
+		const code = (body as ApiErrorBody | null)?.error;
+		this.message =
+			status === 503 || status === 504 || code === 'upstream_unavailable'
+				? UNREACHABLE_COPY
+				: SERVER_ERROR_COPY;
 	}
 }
 
@@ -326,16 +348,34 @@ export interface DescribeErrorOptions {
 	 * The caller's own line per status ("You don't have permission to suspend tenants."). It replaces
 	 * Go's generic text, never a known-code copy (tenant-context refusals), and a 409 only when Go sent no text.
 	 */
-	status?: { 401?: string; 403?: string; 404?: string; 409?: string };
+	status?: { 400?: string; 401?: string; 403?: string; 404?: string; 409?: string; 422?: string };
 }
 
-/** The one user-facing line for any failure: toasts, inline banners, list errors. */
+type OwnLineStatus = 400 | 401 | 403 | 404 | 409 | 422;
+
+/**
+ * The one user-facing line for any failure: toasts, inline banners, list errors.
+ * Precedence, first match wins:
+ *   1. not an ApiError → `fallback`
+ *   2. a code in CODE_COPY → its fixed copy, EXCEPT plain `forbidden`, which the caller's own
+ *      line for the status replaces (it is more specific). So a caller's 403 line never beats a
+ *      `tenant_scope_*` code, `grant_exceeds_authority` or `self_modification_forbidden`.
+ *   3. a dead operator scope / an error without status → its own message
+ *   4. a validation error: with field errors its message (the fields also reach the form); without,
+ *      the caller's 400/422 line, else the generic "request was not accepted" line (never Go's raw text)
+ *   5. the caller's own line for the status (a 409 only when Go sent no text)
+ *   6. the error's own message
+ */
 export function describeError(err: unknown, opts: DescribeErrorOptions = {}): string {
 	if (!(err instanceof ApiError)) return opts.fallback ?? 'Something went wrong';
-	const known = err.code === undefined ? undefined : FORBIDDEN_CODE_COPY.get(err.code);
-	if (known !== undefined) return known;
+	const own = err.status === undefined ? undefined : opts.status?.[err.status as OwnLineStatus];
+	const known = err.code === undefined ? undefined : CODE_COPY.get(err.code);
+	const callerLineWins = own !== undefined && CALLER_LINE_WINS_CODES.has(err.code ?? '');
+	if (known !== undefined && !callerLineWins) return known;
 	if (err instanceof ScopeInvalidError || err.status === undefined) return err.message;
-	const own = opts.status?.[err.status as 401 | 403 | 404 | 409];
+	if (err instanceof ValidationError) {
+		return err.hasFieldErrors ? err.message : (own ?? VALIDATION_FALLBACK_COPY);
+	}
 	if (own === undefined || (err instanceof ConflictError && err.detail !== undefined)) {
 		return err.message;
 	}

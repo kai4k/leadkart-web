@@ -337,7 +337,7 @@
 				{@const err = query.error}
 				<Alert
 					variant={err instanceof NetworkError ? 'warning' : 'danger'}
-					title={err instanceof NetworkError ? 'Connection problem' : 'Failed to load tenants'}
+					title="Failed to load tenants"
 				>
 					{listErrorCopy}
 					<Button variant="ghost" size="sm" onclick={() => query.refetch()} class="mt-2"

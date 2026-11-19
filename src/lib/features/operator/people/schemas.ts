@@ -11,10 +11,12 @@
  */
 import { z } from 'zod';
 import { ListPersonMembershipsResponse, PersonDto } from '#lib/api/generated/index.ts';
+import { responseEmail } from '#lib/api/response-schema.ts';
 import { userDtoSchema } from '#lib/features/auth/schemas.ts';
 
 /** The suspension / anonymisation fields are omitzero in Go; an absent value is read as ''. */
 export const personDtoSchema = PersonDto.extend({
+	email: responseEmail,
 	global_suspension_reason: z.string().default(''),
 	globally_suspended_at: z.string().default(''),
 	anonymised_at: z.string().default('')

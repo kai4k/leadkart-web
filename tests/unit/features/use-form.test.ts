@@ -179,12 +179,12 @@ describe('Form.validateField — blur validation', () => {
 		expect(form.errors.email).toBeUndefined();
 	});
 
-	it('shows a ValidationError without field errors as the banner', async () => {
+	it('shows a ValidationError without field errors as the generic banner, never Go text', async () => {
 		const form = useForm(z.object({ email: z.string() }), { email: 'x' });
 		await form.submit(makeEvent(), () =>
 			Promise.reject(new ValidationError({}, 400, 'mail: missing @'))
 		);
-		expect(form.bannerError).toBe('mail: missing @');
+		expect(form.bannerError).toBe('The request was not accepted. Check the values and try again.');
 		expect(form.errors).toEqual({});
 	});
 

@@ -277,13 +277,22 @@ describe('Go tenant-scope codes', () => {
 		});
 		expect(err).toBeInstanceOf(ValidationError);
 		expect(err.code).toBe('tenant_scope_conflict');
-		expect(err.message).toBe('tenant_id conflicts with X-Tenant-Id');
+		expect(err.message).toMatch(/different tenant/);
 	});
 	it('tenant_not_active (409) is a ConflictError with suspended copy', () => {
 		const err = ApiError.fromResponse(res(409), { error: 'tenant_not_active', message: 'x' });
 		expect(err).toBeInstanceOf(ConflictError);
 		expect(err.code).toBe('tenant_not_active');
-		expect(err.message).toBe('This tenant is suspended. Changes are disabled.');
+		expect(err.message).toBe('This tenant is not active. Changes are disabled.');
+	});
+	it('tenant_scope_conflict (400) shows the fixed copy, not Go text', () => {
+		const err = ApiError.fromResponse(res(400), {
+			error: 'tenant_scope_conflict',
+			message: 'tenant_id conflicts with X-Tenant-Id'
+		});
+		expect(err.message).toBe(
+			'This action targets a different tenant than the one you are acting in. Exit the tenant context and try again.'
+		);
 	});
 });
 
@@ -416,8 +425,41 @@ describe('403 code to copy map', () => {
 		expect(err.code).toBe(code);
 	});
 	it('an unknown 403 code keeps Go text', () => {
-		const err = ApiError.fromResponse(res(403), { error: 'forbidden', message: 'nope' });
+		const err = ApiError.fromResponse(res(403), { error: 'insufficient_rank', message: 'nope' });
 		expect(err.message).toBe('nope');
+	});
+});
+
+describe('code to copy map (Go codes with fixed user copy)', () => {
+	it.each([
+		[403, 'forbidden', "You don't have permission to do this."],
+		[403, 'grant_exceeds_authority', "You can't grant a permission or role above your own."],
+		[403, 'self_modification_forbidden', "You can't make this change to your own account."],
+		[403, 'search_category_forbidden', "You don't have access to that search category."],
+		[
+			400,
+			'invalid_search_include',
+			'The request was not accepted. Check the values and try again.'
+		],
+		[409, 'tenant_not_active', 'This tenant is not active. Changes are disabled.']
+	])('%i %s shows fixed copy whatever Go says', (status, code, copy) => {
+		const err = ApiError.fromResponse(res(status), { error: code, message: 'raw Go text' });
+		expect(err.message).toBe(copy);
+		expect(err.code).toBe(code);
+		expect(describeError(err)).toBe(copy);
+	});
+});
+
+describe('server error copy', () => {
+	it('a plain 5xx does not claim anyone was notified', () => {
+		const err = ApiError.fromResponse(res(500), { error: 'internal_error' });
+		expect(err.message).toBe('Something went wrong on our side. Please try again.');
+	});
+	it.each([503, 504])('a %i says the service is not reachable', (status) => {
+		const err = ApiError.fromResponse(res(status), { error: 'upstream_timeout' });
+		expect(err.message).toBe(
+			'The service is not reachable right now. Please try again in a moment.'
+		);
 	});
 });
 
@@ -456,6 +498,55 @@ describe('describeError', () => {
 		expect(describeError(ApiError.fromResponse(res(404), null), opts)).toBe('Gone.');
 		const dead = ApiError.fromResponse(res(404), { error: 'tenant_scope_not_found' });
 		expect(describeError(dead, opts)).toBe(SCOPE_EXPIRED_MESSAGE);
+	});
+	describe('precedence', () => {
+		const fixed = (code: string, status = 403) =>
+			ApiError.fromResponse(res(status), { error: code, message: 'Go text' });
+		it("a caller's own 403 line beats the plain `forbidden` copy; without one the copy shows", () => {
+			expect(describeError(fixed('forbidden'), opts)).toBe("You don't have permission to do it.");
+			expect(describeError(fixed('forbidden'))).toBe("You don't have permission to do this.");
+		});
+		it("a caller's 403 line never beats tenant_scope_* codes, including tenant_scope_conflict", () => {
+			for (const [code, status] of [
+				['tenant_scope_forbidden', 403],
+				['tenant_scope_read_only', 403],
+				['tenant_scope_not_supported', 403],
+				['tenant_scope_conflict', 400]
+			] as const) {
+				const err = fixed(code, status);
+				expect(describeError(err, { status: { 403: 'caller 403', 400: 'caller 400' } })).toBe(
+					err.message
+				);
+			}
+		});
+		it("a specific code (grant_exceeds_authority, self_modification_forbidden) beats the caller's generic 403 line", () => {
+			for (const code of ['grant_exceeds_authority', 'self_modification_forbidden']) {
+				const err = fixed(code);
+				expect(describeError(err, opts)).toBe(err.message);
+				expect(describeError(err, opts)).not.toBe(opts.status[403]);
+			}
+		});
+		it("tenant_not_active beats the caller's 409 line", () => {
+			const err = fixed('tenant_not_active', 409);
+			expect(describeError(err, opts)).toBe('This tenant is not active. Changes are disabled.');
+		});
+	});
+	describe('validation errors', () => {
+		const generic = 'The request was not accepted. Check the values and try again.';
+		it('without field errors never shows Go text; caller line for the status, else the generic line', () => {
+			const err = ApiError.fromResponse(res(422), { message: 'role_id must be a UUID' });
+			expect(describeError(err)).toBe(generic);
+			expect(describeError(err, { status: { 422: 'Pick a valid role.' } })).toBe(
+				'Pick a valid role.'
+			);
+			const e400 = ApiError.fromResponse(res(400), { message: 'bad json at offset 3' });
+			expect(describeError(e400, { status: { 422: 'x', 400: 'Bad input.' } })).toBe('Bad input.');
+			expect(describeError(e400)).toBe(generic);
+		});
+		it('with field errors keeps the field text (it also reaches the form fields)', () => {
+			const err = ApiError.fromResponse(res(422), { errors: { email: ['Email is taken'] } });
+			expect(describeError(err, { status: { 422: 'ignored' } })).toBe('Email is taken');
+		});
 	});
 	it('409 override applies only when Go sent no text', () => {
 		expect(describeError(ApiError.fromResponse(res(409), null), opts)).toBe('Already done.');

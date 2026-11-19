@@ -1,0 +1,111 @@
+/**
+ * Response data is never format-checked beyond its type (Go's email.New accepts addresses
+ * Zod's `.email()` rejects). Every response schema that carries an email must take them all;
+ * the login form (a request schema) keeps its format check.
+ */
+import { describe, expect, it } from 'vitest';
+import {
+	capabilitiesSchema,
+	loginRequestSchema,
+	userDtoSchema
+} from '#lib/features/auth/schemas.ts';
+import { crmLeadDtoSchema } from '#lib/features/leads/schemas.ts';
+import { personDtoSchema } from '#lib/features/operator/people/schemas.ts';
+import { searchPersonHitSchema, searchResponseSchema } from '#lib/features/search/schemas.ts';
+import {
+	membershipSearchResultSchema,
+	listUsersResponseSchema
+} from '#lib/features/users/schemas.ts';
+
+const UUID = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+
+const GO_ONLY_ADDRESSES = [
+	'josé@example.com',
+	'u@münchen.de',
+	'a!b@x.com',
+	'u@ex_ample.com',
+	'u@x.c'
+];
+
+const user = (email: string) => ({
+	membership_id: UUID(1),
+	person_id: UUID(2),
+	tenant_id: UUID(3),
+	email,
+	first_name: 'Ada',
+	last_name: 'Lovelace',
+	status: 'active',
+	role_ids: []
+});
+
+describe.each(GO_ONLY_ADDRESSES)('response schemas accept %s', (email) => {
+	it('capabilities', () => {
+		const r = capabilitiesSchema.safeParse({
+			person_id: UUID(1),
+			membership_id: UUID(2),
+			tenant_id: UUID(3),
+			tenant_slug: 'acme',
+			is_platform: false,
+			is_super_user: false,
+			permissions: [],
+			effective_permissions: [],
+			roles: [],
+			email
+		});
+		expect(r.success).toBe(true);
+	});
+	it('user and the users list', () => {
+		expect(userDtoSchema.safeParse(user(email)).success).toBe(true);
+		expect(
+			listUsersResponseSchema.safeParse({ users: [user(email)], has_more: false }).success
+		).toBe(true);
+	});
+	it('person', () => {
+		const r = personDtoSchema.safeParse({
+			id: UUID(2),
+			email,
+			first_name: 'Ada',
+			last_name: 'Lovelace',
+			is_active: true,
+			is_anonymised: false,
+			is_globally_suspended: false,
+			created_at: '2026-01-01T00:00:00Z'
+		});
+		expect(r.success).toBe(true);
+	});
+	it('search person hit and the search response', () => {
+		const hit = {
+			id: UUID(2),
+			email,
+			first_name: 'Ada',
+			last_name: 'Lovelace',
+			created_at: '2026-01-01T00:00:00Z'
+		};
+		expect(searchPersonHitSchema.safeParse(hit).success).toBe(true);
+		expect(
+			searchResponseSchema.safeParse({ persons: [hit], tenants: [], has_partial: false }).success
+		).toBe(true);
+	});
+	it('membership search result and the CRM lead', () => {
+		expect(
+			membershipSearchResultSchema.safeParse({
+				id: UUID(1),
+				person_id: UUID(2),
+				first_name: 'A',
+				last_name: 'B',
+				email
+			}).success
+		).toBe(true);
+		const lead = crmLeadDtoSchema.safeParse({ email });
+		expect(lead.error?.issues.filter((i) => i.path[0] === 'email')).toEqual([]);
+	});
+});
+
+describe('request schemas keep the format check', () => {
+	it('the login form rejects malformed input', () => {
+		for (const email of ['', 'not-an-email', 'a@']) {
+			expect(loginRequestSchema.safeParse({ email, password: 'x' }).success).toBe(false);
+		}
+		expect(loginRequestSchema.safeParse({ email: 'a@b.com', password: 'x' }).success).toBe(true);
+	});
+});

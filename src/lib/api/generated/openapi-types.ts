@@ -723,26 +723,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -762,7 +787,7 @@ export interface paths {
 						'application/json': components['schemas']['TenantDto'];
 					};
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 			};
 		};
@@ -807,26 +832,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -848,7 +898,7 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -891,26 +941,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -932,7 +1007,7 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -972,26 +1047,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1013,7 +1113,7 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -1053,26 +1153,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1094,7 +1219,7 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -1134,26 +1259,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1175,7 +1325,7 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -1194,6 +1344,8 @@ export interface paths {
 		/**
 		 * Suspend a tenant (Platform-only)
 		 * @description Reason is mandatory per data-retention.md audit canon.
+		 *
+		 *     Requires `identity.tenants.suspend` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
 		 */
 		post: {
 			parameters: {
@@ -1211,26 +1363,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1252,6 +1429,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -1271,7 +1449,10 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Activate a pending or suspended tenant (Platform-only) */
+		/**
+		 * Activate a pending or suspended tenant (Platform-only)
+		 * @description Requires `identity.tenants.activate` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
+		 */
 		post: {
 			parameters: {
 				query?: never;
@@ -1288,26 +1469,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1325,6 +1531,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -1350,6 +1557,8 @@ export interface paths {
 		 *     Reason is mandatory (DPDP §12 + SOC2 CC4.1 audit requirement).
 		 *     Tenants holding an active SuperAdmin role refuse the transition
 		 *     with 422 (`platform_tenant_undeletable`).
+		 *
+		 *     Requires `identity.tenants.delete` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
 		 */
 		post: {
 			parameters: {
@@ -1367,26 +1576,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1408,6 +1642,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -1427,7 +1662,10 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Restore a tenant from marked-for-deletion (Platform-only) */
+		/**
+		 * Restore a tenant from marked-for-deletion (Platform-only)
+		 * @description Requires `identity.tenants.delete` (there is no dedicated restore permission) held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
+		 */
 		post: {
 			parameters: {
 				query?: never;
@@ -1444,26 +1682,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1481,6 +1744,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -1565,26 +1829,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1604,7 +1893,7 @@ export interface paths {
 						'application/json': components['schemas']['ListAuditEventsResponse'];
 					};
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 			};
 		};
 		put?: never;
@@ -1637,26 +1926,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1674,7 +1988,7 @@ export interface paths {
 						'application/json': components['schemas']['ListUsersResponse'];
 					};
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 			};
 		};
 		put?: never;
@@ -1698,26 +2012,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1739,7 +2078,7 @@ export interface paths {
 						'application/json': components['schemas']['CreateUserResponse'];
 					};
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 			};
 		};
 		delete?: never;
@@ -1766,26 +2105,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1805,7 +2169,7 @@ export interface paths {
 						'application/json': components['schemas']['UserDto'];
 					};
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 			};
 		};
@@ -1850,26 +2214,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1891,7 +2280,7 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 				422: components['responses']['Unprocessable'];
 			};
 		};
@@ -1926,26 +2315,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1967,7 +2381,7 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 			};
 		};
 		delete?: never;
@@ -2005,26 +2419,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2042,7 +2481,7 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 			};
 		};
 		delete?: never;
@@ -2080,26 +2519,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2130,7 +2594,7 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 				/** @description `role_not_found` — no live role with that id in the target tenant (or the user does not exist) */
 				404: {
 					headers: {
@@ -2169,26 +2633,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2207,7 +2696,7 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -2253,26 +2742,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2294,7 +2808,7 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -2331,26 +2845,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2372,7 +2911,7 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -2389,26 +2928,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2426,7 +2990,7 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 			};
 		};
@@ -2449,6 +3013,8 @@ export interface paths {
 		 * @description Cross-tenant blast radius — one Person can hold many Memberships;
 		 *     the cascade is gated on Platform tier per multi-tenancy.md
 		 *     "SuperUser god-mode" + `identity.users.anonymise` permission.
+		 *
+		 *     Requires `identity.users.anonymise` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
 		 */
 		post: {
 			parameters: {
@@ -2466,26 +3032,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2503,6 +3094,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -2531,26 +3123,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2568,7 +3185,7 @@ export interface paths {
 						'application/json': components['schemas']['ListRolesResponse'];
 					};
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 			};
 		};
 		put?: never;
@@ -2592,26 +3209,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2633,7 +3275,7 @@ export interface paths {
 						'application/json': components['schemas']['CreateRoleResponse'];
 					};
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 			};
 		};
 		delete?: never;
@@ -2660,26 +3302,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2699,7 +3366,7 @@ export interface paths {
 						'application/json': components['schemas']['RoleDto'];
 					};
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 			};
 		};
 		put?: never;
@@ -2715,26 +3382,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2752,7 +3444,7 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 			};
 		};
 		options?: never;
@@ -2780,26 +3472,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2821,7 +3538,7 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				/** @description Role name already taken in this tenant */
 				409: {
@@ -2888,26 +3605,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2930,7 +3672,7 @@ export interface paths {
 					content?: never;
 				};
 				400: components['responses']['BadRequest'];
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				/**
 				 * @description Role already has an active parent edge (single-parent
@@ -2982,26 +3724,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -3023,7 +3790,7 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -3064,26 +3831,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -3105,7 +3897,7 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -3145,26 +3937,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -3186,7 +4003,7 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -3204,7 +4021,10 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** List all tenants (operator dashboard) */
+		/**
+		 * List all tenants (operator dashboard)
+		 * @description Requires `platform.tenants.view` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
+		 */
 		get: {
 			parameters: {
 				query?: never;
@@ -3223,6 +4043,7 @@ export interface paths {
 						'application/json': components['schemas']['ListAllTenantsResponse'];
 					};
 				};
+				403: components['responses']['Forbidden'];
 			};
 		};
 		put?: never;
@@ -3248,6 +4069,11 @@ export interface paths {
 		 * @description Bypasses the marked-for-deletion lifecycle. Tenants holding an
 		 *     active SuperAdmin role refuse with 422
 		 *     (`platform_tenant_undeletable`).
+		 *
+		 *     Requires `identity.tenants.delete` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
+		 *     The tenant comes from the path only: `X-Tenant-Id` is never applied here, and a
+		 *     value that differs from the path tenant is 400 `tenant_scope_conflict`. The
+		 *     operator is attributed on the outbox row (`act_operator_id`, reason `platform-route`).
 		 */
 		delete: {
 			parameters: {
@@ -3256,26 +4082,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -3294,6 +4145,7 @@ export interface paths {
 					content?: never;
 				};
 				400: components['responses']['TenantScopeInvalid'];
+				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -3310,7 +4162,10 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Get person by UUID (cross-tenant operator probe) */
+		/**
+		 * Get person by UUID (cross-tenant operator probe)
+		 * @description Requires `platform.users.view` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
+		 */
 		get: {
 			parameters: {
 				query?: never;
@@ -3331,6 +4186,7 @@ export interface paths {
 						'application/json': components['schemas']['PersonDto'];
 					};
 				};
+				403: components['responses']['Forbidden'];
 			};
 		};
 		put?: never;
@@ -3348,7 +4204,10 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** List every Membership a Person holds across tenants */
+		/**
+		 * List every Membership a Person holds across tenants
+		 * @description Requires `platform.users.view` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
+		 */
 		get: {
 			parameters: {
 				query?: never;
@@ -3369,6 +4228,7 @@ export interface paths {
 						'application/json': components['schemas']['ListPersonMembershipsResponse'];
 					};
 				};
+				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 			};
 		};
@@ -3398,6 +4258,8 @@ export interface paths {
 		 * @description Updates Person.FirstName / Person.LastName — distinct from the
 		 *     per-Tenant designation/department/status_message which move via
 		 *     PATCH /api/v1/users/{userId}/profile.
+		 *
+		 *     Requires `platform.users.manage` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
 		 */
 		patch: {
 			parameters: {
@@ -3431,6 +4293,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -3449,6 +4312,8 @@ export interface paths {
 		/**
 		 * Globally suspend a Person across all tenants
 		 * @description Reason is mandatory per data-retention.md audit canon.
+		 *
+		 *     Requires `platform.users.manage` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
 		 */
 		post: {
 			parameters: {
@@ -3482,6 +4347,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -3501,7 +4367,10 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Lift a previously applied global suspension */
+		/**
+		 * Lift a previously applied global suspension
+		 * @description Requires `platform.users.manage` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
+		 */
 		post: {
 			parameters: {
 				query?: never;
@@ -3530,6 +4399,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -3549,7 +4419,10 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Anonymise a Person record directly (DPDP §12 / GDPR Art. 17) */
+		/**
+		 * Anonymise a Person record directly (DPDP §12 / GDPR Art. 17)
+		 * @description Requires `identity.users.anonymise` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
+		 */
 		post: {
 			parameters: {
 				query?: never;
@@ -3578,6 +4451,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -3595,7 +4469,10 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Get person by email (cross-tenant operator probe) */
+		/**
+		 * Get person by email (cross-tenant operator probe)
+		 * @description Requires `platform.users.view` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
+		 */
 		get: {
 			parameters: {
 				query: {
@@ -3616,6 +4493,7 @@ export interface paths {
 						'application/json': components['schemas']['PersonDto'];
 					};
 				};
+				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 			};
 		};
@@ -3634,7 +4512,10 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Operator dashboard counts (with optional time-window deltas) */
+		/**
+		 * Operator dashboard counts (with optional time-window deltas)
+		 * @description Requires `platform.tenants.view` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
+		 */
 		get: {
 			parameters: {
 				query?: {
@@ -3660,6 +4541,7 @@ export interface paths {
 						'application/json': components['schemas']['PlatformStatsResponse'];
 					};
 				};
+				403: components['responses']['Forbidden'];
 			};
 		};
 		put?: never;
@@ -3677,7 +4559,10 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** List impersonation sessions */
+		/**
+		 * List impersonation sessions
+		 * @description Requires `platform.tenants.manage` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
+		 */
 		get: {
 			parameters: {
 				query?: never;
@@ -3696,6 +4581,7 @@ export interface paths {
 						'application/json': components['schemas']['ListImpersonationSessionsResponse'];
 					};
 				};
+				403: components['responses']['Forbidden'];
 			};
 		};
 		put?: never;
@@ -3706,6 +4592,8 @@ export interface paths {
 		 *     pinned to the target tenant. Frontend uses this token for the
 		 *     session lifetime (≤4h). The original operator's regular JWT is
 		 *     unaffected.
+		 *
+		 *     Requires `platform.tenants.manage` (there is no dedicated impersonation permission) held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
 		 */
 		post: {
 			parameters: {
@@ -3739,6 +4627,7 @@ export interface paths {
 						'application/json': components['schemas']['CreateImpersonationSessionResponse'];
 					};
 				};
+				403: components['responses']['Forbidden'];
 				/** @description Target tenant not found */
 				404: {
 					headers: {
@@ -3773,6 +4662,8 @@ export interface paths {
 		 *     by POST /api/v1/platform/impersonation/sessions is invalidated
 		 *     on the next request (security_stamp comparison via the
 		 *     impersonation-session resolver).
+		 *
+		 *     Requires `platform.tenants.manage` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
 		 */
 		delete: {
 			parameters: {
@@ -3793,6 +4684,7 @@ export interface paths {
 					content?: never;
 				};
 				400: components['responses']['BadRequest'];
+				403: components['responses']['Forbidden'];
 			};
 		};
 		options?: never;
@@ -3807,13 +4699,19 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Operator omni-search (parallel pg_trgm fanout) */
+		/**
+		 * Operator omni-search (parallel pg_trgm fanout)
+		 * @description Requires `platform.tenants.view` OR `platform.users.view` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
+		 *     Each category needs its own permission: `persons` needs `platform.users.view`, `tenants` needs `platform.tenants.view`.
+		 *     Without `include` the response carries the categories the caller is authorised for; naming a
+		 *     category the caller may not see is 403 `search_category_forbidden` (the message names the category).
+		 */
 		get: {
 			parameters: {
 				query: {
 					q: string;
 					limit?: number;
-					/** @description Comma-separated category list. Currently `persons`, `tenants`. */
+					/** @description Comma-separated category list. Currently `persons`, `tenants`. Default is every category the caller is authorised for. */
 					include?: string;
 				};
 				header?: never;
@@ -3833,6 +4731,15 @@ export interface paths {
 				};
 				/** @description Query too short or invalid include list */
 				400: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				/** @description Missing both permissions (`forbidden`), or an explicitly requested category the caller lacks the permission for (`search_category_forbidden`) */
+				403: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -3875,26 +4782,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -3941,26 +4873,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -4021,26 +4978,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -4103,26 +5085,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -4202,26 +5209,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -4302,26 +5334,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -4829,26 +5886,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -4868,7 +5950,7 @@ export interface paths {
 				};
 				400: components['responses']['TenantScopeInvalid'];
 				401: components['responses']['Unauthorized'];
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 			};
 		};
@@ -4910,26 +5992,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -4949,6 +6056,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 			};
 		};
@@ -4975,26 +6083,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -5018,6 +6151,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description SKU already exists in this tenant */
 				409: {
@@ -5056,26 +6190,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -5096,6 +6255,7 @@ export interface paths {
 					};
 				};
 				400: components['responses']['TenantScopeInvalid'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 			};
 		};
@@ -5114,26 +6274,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -5152,6 +6337,7 @@ export interface paths {
 					content?: never;
 				};
 				400: components['responses']['TenantScopeInvalid'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Product has live batches with non-zero stock */
 				409: {
@@ -5191,26 +6377,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -5233,6 +6444,7 @@ export interface paths {
 					content?: never;
 				};
 				400: components['responses']['TenantScopeInvalid'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Product is deleted */
 				409: {
@@ -5273,26 +6485,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -5313,6 +6550,7 @@ export interface paths {
 					};
 				};
 				400: components['responses']['TenantScopeInvalid'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 			};
 		};
@@ -5339,26 +6577,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -5383,6 +6646,7 @@ export interface paths {
 					};
 				};
 				400: components['responses']['TenantScopeInvalid'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description batch_number already exists for this product */
 				409: {
@@ -5425,26 +6689,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -5465,6 +6754,7 @@ export interface paths {
 					};
 				};
 				400: components['responses']['TenantScopeInvalid'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 			};
 		};
@@ -5495,26 +6785,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -5535,6 +6850,7 @@ export interface paths {
 					};
 				};
 				400: components['responses']['TenantScopeInvalid'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 			};
 		};
@@ -5571,26 +6887,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -5611,6 +6952,7 @@ export interface paths {
 					};
 				};
 				400: components['responses']['BadRequest'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 			};
 		};
@@ -5645,26 +6987,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -5689,6 +7056,7 @@ export interface paths {
 					};
 				};
 				400: components['responses']['TenantScopeInvalid'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Insufficient stock / batch expired / concurrency conflict */
 				409: {
@@ -5749,26 +7117,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -5788,6 +7181,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -5824,26 +7218,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -5865,6 +7284,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 			};
 		};
@@ -5906,26 +7326,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -5951,6 +7396,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Lead is in a terminal stage (converted / lost) */
 				409: {
@@ -6000,26 +7446,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -6043,6 +7514,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Lead is in a terminal stage OR transition is not allowed */
 				409: {
@@ -6092,26 +7564,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -6135,6 +7632,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Lead is in a terminal stage */
 				409: {
@@ -6183,26 +7681,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -6228,6 +7751,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Lead is in a terminal stage */
 				409: {
@@ -6276,26 +7800,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -6315,6 +7864,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Lead is already in a terminal stage */
 				409: {
@@ -6364,26 +7914,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -6403,7 +7978,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -6433,26 +8008,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -6476,6 +8076,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				409: components['responses']['TenantNotActive'];
 				422: components['responses']['Unprocessable'];
@@ -6511,26 +8112,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -6550,7 +8176,7 @@ export interface paths {
 				};
 				400: components['responses']['TenantScopeInvalid'];
 				401: components['responses']['Unauthorized'];
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -6578,26 +8204,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -6619,6 +8270,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -6657,26 +8309,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -6696,6 +8373,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Work item is in a terminal / overdue state */
 				409: {
@@ -6740,26 +8418,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -6779,6 +8482,7 @@ export interface paths {
 				};
 				400: components['responses']['TenantScopeInvalid'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Cannot complete a cancelled task */
 				409: {
@@ -6823,26 +8527,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -6866,6 +8595,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Cannot cancel a completed task */
 				409: {
@@ -6925,26 +8655,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -6968,7 +8723,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Cannot reassign a terminal task */
 				409: {
@@ -7016,26 +8771,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -7055,6 +8835,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -7083,26 +8864,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -7135,6 +8941,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				409: components['responses']['TenantNotActive'];
 				422: components['responses']['Unprocessable'];
@@ -7162,26 +8969,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -7203,6 +9035,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -7241,26 +9074,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -7284,6 +9142,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Invalid status transition */
 				409: {
@@ -7330,26 +9189,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -7369,6 +9253,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Invalid status transition */
 				409: {
@@ -7414,26 +9299,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -7453,6 +9363,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Invalid status transition */
 				409: {
@@ -7498,26 +9409,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -7541,6 +9477,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Invalid status transition */
 				409: {
@@ -7587,26 +9524,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -7630,6 +9592,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				409: components['responses']['TenantNotActive'];
 				422: components['responses']['Unprocessable'];
@@ -7657,26 +9620,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -7698,6 +9686,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -7736,26 +9725,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -7779,6 +9793,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Quotation is terminal */
 				409: {
@@ -7825,26 +9840,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -7866,6 +9906,7 @@ export interface paths {
 				};
 				400: components['responses']['TenantScopeInvalid'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Quotation already rejected */
 				409: {
@@ -7912,26 +9953,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -7955,6 +10021,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Quotation already approved */
 				409: {
@@ -7989,26 +10056,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -8030,6 +10122,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -8068,26 +10161,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -8111,6 +10229,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Invalid transition or duplicate payment reference */
 				409: {
@@ -8157,26 +10276,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -8196,6 +10340,7 @@ export interface paths {
 				};
 				400: components['responses']['TenantScopeInvalid'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Invalid state transition */
 				409: {
@@ -8241,26 +10386,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -8284,6 +10454,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Invalid state transition */
 				409: {
@@ -8318,26 +10489,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -8359,6 +10555,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -8381,26 +10578,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -8422,6 +10644,7 @@ export interface paths {
 				};
 				400: components['responses']['TenantScopeInvalid'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Invalid transition or invoice already exists */
 				409: {
@@ -8467,26 +10690,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -8510,6 +10758,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Order already terminal */
 				409: {
@@ -8555,26 +10804,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -8594,6 +10868,7 @@ export interface paths {
 				};
 				400: components['responses']['TenantScopeInvalid'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Invalid state transition */
 				409: {
@@ -8628,26 +10903,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -8669,6 +10969,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -8691,26 +10992,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -8736,6 +11062,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Duplicate external reference */
 				409: {
@@ -8787,26 +11114,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -8832,6 +11184,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				409: components['responses']['TenantNotActive'];
 				422: components['responses']['Unprocessable'];
@@ -8874,26 +11227,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -8917,6 +11295,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Lead is already in a terminal stage */
 				409: {
@@ -8977,26 +11356,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -9022,6 +11426,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				409: components['responses']['TenantNotActive'];
 				/** @description Invalid due_at / assignee */
@@ -9055,7 +11460,9 @@ export interface paths {
 		 *     upcoming after). Filters: `type`, `assignee`, `lead_id`.
 		 *
 		 *     Callers WITHOUT `crm.leads.read_all` see only their own
-		 *     assignee bucket per ADR 0060.
+		 *     assignee bucket per ADR 0060; probing another assignee is 403
+		 *     `forbidden`. The route honours `X-Tenant-Id` (reads only), so it can
+		 *     also answer the scope errors below.
 		 */
 		get: {
 			parameters: {
@@ -9071,26 +11478,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -9108,17 +11540,9 @@ export interface paths {
 						'application/json': components['schemas']['ListRemindersResponse'];
 					};
 				};
-				400: components['responses']['BadRequest'];
+				400: components['responses']['TenantScopeInvalid'];
 				401: components['responses']['Unauthorized'];
-				/** @description Caller probed another assignee without crm.leads.read_all */
-				403: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						'application/json': components['schemas']['ErrorResponse'];
-					};
-				};
+				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -9161,26 +11585,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -9200,6 +11649,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Reminder is already in a terminal state */
 				409: {
@@ -9249,26 +11699,51 @@ export interface paths {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -9292,6 +11767,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				/** @description Reminder is already in a terminal state */
 				409: {
@@ -9389,33 +11865,7 @@ export interface paths {
 		get: {
 			parameters: {
 				query?: never;
-				header?: {
-					/**
-					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
-					 *
-					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
-					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
-					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
-					 */
-					'X-Tenant-Id'?: components['parameters']['XTenantId'];
-				};
+				header?: never;
 				path?: never;
 				cookie?: never;
 			};
@@ -9430,9 +11880,7 @@ export interface paths {
 						'application/json': components['schemas']['UnreadCountResponse'];
 					};
 				};
-				400: components['responses']['TenantScopeInvalid'];
 				401: components['responses']['Unauthorized'];
-				404: components['responses']['NotFound'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -9467,31 +11915,6 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
-					/**
-					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
-					 *
-					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
-					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
-					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
-					 */
-					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path?: never;
 				cookie?: never;
@@ -9507,10 +11930,7 @@ export interface paths {
 						'application/json': components['schemas']['MarkAllReadResponse'];
 					};
 				};
-				400: components['responses']['TenantScopeInvalid'];
 				401: components['responses']['Unauthorized'];
-				404: components['responses']['NotFound'];
-				409: components['responses']['TenantNotActive'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -9543,31 +11963,6 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
-					/**
-					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
-					 *
-					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
-					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
-					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
-					 */
-					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					notificationId: components['parameters']['NotificationId'];
@@ -9626,31 +12021,6 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
-					/**
-					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid: the request then runs in that tenant (RLS
-					 *     `app.tenant_id`) and permissions are evaluated there via the
-					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-					 *     audit) for every other caller (tenant members, impersonation tokens)
-					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *     A scoped request is attributed durably: its outbox and audit rows
-					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
-					 *
-					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
-					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
-					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-					 *     `tenant_not_active` (a write other than tenant lifecycle into a
-					 *     suspended or pending-deletion tenant; reads are allowed), 403
-					 *     `tenant_scope_not_supported` (routes that act on the caller's own
-					 *     tenant only: permission requests and the marketplace lead purchase).
-					 */
-					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					notificationId: components['parameters']['NotificationId'];
@@ -9669,7 +12039,6 @@ export interface paths {
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
 				404: components['responses']['NotFound'];
-				409: components['responses']['TenantNotActive'];
 			};
 		};
 		delete?: never;
@@ -9829,7 +12198,7 @@ export interface components {
 			legal_name: string;
 			display_name: string;
 			/** @enum {string} */
-			status: 'pending' | 'active' | 'suspended' | 'marked_for_deletion' | 'hard_deleted';
+			status: 'pending' | 'active' | 'suspended' | 'pending_deletion' | 'deleted';
 			/** Format: date-time */
 			created_at: string;
 			/** Format: date-time */
@@ -11093,9 +13462,46 @@ export interface components {
 			};
 		};
 		/**
+		 * @description Forbidden. `error` is `forbidden` (the caller lacks the route's permission in the
+		 *     effective tenant) or `tenant_scope_forbidden` (`X-Tenant-Id` names another tenant
+		 *     and the caller is neither a super user nor a platform operator holding
+		 *     `platform.tenants.view`). On path-tenant routes (`/api/v1/tenants/{tenantId}/...`,
+		 *     the lifecycle routes) a header equal to the path tenant is not a scope request, so
+		 *     `tenant_scope_forbidden` is never returned there: the route's own permission
+		 *     decides, with `forbidden`. `tenant_scope_forbidden` is decided before any tenant
+		 *     lookup and is identical for existing, unknown and suspended tenants, so it cannot
+		 *     be used to probe which tenants exist.
+		 */
+		TenantScopeForbidden: {
+			headers: {
+				[name: string]: unknown;
+			};
+			content: {
+				'application/json': components['schemas']['ErrorResponse'];
+			};
+		};
+		/**
+		 * @description Forbidden. As `TenantScopeForbidden` (`forbidden`, `tenant_scope_forbidden`), plus
+		 *     `tenant_scope_read_only`: the request is not a read, `X-Tenant-Id` names another
+		 *     tenant, and this route is not one of the identity writes operators may perform
+		 *     under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+		 *     accepted under a foreign `X-Tenant-Id`; call them as a member of the tenant.
+		 */
+		TenantScopeReadOnly: {
+			headers: {
+				[name: string]: unknown;
+			};
+			content: {
+				'application/json': components['schemas']['ErrorResponse'];
+			};
+		};
+		/**
 		 * @description `X-Tenant-Id` is malformed or supplied more than once (`invalid_tenant_scope`), or
-		 *     differs from the tenant in the URL (`tenant_scope_conflict`). Only operators who
-		 *     may use the header ever see it; every other caller has the header ignored.
+		 *     differs from the tenant in the URL (`tenant_scope_conflict`). Every platform-tenant
+		 *     member (is_platform with the platform slug anchor, not an impersonation token) can
+		 *     see it, whether or not they hold scope authority; every other caller has the header
+		 *     ignored. The same 400 also covers an invalid list filter or cursor on routes that
+		 *     take them.
 		 */
 		TenantScopeInvalid: {
 			headers: {
@@ -11108,6 +13514,8 @@ export interface components {
 		/**
 		 * @description The tenant selected by `X-Tenant-Id` is suspended or pending deletion, so it can be
 		 *     read and its lifecycle managed but not written otherwise (`tenant_not_active`).
+		 *     Routes that carry the tenant in the path (`/api/v1/tenants/{tenantId}/...`) are
+		 *     exempt: the path is authoritative there, with or without the header.
 		 */
 		TenantNotActive: {
 			headers: {
@@ -11163,26 +13571,51 @@ export interface components {
 		/**
 		 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 		 *     slug-anchored, non-impersonation platform operators whose token and
-		 *     security stamp are valid: the request then runs in that tenant (RLS
-		 *     `app.tenant_id`) and permissions are evaluated there via the
-		 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
-		 *     audit) for every other caller (tenant members, impersonation tokens)
-		 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
-		 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
-		 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
-		 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
-		 *     A scoped request is attributed durably: its outbox and audit rows
-		 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+		 *     security stamp are valid AND who may select a foreign tenant: a super
+		 *     user, or an operator holding `platform.tenants.view`. The request then
+		 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+		 *     there via the `platform.*` equivalents. A platform-tenant member without
+		 *     that authority who names a foreign tenant gets 403
+		 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+		 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+		 *     validation, no lookup, no audit) for every other caller (tenant members,
+		 *     impersonation tokens) and on routes where it cannot apply: all
+		 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+		 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+		 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+		 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+		 *
+		 *     Writes are read-only under a foreign header by default: a non-read
+		 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+		 *     identity writes the operator scope tree uses (users, roles, role
+		 *     permissions, permission overrides, manager changes, anonymise) or a
+		 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+		 *     dispatch and inventory mutations are never accepted under a foreign
+		 *     header.
+		 *
+		 *     A scoped request, or a write to another tenant through the URL alone, is
+		 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+		 *     (the operator) with reason `tenant-via-header` (header) or
+		 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+		 *     neither (header-less lifecycle calls, hard delete, platform person
+		 *     operations, platform-module writes) use reason `platform-route`.
+		 *
+		 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+		 *     hard delete) a header equal to the path tenant selects nothing: no scope
+		 *     authority is needed and no tenant is looked up, so the answer is the
+		 *     route's own permission gate whether or not the header is sent.
 		 *
 		 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 		 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 		 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-		 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
-		 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
-		 *     `tenant_not_active` (a write other than tenant lifecycle into a
-		 *     suspended or pending-deletion tenant; reads are allowed), 403
-		 *     `tenant_scope_not_supported` (routes that act on the caller's own
-		 *     tenant only: permission requests and the marketplace lead purchase).
+		 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+		 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+		 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+		 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+		 *     suspended or pending-deletion tenant on a non-path route; reads and
+		 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+		 *     (routes that act on the caller's own tenant only: permission requests
+		 *     and the marketplace lead purchase).
 		 */
 		XTenantId: string;
 		TenantId: string;

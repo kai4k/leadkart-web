@@ -59,7 +59,7 @@ describe('users gateway', () => {
 		await expect(deactivateUser('m1', { reason: 'x' })).rejects.toMatchObject({
 			status: 403,
 			code: 'self_modification_forbidden',
-			message: expect.stringContaining('cannot deactivate yourself')
+			message: "You can't make this change to your own account."
 		});
 	});
 });

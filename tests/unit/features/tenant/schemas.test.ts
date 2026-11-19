@@ -170,7 +170,7 @@ describe('tenantSchema status (Go domain values)', () => {
 		}
 	);
 
-	it.each(['marked_for_deletion', 'hard_deleted'])('rejects the spec-only value %s', (status) => {
+	it.each(['marked_for_deletion', 'hard_deleted'])('rejects the retired value %s', (status) => {
 		expect(tenantSchema.safeParse({ ...FULL_TENANT, status }).success).toBe(false);
 	});
 });

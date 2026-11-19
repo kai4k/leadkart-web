@@ -129,7 +129,7 @@ export const TenantDto = z
 		slug: z.string(),
 		legal_name: z.string(),
 		display_name: z.string(),
-		status: z.enum(['pending', 'active', 'suspended', 'marked_for_deletion', 'hard_deleted']),
+		status: z.enum(['pending', 'active', 'suspended', 'pending_deletion', 'deleted']),
 		created_at: z.string().datetime({ offset: true }),
 		activated_at: z.string().datetime({ offset: true }).optional(),
 		suspended_at: z.string().datetime({ offset: true }).optional(),
@@ -1549,6 +1549,20 @@ themselves; callers WITH it see the full tenant set per ADR 0060.
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -1592,6 +1606,20 @@ themselves; callers WITH it see the full tenant set per ADR 0060.
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -1641,6 +1669,16 @@ AssignmentHistory audit table. Emits &#x60;crm.lead_assigned.v1&#x60;.
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -1698,6 +1736,16 @@ terminal leads (converted / lost).
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -1744,6 +1792,16 @@ this is the future Orders module&#x27;s create-trigger per ADR 0060.
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -1798,6 +1856,16 @@ Emits &#x60;crm.lead_lost.v1&#x60;.
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -1863,6 +1931,16 @@ Emits &#x60;crm.reminder_created.v1&#x60;.
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -1871,6 +1949,8 @@ Emits &#x60;crm.reminder_created.v1&#x60;.
 				status: 409,
 				description: `The tenant selected by &#x60;X-Tenant-Id&#x60; is suspended or pending deletion, so it can be
 read and its lifecycle managed but not written otherwise (&#x60;tenant_not_active&#x60;).
+Routes that carry the tenant in the path (&#x60;/api/v1/tenants/{tenantId}/...&#x60;) are
+exempt: the path is authoritative there, with or without the header.
 `,
 				schema: ErrorResponse
 			},
@@ -1922,6 +2002,16 @@ Emits &#x60;crm.lead_stage_changed.v1&#x60;.
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -1984,6 +2074,16 @@ non-terminal stage. Emits &#x60;crm.lead_temperature_changed.v1&#x60;.
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -2004,7 +2104,9 @@ caller&#x27;s tenant, sorted by &#x60;due_at&#x60; ASC (overdue first,
 upcoming after). Filters: &#x60;type&#x60;, &#x60;assignee&#x60;, &#x60;lead_id&#x60;.
 
 Callers WITHOUT &#x60;crm.leads.read_all&#x60; see only their own
-assignee bucket per ADR 0060.
+assignee bucket per ADR 0060; probing another assignee is 403
+&#x60;forbidden&#x60;. The route honours &#x60;X-Tenant-Id&#x60; (reads only), so it can
+also answer the scope errors below.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -2043,7 +2145,13 @@ assignee bucket per ADR 0060.
 		errors: [
 			{
 				status: 400,
-				description: `Malformed request (invalid body, bad param shape)`,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -2053,7 +2161,16 @@ assignee bucket per ADR 0060.
 			},
 			{
 				status: 403,
-				description: `Caller probed another assignee without crm.leads.read_all`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -2112,6 +2229,16 @@ doctrine). Refused on already-terminal reminders. Emits
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -2166,6 +2293,16 @@ Emits &#x60;crm.reminder_marked_sent.v1&#x60;.
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -2217,6 +2354,16 @@ a pre-existing note returns 200 with &#x60;already_existed: true&#x60;.
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -2225,6 +2372,8 @@ a pre-existing note returns 200 with &#x60;already_existed: true&#x60;.
 				status: 409,
 				description: `The tenant selected by &#x60;X-Tenant-Id&#x60; is suspended or pending deletion, so it can be
 read and its lifecycle managed but not written otherwise (&#x60;tenant_not_active&#x60;).
+Routes that carry the tenant in the path (&#x60;/api/v1/tenants/{tenantId}/...&#x60;) are
+exempt: the path is authoritative there, with or without the header.
 `,
 				schema: ErrorResponse
 			},
@@ -2271,6 +2420,20 @@ read and its lifecycle managed but not written otherwise (&#x60;tenant_not_activ
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -2309,6 +2472,20 @@ read and its lifecycle managed but not written otherwise (&#x60;tenant_not_activ
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -2355,6 +2532,16 @@ read and its lifecycle managed but not written otherwise (&#x60;tenant_not_activ
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -2411,6 +2598,16 @@ read and its lifecycle managed but not written otherwise (&#x60;tenant_not_activ
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -2475,6 +2672,16 @@ read and its lifecycle managed but not written otherwise (&#x60;tenant_not_activ
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -2531,6 +2738,16 @@ read and its lifecycle managed but not written otherwise (&#x60;tenant_not_activ
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -2572,8 +2789,25 @@ Cross-tenant access surfaces as 404 per ADR 0044.
 			{
 				status: 400,
 				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
-differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
-may use the header ever see it; every other caller has the header ignored.
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
 `,
 				schema: ErrorResponse
 			},
@@ -2628,8 +2862,21 @@ modification after retry cap).
 			{
 				status: 400,
 				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
-differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
-may use the header ever see it; every other caller has the header ignored.
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
 `,
 				schema: ErrorResponse
 			},
@@ -2694,6 +2941,20 @@ Append-only ledger ordered (occurred_at, id) DESC. Optional
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -2736,6 +2997,16 @@ SKU collision. 422 on field-validation failure.
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -2814,6 +3085,20 @@ ordered (created_at, id) DESC. Filters narrow the result set.
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -2845,8 +3130,25 @@ as 404 per ADR 0044 enumeration-safety.
 			{
 				status: 400,
 				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
-differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
-may use the header ever see it; every other caller has the header ignored.
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
 `,
 				schema: ErrorResponse
 			},
@@ -2896,8 +3198,21 @@ invariant failure (out-of-range GST bps, oversized name, etc).
 			{
 				status: 400,
 				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
-differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
-may use the header ever see it; every other caller has the header ignored.
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
 `,
 				schema: ErrorResponse
 			},
@@ -2944,8 +3259,21 @@ live batch with quantity_on_hand &gt; 0 exists.
 			{
 				status: 400,
 				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
-differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
-may use the header ever see it; every other caller has the header ignored.
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
 `,
 				schema: ErrorResponse
 			},
@@ -2997,8 +3325,21 @@ batch_number is unique per product on live rows.
 			{
 				status: 400,
 				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
-differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
-may use the header ever see it; every other caller has the header ignored.
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
 `,
 				schema: ErrorResponse
 			},
@@ -3060,8 +3401,25 @@ excluded by default (pass &#x60;include_expired&#x3D;true&#x60; to include).
 			{
 				status: 400,
 				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
-differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
-may use the header ever see it; every other caller has the header ignored.
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
 `,
 				schema: ErrorResponse
 			},
@@ -3101,8 +3459,25 @@ multi-batch allocations against a single order quantity.
 			{
 				status: 400,
 				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
-differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
-may use the header ever see it; every other caller has the header ignored.
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
 `,
 				schema: ErrorResponse
 			},
@@ -3190,11 +3565,6 @@ enforced server-side — a caller only ever sees their own inbox.
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
-			},
-			{
-				name: 'X-Tenant-Id',
-				type: 'Header',
-				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -3212,13 +3582,6 @@ enforced server-side — a caller only ever sees their own inbox.
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
-				schema: ErrorResponse
-			},
-			{
-				status: 409,
-				description: `The tenant selected by &#x60;X-Tenant-Id&#x60; is suspended or pending deletion, so it can be
-read and its lifecycle managed but not written otherwise (&#x60;tenant_not_active&#x60;).
-`,
 				schema: ErrorResponse
 			}
 		]
@@ -3238,11 +3601,6 @@ read and its lifecycle managed but not written otherwise (&#x60;tenant_not_activ
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
-			},
-			{
-				name: 'X-Tenant-Id',
-				type: 'Header',
-				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -3279,38 +3637,13 @@ read and its lifecycle managed but not written otherwise (&#x60;tenant_not_activ
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
-			},
-			{
-				name: 'X-Tenant-Id',
-				type: 'Header',
-				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.object({ marked_read: z.number().int() }).passthrough(),
 		errors: [
 			{
-				status: 400,
-				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
-differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
-may use the header ever see it; every other caller has the header ignored.
-`,
-				schema: ErrorResponse
-			},
-			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
-				schema: ErrorResponse
-			},
-			{
-				status: 404,
-				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
-				schema: ErrorResponse
-			},
-			{
-				status: 409,
-				description: `The tenant selected by &#x60;X-Tenant-Id&#x60; is suspended or pending deletion, so it can be
-read and its lifecycle managed but not written otherwise (&#x60;tenant_not_active&#x60;).
-`,
 				schema: ErrorResponse
 			},
 			{
@@ -3325,31 +3658,11 @@ read and its lifecycle managed but not written otherwise (&#x60;tenant_not_activ
 		path: '/api/v1/notifications/unread-count',
 		alias: 'getApiv1notificationsunreadCount',
 		requestFormat: 'json',
-		parameters: [
-			{
-				name: 'X-Tenant-Id',
-				type: 'Header',
-				schema: z.string().uuid().optional()
-			}
-		],
 		response: z.object({ unread_count: z.number().int() }).passthrough(),
 		errors: [
 			{
-				status: 400,
-				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
-differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
-may use the header ever see it; every other caller has the header ignored.
-`,
-				schema: ErrorResponse
-			},
-			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
-				schema: ErrorResponse
-			},
-			{
-				status: 404,
-				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
 			},
 			{
@@ -3386,6 +3699,20 @@ may use the header ever see it; every other caller has the header ignored.
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -3440,6 +3767,16 @@ may use the header ever see it; every other caller has the header ignored.
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -3483,14 +3820,27 @@ may use the header ever see it; every other caller has the header ignored.
 			{
 				status: 400,
 				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
-differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
-may use the header ever see it; every other caller has the header ignored.
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -3537,14 +3887,27 @@ may use the header ever see it; every other caller has the header ignored.
 			{
 				status: 400,
 				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
-differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
-may use the header ever see it; every other caller has the header ignored.
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -3608,6 +3971,16 @@ allowed) against the order&#x27;s invoice with a gapless number. Requires
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -3616,6 +3989,8 @@ allowed) against the order&#x27;s invoice with a gapless number. Requires
 				status: 409,
 				description: `The tenant selected by &#x60;X-Tenant-Id&#x60; is suspended or pending deletion, so it can be
 read and its lifecycle managed but not written otherwise (&#x60;tenant_not_active&#x60;).
+Routes that carry the tenant in the path (&#x60;/api/v1/tenants/{tenantId}/...&#x60;) are
+exempt: the path is authoritative there, with or without the header.
 `,
 				schema: ErrorResponse
 			},
@@ -3661,6 +4036,20 @@ read and its lifecycle managed but not written otherwise (&#x60;tenant_not_activ
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -3699,14 +4088,27 @@ read and its lifecycle managed but not written otherwise (&#x60;tenant_not_activ
 			{
 				status: 400,
 				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
-differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
-may use the header ever see it; every other caller has the header ignored.
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -3766,6 +4168,16 @@ may use the header ever see it; every other caller has the header ignored.
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -3809,6 +4221,20 @@ may use the header ever see it; every other caller has the header ignored.
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -3860,6 +4286,16 @@ may use the header ever see it; every other caller has the header ignored.
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -3924,6 +4360,16 @@ may use the header ever see it; every other caller has the header ignored.
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -3980,6 +4426,16 @@ may use the header ever see it; every other caller has the header ignored.
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -3988,6 +4444,8 @@ may use the header ever see it; every other caller has the header ignored.
 				status: 409,
 				description: `The tenant selected by &#x60;X-Tenant-Id&#x60; is suspended or pending deletion, so it can be
 read and its lifecycle managed but not written otherwise (&#x60;tenant_not_active&#x60;).
+Routes that carry the tenant in the path (&#x60;/api/v1/tenants/{tenantId}/...&#x60;) are
+exempt: the path is authoritative there, with or without the header.
 `,
 				schema: ErrorResponse
 			},
@@ -4033,6 +4491,20 @@ read and its lifecycle managed but not written otherwise (&#x60;tenant_not_activ
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -4071,14 +4543,27 @@ read and its lifecycle managed but not written otherwise (&#x60;tenant_not_activ
 			{
 				status: 400,
 				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
-differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
-may use the header ever see it; every other caller has the header ignored.
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -4143,6 +4628,16 @@ may use the header ever see it; every other caller has the header ignored.
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -4196,6 +4691,16 @@ may use the header ever see it; every other caller has the header ignored.
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -4526,6 +5031,8 @@ Deny per ADR 0055 audit canon. Same caller-authorization as Approve.
 pinned to the target tenant. Frontend uses this token for the
 session lifetime (≤4h). The original operator&#x27;s regular JWT is
 unaffected.
+
+Requires &#x60;platform.tenants.manage&#x60; (there is no dedicated impersonation permission) held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -4543,6 +5050,11 @@ unaffected.
 		response: CreateImpersonationSessionResponse,
 		errors: [
 			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Target tenant not found`,
 				schema: ErrorResponse
@@ -4558,8 +5070,17 @@ unaffected.
 		method: 'get',
 		path: '/api/v1/platform/impersonation/sessions',
 		alias: 'getApiv1platformimpersonationsessions',
+		description: `Requires &#x60;platform.tenants.manage&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+`,
 		requestFormat: 'json',
-		response: ListImpersonationSessionsResponse
+		response: ListImpersonationSessionsResponse,
+		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			}
+		]
 	},
 	{
 		method: 'delete',
@@ -4569,6 +5090,8 @@ unaffected.
 by POST /api/v1/platform/impersonation/sessions is invalidated
 on the next request (security_stamp comparison via the
 impersonation-session resolver).
+
+Requires &#x60;platform.tenants.manage&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -4583,6 +5106,11 @@ impersonation-session resolver).
 			{
 				status: 400,
 				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
 				schema: ErrorResponse
 			}
 		]
@@ -4604,8 +5132,11 @@ impersonation-session resolver).
 			{
 				status: 400,
 				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
-differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
-may use the header ever see it; every other caller has the header ignored.
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
 `,
 				schema: ErrorResponse
 			},
@@ -4616,7 +5147,16 @@ may use the header ever see it; every other caller has the header ignored.
 			},
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -4823,6 +5363,8 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 		method: 'get',
 		path: '/api/v1/platform/persons',
 		alias: 'getApiv1platformpersons',
+		description: `Requires &#x60;platform.users.view&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -4834,6 +5376,11 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 		response: PersonDto,
 		errors: [
 			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -4844,6 +5391,8 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 		method: 'get',
 		path: '/api/v1/platform/persons/:personId',
 		alias: 'getApiv1platformpersonsPersonId',
+		description: `Requires &#x60;platform.users.view&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -4852,12 +5401,21 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 				schema: z.string().uuid()
 			}
 		],
-		response: PersonDto
+		response: PersonDto,
+		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			}
+		]
 	},
 	{
 		method: 'post',
 		path: '/api/v1/platform/persons/:personId/anonymise',
 		alias: 'postApiv1platformpersonsPersonIdanonymise',
+		description: `Requires &#x60;identity.users.anonymise&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -4874,6 +5432,11 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 		response: z.void(),
 		errors: [
 			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -4889,7 +5452,10 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 		method: 'post',
 		path: '/api/v1/platform/persons/:personId/global-suspend',
 		alias: 'postApiv1platformpersonsPersonIdglobalSuspend',
-		description: `Reason is mandatory per data-retention.md audit canon.`,
+		description: `Reason is mandatory per data-retention.md audit canon.
+
+Requires &#x60;platform.users.manage&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -4911,6 +5477,11 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 		response: z.void(),
 		errors: [
 			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -4926,6 +5497,8 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 		method: 'post',
 		path: '/api/v1/platform/persons/:personId/lift-global-suspension',
 		alias: 'postApiv1platformpersonsPersonIdliftGlobalSuspension',
+		description: `Requires &#x60;platform.users.manage&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -4942,6 +5515,11 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 		response: z.void(),
 		errors: [
 			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -4957,6 +5535,8 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 		method: 'get',
 		path: '/api/v1/platform/persons/:personId/memberships',
 		alias: 'getApiv1platformpersonsPersonIdmemberships',
+		description: `Requires &#x60;platform.users.view&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -4967,6 +5547,11 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 		],
 		response: ListPersonMembershipsResponse,
 		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -4981,6 +5566,8 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 		description: `Updates Person.FirstName / Person.LastName — distinct from the
 per-Tenant designation/department/status_message which move via
 PATCH /api/v1/users/{userId}/profile.
+
+Requires &#x60;platform.users.manage&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -5003,6 +5590,11 @@ PATCH /api/v1/users/{userId}/profile.
 		response: z.void(),
 		errors: [
 			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -5018,6 +5610,8 @@ PATCH /api/v1/users/{userId}/profile.
 		method: 'get',
 		path: '/api/v1/platform/stats',
 		alias: 'getApiv1platformstats',
+		description: `Requires &#x60;platform.tenants.view&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -5026,14 +5620,30 @@ PATCH /api/v1/users/{userId}/profile.
 				schema: z.enum(['', '24h', '7d', '30d']).optional().default('')
 			}
 		],
-		response: PlatformStatsResponse
+		response: PlatformStatsResponse,
+		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			}
+		]
 	},
 	{
 		method: 'get',
 		path: '/api/v1/platform/tenants',
 		alias: 'getApiv1platformtenants',
+		description: `Requires &#x60;platform.tenants.view&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+`,
 		requestFormat: 'json',
-		response: ListAllTenantsResponse
+		response: ListAllTenantsResponse,
+		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			}
+		]
 	},
 	{
 		method: 'delete',
@@ -5042,6 +5652,11 @@ PATCH /api/v1/users/{userId}/profile.
 		description: `Bypasses the marked-for-deletion lifecycle. Tenants holding an
 active SuperAdmin role refuse with 422
 (&#x60;platform_tenant_undeletable&#x60;).
+
+Requires &#x60;identity.tenants.delete&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+The tenant comes from the path only: &#x60;X-Tenant-Id&#x60; is never applied here, and a
+value that differs from the path tenant is 400 &#x60;tenant_scope_conflict&#x60;. The
+operator is attributed on the outbox row (&#x60;act_operator_id&#x60;, reason &#x60;platform-route&#x60;).
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -5061,9 +5676,17 @@ active SuperAdmin role refuse with 422
 			{
 				status: 400,
 				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
-differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
-may use the header ever see it; every other caller has the header ignored.
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
 `,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
 				schema: ErrorResponse
 			},
 			{
@@ -5317,7 +5940,16 @@ H11.
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -5350,7 +5982,16 @@ H11.
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -5378,7 +6019,16 @@ H11.
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -5419,7 +6069,16 @@ Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -5462,7 +6121,16 @@ Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -5523,7 +6191,16 @@ Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60
 			},
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -5583,7 +6260,16 @@ Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -5631,7 +6317,16 @@ Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -5679,7 +6374,16 @@ Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -5698,6 +6402,11 @@ Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60
 		method: 'get',
 		path: '/api/v1/search',
 		alias: 'getApiv1search',
+		description: `Requires &#x60;platform.tenants.view&#x60; OR &#x60;platform.users.view&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+Each category needs its own permission: &#x60;persons&#x60; needs &#x60;platform.users.view&#x60;, &#x60;tenants&#x60; needs &#x60;platform.tenants.view&#x60;.
+Without &#x60;include&#x60; the response carries the categories the caller is authorised for; naming a
+category the caller may not see is 403 &#x60;search_category_forbidden&#x60; (the message names the category).
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -5721,6 +6430,11 @@ Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60
 			{
 				status: 400,
 				description: `Query too short or invalid include list`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Missing both permissions (&#x60;forbidden&#x60;), or an explicitly requested category the caller lacks the permission for (&#x60;search_category_forbidden&#x60;)`,
 				schema: ErrorResponse
 			}
 		]
@@ -5766,6 +6480,16 @@ the same tenant (otherwise 422 &#x60;assignee_inactive&#x60;). Emits
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -5774,6 +6498,8 @@ the same tenant (otherwise 422 &#x60;assignee_inactive&#x60;). Emits
 				status: 409,
 				description: `The tenant selected by &#x60;X-Tenant-Id&#x60; is suspended or pending deletion, so it can be
 read and its lifecycle managed but not written otherwise (&#x60;tenant_not_active&#x60;).
+Routes that carry the tenant in the path (&#x60;/api/v1/tenants/{tenantId}/...&#x60;) are
+exempt: the path is authoritative there, with or without the header.
 `,
 				schema: ErrorResponse
 			},
@@ -5866,7 +6592,16 @@ returns 403).
 			},
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -5908,6 +6643,20 @@ returns 403).
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -5962,6 +6711,16 @@ returns 403).
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -6005,14 +6764,27 @@ returns 403).
 			{
 				status: 400,
 				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
-differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
-may use the header ever see it; every other caller has the header ignored.
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -6073,7 +6845,12 @@ caller&#x27;s subordinate scope (or be the caller themselves). 403
 			},
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -6128,6 +6905,16 @@ caller&#x27;s subordinate scope (or be the caller themselves). 403
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -6166,8 +6953,11 @@ actor&#x27;s subordinate scope via the hierarchy traversal (requires
 			{
 				status: 400,
 				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
-differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
-may use the header ever see it; every other caller has the header ignored.
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
 `,
 				schema: ErrorResponse
 			},
@@ -6178,7 +6968,16 @@ may use the header ever see it; every other caller has the header ignored.
 			},
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -6297,7 +7096,16 @@ Requires &#x60;platform.tenants.create&#x60;.
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -6311,6 +7119,8 @@ Requires &#x60;platform.tenants.create&#x60;.
 		method: 'post',
 		path: '/api/v1/tenants/:tenantId/activate',
 		alias: 'postApiv1tenantsTenantIdactivate',
+		description: `Requires &#x60;identity.tenants.activate&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -6331,6 +7141,20 @@ Requires &#x60;platform.tenants.create&#x60;.
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -6376,7 +7200,16 @@ Requires &#x60;platform.tenants.create&#x60;.
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -6424,7 +7257,16 @@ Requires &#x60;platform.tenants.create&#x60;.
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -6462,7 +7304,16 @@ Requires &#x60;platform.tenants.create&#x60;.
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -6485,6 +7336,8 @@ Requires &#x60;platform.tenants.create&#x60;.
 Reason is mandatory (DPDP §12 + SOC2 CC4.1 audit requirement).
 Tenants holding an active SuperAdmin role refuse the transition
 with 422 (&#x60;platform_tenant_undeletable&#x60;).
+
+Requires &#x60;identity.tenants.delete&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -6511,6 +7364,20 @@ with 422 (&#x60;platform_tenant_undeletable&#x60;).
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -6556,7 +7423,16 @@ with 422 (&#x60;platform_tenant_undeletable&#x60;).
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -6575,6 +7451,8 @@ with 422 (&#x60;platform_tenant_undeletable&#x60;).
 		method: 'post',
 		path: '/api/v1/tenants/:tenantId/restore',
 		alias: 'postApiv1tenantsTenantIdrestore',
+		description: `Requires &#x60;identity.tenants.delete&#x60; (there is no dedicated restore permission) held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -6595,6 +7473,20 @@ with 422 (&#x60;platform_tenant_undeletable&#x60;).
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -6640,7 +7532,16 @@ with 422 (&#x60;platform_tenant_undeletable&#x60;).
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -6691,7 +7592,16 @@ Requires &#x60;identity.tenants.update&#x60; (satisfied by &#x60;tenant.admin&#x
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -6710,7 +7620,10 @@ Requires &#x60;identity.tenants.update&#x60; (satisfied by &#x60;tenant.admin&#x
 		method: 'post',
 		path: '/api/v1/tenants/:tenantId/suspend',
 		alias: 'postApiv1tenantsTenantIdsuspend',
-		description: `Reason is mandatory per data-retention.md audit canon.`,
+		description: `Reason is mandatory per data-retention.md audit canon.
+
+Requires &#x60;identity.tenants.suspend&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -6736,6 +7649,20 @@ Requires &#x60;identity.tenants.update&#x60; (satisfied by &#x60;tenant.admin&#x
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -6776,7 +7703,16 @@ Requires &#x60;identity.tenants.update&#x60; (satisfied by &#x60;tenant.admin&#x
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -6809,7 +7745,16 @@ Requires &#x60;identity.tenants.update&#x60; (satisfied by &#x60;tenant.admin&#x
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -6837,7 +7782,16 @@ Requires &#x60;identity.tenants.update&#x60; (satisfied by &#x60;tenant.admin&#x
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -6854,6 +7808,8 @@ Requires &#x60;identity.tenants.update&#x60; (satisfied by &#x60;tenant.admin&#x
 		description: `Cross-tenant blast radius — one Person can hold many Memberships;
 the cascade is gated on Platform tier per multi-tenancy.md
 &quot;SuperUser god-mode&quot; + &#x60;identity.users.anonymise&#x60; permission.
+
+Requires &#x60;identity.users.anonymise&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -6875,6 +7831,20 @@ the cascade is gated on Platform tier per multi-tenancy.md
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -6920,7 +7890,16 @@ the cascade is gated on Platform tier per multi-tenancy.md
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -6960,7 +7939,16 @@ Requires &#x60;identity.users.update&#x60; (satisfied by &#x60;tenant.admin&#x60
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -6998,7 +7986,16 @@ Requires &#x60;identity.users.update&#x60; (satisfied by &#x60;tenant.admin&#x60
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -7044,7 +8041,16 @@ Requires &#x60;identity.users.update_permissions&#x60; (satisfied by &#x60;tenan
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -7092,7 +8098,16 @@ Requires &#x60;identity.users.update_permissions&#x60; (satisfied by &#x60;tenan
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -7130,7 +8145,16 @@ Requires &#x60;identity.users.update_permissions&#x60; (satisfied by &#x60;tenan
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -7173,7 +8197,16 @@ Requires &#x60;identity.users.update_permissions&#x60; (satisfied by &#x60;tenan
 			},
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -7211,7 +8244,16 @@ Requires &#x60;identity.users.update_permissions&#x60; (satisfied by &#x60;tenan
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+`,
 				schema: ErrorResponse
 			},
 			{
