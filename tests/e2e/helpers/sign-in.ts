@@ -32,10 +32,13 @@ import {
 	type Permission
 } from './fake-jwt';
 import { registerMocks } from './mock';
+import { OPERATOR_EFFECTIVE, TENANT_ADMIN_EFFECTIVE } from './permission-sets';
 
 export interface SignInOpts {
 	tier: Tier;
 	permissions?: Permission[];
+	/** Overrides the tier's default effective_permissions (what Go computes). */
+	effective_permissions?: Permission[];
 	is_super_user?: boolean;
 	tenant_id?: string;
 	tenant_slug?: string;
@@ -53,6 +56,15 @@ export async function signInAsTier(page: Page, opts: SignInOpts): Promise<void> 
 	const isPlatform = opts.tier === 'platform-super' || opts.tier === 'platform-staff';
 	const isSuperUser = opts.is_super_user ?? opts.tier === 'platform-super';
 	const permissions = opts.permissions ?? [];
+	// What Go computes: an operator super user holds the platform-reserved names (what the operator pages gate on), a tenant.admin holder what it implies in
+	// its own tenant; anyone else exactly their permissions. Specs may override.
+	const effectivePermissions =
+		opts.effective_permissions ??
+		(opts.tier === 'platform-super'
+			? OPERATOR_EFFECTIVE
+			: opts.tier === 'tenant-admin'
+				? [...new Set([...TENANT_ADMIN_EFFECTIVE, ...permissions])]
+				: permissions);
 
 	const claimOverrides = {
 		is_platform: isPlatform,
@@ -66,6 +78,9 @@ export async function signInAsTier(page: Page, opts: SignInOpts): Promise<void> 
 
 	const capabilities = fakeCapabilitiesResponse({
 		permissions,
+		effective_permissions: effectivePermissions,
+		tier: opts.tier === 'tenant-admin' ? 'admin' : 'user',
+		rank: opts.tier === 'tenant-admin' ? 5 : 99,
 		is_platform: isPlatform,
 		is_super_user: isSuperUser,
 		tenant_id: tenantId,

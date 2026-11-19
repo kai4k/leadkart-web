@@ -30,7 +30,8 @@ describe('create-role action authorisation', () => {
 		loadCapabilities.mockResolvedValue({
 			is_platform: false,
 			is_super_user: false,
-			permissions: ['identity.roles.view']
+			permissions: ['identity.roles.view'],
+			effective_permissions: ['identity.roles.view']
 		});
 		await expect(run()).rejects.toMatchObject({ status: 303, location: '/dashboard' });
 		expect(goFetch).not.toHaveBeenCalled();
@@ -46,7 +47,8 @@ describe('create-role action authorisation', () => {
 		loadCapabilities.mockResolvedValue({
 			is_platform: false,
 			is_super_user: false,
-			permissions: ['identity.roles.create']
+			permissions: ['identity.roles.create'],
+			effective_permissions: ['identity.roles.create']
 		});
 		goFetch.mockResolvedValue({ ok: false, status: 500 });
 		await run().catch(() => undefined);

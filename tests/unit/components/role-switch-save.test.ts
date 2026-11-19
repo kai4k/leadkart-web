@@ -19,21 +19,20 @@ vi.mock('@tanstack/svelte-query', async (importOriginal) =>
 		{
 			createQuery: (opts: () => { queryKey: readonly string[] }) => {
 				const key = opts().queryKey;
-				const data =
-					key[0] === 'me'
-						? {
-								permissions: ['identity.roles.update'],
-								effective_permissions: ['identity.roles.update']
-							}
-						: key[1] === 'list'
-							? { roles: [] }
-							: role(String(key[2]));
+				const data = key[1] === 'list' ? { roles: [] } : role(String(key[2]));
 				return { data, isPending: false, isError: false, error: null };
 			}
 		},
 		{ swallowRejections: true }
 	)
 );
+// The page reads what Go said about the caller from page.data (session.can).
+vi.mock('$app/state', () => ({
+	page: {
+		url: new URL('http://localhost/'),
+		data: { capabilities: { effective_permissions: ['identity.roles.update'] } }
+	}
+}));
 const toastMock = vi.hoisted(() => ({ success: vi.fn(), warning: vi.fn(), error: vi.fn() }));
 const empty = vi.hoisted(() => ({ default: undefined as unknown }));
 vi.mock('$ui', async (importOriginal) => ({

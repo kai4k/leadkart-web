@@ -7,6 +7,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { goFetch, readGoFailure, readGoJson } from '#lib/server/go.ts';
 import { createRoleRequestSchema } from '$features/roles/schemas';
+import { P } from '#lib/features/auth/permissions.ts';
 import { guardPage, requireCapability } from '#lib/server/guards.ts';
 import { loadCapabilities } from '#lib/server/capabilities.ts';
 import type { Actions } from './$types';
@@ -15,12 +16,12 @@ interface CreateRoleResponse {
 	role_id: string;
 }
 
-export const load = guardPage('identity.roles.create');
+export const load = guardPage(P.identityRolesCreate);
 
 export const actions: Actions = {
 	default: async ({ request, cookies }) => {
 		// Actions are a separate entry point from the load above: authorise here too.
-		requireCapability(await loadCapabilities(cookies), 'identity.roles.create');
+		requireCapability(await loadCapabilities(cookies), P.identityRolesCreate);
 
 		const fd = await request.formData();
 		const payload = {

@@ -390,7 +390,7 @@ test.describe('session refresh', () => {
 		});
 		await page.goto('/dashboard');
 		await expect(page).toHaveURL(/\/dashboard$/);
-		await expect(page.getByRole('heading', { level: 1, name: 'My Dashboard' })).toBeVisible();
+		await expect(page.getByRole('heading', { level: 1, name: 'Tenant Dashboard' })).toBeVisible();
 	});
 
 	test('refresh unavailable on a real client query: the SPA stays on the page, not /signin', async ({

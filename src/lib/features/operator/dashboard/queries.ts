@@ -8,11 +8,13 @@ const dashboardKeys = {
 
 /**
  * Platform stats query — refetches every 60 s so the dashboard stays
- * live without a manual refresh.
+ * live without a manual refresh. `enabled` keeps it off for an operator whose
+ * Go answer would be 403 (GET /platform/stats needs platform.tenants.view).
  */
-export function platformStatsQuery() {
+export function platformStatsQuery(enabled: () => boolean = () => true) {
 	return createQuery(() => ({
 		queryKey: dashboardKeys.stats(),
+		enabled: enabled(),
 		queryFn: ({ signal }) => api.getPlatformStats(signal),
 		refetchInterval: 60_000
 	}));

@@ -1,131 +1,238 @@
 /**
- * Sidebar navigation catalogue.
+ * THE route / permission config. The sidebar, the page titles, the command
+ * palette's "Pages" group, the operator scope tabs, Phase 2's horizontal nav and
+ * the server route guards all read this table; there is no second list of
+ * routes or of who may see them.
  *
- * Architecture:
- *   1. The catalogue is tier-keyed (PLATFORM / TENANT_ADMIN / TENANT_USER).
- *      Tier is derived synchronously from session.principal — a $derived
- *      projection over page.data.capabilities, which the (app) root
- *      layout server load bakes into first-paint HTML. Sidebar renders
- *      on the first frame, no skeleton.
+ * Pure module: no icons, no `.svelte` (icons live in `nav-icons.ts`, client only),
+ * so server code can import it.
  *
- *   2. Items render AS-IS — no per-item permission filter. The page each
- *      link goes to enforces fine-grained perms at action time. Stripe,
- *      AWS Console, GitHub, Linear, Vercel all follow this pattern: nav
- *      is a stable shell, not a permission audit.
+ * Visibility is a permission check and nothing else (see
+ * `features/auth/capabilities.ts`): never tier, rank, `is_super_user` or
+ * `is_platform`. Two things shape an entry besides its permissions:
  *
- *   3. Items here MUST correspond to existing routes. Dead links are
- *      worse than missing entries — they break trust in the nav. Roadmap
- *      destinations (leads, orders, dispatch, etc.) live in roadmap docs
- *      until their routes ship.
- *
- * References:
- *   - Stripe Dashboard: operator vs merchant menus are entirely separate
- *     surfaces. LeadKart conflates them under one app via tier-split nav.
- *   - Linear: per-role nav catalogues.
- *   - Vercel: per-scope (personal vs team) menus.
+ *   context  where it exists. 'own' = the caller's own tenant, 'scope' = while an
+ *            operator acts inside another tenant (the BFF sends X-Tenant-Id),
+ *            'both' = either. Entries that Go refuses in tenant context
+ *            (permission requests) are 'own'; the operator scope tree is 'scope'.
+ *   access   any-of permissions (or just "signed in").
  */
-
 import type { ResolvedPathname } from '$app/types';
-import {
-	Boxes,
-	Building2,
-	Inbox,
-	LayoutDashboard,
-	type LucideIcon,
-	Settings,
-	ShieldCheck,
-	ShoppingCart,
-	Users
-} from '#lib/icons/index.ts';
-import type { PrincipalTier } from '#lib/features/auth/capabilities.ts';
+import { canAny, type Capabilities } from '#lib/features/auth/capabilities.ts';
+import { P } from '#lib/features/auth/permissions.ts';
 
-export interface NavItem {
+type Caps = Capabilities | null | undefined;
+
+type NavContext = 'own' | 'scope' | 'both';
+type NavSectionId = 'main' | 'operator' | 'tenantContext' | 'administration' | 'crm' | 'account';
+export type AccessRule =
+	| { readonly kind: 'authenticated' }
+	| { readonly kind: 'any'; readonly permissions: readonly string[] };
+
+export interface NavRoute {
+	readonly href: ResolvedPathname;
+	readonly label: string;
+	readonly section: NavSectionId;
+	readonly context: NavContext;
+	readonly access: AccessRule;
+	/** Guards a sub-tree but is not rendered in navigation. */
+	readonly hidden?: true;
+}
+
+const AUTHENTICATED: AccessRule = { kind: 'authenticated' };
+const anyOf = (...permissions: string[]): AccessRule => ({ kind: 'any', permissions });
+
+export const NAV_ROUTES = {
+	dashboard: {
+		href: '/dashboard',
+		label: 'Dashboard',
+		section: 'main',
+		context: 'both',
+		access: AUTHENTICATED
+	},
+
+	// Operator — Go: GET /platform/tenants + /platform/stats need platform.tenants.view,
+	// GET /platform/persons* needs platform.users.view.
+	tenants: {
+		href: '/operator/tenants',
+		label: 'Tenants',
+		section: 'operator',
+		context: 'both',
+		access: anyOf(P.platformTenantsView)
+	},
+	persons: {
+		href: '/operator/persons',
+		label: 'People',
+		section: 'operator',
+		context: 'both',
+		access: anyOf(P.platformUsersView)
+	},
+
+	// The operator scope tree (an operator acting inside a tenant). Go, scoped calls:
+	// tenant read + audit = platform.tenants.view|manage; users read = platform.users.view|manage;
+	// roles read = platform.roles.view|manage.
+	scopeProfile: {
+		href: '/operator/scope/profile',
+		label: 'Profile',
+		section: 'tenantContext',
+		context: 'scope',
+		access: anyOf(P.platformTenantsView, P.platformTenantsManage)
+	},
+	scopeMembers: {
+		href: '/operator/scope/members',
+		label: 'Members',
+		section: 'tenantContext',
+		context: 'scope',
+		access: anyOf(P.platformUsersView, P.platformUsersManage)
+	},
+	scopeRoles: {
+		href: '/operator/scope/roles',
+		label: 'Roles',
+		section: 'tenantContext',
+		context: 'scope',
+		access: anyOf(P.platformRolesView, P.platformRolesManage)
+	},
+	scopeActivity: {
+		href: '/operator/scope/activity',
+		label: 'Activity',
+		section: 'tenantContext',
+		context: 'scope',
+		access: anyOf(P.platformTenantsView, P.platformTenantsManage)
+	},
+	scopeSettings: {
+		href: '/operator/scope/settings',
+		label: 'Settings',
+		section: 'tenantContext',
+		context: 'scope',
+		access: anyOf(P.platformTenantsView, P.platformTenantsManage)
+	},
+
+	// Administration of the caller's own tenant.
+	tenantSettings: {
+		href: '/settings/tenant',
+		label: 'Tenant Settings',
+		section: 'administration',
+		context: 'own',
+		access: anyOf(P.identityTenantsView)
+	},
+	team: {
+		href: '/settings/users',
+		label: 'Team',
+		section: 'administration',
+		context: 'own',
+		access: anyOf(P.identityUsersView)
+	},
+	roles: {
+		href: '/settings/roles',
+		label: 'Roles',
+		section: 'administration',
+		context: 'own',
+		access: anyOf(P.identityRolesView)
+	},
+
+	// CRM. Reads work in tenant context; writes are blocked there (capabilities.ts).
+	leads: {
+		href: '/leads',
+		label: 'Leads',
+		section: 'crm',
+		context: 'both',
+		access: anyOf(P.crmLeadsRead)
+	},
+	orders: {
+		href: '/orders',
+		label: 'Orders',
+		section: 'crm',
+		context: 'both',
+		access: anyOf(P.ordersOrdersRead, P.ordersQuotationsRead)
+	},
+	quotations: {
+		href: '/orders/quotations',
+		label: 'Quotations',
+		section: 'crm',
+		context: 'both',
+		access: anyOf(P.ordersQuotationsRead),
+		hidden: true
+	},
+	// Go: the landing is the product list (catalogRead = catalog.read|manage). Stock
+	// permissions alone reach nothing — batches live under a product.
+	inventory: {
+		href: '/inventory',
+		label: 'Inventory',
+		section: 'crm',
+		context: 'both',
+		access: anyOf(P.inventoryCatalogRead, P.inventoryCatalogManage)
+	},
+
+	// Go answers tenant_scope_not_supported on every /permission-requests route in tenant context.
+	permissionRequests: {
+		href: '/permission-requests',
+		label: 'Permission requests',
+		section: 'account',
+		context: 'own',
+		access: anyOf(P.identityMetaRequestPermissionElevation, P.identityRolesApprove)
+	},
+	account: {
+		href: '/settings/account',
+		label: 'Account',
+		section: 'account',
+		context: 'both',
+		access: AUTHENTICATED
+	}
+} as const satisfies Record<string, NavRoute>;
+export type NavRouteKey = keyof typeof NAV_ROUTES;
+
+const SECTIONS: ReadonlyArray<{ id: NavSectionId; title?: string }> = [
+	{ id: 'main' },
+	{ id: 'operator', title: 'Operator' },
+	{ id: 'tenantContext', title: 'Tenant context' },
+	{ id: 'administration', title: 'Administration' },
+	{ id: 'crm', title: 'CRM' },
+	{ id: 'account', title: 'Account' }
+];
+
+function contextMatches(route: NavRoute, inTenantContext: boolean): boolean {
+	return route.context === 'both' || (route.context === 'scope') === inTenantContext;
+}
+
+export function canSee(caps: Caps, route: NavRoute, inTenantContext = false): boolean {
+	if (!caps || !contextMatches(route, inTenantContext)) return false;
+	return route.access.kind === 'authenticated'
+		? true
+		: canAny(caps, route.access.permissions, inTenantContext);
+}
+
+interface VisibleNavItem {
+	key: NavRouteKey;
 	href: ResolvedPathname;
 	label: string;
-	icon: LucideIcon;
 }
-
-export interface NavSection {
+export interface VisibleNavSection {
+	id: NavSectionId;
 	title?: string;
-	items: NavItem[];
+	items: VisibleNavItem[];
 }
 
-export const PLATFORM_NAV: NavSection[] = [
-	{
-		title: 'Operator',
-		items: [
-			{ href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-			{ href: '/operator/tenants', label: 'Tenants', icon: Building2 }
-		]
-	},
-	{
-		title: 'Account',
-		items: [{ href: '/settings/account', label: 'Account', icon: ShieldCheck }]
-	}
-];
+/** Every entry the caller may see, grouped; empty sections dropped. Hidden (guard-only) entries excluded. */
+export function visibleNav(caps: Caps, inTenantContext = false): VisibleNavSection[] {
+	const entries = Object.entries(NAV_ROUTES) as Array<[NavRouteKey, NavRoute]>;
+	return SECTIONS.map((s) => ({
+		id: s.id,
+		title: s.title,
+		items: entries
+			.filter(([, r]) => r.section === s.id && !r.hidden && canSee(caps, r, inTenantContext))
+			.map(([key, r]) => ({ key, href: r.href, label: r.label }))
+	})).filter((s) => s.items.length > 0);
+}
 
-export const TENANT_ADMIN_NAV: NavSection[] = [
-	{
-		items: [{ href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }]
-	},
-	{
-		title: 'Administration',
-		items: [
-			{ href: '/settings/tenant', label: 'Tenant Settings', icon: Settings },
-			{ href: '/settings/users', label: 'Team', icon: Users },
-			{ href: '/settings/roles', label: 'Roles', icon: ShieldCheck },
-			{ href: '/permission-requests', label: 'Permission requests', icon: Inbox }
-		]
-	},
-	{
-		title: 'CRM',
-		items: [
-			{ href: '/leads', label: 'Leads', icon: Users },
-			{ href: '/orders', label: 'Orders', icon: ShoppingCart },
-			{ href: '/inventory', label: 'Inventory', icon: Boxes }
-		]
-	},
-	{
-		title: 'Account',
-		items: [{ href: '/settings/account', label: 'Account', icon: ShieldCheck }]
+/** The nav route guarding `pathname` (longest href prefix), or null. */
+export function routeForPath(pathname: string): NavRoute | null {
+	let best: NavRoute | null = null;
+	for (const r of Object.values(NAV_ROUTES) as NavRoute[]) {
+		if (
+			(pathname === r.href || pathname.startsWith(`${r.href}/`)) &&
+			(!best || r.href.length > best.href.length)
+		)
+			best = r;
 	}
-];
-
-export const TENANT_USER_NAV: NavSection[] = [
-	{
-		items: [{ href: '/dashboard', label: 'My Dashboard', icon: LayoutDashboard }]
-	},
-	{
-		title: 'My Work',
-		items: [
-			{ href: '/leads', label: 'Leads', icon: Users },
-			{ href: '/orders', label: 'Orders', icon: ShoppingCart },
-			{ href: '/inventory', label: 'Inventory', icon: Boxes },
-			{ href: '/permission-requests', label: 'Permission requests', icon: Inbox }
-		]
-	},
-	{
-		title: 'Account',
-		items: [{ href: '/settings/account', label: 'Account', icon: ShieldCheck }]
-	}
-];
-
-/**
- * Returns the nav catalogue appropriate for the principal's tier.
- * Empty array for 'unknown' (signed-out users shouldn't see (app)/*
- * anyway — the layout's auth guard redirects them).
- */
-export function navForTier(tier: PrincipalTier): NavSection[] {
-	switch (tier) {
-		case 'platform-super':
-		case 'platform-staff':
-			return PLATFORM_NAV;
-		case 'tenant-admin':
-			return TENANT_ADMIN_NAV;
-		case 'tenant-user':
-			return TENANT_USER_NAV;
-		case 'unknown':
-		default:
-			return [];
-	}
+	return best;
 }

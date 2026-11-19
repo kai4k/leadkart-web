@@ -114,7 +114,8 @@ describe('actions that used to print Go detail raw', () => {
 		capabilities.loadCapabilities.mockResolvedValue({
 			is_platform: false,
 			is_super_user: true,
-			permissions: []
+			permissions: [],
+			effective_permissions: ['identity.roles.create']
 		});
 		vi.stubGlobal(
 			'fetch',
@@ -137,7 +138,8 @@ describe('actions that used to print Go detail raw', () => {
 		capabilities.loadCapabilities.mockResolvedValue({
 			is_platform: false,
 			is_super_user: true,
-			permissions: []
+			permissions: [],
+			effective_permissions: ['identity.roles.create']
 		});
 		vi.stubGlobal(
 			'fetch',

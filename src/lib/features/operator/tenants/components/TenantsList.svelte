@@ -34,7 +34,7 @@
 		canSuspend,
 		tenantLifecycleBadge
 	} from '../view-models';
-	import { myCapabilitiesQuery, hasCapability } from '$features/auth';
+	import { P, session } from '$features/auth';
 	import { NetworkError } from '$api/errors';
 	import { getListErrorMessage } from '$api/error-messages';
 	import { enterScopeMutation } from '$features/operator/scope';
@@ -79,10 +79,13 @@
 		});
 	}
 
-	const capsQuery = myCapabilitiesQuery();
-	const canCreate = $derived(hasCapability(capsQuery.data, 'platform.tenants.create'));
-	const canView = $derived(hasCapability(capsQuery.data, 'platform.tenants.view'));
-	const canManage = $derived(hasCapability(capsQuery.data, 'platform.tenants.manage'));
+	const canCreate = $derived(session.can(P.platformTenantsCreate));
+	const canImpersonate = $derived(session.can(P.platformImpersonationManage));
+	// One Go permission per lifecycle action (suspend / activate / delete = mark + restore).
+	const mayActivate = $derived(session.can(P.identityTenantsActivate));
+	const maySuspend = $derived(session.can(P.identityTenantsSuspend));
+	const mayDelete = $derived(session.can(P.identityTenantsDelete));
+	const canManage = $derived(maySuspend || mayActivate || mayDelete);
 
 	const query = tenantsListQuery();
 	const activateMutation = activateTenantMutation();
@@ -212,7 +215,7 @@
 		</div>
 	{:else if tenant.slug !== 'platform'}
 		<div class="cluster cluster-tight">
-			{#if canView}
+			{#if canImpersonate}
 				<Button
 					variant="ghost"
 					size="sm"
@@ -236,7 +239,7 @@
 						<Icon icon={MoreVertical} size="sm" />
 					</Dropdown.Trigger>
 					<Dropdown.Menu>
-						{#if canSuspend(tenant)}
+						{#if maySuspend && canSuspend(tenant)}
 							<Dropdown.Item
 								onclick={() => {
 									lifecycleTarget = tenant;
@@ -246,17 +249,17 @@
 								<Icon icon={Pause} size="sm" /> Suspend
 							</Dropdown.Item>
 						{/if}
-						{#if canActivate(tenant)}
+						{#if mayActivate && canActivate(tenant)}
 							<Dropdown.Item onclick={() => activateMutation.mutate(tenant.id)}>
 								<Icon icon={Play} size="sm" /> Activate
 							</Dropdown.Item>
 						{/if}
-						{#if canRestore(tenant)}
+						{#if mayDelete && canRestore(tenant)}
 							<Dropdown.Item onclick={() => restoreMutation.mutate(tenant.id)}>
 								<Icon icon={RotateCcw} size="sm" /> Restore
 							</Dropdown.Item>
 						{/if}
-						{#if canMarkForDeletion(tenant)}
+						{#if mayDelete && canMarkForDeletion(tenant)}
 							<Dropdown.Separator />
 							<Dropdown.Item
 								variant="danger"

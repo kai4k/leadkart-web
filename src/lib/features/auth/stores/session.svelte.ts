@@ -22,12 +22,20 @@
 
 import { page } from '$app/state';
 import { clearUserBrowserState } from '#lib/api/query-client.ts';
-import { logout as logoutRequest, type Capabilities } from '../api';
+import { logout as logoutRequest } from '../api';
+import { can, canAny, type Capabilities } from '../capabilities.ts';
 import type { SessionPrincipal } from '../types';
 
 export interface Session {
 	readonly principal: SessionPrincipal | null;
+	/** What Go said about the caller (SSR-bootstrapped, `page.data`); null when signed out. */
+	readonly capabilities: Capabilities | null;
+	/** An operator is acting inside another tenant (the BFF sends the scope header). */
+	readonly inTenantContext: boolean;
 	readonly isAuthenticated: boolean;
+	/** The one permission rule: in `effective_permissions` (minus what Go refuses in tenant context). */
+	can(permission: string): boolean;
+	canAny(...permissions: string[]): boolean;
 	logout(): Promise<void>;
 }
 
@@ -41,8 +49,15 @@ function createSession(): Session {
 	 * Returns null when capabilities are absent (auth route, sign-out,
 	 * or layout server redirect to /signin before load completes).
 	 */
+	function readCapabilities(): Capabilities | null {
+		return (page.data as { capabilities?: Capabilities }).capabilities ?? null;
+	}
+	function readInTenantContext(): boolean {
+		return (page.data as { inTenantContext?: boolean }).inTenantContext === true;
+	}
+
 	function readPrincipal(): SessionPrincipal | null {
-		const caps = (page.data as { capabilities?: Capabilities }).capabilities;
+		const caps = readCapabilities();
 		if (!caps) return null;
 		return {
 			personId: caps.person_id,
@@ -51,8 +66,8 @@ function createSession(): Session {
 			membershipId: caps.membership_id,
 			email: caps.email,
 			isPlatform: caps.is_platform,
-			isSuperUser: caps.is_super_user,
-			permissions: caps.permissions
+			tier: caps.tier,
+			rank: caps.rank
 		};
 	}
 
@@ -84,9 +99,17 @@ function createSession(): Session {
 		get principal() {
 			return readPrincipal();
 		},
+		get capabilities() {
+			return readCapabilities();
+		},
+		get inTenantContext() {
+			return readInTenantContext();
+		},
 		get isAuthenticated() {
 			return readPrincipal() !== null;
 		},
+		can: (permission) => can(readCapabilities(), permission, readInTenantContext()),
+		canAny: (...permissions) => canAny(readCapabilities(), permissions, readInTenantContext()),
 		logout
 	};
 }

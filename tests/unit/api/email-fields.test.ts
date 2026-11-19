@@ -85,7 +85,7 @@ describe('every form schema uses the shared email rule', () => {
  * unauthenticated POST must not be able to occupy the event loop. 254 is Go's own cap.
  */
 describe('email fields are length-bounded and linear', () => {
-	const ADVERSARIAL = [`a@${  '.'.repeat(500_000)  }@`, `a@${  'a.'.repeat(250_000)}`];
+	const ADVERSARIAL = [`a@${'.'.repeat(500_000)}@`, `a@${'a.'.repeat(250_000)}`];
 
 	it.each(['formEmailField', 'lookupEmailField'] as const)(
 		'%s rejects a 500 000-character adversarial input in under 50 ms',
@@ -100,7 +100,7 @@ describe('email fields are length-bounded and linear', () => {
 	);
 
 	it('accepts 254 characters and rejects 255', () => {
-		const at = (n: number) => `${'a'.repeat(n - '@b.co'.length)  }@b.co`;
+		const at = (n: number) => `${'a'.repeat(n - '@b.co'.length)}@b.co`;
 		for (const field of [formEmailField, lookupEmailField]) {
 			expect(field.safeParse(at(254)).success).toBe(true);
 			expect(field.safeParse(at(255)).success).toBe(false);

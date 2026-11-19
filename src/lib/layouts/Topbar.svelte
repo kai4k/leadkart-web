@@ -4,7 +4,7 @@
 	import { routeContext } from '#lib/utils/routeTitle.ts';
 	import UserMenu from './UserMenu.svelte';
 	import { CommandPalette } from '$features/search';
-	import { myCapabilitiesQuery, hasCapability } from '$features/auth';
+	import { session } from '$features/auth';
 
 	/**
 	 * Topbar — Linear/Vercel-minimal shape:
@@ -26,13 +26,9 @@
 
 	const route = $derived(routeContext(page.url.pathname));
 
-	// Search palette: only operators (platform.users.view OR platform.tenants.view)
-	// can hit /v1/search. For everyone else, hide the trigger.
-	const capsQuery = myCapabilitiesQuery();
-	const canSearch = $derived(
-		hasCapability(capsQuery.data, 'platform.users.view') ||
-			hasCapability(capsQuery.data, 'platform.tenants.view')
-	);
+	// The palette is for every signed-in user (pages from the nav config); operators
+	// additionally get tenant / people search inside it.
+	const canSearch = $derived(session.isAuthenticated);
 
 	let paletteOpen = $state(false);
 

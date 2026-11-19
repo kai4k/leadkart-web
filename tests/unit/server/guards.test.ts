@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { guardPage, hasRequiredCapability, requireCapability } from '#lib/server/guards.ts';
 
 const caps = (permissions: string[], extra = {}) =>
-	({ is_platform: false, is_super_user: false, permissions, ...extra }) as never;
+	({
+		is_platform: false,
+		is_super_user: false,
+		permissions: [],
+		effective_permissions: permissions,
+		...extra
+	}) as never;
 
 function redirectOf(fn: () => void): { status: number; location: string } | null {
 	try {
@@ -19,10 +25,18 @@ describe('requireCapability', () => {
 			redirectOf(() => requireCapability(caps(['identity.users.view']), 'identity.users.view'))
 		).toBeNull();
 	});
-	it('passes for a super user', () => {
+	it('a super-user flag alone passes nothing: only effective_permissions do', () => {
 		expect(
 			redirectOf(() =>
 				requireCapability(caps([], { is_super_user: true }), 'identity.roles.create')
+			)
+		).toMatchObject({ status: 303, location: '/dashboard' });
+		expect(
+			redirectOf(() =>
+				requireCapability(
+					caps(['identity.roles.create'], { is_super_user: true }),
+					'identity.roles.create'
+				)
 			)
 		).toBeNull();
 	});
@@ -45,10 +59,19 @@ describe('hasRequiredCapability', () => {
 		expect(hasRequiredCapability(caps([]), 'identity.users.view')).toBe(false);
 		expect(hasRequiredCapability(null, 'identity.users.view')).toBe(false);
 	});
-	it('platform users hold platform.* implicitly', () => {
+	it('is_platform alone grants no platform.* name', () => {
 		expect(hasRequiredCapability(caps([], { is_platform: true }), 'platform.tenants.view')).toBe(
-			true
+			false
 		);
+		expect(
+			hasRequiredCapability(
+				caps(['platform.tenants.view'], { is_platform: true }),
+				'platform.tenants.view'
+			)
+		).toBe(true);
+	});
+	it('tenant.admin implies nothing on the web (Go expands it into effective_permissions)', () => {
+		expect(hasRequiredCapability(caps(['tenant.admin']), 'identity.users.view')).toBe(false);
 	});
 });
 

@@ -11,7 +11,7 @@
  * File-level rule (no attempt to parse which block does what): a route
  * component (src/routes/**\/*.svelte) or feature component
  * (src/lib/features/**\/*.svelte) that both calls `goto(` and references
- * `hasCapability` / `myCapabilitiesQuery` / `capabilities` fails, unless it is
+ * `session.can` / `myCapabilitiesQuery` / `capabilities` fails, unless it is
  * in ALLOWLIST below. Comments are ignored.
  *
  * Exit code: 0 on clean, 1 on any violation.
@@ -32,10 +32,15 @@ const ALLOWLIST = [
 	// goto opens a tenant from a membership row; capabilities only hide manage/anonymise actions.
 	'src/lib/features/operator/people/components/PersonDetail.svelte',
 	// goto syncs the URL filters; capabilities only hide create/view/manage actions.
-	'src/lib/features/operator/tenants/components/TenantsList.svelte'
+	'src/lib/features/operator/tenants/components/TenantsList.svelte',
+	// goto leaves the scope after "Exit context"; capabilities only choose which tabs are listed.
+	'src/routes/(app)/operator/scope/+layout.svelte',
+	// goto opens a tenant scope / person picked from a search hit; capabilities only choose the groups listed.
+	'src/lib/features/search/components/CommandPalette.svelte'
 ];
 
-const CAPABILITY = /\bhasCapability\b|\bmyCapabilitiesQuery\b|\bcapabilities\b/;
+const CAPABILITY =
+	/\bhasCapability\b|\bmyCapabilitiesQuery\b|\bcapabilities\b|\bsession\.can(Any)?\b/;
 const GOTO = /\bgoto\s*\(/;
 
 /** Drop HTML, block and line comments so prose never trips the rule. */

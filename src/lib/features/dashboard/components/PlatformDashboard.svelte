@@ -11,7 +11,7 @@
 		Users
 	} from '#lib/icons/index.ts';
 	import { Alert, Card, Spinner } from '$ui';
-	import { myCapabilitiesQuery, deriveTier } from '$features/auth';
+	import { P, session } from '$features/auth';
 	import { describeError } from '$api/errors';
 	import { platformStatsQuery } from '$features/operator';
 
@@ -30,12 +30,13 @@
 	 * backend endpoints land.
 	 */
 
-	const capsQuery = myCapabilitiesQuery();
-	const isSuper = $derived(deriveTier(capsQuery.data) === 'platform-super');
+	// Label only: what the header badge says. Every widget below is gated by `can`.
+	const isSuper = $derived(session.capabilities?.is_super_user === true);
+	const canViewStats = $derived(session.can(P.platformTenantsView));
 
 	type TileAccent = 'brand' | 'success' | 'warning' | 'danger';
 
-	const statsQuery = platformStatsQuery();
+	const statsQuery = platformStatsQuery(() => canViewStats);
 	const stats = $derived(statsQuery.data ?? null);
 	const statsLoading = $derived(statsQuery.isPending);
 	const statsError = $derived(
@@ -151,7 +152,7 @@
 		</p>
 	</header>
 
-	{#if statsError}
+	{#if canViewStats && statsError}
 		<Alert variant="danger" title="Stats unavailable">
 			<p>{statsError}</p>
 			<p class="caption text-fg-muted mt-2">
@@ -169,7 +170,7 @@
 	{/if}
 
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-		{#each statTiles as tile (tile.label)}
+		{#each canViewStats ? statTiles : [] as tile (tile.label)}
 			<Card.Root surface="glass" class="hover:bg-bg-muted">
 				<Card.Header>
 					<div class="cluster" style="--cluster-gap: var(--spacing-3);">

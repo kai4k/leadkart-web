@@ -52,6 +52,7 @@ export {
 	Edit,
 	Eye,
 	EyeOff,
+	FileText,
 	Filter,
 	type LucideIcon,
 	Inbox,

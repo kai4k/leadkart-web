@@ -14,8 +14,18 @@ vi.mock('#lib/server/scope.ts', () => ({ setOperatorScope, clearOperatorScope: v
 import { POST } from '../../../src/routes/api/operator/scope/+server.ts';
 
 const TENANT = { id: '00000000-0000-4000-8000-000000000001', slug: 'acme', display_name: 'Acme' };
-const PLATFORM = { is_platform: true, is_super_user: false, permissions: [] };
-const TENANT_ADMIN = { is_platform: false, is_super_user: false, permissions: ['tenant.admin'] };
+const PLATFORM = {
+	is_platform: true,
+	is_super_user: false,
+	permissions: [],
+	effective_permissions: ['platform.tenants.view']
+};
+const TENANT_ADMIN = {
+	is_platform: false,
+	is_super_user: false,
+	permissions: ['tenant.admin'],
+	effective_permissions: ['tenant.admin', 'identity.users.view']
+};
 
 function post(opts: { access?: boolean } = {}) {
 	const jar = new Map<string, string>(opts.access === false ? [] : [['lk_access', 'token']]);

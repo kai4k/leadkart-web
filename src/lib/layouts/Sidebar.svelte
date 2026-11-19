@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { navForTier } from '#lib/config/nav.ts';
-	import { session, type PrincipalTier } from '$features/auth';
+	import { visibleNav } from '#lib/config/nav.ts';
+	import { NAV_ICONS } from '#lib/config/nav-icons.ts';
+	import { session } from '$features/auth';
 
 	let { onNavigate }: { onNavigate?: () => void } = $props();
 
@@ -18,26 +19,18 @@
 	}
 
 	/**
-	 * Tier-scoped nav catalogue. Tier derives SYNCHRONOUSLY from
-	 * session.principal — itself a $derived projection over
-	 * page.data.capabilities (SSR-bootstrapped at the root layout
-	 * server load). No async query, no skeleton, no first-paint pop-in.
-	 *
-	 * Items render AS-IS — no permission filtering at the nav layer.
-	 * Pages enforce fine-grained perms at action time. Stripe / AWS /
-	 * GitHub / Linear / Vercel all do this.
+	 * The nav is the one config (`nav.ts`) filtered by what Go said the caller may do
+	 * (`effective_permissions`, SSR-bootstrapped into page.data: no query, no skeleton,
+	 * no first-paint pop-in) and by whether an operator is acting inside a tenant.
+	 * Nothing here looks at tier, rank or any role flag.
 	 */
-	const tier = $derived.by((): PrincipalTier => {
-		const p = session.principal;
-		if (!p) return 'unknown';
-		if (p.isPlatform && p.isSuperUser) return 'platform-super';
-		if (p.isPlatform) return 'platform-staff';
-		if (p.isSuperUser) return 'tenant-admin';
-		if (p.permissions?.includes('tenant.admin')) return 'tenant-admin';
-		return 'tenant-user';
-	});
-
-	const sections = $derived(navForTier(tier));
+	// The operator scope tree ("Tenant context" section) is rendered as tabs by the scope layout, from
+	// the same config; listing it here too would duplicate every link on those pages.
+	const sections = $derived(
+		visibleNav(session.capabilities, session.inTenantContext).filter(
+			(s) => s.id !== 'tenantContext'
+		)
+	);
 </script>
 
 <nav
@@ -57,7 +50,7 @@
 	</a>
 
 	<div class="lk-sidebar-scroll">
-		{#each sections as section, i (section.title ?? i)}
+		{#each sections as section (section.id)}
 			{#if section.items.length > 0}
 				<div class="lk-sidebar-group">
 					{#if section.title}
@@ -65,7 +58,7 @@
 					{/if}
 					<ul class="lk-sidebar-list">
 						{#each section.items as item (item.href)}
-							{@const SidebarIcon = item.icon}
+							{@const SidebarIcon = NAV_ICONS[item.key]}
 							{@const active = isActive(item.href)}
 							<li>
 								<a

@@ -32,7 +32,8 @@ export {
 } from './queries';
 
 export { displayName, initials } from './view-models';
-export { hasCapability, deriveTier, type PrincipalTier } from './capabilities';
+export { can, canAny, dashboardVariant, type DashboardVariant, type Tier } from './capabilities';
+export { P, type Permission } from './permissions';
 
 export type {
 	LoginResponse,

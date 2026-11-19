@@ -3,7 +3,7 @@
 	import { Eye, Icon } from '$icons';
 	import { ImpersonateModal } from '$features/operator/impersonation';
 	import { tenantLifecycleBadge } from '$features/operator/tenants';
-	import { hasCapability, myCapabilitiesQuery } from '$features/auth/queries';
+	import { P, session } from '$features/auth';
 	import type { LayoutData } from '../$types';
 
 	let { data }: { data: LayoutData } = $props();
@@ -11,8 +11,7 @@
 	let impersonateOpen = $state(false);
 
 	const tenant = $derived(data.tenant);
-	const capsQuery = myCapabilitiesQuery();
-	const canView = $derived(hasCapability(capsQuery.data, 'platform.tenants.view'));
+	const canImpersonate = $derived(session.can(P.platformImpersonationManage));
 	const badge = $derived(tenantLifecycleBadge(tenant));
 </script>
 
@@ -21,7 +20,7 @@
 <div class="stack stack-relaxed">
 	<header class="cluster cluster-spread">
 		<Badge variant={badge.variant} appearance="soft" size="sm">{badge.label}</Badge>
-		{#if canView}
+		{#if canImpersonate}
 			<Button variant="ghost" onclick={() => (impersonateOpen = true)}>
 				<Icon icon={Eye} size="sm" /> Impersonate this tenant
 			</Button>

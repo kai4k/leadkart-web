@@ -1,12 +1,13 @@
 import { redirect } from '@sveltejs/kit';
 // Pure module imported directly: the auth barrel re-exports .svelte components.
-import { hasCapability, type Capabilities } from '#lib/features/auth/capabilities.ts';
+import { can, type Capabilities } from '#lib/features/auth/capabilities.ts';
+import { P } from '#lib/features/auth/permissions.ts';
 
 /**
  * The permission the /operator/tenants page requires. Entering (and staying in)
  * a tenant's operator scope requires the same one.
  */
-export const OPERATOR_SCOPE_PERMISSION = 'platform.tenants.view';
+export const OPERATOR_SCOPE_PERMISSION = P.platformTenantsView;
 
 /**
  * Non-redirecting check for JSON endpoints (which answer 403, never a
@@ -17,7 +18,7 @@ export function hasRequiredCapability(
 	caps: Capabilities | null | undefined,
 	permission: string
 ): boolean {
-	return hasCapability(caps ?? undefined, permission);
+	return can(caps, permission);
 }
 
 /**
@@ -31,7 +32,7 @@ export function requireCapability(caps: Capabilities | null | undefined, permiss
 
 /**
  * A `+page.server.ts` load that only guards the page:
- *   export const load = guardPage('identity.users.view');
+ *   export const load = guardPage(P.identityUsersView);
  * Capabilities come from the (app) layout load via `parent()`.
  */
 export function guardPage(

@@ -48,10 +48,8 @@ export const load: LayoutServerLoad = async ({ cookies, url, locals }) => {
 	// cannot loop 409 → DELETE → /signin. /operator/scope clears it itself (and
 	// redirects). The state is checked first so `url` is only read (and tracked
 	// as a load dependency) when there is something to clear.
-	if (
-		readOperatorScope(cookies).state === 'invalid' &&
-		!url.pathname.startsWith('/operator/scope')
-	) {
+	const scope = readOperatorScope(cookies);
+	if (scope.state === 'invalid' && !url.pathname.startsWith('/operator/scope')) {
 		clearOperatorScope(cookies);
 	}
 
@@ -67,5 +65,7 @@ export const load: LayoutServerLoad = async ({ cookies, url, locals }) => {
 		throw redirect(303, `/signin?next=${next}`);
 	}
 
-	return { capabilities };
+	// Tenant context = a valid scope cookie: the BFF sends X-Tenant-Id on every Go call, so the
+	// nav and permission checks must know (nav.ts, capabilities.ts). Never carries the tenant itself.
+	return { capabilities, inTenantContext: scope.state === 'valid' };
 };

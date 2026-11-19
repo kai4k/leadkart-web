@@ -19,6 +19,7 @@ export default defineConfig({
 			// individual tests but vite still needs a resolvable alias
 			// during import-analysis. Empty stubs at known paths satisfy
 			// that without affecting test behaviour.
+			'$app/forms': resolve(__dirname, 'tests/unit/stubs/app-forms.ts'),
 			'$app/env/private': resolve(__dirname, 'tests/unit/stubs/app-env-private.ts'),
 			'$app/env': resolve(__dirname, 'tests/unit/stubs/app-env.ts'),
 			'$app/navigation': resolve(__dirname, 'tests/unit/stubs/app-navigation.ts'),

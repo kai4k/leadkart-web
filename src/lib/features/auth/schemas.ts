@@ -15,9 +15,8 @@ import { lookupEmailField, newPasswordField } from '#lib/api/request-schema.ts';
  * CapabilitiesDto — GET /v1/auth/me/capabilities, straight from the generated
  * contract. `email` / `first_name` / `last_name` are omitzero in Go
  * (me_http.go), so they are optional here: a missing name never signs the
- * user out. The backend does NOT send a `tier` field — tier is derived
- * client-side via `deriveTier()` in capabilities.ts from `is_platform`,
- * `is_super_user` and `permissions`.
+ * user out. `effective_permissions` is what the web authorises on
+ * (capabilities.ts `can`); `rank` / `tier` are Go's seniority, presentation only.
  */
 export const capabilitiesSchema = CapabilitiesDto;
 

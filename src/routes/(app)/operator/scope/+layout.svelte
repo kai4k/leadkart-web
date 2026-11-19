@@ -3,11 +3,13 @@
 	import { page } from '$app/state';
 	import { goto, refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import type { ResolvedPathname } from '$app/types';
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import { Badge, Breadcrumbs, Button, type BreadcrumbItem } from '$ui';
-	import { Building2, Icon, Users, Shield, Settings, Activity, UserCog, LogOut } from '$icons';
+	import { Building2, Icon, Shield, LogOut } from '$icons';
 	import { exitScope as exitScopeApi } from '$features/operator/scope';
+	import { session } from '$features/auth';
+	import { visibleNav } from '#lib/config/nav.ts';
+	import { NAV_ICONS } from '#lib/config/nav-icons.ts';
 	import type { LayoutData } from './$types';
 
 	let { children, data }: { children: Snippet; data: LayoutData } = $props();
@@ -18,13 +20,11 @@
 		{ label: tenant.display_name }
 	]);
 
-	const tabs: ReadonlyArray<{ href: ResolvedPathname; label: string; icon: typeof Building2 }> = [
-		{ href: '/operator/scope/profile', label: 'Profile', icon: Building2 },
-		{ href: '/operator/scope/members', label: 'Members', icon: Users },
-		{ href: '/operator/scope/roles', label: 'Roles', icon: UserCog },
-		{ href: '/operator/scope/activity', label: 'Activity', icon: Activity },
-		{ href: '/operator/scope/settings', label: 'Settings', icon: Settings }
-	];
+	// The tabs are the nav config's "Tenant context" section, filtered by the operator's own
+	// platform.* permissions — the same entries the sidebar lists in tenant context.
+	const tabs = $derived(
+		visibleNav(session.capabilities, true).find((s) => s.id === 'tenantContext')?.items ?? []
+	);
 
 	function isActive(href: string): boolean {
 		return page.url.pathname === href || page.url.pathname.startsWith(`${href}/`);
@@ -68,13 +68,14 @@
 		<ul class="cluster cluster-tight" style="list-style:none;margin:0;padding:0;">
 			{#each tabs as tab (tab.href)}
 				{@const active = isActive(tab.href)}
+				{@const TabIcon = NAV_ICONS[tab.key]}
 				<li>
 					<a
 						href={tab.href}
 						aria-current={active ? 'page' : undefined}
 						class={['lk-tenant-tab', active && 'lk-tenant-tab--active']}
 					>
-						<tab.icon size={14} aria-hidden="true" />
+						<TabIcon size={14} aria-hidden="true" />
 						{tab.label}
 					</a>
 				</li>

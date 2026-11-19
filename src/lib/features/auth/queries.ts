@@ -17,7 +17,6 @@ import { useOptimisticMutation } from '#lib/hooks/index.ts';
 import * as api from './api';
 import type { SessionDto } from './types';
 import type { Capabilities } from './capabilities';
-export { hasCapability } from './capabilities';
 
 export const capabilitiesKey = ['me', 'capabilities'] as const;
 const profileKey = (membershipId: string) => ['me', 'profile', membershipId] as const;

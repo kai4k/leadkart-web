@@ -27,10 +27,24 @@ test.describe('Cmd+K search palette — visibility gate', () => {
 		await expect(page.locator('button[aria-label="Search (Cmd+K)"]')).toBeVisible();
 	});
 
-	test('trigger hidden for tenant-user (no operator permissions)', async ({ page }) => {
-		await signInAsTier(page, { tier: 'tenant-user' });
+	test('palette is available to a tenant user: Pages only, no directory search', async ({
+		page
+	}) => {
+		await signInAsTier(page, {
+			tier: 'tenant-user',
+			permissions: ['crm.leads.read', 'identity.meta.request_permission_elevation']
+		});
 		await page.goto('/dashboard');
-		await expect(page.locator('button[aria-label="Search (Cmd+K)"]')).toHaveCount(0);
+		await page.locator('button[aria-label="Search (Cmd+K)"]').click();
+		const dialog = page.getByRole('dialog');
+		await expect(dialog.getByPlaceholder('Search pages…')).toBeVisible();
+		await expect(dialog.getByRole('link', { name: 'Leads' })).toBeVisible();
+		await expect(dialog.getByRole('link', { name: 'Tenants' })).toHaveCount(0);
+		await dialog.getByRole('searchbox').fill('perm');
+		await expect(dialog.getByRole('link', { name: 'Permission requests' })).toBeVisible();
+		await expect(dialog.getByRole('link', { name: 'Leads' })).toHaveCount(0);
+		await dialog.getByRole('link', { name: 'Permission requests' }).click();
+		await expect(page).toHaveURL(/\/permission-requests$/);
 	});
 });
 

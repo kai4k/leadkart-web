@@ -1,12 +1,17 @@
 /**
- * Capability / permission-check tests. These cover the hasCapability helper
- * and the deriveTier helper. hasCapability is the UX-hint gate components use
- * to show/hide actions — drift here means buttons appear for users who can't
- * take the action. deriveTier drives sidebar catalogue selection and dashboard
- * variant routing. Pin every branch.
+ * The web's one permission rule: `can(p)` is true iff `p` is in
+ * `capabilities.effective_permissions` (Go computes that list). Nothing else
+ * authorises: not `is_super_user`, not `is_platform`, not `tenant.admin`, not
+ * tier or rank. The only subtraction is Go's tenant-context refusals.
  */
 import { describe, expect, it } from 'vitest';
-import { hasCapability, deriveTier, type Capabilities } from '#lib/features/auth/capabilities.ts';
+import {
+	can,
+	canAny,
+	dashboardVariant,
+	type Capabilities
+} from '#lib/features/auth/capabilities.ts';
+import { P, isBlockedInTenantContext } from '#lib/features/auth/permissions.ts';
 
 function caps(overrides: Partial<Capabilities> = {}): Capabilities {
 	return {
@@ -28,80 +33,128 @@ function caps(overrides: Partial<Capabilities> = {}): Capabilities {
 	};
 }
 
-describe('hasCapability', () => {
-	it('returns false when caps is undefined (query not yet resolved)', () => {
-		expect(hasCapability(undefined, 'identity.users.create')).toBe(false);
+describe('can', () => {
+	it('is false without capabilities (not yet resolved / signed out)', () => {
+		expect(can(undefined, P.identityUsersView)).toBe(false);
+		expect(can(null, P.identityUsersView)).toBe(false);
 	});
 
-	it('returns true unconditionally for is_super_user (short-circuit per ADR 0036)', () => {
+	it('is true exactly when the name is in effective_permissions', () => {
+		const c = caps({ effective_permissions: [P.identityUsersView] });
+		expect(can(c, P.identityUsersView)).toBe(true);
+		expect(can(c, P.identityUsersCreate)).toBe(false);
+	});
+
+	it('does NOT read the JWT `permissions` list', () => {
+		expect(can(caps({ permissions: [P.crmLeadsRead] }), P.crmLeadsRead)).toBe(false);
+	});
+
+	it('applies no tenant.admin implication of its own', () => {
+		const c = caps({ permissions: ['tenant.admin'], effective_permissions: ['tenant.admin'] });
+		expect(can(c, P.identityUsersView)).toBe(false);
+		expect(can(c, P.crmLeadsRead)).toBe(false);
+	});
+
+	it('applies no super-user shortcut', () => {
+		expect(can(caps({ is_super_user: true }), P.crmLeadsRead)).toBe(false);
+		expect(can(caps({ is_super_user: true }), P.platformTenantsView)).toBe(false);
+	});
+
+	it('applies no platform shortcut: is_platform alone grants no platform.* name', () => {
+		const c = caps({ is_platform: true, tenant_slug: 'platform' });
+		expect(can(c, P.platformTenantsView)).toBe(false);
 		expect(
-			hasCapability(caps({ is_super_user: true, permissions: [] }), 'literally.anything')
+			can(caps({ ...c, effective_permissions: [P.platformTenantsView] }), P.platformTenantsView)
 		).toBe(true);
 	});
 
-	it('returns true when the permission is in the list', () => {
-		expect(
-			hasCapability(caps({ permissions: ['identity.users.create'] }), 'identity.users.create')
-		).toBe(true);
-	});
-
-	it('returns false when the permission is absent', () => {
-		expect(
-			hasCapability(caps({ permissions: ['crm.leads.view'] }), 'identity.tenants.delete')
-		).toBe(false);
-	});
-
-	it('returns false when permissions list is empty', () => {
-		expect(hasCapability(caps(), 'identity.users.view')).toBe(false);
-	});
-
-	it('returns true for platform-super user on any permission', () => {
-		const c = caps({ is_platform: true, is_super_user: true });
-		expect(hasCapability(c, 'platform.tenants.delete')).toBe(true);
-	});
-
-	// Platform-tier users (is_platform=true) implicitly hold platform.*
-	// permissions — see capabilities.ts comment. The server's
-	// RequirePermission middleware is the actual gate; the client treats
-	// the coarse claim as sufficient for UI affordances.
-	it('returns true for platform-staff on any platform.* permission (coarse-claim implies fine)', () => {
-		const c = caps({ is_platform: true, is_super_user: false });
-		expect(hasCapability(c, 'platform.tenants.manage')).toBe(true);
-		expect(hasCapability(c, 'platform.tenants.view')).toBe(true);
-	});
-
-	it('returns false for platform-staff on a non-platform.* permission they lack', () => {
-		const c = caps({ is_platform: true, is_super_user: false });
-		expect(hasCapability(c, 'crm.leads.delete')).toBe(false);
+	it('never authorises on tier or rank', () => {
+		const owner = caps({ tier: 'owner', rank: 0 });
+		expect(can(owner, P.identityUsersView)).toBe(false);
+		expect(can(owner, P.crmLeadsManage)).toBe(false);
 	});
 });
 
-describe('deriveTier', () => {
-	it('returns unknown when caps is undefined', () => {
-		expect(deriveTier(undefined)).toBe('unknown');
+describe('canAny', () => {
+	const c = caps({ effective_permissions: [P.ordersQuotationsRead] });
+	it('is true when any listed name is held', () => {
+		expect(canAny(c, [P.ordersOrdersRead, P.ordersQuotationsRead])).toBe(true);
+	});
+	it('is false when none is held, or the list is empty, or caps are missing', () => {
+		expect(canAny(c, [P.ordersOrdersRead, P.ordersOrdersManage])).toBe(false);
+		expect(canAny(c, [])).toBe(false);
+		expect(canAny(null, [P.ordersQuotationsRead])).toBe(false);
+	});
+});
+
+describe('tenant context (Go tenant_scope_read_only / tenant_scope_not_supported)', () => {
+	it('blocks writes of crm / orders / inventory / dispatch / tasks, keeps their reads', () => {
+		for (const name of [
+			P.crmLeadsManage,
+			P.crmLeadsAssign,
+			P.ordersOrdersManage,
+			P.ordersQuotationsManage,
+			P.ordersPaymentsRecord,
+			P.inventoryCatalogManage,
+			P.inventoryStockManage,
+			P.dispatchManage,
+			P.tasksManage,
+			P.tasksReassign
+		])
+			expect(isBlockedInTenantContext(name), name).toBe(true);
+		for (const name of [
+			P.crmLeadsRead,
+			P.crmLeadsReadAll,
+			P.ordersOrdersRead,
+			P.ordersInvoicesRead,
+			P.ordersPaymentsRead,
+			P.inventoryCatalogRead,
+			P.inventoryStockRead,
+			P.dispatchRead,
+			P.tasksRead,
+			P.tasksReadAll
+		])
+			expect(isBlockedInTenantContext(name), name).toBe(false);
 	});
 
-	it('returns platform-super for is_platform + is_super_user', () => {
-		expect(deriveTier(caps({ is_platform: true, is_super_user: true }))).toBe('platform-super');
+	it('blocks permission requests and marketplace purchase', () => {
+		expect(isBlockedInTenantContext(P.identityMetaRequestPermissionElevation)).toBe(true);
+		expect(isBlockedInTenantContext(P.identityRolesApprove)).toBe(true);
+		expect(isBlockedInTenantContext(P.platformMarketplacePurchase)).toBe(true);
 	});
 
-	it('returns platform-staff for is_platform without is_super_user', () => {
-		expect(deriveTier(caps({ is_platform: true, is_super_user: false }))).toBe('platform-staff');
+	it('leaves identity writes and platform names alone (Go accepts 17 identity writes under scope)', () => {
+		for (const name of [
+			P.identityUsersCreate,
+			P.identityRolesCreate,
+			P.platformUsersManage,
+			P.platformTenantsManage,
+			P.notificationsManage
+		])
+			expect(isBlockedInTenantContext(name), name).toBe(false);
 	});
 
-	it('returns tenant-admin for is_super_user without is_platform', () => {
-		expect(deriveTier(caps({ is_platform: false, is_super_user: true }))).toBe('tenant-admin');
+	it('can() only subtracts in tenant context, never adds', () => {
+		const c = caps({ effective_permissions: [P.crmLeadsManage, P.crmLeadsRead] });
+		expect(can(c, P.crmLeadsManage)).toBe(true);
+		expect(can(c, P.crmLeadsManage, true)).toBe(false);
+		expect(can(c, P.crmLeadsRead, true)).toBe(true);
+		expect(canAny(c, [P.crmLeadsManage], true)).toBe(false);
+		expect(can(c, P.crmLeadsAssign, true)).toBe(false);
 	});
+});
 
-	it('returns tenant-admin for tenant.admin permission', () => {
-		expect(deriveTier(caps({ permissions: ['tenant.admin'] }))).toBe('tenant-admin');
+describe('dashboardVariant (a layout choice, not an authorisation)', () => {
+	it('platform operators get the platform dashboard', () => {
+		expect(dashboardVariant(caps({ is_platform: true }))).toBe('platform');
 	});
-
-	it('returns tenant-user for regular user with no special flags', () => {
-		expect(deriveTier(caps({ permissions: ['crm.leads.view'] }))).toBe('tenant-user');
+	it('owner and admin tiers get the tenant-admin dashboard', () => {
+		expect(dashboardVariant(caps({ tier: 'owner', rank: 0 }))).toBe('tenant-admin');
+		expect(dashboardVariant(caps({ tier: 'admin', rank: 5 }))).toBe('tenant-admin');
 	});
-
-	it('returns tenant-user for empty permissions', () => {
-		expect(deriveTier(caps())).toBe('tenant-user');
+	it('every other tier, and no capabilities, get the user dashboard', () => {
+		for (const tier of ['manager', 'team_lead', 'user'] as const)
+			expect(dashboardVariant(caps({ tier }))).toBe('tenant-user');
+		expect(dashboardVariant(undefined)).toBe('tenant-user');
 	});
 });

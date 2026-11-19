@@ -1,71 +1,55 @@
 /**
- * Pure capability-check helpers — no SvelteKit or TanStack deps.
- * Extracted from queries.ts so unit tests can import this without
- * pulling in the toast / $app/* chain.
+ * The web's one authorisation rule — a pure module (no SvelteKit, no TanStack, no
+ * icons) so server guards, the nav config and unit tests import it directly.
  *
- * hasCapability is the canonical permission-check helper.
- * The superuser short-circuit mirrors ADR 0036 §4.1.
+ *   can(permission)  ⇔  the name is in `capabilities.effective_permissions`.
  *
- * deriveTier synthesises the principal's tier from the backend CapabilitiesDto
- * fields (is_platform, is_super_user, permissions). The backend does NOT send
- * a `tier` field — it is a frontend-only concept used to select the sidebar
- * catalogue and the dashboard variant.
+ * Go computes that list per caller: it already holds everything `tenant.admin`
+ * implies inside the caller's own tenant, everything a super user may do, and
+ * leaves platform-reserved names out for non-operators. The web applies NO
+ * implication of its own: no "tenant.admin grants identity.*", no
+ * `is_super_user` shortcut, no `is_platform` shortcut, nothing derived from
+ * tier or rank.
+ *
+ * `tier` and `rank` are presentation only (badges, wording, dashboard variant).
+ *
+ * One restriction, layered on top and only ever subtracting: while an operator
+ * acts inside another tenant ("tenant context", the BFF sends X-Tenant-Id),
+ * capabilities still describe the operator's own account, but Go refuses the
+ * writes of several modules and the permission-request routes
+ * (`tenant_scope_read_only` / `tenant_scope_not_supported`). `inTenantContext`
+ * applies exactly that, in this one place (see `isBlockedInTenantContext`).
  */
-
 import type { Capabilities } from './api';
+import { isBlockedInTenantContext } from './permissions.ts';
 
 export type { Capabilities };
 
-/**
- * The five principal tiers the frontend distinguishes.
- * Derived client-side from CapabilitiesDto; NOT a wire field.
- */
-export type PrincipalTier =
-	| 'platform-super'
-	| 'platform-staff'
-	| 'tenant-admin'
-	| 'tenant-user'
-	| 'unknown';
+type Caps = Capabilities | null | undefined;
 
-/**
- * Derives the principal's tier from the backend CapabilitiesDto.
- * Mirrors the old `tierOf()` logic:
- *   platform + super_user → platform-super (full operator access)
- *   platform only         → platform-staff (read-only operator)
- *   super_user only       → tenant-admin   (tenant owner / super-admin role)
- *   tenant.admin perm     → tenant-admin
- *   else                  → tenant-user
- *   undefined             → unknown
- */
-export function deriveTier(caps: Capabilities | undefined): PrincipalTier {
-	if (!caps) return 'unknown';
-	if (caps.is_platform && caps.is_super_user) return 'platform-super';
-	if (caps.is_platform) return 'platform-staff';
-	if (caps.is_super_user) return 'tenant-admin';
-	if (caps.permissions.includes('tenant.admin')) return 'tenant-admin';
-	return 'tenant-user';
+/** Go's seniority band (ADR 0069). Presentation only. */
+export type Tier = Capabilities['tier'];
+
+export function can(caps: Caps, permission: string, inTenantContext = false): boolean {
+	if (!caps) return false;
+	if (inTenantContext && isBlockedInTenantContext(permission)) return false;
+	return caps.effective_permissions.includes(permission);
+}
+
+export function canAny(
+	caps: Caps,
+	permissions: readonly string[],
+	inTenantContext = false
+): boolean {
+	return permissions.some((permission) => can(caps, permission, inTenantContext));
 }
 
 /**
- * Returns true if the capabilities set includes the requested permission.
- * Short-circuits to true for super-users per ADR 0036.
- * Returns false when caps is undefined (query not yet resolved).
- *
- * Usage (component):
- *   const capsQuery = myCapabilitiesQuery();
- *   const canManage = $derived(hasCapability(capsQuery.data, 'platform.tenants.manage'));
+ * Which dashboard to render. A layout choice, not an authorisation: every action
+ * and widget on the dashboards is still gated by `can`.
  */
-export function hasCapability(caps: Capabilities | undefined, permission: string): boolean {
-	if (!caps) return false;
-	if (caps.is_super_user) return true;
-	// Platform-tier users (is_platform=true) implicitly hold platform.*
-	// permissions — they're LeadKart staff on the platform tenant. The
-	// server's RequirePermission middleware is the actual gate; hiding
-	// nav links from an operator because the JWT didn't ship the explicit
-	// platform.tenants.view permission produces broken UX.
-	if (caps.is_platform && permission.startsWith('platform.')) return true;
-	// Tenant-admin meta-perm grants all identity.* tenant-management perms.
-	// Same reasoning — coarse claim implies the fine-grained set.
-	if (caps.permissions.includes('tenant.admin') && permission.startsWith('identity.')) return true;
-	return caps.permissions.includes(permission);
+export type DashboardVariant = 'platform' | 'tenant-admin' | 'tenant-user';
+export function dashboardVariant(caps: Caps): DashboardVariant {
+	if (caps?.is_platform) return 'platform';
+	return caps?.tier === 'owner' || caps?.tier === 'admin' ? 'tenant-admin' : 'tenant-user';
 }

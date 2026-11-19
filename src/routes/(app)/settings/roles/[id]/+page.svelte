@@ -24,7 +24,7 @@
 		ROLE_NAME_MAX,
 		ROLE_NAME_MIN
 	} from '$features/roles';
-	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
+	import { P, session } from '$features/auth';
 	import { describeError } from '$api/errors';
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 
@@ -71,11 +71,8 @@
 		{ label: role?.name ?? 'Role' }
 	]);
 	const protectedRole = $derived(role ? isProtectedRole(role) : false);
-	const capsQuery = myCapabilitiesQuery();
 
-	const canUpdate = $derived(
-		!protectedRole && hasCapability(capsQuery.data, 'identity.roles.update')
-	);
+	const canUpdate = $derived(!protectedRole && session.can(P.identityRolesUpdate));
 	// Created once: the role id travels in the mutation variables.
 	const updateMutation = updateRoleMutation();
 	const replacePermsMutation = replaceRolePermissionsMutation();

@@ -1,8 +1,12 @@
 /**
  * Frontend mirror of the backend's IdentityPermissions catalogue
- * (internal/identity/domain/permission/permission.go).
+ * (internal/identity/domain/permission/permission.go) — every name Go
+ * recognises, nothing else.
  *
- * MUST be kept in sync with the Go constants. When the backend ships
+ * `tests/unit/features/auth/permissions.test.ts` compares this list with
+ * Go's file at the commit pinned in src/lib/api/generated/SOURCE.json
+ * (skipped, with a notice, when no Go checkout is present) and checks that
+ * every name in the web's `P` map is here. When the backend ships
  * GET /v1/permissions, replace this with a runtime fetch.
  *
  * Each permission has:
@@ -19,24 +23,59 @@ export type PermissionCatalogueEntry = {
 export const PERMISSION_CATALOGUE: ReadonlyArray<PermissionCatalogueEntry> = [
 	// --- Meta ---
 	{ name: 'tenant.admin', description: 'Holder is a tenant administrator', group: 'meta' },
+	{
+		name: 'identity.meta.request_permission_elevation',
+		description: 'Ask a manager for more permissions',
+		group: 'meta'
+	},
 
 	// --- Platform (cross-tenant operator) ---
 	{ name: 'platform.tenants.view', description: 'Read any tenant', group: 'platform' },
 	{ name: 'platform.tenants.create', description: 'Register a new tenant', group: 'platform' },
 	{
 		name: 'platform.tenants.manage',
-		description: 'Suspend/activate/delete tenants',
+		description: 'Edit any tenant (profile, statutory, settings)',
 		group: 'platform'
 	},
 	{ name: 'platform.users.view', description: 'Read any Person record', group: 'platform' },
 	{ name: 'platform.users.create', description: 'Create platform users', group: 'platform' },
 	{
 		name: 'platform.users.manage',
-		description: 'Global suspend / anonymise persons',
+		description: 'Edit, globally suspend and lift persons',
 		group: 'platform'
 	},
 	{ name: 'platform.roles.view', description: 'Read platform-tenant roles', group: 'platform' },
 	{ name: 'platform.roles.manage', description: 'Manage platform-tenant roles', group: 'platform' },
+	{
+		name: 'platform.impersonation.manage',
+		description: 'Open, list and end impersonation sessions',
+		group: 'platform'
+	},
+	{
+		name: 'platform.unverified_contacts.manage',
+		description: 'Run the unverified-contact verification pipeline',
+		group: 'platform'
+	},
+	{
+		name: 'platform.marketplace.browse',
+		description: 'Browse leads on the marketplace',
+		group: 'platform'
+	},
+	{
+		name: 'platform.marketplace.purchase',
+		description: 'Buy marketplace leads with credits',
+		group: 'platform'
+	},
+	{
+		name: 'platform.lead_credits.read',
+		description: 'Read the lead-credit balance',
+		group: 'platform'
+	},
+	{
+		name: 'platform.lead_credits.topup',
+		description: 'Credit a tenant lead-credit balance',
+		group: 'platform'
+	},
 
 	// --- Identity (tenant-scoped) ---
 	{ name: 'identity.tenants.view', description: "View own tenant's settings", group: 'identity' },
@@ -52,13 +91,17 @@ export const PERMISSION_CATALOGUE: ReadonlyArray<PermissionCatalogueEntry> = [
 	},
 	{
 		name: 'identity.tenants.suspend',
-		description: 'Self-suspend the tenant (cooling off)',
+		description: 'Suspend a tenant (platform operators)',
 		group: 'identity'
 	},
-	{ name: 'identity.tenants.activate', description: 'Lift a self-suspension', group: 'identity' },
+	{
+		name: 'identity.tenants.activate',
+		description: 'Lift a tenant suspension (platform operators)',
+		group: 'identity'
+	},
 	{
 		name: 'identity.tenants.delete',
-		description: 'Mark the tenant for deletion',
+		description: 'Mark for deletion, restore and hard-delete a tenant (platform operators)',
 		group: 'identity'
 	},
 
@@ -88,9 +131,91 @@ export const PERMISSION_CATALOGUE: ReadonlyArray<PermissionCatalogueEntry> = [
 	},
 	{ name: 'identity.roles.delete', description: 'Remove custom roles', group: 'identity' },
 	{ name: 'identity.roles.assign', description: 'Assign a role to a user', group: 'identity' },
-	{ name: 'identity.roles.revoke', description: 'Remove a role from a user', group: 'identity' }
+	{ name: 'identity.roles.revoke', description: 'Remove a role from a user', group: 'identity' },
+	{
+		name: 'identity.roles.approve',
+		description: 'Approve permission-elevation requests from direct reports',
+		group: 'identity'
+	},
 
-	// Other modules (CRM, Orders, Inventory, etc.) — add when those slices land.
+	// --- CRM ---
+	{ name: 'crm.leads.read', description: 'View assigned leads', group: 'crm' },
+	{ name: 'crm.leads.read_all', description: 'View every lead in the tenant', group: 'crm' },
+	{ name: 'crm.leads.assign', description: 'Assign leads to members', group: 'crm' },
+	{
+		name: 'crm.leads.manage',
+		description: 'Move, call, convert and lose leads; set reminders',
+		group: 'crm'
+	},
+
+	// --- Inventory ---
+	{ name: 'inventory.catalog.read', description: 'View the product catalogue', group: 'inventory' },
+	{
+		name: 'inventory.catalog.manage',
+		description: 'Create, edit and delete products',
+		group: 'inventory'
+	},
+	{
+		name: 'inventory.stock.read',
+		description: 'View batches and stock movements',
+		group: 'inventory'
+	},
+	{
+		name: 'inventory.stock.manage',
+		description: 'Add batches and record stock movements',
+		group: 'inventory'
+	},
+
+	// --- Tasks ---
+	{ name: 'tasks.work_items.read', description: 'View own tasks', group: 'tasks' },
+	{ name: 'tasks.work_items.read_all', description: "View the team's tasks", group: 'tasks' },
+	{ name: 'tasks.work_items.manage', description: 'Create and update own tasks', group: 'tasks' },
+	{
+		name: 'tasks.work_items.reassign',
+		description: 'Move a task to another member',
+		group: 'tasks'
+	},
+
+	// --- Dispatch ---
+	{
+		name: 'dispatch.consignment_notes.read',
+		description: 'View consignment notes',
+		group: 'dispatch'
+	},
+	{
+		name: 'dispatch.consignment_notes.manage',
+		description: 'Create consignment notes and drive carrier status',
+		group: 'dispatch'
+	},
+
+	// --- Orders ---
+	{ name: 'orders.quotations.read', description: 'View quotations', group: 'orders' },
+	{
+		name: 'orders.quotations.manage',
+		description: 'Create, revise, approve and reject quotations',
+		group: 'orders'
+	},
+	{ name: 'orders.orders.read', description: 'View orders', group: 'orders' },
+	{
+		name: 'orders.orders.manage',
+		description: 'Confirm, pack, invoice, cancel and complete orders',
+		group: 'orders'
+	},
+	{ name: 'orders.payments.read', description: 'View payments', group: 'orders' },
+	{ name: 'orders.payments.record', description: 'Record a payment receipt', group: 'orders' },
+	{ name: 'orders.invoices.read', description: 'View invoices and credit notes', group: 'orders' },
+
+	// --- Notifications ---
+	{
+		name: 'notifications.inbox.read',
+		description: 'Read own notifications',
+		group: 'notifications'
+	},
+	{
+		name: 'notifications.inbox.manage',
+		description: 'Mark own notifications read or dismissed',
+		group: 'notifications'
+	}
 ];
 
 /**

@@ -3,9 +3,10 @@
  * by matching against the nav catalogues. Used by the Topbar to
  * render the current-page badge (icon + title).
  *
- * Picks the longest matching prefix from all three tier catalogues
- * so /settings/users beats /settings, /platform/leads beats /platform.
- * Falls back to a title-cased final path segment + null icon for
+ * Reads the one nav config (`config/nav.ts`) — every entry, whoever may
+ * see it — and matches each progressive path prefix exactly, so
+ * /settings/users resolves to "Team" and /settings to a title-cased
+ * segment. Falls back to a title-cased final path segment + null icon for
  * routes not in any nav (e.g. /signin, /404).
  *
  * Single page title for now — multi-segment breadcrumb is deferred
@@ -14,17 +15,21 @@
  */
 
 import type { ResolvedPathname } from '$app/types';
-import { PLATFORM_NAV, TENANT_ADMIN_NAV, TENANT_USER_NAV, type NavItem } from '#lib/config/nav.ts';
+import { NAV_ROUTES, type NavRoute, type NavRouteKey } from '#lib/config/nav.ts';
+import { NAV_ICONS } from '#lib/config/nav-icons.ts';
+import type { LucideIcon } from '#lib/icons/index.ts';
 
-const ALL_ITEMS = [...PLATFORM_NAV, ...TENANT_ADMIN_NAV, ...TENANT_USER_NAV].flatMap(
-	(s) => s.items
+interface NavItem {
+	href: string;
+	label: string;
+	icon: LucideIcon;
+}
+
+const ALL_ITEMS: NavItem[] = (Object.entries(NAV_ROUTES) as Array<[NavRouteKey, NavRoute]>).map(
+	([key, r]) => ({ href: r.href, label: r.label, icon: NAV_ICONS[key] })
 );
 
-/** Icon is typed as NavItem['icon'] — same shape used everywhere else
- *  in the codebase (@lucide/svelte's component type doesn't match
- *  Svelte 5's `Component<...>` cleanly; the structural contract is
- *  enforced by the Icon wrapper). */
-type IconComponent = NavItem['icon'];
+type IconComponent = LucideIcon;
 
 interface Crumb {
 	label: string;

@@ -3,6 +3,9 @@ import { error } from '@sveltejs/kit';
 
 const loadCapabilities = vi.hoisted(() => vi.fn());
 vi.mock('#lib/server/capabilities.ts', () => ({ loadCapabilities }));
+const readOperatorScope = vi.hoisted(() => vi.fn(() => ({ state: 'none' }) as { state: string }));
+const clearOperatorScope = vi.hoisted(() => vi.fn());
+vi.mock('#lib/server/scope.ts', () => ({ readOperatorScope, clearOperatorScope }));
 
 import { load } from '../../../src/routes/(app)/+layout.server.ts';
 
@@ -34,6 +37,20 @@ describe('(app) layout: sign-in only for a real auth failure', () => {
 
 	it('usable capabilities pass through', async () => {
 		loadCapabilities.mockResolvedValueOnce({ person_id: 'p' });
-		await expect(run()).resolves.toEqual({ capabilities: { person_id: 'p' } });
+		await expect(run()).resolves.toEqual({
+			capabilities: { person_id: 'p' },
+			inTenantContext: false
+		});
+	});
+
+	it('inTenantContext is true only for a valid operator-scope cookie', async () => {
+		loadCapabilities.mockResolvedValue({ person_id: 'p' });
+		readOperatorScope.mockReturnValueOnce({ state: 'valid' });
+		await expect(run()).resolves.toMatchObject({ inTenantContext: true });
+		readOperatorScope.mockReturnValueOnce({ state: 'invalid' });
+		await expect(run()).resolves.toMatchObject({ inTenantContext: false });
+		expect(clearOperatorScope).toHaveBeenCalledTimes(1);
+		readOperatorScope.mockReturnValueOnce({ state: 'none' });
+		await expect(run()).resolves.toMatchObject({ inTenantContext: false });
 	});
 });

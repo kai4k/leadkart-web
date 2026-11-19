@@ -29,8 +29,9 @@ export interface SessionPrincipal {
 	/** From the capabilities payload; Go omits it when empty (omitzero), so it may be absent. */
 	email?: string;
 	isPlatform?: boolean;
-	isSuperUser?: boolean;
-	permissions?: string[];
+	/** Presentation only (badges, wording): never authorise on these. */
+	tier?: 'owner' | 'admin' | 'manager' | 'team_lead' | 'user';
+	rank?: number;
 }
 
 export type UserDto = z.output<typeof userDtoSchema>;

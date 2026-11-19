@@ -17,7 +17,7 @@
 		canLiftSuspension,
 		canAnonymise
 	} from '../view-models';
-	import { myCapabilitiesQuery, hasCapability } from '$features/auth';
+	import { P, session } from '$features/auth';
 	import type { PersonDto } from '../types';
 	import GlobalSuspendDialog from './GlobalSuspendDialog.svelte';
 	import AnonymiseDialog from './AnonymiseDialog.svelte';
@@ -53,9 +53,8 @@
 	const errorMsg = $derived(describeError(query.error, { fallback: 'Failed to load person' }));
 	const isPending = $derived(liftMutation.isPending);
 
-	const capsQuery = myCapabilitiesQuery();
-	const canManage = $derived(hasCapability(capsQuery.data, 'platform.users.manage'));
-	const canAnonymiseOp = $derived(hasCapability(capsQuery.data, 'identity.users.anonymise'));
+	const canManage = $derived(session.can(P.platformUsersManage));
+	const canAnonymiseOp = $derived(session.can(P.identityUsersAnonymise));
 
 	const activityQuery = $derived(personId ? personActivityQuery(personId) : null);
 
