@@ -177,3 +177,67 @@ describe('resourceMutationOptions', () => {
 		expect(toastMock.error).toHaveBeenCalledWith('An unexpected error occurred.');
 	});
 });
+
+describe('inlineErrors: the global handler toasts when no consumer is left to show the error', () => {
+	function setup() {
+		const qc = createQueryClient();
+		const gate = rejecting();
+		const failLater = () => gate.promise;
+		const observer = new MutationObserver(
+			qc,
+			resourceMutationOptions(qc, { fn: failLater, invalidate: () => [], inlineErrors: true })
+		);
+		const fail = () => gate.reject(new ApiError(500));
+		return { observer, fail, settled: () => gate.promise.catch(() => {}) };
+	}
+	function rejecting() {
+		let reject!: (e: unknown) => void;
+		const promise = new Promise<never>((_, r) => (reject = r));
+		return { promise, reject };
+	}
+
+	it('a mounted consumer shows the error itself: no toast', async () => {
+		const { observer, fail } = setup();
+		const unsubscribe = observer.subscribe(() => {}); // the component's subscription
+		const done = observer.mutate(undefined as never).catch(() => {});
+		fail();
+		await done;
+		expect(toastMock.error).not.toHaveBeenCalled();
+		unsubscribe();
+	});
+
+	it('a consumer that unmounted before the mutation settled: exactly one toast', async () => {
+		const { observer, fail } = setup();
+		const unsubscribe = observer.subscribe(() => {});
+		const done = observer.mutate(undefined as never).catch(() => {});
+		unsubscribe(); // navigated away
+		fail();
+		await done;
+		expect(toastMock.error).toHaveBeenCalledTimes(1);
+		expect(toastMock.error).toHaveBeenCalledWith('An unexpected error occurred.');
+	});
+
+	it('a mutation superseded by a later mutate() of the same consumer: its failure is toasted once', async () => {
+		const qc = createQueryClient();
+		const failures: Array<(e: unknown) => void> = [];
+		const observer = new MutationObserver(
+			qc,
+			resourceMutationOptions(qc, {
+				fn: () => new Promise<never>((_, reject) => failures.push(reject)),
+				invalidate: () => [],
+				inlineErrors: true
+			})
+		);
+		const unsubscribe = observer.subscribe(() => {});
+		const first = observer.mutate(undefined as never).catch(() => {});
+		const second = observer.mutate(undefined as never).catch(() => {});
+		await vi.waitFor(() => expect(failures).toHaveLength(2));
+		failures[0]!(new ApiError(500)); // the first one fails: nobody shows it
+		await first;
+		expect(toastMock.error).toHaveBeenCalledTimes(1);
+		failures[1]!(new ApiError(500)); // the current one fails: the consumer shows it
+		await second;
+		expect(toastMock.error).toHaveBeenCalledTimes(1);
+		unsubscribe();
+	});
+});

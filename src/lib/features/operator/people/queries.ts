@@ -1,10 +1,10 @@
 /**
  * TanStack Query hooks for the operator people surface.
  */
-import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
+import { createQuery } from '@tanstack/svelte-query';
 import * as api from './api';
 import type { PersonListParams } from './api';
-import { toast } from '$ui';
+import { createResourceMutation } from '#lib/api/mutations.ts';
 
 // ── Query key factory ──────────────────────────────────────────────
 
@@ -47,40 +47,31 @@ export function personMembershipsQuery(personId: string) {
 
 // ── Mutation hooks ─────────────────────────────────────────────────
 
-/** Globally suspend a person across all tenants. */
+/** Globally suspend a person across all tenants. inlineErrors: the dialog shows the failure. */
 export function globalSuspendMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-			api.globalSuspend(id, { reason }),
-		onSuccess: (_, vars) => {
-			void qc.invalidateQueries({ queryKey: peopleKeys.detail(vars.id) });
-			toast.success('Person globally suspended');
-		}
-	}));
+	return createResourceMutation({
+		fn: ({ id, reason }: { id: string; reason: string }) => api.globalSuspend(id, { reason }),
+		invalidate: ({ id }) => [peopleKeys.detail(id)],
+		successToast: 'Person globally suspended',
+		inlineErrors: true
+	});
 }
 
 /** Lift an existing global suspension. */
 export function liftGlobalSuspensionMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: (id: string) => api.liftGlobalSuspension(id),
-		onSuccess: (_, id) => {
-			void qc.invalidateQueries({ queryKey: peopleKeys.detail(id) });
-			toast.success('Suspension lifted');
-		}
-	}));
+	return createResourceMutation({
+		fn: (id: string) => api.liftGlobalSuspension(id),
+		invalidate: (id) => [peopleKeys.detail(id)],
+		successToast: 'Suspension lifted'
+	});
 }
 
-/** Irreversibly anonymise a Person (DPDP). */
+/** Irreversibly anonymise a Person (DPDP). inlineErrors: the dialog shows the failure. */
 export function anonymisePersonMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-			api.anonymisePerson(id, { reason }),
-		onSuccess: (_, vars) => {
-			void qc.invalidateQueries({ queryKey: peopleKeys.detail(vars.id) });
-			toast.success('Person anonymised');
-		}
-	}));
+	return createResourceMutation({
+		fn: ({ id, reason }: { id: string; reason: string }) => api.anonymisePerson(id, { reason }),
+		invalidate: ({ id }) => [peopleKeys.detail(id)],
+		successToast: 'Person anonymised',
+		inlineErrors: true
+	});
 }

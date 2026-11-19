@@ -39,6 +39,18 @@ export interface SessionGuard {
 	handle: (error: unknown) => boolean;
 }
 
+/**
+ * An error that ends the session or the operator scope (the ones handle reacts to). Orchestration
+ * that settles many calls (bulk actions) rethrows these instead of counting them as failed rows,
+ * so the global handler gets to run the guard.
+ */
+export function isSessionEndingError(error: unknown): boolean {
+	return (
+		(error instanceof AuthError && error.status === 401 && error.code === SESSION_EXPIRED_CODE) ||
+		error instanceof ScopeInvalidError
+	);
+}
+
 const SCOPE_EXIT_FAILED_MESSAGE = 'Could not leave the tenant context — signing out';
 
 export function createSessionGuard(deps: SessionGuardDeps): SessionGuard {
@@ -52,11 +64,7 @@ export function createSessionGuard(deps: SessionGuardDeps): SessionGuard {
 
 	return {
 		handle(error) {
-			if (
-				error instanceof AuthError &&
-				error.status === 401 &&
-				error.code === SESSION_EXPIRED_CODE
-			) {
+			if (error instanceof AuthError && isSessionEndingError(error)) {
 				if (redirecting) return true;
 				const { pathname, search } = deps.location();
 				if (pathname.startsWith('/signin')) return true;

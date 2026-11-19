@@ -29,6 +29,13 @@ describe('getListErrorMessage', () => {
 			'The request was not accepted. Check the values and try again.'
 		);
 	});
+	it('a caller can name what a 404 means for its page', () => {
+		const err = ApiError.fromResponse(res(404), null);
+		expect(getListErrorMessage(err, 'batches', 'This product was deleted or moved.')).toBe(
+			'This product was deleted or moved.'
+		);
+		expect(getListErrorMessage(err, 'batches')).toBe('This resource was deleted or moved.');
+	});
 	it('401, 404 and unknown errors keep their list copy', () => {
 		expect(getListErrorMessage(ApiError.fromResponse(res(401), null), 'x')).toBe(
 			'Your session expired. Sign in again.'

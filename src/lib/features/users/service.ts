@@ -3,6 +3,8 @@
  * own call; every call is settled (one failure never hides the rest) and the outcome is
  * reported once, not per row.
  */
+import { describeError } from '#lib/api/errors.ts';
+import { isSessionEndingError } from '#lib/api/session-guard.ts';
 import * as api from './api';
 import type { BulkStatusAction, BulkStatusResult } from './types';
 
@@ -10,7 +12,9 @@ const BULK_DEACTIVATE_REASON = 'Bulk deactivate';
 
 /**
  * Runs the action for every id. Resolves with the counts when at least one call worked;
- * rethrows the first failure when none did (so the caller's error path reports it).
+ * rethrows the first failure when none did (so the caller's error path reports it). A session-ending
+ * error (expired session, dead operator scope) among the failures is rethrown whatever the others
+ * did: it is not a failed row, and the global handler must run the session guard.
  */
 export async function bulkSetStatus(
 	action: BulkStatusAction,
@@ -25,10 +29,13 @@ export async function bulkSetStatus(
 		)
 	);
 	const failures = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+	const sessionEnding = failures.find((f) => isSessionEndingError(f.reason));
+	if (sessionEnding) throw sessionEnding.reason;
 	if (failures.length > 0 && failures.length === results.length) throw failures[0].reason;
 	return {
 		succeeded: results.length - failures.length,
 		failed: failures.length,
-		failedIds: ids.filter((_, i) => results[i]?.status === 'rejected')
+		failedIds: ids.filter((_, i) => results[i]?.status === 'rejected'),
+		firstFailureReason: failures[0] ? describeError(failures[0].reason) : undefined
 	};
 }

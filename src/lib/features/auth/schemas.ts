@@ -9,6 +9,7 @@ import {
 	UpdateUserProfileRequest,
 	UserDto
 } from '#lib/api/generated/index.ts';
+import { newPasswordField } from '#lib/api/request-schema.ts';
 import { responseEmail, responseEmailOptional } from '#lib/api/response-schema.ts';
 
 /**
@@ -42,7 +43,7 @@ export const loginRequestSchema = LoginRequest.pick({ email: true, password: tru
  */
 export const changePasswordSchema = ChangePasswordRequest.extend({
 	current_password: z.string().min(1, 'Current password is required'),
-	new_password: z.string().min(12, 'Password must be at least 12 characters')
+	new_password: newPasswordField
 });
 
 /**

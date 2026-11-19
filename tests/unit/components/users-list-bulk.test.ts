@@ -114,7 +114,9 @@ describe('UsersList bulk status change', () => {
 
 		await vi.waitFor(() => expect(toastMock.warning).toHaveBeenCalledTimes(1));
 		flushSync();
-		expect(toastMock.warning.mock.calls[0]?.[0]).toBe('2 reactivated, 1 failed');
+		expect(toastMock.warning.mock.calls[0]?.[0]).toBe(
+			'2 reactivated, 1 failed: Something went wrong'
+		);
 		expect(toastMock.success).not.toHaveBeenCalled();
 		expect(gw.reactivateUser).toHaveBeenCalledTimes(3);
 

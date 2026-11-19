@@ -58,16 +58,22 @@ describe('personDtoSchema', () => {
 			...VALID_PERSON,
 			global_suspension_reason: 'Spam activity',
 			globally_suspended_at: '2026-03-01T12:00:00Z',
-			anonymised_at: ''
+			anonymised_at: '2026-03-02T12:00:00Z'
 		});
 		expect(result.success).toBe(true);
 	});
 
-	it('defaults optional string fields to empty string when absent', () => {
+	it('defaults the suspension reason to empty and leaves absent dates absent (omitzero in Go)', () => {
 		const result = personDtoSchema.parse(VALID_PERSON);
 		expect(result.global_suspension_reason).toBe('');
-		expect(result.globally_suspended_at).toBe('');
-		expect(result.anonymised_at).toBe('');
+		expect(result.globally_suspended_at).toBeUndefined();
+		expect(result.anonymised_at).toBeUndefined();
+	});
+
+	it('keeps the generated date check on dates that are present', () => {
+		expect(
+			personDtoSchema.safeParse({ ...VALID_PERSON, globally_suspended_at: 'yesterday' }).success
+		).toBe(false);
 	});
 
 	it('rejects a PersonDto missing required created_at', () => {

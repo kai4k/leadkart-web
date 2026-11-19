@@ -14,6 +14,7 @@
 import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 import * as api from './api';
 import { toast } from '$ui';
+import { INLINE_ERRORS_META } from '#lib/api/mutations.ts';
 import { createInfiniteList, useOptimisticMutation, type InfiniteList } from '#lib/hooks/index.ts';
 import type { Page } from '#lib/api/pagination.ts';
 import type {
@@ -126,6 +127,7 @@ export function updateLeadMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: ({ id, req }: { id: string; req: UpdateLeadRequest }) => api.updateLead(id, req),
+		meta: INLINE_ERRORS_META,
 		onSuccess: (lead) => {
 			qc.setQueryData(leadsKeys.detail(lead.id), lead);
 			void qc.invalidateQueries({ queryKey: leadsKeys.lists() });
@@ -217,6 +219,7 @@ export function reassignLeadMutation() {
 	return createMutation(() => ({
 		mutationFn: ({ id, req }: { id: string; req: ReassignLeadRequest }) =>
 			api.reassignLead(id, req),
+		meta: INLINE_ERRORS_META,
 		onSuccess: (lead) => {
 			qc.setQueryData(leadsKeys.detail(lead.id), lead);
 			void qc.invalidateQueries({ queryKey: leadsKeys.history(lead.id) });
@@ -230,6 +233,7 @@ export function logCallMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: ({ id, req }: { id: string; req: LogCallRequest }) => api.logCall(id, req),
+		meta: INLINE_ERRORS_META,
 		onSuccess: (_call, vars) => {
 			void qc.invalidateQueries({ queryKey: leadsKeys.calls(vars.id) });
 			void qc.invalidateQueries({ queryKey: leadsKeys.reminders(vars.id) });
@@ -275,9 +279,6 @@ export function bulkLeadActionMutation() {
 							? 'updated'
 							: 'updated';
 			toast.success(`${result.affected} ${noun} ${verb}`);
-		},
-		onError: () => {
-			toast.error('Bulk action failed');
 		}
 	}));
 }

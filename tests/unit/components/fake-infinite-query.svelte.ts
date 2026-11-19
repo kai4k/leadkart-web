@@ -8,11 +8,15 @@ export function createFakeInfiniteQuery(initial: { pages?: number; hasNextPage?:
 	let pages = $state(initial.pages ?? 1);
 	let hasNextPage = $state(initial.hasNextPage ?? true);
 	let isFetchingNextPage = $state(false);
+	let lastEmpty = $state(false);
 	const fetchNextPage = vi.fn(() => Promise.resolve());
 	return {
 		get data() {
 			return {
-				pages: Array.from({ length: pages }, () => ({ items: [1], has_more: hasNextPage }))
+				pages: Array.from({ length: pages }, (_, i) => ({
+					items: i === pages - 1 && lastEmpty ? [] : [1],
+					has_more: hasNextPage
+				}))
 			};
 		},
 		get hasNextPage() {
@@ -25,8 +29,9 @@ export function createFakeInfiniteQuery(initial: { pages?: number; hasNextPage?:
 		isError: false,
 		fetchNextPage,
 		/** A page arrived. */
-		land(opts: { hasNextPage?: boolean } = {}) {
+		land(opts: { hasNextPage?: boolean; empty?: boolean } = {}) {
 			pages += 1;
+			lastEmpty = opts.empty ?? false;
 			if (opts.hasNextPage !== undefined) hasNextPage = opts.hasNextPage;
 		},
 		setFetching(v: boolean) {

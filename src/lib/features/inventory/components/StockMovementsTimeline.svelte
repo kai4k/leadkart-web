@@ -7,7 +7,7 @@
 		movementReasonAccent,
 		movementReasonLabel
 	} from '$features/inventory/view-models';
-	import { describeError } from '$api/errors';
+	import { getListErrorMessage } from '$api/error-messages';
 
 	/**
 	 * StockMovementsTimeline — cursor-paginated audit log of every
@@ -29,14 +29,7 @@
 	const errorCopy = $derived.by(() => {
 		const err = query.error;
 		if (!err) return '';
-		return describeError(err, {
-			fallback: 'Something went wrong. Please try again.',
-			status: {
-				401: 'Your session expired. Sign in again.',
-				403: "You don't have permission to view stock movements.",
-				404: 'This product was deleted or moved.'
-			}
-		});
+		return getListErrorMessage(err, 'stock movements', 'This product was deleted or moved.') ?? '';
 	});
 </script>
 

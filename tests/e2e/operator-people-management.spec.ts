@@ -26,8 +26,6 @@ const PERSON_AAA = {
 	is_globally_suspended: false,
 	is_anonymised: false,
 	global_suspension_reason: '',
-	globally_suspended_at: '',
-	anonymised_at: '',
 	created_at: '2026-01-01T00:00:00Z'
 };
 

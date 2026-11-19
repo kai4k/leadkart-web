@@ -7,7 +7,6 @@
 		Card,
 		CopyButton,
 		Skeleton,
-		toast,
 		type BreadcrumbItem
 	} from '$ui';
 	import { Select, TextField } from '#lib/components/form/index.ts';
@@ -19,7 +18,9 @@
 		setRoleParentMutation,
 		PermissionTree,
 		roleBadgeVariant,
-		isProtectedRole
+		isProtectedRole,
+		ROLE_LEVEL_MAX,
+		ROLE_LEVEL_MIN
 	} from '$features/roles';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 	import { describeError } from '$api/errors';
@@ -46,12 +47,9 @@
 				if (id === roleId) saved = true;
 			},
 			onError: (err: unknown) => {
-				// The banner shows only the role on screen; a failure for a role the user has
-				// since left would otherwise be silent, so it goes to a toast.
-				if (id !== roleId) {
-					toast.error(describeError(err, { fallback }));
-					return;
-				}
+				// A save that fails after the user left the page is toasted by the global handler
+				// (no observer left); nothing to special-case here.
+				if (id !== roleId) return;
 				error = describeError(err, {
 					fallback,
 					status: {
@@ -221,8 +219,8 @@
 					<input
 						type="number"
 						bind:value={hierarchyLevel}
-						min={0}
-						max={100}
+						min={ROLE_LEVEL_MIN}
+						max={ROLE_LEVEL_MAX}
 						disabled={!canUpdate}
 						class="bg-bg-elevated border border-border rounded-md rounded-md px-3 py-2 text-sm"
 					/>

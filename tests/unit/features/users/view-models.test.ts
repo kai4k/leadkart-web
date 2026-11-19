@@ -96,6 +96,16 @@ describe('bulkSummary', () => {
 			'2 deactivated, 1 failed'
 		);
 	});
+	it('names the first failure reason when there is one', () => {
+		expect(
+			bulkSummary('deactivate', {
+				succeeded: 2,
+				failed: 1,
+				failedIds: ['b'],
+				firstFailureReason: "You can't make this change to your own account."
+			})
+		).toBe("2 deactivated, 1 failed: You can't make this change to your own account.");
+	});
 	it('is empty when nothing was attempted', () => {
 		expect(bulkSummary('deactivate', { succeeded: 0, failed: 0, failedIds: [] })).toBe('');
 	});

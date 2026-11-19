@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { roleDtoSchema, listRolesResponseSchema } from '#lib/features/roles/schemas.ts';
+import {
+	createRoleRequestSchema,
+	listRolesResponseSchema,
+	ROLE_LEVEL_MAX,
+	ROLE_LEVEL_MIN,
+	roleDtoSchema
+} from '#lib/features/roles/schemas.ts';
 
 describe('roleDtoSchema', () => {
 	it('parses a role', () => {
@@ -20,5 +26,17 @@ describe('roleDtoSchema', () => {
 describe('listRolesResponseSchema', () => {
 	it('parses empty roles list', () => {
 		expect(listRolesResponseSchema.parse({ roles: [] }).roles).toEqual([]);
+	});
+});
+
+describe('role level bounds (derived from the generated contract, not repeated in forms)', () => {
+	const req = (hierarchy_level: number) => ({ name: 'Sales', hierarchy_level });
+	it('the max is the contract max; custom roles start at 1 (0 is the system Owner level)', () => {
+		expect(ROLE_LEVEL_MAX).toBe(99);
+		expect(ROLE_LEVEL_MIN).toBe(1);
+	});
+	it('the contract accepts the max and rejects one above it', () => {
+		expect(createRoleRequestSchema.safeParse(req(ROLE_LEVEL_MAX)).success).toBe(true);
+		expect(createRoleRequestSchema.safeParse(req(ROLE_LEVEL_MAX + 1)).success).toBe(false);
 	});
 });

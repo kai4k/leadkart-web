@@ -34,7 +34,7 @@
 		drugScheduleSchema
 	} from '$features/inventory/schemas';
 	import type { ListProductsParams, ProductSort } from '$features/inventory/api';
-	import { describeError } from '$api/errors';
+	import { getListErrorMessage } from '$api/error-messages';
 	import { buildProductFilterConfig, type ProductFilters } from './ProductFilters.svelte';
 	import CreateProductDrawer from './CreateProductDrawer.svelte';
 	import ProductBulkUploadDrawer from './ProductBulkUploadDrawer.svelte';
@@ -275,13 +275,7 @@
 	const errorCopy = $derived.by(() => {
 		const err = query.error;
 		if (!err) return '';
-		return describeError(err, {
-			fallback: 'Something went wrong. Please try again.',
-			status: {
-				401: 'Your session expired. Sign in again.',
-				403: "You don't have permission to view products."
-			}
-		});
+		return getListErrorMessage(err, 'products') ?? '';
 	});
 </script>
 

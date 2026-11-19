@@ -10,27 +10,31 @@
  * context or from the platform persons/memberships endpoint.
  */
 import { z } from 'zod';
-import { ListPersonMembershipsResponse, PersonDto } from '#lib/api/generated/index.ts';
+import {
+	GlobalSuspendPersonRequest,
+	ListPersonMembershipsResponse,
+	PersonDto
+} from '#lib/api/generated/index.ts';
+import { reasonField } from '#lib/api/request-schema.ts';
 import { responseEmail } from '#lib/api/response-schema.ts';
 import { userDtoSchema } from '#lib/features/auth/schemas.ts';
 
-/** The suspension / anonymisation fields are omitzero in Go; an absent value is read as ''. */
+/** The suspension reason is omitzero in Go; an absent value is read as ''. */
 export const personDtoSchema = PersonDto.extend({
 	email: responseEmail,
-	global_suspension_reason: z.string().default(''),
-	globally_suspended_at: z.string().default(''),
-	anonymised_at: z.string().default('')
+	global_suspension_reason: z.string().default('')
 });
 
 export const listPersonMembershipsResponseSchema = ListPersonMembershipsResponse.extend({
 	memberships: z.array(userDtoSchema)
 });
 
-export const globalSuspendRequestSchema = z.object({ reason: z.string().min(1).max(500) }).strict();
+export const globalSuspendRequestSchema = GlobalSuspendPersonRequest.extend({
+	reason: reasonField
+}).strict();
 
-export const anonymisePersonRequestSchema = z
-	.object({ reason: z.string().min(1).max(500) })
-	.strict();
+/** Anonymise has no generated request body schema: the same { reason } as a global suspension. */
+export const anonymisePersonRequestSchema = z.object({ reason: reasonField }).strict();
 
 export const personListResponseSchema = z.object({
 	persons: z.array(personDtoSchema),

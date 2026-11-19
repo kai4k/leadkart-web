@@ -5,6 +5,7 @@
 	import { resolve } from '$app/paths';
 	import { Alert, Breadcrumbs, Button, Card, type BreadcrumbItem } from '$ui';
 	import { NumberInput, TextField } from '$form';
+	import { ROLE_LEVEL_MAX, ROLE_LEVEL_MIN } from '$features/roles';
 	import type { ActionData } from './$types';
 
 	/**
@@ -91,10 +92,10 @@
 				<NumberInput
 					label="Hierarchy level"
 					name="hierarchy_level"
-					hint="0 = highest authority (Owner). 100 = lowest. Used for hierarchy-scoped operations like lead reassignment and leave approval. Default 50 = middle management."
+					hint={`${ROLE_LEVEL_MIN} = highest authority. ${ROLE_LEVEL_MAX} = lowest. Used for hierarchy-scoped operations like lead reassignment and leave approval. Default 50 = middle management.`}
 					bind:value={hierarchyLevel}
-					min={0}
-					max={100}
+					min={ROLE_LEVEL_MIN}
+					max={ROLE_LEVEL_MAX}
 				/>
 
 				{#if bannerError}

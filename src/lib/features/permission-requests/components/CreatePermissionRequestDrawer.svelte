@@ -2,7 +2,10 @@
 	import { Drawer, Button, Alert } from '$ui';
 	import { TextField } from '#lib/components/form/index.ts';
 	import { createPermissionRequestMutation } from '$features/permission-requests/queries';
-	import { createPermissionRequestSchema } from '$features/permission-requests/schemas';
+	import {
+		createPermissionRequestSchema,
+		PERMISSION_REQUEST_MAX_DAYS
+	} from '$features/permission-requests/schemas';
 	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 
 	type Props = { open: boolean; onOpenChange: (open: boolean) => void };
@@ -68,7 +71,7 @@
 						type="number"
 						bind:value={form.values.duration_days}
 						min={1}
-						max={365}
+						max={PERMISSION_REQUEST_MAX_DAYS}
 						class="bg-bg-elevated border border-border rounded-md rounded-md px-3 py-2 text-sm"
 					/>
 					<span class="caption text-fg-subtle">Leave blank for the tenant default.</span>

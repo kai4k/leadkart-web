@@ -23,7 +23,7 @@ const VALID_REGISTER = {
 	legal_name: 'Acme Pharma Pvt Ltd',
 	display_name: 'Acme',
 	admin_email: 'admin@acme.test',
-	admin_password: 'S3cur3Pass!',
+	admin_password: 'S3cur3Pass!!x',
 	admin_first_name: 'Raj',
 	admin_last_name: 'Verma'
 };
@@ -73,19 +73,13 @@ describe('registerTenantRequestSchema — slug', () => {
 		).toBe(false);
 	});
 
-	it('rejects slug shorter than 3 characters', () => {
-		expect(registerTenantRequestSchema.safeParse({ ...VALID_REGISTER, slug: 'ab' }).success).toBe(
-			false
-		);
-	});
-
-	it('rejects slug longer than 60 characters', () => {
-		expect(
-			registerTenantRequestSchema.safeParse({
-				...VALID_REGISTER,
-				slug: 'a'.repeat(61)
-			}).success
-		).toBe(false);
+	it('follows the contract bounds: 2 to 100 characters', () => {
+		const parse = (slug: string) =>
+			registerTenantRequestSchema.safeParse({ ...VALID_REGISTER, slug }).success;
+		expect(parse('a')).toBe(false);
+		expect(parse('ab')).toBe(true);
+		expect(parse('a'.repeat(100))).toBe(true);
+		expect(parse('a'.repeat(101))).toBe(false);
 	});
 });
 
@@ -94,17 +88,13 @@ describe('registerTenantRequestSchema — slug', () => {
 // ---------------------------------------------------------------------------
 
 describe('registerTenantRequestSchema — password + strict', () => {
-	it('rejects admin_password shorter than 8 characters', () => {
-		expect(
-			registerTenantRequestSchema.safeParse({ ...VALID_REGISTER, admin_password: 'short' }).success
-		).toBe(false);
-	});
-
-	it('accepts admin_password of exactly 8 characters', () => {
-		expect(
-			registerTenantRequestSchema.safeParse({ ...VALID_REGISTER, admin_password: '12345678' })
-				.success
-		).toBe(true);
+	it('uses the shared password rule: 12 characters, not 8', () => {
+		const parse = (admin_password: string) =>
+			registerTenantRequestSchema.safeParse({ ...VALID_REGISTER, admin_password }).success;
+		expect(parse('1234567')).toBe(false);
+		expect(parse('12345678')).toBe(false);
+		expect(parse('a'.repeat(11))).toBe(false);
+		expect(parse('a'.repeat(12))).toBe(true);
 	});
 
 	it('rejects extra fields (strict mode)', () => {

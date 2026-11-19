@@ -33,9 +33,45 @@ export function toPage<K extends string, T>(
 		next_cursor: envelope.next_cursor || undefined
 	};
 }
+/** What the cursor rule reads of a page (Go omits or nulls `next_cursor` on the last page). */
+export type CursorPage = { has_more: boolean; next_cursor?: string | null };
+
 /** The ONE next-page rule: the cursor to ask for, or undefined when this was the last page. */
-export function nextCursor(page: Page<unknown>): string | undefined {
+export function nextCursor(page: CursorPage): string | undefined {
 	return page.has_more ? page.next_cursor || undefined : undefined;
+}
+/** What follows a page: the cursor to request, or why there is none. */
+export type NextPage = { cursor: string } | { cursor: undefined; reason: 'last' | 'repeated' };
+
+/**
+ * THE cursor rule, shared by `fetchAllPages` and the infinite-list hook: the next cursor, or the
+ * reason to stop. `requested` holds every cursor already asked for; a page that points back at one
+ * (an echo, or A -> B -> A) would repeat pages forever, so it stops as 'repeated' (with a DEV
+ * `console.error`) instead of looping.
+ */
+export function nextPage(page: CursorPage, requested: ReadonlySet<string>): NextPage {
+	const cursor = nextCursor(page);
+	if (cursor === undefined) return { cursor: undefined, reason: 'last' };
+	if (requested.has(cursor)) {
+		if (import.meta.env.DEV) {
+			console.error('[api] pagination repeated a cursor; stopping the read', cursor);
+		}
+		return { cursor: undefined, reason: 'repeated' };
+	}
+	return { cursor };
+}
+/**
+ * TanStack's getNextPageParam for every cursor-paged infinite query: 
+extPage over the cursors
+ * the query has already requested (its pageParams).
+ */
+export function nextPageParam(
+	last: CursorPage,
+	_pages: unknown[],
+	_lastParam: string | undefined,
+	allParams: ReadonlyArray<string | undefined>
+): string | undefined {
+	return nextPage(last, new Set(allParams.filter((p): p is string => p !== undefined))).cursor;
 }
 export interface AllPages<T> {
 	items: T[];
@@ -44,7 +80,7 @@ export interface AllPages<T> {
 }
 /**
  * Reads every page (cap: maxPages x page size, 10,000 rows at 200). For Go lists with no
- * server-side search (users). A repeated cursor stops the read as `truncated`, like the cap
+ * server-side search (users). A repeated cursor (see `nextPage`) stops the read as `truncated`, like the cap
  * (callers already warn on `truncated`). Aborting `signal` stops between pages and rejects with its reason.
  */
 export async function fetchAllPages<T>(
@@ -59,17 +95,10 @@ export async function fetchAllPages<T>(
 		signal?.throwIfAborted();
 		const page = await fetchPage(cursor);
 		items.push(...page.items);
-		const next = nextCursor(page);
-		if (next === undefined) return { items, truncated: false };
-		// A cursor seen before (an echo, or A -> B -> A) would repeat pages until the cap, with duplicates.
-		if (seen.has(next)) {
-			if (import.meta.env.DEV) {
-				console.error('[api] pagination repeated a cursor; stopping the read', next);
-			}
-			return { items, truncated: true };
-		}
-		seen.add(next);
-		cursor = next;
+		const next = nextPage(page, seen);
+		if (next.cursor === undefined) return { items, truncated: next.reason === 'repeated' };
+		seen.add(next.cursor);
+		cursor = next.cursor;
 	}
 	signal?.throwIfAborted();
 	return { items, truncated: true };

@@ -4,7 +4,7 @@
 	import { batchesQuery } from '$features/inventory/queries';
 	import { expiryStatus, fefoSort, formatPrice } from '$features/inventory/view-models';
 	import type { BatchDto } from '$features/inventory/schemas';
-	import { describeError } from '$api/errors';
+	import { getListErrorMessage } from '$api/error-messages';
 	import AddBatchDrawer from './AddBatchDrawer.svelte';
 	import AdjustStockDialog from './AdjustStockDialog.svelte';
 	import WriteOffBatchDialog from './WriteOffBatchDialog.svelte';
@@ -47,14 +47,7 @@
 	const errorCopy = $derived.by(() => {
 		const err = query.error;
 		if (!err) return '';
-		return describeError(err, {
-			fallback: 'Something went wrong. Please try again.',
-			status: {
-				401: 'Your session expired. Sign in again.',
-				403: "You don't have permission to view batches.",
-				404: 'This product was deleted or moved.'
-			}
-		});
+		return getListErrorMessage(err, 'batches', 'This product was deleted or moved.') ?? '';
 	});
 </script>
 

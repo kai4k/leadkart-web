@@ -20,6 +20,10 @@ export type PermissionRequestState = PermissionRequestDto['state'];
 export const listPermissionRequestsResponseSchema = ListPermissionRequestsResponseContract;
 export type ListPermissionRequestsResponse = z.output<typeof listPermissionRequestsResponseSchema>;
 
+/** Longest request duration, from the contract. */
+export const PERMISSION_REQUEST_MAX_DAYS =
+	CreatePermissionRequestRequest.shape.duration_days.unwrap().maxValue ?? 90;
+
 /** Duration (1-90 days) and reason (max 1024) bounds are the generated ones; only the messages are ours. */
 export const createPermissionRequestSchema = CreatePermissionRequestRequest.extend({
 	permission: z.string().min(1, 'Pick a permission'),

@@ -10,37 +10,43 @@
  * naming convention (dto suffix makes the gateway-boundary role explicit).
  */
 import { z } from 'zod';
-import { RegisterTenantResponse } from '#lib/api/generated/index.ts';
+import {
+	RegisterTenantRequest,
+	SuspendTenantRequest,
+	MarkTenantForDeletionRequest,
+	RegisterTenantResponse
+} from '#lib/api/generated/index.ts';
+import { newPasswordField, reasonField } from '#lib/api/request-schema.ts';
 import { tenantSchema } from '#lib/features/tenant/schemas.ts';
 
 export { tenantSchema as tenantDtoSchema } from '#lib/features/tenant/schemas.ts';
 
-export const registerTenantRequestSchema = z
-	.object({
-		slug: z
-			.string()
-			.min(3)
-			.max(60)
-			.regex(
-				/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/,
-				'slug must be lowercase letters, digits, and dashes'
-			),
-		legal_name: z.string().min(2).max(200),
-		display_name: z.string().min(2).max(200),
-		admin_email: z.string().email(),
-		admin_password: z.string().min(8).max(200),
-		admin_first_name: z.string().min(1).max(120),
-		admin_last_name: z.string().min(1).max(120)
-	})
-	.strict();
+/**
+ * Built from the generated request: its slug / name bounds and the admin e-mail check stand.
+ * Added here: no leading/trailing dash in a slug, names must not be empty, the shared password rule.
+ */
+const registerShape = RegisterTenantRequest.shape;
+export const registerTenantRequestSchema = RegisterTenantRequest.extend({
+	slug: registerShape.slug.regex(
+		/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/,
+		'slug must be lowercase letters, digits, and dashes'
+	),
+	legal_name: registerShape.legal_name.min(2),
+	display_name: registerShape.display_name.min(2),
+	admin_password: newPasswordField,
+	admin_first_name: registerShape.admin_first_name.min(1).max(120),
+	admin_last_name: registerShape.admin_last_name.min(1).max(120)
+}).strict();
 
 export const registerTenantResponseSchema = RegisterTenantResponse;
 
-export const suspendTenantRequestSchema = z.object({ reason: z.string().min(1).max(500) }).strict();
+export const suspendTenantRequestSchema = SuspendTenantRequest.extend({
+	reason: reasonField
+}).strict();
 
-export const markForDeletionRequestSchema = z
-	.object({ reason: z.string().min(1).max(500) })
-	.strict();
+export const markForDeletionRequestSchema = MarkTenantForDeletionRequest.extend({
+	reason: reasonField
+}).strict();
 
 export const listAllTenantsResponseSchema = z.object({
 	tenants: z.array(tenantSchema)

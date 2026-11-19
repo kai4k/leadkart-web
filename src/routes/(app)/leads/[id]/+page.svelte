@@ -27,7 +27,7 @@
 		EditLeadDrawer,
 		ReassignDialog
 	} from '$features/leads';
-	import { describeError } from '$api/errors';
+	import { getListErrorMessage } from '$api/error-messages';
 
 	const id = $derived(page.params.id ?? '');
 	const detail = $derived(leadDetailQuery(id));
@@ -60,14 +60,7 @@
 	const detailErrorCopy = $derived.by(() => {
 		const err = detail.error;
 		if (!err) return '';
-		return describeError(err, {
-			fallback: 'Something went wrong. Please try again.',
-			status: {
-				401: 'Your session expired. Sign in again.',
-				403: "You don't have permission to view this lead.",
-				404: 'This lead was deleted or moved.'
-			}
-		});
+		return getListErrorMessage(err, 'this lead', 'This lead was deleted or moved.') ?? '';
 	});
 </script>
 

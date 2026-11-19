@@ -22,9 +22,11 @@
  *     `useOptimisticMutation`, which snapshots, projects, rolls back and
  *     reuses this helper for invalidation, toast and meta.
  *  4. A form or dialog that shows the error inline sets `inlineErrors: true`.
- *     That sets `meta.skipErrorToast` and avoids a double toast. Otherwise
- *     the global `MutationCache` toast is the only error toast, and hooks
- *     never toast errors themselves.
+ *     That sets `meta.skipErrorToast` and avoids a double toast, for as long as the
+ *     consumer is still observing the mutation. If it unmounted (or a later `mutate()`
+ *     superseded this one) before the failure landed, the global handler toasts instead,
+ *     so a failure is never silent (see `query-client.ts`). Otherwise the global
+ *     `MutationCache` toast is the only error toast, and hooks never toast errors themselves.
  */
 import {
 	createMutation,
@@ -33,6 +35,14 @@ import {
 	type QueryKey
 } from '@tanstack/svelte-query';
 import { toast } from '$ui';
+
+/**
+ * THE inline-errors flag (`meta.skipErrorToast`): the consumer renders the failure itself, so the
+ * global handler stays quiet while that consumer is still observing the mutation. The helper sets
+ * it for `inlineErrors: true`; a hook that must stay a raw `createMutation` (optimistic writes,
+ * multi-key cache seeding) spreads this instead of spelling the key.
+ */
+export const INLINE_ERRORS_META = { skipErrorToast: true } as const;
 
 export interface ResourceMutationOptions<TVars, TData> {
 	fn: (vars: TVars) => Promise<TData>;
@@ -57,7 +67,7 @@ export function resourceMutationOptions<TVars, TData>(
 	return {
 		mutationKey: o.mutationKey,
 		mutationFn: o.fn,
-		meta: o.inlineErrors ? { skipErrorToast: true } : undefined,
+		meta: o.inlineErrors ? INLINE_ERRORS_META : undefined,
 		onSuccess: async (data: TData, vars: TVars) => {
 			await Promise.all(
 				o.invalidate(vars, data).map((queryKey) => qc.invalidateQueries({ queryKey }))

@@ -28,10 +28,12 @@
  *     while user is looking at stale-but-rendered data). Fresh-load failures
  *     are surfaced by the component's own isError branch.
  *   - MutationCache.onError fires for EVERY mutation failure. We toast unless
- *     the mutation opts out via `meta: { skipErrorToast: true }` — used when
- *     a dialog shows an inline Alert and a toast would be duplicative.
+ *     the mutation opts out via `meta: { skipErrorToast: true }` (`inlineErrors`) AND still
+ *     has an observer: the component that renders the error inline. A mutation nobody observes
+ *     any more (the consumer unmounted, or a later `mutate()` of the same consumer superseded
+ *     it) has no inline surface left, so it toasts like any other. One rule, no per-page cases.
  */
-import { QueryClient, QueryCache, MutationCache } from '@tanstack/svelte-query';
+import { QueryClient, QueryCache, MutationCache, type Mutation } from '@tanstack/svelte-query';
 import { onDestroy } from 'svelte';
 import { browser } from '$app/env';
 import { goto } from '$app/navigation';
@@ -54,6 +56,25 @@ export function createQueryClient(): QueryClient {
 		location: () => window.location
 	});
 
+	const mutationCache = new MutationCache({
+		onError: (error, _vars, _ctx, mutation) => {
+			// Session errors (401) redirect to /signin; no toast on the way out.
+			if (sessionGuard.handle(error)) return;
+			// Inline errors: the observing component shows it (see the header).
+			if (mutation.meta?.skipErrorToast === true && observers.has(mutation)) return;
+			toast.error(describeError(error));
+		}
+	});
+	// Observer count per mutation, from the cache's own events: a MutationObserver attaches on
+	// `mutate()` and detaches on unmount, `reset()` and when a later `mutate()` replaces it.
+	const observers = new Map<Mutation<unknown, unknown, unknown, unknown>, number>();
+	mutationCache.subscribe((event) => {
+		if (event.type !== 'observerAdded' && event.type !== 'observerRemoved') return;
+		const count = (observers.get(event.mutation) ?? 0) + (event.type === 'observerAdded' ? 1 : -1);
+		if (count > 0) observers.set(event.mutation, count);
+		else observers.delete(event.mutation);
+	});
+
 	const client: QueryClient = new QueryClient({
 		queryCache: new QueryCache({
 			onError: (error, query) => {
@@ -65,16 +86,7 @@ export function createQueryClient(): QueryClient {
 				}
 			}
 		}),
-		mutationCache: new MutationCache({
-			onError: (error, _vars, _ctx, mutation) => {
-				// Opt-out: pass meta: { skipErrorToast: true } when the calling
-				// dialog renders an inline error and a toast would be noise.
-				// Session errors (401) redirect to /signin; no toast on the way out.
-				if (sessionGuard.handle(error)) return;
-				if (mutation.meta?.skipErrorToast === true) return;
-				toast.error(describeError(error));
-			}
-		}),
+		mutationCache,
 		defaultOptions: {
 			queries: {
 				staleTime: 30_000,

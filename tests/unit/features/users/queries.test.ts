@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, type MutationObserver } from '@tanstack/svelte-query';
+import { ApiError } from '#lib/api/errors.ts';
 import type * as TanstackQuery from '@tanstack/svelte-query';
 
 const h = vi.hoisted(() => ({ qc: undefined as unknown as QueryClient }));
@@ -154,9 +155,11 @@ describe('bulk member status (I-2)', () => {
 			.mockRejectedValueOnce(new Error('nope'))
 			.mockResolvedValueOnce(undefined);
 		const result = await bulk().mutate({ action: 'deactivate', ids: ['a', 'b', 'c'] });
-		expect(result).toEqual({ succeeded: 2, failed: 1, failedIds: ['b'] });
+		expect(result).toMatchObject({ succeeded: 2, failed: 1, failedIds: ['b'] });
 		expect(toastMock.warning).toHaveBeenCalledTimes(1);
-		expect(toastMock.warning.mock.calls[0]?.[0]).toBe('2 deactivated, 1 failed');
+		expect(toastMock.warning.mock.calls[0]?.[0]).toBe(
+			'2 deactivated, 1 failed: Something went wrong'
+		);
 		expect(toastMock.success).not.toHaveBeenCalled();
 		expect(invalidated).toEqual([
 			['users', 'detail', 'a'],
@@ -164,6 +167,35 @@ describe('bulk member status (I-2)', () => {
 			['users', 'detail', 'c'],
 			['users', 'list']
 		]);
+	});
+	const res = (status: number) => new Response(null, { status });
+	it("the warning names the first failure's reason (the shared describer)", async () => {
+		gw.deactivateUser
+			.mockResolvedValueOnce(undefined)
+			.mockResolvedValueOnce(undefined)
+			.mockRejectedValueOnce(
+				ApiError.fromResponse(res(403), { error: 'self_modification_forbidden', message: 'raw' })
+			);
+		await bulk().mutate({ action: 'deactivate', ids: ['a', 'b', 'c'] });
+		expect(toastMock.warning.mock.calls[0]?.[0]).toBe(
+			"2 deactivated, 1 failed: You can't make this change to your own account."
+		);
+	});
+	it('an expired session among the failures reaches the session guard: rethrown, no summary toast', async () => {
+		const expired = ApiError.fromResponse(res(401), { error: 'session_expired' });
+		gw.reactivateUser.mockResolvedValueOnce(undefined).mockRejectedValueOnce(expired);
+		await expect(bulk().mutate({ action: 'reactivate', ids: ['a', 'b'] })).rejects.toBe(expired);
+		expect(toastMock.success).not.toHaveBeenCalled();
+		expect(toastMock.warning).not.toHaveBeenCalled();
+	});
+	it('an ordinary 401 (not session_expired) is only a failed row', async () => {
+		gw.reactivateUser
+			.mockResolvedValueOnce(undefined)
+			.mockRejectedValueOnce(ApiError.fromResponse(res(401), { error: 'something_else' }));
+		await expect(bulk().mutate({ action: 'reactivate', ids: ['a', 'b'] })).resolves.toMatchObject({
+			succeeded: 1,
+			failed: 1
+		});
 	});
 	it('an empty id list makes no call and shows no toast', async () => {
 		await bulk().mutate({ action: 'deactivate', ids: [] });

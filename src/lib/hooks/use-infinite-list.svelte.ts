@@ -5,7 +5,8 @@
  * and binds the `sentinelRef` to a `<div bind:this>` placed at the
  * bottom of the list. When the sentinel scrolls into view we call
  * `query.fetchNextPage()`. After each page lands the observer is rebuilt, so a sentinel that
- * is still in view fetches again.
+ * is still in view fetches again, until the list ends, a cursor repeats (`nextPage`) or a page
+ * comes back empty.
  *
  * Cursor-based pagination contract (leadkart-go):
  *   page shape = `{ items, has_more, next_cursor? }`
@@ -20,7 +21,7 @@
  * disconnects the observer on component teardown.
  */
 import { createInfiniteQuery, type CreateInfiniteQueryResult } from '@tanstack/svelte-query';
-import { nextCursor, type Page } from '#lib/api/pagination.ts';
+import { nextPageParam, type Page } from '#lib/api/pagination.ts';
 
 export type InfiniteListState = 'pending' | 'error' | 'empty' | 'ready';
 
@@ -69,7 +70,9 @@ export function createInfiniteList<T>(options: InfiniteListOptions<T>): Infinite
 		queryFn: ({ pageParam, signal }) =>
 			options.queryFn({ cursor: pageParam as string | undefined, signal }),
 		initialPageParam: undefined as string | undefined,
-		getNextPageParam: (last: Page<T>) => nextCursor(last),
+		// The shared cursor rule: a cursor already requested (an echo, A -> B -> A) ends the list
+		// instead of re-fetching the same page for as long as the sentinel stays in view.
+		getNextPageParam: nextPageParam,
 		enabled: enabled()
 	})) as InfiniteListQuery<T>;
 
@@ -84,6 +87,9 @@ export function createInfiniteList<T>(options: InfiniteListOptions<T>): Infinite
 		const observer = new IntersectionObserver(
 			(entries) => {
 				for (const entry of entries) {
+					// An empty page earns no more auto-loading (the button stays for a manual retry).
+					const lastPage = query.data?.pages.at(-1);
+					if (lastPage && lastPage.items.length === 0) continue;
 					if (entry.isIntersecting && query.hasNextPage && !query.isFetchingNextPage) {
 						void query.fetchNextPage();
 					}

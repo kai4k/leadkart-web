@@ -6,6 +6,7 @@
 			'interactive',
 			'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2',
 			'disabled:cursor-not-allowed disabled:opacity-60 disabled:!transform-none',
+			'aria-disabled:cursor-not-allowed aria-disabled:opacity-60 aria-disabled:!transform-none',
 			'motion-reduce:!transition-none motion-reduce:!transform-none motion-reduce:hover:!transform-none'
 		],
 		{
@@ -58,20 +59,33 @@
 	import Spinner from '../spinner/Spinner.svelte';
 
 	export type ButtonProps = WithElementRef<HTMLButtonAttributes> &
-		ButtonVariants & { loading?: boolean; children?: Snippet };
+		ButtonVariants & {
+			loading?: boolean;
+			/**
+			 * While `loading`, stay in the tab order: `aria-disabled` + `aria-busy` instead of `disabled`,
+			 * and clicks are ignored. For a control that is focused while it loads (the infinite-list
+			 * "Load more"), where `disabled` would drop focus to `<body>`.
+			 */
+			focusableWhileLoading?: boolean;
+			children?: Snippet;
+		};
 
 	let {
 		variant = 'primary',
 		size = 'md',
 		fullWidth = false,
 		loading = false,
+		focusableWhileLoading = false,
 		disabled = false,
 		type = 'button',
 		ref = $bindable(null),
 		class: className = '',
 		children,
+		onclick,
 		...rest
 	}: ButtonProps = $props();
+
+	const inertWhileLoading = $derived(loading && focusableWhileLoading);
 
 	const forwardRef: Attachment = (node) => {
 		ref = node as HTMLButtonElement;
@@ -85,9 +99,11 @@
 	{@attach forwardRef}
 	data-slot="button"
 	{type}
-	disabled={disabled || loading}
+	disabled={disabled || (loading && !focusableWhileLoading)}
+	aria-disabled={inertWhileLoading ? 'true' : undefined}
 	aria-busy={loading || undefined}
 	class={cn(buttonVariants({ variant, size, fullWidth }), className)}
+	onclick={inertWhileLoading ? undefined : onclick}
 	{...rest}
 >
 	{#if loading}<Spinner size={size === 'lg' ? 18 : 16} aria-hidden="true" />{/if}

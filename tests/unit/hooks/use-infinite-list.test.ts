@@ -3,7 +3,12 @@ import { inRoot } from './root.svelte.ts';
 
 type Captured = {
 	queryFn: (ctx: { pageParam: string | undefined; signal: AbortSignal }) => Promise<unknown>;
-	getNextPageParam: (last: unknown) => string | undefined;
+	getNextPageParam: (
+		last: unknown,
+		all: unknown[],
+		lastParam: string | undefined,
+		allParams: (string | undefined)[]
+	) => string | undefined;
 	initialPageParam: undefined;
 };
 const captured = vi.hoisted(() => ({ opts: undefined as unknown }));
@@ -34,9 +39,27 @@ describe('createInfiniteList', () => {
 			createInfiniteList<number>({ queryKey: () => ['t'], queryFn: vi.fn() })
 		);
 		const { getNextPageParam } = captured.opts as Captured;
-		expect(getNextPageParam({ items: [], has_more: true, next_cursor: 'n' })).toBe('n');
-		expect(getNextPageParam({ items: [], has_more: false, next_cursor: 'n' })).toBeUndefined();
-		expect(getNextPageParam({ items: [], has_more: true })).toBeUndefined();
+		const first = (last: unknown) => getNextPageParam(last, [], undefined, [undefined]);
+		expect(first({ items: [], has_more: true, next_cursor: 'n' })).toBe('n');
+		expect(first({ items: [], has_more: false, next_cursor: 'n' })).toBeUndefined();
+		expect(first({ items: [], has_more: true })).toBeUndefined();
+		dispose();
+	});
+
+	it('getNextPageParam stops on a cursor it already requested (an echo, or A -> B -> A)', () => {
+		const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { dispose } = inRoot(() =>
+			createInfiniteList<number>({ queryKey: () => ['t'], queryFn: vi.fn() })
+		);
+		const { getNextPageParam } = captured.opts as Captured;
+		const more = (c: string) => ({ items: [], has_more: true, next_cursor: c });
+		// echo: asked for X, Go answers next_cursor X
+		expect(getNextPageParam(more('X'), [], 'X', [undefined, 'X'])).toBeUndefined();
+		// A -> B -> A
+		expect(getNextPageParam(more('A'), [], 'B', [undefined, 'A', 'B'])).toBeUndefined();
+		// a new cursor still advances
+		expect(getNextPageParam(more('C'), [], 'B', [undefined, 'A', 'B'])).toBe('C');
+		err.mockRestore();
 		dispose();
 	});
 });

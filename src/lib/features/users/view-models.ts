@@ -43,9 +43,14 @@ export function canRevokeRole(role: RoleDto): boolean {
 	return !role.is_super_admin;
 }
 
-/** "3 deactivated, 1 failed" / "2 reactivated"; empty when nothing was attempted (no toast). */
+/**
+ * "3 deactivated, 1 failed: <reason of the first failure>" / "2 reactivated"; empty when nothing
+ * was attempted (no toast). The reason is the shared describer's line, never Go's raw text.
+ */
 export function bulkSummary(action: BulkStatusAction, r: BulkStatusResult): string {
 	if (r.succeeded + r.failed === 0) return '';
 	const done = `${r.succeeded} ${action === 'deactivate' ? 'deactivated' : 'reactivated'}`;
-	return r.failed > 0 ? `${done}, ${r.failed} failed` : done;
+	if (r.failed === 0) return done;
+	const reason = r.firstFailureReason ? `: ${r.firstFailureReason}` : '';
+	return `${done}, ${r.failed} failed${reason}`;
 }

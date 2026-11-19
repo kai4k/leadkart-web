@@ -17,6 +17,8 @@ import {
 	useQueryClient
 } from '@tanstack/svelte-query';
 import { toast } from '$ui';
+import { createResourceMutation, INLINE_ERRORS_META } from '#lib/api/mutations.ts';
+import { nextPageParam } from '#lib/api/pagination.ts';
 import * as api from './api';
 import type {
 	ApproveQuotationRequest,
@@ -54,7 +56,7 @@ export function ordersInfiniteQuery(getParams: () => ListOrdersParams) {
 			queryFn: async ({ pageParam }: { pageParam: string | undefined }) =>
 				api.listOrders({ ...params, cursor: pageParam }),
 			initialPageParam: undefined as string | undefined,
-			getNextPageParam: (last) => (last.has_more ? (last.next_cursor ?? undefined) : undefined)
+			getNextPageParam: nextPageParam
 		};
 	});
 }
@@ -113,18 +115,19 @@ function syncCaches(qc: ReturnType<typeof useQueryClient>, order: OrderDto): voi
 // at creation): the detail component is reused when only [id] changes, so a
 // captured id would act on the previous order.
 
+/** `inlineErrors`: the revise drawer shows the failure in its banner (and, on a 422, on the fields). */
 export function reviseQuotationMutation() {
 	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: ({ id, ...req }: { id: string } & ReviseQuotationRequest) =>
-			api.reviseQuotation(id, req),
-		onSuccess: (order, { id }) => {
-			syncCaches(qc, order);
-			void qc.invalidateQueries({ queryKey: ordersKeys.revisions(id) });
-			toast.success('Quotation revised');
+	return createResourceMutation({
+		fn: ({ id, ...req }: { id: string } & ReviseQuotationRequest) => api.reviseQuotation(id, req),
+		// The response IS the refetch for the detail (rule 11); the lists and revisions re-read.
+		invalidate: ({ id }) => [ordersKeys.lists(), ordersKeys.revisions(id)],
+		onSuccess: (_vars, order) => {
+			qc.setQueryData(ordersKeys.detail(order.id), order);
 		},
-		onError: () => toast.error('Failed to revise quotation')
-	}));
+		successToast: 'Quotation revised',
+		inlineErrors: true
+	});
 }
 
 export function approveQuotationMutation() {
@@ -135,14 +138,14 @@ export function approveQuotationMutation() {
 		onSuccess: (order) => {
 			syncCaches(qc, order);
 			toast.success('Quotation approved');
-		},
-		onError: () => toast.error('Failed to approve quotation')
+		}
 	}));
 }
 
 export function recordPaymentMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
+		meta: INLINE_ERRORS_META,
 		mutationFn: ({ id, ...req }: { id: string } & RecordPaymentRequest) =>
 			api.recordPayment(id, req),
 		onSuccess: (_payment, { id }) => {
@@ -153,8 +156,7 @@ export function recordPaymentMutation() {
 			void qc.invalidateQueries({ queryKey: ordersKeys.payments(id) });
 			void qc.invalidateQueries({ queryKey: ordersKeys.lists() });
 			toast.success('Payment recorded');
-		},
-		onError: () => toast.error('Failed to record payment')
+		}
 	}));
 }
 
@@ -165,20 +167,19 @@ export function confirmOrderMutation() {
 		onSuccess: (order) => {
 			syncCaches(qc, order);
 			toast.success('Order confirmed');
-		},
-		onError: () => toast.error('Failed to confirm order')
+		}
 	}));
 }
 
 export function markPackedMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
+		meta: INLINE_ERRORS_META,
 		mutationFn: ({ id, ...req }: { id: string } & MarkPackedRequest) => api.markPacked(id, req),
 		onSuccess: (order) => {
 			syncCaches(qc, order);
 			toast.success('Order marked as packed');
-		},
-		onError: () => toast.error('Failed to mark as packed')
+		}
 	}));
 }
 
@@ -190,20 +191,19 @@ export function generateInvoiceMutation() {
 			syncCaches(qc, order);
 			void qc.invalidateQueries({ queryKey: ordersKeys.invoice(id) });
 			toast.success('Invoice generated');
-		},
-		onError: () => toast.error('Failed to generate invoice')
+		}
 	}));
 }
 
 export function dispatchOrderMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
+		meta: INLINE_ERRORS_META,
 		mutationFn: ({ id, ...req }: { id: string } & DispatchRequest) => api.dispatchOrder(id, req),
 		onSuccess: (order) => {
 			syncCaches(qc, order);
 			toast.success('Order dispatched');
-		},
-		onError: () => toast.error('Failed to dispatch order')
+		}
 	}));
 }
 
@@ -215,8 +215,7 @@ export function markDeliveredMutation() {
 		onSuccess: (order) => {
 			syncCaches(qc, order);
 			toast.success('Order marked as delivered');
-		},
-		onError: () => toast.error('Failed to mark as delivered')
+		}
 	}));
 }
 
@@ -227,22 +226,21 @@ export function completeOrderMutation() {
 		onSuccess: (order) => {
 			syncCaches(qc, order);
 			toast.success('Order complete');
-		},
-		onError: () => toast.error('Failed to complete order')
+		}
 	}));
 }
 
 export function cancelOrderMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
+		meta: INLINE_ERRORS_META,
 		mutationFn: ({ id, ...req }: { id: string } & CancelOrderRequest) => api.cancelOrder(id, req),
 		onSuccess: (order, { id }) => {
 			syncCaches(qc, order);
 			void qc.invalidateQueries({ queryKey: ordersKeys.creditNotes(id) });
 			void qc.invalidateQueries({ queryKey: ordersKeys.invoice(id) });
 			toast.success('Order cancelled');
-		},
-		onError: () => toast.error('Failed to cancel order')
+		}
 	}));
 }
 
@@ -259,7 +257,6 @@ export function bulkOrderActionMutation() {
 			} else {
 				toast.warning(`${res.affected} updated, ${res.errors.length} failed`);
 			}
-		},
-		onError: () => toast.error('Bulk action failed')
+		}
 	}));
 }

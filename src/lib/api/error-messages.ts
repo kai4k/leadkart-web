@@ -22,18 +22,25 @@ import { describeError } from './errors';
  * for `null`/`undefined` so call sites can pass `query.error` directly
  * and short-circuit when no error is present.
  *
+ * `notFound` is the 404 line for pages whose missing thing is not the generic "resource" (a
+ * product's batches: "This product was deleted or moved.").
+ *
  * `resourceNoun` should be a plural lower-cased noun ("tenants",
  * "team members", "orders") that fits in "You don't have permission
  * to view {noun}." — used for the 403 branch.
  */
-export function getListErrorMessage(err: unknown, resourceNoun: string): string | null {
+export function getListErrorMessage(
+	err: unknown,
+	resourceNoun: string,
+	notFound = 'This resource was deleted or moved.'
+): string | null {
 	if (!err) return null;
 	return describeError(err, {
 		fallback: 'Something went wrong. Please try again.',
 		status: {
 			401: 'Your session expired. Sign in again.',
 			403: `You don't have permission to view ${resourceNoun}.`,
-			404: 'This resource was deleted or moved.'
+			404: notFound
 		}
 	});
 }

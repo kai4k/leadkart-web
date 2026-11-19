@@ -28,4 +28,6 @@ export interface BulkStatusResult {
 	failed: number;
 	/** The ids whose call failed, so the caller can leave exactly those selected. */
 	failedIds: string[];
+	/** The first failed call's user-facing reason (the shared describer's line), for the summary. */
+	firstFailureReason?: string;
 }

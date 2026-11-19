@@ -17,6 +17,7 @@ import {
 	ListUsersResponse,
 	ReplaceUserPermissionOverridesRequest
 } from '#lib/api/generated/index.ts';
+import { reasonField } from '#lib/api/request-schema.ts';
 import { responseEmail } from '#lib/api/response-schema.ts';
 import { userDtoSchema } from '#lib/features/auth/schemas.ts';
 
@@ -54,7 +55,7 @@ export const createUserRequestSchema = CreateUserRequest.extend({
 export const createUserResponseSchema = CreateUserResponse;
 
 export const deactivateUserRequestSchema = DeactivateUserRequest.extend({
-	reason: z.string().min(1).max(500)
+	reason: reasonField
 }).strict();
 
 export const assignUserRoleRequestSchema = AssignUserRoleRequest.strict();

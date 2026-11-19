@@ -4,6 +4,7 @@ import {
 	fetchAllPages,
 	MAX_PAGE_SIZE,
 	nextCursor,
+	nextPage,
 	toPage,
 	type Page
 } from '#lib/api/pagination.ts';
@@ -32,6 +33,34 @@ describe('pagination', () => {
 		expect(nextCursor(page({ has_more: false, next_cursor: 'n' }))).toBeUndefined();
 		expect(nextCursor(page({ has_more: true }))).toBeUndefined();
 		expect(nextCursor(page({ has_more: true, next_cursor: '' }))).toBeUndefined();
+	});
+});
+
+describe('nextPage (the ONE cursor rule: fetchAllPages and the infinite-list hook)', () => {
+	const page = (p: Partial<Page<number>>): Page<number> => ({ items: [], has_more: false, ...p });
+	it('a fresh cursor is the next page', () => {
+		expect(nextPage(page({ has_more: true, next_cursor: 'B' }), new Set(['A']))).toEqual({
+			cursor: 'B'
+		});
+	});
+	it('the last page ends it as "last"', () => {
+		expect(nextPage(page({ has_more: false }), new Set())).toEqual({
+			cursor: undefined,
+			reason: 'last'
+		});
+		expect(nextPage(page({ has_more: true }), new Set())).toEqual({
+			cursor: undefined,
+			reason: 'last'
+		});
+	});
+	it('a cursor already requested (an echo, or A -> B -> A) ends it as "repeated" and says so in DEV', () => {
+		const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+		expect(nextPage(page({ has_more: true, next_cursor: 'A' }), new Set(['A', 'B']))).toEqual({
+			cursor: undefined,
+			reason: 'repeated'
+		});
+		expect(err).toHaveBeenCalledTimes(1);
+		err.mockRestore();
 	});
 });
 

@@ -10,6 +10,7 @@
  * uuid() rejects all-zero sentinels.
  */
 import { z } from 'zod';
+import { reasonField } from '#lib/api/request-schema.ts';
 
 // ── Classification enums ─────────────────────────────────────────────
 
@@ -223,7 +224,7 @@ export type CreateBatchRequest = z.output<typeof createBatchRequestSchema>;
 
 export const writeOffBatchRequestSchema = z
 	.object({
-		reason: z.string().min(1, 'Reason is required').max(500)
+		reason: reasonField
 	})
 	.strict();
 export type WriteOffBatchRequest = z.output<typeof writeOffBatchRequestSchema>;

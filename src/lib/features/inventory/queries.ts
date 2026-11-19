@@ -18,6 +18,8 @@ import {
 	createQuery,
 	useQueryClient
 } from '@tanstack/svelte-query';
+import { INLINE_ERRORS_META } from '#lib/api/mutations.ts';
+import { nextPageParam } from '#lib/api/pagination.ts';
 import { toast } from '$ui';
 import * as api from './api';
 import type { ListBatchesParams, ListMovementsParams, ListProductsParams } from './api';
@@ -67,7 +69,7 @@ export function productsInfiniteQuery(params: ListProductsParams = {}) {
 				cursor: pageParam as string | undefined
 			}),
 		initialPageParam: undefined as string | undefined,
-		getNextPageParam: (last) => (last.has_more ? (last.next_cursor ?? undefined) : undefined)
+		getNextPageParam: nextPageParam
 	}));
 }
 
@@ -83,7 +85,7 @@ export function createProductMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: (body: CreateProductRequest) => api.createProduct(body),
-		meta: { skipErrorToast: true },
+		meta: INLINE_ERRORS_META,
 		onSuccess: (product) => {
 			qc.setQueryData(inventoryKeys.productDetail(product.id), product);
 			void qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
@@ -97,7 +99,7 @@ export function updateProductMutation() {
 	return createMutation(() => ({
 		mutationFn: ({ id, body }: { id: string; body: UpdateProductRequest }) =>
 			api.updateProduct(id, body),
-		meta: { skipErrorToast: true },
+		meta: INLINE_ERRORS_META,
 		onSuccess: (product) => {
 			qc.setQueryData(inventoryKeys.productDetail(product.id), product);
 			void qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
@@ -144,7 +146,7 @@ export function addBatchMutation() {
 	return createMutation(() => ({
 		mutationFn: ({ productId, body }: { productId: string; body: CreateBatchRequest }) =>
 			api.createBatch(productId, body),
-		meta: { skipErrorToast: true },
+		meta: INLINE_ERRORS_META,
 		onSuccess: (_batch, vars) => {
 			void qc.invalidateQueries({ queryKey: inventoryKeys.batches(vars.productId) });
 			void qc.invalidateQueries({ queryKey: inventoryKeys.productDetail(vars.productId) });
@@ -166,7 +168,7 @@ export function writeOffBatchMutation() {
 			batchId: string;
 			body: WriteOffBatchRequest;
 		}) => api.writeOffBatch(batchId, body),
-		meta: { skipErrorToast: true },
+		meta: INLINE_ERRORS_META,
 		onSuccess: (_batch, vars) => {
 			void qc.invalidateQueries({ queryKey: inventoryKeys.batches(vars.productId) });
 			void qc.invalidateQueries({ queryKey: inventoryKeys.productDetail(vars.productId) });
@@ -201,7 +203,7 @@ export function movementsInfiniteQuery(productId: string, params: ListMovementsP
 			}),
 		enabled: Boolean(productId),
 		initialPageParam: undefined as string | undefined,
-		getNextPageParam: (last) => (last.has_more ? (last.next_cursor ?? undefined) : undefined)
+		getNextPageParam: nextPageParam
 	}));
 }
 
@@ -219,7 +221,7 @@ export function adjustStockMutation() {
 	return createMutation(() => ({
 		mutationFn: ({ productId, body }: { productId: string; body: CreateMovementRequest }) =>
 			api.createMovement(productId, body),
-		meta: { skipErrorToast: true },
+		meta: INLINE_ERRORS_META,
 		onMutate: async ({ productId, body }) => {
 			await qc.cancelQueries({ queryKey: inventoryKeys.productDetail(productId) });
 			const previous = qc.getQueryData<ProductDto>(inventoryKeys.productDetail(productId));
