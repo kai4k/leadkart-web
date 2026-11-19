@@ -9,6 +9,7 @@
 		"src/**/*.js",
 		"src/**/*.svelte",
 		"tests/**/*.ts",
+		"tests/**/*.svelte",
 		"vite.config.ts",
 		"vitest.config.ts",
 		"playwright.config.ts"

@@ -383,6 +383,20 @@ export function describeError(err: unknown, opts: DescribeErrorOptions = {}): st
 	return own;
 }
 
+/**
+ * The failure of a "reason" dialog (suspend, anonymise, mark for deletion, ...): a field error on
+ * `reason` stays on the field; anything else is the one banner line from `describeError`.
+ */
+export function describeReasonError(
+	err: unknown,
+	opts: DescribeErrorOptions
+): { reasonError: string | null; banner: string | null } {
+	if (err instanceof ValidationError && err.fields.reason) {
+		return { reasonError: err.fields.reason, banner: null };
+	}
+	return { reasonError: null, banner: describeError(err, opts) };
+}
+
 // ── Legacy compat ─────────────────────────────────────────────────────────
 
 /** Type predicate — narrows `unknown` to `ApiError` safely. */

@@ -3,6 +3,7 @@
 	import { deleteRoleMutation } from '$features/roles/queries';
 	import type { RoleDto } from '$features/roles/types';
 	import { describeError } from '$api/errors';
+	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 
 	type Props = { open: boolean; role: RoleDto | null; onOpenChange: (open: boolean) => void };
 	let { open = $bindable(false), role, onOpenChange }: Props = $props();
@@ -11,6 +12,8 @@
 	let bannerError = $state<string | null>(null);
 
 	const mutation = deleteRoleMutation();
+	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
+	useResetOnChange(() => open, mutation);
 	const isPending = $derived(mutation.isPending);
 	const canConfirm = $derived(role !== null && confirmName === role.name);
 

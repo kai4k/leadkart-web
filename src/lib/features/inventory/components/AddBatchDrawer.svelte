@@ -5,6 +5,7 @@
 	import { addBatchMutation } from '$features/inventory/queries';
 	import { createBatchRequestSchema, type CreateBatchRequest } from '$features/inventory/schemas';
 	import { Icon, X } from '$icons';
+	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 
 	/**
 	 * AddBatchDrawer — record inward batch.
@@ -23,6 +24,8 @@
 	let { open = $bindable(false), productId, onOpenChange }: Props = $props();
 
 	const mutation = addBatchMutation();
+	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
+	useResetOnChange(() => open, mutation);
 
 	function todayIsoDate(): string {
 		const d = new Date();
@@ -69,7 +72,7 @@
 	}
 </script>
 
-<Drawer.Root bind:open {onOpenChange}>
+<Drawer.Root bind:open busy={form.isSubmitting} {onOpenChange}>
 	<Drawer.Content>
 		<Drawer.Header>
 			<div class="stack stack-tight">

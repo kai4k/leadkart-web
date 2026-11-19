@@ -183,7 +183,7 @@
 	);
 </script>
 
-<Drawer.Root bind:open {onOpenChange}>
+<Drawer.Root bind:open busy={previewLoading || commitLoading} {onOpenChange}>
 	<Drawer.Content>
 		<Drawer.Header>
 			<div class="stack stack-tight">

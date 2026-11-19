@@ -129,7 +129,7 @@
 	}
 </script>
 
-<Drawer.Root bind:open {onOpenChange}>
+<Drawer.Root bind:open busy={form.isSubmitting} {onOpenChange}>
 	<Drawer.Content>
 		<Drawer.Header>
 			<div class="stack stack-tight">

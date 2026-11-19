@@ -79,7 +79,7 @@
 	const buttonVariant = $derived(variant === 'danger' ? 'danger' : 'primary');
 </script>
 
-<Dialog.Root bind:open {onOpenChange}>
+<Dialog.Root bind:open busy={loading} {onOpenChange}>
 	<Dialog.Content>
 		<Dialog.Header>
 			<div class="cluster cluster-tight items-start gap-3">

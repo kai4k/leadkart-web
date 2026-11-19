@@ -55,6 +55,8 @@ export {
 	type ListPaginationOptions
 } from './use-list-pagination.svelte';
 
+export { useResetOnChange } from './use-reset-on-change.svelte';
+
 export { createPwa, type Pwa } from './use-pwa.svelte';
 
 export { useForm, type Form, type FormOpts, type FieldErrors } from './use-form.svelte';

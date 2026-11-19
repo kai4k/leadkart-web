@@ -45,7 +45,7 @@
 	}
 </script>
 
-<Dialog.Root bind:open {onOpenChange}>
+<Dialog.Root bind:open busy={isPending} {onOpenChange}>
 	<Dialog.Content>
 		<Dialog.Header>
 			<div class="stack stack-tight">

@@ -74,7 +74,7 @@
 	}
 </script>
 
-<Drawer.Root bind:open onOpenChange={handleClose}>
+<Drawer.Root bind:open busy={form.isSubmitting} onOpenChange={handleClose}>
 	<Drawer.Content>
 		<Drawer.Header>
 			<div class="stack stack-tight">

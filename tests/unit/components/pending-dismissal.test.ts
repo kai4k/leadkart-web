@@ -1,0 +1,121 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { flushSync, mount, unmount, type ComponentProps } from 'svelte';
+import type { QueryClient } from '@tanstack/svelte-query';
+
+const h = vi.hoisted(() => ({ qc: undefined as unknown as QueryClient }));
+// Real mutation machinery (observers, the MutationCache's one global error toast) against a real
+// QueryClient; only the context lookup is replaced.
+vi.mock('@tanstack/svelte-query', async (importOriginal) =>
+	(await import('../helpers/real-mutations.svelte.ts')).withRealMutations(
+		await importOriginal(),
+		() => h.qc,
+		{},
+		{ swallowRejections: true }
+	)
+);
+const toastMock = vi.hoisted(() => ({ success: vi.fn(), warning: vi.fn(), error: vi.fn() }));
+vi.mock('$ui', async (importOriginal) => ({
+	...(await importOriginal<Record<string, unknown>>()),
+	toast: toastMock
+}));
+const gw = vi.hoisted(() => ({ anonymisePerson: vi.fn() }));
+vi.mock('#lib/features/operator/people/api.ts', () => gw);
+vi.mock('#lib/features/operator/people/api', () => gw);
+
+import { reactiveProps } from '../helpers/reactive-props.svelte.ts';
+import { createQueryClient } from '#lib/api/query-client.ts';
+import { ServerError } from '#lib/api/errors.ts';
+import AnonymiseDialog from '#lib/features/operator/people/components/AnonymiseDialog.svelte';
+
+const person = { id: 'p1', email: 'a@b.co' } as unknown as ComponentProps<
+	typeof AnonymiseDialog
+>['person'];
+
+let target: HTMLElement;
+let component: ReturnType<typeof mount> | undefined;
+let props: ComponentProps<typeof AnonymiseDialog>;
+const onOpenChange = vi.fn();
+
+beforeEach(() => {
+	vi.clearAllMocks();
+	h.qc = createQueryClient();
+	vi.spyOn(h.qc, 'invalidateQueries').mockResolvedValue(undefined);
+	target = document.body.appendChild(document.createElement('div'));
+	props = reactiveProps({ open: true, person, onOpenChange });
+	component = mount(AnonymiseDialog, { target, props });
+	flushSync();
+});
+afterEach(() => {
+	if (component) unmount(component);
+	component = undefined;
+	target.remove();
+	document.body.innerHTML = '';
+});
+
+const buttonNamed = (name: RegExp) =>
+	[...document.querySelectorAll('button')].find((b) => name.test(b.textContent?.trim() ?? ''));
+const field = (selector: string) => document.querySelector<HTMLInputElement>(selector)!;
+const type = (el: HTMLInputElement | HTMLTextAreaElement, value: string) => {
+	el.value = value;
+	el.dispatchEvent(new Event('input', { bubbles: true }));
+	flushSync();
+};
+const submit = () => {
+	type(field('input'), 'a@b.co');
+	type(document.querySelector('textarea')!, 'because');
+	buttonNamed(/Anonymise permanently/)!.click();
+	flushSync();
+};
+const pressEscape = () => {
+	document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+	flushSync();
+};
+const dialogOpen = () => document.querySelector('[role="dialog"]') !== null;
+
+describe('a pending save cannot be dismissed into silence', () => {
+	it('Escape and the X do nothing while the call is in flight, then work again', async () => {
+		let reject!: (e: unknown) => void;
+		gw.anonymisePerson.mockReturnValue(new Promise((_r, rej) => (reject = rej)));
+		submit();
+		await vi.waitFor(() => expect(gw.anonymisePerson).toHaveBeenCalledTimes(1));
+
+		pressEscape();
+		document.querySelector<HTMLElement>('[aria-label="Close"]')?.click();
+		flushSync();
+		expect(dialogOpen()).toBe(true);
+		expect(onOpenChange).not.toHaveBeenCalledWith(false);
+
+		reject(new ServerError(500, null));
+		await vi.waitFor(() => expect(document.body.textContent).toContain('went wrong on our side'));
+		pressEscape();
+		await vi.waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+	});
+
+	it('mounted and visible: the failure is a banner, not a toast', async () => {
+		gw.anonymisePerson.mockRejectedValue(new ServerError(500, null));
+		submit();
+		await vi.waitFor(() => expect(document.body.textContent).toContain('went wrong'));
+		expect(toastMock.error).not.toHaveBeenCalled();
+	});
+
+	it('closed by the parent while pending, then fails: exactly one toast (no silent failure)', async () => {
+		let reject!: (e: unknown) => void;
+		gw.anonymisePerson.mockReturnValue(new Promise((_r, rej) => (reject = rej)));
+		submit();
+		await vi.waitFor(() => expect(gw.anonymisePerson).toHaveBeenCalledTimes(1));
+
+		props.open = false; // the component stays mounted, as in every parent
+		flushSync();
+		reject(new ServerError(500, null));
+
+		await vi.waitFor(() => expect(toastMock.error).toHaveBeenCalledTimes(1));
+		expect(toastMock.error.mock.calls[0]?.[0]).toBe(
+			'Something went wrong on our side. Please try again.'
+		);
+	});
+
+	it('the reason label does not promise an audit the backend does not do yet', () => {
+		expect(document.body.textContent).toContain('Reason (required)');
+		expect(document.body.textContent).not.toContain('audited');
+	});
+});

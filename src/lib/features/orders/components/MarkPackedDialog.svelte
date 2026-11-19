@@ -37,7 +37,7 @@
 	}
 </script>
 
-<Dialog.Root bind:open {onOpenChange}>
+<Dialog.Root bind:open busy={form.isSubmitting} {onOpenChange}>
 	<Dialog.Content>
 		<Dialog.Header>
 			<h2 class="h5">Mark packed</h2>

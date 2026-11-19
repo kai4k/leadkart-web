@@ -20,6 +20,7 @@
 		type DraftItem
 	} from './OrderItemsEditor.svelte';
 	import { ValidationError, describeError } from '$api/errors';
+	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 
 	type Props = {
 		order: OrderDto;
@@ -37,6 +38,8 @@
 	}: Props = $props();
 
 	const reviseM = reviseQuotationMutation();
+	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
+	useResetOnChange(() => open, reviseM);
 
 	function seedRows(): DraftItem[] {
 		return order.current_items.map((it) => ({
@@ -131,7 +134,7 @@
 	}
 </script>
 
-<Drawer.Root bind:open {onOpenChange}>
+<Drawer.Root bind:open busy={form.isSubmitting} {onOpenChange}>
 	<Drawer.Content>
 		<Drawer.Header>
 			<h2 class="h5">Revise quotation</h2>

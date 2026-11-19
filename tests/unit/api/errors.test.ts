@@ -12,7 +12,8 @@ import {
 	SchemaError,
 	RateLimitError,
 	parseRetryAfter,
-	describeError
+	describeError,
+	describeReasonError
 } from '#lib/api/errors.ts';
 import { SCOPE_EXPIRED_MESSAGE } from '#lib/api/scope-header.ts';
 
@@ -553,5 +554,28 @@ describe('describeError', () => {
 		expect(describeError(ApiError.fromResponse(res(409), { message: 'Slug taken' }), opts)).toBe(
 			'Slug taken'
 		);
+	});
+});
+
+describe('describeReasonError (the reason dialogs share one error branch)', () => {
+	const opts = { fallback: 'Failed.', status: { 403: 'Not yours.' } };
+
+	it('a field error on `reason` stays on the field, no banner', () => {
+		const err = new ValidationError({ reason: 'Reason is required' }, 422);
+		expect(describeReasonError(err, opts)).toEqual({
+			reasonError: 'Reason is required',
+			banner: null
+		});
+	});
+
+	it('anything else is the one banner line from describeError', () => {
+		expect(describeReasonError(new AuthError(403), opts)).toEqual({
+			reasonError: null,
+			banner: 'Not yours.'
+		});
+		expect(describeReasonError(new Error('x'), opts)).toEqual({
+			reasonError: null,
+			banner: 'Failed.'
+		});
 	});
 });

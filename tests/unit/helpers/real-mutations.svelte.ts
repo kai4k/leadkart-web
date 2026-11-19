@@ -18,19 +18,26 @@ import type * as TanstackQuery from '@tanstack/svelte-query';
 export function withRealMutations(
 	actual: typeof TanstackQuery,
 	qc: () => QueryClient,
-	overrides: Record<string, unknown> = {}
+	overrides: Record<string, unknown> = {},
+	/** `swallowRejections`: `mutate()` resolves on failure, like the real binding (a component calls it without a catch). */
+	opts: { swallowRejections?: boolean } = {}
 ) {
 	return {
 		...actual,
 		createQuery: () => undefined,
 		useQueryClient: () => qc(),
-		createMutation: (opts: () => never) => {
-			const observer = new actual.MutationObserver(qc(), opts());
+		createMutation: (options: () => never) => {
+			const observer = new actual.MutationObserver(qc(), options());
 			let pending = $state(false);
 			observer.subscribe((result) => {
 				pending = result.isPending;
 			});
 			Object.defineProperty(observer, 'isPending', { get: () => pending });
+			if (opts.swallowRejections) {
+				const mutate = observer.mutate.bind(observer);
+				observer.mutate = ((vars, mutateOpts) =>
+					mutate(vars, mutateOpts).catch(() => undefined)) as typeof observer.mutate;
+			}
 			Object.defineProperty(observer, 'mutateAsync', {
 				value: (vars: never) => observer.mutate(vars)
 			});

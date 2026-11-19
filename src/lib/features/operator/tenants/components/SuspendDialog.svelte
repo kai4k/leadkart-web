@@ -2,7 +2,8 @@
 	import { ConfirmDialog, Alert } from '$ui';
 	import { suspendTenantMutation } from '../queries';
 	import type { TenantDto } from '../types';
-	import { ValidationError, describeError } from '$api/errors';
+	import { describeReasonError } from '$api/errors';
+	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 
 	type Props = {
 		open: boolean;
@@ -17,6 +18,8 @@
 
 	// TanStack Query v6 (Svelte 5): result is Svelte 5 reactive state, accessed directly.
 	const suspendMutation = suspendTenantMutation();
+	// The component outlives the dialog: detach the observer when it opens or closes (a late failure then toasts).
+	useResetOnChange(() => open, suspendMutation);
 	const isPending = $derived(suspendMutation.isPending);
 
 	async function onConfirm() {
@@ -31,19 +34,14 @@
 					onOpenChange(false);
 				},
 				onError: (err: unknown) => {
-					if (err instanceof ValidationError) {
-						reasonError = err.fields.reason ?? null;
-						bannerError = reasonError ? null : 'The server rejected this request.';
-					} else {
-						bannerError = describeError(err, {
-							fallback: 'Failed to suspend. Please try again.',
-							status: {
-								403: "You don't have permission to suspend tenants.",
-								404: 'This tenant was deleted or moved.',
-								409: 'This tenant is already suspended.'
-							}
-						});
-					}
+					({ reasonError, banner: bannerError } = describeReasonError(err, {
+						fallback: 'Failed to suspend. Please try again.',
+						status: {
+							403: "You don't have permission to suspend tenants.",
+							404: 'This tenant was deleted or moved.',
+							409: 'This tenant is already suspended.'
+						}
+					}));
 				}
 			}
 		);

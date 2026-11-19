@@ -6,6 +6,7 @@
 	import { canRevokeRole } from '$features/users/view-models';
 	import { displayName } from '$features/auth';
 	import { describeError } from '$api/errors';
+	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 
 	type Props = {
 		roleList: RoleDto[];
@@ -20,6 +21,8 @@
 
 	const assignMutation = assignRoleMutation();
 	const revokeMutation = revokeRoleMutation();
+	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
+	useResetOnChange(() => open, assignMutation, revokeMutation);
 
 	function handleError(err: unknown, mode: 'assign' | 'revoke'): void {
 		const verbing = mode === 'assign' ? 'assign' : 'revoke';
@@ -60,7 +63,7 @@
 	);
 </script>
 
-<Drawer.Root bind:open {onOpenChange}>
+<Drawer.Root bind:open busy={assignMutation.isPending || revokeMutation.isPending} {onOpenChange}>
 	<Drawer.Content>
 		<Drawer.Header>
 			<div class="stack stack-tight">

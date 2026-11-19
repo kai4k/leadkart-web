@@ -82,7 +82,7 @@
 	}
 </script>
 
-<Dialog.Root bind:open {onOpenChange}>
+<Dialog.Root bind:open busy={form.isSubmitting} {onOpenChange}>
 	<Dialog.Content>
 		<Dialog.Header>
 			<div class="stack stack-tight">

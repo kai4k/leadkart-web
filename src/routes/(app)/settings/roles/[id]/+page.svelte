@@ -24,6 +24,7 @@
 	} from '$features/roles';
 	import { myCapabilitiesQuery, hasCapability } from '$features/auth/queries';
 	import { describeError } from '$api/errors';
+	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 
 	let { data } = $props();
 
@@ -40,16 +41,15 @@
 		error = null;
 		saved = false;
 	});
-	// Save callbacks report only while their role is still the one shown.
-	function bannerFor(id: string, fallback: string) {
+	// The page stays mounted across role ids. When the role changes the three mutations are reset
+	// (below), so a save of the role the user left reports through the global toast, not a banner
+	// for the wrong role; the callbacks here only ever run for the role on screen.
+	function bannerFor(fallback: string) {
 		return {
 			onSuccess: () => {
-				if (id === roleId) saved = true;
+				saved = true;
 			},
 			onError: (err: unknown) => {
-				// A save that fails after the user left the page is toasted by the global handler
-				// (no observer left); nothing to special-case here.
-				if (id !== roleId) return;
 				error = describeError(err, {
 					fallback,
 					status: {
@@ -78,6 +78,7 @@
 	const updateMutation = updateRoleMutation();
 	const replacePermsMutation = replaceRolePermissionsMutation();
 	const parentMutation = setRoleParentMutation();
+	useResetOnChange(() => roleId, updateMutation, replacePermsMutation, parentMutation);
 	const isMutating = $derived(
 		updateMutation.isPending || replacePermsMutation.isPending || parentMutation.isPending
 	);
@@ -104,7 +105,7 @@
 
 		parentMutation.mutate(
 			{ id: role.id, parent_role_id: selectedParent || null },
-			bannerFor(role.id, 'Failed to update parent.')
+			bannerFor('Failed to update parent.')
 		);
 	}
 
@@ -135,7 +136,7 @@
 				id: role.id,
 				req: { name: name.trim(), hierarchy_level: hierarchyLevel }
 			},
-			bannerFor(role.id, 'Failed to save.')
+			bannerFor('Failed to save.')
 		);
 	}
 
@@ -146,7 +147,7 @@
 
 		replacePermsMutation.mutate(
 			{ id: role.id, permissions: selectedPerms },
-			bannerFor(role.id, 'Failed to save permissions.')
+			bannerFor('Failed to save permissions.')
 		);
 	}
 </script>

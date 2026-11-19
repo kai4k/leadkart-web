@@ -2,7 +2,8 @@
 	import { ConfirmDialog, Alert } from '$ui';
 	import { anonymisePersonMutation } from '../queries';
 	import type { PersonDto } from '../types';
-	import { ValidationError, describeError } from '$api/errors';
+	import { describeReasonError } from '$api/errors';
+	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 
 	type Props = { open: boolean; person: PersonDto | null; onOpenChange: (open: boolean) => void };
 	let { open = $bindable(false), person, onOpenChange }: Props = $props();
@@ -13,6 +14,8 @@
 	let bannerError = $state<string | null>(null);
 
 	const mutation = anonymisePersonMutation();
+	// The component outlives the dialog: detach the observer when it opens or closes (a late failure then toasts).
+	useResetOnChange(() => open, mutation);
 	const isPending = $derived(mutation.isPending);
 	const canConfirm = $derived(
 		person !== null && typedEmail === person.email && reason.trim().length > 0
@@ -30,20 +33,15 @@
 					reason = '';
 					onOpenChange(false);
 				},
-				onError: (err) => {
-					if (err instanceof ValidationError) {
-						reasonError = err.fields.reason ?? null;
-						bannerError = reasonError ? null : 'The server rejected this request.';
-					} else {
-						bannerError = describeError(err, {
-							fallback: 'Anonymisation failed. Please try again.',
-							status: {
-								403: "You don't have permission to anonymise people.",
-								404: 'This person was deleted or moved.',
-								409: 'This person is already anonymised.'
-							}
-						});
-					}
+				onError: (err: unknown) => {
+					({ reasonError, banner: bannerError } = describeReasonError(err, {
+						fallback: 'Anonymisation failed. Please try again.',
+						status: {
+							403: "You don't have permission to anonymise people.",
+							404: 'This person was deleted or moved.',
+							409: 'This person is already anonymised.'
+						}
+					}));
 				}
 			}
 		);
@@ -74,7 +72,9 @@
 			/>
 		</label>
 		<label class="stack stack-tight mt-4 w-full">
-			<span class="label text-sm md:text-base">Reason (required, audited)</span>
+			<!-- Go's anonymise handler ignores the request body today, so the reason is NOT audited yet.
+			     Restore "(required, audited)" when the backend change that records it lands. -->
+			<span class="label text-sm md:text-base">Reason (required)</span>
 			<textarea
 				bind:value={reason}
 				required
