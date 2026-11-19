@@ -18,7 +18,7 @@
 
 	const capsQuery = myCapabilitiesQuery();
 	const membershipId = $derived(capsQuery.data?.membership_id ?? '');
-	const profileQuery = $derived(myProfileQuery(membershipId));
+	const profileQuery = myProfileQuery(() => membershipId);
 	const profileData = $derived(profileQuery.data ?? null);
 
 	const tabs: ReadonlyArray<{ href: ResolvedPathname; label: string }> = [

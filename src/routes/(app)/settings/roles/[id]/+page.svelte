@@ -71,7 +71,7 @@
 			}
 		};
 	}
-	const query = $derived(roleDetailQuery(roleId));
+	const query = roleDetailQuery(() => roleId);
 	const role = $derived(query.data ?? null);
 	const breadcrumbs = $derived<BreadcrumbItem[]>([
 		{ label: 'Settings' },

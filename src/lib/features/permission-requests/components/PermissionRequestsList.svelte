@@ -6,7 +6,7 @@
 	import type { ResolvedPathname } from '$app/types';
 	import { Badge, Button, DataTable, EmptyState, type DataTableColumn } from '$ui';
 	import { Icon, Inbox, Plus } from '$icons';
-	import { permissionRequestsListQuery } from '$features/permission-requests/queries';
+	import { permissionRequestsInfiniteQuery } from '$features/permission-requests/queries';
 	import { stateBadge, daysOrIndefinite } from '$features/permission-requests/view-models';
 	import type { PermissionRequestDto } from '$features/permission-requests/schemas';
 	import type { ListRole } from '$features/permission-requests/api';
@@ -22,7 +22,7 @@
 		(page.url.searchParams.get('role') as ListRole | null) ?? 'requester'
 	);
 
-	const query = $derived(permissionRequestsListQuery(role));
+	const list = permissionRequestsInfiniteQuery(() => role);
 
 	let createOpen = $state(false);
 
@@ -36,19 +36,11 @@
 		});
 	}
 
-	const requests = $derived(query.data?.items ?? []);
+	const requests = $derived(list.items);
 
-	const tableState = $derived(
-		query.isPending
-			? 'loading'
-			: query.isError
-				? 'error'
-				: requests.length === 0
-					? 'empty'
-					: 'ready'
-	);
+	const tableState = $derived(list.state === 'pending' ? 'loading' : list.state);
 
-	const listErrorCopy = $derived(getListErrorMessage(query.error, 'permission requests'));
+	const listErrorCopy = $derived(getListErrorMessage(list.query.error, 'permission requests'));
 
 	const columns: DataTableColumn<PermissionRequestDto>[] = [
 		{
@@ -167,6 +159,15 @@
 			</EmptyState>
 		{/snippet}
 	</DataTable.Root>
+
+	<!-- Infinite scroll sentinel: the same pattern as the leads list -->
+	<div bind:this={list.sentinelRef} class="h-px w-full" aria-hidden="true"></div>
+
+	{#if list.isFetchingNextPage}
+		<p class="caption text-fg-muted text-center" aria-live="polite">Loading more…</p>
+	{:else if !list.hasNextPage && requests.length > 0}
+		<p class="caption text-fg-subtle text-center">End of results</p>
+	{/if}
 </div>
 
 <CreatePermissionRequestDrawer bind:open={createOpen} onOpenChange={(o) => (createOpen = o)} />

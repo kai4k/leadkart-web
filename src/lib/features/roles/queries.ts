@@ -25,12 +25,15 @@ export function rolesListQuery() {
 	}));
 }
 
-export function roleDetailQuery(roleId: string) {
-	return createQuery(() => ({
-		queryKey: rolesKeys.detail(roleId),
-		queryFn: ({ signal }) => api.getRole(roleId, signal),
-		enabled: Boolean(roleId)
-	}));
+export function roleDetailQuery(getRoleId: () => string) {
+	return createQuery(() => {
+		const roleId = getRoleId();
+		return {
+			queryKey: rolesKeys.detail(roleId),
+			queryFn: ({ signal }) => api.getRole(roleId, signal),
+			enabled: Boolean(roleId)
+		};
+	});
 }
 
 export function updateRoleMutation() {

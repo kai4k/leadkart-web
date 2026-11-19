@@ -5,7 +5,6 @@
 	import { SvelteURL } from 'svelte/reactivity';
 	import type { ResolvedPathname } from '$app/types';
 	import {
-		Alert,
 		Avatar,
 		Badge,
 		Button,
@@ -28,7 +27,6 @@
 	} from '$icons';
 	import {
 		usersListQuery,
-		usersListTruncatedQuery,
 		reactivateUserMutation,
 		bulkUserStatusMutation
 	} from '$features/users/queries';
@@ -39,6 +37,7 @@
 	import { getListErrorMessage } from '$api/error-messages';
 	import { createBulkSelection, createListPagination } from '#lib/hooks/index.ts';
 	import { BulkActionBar, type BulkAction } from '#lib/components/data/index.ts';
+	import UsersTruncatedAlert from './UsersTruncatedAlert.svelte';
 	import CreateUserDrawer from './CreateUserDrawer.svelte';
 	import DeactivateUserDialog from './DeactivateUserDialog.svelte';
 	import RoleAssignmentDrawer from './RoleAssignmentDrawer.svelte';
@@ -83,7 +82,6 @@
 	}
 
 	const listQuery = usersListQuery();
-	const truncatedQuery = usersListTruncatedQuery();
 	const rolesQuery = rolesListQuery();
 	const reactivate = reactivateUserMutation();
 	const bulkStatus = bulkUserStatusMutation();
@@ -319,11 +317,7 @@
 		</div>
 	</header>
 
-	{#if truncatedQuery.data}
-		<Alert variant="warning">
-			Showing the first {userList.length} members. The team is larger than this list can load.
-		</Alert>
-	{/if}
+	<UsersTruncatedAlert count={userList.length} />
 
 	<nav class="cluster cluster-tight" aria-label="Filter members by status">
 		{#each statusOptions as opt (opt.value)}

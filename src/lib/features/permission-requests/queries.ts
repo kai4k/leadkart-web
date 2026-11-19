@@ -7,8 +7,9 @@
  */
 import { createQuery } from '@tanstack/svelte-query';
 import { createResourceMutation } from '#lib/api/mutations.ts';
+import { createInfiniteList, type InfiniteList } from '#lib/hooks/index.ts';
 import * as api from './api';
-import type { CreatePermissionRequest } from './schemas';
+import type { CreatePermissionRequest, PermissionRequestDto } from './schemas';
 import type { ListRole } from './api';
 
 const permissionRequestsKeys = {
@@ -17,19 +18,25 @@ const permissionRequestsKeys = {
 	detail: (id: string) => [...permissionRequestsKeys.all, 'detail', id] as const
 };
 
-export function permissionRequestsListQuery(role: ListRole = 'requester') {
-	return createQuery(() => ({
-		queryKey: permissionRequestsKeys.list(role),
-		queryFn: ({ signal }) => api.listPermissionRequests({ role }, signal)
-	}));
+/** Every page of the caller's requests, loaded as the list scrolls; `getRole` is read reactively. */
+export function permissionRequestsInfiniteQuery(
+	getRole: () => ListRole = () => 'requester'
+): InfiniteList<PermissionRequestDto> {
+	return createInfiniteList<PermissionRequestDto>({
+		queryKey: () => permissionRequestsKeys.list(getRole()),
+		queryFn: ({ cursor, signal }) => api.listPermissionRequests({ role: getRole(), cursor }, signal)
+	});
 }
 
-export function permissionRequestDetailQuery(id: string) {
-	return createQuery(() => ({
-		queryKey: permissionRequestsKeys.detail(id),
-		queryFn: ({ signal }) => api.getPermissionRequest(id, signal),
-		enabled: Boolean(id)
-	}));
+export function permissionRequestDetailQuery(getId: () => string) {
+	return createQuery(() => {
+		const id = getId();
+		return {
+			queryKey: permissionRequestsKeys.detail(id),
+			queryFn: ({ signal }) => api.getPermissionRequest(id, signal),
+			enabled: Boolean(id)
+		};
+	});
 }
 
 export function createPermissionRequestMutation() {

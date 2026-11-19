@@ -12,4 +12,5 @@ export { default as DeactivateUserDialog } from './components/DeactivateUserDial
 export { default as RoleAssignmentDrawer } from './components/RoleAssignmentDrawer.svelte';
 export { default as ManagerSelectorDrawer } from './components/ManagerSelectorDrawer.svelte';
 export { default as PermissionOverridesPanel } from './components/PermissionOverridesPanel.svelte';
+export { default as UsersTruncatedAlert } from './components/UsersTruncatedAlert.svelte';
 export { default as UserDetailTabs } from './components/UserDetailTabs.svelte';

@@ -3,7 +3,7 @@
 	import { Users } from '$icons';
 	import { usersListQuery } from '$features/users/queries';
 	import { buildOrgTree } from '$features/users/view-models-hierarchy';
-	import { OrgTreeNode } from '$features/users';
+	import { OrgTreeNode, UsersTruncatedAlert } from '$features/users';
 
 	/**
 	 * Org chart — renders the tenant's reporting structure as a tree
@@ -39,6 +39,8 @@
 			task visibility and management chains.
 		</p>
 	</header>
+
+	<UsersTruncatedAlert count={users.length} />
 
 	{#if listQuery.isPending}
 		<div class="stack stack-relaxed" aria-busy="true" aria-label="Loading hierarchy">

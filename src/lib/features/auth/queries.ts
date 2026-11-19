@@ -54,13 +54,16 @@ export function myCapabilitiesQuery() {
  * Caller's own membership profile. membershipId comes from the session
  * principal (injected by the layout or caller).
  */
-export function myProfileQuery(membershipId: string) {
-	return createQuery(() => ({
-		queryKey: profileKey(membershipId),
-		queryFn: ({ signal }) => api.getMyProfile(membershipId, signal),
-		enabled: Boolean(membershipId),
-		staleTime: 2 * 60_000
-	}));
+export function myProfileQuery(getMembershipId: () => string) {
+	return createQuery(() => {
+		const membershipId = getMembershipId();
+		return {
+			queryKey: profileKey(membershipId),
+			queryFn: ({ signal }) => api.getMyProfile(membershipId, signal),
+			enabled: Boolean(membershipId),
+			staleTime: 2 * 60_000
+		};
+	});
 }
 
 // ── Sessions ───────────────────────────────────────────────────────

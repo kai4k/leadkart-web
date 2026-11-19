@@ -22,7 +22,7 @@
 	const capsQuery = myCapabilitiesQuery();
 	const callerMembershipId = $derived(capsQuery.data?.membership_id ?? '');
 
-	const query = $derived(permissionRequestDetailQuery(id));
+	const query = permissionRequestDetailQuery(() => id);
 	const req = $derived(query.data ?? null);
 
 	const approveMutation = approvePermissionRequestMutation();
