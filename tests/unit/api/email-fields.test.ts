@@ -79,3 +79,37 @@ describe('every form schema uses the shared email rule', () => {
 		);
 	});
 });
+
+/**
+ * ReDoS guard: these schemas run in form actions BEFORE any auth check, so an
+ * unauthenticated POST must not be able to occupy the event loop. 254 is Go's own cap.
+ */
+describe('email fields are length-bounded and linear', () => {
+	const ADVERSARIAL = [`a@${  '.'.repeat(500_000)  }@`, `a@${  'a.'.repeat(250_000)}`];
+
+	it.each(['formEmailField', 'lookupEmailField'] as const)(
+		'%s rejects a 500 000-character adversarial input in under 50 ms',
+		(name) => {
+			const field = name === 'formEmailField' ? formEmailField : lookupEmailField;
+			for (const input of ADVERSARIAL) {
+				const start = performance.now();
+				expect(field.safeParse(input).success).toBe(false);
+				expect(performance.now() - start).toBeLessThan(50);
+			}
+		}
+	);
+
+	it('accepts 254 characters and rejects 255', () => {
+		const at = (n: number) => `${'a'.repeat(n - '@b.co'.length)  }@b.co`;
+		for (const field of [formEmailField, lookupEmailField]) {
+			expect(field.safeParse(at(254)).success).toBe(true);
+			expect(field.safeParse(at(255)).success).toBe(false);
+		}
+	});
+
+	it('the linear pattern still rejects empty domain labels', () => {
+		for (const bad of ['a@b..c', 'a@.b.c', 'a@b.c.']) {
+			expect(formEmailField.safeParse(bad).success, bad).toBe(false);
+		}
+	});
+});
