@@ -240,6 +240,8 @@ test.describe('Tenant user management — negative', () => {
 		await page.goto('/settings/users');
 		// DataTable surfaces the typed ServerError copy via the shared describer; server
 		// message strings are not rendered (CLAUDE.md rule 12).
-		await expect(page.getByText(/server error/i).first()).toBeVisible({ timeout: 5000 });
+		await expect(page.getByText(/something went wrong on our side/i).first()).toBeVisible({
+			timeout: 5000
+		});
 	});
 });

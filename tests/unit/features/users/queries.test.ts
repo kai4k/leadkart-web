@@ -1,20 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, type MutationObserver } from '@tanstack/svelte-query';
 import { ApiError } from '#lib/api/errors.ts';
-import type * as TanstackQuery from '@tanstack/svelte-query';
 
 const h = vi.hoisted(() => ({ qc: undefined as unknown as QueryClient }));
 // Real mutation machinery against a real QueryClient; only the context lookup and the Svelte
 // binding are replaced.
-vi.mock('@tanstack/svelte-query', async (importOriginal) => {
-	const actual = await importOriginal<typeof TanstackQuery>();
-	return {
-		...actual,
-		createQuery: vi.fn(),
-		useQueryClient: () => h.qc,
-		createMutation: (opts: () => never) => new actual.MutationObserver(h.qc, opts())
-	};
-});
+vi.mock('@tanstack/svelte-query', async (importOriginal) =>
+	(await import('../../helpers/real-mutations.svelte.ts')).withRealMutations(
+		await importOriginal(),
+		() => h.qc
+	)
+);
 const toastMock = vi.hoisted(() => ({ success: vi.fn(), warning: vi.fn(), error: vi.fn() }));
 vi.mock('$ui', () => ({ toast: toastMock }));
 const gw = vi.hoisted(() => ({

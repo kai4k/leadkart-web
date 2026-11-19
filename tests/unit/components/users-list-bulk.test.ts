@@ -1,44 +1,36 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
-import { QueryClient } from '@tanstack/svelte-query';
-import type * as TanstackQuery from '@tanstack/svelte-query';
+import type { QueryClient } from '@tanstack/svelte-query';
 
 const h = vi.hoisted(() => ({ qc: undefined as unknown as QueryClient, users: [] as unknown[] }));
 // Real mutation machinery (settling, toasts, invalidation) against a real QueryClient; queries
 // are replaced with fixed data.
-vi.mock('@tanstack/svelte-query', async (importOriginal) => {
-	const actual = await importOriginal<typeof TanstackQuery>();
-	return {
-		...actual,
-		useQueryClient: () => h.qc,
-		createMutation: (opts: () => never) => {
-			const observer = new actual.MutationObserver(h.qc, opts());
-			// The Svelte binding exposes mutateAsync; the bare observer's mutate() is that promise.
-			return Object.assign(observer, {
-				mutateAsync: (vars: never) => observer.mutate(vars),
-				isPending: false
-			});
-		},
-		createQuery: (
-			opts: () => { queryKey: readonly string[]; select?: (r: unknown) => unknown }
-		) => {
-			const o = opts();
-			const root = o.queryKey[0];
-			const raw =
-				root === 'users'
-					? { items: h.users, truncated: false }
-					: root === 'roles'
-						? { roles: [] }
-						: undefined;
-			return {
-				data: o.select && raw ? o.select(raw) : raw,
-				isPending: false,
-				isError: false,
-				error: null
-			};
+vi.mock('@tanstack/svelte-query', async (importOriginal) =>
+	(await import('../helpers/real-mutations.svelte.ts')).withRealMutations(
+		await importOriginal(),
+		() => h.qc,
+		{
+			createQuery: (
+				opts: () => { queryKey: readonly string[]; select?: (r: unknown) => unknown }
+			) => {
+				const o = opts();
+				const root = o.queryKey[0];
+				const raw =
+					root === 'users'
+						? { items: h.users, truncated: false }
+						: root === 'roles'
+							? { roles: [] }
+							: undefined;
+				return {
+					data: o.select && raw ? o.select(raw) : raw,
+					isPending: false,
+					isError: false,
+					error: null
+				};
+			}
 		}
-	};
-});
+	)
+);
 const toastMock = vi.hoisted(() => ({ success: vi.fn(), warning: vi.fn(), error: vi.fn() }));
 vi.mock('$ui', async (importOriginal) => ({
 	...(await importOriginal<Record<string, unknown>>()),
@@ -53,6 +45,8 @@ const gw = vi.hoisted(() => ({ deactivateUser: vi.fn(), reactivateUser: vi.fn() 
 vi.mock('#lib/features/users/api.ts', () => gw);
 vi.mock('#lib/features/users/api', () => gw);
 
+import { createQueryClient } from '#lib/api/query-client.ts';
+import { ApiError } from '#lib/api/errors.ts';
 import UsersList from '#lib/features/users/components/UsersList.svelte';
 
 const user = (n: number) => ({
@@ -74,7 +68,8 @@ let component: ReturnType<typeof mount> | undefined;
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	h.qc = new QueryClient();
+	// The real client: its MutationCache owns the one global error toast.
+	h.qc = createQueryClient();
 	vi.spyOn(h.qc, 'invalidateQueries').mockResolvedValue(undefined);
 	h.users = [user(1), user(2), user(3)];
 	target = document.body.appendChild(document.createElement('div'));
@@ -128,5 +123,26 @@ describe('UsersList bulk status change', () => {
 			expect(retry).toBeDefined();
 			expect((retry as HTMLButtonElement).disabled).toBe(false);
 		});
+	});
+	it('when every call fails: the whole selection stays, exactly one error toast, no summary toast', async () => {
+		gw.deactivateUser.mockRejectedValue(new ApiError(500));
+		for (const b of checkboxes()) b.click();
+		flushSync();
+
+		buttonNamed('Deactivate')?.click();
+		// Deactivate asks for confirmation first.
+		await vi.waitFor(() => expect(buttonNamed('Deactivate')).toBeDefined());
+		const confirm = [...document.querySelectorAll('button')]
+			.filter((b) => b.textContent?.trim() === 'Deactivate')
+			.at(-1);
+		confirm?.click();
+
+		await vi.waitFor(() => expect(toastMock.error).toHaveBeenCalledTimes(1));
+		flushSync();
+		expect(toastMock.error).toHaveBeenCalledWith(new ApiError(500).message);
+		expect(toastMock.warning).not.toHaveBeenCalled();
+		expect(toastMock.success).not.toHaveBeenCalled();
+		expect(gw.deactivateUser).toHaveBeenCalledTimes(3);
+		expect(checkboxes().every(isChecked)).toBe(true);
 	});
 });

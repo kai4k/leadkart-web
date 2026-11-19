@@ -1,22 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, type MutationObserver } from '@tanstack/svelte-query';
-import type * as TanstackQuery from '@tanstack/svelte-query';
 
 const h = vi.hoisted(() => ({ qc: undefined as unknown as QueryClient }));
-vi.mock('@tanstack/svelte-query', async (importOriginal) => {
-	const actual = await importOriginal<typeof TanstackQuery>();
-	return {
-		...actual,
-		createQuery: vi.fn(),
-		useQueryClient: () => h.qc,
-		createMutation: (opts: () => never) => new actual.MutationObserver(h.qc, opts())
-	};
-});
+vi.mock('@tanstack/svelte-query', async (importOriginal) =>
+	(await import('../../../helpers/real-mutations.svelte.ts')).withRealMutations(
+		await importOriginal(),
+		() => h.qc
+	)
+);
 vi.mock('$ui', () => ({ toast: { success: vi.fn(), warning: vi.fn(), error: vi.fn() } }));
 const gw = vi.hoisted(() => ({
 	registerTenant: vi.fn(),
 	suspendTenant: vi.fn(),
-	activateTenant: vi.fn()
+	activateTenant: vi.fn(),
+	restoreTenant: vi.fn(),
+	markForDeletion: vi.fn()
 }));
 const nav = vi.hoisted(() => ({ refreshAll: vi.fn(() => Promise.resolve()) }));
 vi.mock('$app/navigation', () => nav);
@@ -25,7 +23,9 @@ vi.mock('#lib/features/operator/tenants/api', () => gw);
 
 import {
 	activateTenantMutation,
+	markForDeletionMutation,
 	registerTenantMutation,
+	restoreTenantMutation,
 	suspendTenantMutation
 } from '#lib/features/operator/tenants/queries.ts';
 
@@ -33,6 +33,8 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	h.qc = new QueryClient();
 });
+
+type Run = { mutate: (vars: never) => Promise<void> };
 
 describe('tenant mutations', () => {
 	it('register shows its error in the drawer banner, so the global toast is skipped', () => {
@@ -50,6 +52,8 @@ describe('tenant mutations', () => {
 			});
 			gw.suspendTenant.mockResolvedValue(undefined);
 			gw.activateTenant.mockResolvedValue(undefined);
+			gw.restoreTenant.mockResolvedValue(undefined);
+			gw.markForDeletion.mockResolvedValue(undefined);
 		});
 		const suspend = () =>
 			suspendTenantMutation() as unknown as MutationObserver<
@@ -75,5 +79,26 @@ describe('tenant mutations', () => {
 			await activate.mutate('t1');
 			expect(nav.refreshAll).not.toHaveBeenCalled();
 		});
+
+		it.each([
+			['activate', (vars: never) => (activateTenantMutation() as never as Run).mutate(vars), 't1'],
+			['restore', (vars: never) => (restoreTenantMutation() as never as Run).mutate(vars), 't1'],
+			[
+				'mark for deletion',
+				(vars: never) => (markForDeletionMutation() as never as Run).mutate(vars),
+				{ id: 't1', reason: 'x' }
+			]
+		])(
+			'%s refreshes the server-loaded tenant inside the scope tree only',
+			async (_n, run, vars) => {
+				window.history.pushState({}, '', '/operator/tenants');
+				await run(vars as never);
+				expect(nav.refreshAll).not.toHaveBeenCalled();
+				window.history.pushState({}, '', '/operator/scope/profile');
+				await run(vars as never);
+				expect(nav.refreshAll).toHaveBeenCalledTimes(1);
+				expect(invalidated).toEqual([['tenants'], ['tenants']]);
+			}
+		);
 	});
 });

@@ -505,9 +505,10 @@ test.describe('Inventory — adjust stock', () => {
 				path: `/api/v1/inventory/products/${productIn.id}/movements`,
 				status: 422,
 				body: {
-					code: 'negative_stock_disallowed',
+					// Go's envelope: error + errors: { field: [messages] }.
+					error: 'validation_failed',
 					message: 'Adjustment would drive stock below zero',
-					fields: { delta: 'Would drive stock below zero' }
+					errors: { delta: ['Would drive stock below zero'] }
 				}
 			}
 		]);
@@ -518,7 +519,7 @@ test.describe('Inventory — adjust stock', () => {
 		await page.locator('input[role="spinbutton"]').last().fill('-1000');
 		await page.locator('input[role="spinbutton"]').last().press('Tab');
 		await page.locator('button[type="submit"][form="adjust-stock-form"]').click();
-		// Server's 422 with `fields.delta: 'Would drive stock below zero'` surfaces inline under the NumberInput.
+		// Go's 422 field error (errors.delta) reaches the form.
 		await expect(page.getByText(/drive stock below zero/i).first()).toBeVisible({
 			timeout: 5000
 		});

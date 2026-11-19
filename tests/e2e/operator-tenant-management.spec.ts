@@ -113,7 +113,7 @@ test.describe('Operator tenants list', () => {
 		await expect(
 			page
 				.locator('#main-content')
-				.getByText(/server error/i)
+				.getByText(/something went wrong on our side/i)
 				.first()
 		).toBeVisible({
 			timeout: 5000

@@ -1,5 +1,6 @@
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { resolve } from 'path';
+import { defaultClientConditions } from 'vite';
 import { defineConfig } from 'vitest/config';
 import { aliases } from './aliases.js';
 
@@ -10,8 +11,6 @@ import { aliases } from './aliases.js';
 export default defineConfig({
 	plugins: [svelte()],
 	resolve: {
-		// Svelte's client runtime, so component tests can mount() into jsdom.
-		conditions: ['browser'],
 		alias: {
 			...Object.fromEntries(
 				Object.entries(aliases).map(([key, target]) => [key, resolve(__dirname, target)])
@@ -28,9 +27,32 @@ export default defineConfig({
 		}
 	},
 	test: {
-		environment: 'jsdom',
-		setupFiles: ['./tests/unit/setup.ts'],
-		include: ['tests/unit/**/*.test.ts', 'src/**/*.test.ts'],
+		// Two projects, so each test runs in the environment its code runs in:
+		//   server: tests/unit/server/** (BFF modules) in plain node, default (node) resolve
+		//           conditions, no DOM: a browser global used on the server fails here.
+		//   client: everything else in jsdom with Svelte's client runtime (`browser` condition,
+		//           kept next to Vite's own client conditions) so component tests can mount().
+		projects: [
+			{
+				extends: true,
+				test: {
+					name: 'server',
+					environment: 'node',
+					include: ['tests/unit/server/**/*.test.ts']
+				}
+			},
+			{
+				extends: true,
+				resolve: { conditions: ['browser', ...defaultClientConditions] },
+				test: {
+					name: 'client',
+					environment: 'jsdom',
+					setupFiles: ['./tests/unit/setup.ts'],
+					include: ['tests/unit/**/*.test.ts', 'src/**/*.test.ts'],
+					exclude: ['tests/unit/server/**']
+				}
+			}
+		],
 		coverage: {
 			provider: 'v8',
 			reporter: ['text', 'html', 'lcov', 'json-summary'],
