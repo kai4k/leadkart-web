@@ -59,6 +59,7 @@ export const CapabilitiesDto = z
 		is_platform: z.boolean(),
 		is_super_user: z.boolean(),
 		permissions: z.array(z.string()),
+		effective_permissions: z.array(z.string()),
 		roles: z.array(CapabilityRoleDto)
 	})
 	.passthrough();
@@ -3760,10 +3761,23 @@ At most one pending request per (membership, permission) tuple.
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: CreatePermissionRequestResponse,
 		errors: [
+			{
+				status: 403,
+				description: `The route does not support the &#x60;X-Tenant-Id&#x60; operator scope (it acts on the
+caller&#x27;s own tenant only) and the header selected a different tenant
+(&#x60;tenant_scope_not_supported&#x60;, ADR 0039).
+`,
+				schema: ErrorResponse
+			},
 			{
 				status: 409,
 				description: `Another pending request already exists for this (membership, permission) tuple`,
@@ -3800,6 +3814,11 @@ decision. Keyset-paginated per ADR 0038.
 				name: 'page_size',
 				type: 'Query',
 				schema: z.number().int().gte(1).lte(200).optional().default(50)
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: ListPermissionRequestsResponse,
@@ -3807,6 +3826,14 @@ decision. Keyset-paginated per ADR 0038.
 			{
 				status: 400,
 				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `The route does not support the &#x60;X-Tenant-Id&#x60; operator scope (it acts on the
+caller&#x27;s own tenant only) and the header selected a different tenant
+(&#x60;tenant_scope_not_supported&#x60;, ADR 0039).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -3825,10 +3852,23 @@ collapse to 404 per ADR 0044 enumeration-safety canon.
 				name: 'requestId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: PermissionRequestDto,
 		errors: [
+			{
+				status: 403,
+				description: `The route does not support the &#x60;X-Tenant-Id&#x60; operator scope (it acts on the
+caller&#x27;s own tenant only) and the header selected a different tenant
+(&#x60;tenant_scope_not_supported&#x60;, ADR 0039).
+`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -3864,13 +3904,18 @@ MUST be either the requester&#x27;s manager OR carry &#x60;is_platform&#x3D;true
 				name: 'requestId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
 		errors: [
 			{
 				status: 403,
-				description: `Caller is not the manager and not a Platform operator`,
+				description: `Caller is not the manager and not a Platform operator, OR &#x60;X-Tenant-Id&#x60; selected a foreign tenant (&#x60;tenant_scope_not_supported&#x60;)`,
 				schema: ErrorResponse
 			},
 			{
@@ -3909,10 +3954,23 @@ ADR 0044 enumeration-safety canon.
 				name: 'requestId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 403,
+				description: `The route does not support the &#x60;X-Tenant-Id&#x60; operator scope (it acts on the
+caller&#x27;s own tenant only) and the header selected a different tenant
+(&#x60;tenant_scope_not_supported&#x60;, ADR 0039).
+`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -3948,13 +4006,18 @@ Deny per ADR 0055 audit canon. Same caller-authorization as Approve.
 				name: 'requestId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
 		errors: [
 			{
 				status: 403,
-				description: `Caller is not the manager and not a Platform operator`,
+				description: `Caller is not the manager and not a Platform operator, OR &#x60;X-Tenant-Id&#x60; selected a foreign tenant (&#x60;tenant_scope_not_supported&#x60;)`,
 				schema: ErrorResponse
 			},
 			{
@@ -4233,7 +4296,10 @@ the lead to the tenant&#x27;s CRM (via the LeadPurchasedV1 event consumed by CRM
 			},
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `The route does not support the &#x60;X-Tenant-Id&#x60; operator scope (it acts on the
+caller&#x27;s own tenant only) and the header selected a different tenant
+(&#x60;tenant_scope_not_supported&#x60;, ADR 0039).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -4724,13 +4790,31 @@ H11.
 		method: 'get',
 		path: '/api/v1/roles',
 		alias: 'getApiv1roles',
+		description: `Requires &#x60;identity.roles.view&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+`,
 		requestFormat: 'json',
-		response: ListRolesResponse
+		parameters: [
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
+			}
+		],
+		response: ListRolesResponse,
+		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			}
+		]
 	},
 	{
 		method: 'post',
 		path: '/api/v1/roles',
 		alias: 'postApiv1roles',
+		description: `Requires &#x60;identity.roles.create&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -4742,23 +4826,49 @@ H11.
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
-		response: z.object({ role_id: z.string().uuid() }).passthrough()
+		response: z.object({ role_id: z.string().uuid() }).passthrough(),
+		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			}
+		]
 	},
 	{
 		method: 'get',
 		path: '/api/v1/roles/:roleId',
 		alias: 'getApiv1rolesRoleId',
+		description: `Requires &#x60;identity.roles.view&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
 				name: 'roleId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
-		response: RoleDto
+		response: RoleDto,
+		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			}
+		]
 	},
 	{
 		method: 'patch',
@@ -4767,6 +4877,7 @@ H11.
 		description: `Both fields optional. Empty &#x60;name&#x60; skips rename. Omitting
 &#x60;hierarchy_level&#x60; (or sending &#x60;null&#x60;) skips re-level — using a
 pointer field instead of a -1 sentinel keeps the wire shape clean.
+Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -4784,10 +4895,20 @@ pointer field instead of a -1 sentinel keeps the wire shape clean.
 				name: 'roleId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -4809,15 +4930,29 @@ pointer field instead of a -1 sentinel keeps the wire shape clean.
 		method: 'delete',
 		path: '/api/v1/roles/:roleId',
 		alias: 'deleteApiv1rolesRoleId',
+		description: `Requires &#x60;identity.roles.delete&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
 				name: 'roleId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
-		response: z.void()
+		response: z.void(),
+		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			}
+		]
 	},
 	{
 		method: 'patch',
@@ -4841,6 +4976,7 @@ DB layer (composite FK + cycle trigger). Surfaces as 422
 
 Optional &#x60;reason&#x60; (10-1024 chars) is recorded onto the new
 edge OR the cleared edge for audit.
+Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -4858,6 +4994,11 @@ edge OR the cleared edge for audit.
 				name: 'roleId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -4865,6 +5006,11 @@ edge OR the cleared edge for audit.
 			{
 				status: 400,
 				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
 				schema: ErrorResponse
 			},
 			{
@@ -4895,6 +5041,7 @@ retrying.
 		description: `Permission names MUST match the closed
 &#x60;permission.IdentityPermissions&#x60; catalogue; unknown names surface
 as 422 (&#x60;permission_unknown&#x60;).
+Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Conferring a permission the caller does not hold is rejected with &#x60;grant_exceeds_authority&#x60;.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -4912,10 +5059,20 @@ as 422 (&#x60;permission_unknown&#x60;).
 				name: 'roleId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -4932,6 +5089,8 @@ as 422 (&#x60;permission_unknown&#x60;).
 		method: 'post',
 		path: '/api/v1/roles/:roleId/permissions/grant',
 		alias: 'postApiv1rolesRoleIdpermissionsgrant',
+		description: `Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Conferring a permission the caller does not hold is rejected with &#x60;grant_exceeds_authority&#x60;.
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -4948,10 +5107,20 @@ as 422 (&#x60;permission_unknown&#x60;).
 				name: 'roleId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -4968,6 +5137,8 @@ as 422 (&#x60;permission_unknown&#x60;).
 		method: 'post',
 		path: '/api/v1/roles/:roleId/permissions/revoke',
 		alias: 'postApiv1rolesRoleIdpermissionsrevoke',
+		description: `Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -4984,10 +5155,20 @@ as 422 (&#x60;permission_unknown&#x60;).
 				name: 'roleId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -5456,6 +5637,10 @@ land per Stripe listing-endpoint canon.
 		method: 'post',
 		path: '/api/v1/tenants',
 		alias: 'postApiv1tenants',
+		description: `Platform operators only (is_platform + slug anchor) — ADR 0068. Tenant
+onboarding is operator-led (ADR 0053 &quot;no public sign-up surface&quot;).
+Requires &#x60;platform.tenants.create&#x60;.
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -5477,8 +5662,23 @@ land per Stripe listing-endpoint canon.
 				schema: ErrorResponse
 			},
 			{
+				status: 401,
+				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
+			{
 				status: 409,
 				description: `Email already has an active membership in another tenant`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the seconds to wait.`,
 				schema: ErrorResponse
 			}
 		]
@@ -5487,16 +5687,28 @@ land per Stripe listing-endpoint canon.
 		method: 'get',
 		path: '/api/v1/tenants/:tenantId',
 		alias: 'getApiv1tenantsTenantId',
+		description: `Requires &#x60;identity.tenants.view&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
 				name: 'tenantId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: TenantDto,
 		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -5519,6 +5731,11 @@ land per Stripe listing-endpoint canon.
 				name: 'tenantId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -5539,6 +5756,8 @@ land per Stripe listing-endpoint canon.
 		method: 'patch',
 		path: '/api/v1/tenants/:tenantId/admin-contact',
 		alias: 'patchApiv1tenantsTenantIdadminContact',
+		description: `Requires &#x60;identity.tenants.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -5555,10 +5774,20 @@ land per Stripe listing-endpoint canon.
 				name: 'tenantId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -5575,6 +5804,8 @@ land per Stripe listing-endpoint canon.
 		method: 'get',
 		path: '/api/v1/tenants/:tenantId/audit/events',
 		alias: 'getApiv1tenantsTenantIdauditevents',
+		description: `Requires &#x60;identity.tenants.view&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -5591,14 +5822,28 @@ land per Stripe listing-endpoint canon.
 				name: 'page_size',
 				type: 'Query',
 				schema: z.number().int().gte(1).lte(200).optional().default(50)
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
-		response: ListAuditEventsResponse
+		response: ListAuditEventsResponse,
+		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			}
+		]
 	},
 	{
 		method: 'patch',
 		path: '/api/v1/tenants/:tenantId/display-preferences',
 		alias: 'patchApiv1tenantsTenantIddisplayPreferences',
+		description: `Requires &#x60;identity.tenants.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -5615,10 +5860,20 @@ land per Stripe listing-endpoint canon.
 				name: 'tenantId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -5656,6 +5911,11 @@ with 422 (&#x60;platform_tenant_undeletable&#x60;).
 				name: 'tenantId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -5676,6 +5936,8 @@ with 422 (&#x60;platform_tenant_undeletable&#x60;).
 		method: 'patch',
 		path: '/api/v1/tenants/:tenantId/profile',
 		alias: 'patchApiv1tenantsTenantIdprofile',
+		description: `Requires &#x60;identity.tenants.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -5692,10 +5954,20 @@ with 422 (&#x60;platform_tenant_undeletable&#x60;).
 				name: 'tenantId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -5723,6 +5995,11 @@ with 422 (&#x60;platform_tenant_undeletable&#x60;).
 				name: 'tenantId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -5743,6 +6020,8 @@ with 422 (&#x60;platform_tenant_undeletable&#x60;).
 		method: 'patch',
 		path: '/api/v1/tenants/:tenantId/settings',
 		alias: 'patchApiv1tenantsTenantIdsettings',
+		description: `Requires &#x60;identity.tenants.update_settings&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -5759,10 +6038,20 @@ with 422 (&#x60;platform_tenant_undeletable&#x60;).
 				name: 'tenantId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -5782,6 +6071,7 @@ with 422 (&#x60;platform_tenant_undeletable&#x60;).
 		description: `Empty strings clear the corresponding declaration; the aggregate
 accepts a zero Statutory VO for tenants that haven&#x27;t yet
 onboarded their compliance IDs.
+Requires &#x60;identity.tenants.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -5799,10 +6089,20 @@ onboarded their compliance IDs.
 				name: 'tenantId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -5836,6 +6136,11 @@ onboarded their compliance IDs.
 				name: 'tenantId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -5856,6 +6161,8 @@ onboarded their compliance IDs.
 		method: 'get',
 		path: '/api/v1/users',
 		alias: 'getApiv1users',
+		description: `Requires &#x60;identity.users.view&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -5867,14 +6174,28 @@ onboarded their compliance IDs.
 				name: 'page_size',
 				type: 'Query',
 				schema: z.number().int().gte(1).lte(200).optional().default(50)
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
-		response: ListUsersResponse
+		response: ListUsersResponse,
+		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			}
+		]
 	},
 	{
 		method: 'post',
 		path: '/api/v1/users',
 		alias: 'postApiv1users',
+		description: `Requires &#x60;identity.users.create&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -5886,24 +6207,48 @@ onboarded their compliance IDs.
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
-		response: CreateUserResponse
+		response: CreateUserResponse,
+		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			}
+		]
 	},
 	{
 		method: 'get',
 		path: '/api/v1/users/:userId',
 		alias: 'getApiv1usersUserId',
+		description: `Requires &#x60;identity.users.view&#x60; or self (path id equals the caller&#x27;s membership) (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
 				name: 'userId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: UserDto,
 		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -5930,6 +6275,11 @@ the cascade is gated on Platform tier per multi-tenancy.md
 				name: 'userId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -5950,6 +6300,8 @@ the cascade is gated on Platform tier per multi-tenancy.md
 		method: 'post',
 		path: '/api/v1/users/:userId/deactivate',
 		alias: 'postApiv1usersUserIddeactivate',
+		description: `Requires &#x60;identity.users.deactivate&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;).
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -5966,9 +6318,21 @@ the cascade is gated on Platform tier per multi-tenancy.md
 				name: 'userId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
-		response: z.void()
+		response: z.void(),
+		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			}
+		]
 	},
 	{
 		method: 'put',
@@ -5976,6 +6340,7 @@ the cascade is gated on Platform tier per multi-tenancy.md
 		alias: 'putApiv1usersUserIdmanager',
 		description: `ManagerID MUST be a Membership in the same tenant — composite FK
 at the schema layer enforces this; cross-tenant ID surfaces as 422.
+Requires &#x60;identity.users.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;).
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -5993,10 +6358,20 @@ at the schema layer enforces this; cross-tenant ID surfaces as 422.
 				name: 'userId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -6013,16 +6388,28 @@ at the schema layer enforces this; cross-tenant ID surfaces as 422.
 		method: 'delete',
 		path: '/api/v1/users/:userId/manager',
 		alias: 'deleteApiv1usersUserIdmanager',
+		description: `Requires &#x60;identity.users.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;).
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
 				name: 'userId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -6037,6 +6424,7 @@ at the schema layer enforces this; cross-tenant ID surfaces as 422.
 		description: `Empty arrays clear the corresponding overlay. Permission names
 MUST match the closed &#x60;permission.IdentityPermissions&#x60; catalogue;
 unknown names surface as 422 (&#x60;permission_unknown&#x60;).
+Requires &#x60;identity.users.update_permissions&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;). Conferring a permission the caller does not hold is rejected with &#x60;grant_exceeds_authority&#x60;.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -6054,10 +6442,20 @@ unknown names surface as 422 (&#x60;permission_unknown&#x60;).
 				name: 'userId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -6074,6 +6472,8 @@ unknown names surface as 422 (&#x60;permission_unknown&#x60;).
 		method: 'patch',
 		path: '/api/v1/users/:userId/profile',
 		alias: 'patchApiv1usersUserIdprofile',
+		description: `Requires &#x60;identity.users.update&#x60; or self (path id equals the caller&#x27;s membership) (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -6090,10 +6490,20 @@ unknown names surface as 422 (&#x60;permission_unknown&#x60;).
 				name: 'userId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
@@ -6105,6 +6515,8 @@ unknown names surface as 422 (&#x60;permission_unknown&#x60;).
 		method: 'post',
 		path: '/api/v1/users/:userId/reactivate',
 		alias: 'postApiv1usersUserIdreactivate',
+		description: `Requires &#x60;identity.users.reactivate&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;).
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -6116,14 +6528,28 @@ unknown names surface as 422 (&#x60;permission_unknown&#x60;).
 				name: 'userId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
-		response: z.void()
+		response: z.void(),
+		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			}
+		]
 	},
 	{
 		method: 'post',
 		path: '/api/v1/users/:userId/roles',
 		alias: 'postApiv1usersUserIdroles',
+		description: `Requires &#x60;identity.roles.assign&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;). Conferring a permission the caller does not hold is rejected with &#x60;grant_exceeds_authority&#x60;. Only a super user may assign a super-admin role.
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -6140,14 +6566,38 @@ unknown names surface as 422 (&#x60;permission_unknown&#x60;).
 				name: 'userId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
-		response: z.void()
+		response: z.void(),
+		errors: [
+			{
+				status: 400,
+				description: `Malformed id: &#x60;invalid_user_id&#x60; (path) or &#x60;invalid_role_id&#x60; (body &#x60;role_id&#x60;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `&#x60;role_not_found&#x60; — no live role with that id in the target tenant (or the user does not exist)`,
+				schema: ErrorResponse
+			}
+		]
 	},
 	{
 		method: 'delete',
 		path: '/api/v1/users/:userId/roles/:roleId',
 		alias: 'deleteApiv1usersUserIdrolesRoleId',
+		description: `Requires &#x60;identity.roles.revoke&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;).
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -6159,10 +6609,20 @@ unknown names surface as 422 (&#x60;permission_unknown&#x60;).
 				name: 'roleId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 403,
+				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,

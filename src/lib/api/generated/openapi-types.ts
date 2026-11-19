@@ -646,7 +646,12 @@ export interface paths {
 			};
 		};
 		put?: never;
-		/** Register a new tenant + initial admin user */
+		/**
+		 * Register a new tenant + initial admin user
+		 * @description Platform operators only (is_platform + slug anchor) — ADR 0068. Tenant
+		 *     onboarding is operator-led (ADR 0053 "no public sign-up surface").
+		 *     Requires `platform.tenants.create`.
+		 */
 		post: {
 			parameters: {
 				query?: never;
@@ -680,6 +685,8 @@ export interface paths {
 					};
 				};
 				400: components['responses']['BadRequest'];
+				401: components['responses']['Unauthorized'];
+				403: components['responses']['Forbidden'];
 				/** @description Email already has an active membership in another tenant */
 				409: {
 					headers: {
@@ -689,6 +696,7 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -704,11 +712,29 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Get tenant by UUID */
+		/**
+		 * Get tenant by UUID
+		 * @description Requires `identity.tenants.view` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 */
 		get: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path: {
 					tenantId: components['parameters']['TenantId'];
 				};
@@ -725,6 +751,7 @@ export interface paths {
 						'application/json': components['schemas']['TenantDto'];
 					};
 				};
+				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 			};
 		};
@@ -749,7 +776,10 @@ export interface paths {
 		delete?: never;
 		options?: never;
 		head?: never;
-		/** Update tenant legal + display name */
+		/**
+		 * Update tenant legal + display name
+		 * @description Requires `identity.tenants.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 */
 		patch: {
 			parameters: {
 				query?: never;
@@ -763,6 +793,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					tenantId: components['parameters']['TenantId'];
@@ -782,6 +826,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -806,6 +851,7 @@ export interface paths {
 		 * @description Empty strings clear the corresponding declaration; the aggregate
 		 *     accepts a zero Statutory VO for tenants that haven't yet
 		 *     onboarded their compliance IDs.
+		 *     Requires `identity.tenants.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
 		 */
 		patch: {
 			parameters: {
@@ -820,6 +866,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					tenantId: components['parameters']['TenantId'];
@@ -839,6 +899,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -858,7 +919,10 @@ export interface paths {
 		delete?: never;
 		options?: never;
 		head?: never;
-		/** Update tenant admin phone + postal address */
+		/**
+		 * Update tenant admin phone + postal address
+		 * @description Requires `identity.tenants.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 */
 		patch: {
 			parameters: {
 				query?: never;
@@ -872,6 +936,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					tenantId: components['parameters']['TenantId'];
@@ -891,6 +969,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -910,7 +989,10 @@ export interface paths {
 		delete?: never;
 		options?: never;
 		head?: never;
-		/** Update tenant password policy */
+		/**
+		 * Update tenant password policy
+		 * @description Requires `identity.tenants.update_settings` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 */
 		patch: {
 			parameters: {
 				query?: never;
@@ -924,6 +1006,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					tenantId: components['parameters']['TenantId'];
@@ -943,6 +1039,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -962,7 +1059,10 @@ export interface paths {
 		delete?: never;
 		options?: never;
 		head?: never;
-		/** Update tenant locale / time zone / date format / currency */
+		/**
+		 * Update tenant locale / time zone / date format / currency
+		 * @description Requires `identity.tenants.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 */
 		patch: {
 			parameters: {
 				query?: never;
@@ -976,6 +1076,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					tenantId: components['parameters']['TenantId'];
@@ -995,6 +1109,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -1027,6 +1142,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					tenantId: components['parameters']['TenantId'];
@@ -1079,6 +1208,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					tenantId: components['parameters']['TenantId'];
@@ -1133,6 +1276,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					tenantId: components['parameters']['TenantId'];
@@ -1185,6 +1342,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					tenantId: components['parameters']['TenantId'];
@@ -1269,7 +1440,10 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Tenant-scoped audit-event feed (keyset-paginated) */
+		/**
+		 * Tenant-scoped audit-event feed (keyset-paginated)
+		 * @description Requires `identity.tenants.view` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 */
 		get: {
 			parameters: {
 				query?: {
@@ -1277,7 +1451,22 @@ export interface paths {
 					cursor?: components['parameters']['Cursor'];
 					page_size?: components['parameters']['PageSize'];
 				};
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path: {
 					tenantId: components['parameters']['TenantId'];
 				};
@@ -1294,6 +1483,7 @@ export interface paths {
 						'application/json': components['schemas']['ListAuditEventsResponse'];
 					};
 				};
+				403: components['responses']['Forbidden'];
 			};
 		};
 		put?: never;
@@ -1311,7 +1501,10 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** List active members of the caller's tenant (cursor-paginated) */
+		/**
+		 * List active members of the caller's tenant (cursor-paginated)
+		 * @description Requires `identity.users.view` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 */
 		get: {
 			parameters: {
 				query?: {
@@ -1319,7 +1512,22 @@ export interface paths {
 					cursor?: components['parameters']['Cursor'];
 					page_size?: components['parameters']['PageSize'];
 				};
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path?: never;
 				cookie?: never;
 			};
@@ -1334,10 +1542,14 @@ export interface paths {
 						'application/json': components['schemas']['ListUsersResponse'];
 					};
 				};
+				403: components['responses']['Forbidden'];
 			};
 		};
 		put?: never;
-		/** Create a user (find-or-create-by-email, per Auth0/Entra ID canon) */
+		/**
+		 * Create a user (find-or-create-by-email, per Auth0/Entra ID canon)
+		 * @description Requires `identity.users.create` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 */
 		post: {
 			parameters: {
 				query?: never;
@@ -1351,6 +1563,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path?: never;
 				cookie?: never;
@@ -1370,6 +1596,7 @@ export interface paths {
 						'application/json': components['schemas']['CreateUserResponse'];
 					};
 				};
+				403: components['responses']['Forbidden'];
 			};
 		};
 		delete?: never;
@@ -1385,11 +1612,29 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Get one user (membership) by ID */
+		/**
+		 * Get one user (membership) by ID
+		 * @description Requires `identity.users.view` or self (path id equals the caller's membership) (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 */
 		get: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path: {
 					userId: components['parameters']['UserId'];
 				};
@@ -1406,6 +1651,7 @@ export interface paths {
 						'application/json': components['schemas']['UserDto'];
 					};
 				};
+				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 			};
 		};
@@ -1430,7 +1676,10 @@ export interface paths {
 		delete?: never;
 		options?: never;
 		head?: never;
-		/** Update user designation + department + status message */
+		/**
+		 * Update user designation + department + status message
+		 * @description Requires `identity.users.update` or self (path id equals the caller's membership) (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 */
 		patch: {
 			parameters: {
 				query?: never;
@@ -1444,6 +1693,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					userId: components['parameters']['UserId'];
@@ -1463,6 +1726,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['Forbidden'];
 				422: components['responses']['Unprocessable'];
 			};
 		};
@@ -1477,7 +1741,10 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Deactivate a user (reason required) */
+		/**
+		 * Deactivate a user (reason required)
+		 * @description Requires `identity.users.deactivate` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`).
+		 */
 		post: {
 			parameters: {
 				query?: never;
@@ -1491,6 +1758,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					userId: components['parameters']['UserId'];
@@ -1510,6 +1791,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['Forbidden'];
 			};
 		};
 		delete?: never;
@@ -1527,7 +1809,10 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Reactivate a deactivated user */
+		/**
+		 * Reactivate a deactivated user
+		 * @description Requires `identity.users.reactivate` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`).
+		 */
 		post: {
 			parameters: {
 				query?: never;
@@ -1541,6 +1826,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					userId: components['parameters']['UserId'];
@@ -1556,6 +1855,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['Forbidden'];
 			};
 		};
 		delete?: never;
@@ -1573,7 +1873,10 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Assign a role to a user */
+		/**
+		 * Assign a role to a user
+		 * @description Requires `identity.roles.assign` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`). Conferring a permission the caller does not hold is rejected with `grant_exceeds_authority`. Only a super user may assign a super-admin role.
+		 */
 		post: {
 			parameters: {
 				query?: never;
@@ -1587,6 +1890,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					userId: components['parameters']['UserId'];
@@ -1606,6 +1923,25 @@ export interface paths {
 					};
 					content?: never;
 				};
+				/** @description Malformed id: `invalid_user_id` (path) or `invalid_role_id` (body `role_id`) */
+				400: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				403: components['responses']['Forbidden'];
+				/** @description `role_not_found` — no live role with that id in the target tenant (or the user does not exist) */
+				404: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 			};
 		};
 		delete?: never;
@@ -1624,11 +1960,29 @@ export interface paths {
 		get?: never;
 		put?: never;
 		post?: never;
-		/** Revoke a role from a user */
+		/**
+		 * Revoke a role from a user
+		 * @description Requires `identity.roles.revoke` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`).
+		 */
 		delete: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path: {
 					userId: components['parameters']['UserId'];
 					roleId: components['parameters']['RoleId'];
@@ -1644,6 +1998,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -1671,6 +2026,7 @@ export interface paths {
 		 * @description Empty arrays clear the corresponding overlay. Permission names
 		 *     MUST match the closed `permission.IdentityPermissions` catalogue;
 		 *     unknown names surface as 422 (`permission_unknown`).
+		 *     Requires `identity.users.update_permissions` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`). Conferring a permission the caller does not hold is rejected with `grant_exceeds_authority`.
 		 */
 		patch: {
 			parameters: {
@@ -1685,6 +2041,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					userId: components['parameters']['UserId'];
@@ -1704,6 +2074,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -1722,6 +2093,7 @@ export interface paths {
 		 * Assign user's reporting manager
 		 * @description ManagerID MUST be a Membership in the same tenant — composite FK
 		 *     at the schema layer enforces this; cross-tenant ID surfaces as 422.
+		 *     Requires `identity.users.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`).
 		 */
 		put: {
 			parameters: {
@@ -1736,6 +2108,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					userId: components['parameters']['UserId'];
@@ -1755,16 +2141,35 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
 		};
 		post?: never;
-		/** Remove user's reporting manager */
+		/**
+		 * Remove user's reporting manager
+		 * @description Requires `identity.users.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`).
+		 */
 		delete: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path: {
 					userId: components['parameters']['UserId'];
 				};
@@ -1779,6 +2184,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 			};
 		};
@@ -1815,6 +2221,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					userId: components['parameters']['UserId'];
@@ -1847,11 +2267,29 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** List roles in the caller's tenant */
+		/**
+		 * List roles in the caller's tenant
+		 * @description Requires `identity.roles.view` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 */
 		get: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path?: never;
 				cookie?: never;
 			};
@@ -1866,10 +2304,14 @@ export interface paths {
 						'application/json': components['schemas']['ListRolesResponse'];
 					};
 				};
+				403: components['responses']['Forbidden'];
 			};
 		};
 		put?: never;
-		/** Create a custom role */
+		/**
+		 * Create a custom role
+		 * @description Requires `identity.roles.create` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 */
 		post: {
 			parameters: {
 				query?: never;
@@ -1883,6 +2325,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path?: never;
 				cookie?: never;
@@ -1902,6 +2358,7 @@ export interface paths {
 						'application/json': components['schemas']['CreateRoleResponse'];
 					};
 				};
+				403: components['responses']['Forbidden'];
 			};
 		};
 		delete?: never;
@@ -1917,11 +2374,29 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Get role by ID */
+		/**
+		 * Get role by ID
+		 * @description Requires `identity.roles.view` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 */
 		get: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path: {
 					roleId: components['parameters']['RoleId'];
 				};
@@ -1938,15 +2413,34 @@ export interface paths {
 						'application/json': components['schemas']['RoleDto'];
 					};
 				};
+				403: components['responses']['Forbidden'];
 			};
 		};
 		put?: never;
 		post?: never;
-		/** Soft-delete a role */
+		/**
+		 * Soft-delete a role
+		 * @description Requires `identity.roles.delete` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 */
 		delete: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path: {
 					roleId: components['parameters']['RoleId'];
 				};
@@ -1961,6 +2455,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['Forbidden'];
 			};
 		};
 		options?: never;
@@ -1970,6 +2465,7 @@ export interface paths {
 		 * @description Both fields optional. Empty `name` skips rename. Omitting
 		 *     `hierarchy_level` (or sending `null`) skips re-level — using a
 		 *     pointer field instead of a -1 sentinel keeps the wire shape clean.
+		 *     Requires `identity.roles.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
 		 */
 		patch: {
 			parameters: {
@@ -1984,6 +2480,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					roleId: components['parameters']['RoleId'];
@@ -2003,6 +2513,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 				/** @description Role name already taken in this tenant */
 				409: {
@@ -2051,6 +2562,7 @@ export interface paths {
 		 *
 		 *     Optional `reason` (10-1024 chars) is recorded onto the new
 		 *     edge OR the cleared edge for audit.
+		 *     Requires `identity.roles.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
 		 */
 		patch: {
 			parameters: {
@@ -2065,6 +2577,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					roleId: components['parameters']['RoleId'];
@@ -2085,6 +2611,7 @@ export interface paths {
 					content?: never;
 				};
 				400: components['responses']['BadRequest'];
+				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 				/**
 				 * @description Role already has an active parent edge (single-parent
@@ -2118,6 +2645,7 @@ export interface paths {
 		 * @description Permission names MUST match the closed
 		 *     `permission.IdentityPermissions` catalogue; unknown names surface
 		 *     as 422 (`permission_unknown`).
+		 *     Requires `identity.roles.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Conferring a permission the caller does not hold is rejected with `grant_exceeds_authority`.
 		 */
 		put: {
 			parameters: {
@@ -2132,6 +2660,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					roleId: components['parameters']['RoleId'];
@@ -2151,6 +2693,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -2171,7 +2714,10 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Grant a single permission to the role */
+		/**
+		 * Grant a single permission to the role
+		 * @description Requires `identity.roles.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Conferring a permission the caller does not hold is rejected with `grant_exceeds_authority`.
+		 */
 		post: {
 			parameters: {
 				query?: never;
@@ -2185,6 +2731,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					roleId: components['parameters']['RoleId'];
@@ -2204,6 +2764,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -2223,7 +2784,10 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Revoke a single permission from the role */
+		/**
+		 * Revoke a single permission from the role
+		 * @description Requires `identity.roles.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 */
 		post: {
 			parameters: {
 				query?: never;
@@ -2237,6 +2801,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					roleId: components['parameters']['RoleId'];
@@ -2256,6 +2834,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -2913,7 +3492,22 @@ export interface paths {
 					cursor?: components['parameters']['Cursor'];
 					page_size?: components['parameters']['PageSize'];
 				};
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path?: never;
 				cookie?: never;
 			};
@@ -2929,6 +3523,7 @@ export interface paths {
 					};
 				};
 				400: components['responses']['BadRequest'];
+				403: components['responses']['TenantScopeNotSupported'];
 			};
 		};
 		put?: never;
@@ -2953,6 +3548,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path?: never;
 				cookie?: never;
@@ -2972,6 +3581,7 @@ export interface paths {
 						'application/json': components['schemas']['CreatePermissionRequestResponse'];
 					};
 				};
+				403: components['responses']['TenantScopeNotSupported'];
 				/** @description Another pending request already exists for this (membership, permission) tuple */
 				409: {
 					headers: {
@@ -3006,7 +3616,22 @@ export interface paths {
 		get: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path: {
 					requestId: components['parameters']['PermissionRequestId'];
 				};
@@ -3023,6 +3648,7 @@ export interface paths {
 						'application/json': components['schemas']['PermissionRequestDto'];
 					};
 				};
+				403: components['responses']['TenantScopeNotSupported'];
 				404: components['responses']['NotFound'];
 			};
 		};
@@ -3062,6 +3688,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					requestId: components['parameters']['PermissionRequestId'];
@@ -3081,7 +3721,7 @@ export interface paths {
 					};
 					content?: never;
 				};
-				/** @description Caller is not the manager and not a Platform operator */
+				/** @description Caller is not the manager and not a Platform operator, OR `X-Tenant-Id` selected a foreign tenant (`tenant_scope_not_supported`) */
 				403: {
 					headers: {
 						[name: string]: unknown;
@@ -3136,6 +3776,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					requestId: components['parameters']['PermissionRequestId'];
@@ -3155,7 +3809,7 @@ export interface paths {
 					};
 					content?: never;
 				};
-				/** @description Caller is not the manager and not a Platform operator */
+				/** @description Caller is not the manager and not a Platform operator, OR `X-Tenant-Id` selected a foreign tenant (`tenant_scope_not_supported`) */
 				403: {
 					headers: {
 						[name: string]: unknown;
@@ -3211,6 +3865,20 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators: the request
+					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+					 *     other caller (tenant members, impersonation tokens) and by
+					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+					 *     tenant wins and a different header value is rejected.
+					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+					 *     `tenant_scope_conflict` (differs from the path tenant), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					requestId: components['parameters']['PermissionRequestId'];
@@ -3226,6 +3894,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				403: components['responses']['TenantScopeNotSupported'];
 				404: components['responses']['NotFound'];
 				/** @description Request is not in pending state */
 				409: {
@@ -3627,7 +4296,7 @@ export interface paths {
 					};
 				};
 				401: components['responses']['Unauthorized'];
-				403: components['responses']['Forbidden'];
+				403: components['responses']['TenantScopeNotSupported'];
 				404: components['responses']['NotFound'];
 				/** @description Lead already sold OR credit-row concurrency conflict */
 				409: {
@@ -7121,6 +7790,8 @@ export interface components {
 			is_platform: boolean;
 			is_super_user: boolean;
 			permissions: string[];
+			/** @description Every catalogue permission the caller satisfies in their own tenant (tenant.admin expanded). Use this, not permissions[], for UI gating. */
+			effective_permissions: string[];
 			roles: components['schemas']['CapabilityRoleDto'][];
 		};
 		CapabilityRoleDto: {
@@ -8426,6 +9097,30 @@ export interface components {
 				'application/json': components['schemas']['ErrorResponse'];
 			};
 		};
+		/**
+		 * @description The route does not support the `X-Tenant-Id` operator scope (it acts on the
+		 *     caller's own tenant only) and the header selected a different tenant
+		 *     (`tenant_scope_not_supported`, ADR 0039).
+		 */
+		TenantScopeNotSupported: {
+			headers: {
+				[name: string]: unknown;
+			};
+			content: {
+				'application/json': components['schemas']['ErrorResponse'];
+			};
+		};
+		/** @description Rate limit exceeded; `Retry-After` carries the seconds to wait. */
+		TooManyRequests: {
+			headers: {
+				/** @description Seconds until the request may be retried. */
+				'Retry-After'?: number;
+				[name: string]: unknown;
+			};
+			content: {
+				'application/json': components['schemas']['ErrorResponse'];
+			};
+		};
 		/** @description Field-level validation failure (RFC 9457 with `errors` map) */
 		ValidationError: {
 			headers: {
@@ -8458,6 +9153,20 @@ export interface components {
 		/** @description Opaque base64-encoded keyset cursor. Omit for first page. */
 		Cursor: string;
 		PageSize: number;
+		/**
+		 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+		 *     slug-anchored, non-impersonation platform operators: the request
+		 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
+		 *     evaluated there via the `platform.*` equivalents. IGNORED for every
+		 *     other caller (tenant members, impersonation tokens) and by
+		 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
+		 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
+		 *     tenant wins and a different header value is rejected.
+		 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
+		 *     `tenant_scope_conflict` (differs from the path tenant), 404
+		 *     `tenant_scope_not_found` (unknown or deleted tenant).
+		 */
+		XTenantId: string;
 		TenantId: string;
 		UserId: string;
 		RoleId: string;

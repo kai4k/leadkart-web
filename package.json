@@ -33,7 +33,7 @@
 		"test:coverage": "vitest run --passWithNoTests --coverage",
 		"test:e2e": "playwright test --project=chromium --project=firefox --project=webkit",
 		"openapi:codegen": "node scripts/openapi-codegen.mjs",
-		"openapi:check": "node scripts/openapi-codegen.mjs && git diff --exit-code -- src/lib/api/generated/",
+		"openapi:check": "node scripts/openapi-codegen.mjs --check",
 		"size": "size-limit",
 		"size:critical": "node scripts/check-bundle-size.mjs",
 		"prepare": "husky"
