@@ -12,6 +12,7 @@
 		Dropdown,
 		EmptyState,
 		Pagination,
+		toast,
 		type DataTableColumn
 	} from '$ui';
 	import {
@@ -113,7 +114,11 @@
 									{ id, reason: 'Bulk deactivate' },
 									{
 										onSuccess: () => resolve(),
-										onError: () => resolve()
+										// the mutation shows errors inline (dialog), so the bulk path toasts them itself
+										onError: (err) => {
+											toast.error(err.message);
+											resolve();
+										}
 									}
 								);
 							})
@@ -144,7 +149,7 @@
 		}
 	];
 
-	const userList = $derived(listQuery.data?.users ?? []);
+	const userList = $derived(listQuery.data ?? []);
 	const roleList = $derived(rolesQuery.data?.roles ?? []);
 
 	const statusCounts = $derived.by(() => {

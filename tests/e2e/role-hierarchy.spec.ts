@@ -9,7 +9,7 @@ import { TEST_TENANT_ID } from './helpers/fake-jwt';
  *
  * Coverage:
  *   - Role detail page surfaces the "Organizational hierarchy" card
- *   - Save parent: PATCH /v1/roles/{id}/parent → 200 RoleDto + toast
+ *   - Save parent: PATCH /v1/roles/{id}/parent → 204 (roles_http.go:143) + toast
  *   - Clear parent: same endpoint with parent_role_id=null
  *   - Protected roles (super_admin / system_default) are NOT offered as
  *     parent candidates (server-enforced; UI also filters)
@@ -78,7 +78,7 @@ test.describe('Role hierarchy editor', () => {
 				status: 200,
 				body: { roles: [CHILD_ROLE, PARENT_ROLE, PROTECTED_ROLE] }
 			},
-			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [] } }
+			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [], has_more: false } }
 		]);
 		await page.goto(`/settings/roles/${CHILD_ROLE.id}`);
 
@@ -115,12 +115,11 @@ test.describe('Role hierarchy editor', () => {
 				status: 200,
 				body: { roles: [CHILD_ROLE, PARENT_ROLE] }
 			},
-			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [] } },
+			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [], has_more: false } },
 			{
 				method: 'PATCH',
 				path: `/api/v1/roles/${CHILD_ROLE.id}/parent`,
-				status: 200,
-				body: { ...CHILD_ROLE, parent_role_id: PARENT_ROLE.id }
+				status: 204
 			}
 		]);
 		await page.goto(`/settings/roles/${CHILD_ROLE.id}`);
@@ -146,12 +145,11 @@ test.describe('Role hierarchy editor', () => {
 				status: 200,
 				body: { roles: [CHILD_ROLE, PARENT_ROLE] }
 			},
-			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [] } },
+			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [], has_more: false } },
 			{
 				method: 'PATCH',
 				path: `/api/v1/roles/${CHILD_ROLE.id}/parent`,
-				status: 200,
-				body: { ...CHILD_ROLE, parent_role_id: PARENT_ROLE.id }
+				status: 204
 			}
 		]);
 		const saved = page.getByRole('alert').getByText('Saved.', { exact: true });

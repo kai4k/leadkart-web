@@ -1,4 +1,4 @@
-import { apiLegacy, parseResponse } from '#lib/api/client.ts';
+import { api } from '#lib/api/client.ts';
 import { listRolesResponseSchema, roleDtoSchema, createRoleResponseSchema } from './schemas';
 import type {
 	ListRolesResponse,
@@ -10,55 +10,51 @@ import type {
 	RolePermissionRequest
 } from './types';
 
-export async function listRoles(): Promise<ListRolesResponse> {
-	const raw = await apiLegacy.get<unknown>('/v1/roles');
-	return parseResponse(listRolesResponseSchema, raw);
+export function listRoles(signal?: AbortSignal): Promise<ListRolesResponse> {
+	return api.get('/v1/roles', listRolesResponseSchema, { signal });
 }
 
-export async function getRole(roleId: string): Promise<RoleDto> {
-	const raw = await apiLegacy.get<unknown>(`/v1/roles/${roleId}`);
-	return parseResponse(roleDtoSchema, raw);
+export function getRole(roleId: string, signal?: AbortSignal): Promise<RoleDto> {
+	return api.get(`/v1/roles/${roleId}`, roleDtoSchema, { signal });
 }
 
-export async function createRole(req: CreateRoleRequest): Promise<CreateRoleResponse> {
-	const raw = await apiLegacy.post<unknown>('/v1/roles', req);
-	return parseResponse(createRoleResponseSchema, raw);
+export function createRole(req: CreateRoleRequest): Promise<CreateRoleResponse> {
+	return api.postJson('/v1/roles', req, createRoleResponseSchema);
 }
 
-export async function updateRole(roleId: string, req: UpdateRoleRequest): Promise<RoleDto> {
-	const raw = await apiLegacy.patch<unknown>(`/v1/roles/${roleId}`, req);
-	return parseResponse(roleDtoSchema, raw);
+/** PATCH /v1/roles/{id} answers 204 (roles_http.go:182). */
+export async function updateRole(roleId: string, req: UpdateRoleRequest): Promise<void> {
+	await api.patch(`/v1/roles/${roleId}`, req);
 }
 
 export async function replaceRolePermissions(
 	roleId: string,
 	req: ReplaceRolePermissionsRequest
 ): Promise<void> {
-	await apiLegacy.put<void>(`/v1/roles/${roleId}/permissions`, req);
+	await api.put(`/v1/roles/${roleId}/permissions`, req);
 }
 
 export async function grantRolePermission(
 	roleId: string,
 	req: RolePermissionRequest
 ): Promise<void> {
-	await apiLegacy.post<void>(`/v1/roles/${roleId}/permissions/grant`, req);
+	await api.post(`/v1/roles/${roleId}/permissions/grant`, req);
 }
 
 export async function revokeRolePermission(
 	roleId: string,
 	req: RolePermissionRequest
 ): Promise<void> {
-	await apiLegacy.post<void>(`/v1/roles/${roleId}/permissions/revoke`, req);
+	await api.post(`/v1/roles/${roleId}/permissions/revoke`, req);
 }
 
 export async function deleteRole(roleId: string): Promise<void> {
-	await apiLegacy.delete<void>(`/v1/roles/${roleId}`);
+	await api.delete(`/v1/roles/${roleId}`);
 }
 
 /**
- * Set or clear the role's parent (single-parent organisational hierarchy
- * per ADR 0054 Option A / Wave 9.1d). Pass `parent_role_id: null` to
- * detach. Returns the updated role.
+ * Set or clear the role's parent (single-parent organisational hierarchy,
+ * ADR 0054). Pass `parent_role_id: null` to detach. 204 (roles_http.go:143).
  *
  * Server-enforced invariants:
  *   - No cycles
@@ -68,7 +64,6 @@ export async function deleteRole(roleId: string): Promise<void> {
 export async function setRoleParent(
 	roleId: string,
 	body: { parent_role_id: string | null }
-): Promise<RoleDto> {
-	const raw = await apiLegacy.patch<unknown>(`/v1/roles/${roleId}/parent`, body);
-	return parseResponse(roleDtoSchema, raw);
+): Promise<void> {
+	await api.patch(`/v1/roles/${roleId}/parent`, body);
 }

@@ -159,7 +159,12 @@ for (const vp of VIEWPORTS) {
 				tier: 'tenant-admin',
 				permissions: ['tenant.admin', 'identity.users.view'],
 				mocks: [
-					{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [] } },
+					{
+						method: 'GET',
+						path: '/api/v1/users',
+						status: 200,
+						body: { users: [], has_more: false }
+					},
 					{ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [] } }
 				]
 			});
@@ -197,7 +202,8 @@ for (const vp of VIEWPORTS) {
 									email: 'bob@acme.test',
 									designation: 'Account Manager'
 								})
-							]
+							],
+							has_more: false
 						}
 					},
 					{ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [] } }

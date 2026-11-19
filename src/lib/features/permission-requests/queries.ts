@@ -5,9 +5,9 @@
  *   role=requester (default) — the caller's own history
  *   role=approver           — the caller's approval queue
  */
-import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
+import { createQuery } from '@tanstack/svelte-query';
+import { createResourceMutation } from '#lib/api/mutations.ts';
 import * as api from './api';
-import { toast } from '$ui';
 import type { CreatePermissionRequest } from './schemas';
 import type { ListRole } from './api';
 
@@ -20,60 +20,48 @@ const permissionRequestsKeys = {
 export function permissionRequestsListQuery(role: ListRole = 'requester') {
 	return createQuery(() => ({
 		queryKey: permissionRequestsKeys.list(role),
-		queryFn: () => api.listPermissionRequests({ role })
+		queryFn: ({ signal }) => api.listPermissionRequests({ role }, signal)
 	}));
 }
 
 export function permissionRequestDetailQuery(id: string) {
 	return createQuery(() => ({
 		queryKey: permissionRequestsKeys.detail(id),
-		queryFn: () => api.getPermissionRequest(id),
+		queryFn: ({ signal }) => api.getPermissionRequest(id, signal),
 		enabled: Boolean(id)
 	}));
 }
 
 export function createPermissionRequestMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: (req: CreatePermissionRequest) => api.createPermissionRequest(req),
-		onSuccess: () => {
-			void qc.invalidateQueries({ queryKey: permissionRequestsKeys.all });
-			toast.success('Request submitted');
-		}
-	}));
+	return createResourceMutation({
+		fn: (req: CreatePermissionRequest) => api.createPermissionRequest(req),
+		invalidate: () => [permissionRequestsKeys.all],
+		successToast: 'Request submitted'
+	});
 }
 
 export function approvePermissionRequestMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: ({ id, decision_reason }: { id: string; decision_reason?: string }) =>
+	return createResourceMutation({
+		fn: ({ id, decision_reason }: { id: string; decision_reason?: string }) =>
 			api.approvePermissionRequest(id, decision_reason ? { decision_reason } : {}),
-		onSuccess: () => {
-			void qc.invalidateQueries({ queryKey: permissionRequestsKeys.all });
-			toast.success('Request approved');
-		}
-	}));
+		invalidate: () => [permissionRequestsKeys.all],
+		successToast: 'Request approved'
+	});
 }
 
 export function denyPermissionRequestMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: ({ id, decision_reason }: { id: string; decision_reason: string }) =>
+	return createResourceMutation({
+		fn: ({ id, decision_reason }: { id: string; decision_reason: string }) =>
 			api.denyPermissionRequest(id, { decision_reason }),
-		onSuccess: () => {
-			void qc.invalidateQueries({ queryKey: permissionRequestsKeys.all });
-			toast.success('Request denied');
-		}
-	}));
+		invalidate: () => [permissionRequestsKeys.all],
+		successToast: 'Request denied'
+	});
 }
 
 export function cancelPermissionRequestMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: (id: string) => api.cancelPermissionRequest(id),
-		onSuccess: () => {
-			void qc.invalidateQueries({ queryKey: permissionRequestsKeys.all });
-			toast.success('Request cancelled');
-		}
-	}));
+	return createResourceMutation({
+		fn: (id: string) => api.cancelPermissionRequest(id),
+		invalidate: () => [permissionRequestsKeys.all],
+		successToast: 'Request cancelled'
+	});
 }

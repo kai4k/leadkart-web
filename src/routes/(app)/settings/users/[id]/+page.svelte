@@ -25,7 +25,7 @@
 	const rolesQuery = rolesListQuery();
 
 	const user = $derived(userQuery.data ?? null);
-	const userList = $derived(usersListQ.data?.users ?? []);
+	const userList = $derived(usersListQ.data ?? []);
 	const roleList = $derived(rolesQuery.data?.roles ?? []);
 
 	const status = $derived(user ? userStatusBadge(user.status) : null);

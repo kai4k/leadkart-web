@@ -13,7 +13,9 @@ import { userDtoSchema } from '#lib/features/auth/schemas.ts';
 export { userDtoSchema };
 
 export const listUsersResponseSchema = z.object({
-	users: z.array(userDtoSchema)
+	users: z.array(userDtoSchema),
+	has_more: z.boolean(),
+	next_cursor: z.string().optional()
 });
 
 /**

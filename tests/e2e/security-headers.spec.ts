@@ -212,7 +212,7 @@ test.describe('security headers + CSP', () => {
 			{ method: 'GET', path: '/api/v1/inventory/products', status: 200, body: EMPTY_PAGE },
 			{ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [ROLE] } },
 			{ method: 'GET', path: `/api/v1/roles/${ROLE.id}`, status: 200, body: ROLE },
-			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [] } }
+			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [], has_more: false } }
 		]);
 
 		// signInAsTier already landed on /dashboard; reload to read its headers.

@@ -15,7 +15,7 @@
 	 */
 
 	const listQuery = usersListQuery();
-	const users = $derived(listQuery.data?.users ?? []);
+	const users = $derived(listQuery.data ?? []);
 	const tree = $derived(buildOrgTree(users));
 
 	const breadcrumbs: BreadcrumbItem[] = [

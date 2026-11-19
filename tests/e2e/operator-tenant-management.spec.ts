@@ -245,7 +245,7 @@ test.describe('Operator scope flow', () => {
 	test('BFF auto-injects X-Tenant-Id for in-scope API calls', async ({ page }) => {
 		await setupOperator(page);
 		await registerMocks([
-			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [] } },
+			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [], has_more: false } },
 			{ method: 'GET', path: `/api/v1/tenants/${ACME.id}/activity`, status: 200, body: {} }
 		]);
 		await page.goto('/operator/tenants');
@@ -267,7 +267,7 @@ test.describe('Operator scope flow', () => {
 	test('a browser-supplied X-Tenant-Id is ignored: Go sees the cookie tenant', async ({ page }) => {
 		await setupOperator(page);
 		await registerMocks([
-			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [] } }
+			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [], has_more: false } }
 		]);
 		await page.goto('/operator/tenants');
 		await page.getByText('Acme Pharma').first().click();
@@ -301,7 +301,7 @@ test.describe('Operator scope flow', () => {
 	}) => {
 		await setupOperator(page);
 		await registerMocks([
-			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [] } }
+			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [], has_more: false } }
 		]);
 		await page.goto('/operator/tenants');
 		await context.addCookies([
@@ -327,7 +327,7 @@ test.describe('Operator scope flow', () => {
 	}) => {
 		await setupOperator(page);
 		await registerMocks([
-			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [] } }
+			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [], has_more: false } }
 		]);
 		await page.goto('/operator/tenants');
 		const scope = { id: ACME.id, slug: ACME.slug, display_name: ACME.display_name };
@@ -354,7 +354,7 @@ test.describe('Operator scope flow', () => {
 	}) => {
 		await setupOperator(page);
 		await registerMocks([
-			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [] } },
+			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [], has_more: false } },
 			{ method: 'GET', path: `/api/v1/tenants/${ACME.id}/activity`, status: 200, body: {} }
 		]);
 		await page.goto('/operator/tenants');

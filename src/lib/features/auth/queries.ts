@@ -34,7 +34,7 @@ const sessionsKey = ['me', 'sessions'] as const;
 export function myCapabilitiesQuery() {
 	return createQuery(() => ({
 		queryKey: capabilitiesKey,
-		queryFn: () => api.getMyCapabilities(),
+		queryFn: ({ signal }) => api.getMyCapabilities(signal),
 		// SSR-bootstrapped initial data from the (app) root layout server load.
 		// On first render this is baked into the page HTML — no loading skeleton,
 		// no network call needed before the nav renders. TanStack treats
@@ -57,7 +57,7 @@ export function myCapabilitiesQuery() {
 export function myProfileQuery(membershipId: string) {
 	return createQuery(() => ({
 		queryKey: profileKey(membershipId),
-		queryFn: () => api.getMyProfile(membershipId),
+		queryFn: ({ signal }) => api.getMyProfile(membershipId, signal),
 		enabled: Boolean(membershipId),
 		staleTime: 2 * 60_000
 	}));
@@ -69,7 +69,7 @@ export function myProfileQuery(membershipId: string) {
 export function mySessionsQuery() {
 	return createQuery(() => ({
 		queryKey: sessionsKey,
-		queryFn: () => api.listSessions(),
+		queryFn: ({ signal }) => api.listSessions(signal),
 		staleTime: 60_000
 	}));
 }

@@ -243,7 +243,8 @@ test.describe('@a11y settings routes', () => {
 							email: 'alice@acme.test',
 							designation: 'Sales Lead'
 						})
-					]
+					],
+					has_more: false
 				}
 			},
 			{ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [] } }

@@ -36,7 +36,7 @@
 		});
 	}
 
-	const requests = $derived(query.data?.requests ?? []);
+	const requests = $derived(query.data?.items ?? []);
 
 	const tableState = $derived(
 		query.isPending

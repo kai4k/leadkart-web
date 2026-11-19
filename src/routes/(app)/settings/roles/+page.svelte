@@ -3,7 +3,7 @@
 	import { usersListQuery } from '$features/users';
 
 	const usersQuery = usersListQuery();
-	const roster = $derived(usersQuery.data?.users ?? []);
+	const roster = $derived(usersQuery.data ?? []);
 </script>
 
 <svelte:head><title>Roles · LeadKart</title></svelte:head>

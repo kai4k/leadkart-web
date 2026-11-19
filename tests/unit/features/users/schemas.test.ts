@@ -11,7 +11,7 @@ import {
 
 describe('listUsersResponseSchema', () => {
 	it('parses a list shape', () => {
-		expect(listUsersResponseSchema.parse({ users: [] }).users).toEqual([]);
+		expect(listUsersResponseSchema.parse({ users: [], has_more: false }).users).toEqual([]);
 	});
 });
 

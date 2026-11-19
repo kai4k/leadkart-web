@@ -1,68 +1,64 @@
 /**
- * Gateway for permission-elevation requests (ADR 0055).
- * All responses are Zod-parsed at the boundary.
+ * Gateway for permission-elevation requests (ADR 0055). Go answers
+ * approve / deny / cancel with 204 and create with 201 + ids.
  */
-import { apiLegacy, parseResponse } from '#lib/api/client.ts';
+import { api } from '#lib/api/client.ts';
+import { cursorQuery, toPage, type CursorParams, type Page } from '#lib/api/pagination.ts';
 import {
 	listPermissionRequestsResponseSchema,
 	permissionRequestDtoSchema,
 	createPermissionRequestResponseSchema,
 	type CreatePermissionRequest,
 	type CreatePermissionRequestResponse,
-	type ListPermissionRequestsResponse,
 	type PermissionRequestDto
 } from './schemas';
 
 export type ListRole = 'requester' | 'approver';
 
-export interface ListParams {
+export interface ListParams extends CursorParams {
 	role?: ListRole;
-	cursor?: string;
-	limit?: number;
-}
-
-function buildListQuery(params: ListParams = {}): string {
-	const qs = new URLSearchParams();
-	if (params.role) qs.set('role', params.role);
-	if (params.cursor) qs.set('cursor', params.cursor);
-	if (params.limit != null) qs.set('limit', String(params.limit));
-	const q = qs.toString();
-	return q ? `/v1/permission-requests?${q}` : '/v1/permission-requests';
 }
 
 export async function listPermissionRequests(
-	params?: ListParams
-): Promise<ListPermissionRequestsResponse> {
-	const raw = await apiLegacy.get<unknown>(buildListQuery(params));
-	return parseResponse(listPermissionRequestsResponseSchema, raw);
+	params: ListParams = {},
+	signal?: AbortSignal
+): Promise<Page<PermissionRequestDto>> {
+	return toPage(
+		await api.get('/v1/permission-requests', listPermissionRequestsResponseSchema, {
+			query: { role: params.role, ...cursorQuery(params) },
+			signal
+		}),
+		'requests'
+	);
 }
 
-export async function getPermissionRequest(id: string): Promise<PermissionRequestDto> {
-	const raw = await apiLegacy.get<unknown>(`/v1/permission-requests/${id}`);
-	return parseResponse(permissionRequestDtoSchema, raw);
+export function getPermissionRequest(
+	id: string,
+	signal?: AbortSignal
+): Promise<PermissionRequestDto> {
+	return api.get(`/v1/permission-requests/${id}`, permissionRequestDtoSchema, { signal });
 }
 
-export async function createPermissionRequest(
+export function createPermissionRequest(
 	req: CreatePermissionRequest
 ): Promise<CreatePermissionRequestResponse> {
-	const raw = await apiLegacy.post<unknown>('/v1/permission-requests', req);
-	return parseResponse(createPermissionRequestResponseSchema, raw);
+	return api.postJson('/v1/permission-requests', req, createPermissionRequestResponseSchema);
 }
 
 export async function approvePermissionRequest(
 	id: string,
 	body: { decision_reason?: string } = {}
 ): Promise<void> {
-	await apiLegacy.post<void>(`/v1/permission-requests/${id}/approve`, body);
+	await api.post(`/v1/permission-requests/${id}/approve`, body);
 }
 
 export async function denyPermissionRequest(
 	id: string,
 	body: { decision_reason: string }
 ): Promise<void> {
-	await apiLegacy.post<void>(`/v1/permission-requests/${id}/deny`, body);
+	await api.post(`/v1/permission-requests/${id}/deny`, body);
 }
 
 export async function cancelPermissionRequest(id: string): Promise<void> {
-	await apiLegacy.post<void>(`/v1/permission-requests/${id}/cancel`, {});
+	await api.post(`/v1/permission-requests/${id}/cancel`, {});
 }

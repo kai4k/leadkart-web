@@ -71,7 +71,7 @@ export class ApiError extends Error {
 				err = new AuthError(401, traceId);
 				break;
 			case 403:
-				err = new AuthError(403, traceId);
+				err = new AuthError(403, traceId, text);
 				break;
 			case 404:
 				err = new NotFoundError(response.url || 'unknown resource', traceId);
@@ -208,11 +208,14 @@ export class ServerError extends ApiError {
 export class AuthError extends ApiError {
 	declare readonly status: 401 | 403;
 
-	constructor(status: 401 | 403, traceId?: string) {
+	/** `detail` is Go's own 403 text (forbidden, self_modification_forbidden, grant_exceeds_authority); 401 stays generic. */
+	constructor(status: 401 | 403, traceId?: string, detail?: string) {
 		super(status, traceId);
 		this.name = 'AuthError';
 		this.message =
-			status === 401 ? 'Sign in to continue.' : "You don't have permission for this action.";
+			status === 401
+				? 'Sign in to continue.'
+				: (detail ?? "You don't have permission for this action.");
 	}
 }
 

@@ -60,7 +60,7 @@ test.describe('Tenant user management — positive', () => {
 			method: 'GET',
 			path: '/api/v1/users',
 			status: 200,
-			body: { users: [] }
+			body: { users: [], has_more: false }
 		});
 		await page.goto('/settings/users');
 
@@ -76,6 +76,36 @@ test.describe('Tenant user management — positive', () => {
 			.first()
 			.click();
 		await expect(page.getByRole('heading', { name: /add team member/i })).toBeVisible();
+	});
+
+	test('deactivate: Go answers 204 (users_http.go:135) -> success toast and dialog closes', async ({
+		page
+	}) => {
+		await signInAsTenantAdmin(page);
+		await registerMocks([
+			{
+				method: 'GET',
+				path: '/api/v1/users',
+				status: 200,
+				body: { users: [OTHER_USER], has_more: false }
+			},
+			{
+				method: 'POST',
+				path: `/api/v1/users/${OTHER_USER.membership_id}/deactivate`,
+				status: 204
+			}
+		]);
+		await page.goto('/settings/users');
+		await expect(page.getByText('Alice Anderson')).toBeVisible();
+		await page.getByRole('button', { name: 'Row actions' }).first().click();
+		await page.getByRole('menuitem', { name: /deactivate/i }).click();
+		await page.getByLabel(/reason/i).fill('Left the company');
+		await page
+			.getByRole('dialog')
+			.getByRole('button', { name: /^deactivate$/i })
+			.click();
+		await expect(page.getByText(/member deactivated/i)).toBeVisible({ timeout: 5000 });
+		await expect(page.getByRole('dialog')).toHaveCount(0);
 	});
 
 	test('existing members render in the table', async ({ page }) => {
@@ -94,7 +124,8 @@ test.describe('Tenant user management — positive', () => {
 						last_name: 'User',
 						email: 'test@example.com'
 					})
-				]
+				],
+				has_more: false
 			}
 		});
 		await page.goto('/settings/users');
@@ -105,7 +136,7 @@ test.describe('Tenant user management — positive', () => {
 	test('create member happy path: form → success → drawer closes', async ({ page }) => {
 		await signInAsTenantAdmin(page);
 		await registerMocks([
-			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [] } },
+			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [], has_more: false } },
 			{
 				method: 'POST',
 				path: '/api/v1/users',
@@ -146,7 +177,7 @@ test.describe('Tenant user management — negative', () => {
 			method: 'GET',
 			path: '/api/v1/users',
 			status: 200,
-			body: { users: [] }
+			body: { users: [], has_more: false }
 		});
 		await page.goto('/settings/users');
 		await page
@@ -170,7 +201,7 @@ test.describe('Tenant user management — negative', () => {
 	test('duplicate email: server 409 surfaces in form banner', async ({ page }) => {
 		await signInAsTenantAdmin(page);
 		await registerMocks([
-			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [] } },
+			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [], has_more: false } },
 			{
 				method: 'POST',
 				path: '/api/v1/users',

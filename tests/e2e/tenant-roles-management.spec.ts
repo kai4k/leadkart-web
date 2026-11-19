@@ -65,7 +65,12 @@ async function signInAsRoleManager(page: Page) {
 		]
 	});
 	// RolesList also queries users (for member count). Empty list keeps it simple.
-	await registerMock({ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [] } });
+	await registerMock({
+		method: 'GET',
+		path: '/api/v1/users',
+		status: 200,
+		body: { users: [], has_more: false }
+	});
 }
 
 test.describe('Roles list — positive', () => {

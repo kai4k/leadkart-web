@@ -6,15 +6,12 @@
  * sees or passes the tenant identifier — every call here is the
  * scope-agnostic gateway function.
  *
- * Cache discipline (TanStack canon):
- *   - Mutations invalidate; let auto-refetch repopulate.
- *   - No manual setQueryData cross-query seeding.
- *   - No manual optimistic rollback — UX win not worth the complexity.
- *   - Toasts live IN the mutation hook, not the calling component.
+ * Cache discipline: see `#lib/api/mutations.ts` (mutations invalidate, no
+ * DTO is written into the cache, the global MutationCache toasts errors).
  */
-import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
+import { createQuery } from '@tanstack/svelte-query';
+import { createResourceMutation } from '#lib/api/mutations.ts';
 import * as api from './api';
-import { toast } from '$ui';
 import type { CreateUserRequest, ReplacePermissionOverridesRequest } from './types';
 
 const usersKeys = {
@@ -44,117 +41,89 @@ export function membershipSearchQuery(getQuery: () => string) {
 	});
 }
 
+/** Every active member (all pages) — `data: UserDto[]`. */
 export function usersListQuery() {
 	return createQuery(() => ({
 		queryKey: usersKeys.list(),
-		queryFn: () => api.listUsers()
+		queryFn: ({ signal }) => api.listAllUsers(signal)
 	}));
 }
 
-/**
- * Single-membership detail — GET /v1/users/{membershipId}.
- * Mutations on the same id invalidate this key, so the page re-fetches
- * canonical state instead of patching mutation responses into the cache.
- */
+/** Single-membership detail — GET /v1/users/{membershipId}. */
 export function userDetailQuery(getId: () => string) {
 	return createQuery(() => {
 		const id = getId();
 		return {
 			queryKey: usersKeys.detail(id),
-			queryFn: () => api.getUser(id),
+			queryFn: ({ signal }) => api.getUser(id, signal),
 			enabled: Boolean(id)
 		};
 	});
 }
 
 export function createUserMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: (req: CreateUserRequest) => api.createUser(req),
-		onSuccess: () => {
-			void qc.invalidateQueries({ queryKey: usersKeys.list() });
-			toast.success('Member added');
-		}
-	}));
+	return createResourceMutation({
+		fn: (req: CreateUserRequest) => api.createUser(req),
+		invalidate: () => [usersKeys.list()],
+		successToast: 'Member added'
+	});
 }
 
 export function deactivateUserMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-			api.deactivateUser(id, { reason }),
-		onSuccess: () => {
-			void qc.invalidateQueries({ queryKey: usersKeys.all });
-			toast.success('Member deactivated');
-		}
-	}));
+	return createResourceMutation({
+		fn: ({ id, reason }: { id: string; reason: string }) => api.deactivateUser(id, { reason }),
+		invalidate: ({ id }) => [usersKeys.detail(id), usersKeys.list()],
+		successToast: 'Member deactivated',
+		inlineErrors: true
+	});
 }
 
 export function reactivateUserMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: (id: string) => api.reactivateUser(id),
-		onSuccess: () => {
-			void qc.invalidateQueries({ queryKey: usersKeys.all });
-			toast.success('Member reactivated');
-		}
-	}));
+	return createResourceMutation({
+		fn: (id: string) => api.reactivateUser(id),
+		invalidate: (id) => [usersKeys.detail(id), usersKeys.list()],
+		successToast: 'Member reactivated'
+	});
 }
 
 export function assignRoleMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: ({ id, roleId }: { id: string; roleId: string }) =>
-			api.assignRole(id, { role_id: roleId }),
-		onSuccess: (_, vars) => {
-			void qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id) });
-			toast.success('Role assigned');
-		}
-	}));
+	return createResourceMutation({
+		fn: ({ id, roleId }: { id: string; roleId: string }) => api.assignRole(id, { role_id: roleId }),
+		invalidate: ({ id }) => [usersKeys.detail(id), usersKeys.list()],
+		successToast: 'Role assigned'
+	});
 }
 
 export function revokeRoleMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: ({ id, roleId }: { id: string; roleId: string }) => api.revokeRole(id, roleId),
-		onSuccess: (_, vars) => {
-			void qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id) });
-			toast.success('Role revoked');
-		}
-	}));
+	return createResourceMutation({
+		fn: ({ id, roleId }: { id: string; roleId: string }) => api.revokeRole(id, roleId),
+		invalidate: ({ id }) => [usersKeys.detail(id), usersKeys.list()],
+		successToast: 'Role revoked'
+	});
 }
 
 export function replacePermissionOverridesMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: ({ id, body }: { id: string; body: ReplacePermissionOverridesRequest }) =>
+	return createResourceMutation({
+		fn: ({ id, body }: { id: string; body: ReplacePermissionOverridesRequest }) =>
 			api.replacePermissionOverrides(id, body),
-		onSuccess: (_, vars) => {
-			void qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id) });
-			toast.success('Permission overrides saved');
-		}
-	}));
+		invalidate: ({ id }) => [usersKeys.detail(id)],
+		successToast: 'Permission overrides saved'
+	});
 }
 
 export function assignManagerMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: ({ id, managerId }: { id: string; managerId: string }) =>
+	return createResourceMutation({
+		fn: ({ id, managerId }: { id: string; managerId: string }) =>
 			api.assignManager(id, { manager_id: managerId }),
-		onSuccess: (_, vars) => {
-			void qc.invalidateQueries({ queryKey: usersKeys.detail(vars.id) });
-			toast.success('Manager assigned');
-		}
-	}));
+		invalidate: ({ id }) => [usersKeys.detail(id), usersKeys.list()],
+		successToast: 'Manager assigned'
+	});
 }
 
 export function removeManagerMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: (id: string) => api.removeManager(id),
-		onSuccess: (_, id) => {
-			void qc.invalidateQueries({ queryKey: usersKeys.detail(id) });
-			toast.success('Manager removed');
-		}
-	}));
+	return createResourceMutation({
+		fn: (id: string) => api.removeManager(id),
+		invalidate: (id) => [usersKeys.detail(id), usersKeys.list()],
+		successToast: 'Manager removed'
+	});
 }

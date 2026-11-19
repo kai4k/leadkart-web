@@ -6,7 +6,7 @@
 	let { data }: { data: LayoutData } = $props();
 
 	const usersQuery = usersListQuery();
-	const roster = $derived(usersQuery.data?.users ?? []);
+	const roster = $derived(usersQuery.data ?? []);
 </script>
 
 <svelte:head><title>Roles · {data.tenant.display_name} · LeadKart</title></svelte:head>
