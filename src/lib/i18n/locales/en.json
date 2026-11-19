@@ -54,7 +54,10 @@
 				"subtitle": "We're verifying the token in your link…",
 				"success": "Email updated. Use the new one to sign in.",
 				"missingToken": "This page expects a confirmation token in the URL. Use the link from your email.",
-				"invalidToken": "This confirmation link is invalid or has expired."
+				"invalidToken": "This confirmation link is invalid or has expired.",
+				"unreachable": "The service is not reachable right now. Your link is still valid, so try again in a moment.",
+				"rateLimited": "Too many attempts. Your link is still valid, so wait a moment and try again.",
+				"retry": "Try again"
 			}
 		},
 		"errors": {
@@ -63,7 +66,7 @@
 			"mustChangePassword": "Set a new password to continue.",
 			"unexpected": "Something went wrong. Please try again.",
 			"rateLimited": "Too many attempts. Wait a moment and try again.",
-			"upstreamUnavailable": "Can't reach the server. Check your connection and try again."
+			"upstreamUnavailable": "The service is not reachable right now. Please try again in a moment."
 		},
 		"mustChange": {
 			"title": "Set a new password",

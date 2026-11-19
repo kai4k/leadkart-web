@@ -8,20 +8,14 @@
  * tRPC, TanStack Query). Schema mismatch surfaces here, not deep in
  * the call stack.
  *
- * BFF auth model: login/logout POST to BFF endpoints (/auth/login,
- * /auth/logout) which handle cookie management. All other API calls
+ * BFF auth model: sign-in, forgot / reset password and the forced change are
+ * form actions (src/routes/(auth)/*, (app)/must-change-password); logout POSTs
+ * to /auth/logout, which handles cookie management. All other API calls
  * go through /api/[...path] proxy which injects Bearer from cookie.
  * The browser never sees access_token or refresh_token.
  *
- * Surface covers authenticated-user flows: login, logout,
- * change-password, plus profile read/update and session list/revoke.
- * Public reset-with-old-password (see `resetWithOldPassword` below) is
- * the self-serve recovery path — chosen over email-link reset to avoid
- * the transactional-email dependency for v0.5.
- *
- *   - Self-serve registration is DISABLED.
- *   - Email-link forgot-password is DISABLED (use reset-with-old).
- *   - Self-service email change is DISABLED.
+ * Surface covers authenticated-user flows: logout, change-password, plus
+ * profile read/update and session list/revoke.
  */
 import { api } from '#lib/api/client.ts';
 import { ApiError, type ApiErrorBody } from '$api/errors';
@@ -113,45 +107,6 @@ export function changePassword(body: {
 	new_password: string;
 }): Promise<void> {
 	return api.post('/v1/auth/change-password', body);
-}
-
-/**
- * Public — no auth required. Forwards to Go's POST /api/v1/auth/request-password-reset.
- * Go always returns 204 regardless of whether the email is registered
- * (Auth0/Okta canon — defeats account enumeration). The caller cannot
- * distinguish "email valid" from "email unknown" and must show identical
- * success copy either way.
- */
-export async function requestPasswordReset(body: { email: string }): Promise<void> {
-	const resp = await fetch('/auth/request-password-reset', {
-		method: 'POST',
-		headers: { 'content-type': 'application/json' },
-		credentials: 'same-origin',
-		body: JSON.stringify(body)
-	});
-	if (resp.ok) return;
-	throw await readBffError(resp);
-}
-
-/**
- * Public — no auth required. Confirms a password reset using the signed
- * token Go emailed. Token is single-use and time-boxed server-side.
- *
- * Failure modes (server-mapped — caller switches on err.status + err.code):
- *   400 invalid_token / token_consumed / token_expired → top banner
- *   422 password_breached → field error on new_password
- *   422 password_same     → field error on new_password
- *   422 weak_password     → field error on new_password
- */
-export async function resetPassword(body: { token: string; new_password: string }): Promise<void> {
-	const resp = await fetch('/auth/reset-password', {
-		method: 'POST',
-		headers: { 'content-type': 'application/json' },
-		credentials: 'same-origin',
-		body: JSON.stringify(body)
-	});
-	if (resp.ok) return;
-	throw await readBffError(resp);
 }
 
 /**

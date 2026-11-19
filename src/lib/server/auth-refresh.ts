@@ -16,13 +16,14 @@
 import { createHash } from 'node:crypto';
 import { error, type Cookies } from '@sveltejs/kit';
 import { z } from 'zod';
-import { config } from './config.ts';
 import {
 	clearAuthCookies,
+	mustChangePassword,
 	REFRESH_COOKIE,
 	setAuthCookies,
 	setMustChangePassword
 } from './cookies.ts';
+import { goAuthFetch } from './proxy.ts';
 import { clearOperatorScope } from './scope.ts';
 
 export const tokenPairSchema = z.object({
@@ -42,13 +43,7 @@ const inflight = new Map<string, Promise<RefreshResult>>();
 async function callRefresh(refresh: string, fetchFn: typeof fetch): Promise<RefreshResult> {
 	let resp: Response;
 	try {
-		resp = await fetchFn(`${config.GO_API_URL}/api/v1/auth/refresh`, {
-			method: 'POST',
-			redirect: 'manual',
-			headers: { 'content-type': 'application/json', accept: 'application/json' },
-			body: JSON.stringify({ refresh_token: refresh }),
-			signal: AbortSignal.timeout(config.UPSTREAM_TIMEOUT_MS)
-		});
+		resp = await goAuthFetch('/v1/auth/refresh', { body: { refresh_token: refresh } }, fetchFn);
 	} catch {
 		return { ok: false, reason: 'unavailable' };
 	}
@@ -125,6 +120,9 @@ export async function refreshSession(
 		setAuthCookies(cookies, result.tokens.access_token, result.tokens.refresh_token, {
 			keepCsrf: true
 		});
+		// lk_mcp is set once at login but the refresh cookie now rolls for 14 days on every refresh:
+		// renew it with the session or the forced-change gate lapses 14 days after login.
+		if (mustChangePassword(cookies)) setMustChangePassword(cookies, true);
 		return { ok: true, access: result.tokens.access_token };
 	}
 	if (result.reason === 'rejected') {

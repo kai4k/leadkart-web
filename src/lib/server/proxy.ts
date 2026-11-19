@@ -6,6 +6,7 @@
 
 import { deadlineSignal } from '../api/abort.ts';
 import { SCOPE_REQUIRED_HEADER } from '../api/scope-header.ts';
+import { config } from './config.ts';
 
 const UPSTREAM_PREFIX = '/api/v1/';
 const SEGMENT_DELIMITERS = new Set(['/', '\\', '?', '#']);
@@ -131,6 +132,33 @@ export interface UpstreamTimeout {
 export function upstreamTimeout(parent: AbortSignal | undefined, ms: number): UpstreamTimeout {
 	const { signal, stopTimer } = deadlineSignal(parent, ms);
 	return { signal, headersReceived: stopTimer };
+}
+
+/**
+ * Pre-login Go call (login, password reset, refresh, ...): POST JSON, no auth, no
+ * scope. Never follows redirects; the timeout bounds time-to-first-byte.
+ * Throws on transport failure or timeout: callers catch, use
+ * `isUpstreamTimeout` and answer 504 / 502. Never logs the body (it can hold
+ * a password or token). `fetchFn` is for tests (refresh).
+ * Re-exported from go.ts; defined here because go.ts imports auth-refresh.ts, which needs it.
+ */
+export async function goAuthFetch(
+	path: `/v1/${string}`,
+	init: { method?: 'POST'; body?: unknown } = {},
+	fetchFn: typeof fetch = fetch
+): Promise<Response> {
+	const timeout = upstreamTimeout(undefined, config.UPSTREAM_TIMEOUT_MS);
+	try {
+		return await fetchFn(`${config.GO_API_URL}/api${path}`, {
+			method: init.method ?? 'POST',
+			redirect: 'manual',
+			signal: timeout.signal,
+			headers: { 'content-type': 'application/json', accept: 'application/json' },
+			body: init.body === undefined ? undefined : JSON.stringify(init.body)
+		});
+	} finally {
+		timeout.headersReceived();
+	}
 }
 
 /**

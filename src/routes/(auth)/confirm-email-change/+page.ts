@@ -13,11 +13,14 @@
  * Phases returned to the component:
  *   - 'missing' → no token in URL
  *   - 'success' → email updated
- *   - 'invalid' → token expired/consumed/malformed (or network error)
+ *   - 'invalid' → Go refused the token (expired / consumed / malformed)
+ *   - 'unreachable' → 5xx / 502 / 504 / network error: Go did not answer, the
+ *     token is still valid, so the view offers a retry
+ *   - 'rateLimited' → 429: same, wait and retry
  */
 import type { PageLoad } from './$types';
 
-export type ConfirmPhase = 'missing' | 'success' | 'invalid';
+export type ConfirmPhase = 'missing' | 'success' | 'invalid' | 'unreachable' | 'rateLimited';
 
 export const load: PageLoad = async ({ url, fetch }) => {
 	const token = url.searchParams.get('token') ?? '';
@@ -32,8 +35,10 @@ export const load: PageLoad = async ({ url, fetch }) => {
 		if (resp.ok || resp.status === 204) {
 			return { phase: 'success' as ConfirmPhase };
 		}
+		if (resp.status === 429) return { phase: 'rateLimited' as ConfirmPhase };
+		if (resp.status >= 500) return { phase: 'unreachable' as ConfirmPhase };
 		return { phase: 'invalid' as ConfirmPhase };
 	} catch {
-		return { phase: 'invalid' as ConfirmPhase };
+		return { phase: 'unreachable' as ConfirmPhase };
 	}
 };

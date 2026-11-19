@@ -183,6 +183,27 @@ describe('refreshSession', () => {
 	});
 });
 
+describe('refreshSession and the forced-change cookie', () => {
+	const renew = () =>
+		vi.fn(() => Promise.resolve(ok({ access_token: 'new-a', refresh_token: 'new-r' })));
+
+	it('re-sets lk_mcp with the fresh 14-day lifetime so the gate does not lapse', async () => {
+		const j = statefulJar({ lk_refresh: 'rs-mcp', lk_csrf: 'c', lk_mcp: '1' });
+		await refreshSession(j.api, renew());
+		const mcp = j.sets.find((s) => s.name === 'lk_mcp');
+		expect(mcp?.value).toBe('1');
+		expect(mcp?.opts.maxAge).toBe(14 * 24 * 3600);
+		expect(mcp?.opts.httpOnly).toBe(true);
+	});
+
+	it('does not invent the cookie for a session that has none', async () => {
+		const j = statefulJar({ lk_refresh: 'rs-nomcp', lk_csrf: 'c' });
+		await refreshSession(j.api, renew());
+		expect(j.sets.find((s) => s.name === 'lk_mcp')).toBeUndefined();
+		expect(j.store.has('lk_mcp')).toBe(false);
+	});
+});
+
 describe('establishSession', () => {
 	it('sets the mcp cookie when must_change_password is true and clears operator scope', () => {
 		const j = statefulJar({ lk_op_tenant: 'scope' });

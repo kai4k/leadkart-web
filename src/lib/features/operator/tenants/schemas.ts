@@ -16,14 +16,14 @@ import {
 	MarkTenantForDeletionRequest,
 	RegisterTenantResponse
 } from '#lib/api/generated/index.ts';
-import { newPasswordField, reasonField } from '#lib/api/request-schema.ts';
+import { formEmailField, newPasswordField, reasonField } from '#lib/api/request-schema.ts';
 import { tenantSchema } from '#lib/features/tenant/schemas.ts';
 
 export { tenantSchema as tenantDtoSchema } from '#lib/features/tenant/schemas.ts';
 
 /**
- * Built from the generated request: its slug / name bounds and the admin e-mail check stand.
- * Added here: no leading/trailing dash in a slug, names must not be empty, the shared password rule.
+ * Built from the generated request: its slug / name bounds stand.
+ * Added here: the shared e-mail rule, no leading/trailing dash in a slug, names must not be empty, the shared password rule.
  */
 const registerShape = RegisterTenantRequest.shape;
 export const registerTenantRequestSchema = RegisterTenantRequest.extend({
@@ -33,6 +33,7 @@ export const registerTenantRequestSchema = RegisterTenantRequest.extend({
 	),
 	legal_name: registerShape.legal_name.min(2),
 	display_name: registerShape.display_name.min(2),
+	admin_email: formEmailField,
 	admin_password: newPasswordField,
 	admin_first_name: registerShape.admin_first_name.min(1).max(120),
 	admin_last_name: registerShape.admin_last_name.min(1).max(120)

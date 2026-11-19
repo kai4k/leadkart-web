@@ -13,13 +13,15 @@
  * doesn't have to round-trip through hidden inputs.
  */
 import { fail } from '@sveltejs/kit';
-import { z } from 'zod';
-import { passwordErrorKey, RESET_TOKEN_INVALID } from '#lib/server/auth-errors.ts';
+import { newPasswordField } from '#lib/api/request-schema.ts';
+import {
+	goFailureKey,
+	passwordErrorKey,
+	RESET_TOKEN_INVALID,
+	upstreamFailure
+} from '#lib/server/auth-errors.ts';
 import { goAuthFetch, goErrorStatus, readGoError } from '#lib/server/go.ts';
-import { isUpstreamTimeout } from '#lib/server/proxy.ts';
 import type { Actions } from './$types';
-
-const newPasswordSchema = z.string().min(12);
 
 export const actions: Actions = {
 	default: async ({ request, url }) => {
@@ -34,7 +36,7 @@ export const actions: Actions = {
 		if (newPassword !== confirmPassword) {
 			return fail(422, { fieldKeys: { confirm: 'auth.resetPassword.errors.mismatch' } });
 		}
-		const parsed = newPasswordSchema.safeParse(newPassword);
+		const parsed = newPasswordField.safeParse(newPassword);
 		if (!parsed.success) {
 			return fail(422, {
 				fieldKeys: { new_password: 'auth.resetPassword.newPasswordHint' }
@@ -47,7 +49,8 @@ export const actions: Actions = {
 				body: { token, new_password: parsed.data }
 			});
 		} catch (err) {
-			return fail(isUpstreamTimeout(err) ? 504 : 502, { formErrorKey: 'auth.errors.unexpected' });
+			const { status, key } = upstreamFailure(err);
+			return fail(status, { formErrorKey: key });
 		}
 
 		if (resp.ok || resp.status === 204) {
@@ -62,6 +65,6 @@ export const actions: Actions = {
 		if (mapped) {
 			return fail(resp.status, { fieldKeys: { new_password: mapped.key } });
 		}
-		return fail(goErrorStatus(resp), { formErrorKey: 'auth.errors.unexpected' });
+		return fail(goErrorStatus(resp), { formErrorKey: goFailureKey(resp.status) });
 	}
 };

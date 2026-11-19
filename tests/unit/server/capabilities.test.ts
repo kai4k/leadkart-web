@@ -23,16 +23,24 @@ describe('loadCapabilities failures', () => {
 });
 
 describe('loadCapabilities contract mismatch', () => {
-	it('logs once (path + issue message, never the value) and returns null', async () => {
+	it('logs once (path + issue message, never the value) and answers 502, not a sign-in loop', async () => {
 		const warn = vi.spyOn(console, 'error').mockImplementation(() => {});
 		goFetch.mockResolvedValueOnce({ ok: true });
 		readGoJson.mockResolvedValueOnce({ person_id: 'secret-person-value', permissions: 'nope' });
-		await expect(loadCapabilities({} as never)).resolves.toBeNull();
+		const err = await loadCapabilities({} as never).catch((e: unknown) => e);
+		expect(err).toMatchObject({ status: 502 });
+		expect(JSON.stringify(err)).not.toContain('secret-person-value');
 		expect(warn).toHaveBeenCalledTimes(1);
 		const line = warn.mock.calls[0].map(String).join(' ');
 		expect(line).toContain('permissions');
 		expect(line).not.toContain('secret-person-value');
 		warn.mockRestore();
+	});
+
+	it('an empty 2xx body is not a parse failure: no usable capabilities, the caller signs in', async () => {
+		goFetch.mockResolvedValueOnce({ ok: true });
+		readGoJson.mockResolvedValueOnce(null);
+		await expect(loadCapabilities({} as never)).resolves.toBeNull();
 	});
 
 	it('stays quiet when Go simply answered non-2xx', async () => {

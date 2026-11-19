@@ -60,6 +60,34 @@ describe('goFetch', () => {
 	});
 });
 
+describe('goFetch without an access cookie', () => {
+	it('no refresh cookie either: the session is over, so sign in', async () => {
+		const fetchFn = vi.fn();
+		vi.stubGlobal('fetch', fetchFn);
+		await expect(goFetch(jar({}), '/v1/users')).rejects.toMatchObject({
+			status: 303,
+			location: '/signin'
+		});
+		expect(fetchFn).not.toHaveBeenCalled();
+	});
+
+	it('refresh cookie still present (the hook could not reach Go): 503, not a sign-out', async () => {
+		const fetchFn = vi.fn();
+		vi.stubGlobal('fetch', fetchFn);
+		await expect(goFetch(jar({ lk_refresh: 'rt' }), '/v1/users')).rejects.toMatchObject({
+			status: 503
+		});
+		expect(fetchFn).not.toHaveBeenCalled();
+	});
+
+	it('requireAuth:false callers still get to decide for themselves', async () => {
+		const fetchFn = vi.fn(() => Promise.resolve(new Response('{}', { status: 401 })));
+		vi.stubGlobal('fetch', fetchFn);
+		const resp = await goFetch(jar({ lk_refresh: 'rt' }), '/v1/users', { requireAuth: false });
+		expect(resp.status).toBe(401);
+	});
+});
+
 describe('goErrorStatus', () => {
 	it('keeps 4xx/5xx statuses', () => {
 		expect(goErrorStatus(new Response(null, { status: 404 }))).toBe(404);
@@ -124,6 +152,25 @@ describe('goAuthFetch', () => {
 		} finally {
 			vi.useRealTimers();
 		}
+	});
+});
+
+describe('goAuthFetch is the one pre-login / refresh call', () => {
+	it('is the same function whether imported from go.ts or the cycle-free module', async () => {
+		const proxy = await import('#lib/server/proxy.ts');
+		expect(proxy.goAuthFetch).toBe(goAuthFetch);
+	});
+
+	it('uses the injected fetch (refresh tests) with the same hardening', async () => {
+		const fetchFn = vi.fn((_url: string, _init: RequestInit) =>
+			Promise.resolve(new Response(null, { status: 204 }))
+		);
+		await goAuthFetch('/v1/auth/refresh', { body: { refresh_token: 'r' } }, fetchFn as never);
+		const [url, init] = fetchFn.mock.calls[0];
+		expect(url).toMatch(/\/api\/v1\/auth\/refresh$/);
+		expect(init.redirect).toBe('manual');
+		expect(init.signal).toBeInstanceOf(AbortSignal);
+		expect(init.body).toBe('{"refresh_token":"r"}');
 	});
 });
 

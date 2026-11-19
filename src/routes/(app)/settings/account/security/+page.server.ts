@@ -9,79 +9,33 @@
  *
  * Both call Go directly via goFetch (cookie → Bearer).
  */
-import { fail } from '@sveltejs/kit';
-import { z } from 'zod';
-import { passwordErrorKey } from '#lib/server/auth-errors.ts';
+import { fail, isRedirect } from '@sveltejs/kit';
+import { formEmailField } from '#lib/api/request-schema.ts';
+import { changePasswordViaGo, goFailureKey, upstreamFailure } from '#lib/server/auth-errors.ts';
 import { setMustChangePassword } from '#lib/server/cookies.ts';
 import { goErrorStatus, goFetch, readGoError } from '#lib/server/go.ts';
-import { changePasswordSchema } from '$features/auth/schemas';
 import type { Actions } from './$types';
-
-const emailSchema = z.string().min(1, 'Email is required').email('Invalid email format');
 
 export const actions: Actions = {
 	changePassword: async ({ request, cookies }) => {
 		const formData = await request.formData();
-		const currentPassword = (formData.get('current_password') ?? '').toString();
-		const newPassword = (formData.get('new_password') ?? '').toString();
-		const confirmPassword = (formData.get('confirm_password') ?? '').toString();
-
-		if (newPassword !== confirmPassword) {
-			return fail(422, {
-				which: 'changePassword' as const,
-				fieldKeys: { confirm: 'account.security.changePassword.errors.mismatch' }
-			});
-		}
-
-		const parsed = changePasswordSchema.safeParse({
-			current_password: currentPassword,
-			new_password: newPassword
+		const result = await changePasswordViaGo(cookies, {
+			current: (formData.get('current_password') ?? '').toString(),
+			next: (formData.get('new_password') ?? '').toString(),
+			confirm: (formData.get('confirm_password') ?? '').toString()
 		});
-		if (!parsed.success) {
-			const flat = parsed.error.flatten().fieldErrors;
-			return fail(422, {
-				which: 'changePassword' as const,
-				fieldKeys: {
-					current: flat.current_password?.[0]
-						? 'account.security.changePassword.currentPassword'
-						: undefined,
-					new: flat.new_password?.[0]
-						? 'account.security.changePassword.newPasswordHint'
-						: undefined
-				}
-			});
+		if (!result.ok) {
+			return fail(result.status, { which: 'changePassword' as const, ...result.body });
 		}
-
-		const resp = await goFetch(cookies, '/v1/auth/change-password', {
-			method: 'POST',
-			body: JSON.stringify(parsed.data),
-			scoped: false
-		});
-
-		if (resp.ok || resp.status === 204) {
-			setMustChangePassword(cookies, false);
-			return { which: 'changePassword' as const, success: true };
-		}
-
-		const body = await readGoError(resp);
-		const mapped = passwordErrorKey(resp.status, body.error);
-		if (mapped) {
-			return fail(resp.status, {
-				which: 'changePassword' as const,
-				fieldKeys: { [mapped.field]: mapped.key }
-			});
-		}
-		return fail(goErrorStatus(resp), {
-			which: 'changePassword' as const,
-			formErrorKey: 'auth.errors.unexpected'
-		});
+		setMustChangePassword(cookies, false);
+		return { which: 'changePassword' as const, success: true };
 	},
 
 	changeEmail: async ({ request, cookies }) => {
 		const formData = await request.formData();
 		const newEmail = (formData.get('new_email') ?? '').toString();
 
-		const parsed = emailSchema.safeParse(newEmail);
+		const parsed = formEmailField.safeParse(newEmail);
 		if (!parsed.success) {
 			return fail(422, {
 				which: 'changeEmail' as const,
@@ -90,11 +44,18 @@ export const actions: Actions = {
 			});
 		}
 
-		const resp = await goFetch(cookies, '/v1/auth/request-email-change', {
-			method: 'POST',
-			body: JSON.stringify({ new_email: parsed.data }),
-			scoped: false
-		});
+		let resp: Response;
+		try {
+			resp = await goFetch(cookies, '/v1/auth/request-email-change', {
+				method: 'POST',
+				body: JSON.stringify({ new_email: parsed.data }),
+				scoped: false
+			});
+		} catch (err) {
+			if (isRedirect(err)) throw err;
+			const { status, key } = upstreamFailure(err);
+			return fail(status, { which: 'changeEmail' as const, email: newEmail, formErrorKey: key });
+		}
 
 		if (resp.ok || resp.status === 204) {
 			return { which: 'changeEmail' as const, submitted: true };
@@ -113,7 +74,7 @@ export const actions: Actions = {
 		return fail(goErrorStatus(resp), {
 			which: 'changeEmail' as const,
 			email: newEmail,
-			formErrorKey: 'auth.errors.unexpected'
+			formErrorKey: goFailureKey(resp.status)
 		});
 	}
 };

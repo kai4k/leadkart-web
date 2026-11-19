@@ -10,8 +10,6 @@
  */
 export {
 	logout,
-	requestPasswordReset,
-	resetPassword,
 	confirmEmailChange,
 	requestEmailChange,
 	changePassword,

@@ -12,19 +12,17 @@
  * on any 2xx so the form shows identical success copy either way.
  */
 import { fail } from '@sveltejs/kit';
-import { z } from 'zod';
+import { lookupEmailField } from '#lib/api/request-schema.ts';
+import { goFailureKey, upstreamFailure } from '#lib/server/auth-errors.ts';
 import { goAuthFetch } from '#lib/server/go.ts';
-import { isUpstreamTimeout } from '#lib/server/proxy.ts';
 import type { Actions } from './$types';
-
-const emailSchema = z.string().min(1, 'Email is required').email('Invalid email format');
 
 export const actions: Actions = {
 	default: async ({ request }) => {
 		const formData = await request.formData();
 		const email = (formData.get('email') ?? '').toString();
 
-		const parsed = emailSchema.safeParse(email);
+		const parsed = lookupEmailField.safeParse(email);
 		if (!parsed.success) {
 			return fail(422, {
 				email,
@@ -36,20 +34,15 @@ export const actions: Actions = {
 		try {
 			resp = await goAuthFetch('/v1/auth/request-password-reset', { body: { email: parsed.data } });
 		} catch (err) {
-			return fail(isUpstreamTimeout(err) ? 504 : 502, {
-				email,
-				formError: 'auth.errors.upstreamUnavailable'
-			});
+			const { status, key } = upstreamFailure(err);
+			return fail(status, { email, formError: key });
 		}
 
 		// Go answers 204 for every email, registered or not (even malformed or an
 		// internal error), so the only non-2xx it can send here are transport-level:
 		// the IP rate limiter (429) or a gateway fault. Anything else reads as sent.
-		if (resp.status === 429) {
-			return fail(429, { email, formError: 'auth.errors.rateLimited' });
-		}
-		if (resp.status >= 500) {
-			return fail(resp.status, { email, formError: 'auth.errors.unexpected' });
+		if (resp.status === 429 || resp.status >= 500) {
+			return fail(resp.status, { email, formError: goFailureKey(resp.status) });
 		}
 
 		return { submitted: true };

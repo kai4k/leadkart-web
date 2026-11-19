@@ -1,4 +1,4 @@
-import { globSync, readFileSync } from 'node:fs';
+import { existsSync, globSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { findEndpoint, normalizePath } from '../../e2e/helpers/contract.ts';
 
@@ -101,8 +101,16 @@ describe('every web call targets a route in leadkart-go api/openapi.yaml', () =>
 		const files = new Set(calls.map((c) => c.file));
 		expect(files.has('src/lib/features/users/api.ts')).toBe(true);
 		expect(files.has('src/lib/server/capabilities.ts')).toBe(true);
-		expect(files.has('src/routes/auth/login/+server.ts')).toBe(true);
+		expect(files.has('src/routes/auth/confirm-email-change/+server.ts')).toBe(true);
 		expect(files.has('src/routes/(app)/settings/tenant/_actions.ts')).toBe(true);
+	});
+
+	it('the raw-echo BFF auth routes are gone (sign-in and reset are form actions)', () => {
+		for (const route of ['login', 'request-password-reset', 'reset-password']) {
+			expect(existsSync(`src/routes/auth/${route}/+server.ts`), route).toBe(false);
+		}
+		expect(existsSync('src/routes/auth/confirm-email-change/+server.ts')).toBe(true);
+		expect(existsSync('src/routes/auth/logout/+server.ts')).toBe(true);
 	});
 
 	it('every unknown path is pinned to the task that re-contracts it', () => {

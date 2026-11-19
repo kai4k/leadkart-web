@@ -25,7 +25,7 @@ export interface GoRequestInit extends Omit<RequestInit, 'headers' | 'body'> {
 	headers?: Record<string, string>;
 	/** String only: the request is replayed after a refresh, so a stream body is not allowed. */
 	body?: string;
-	/** When true (default), throw redirect(303, '/signin') on missing access cookie. */
+	/** When true (default): no access cookie → redirect(303, '/signin'), or 503 when a refresh cookie is still there (the refresh could not reach Go). */
 	requireAuth?: boolean;
 	/** When false, ignore the operator scope cookie (no X-Tenant-Id, no fail-closed redirect). Default true. */
 	scoped?: boolean;
@@ -47,10 +47,12 @@ export async function goFetch(
 	init: GoRequestInit = {}
 ): Promise<Response> {
 	const access = cookies.get(ACCESS_COOKIE());
-	if (!access) {
-		if (init.requireAuth !== false) {
-			throw redirect(303, '/signin');
-		}
+	if (!access && init.requireAuth !== false) {
+		// The hook refreshes an expired access cookie before any action runs. A refresh cookie that is
+		// STILL here means that refresh could not reach Go (a rejected one clears it), so the session
+		// is not over: 503 keeps the user's form, /signin would throw it away.
+		if (cookies.get(REFRESH_COOKIE)) throw error(503, 'Session could not be renewed — try again');
+		throw redirect(303, '/signin');
 	}
 
 	const headers: Record<string, string> = {
@@ -113,30 +115,8 @@ export async function goFetch(
 	return resp;
 }
 
-/**
- * Pre-login Go call (login, password reset, ...): POST JSON, no auth, no
- * scope. Never follows redirects; the timeout bounds time-to-first-byte.
- * Throws on transport failure or timeout: callers catch, use
- * `isUpstreamTimeout` and answer 504 / 502. Never logs the body (it can hold
- * a password or token).
- */
-export async function goAuthFetch(
-	path: `/v1/${string}`,
-	init: { method?: 'POST'; body?: unknown } = {}
-): Promise<Response> {
-	const timeout = upstreamTimeout(undefined, config.UPSTREAM_TIMEOUT_MS);
-	try {
-		return await fetch(`${config.GO_API_URL}/api${path}`, {
-			method: init.method ?? 'POST',
-			redirect: 'manual',
-			signal: timeout.signal,
-			headers: { 'content-type': 'application/json', accept: 'application/json' },
-			body: init.body === undefined ? undefined : JSON.stringify(init.body)
-		});
-	} finally {
-		timeout.headersReceived();
-	}
-}
+// The pre-login / refresh call lives in proxy.ts (auth-refresh.ts cannot import this module: cycle).
+export { goAuthFetch } from './proxy.ts';
 
 /**
  * Status to report for a non-2xx Go response via `error()` / `fail()`.

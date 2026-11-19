@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { Alert, AuthCard, Logo } from '$ui';
+	import { Alert, AuthCard, Button, Logo } from '$ui';
+	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import type { ConfirmPhase } from '../../../../routes/(auth)/confirm-email-change/+page';
 
@@ -32,6 +33,18 @@
 		>
 			{$_('auth.signin.title')}
 		</a>
+	{:else if phase === 'unreachable' || phase === 'rateLimited'}
+		<!-- The token was never consumed, so the same link works once Go answers: re-run the load. -->
+		<Alert variant="warning">
+			{$_(
+				phase === 'rateLimited'
+					? 'auth.changeEmail.confirm.rateLimited'
+					: 'auth.changeEmail.confirm.unreachable'
+			)}
+		</Alert>
+		<Button fullWidth onclick={() => invalidateAll()}>
+			{$_('auth.changeEmail.confirm.retry')}
+		</Button>
 	{:else}
 		<Alert variant="danger">{$_('auth.changeEmail.confirm.invalidToken')}</Alert>
 		<a

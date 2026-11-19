@@ -9,7 +9,7 @@ import {
 	UpdateUserProfileRequest,
 	UserDto
 } from '#lib/api/generated/index.ts';
-import { newPasswordField } from '#lib/api/request-schema.ts';
+import { lookupEmailField, newPasswordField } from '#lib/api/request-schema.ts';
 import { responseEmail, responseEmailOptional } from '#lib/api/response-schema.ts';
 
 /**
@@ -32,7 +32,7 @@ export const capabilitiesSchema = CapabilitiesDto.extend({ email: responseEmailO
  */
 
 export const loginRequestSchema = LoginRequest.pick({ email: true, password: true }).extend({
-	email: z.string().min(1, 'Email is required').email('Invalid email format'),
+	email: lookupEmailField,
 	password: z.string().min(1, 'Password is required')
 });
 

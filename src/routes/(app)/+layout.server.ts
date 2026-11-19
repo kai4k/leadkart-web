@@ -55,10 +55,12 @@ export const load: LayoutServerLoad = async ({ cookies, url, locals }) => {
 		clearOperatorScope(cookies);
 	}
 
-	// Go answered without usable capabilities (401 after refresh, non-2xx,
-	// unexpected shape) — redirect to signin. Don't clear cookies: the user may
-	// still be valid and the endpoint merely misbehaving. Go unreachable is a 503
-	// thrown by loadCapabilities (the session is fine; no signin bounce).
+	// Go answered without usable capabilities (401 after refresh, non-2xx, empty
+	// body) — redirect to signin. Don't clear cookies: the user may still be valid
+	// and the endpoint merely misbehaving. Go unreachable (503), too slow (504) or
+	// answering 2xx with a body the web cannot read (502) is thrown by
+	// loadCapabilities: the session is fine, and signing in again would only hit
+	// the same body, so no signin bounce.
 	const capabilities = await loadCapabilities(cookies);
 	if (!capabilities) {
 		const next = encodeURIComponent(url.pathname + url.search);

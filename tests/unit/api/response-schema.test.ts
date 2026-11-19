@@ -101,11 +101,12 @@ describe.each(GO_ONLY_ADDRESSES)('response schemas accept %s', (email) => {
 	});
 });
 
-describe('request schemas keep the format check', () => {
-	it('the login form rejects malformed input', () => {
-		for (const email of ['', 'not-an-email', 'a@']) {
-			expect(loginRequestSchema.safeParse({ email, password: 'x' }).success).toBe(false);
-		}
+describe('request schemas', () => {
+	it('the login form only requires a non-empty email (Go answers a malformed one like an unknown one)', () => {
+		expect(loginRequestSchema.safeParse({ email: '', password: 'x' }).success).toBe(false);
+		expect(loginRequestSchema.safeParse({ email: 'not-an-email', password: 'x' }).success).toBe(
+			true
+		);
 		expect(loginRequestSchema.safeParse({ email: 'a@b.com', password: 'x' }).success).toBe(true);
 	});
 });

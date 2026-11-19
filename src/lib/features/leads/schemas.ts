@@ -13,6 +13,7 @@
  * Go API validates UUIDs server-side; we accept any string here.
  */
 import { z } from 'zod';
+import { formEmailField } from '#lib/api/request-schema.ts';
 import { responseEmail } from '#lib/api/response-schema.ts';
 
 // ── Enums ───────────────────────────────────────────────────────────
@@ -170,7 +171,7 @@ export const updateLeadSchema = z
 		temperature: leadTemperatureSchema,
 		next_followup_at: z.string(),
 		notes: z.string().max(4000),
-		email: z.string().email().or(z.literal('')),
+		email: formEmailField.or(z.literal('')),
 		street: z.string().max(500),
 		has_drug_licence: z.boolean(),
 		has_gst: z.boolean(),

@@ -8,74 +8,23 @@
  * Reached when login returns `must_change_password=true`. Successful
  * rotation redirects to `?next=` or `/dashboard`.
  */
-import { fail, isRedirect, redirect } from '@sveltejs/kit';
-import { z } from 'zod';
-import { passwordErrorKey } from '#lib/server/auth-errors.ts';
-import { goErrorStatus, goFetch, readGoError } from '#lib/server/go.ts';
+import { fail, redirect } from '@sveltejs/kit';
+import { changePasswordViaGo } from '#lib/server/auth-errors.ts';
 import { setMustChangePassword } from '#lib/server/cookies.ts';
 import { safeRedirectPath } from '#lib/server/redirect.ts';
 import type { Actions } from './$types';
 
-const schema = z.object({
-	current_password: z.string().min(1),
-	new_password: z.string().min(12)
-});
-
 export const actions: Actions = {
 	default: async ({ request, cookies, url }) => {
 		const formData = await request.formData();
-		const currentPassword = (formData.get('current_password') ?? '').toString();
-		const newPassword = (formData.get('new_password') ?? '').toString();
-		const confirmPassword = (formData.get('confirm') ?? '').toString();
-
-		if (newPassword !== confirmPassword) {
-			return fail(422, {
-				fieldKeys: { confirm: 'account.security.changePassword.errors.mismatch' }
-			});
-		}
-
-		const parsed = schema.safeParse({
-			current_password: currentPassword,
-			new_password: newPassword
+		const result = await changePasswordViaGo(cookies, {
+			current: (formData.get('current_password') ?? '').toString(),
+			next: (formData.get('new_password') ?? '').toString(),
+			confirm: (formData.get('confirm') ?? '').toString()
 		});
-		if (!parsed.success) {
-			const flat = parsed.error.flatten().fieldErrors;
-			return fail(422, {
-				fieldKeys: {
-					current: flat.current_password?.[0]
-						? 'account.security.changePassword.currentPassword'
-						: undefined,
-					new: flat.new_password?.[0]
-						? 'account.security.changePassword.newPasswordHint'
-						: undefined
-				}
-			});
-		}
+		if (!result.ok) return fail(result.status, result.body);
 
-		// goFetch redirects to /signin on a missing/rejected session. Any 401 it
-		// returns here is a wrong current password (an expiry 401 is refreshed).
-		let resp: Response;
-		try {
-			resp = await goFetch(cookies, '/v1/auth/change-password', {
-				method: 'POST',
-				body: JSON.stringify(parsed.data),
-				scoped: false
-			});
-		} catch (err) {
-			if (isRedirect(err)) throw err;
-			return fail(502, { formErrorKey: 'auth.errors.unexpected' });
-		}
-
-		if (resp.ok || resp.status === 204) {
-			setMustChangePassword(cookies, false);
-			throw redirect(303, safeRedirectPath(url.searchParams.get('next'), url.origin));
-		}
-
-		const body = await readGoError(resp);
-		const mapped = passwordErrorKey(resp.status, body.error);
-		if (mapped) {
-			return fail(resp.status, { fieldKeys: { [mapped.field]: mapped.key } });
-		}
-		return fail(goErrorStatus(resp), { formErrorKey: 'auth.errors.unexpected' });
+		setMustChangePassword(cookies, false);
+		throw redirect(303, safeRedirectPath(url.searchParams.get('next'), url.origin));
 	}
 };

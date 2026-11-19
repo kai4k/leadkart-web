@@ -67,7 +67,8 @@ const CODE_COPY: ReadonlyMap<string, string> = new Map([
 const CALLER_LINE_WINS_CODES: ReadonlySet<string> = new Set(['forbidden']);
 const SERVER_ERROR_COPY = 'Something went wrong on our side. Please try again.';
 /** 503/504 (the BFF's own: Go unreachable / too slow) and the BFF's 502 `upstream_unavailable`. */
-const UNREACHABLE_COPY = 'The service is not reachable right now. Please try again in a moment.';
+export const UNREACHABLE_COPY =
+	'The service is not reachable right now. Please try again in a moment.';
 const MAX_RETRY_AFTER_SECONDS = 86_400;
 const IMF_FIXDATE =
 	/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{2} (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4} \d{2}:\d{2}:\d{2} GMT$/;

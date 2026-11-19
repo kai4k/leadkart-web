@@ -12,9 +12,12 @@ import { isUpstreamTimeout } from './proxy.ts';
 
 type Capabilities = z.output<typeof capabilitiesSchema>;
 
+const UNREADABLE = 'The service answered in a way this app cannot read. Please try again later.';
+
 /**
  * Capabilities of the signed-in caller, or `null` when Go answered without
- * usable ones (401 after refresh, non-2xx, unexpected shape). Throws 504 when
+ * usable ones (401 after refresh, non-2xx, empty body). Throws 502 when Go answered 2xx with a
+ * body that does not match the contract (signing in again would not help), 504 when
  * Go is too slow and 503 when it is unreachable: the session is fine, so
  * callers must not bounce the user to /signin.
  *
@@ -31,17 +34,18 @@ export async function loadCapabilities(cookies: Cookies): Promise<Capabilities |
 		body = resp.ok ? await readGoJson<unknown>(resp) : null;
 	} catch (err) {
 		if (isRedirect(err) || isHttpError(err)) throw err;
+		if (err instanceof SyntaxError) throw error(502, UNREADABLE); // 2xx, but not JSON
 		if (isUpstreamTimeout(err)) throw error(504, 'Go API did not respond in time');
 		throw error(503, 'Service temporarily unavailable');
 	}
 	if (body === null) return null;
 	const parsed = capabilitiesSchema.safeParse(body);
 	if (parsed.success) return parsed.data;
-	// A contract mismatch must be visible, not a silent sign-out loop. Paths and Zod's messages
-	// only — never the values (they are the caller's identity).
+	// A contract mismatch must be visible, not a silent sign-out loop (signing in again would hit
+	// the same body). Paths and Zod's messages only — never the values (they are the caller's identity).
 	const issues = parsed.error.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`);
 	console.error(
 		`[capabilities] Go's capabilities response does not match the contract: ${issues.join('; ')}`
 	);
-	return null;
+	throw error(502, UNREADABLE);
 }

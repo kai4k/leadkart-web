@@ -18,8 +18,8 @@
  */
 import { fail, redirect } from '@sveltejs/kit';
 import { parseRetryAfter } from '#lib/api/errors.ts';
+import { goFailureKey, upstreamFailure } from '#lib/server/auth-errors.ts';
 import { goAuthFetch, goErrorStatus } from '#lib/server/go.ts';
-import { isUpstreamTimeout } from '#lib/server/proxy.ts';
 import { establishSession, tokenPairSchema } from '#lib/server/auth-refresh.ts';
 import { safeRedirectPath } from '#lib/server/redirect.ts';
 import { loginRequestSchema } from '$features/auth/schemas';
@@ -47,10 +47,8 @@ export const actions: Actions = {
 		try {
 			resp = await goAuthFetch('/v1/auth/login', { body: parsed.data });
 		} catch (err) {
-			return fail(isUpstreamTimeout(err) ? 504 : 502, {
-				email,
-				formError: 'auth.errors.upstreamUnavailable'
-			});
+			const { status, key } = upstreamFailure(err);
+			return fail(status, { email, formError: key });
 		}
 
 		if (!resp.ok) {
@@ -64,14 +62,11 @@ export const actions: Actions = {
 					retryAfterSeconds: parseRetryAfter(resp.headers.get('retry-after'))
 				});
 			}
-			// Go's IP rate limiter (429 rate_limited + Retry-After).
-			if (resp.status === 429) {
-				return fail(429, { email, formError: 'auth.errors.rateLimited' });
-			}
 			if (resp.status === 401) {
 				return fail(401, { email, formError: 'auth.errors.invalidCredentials' });
 			}
-			return fail(goErrorStatus(resp), { email, formError: 'auth.errors.unexpected' });
+			// 429 is Go's IP rate limiter (rate_limited + Retry-After).
+			return fail(goErrorStatus(resp), { email, formError: goFailureKey(resp.status) });
 		}
 
 		const parsedTokens = tokenPairSchema.safeParse(await resp.json().catch(() => null));
