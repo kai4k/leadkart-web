@@ -30,3 +30,43 @@ describe('createUrlFilters.setMany', () => {
 		});
 	});
 });
+
+describe('createUrlFilters.setMany edge cases', () => {
+	interface T {
+		[k: string]: string | string[] | undefined;
+		stage: string | undefined;
+		tag: string[];
+	}
+	const make = () =>
+		createUrlFilters<T>({
+			stage: { type: 'string', label: 'Stage' },
+			tag: { type: 'string[]', label: 'Tag' }
+		});
+
+	it('writes array fields as repeated keys and replaces previous values', () => {
+		goto.mockClear();
+		make().setMany({ tag: ['a', 'b'] });
+		expect(goto).toHaveBeenCalledTimes(1);
+		expect(goto).toHaveBeenCalledWith('/leads?stage=new&name=ab&view=table&tag=a&tag=b', {
+			reset: false,
+			replace: true
+		});
+	});
+
+	it('clearOthers: false keeps existing schema params', () => {
+		goto.mockClear();
+		make().setMany({ tag: ['x'] }, { clearOthers: false });
+		expect(goto.mock.calls[0]![0]).toBe('/leads?stage=new&name=ab&view=table&tag=x');
+	});
+
+	it('skips keys that are not in the schema (dev warning) instead of throwing', () => {
+		goto.mockClear();
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		expect(() =>
+			make().setMany({ stage: 'won', bogus: 'x' } as never, { clearOthers: true })
+		).not.toThrow();
+		expect(goto.mock.calls[0]![0]).toBe('/leads?name=ab&view=table&stage=won');
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('bogus'));
+		warn.mockRestore();
+	});
+});

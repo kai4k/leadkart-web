@@ -63,7 +63,7 @@ export interface UrlFilters<TFilters extends UrlFiltersBase> {
 	readonly hasActive: boolean;
 	setFilter<K extends keyof TFilters & string>(key: K, value: TFilters[K]): void;
 	clearFilter<K extends keyof TFilters & string>(key: K): void;
-	/** Apply several filters in ONE navigation. `clearOthers` first drops every schema key. */
+	/** Apply several filters in ONE navigation. `clearOthers` first drops every schema key; keys outside the schema are skipped. */
 	setMany(patch: Partial<TFilters>, opts?: { clearOthers?: boolean }): void;
 	clearAll(): void;
 	clearValue<K extends keyof TFilters & string>(key: K, value: string): void;
@@ -156,7 +156,14 @@ export function createUrlFilters<TFilters extends UrlFiltersBase>(
 		setMany(patch, opts = {}) {
 			const next = cloneParams();
 			if (opts.clearOthers) for (const key in schema) next.delete(key);
-			for (const key in patch) applyValue(next, key, patch[key] as UrlFilterValue);
+			for (const key in patch) {
+				if (!(key in schema)) {
+					if (import.meta.env.DEV)
+						console.warn(`[url-filters] setMany: "${key}" is not in the schema; skipped`);
+					continue;
+				}
+				applyValue(next, key, patch[key] as UrlFilterValue);
+			}
 			commit(next);
 		},
 		clearFilter(key) {
