@@ -20,14 +20,14 @@ import {
 // ---------------------------------------------------------------------------
 
 const VALID_REQUEST = {
-	target_tenant_id: 'tenant-abc-123',
+	target_tenant_id: '00000000-0000-4000-8000-000000000001',
 	reason: 'Investigating billing discrepancy reported by user'
 };
 
 const VALID_SESSION_DTO = {
-	session_id: 'sess-001',
-	operator_id: 'op-001',
-	target_tenant_id: 'tenant-abc-123',
+	session_id: '00000000-0000-4000-8000-000000000002',
+	operator_id: '00000000-0000-4000-8000-000000000003',
+	target_tenant_id: '00000000-0000-4000-8000-000000000001',
 	reason: 'Investigating billing discrepancy',
 	created_at: '2026-05-18T10:00:00Z',
 	expires_at: '2026-05-18T10:30:00Z'
@@ -164,7 +164,7 @@ describe('createImpersonationSessionRequestSchema — strict mode', () => {
 describe('createImpersonationSessionResponseSchema', () => {
 	it('parses a valid 201 response', () => {
 		const result = createImpersonationSessionResponseSchema.safeParse({
-			session_id: 'sess-uuid-001',
+			session_id: '00000000-0000-4000-8000-000000000002',
 			expires_at_utc: '2026-05-18T10:30:00Z'
 		});
 		expect(result.success).toBe(true);
@@ -181,7 +181,7 @@ describe('createImpersonationSessionResponseSchema', () => {
 	it('rejects response missing expires_at_utc', () => {
 		expect(
 			createImpersonationSessionResponseSchema.safeParse({
-				session_id: 'sess-uuid-001'
+				session_id: '00000000-0000-4000-8000-000000000002'
 			}).success
 		).toBe(false);
 	});
@@ -219,7 +219,7 @@ describe('listImpersonationSessionsResponseSchema', () => {
 		expect(result.success).toBe(true);
 		if (result.success) {
 			expect(result.data.sessions).toHaveLength(1);
-			expect(result.data.sessions[0].session_id).toBe('sess-001');
+			expect(result.data.sessions[0].session_id).toBe('00000000-0000-4000-8000-000000000002');
 		}
 	});
 

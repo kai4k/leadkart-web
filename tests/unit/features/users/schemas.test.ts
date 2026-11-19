@@ -9,6 +9,8 @@ import {
 	assignManagerRequestSchema
 } from '#lib/features/users/schemas.ts';
 
+const U = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+
 describe('listUsersResponseSchema', () => {
 	it('parses a list shape', () => {
 		expect(listUsersResponseSchema.parse({ users: [], has_more: false }).users).toEqual([]);
@@ -31,7 +33,11 @@ describe('createUserRequestSchema', () => {
 describe('createUserResponseSchema', () => {
 	it('parses', () => {
 		expect(
-			createUserResponseSchema.parse({ person_id: 'p', membership_id: 'm', person_existed: false })
+			createUserResponseSchema.parse({
+				person_id: U(1),
+				membership_id: U(2),
+				person_existed: false
+			})
 		).toBeTruthy();
 	});
 });
@@ -55,18 +61,18 @@ describe('replacePermissionOverridesRequestSchema', () => {
 
 describe('assignUserRoleRequestSchema', () => {
 	it('parses role_id', () => {
-		expect(assignUserRoleRequestSchema.parse({ role_id: 'r1' })).toEqual({ role_id: 'r1' });
+		expect(assignUserRoleRequestSchema.parse({ role_id: U(3) })).toEqual({ role_id: U(3) });
 	});
 	it('rejects extras (.strict)', () => {
-		expect(() => assignUserRoleRequestSchema.parse({ role_id: 'r1', extra: 1 })).toThrow();
+		expect(() => assignUserRoleRequestSchema.parse({ role_id: U(3), extra: 1 })).toThrow();
 	});
 });
 
 describe('assignManagerRequestSchema', () => {
 	it('parses manager_id', () => {
-		expect(assignManagerRequestSchema.parse({ manager_id: 'm1' })).toEqual({ manager_id: 'm1' });
+		expect(assignManagerRequestSchema.parse({ manager_id: U(4) })).toEqual({ manager_id: U(4) });
 	});
 	it('rejects extras (.strict)', () => {
-		expect(() => assignManagerRequestSchema.parse({ manager_id: 'm1', extra: 1 })).toThrow();
+		expect(() => assignManagerRequestSchema.parse({ manager_id: U(4), extra: 1 })).toThrow();
 	});
 });

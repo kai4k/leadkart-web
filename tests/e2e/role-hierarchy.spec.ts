@@ -16,7 +16,7 @@ import { TEST_TENANT_ID } from './helpers/fake-jwt';
  */
 
 const PARENT_ROLE = {
-	id: 'role-parent',
+	id: '00000000-0000-4000-8000-000000000105',
 	tenant_id: TEST_TENANT_ID,
 	name: 'Senior Manager',
 	hierarchy_level: 2,
@@ -27,7 +27,7 @@ const PARENT_ROLE = {
 };
 
 const PROTECTED_ROLE = {
-	id: 'role-super',
+	id: '00000000-0000-4000-8000-000000000106',
 	tenant_id: TEST_TENANT_ID,
 	name: 'SuperAdmin',
 	hierarchy_level: 0,
@@ -38,7 +38,7 @@ const PROTECTED_ROLE = {
 };
 
 const CHILD_ROLE = {
-	id: 'role-child',
+	id: '00000000-0000-4000-8000-000000000107',
 	tenant_id: TEST_TENANT_ID,
 	name: 'Sales Lead',
 	hierarchy_level: 5,

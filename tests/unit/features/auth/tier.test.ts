@@ -20,6 +20,7 @@ function caps(overrides: Partial<Capabilities> = {}): Capabilities {
 		is_platform: false,
 		is_super_user: false,
 		permissions: [],
+		effective_permissions: [],
 		roles: [],
 		...overrides
 	};

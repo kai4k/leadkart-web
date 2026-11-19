@@ -24,12 +24,12 @@
  * src/lib/features/auth/schemas.ts so they parse without errors.
  */
 
-export const TEST_TENANT_ID = '00000000-0000-0000-0000-000000000001';
-export const TEST_PERSON_ID = '00000000-0000-0000-0000-000000000a01';
-export const TEST_MEMBERSHIP_ID = '00000000-0000-0000-0000-000000000b01';
+export const TEST_TENANT_ID = '00000000-0000-4000-8000-000000000001';
+export const TEST_PERSON_ID = '00000000-0000-4000-8000-000000000a01';
+export const TEST_MEMBERSHIP_ID = '00000000-0000-4000-8000-000000000b01';
 export const TEST_TENANT_SLUG = 'acme';
 /** Fake refresh-token family ID — used to populate fake session DTOs. */
-export const TEST_FAMILY_ID = 'test-family-id';
+export const TEST_FAMILY_ID = '00000000-0000-4000-8000-000000000f01';
 
 // ── Tier / Permission types ────────────────────────────────────────
 
@@ -154,13 +154,14 @@ export function fakeCapabilitiesResponse(overrides?: {
 		is_platform: overrides?.is_platform ?? false,
 		is_super_user: overrides?.is_super_user ?? false,
 		permissions: overrides?.permissions ?? [],
+		effective_permissions: overrides?.permissions ?? [],
 		roles: overrides?.roles ?? []
 	};
 }
 
 /**
  * Canonical UserDto matching userDtoSchema (GET /v1/users/:membership_id).
- * All nullable fields default to null; optional arrays default to [].
+ * Go omits empty optional fields (omitzero), so left_at / reports_to are absent by default.
  */
 export interface UserDto {
 	membership_id: string;
@@ -169,13 +170,13 @@ export interface UserDto {
 	email: string;
 	first_name: string;
 	last_name: string;
-	status: 'active' | 'inactive' | 'pending';
+	status: 'active' | 'inactive';
 	designation: string;
 	department: string;
 	status_message: string;
 	joined_at: string;
-	left_at: string | null;
-	reports_to: string | null;
+	left_at?: string;
+	reports_to?: string;
 	role_ids: string[];
 }
 
@@ -192,8 +193,6 @@ export function fakeUserDto(overrides?: Partial<UserDto>): UserDto {
 		department: '',
 		status_message: '',
 		joined_at: '2026-01-01T00:00:00Z',
-		left_at: null,
-		reports_to: null,
 		role_ids: [],
 		...overrides
 	};

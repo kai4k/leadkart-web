@@ -111,11 +111,11 @@
 
 	const statusCounts = $derived.by(() => {
 		const all = query.data?.tenants ?? [];
-		const counts = { all: all.length, active: 0, suspended: 0, marked_for_deletion: 0, pending: 0 };
+		const counts = { all: all.length, active: 0, suspended: 0, pending_deletion: 0, pending: 0 };
 		for (const t of all) {
 			if (t.status === 'active') counts.active++;
 			else if (t.status === 'suspended') counts.suspended++;
-			else if (t.status === 'marked_for_deletion') counts.marked_for_deletion++;
+			else if (t.status === 'pending_deletion') counts.pending_deletion++;
 			else if (t.status === 'pending') counts.pending++;
 		}
 		return counts;
@@ -127,9 +127,9 @@
 		{ value: 'suspended', label: 'Suspended', count: statusCounts.suspended },
 		{ value: 'pending', label: 'Pending', count: statusCounts.pending },
 		{
-			value: 'marked_for_deletion',
-			label: 'Marked for deletion',
-			count: statusCounts.marked_for_deletion
+			value: 'pending_deletion',
+			label: 'Pending deletion',
+			count: statusCounts.pending_deletion
 		}
 	] as const);
 

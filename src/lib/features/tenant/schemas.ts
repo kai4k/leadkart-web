@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AdminAddressDto, PasswordPolicyDto, TenantDto } from '#lib/api/generated/index.ts';
 
 /**
  * Tenant feature Zod schemas — used for both API response validation
@@ -14,47 +15,25 @@ import { z } from 'zod';
  * (`internal/identity/ports/dto.go`).
  */
 
-export const adminAddressSchema = z.object({
-	street: z.string().optional(),
-	city: z.string().optional(),
-	district: z.string().optional(),
-	state: z.string().optional(),
-	state_code: z.string().optional(),
-	pincode: z.string().optional()
-});
+export const adminAddressSchema = AdminAddressDto;
 
-export const passwordPolicySchema = z.object({
-	min_length: z.number().int().nonnegative(),
-	require_uppercase: z.boolean(),
-	require_lowercase: z.boolean(),
-	require_digit: z.boolean(),
-	require_symbol: z.boolean(),
-	max_failed_attempts: z.number().int().nonnegative(),
-	lockout_minutes: z.number().int().nonnegative()
-});
+export const passwordPolicySchema = PasswordPolicyDto;
 
-export const tenantSchema = z.object({
-	id: z.string(),
-	slug: z.string(),
-	legal_name: z.string(),
-	display_name: z.string(),
-	status: z.string(),
-	created_at: z.string(),
-	activated_at: z.string().optional(),
-	suspended_at: z.string().optional(),
-	deletion_scheduled_at: z.string().optional(),
-	deletion_reason: z.string().optional(),
-	gst_number: z.string().optional(),
-	pan_number: z.string().optional(),
-	drug_licence_number: z.string().optional(),
-	admin_phone: z.string().optional(),
-	admin_address: adminAddressSchema,
-	password_policy: passwordPolicySchema,
-	locale: z.string().optional(),
-	time_zone: z.string().optional(),
-	date_format: z.string().optional(),
-	currency: z.string().optional()
-});
+/**
+ * Tenant lifecycle status as Go emits it (identity/domain/tenant/status.go).
+ * The OpenAPI spec still lists `marked_for_deletion` / `hard_deleted`, which Go
+ * never sends — the generated enum is corrected here until the spec is fixed.
+ */
+export const tenantStatusSchema = z.enum([
+	'pending',
+	'active',
+	'suspended',
+	'pending_deletion',
+	'deleted'
+]);
+export type TenantStatus = z.output<typeof tenantStatusSchema>;
+
+export const tenantSchema = TenantDto.extend({ status: tenantStatusSchema });
 
 export const updateTenantProfileSchema = z.object({
 	legal_name: z.string().min(1, 'Legal name is required'),

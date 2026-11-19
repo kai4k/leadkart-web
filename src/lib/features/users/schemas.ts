@@ -8,15 +8,20 @@
  * for the caller's own profile.
  */
 import { z } from 'zod';
+import {
+	AssignUserManagerRequest,
+	AssignUserRoleRequest,
+	CreateUserRequest,
+	CreateUserResponse,
+	DeactivateUserRequest,
+	ListUsersResponse,
+	ReplaceUserPermissionOverridesRequest
+} from '#lib/api/generated/index.ts';
 import { userDtoSchema } from '#lib/features/auth/schemas.ts';
 
 export { userDtoSchema };
 
-export const listUsersResponseSchema = z.object({
-	users: z.array(userDtoSchema),
-	has_more: z.boolean(),
-	next_cursor: z.string().optional()
-});
+export const listUsersResponseSchema = ListUsersResponse.extend({ users: z.array(userDtoSchema) });
 
 /**
  * Membership search result — the lightweight shape returned by
@@ -40,34 +45,24 @@ export const searchMembershipsResponseSchema = z.object({
 export type MembershipSearchResult = z.output<typeof membershipSearchResultSchema>;
 export type SearchMembershipsResponse = z.output<typeof searchMembershipsResponseSchema>;
 
-export const createUserRequestSchema = z
-	.object({
-		email: z.string().email(),
-		password: z.string().min(1),
-		first_name: z.string().min(1).max(120),
-		last_name: z.string().min(1).max(120)
-	})
-	.strict();
+export const createUserRequestSchema = CreateUserRequest.extend({
+	first_name: z.string().min(1).max(120),
+	last_name: z.string().min(1).max(120)
+}).strict();
 
-export const createUserResponseSchema = z.object({
-	person_id: z.string(),
-	membership_id: z.string(),
-	person_existed: z.boolean()
-});
+export const createUserResponseSchema = CreateUserResponse;
 
-export const deactivateUserRequestSchema = z
-	.object({
-		reason: z.string().min(1).max(500)
-	})
-	.strict();
+export const deactivateUserRequestSchema = DeactivateUserRequest.extend({
+	reason: z.string().min(1).max(500)
+}).strict();
 
-export const assignUserRoleRequestSchema = z.object({ role_id: z.string() }).strict();
+export const assignUserRoleRequestSchema = AssignUserRoleRequest.strict();
 
-export const replacePermissionOverridesRequestSchema = z
-	.object({
+export const replacePermissionOverridesRequestSchema = ReplaceUserPermissionOverridesRequest.extend(
+	{
 		granted: z.array(z.string()),
 		revoked: z.array(z.string())
-	})
-	.strict();
+	}
+).strict();
 
-export const assignManagerRequestSchema = z.object({ manager_id: z.string() }).strict();
+export const assignManagerRequestSchema = AssignUserManagerRequest.strict();

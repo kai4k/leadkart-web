@@ -22,7 +22,7 @@ import { resetMock, registerMocks, registerMock } from './helpers/mock';
 import { TEST_TENANT_ID } from './helpers/fake-jwt';
 
 const SUPER_ADMIN_ROLE = {
-	id: 'role-super',
+	id: '00000000-0000-4000-8000-000000000109',
 	tenant_id: TEST_TENANT_ID,
 	name: 'SuperAdmin',
 	hierarchy_level: 0,
@@ -32,7 +32,7 @@ const SUPER_ADMIN_ROLE = {
 	created_at: '2026-01-01T00:00:00Z'
 };
 const SYSTEM_ROLE = {
-	id: 'role-system',
+	id: '00000000-0000-4000-8000-00000000010a',
 	tenant_id: TEST_TENANT_ID,
 	name: 'CompanyOwner',
 	hierarchy_level: 1,
@@ -42,7 +42,7 @@ const SYSTEM_ROLE = {
 	created_at: '2026-01-01T00:00:00Z'
 };
 const CUSTOM_ROLE = {
-	id: 'role-custom',
+	id: '00000000-0000-4000-8000-00000000010b',
 	tenant_id: TEST_TENANT_ID,
 	name: 'Sales Lead',
 	hierarchy_level: 5,
@@ -104,7 +104,7 @@ test.describe('Roles list — positive', () => {
 				method: 'POST',
 				path: '/api/v1/roles',
 				status: 201,
-				body: { role_id: 'role-new' }
+				body: { role_id: '00000000-0000-4000-8000-00000000010c' }
 			}
 		]);
 		await page.goto('/settings/roles');
@@ -122,7 +122,9 @@ test.describe('Roles list — positive', () => {
 		await page.locator('#main-content form').getByRole('button', { name: 'Create role' }).click();
 
 		// Form action 303-redirects to the new role detail page.
-		await page.waitForURL(/\/settings\/roles\/role-new$/, { timeout: 5000 });
+		await page.waitForURL(/\/settings\/roles\/00000000-0000-4000-8000-00000000010c$/, {
+			timeout: 5000
+		});
 	});
 });
 
@@ -162,7 +164,7 @@ test.describe('Roles list — negative', () => {
 		await expect(page.getByText('Delete', { exact: true })).toHaveCount(0);
 	});
 
-	test('create role: name shorter than 3 chars blocks submission', async ({ page }) => {
+	test('create role: name shorter than 2 chars blocks submission', async ({ page }) => {
 		await signInAsRoleManager(page);
 		await registerMock({ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [] } });
 		await page.goto('/settings/roles');
@@ -174,7 +176,7 @@ test.describe('Roles list — negative', () => {
 			.first()
 			.click();
 		await page.waitForURL(/\/settings\/roles\/new$/);
-		await page.getByLabel('Role name').fill('ab'); // too short (schema min 3)
+		await page.getByLabel('Role name').fill('a'); // too short (Go contract: name min 2)
 		await page.locator('#main-content form').getByRole('button', { name: 'Create role' }).click();
 
 		// Field-level error appears: TextField marks the input aria-invalid

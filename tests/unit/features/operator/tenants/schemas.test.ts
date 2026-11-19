@@ -167,16 +167,19 @@ describe('markForDeletionRequestSchema', () => {
 describe('registerTenantResponseSchema', () => {
 	it('parses a valid 201 response', () => {
 		const result = registerTenantResponseSchema.safeParse({
-			tenant_id: 'tid-001',
-			person_id: 'pid-001',
-			membership_id: 'mid-001'
+			tenant_id: '00000000-0000-4000-8000-000000000003',
+			person_id: '00000000-0000-4000-8000-000000000001',
+			membership_id: '00000000-0000-4000-8000-000000000002'
 		});
 		expect(result.success).toBe(true);
 	});
 
 	it('rejects a response missing membership_id', () => {
 		expect(
-			registerTenantResponseSchema.safeParse({ tenant_id: 'tid-001', person_id: 'pid-001' }).success
+			registerTenantResponseSchema.safeParse({
+				tenant_id: '00000000-0000-4000-8000-000000000003',
+				person_id: '00000000-0000-4000-8000-000000000001'
+			}).success
 		).toBe(false);
 	});
 });
@@ -188,7 +191,7 @@ describe('registerTenantResponseSchema', () => {
 describe('tenantDtoSchema re-export', () => {
 	it('is the same schema as the tenant feature tenantSchema (parses a valid DTO)', () => {
 		const result = tenantDtoSchema.safeParse({
-			id: 'tid-001',
+			id: '00000000-0000-4000-8000-000000000003',
 			slug: 'acme',
 			legal_name: 'Acme Ltd',
 			display_name: 'Acme',
@@ -215,7 +218,7 @@ describe('tenantDtoSchema re-export', () => {
 // ---------------------------------------------------------------------------
 
 const VALID_TENANT_DTO = {
-	id: 'tid-001',
+	id: '00000000-0000-4000-8000-000000000003',
 	slug: 'acme',
 	legal_name: 'Acme Ltd',
 	display_name: 'Acme',

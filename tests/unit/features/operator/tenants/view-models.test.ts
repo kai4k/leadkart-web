@@ -18,7 +18,7 @@ import type { TenantDto } from '#lib/features/operator/tenants/types.ts';
 // Fixture factory — only fields consumed by view-models needed
 // ---------------------------------------------------------------------------
 
-function makeTenant(status: string): TenantDto {
+function makeTenant(status: TenantDto['status']): TenantDto {
 	return {
 		id: 'tid-001',
 		slug: 'acme',
@@ -56,10 +56,10 @@ describe('tenantLifecycleBadge', () => {
 		expect(badge.label).toBe('Suspended');
 	});
 
-	it('marked_for_deletion → danger variant + "Marked for deletion" label', () => {
-		const badge = tenantLifecycleBadge(makeTenant('marked_for_deletion'));
+	it('pending_deletion → danger variant + "Pending deletion" label', () => {
+		const badge = tenantLifecycleBadge(makeTenant('pending_deletion'));
 		expect(badge.variant).toBe('danger');
-		expect(badge.label).toBe('Marked for deletion');
+		expect(badge.label).toBe('Pending deletion');
 	});
 
 	it('pending → info variant + "Pending" label', () => {
@@ -69,7 +69,7 @@ describe('tenantLifecycleBadge', () => {
 	});
 
 	it('unknown status → neutral variant + raw status as label', () => {
-		const badge = tenantLifecycleBadge(makeTenant('archived'));
+		const badge = tenantLifecycleBadge(makeTenant('archived' as never));
 		expect(badge.variant).toBe('neutral');
 		expect(badge.label).toBe('archived');
 	});
@@ -88,8 +88,8 @@ describe('canSuspend', () => {
 		expect(canSuspend(makeTenant('suspended'))).toBe(false);
 	});
 
-	it('false when status is marked_for_deletion', () => {
-		expect(canSuspend(makeTenant('marked_for_deletion'))).toBe(false);
+	it('false when status is pending_deletion', () => {
+		expect(canSuspend(makeTenant('pending_deletion'))).toBe(false);
 	});
 
 	it('false when status is pending', () => {
@@ -110,8 +110,8 @@ describe('canActivate', () => {
 		expect(canActivate(makeTenant('active'))).toBe(false);
 	});
 
-	it('false when status is marked_for_deletion', () => {
-		expect(canActivate(makeTenant('marked_for_deletion'))).toBe(false);
+	it('false when status is pending_deletion', () => {
+		expect(canActivate(makeTenant('pending_deletion'))).toBe(false);
 	});
 });
 
@@ -128,8 +128,8 @@ describe('canMarkForDeletion', () => {
 		expect(canMarkForDeletion(makeTenant('suspended'))).toBe(true);
 	});
 
-	it('false when status is marked_for_deletion', () => {
-		expect(canMarkForDeletion(makeTenant('marked_for_deletion'))).toBe(false);
+	it('false when status is pending_deletion', () => {
+		expect(canMarkForDeletion(makeTenant('pending_deletion'))).toBe(false);
 	});
 
 	it('false when status is pending', () => {
@@ -142,8 +142,8 @@ describe('canMarkForDeletion', () => {
 // ---------------------------------------------------------------------------
 
 describe('canRestore', () => {
-	it('true when status is marked_for_deletion', () => {
-		expect(canRestore(makeTenant('marked_for_deletion'))).toBe(true);
+	it('true when status is pending_deletion', () => {
+		expect(canRestore(makeTenant('pending_deletion'))).toBe(true);
 	});
 
 	it('false when status is active', () => {

@@ -18,7 +18,7 @@ import { resetMock, registerMocks, registerMock } from './helpers/mock';
  */
 
 const PERSON_AAA = {
-	id: 'per-aaa',
+	id: '00000000-0000-4000-8000-000000000103',
 	email: 'alice@acme.test',
 	first_name: 'Alice',
 	last_name: 'Anderson',

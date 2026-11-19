@@ -17,7 +17,7 @@ import {
 } from '#lib/features/tenant/schemas.ts';
 
 const FULL_TENANT = {
-	id: '00000000-0000-0000-0000-000000000001',
+	id: '00000000-0000-4000-8000-000000000001',
 	slug: 'acme-pharma',
 	legal_name: 'Acme Pharma Pvt Ltd',
 	display_name: 'Acme',
@@ -55,7 +55,7 @@ const FULL_TENANT = {
 describe('tenantSchema', () => {
 	it('parses a fully-populated tenant response', () => {
 		const parsed = tenantSchema.parse(FULL_TENANT);
-		expect(parsed.id).toBe('00000000-0000-0000-0000-000000000001');
+		expect(parsed.id).toBe('00000000-0000-4000-8000-000000000001');
 		expect(parsed.password_policy.min_length).toBe(12);
 		expect(parsed.admin_address.pincode).toBe('400076');
 		expect(parsed.locale).toBe('en-IN');
@@ -63,7 +63,7 @@ describe('tenantSchema', () => {
 
 	it('parses a freshly-onboarded tenant with empty optional fields omitted', () => {
 		const minimal = {
-			id: '00000000-0000-0000-0000-000000000002',
+			id: '00000000-0000-4000-8000-000000000002',
 			slug: 'newco',
 			legal_name: 'NewCo',
 			display_name: 'NewCo',
@@ -159,5 +159,18 @@ describe('update-request schemas', () => {
 			currency: 'INR'
 		});
 		expect(result.success).toBe(true);
+	});
+});
+
+describe('tenantSchema status (Go domain values)', () => {
+	it.each(['pending', 'active', 'suspended', 'pending_deletion', 'deleted'])(
+		'accepts %s',
+		(status) => {
+			expect(tenantSchema.safeParse({ ...FULL_TENANT, status }).success).toBe(true);
+		}
+	);
+
+	it.each(['marked_for_deletion', 'hard_deleted'])('rejects the spec-only value %s', (status) => {
+		expect(tenantSchema.safeParse({ ...FULL_TENANT, status }).success).toBe(false);
 	});
 });

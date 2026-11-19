@@ -128,7 +128,7 @@ test.describe('Permission requests — requester flow', () => {
 				method: 'POST',
 				path: '/api/v1/permission-requests',
 				status: 201,
-				body: { request_id: 'new-req-id' }
+				body: { request_id: '00000000-0000-4000-8000-000000000104', status: 'pending' }
 			}
 		]);
 		await page.goto('/permission-requests');

@@ -18,7 +18,7 @@ import {
 // ---------------------------------------------------------------------------
 
 const VALID_PERSON = {
-	id: 'pid-001',
+	id: '00000000-0000-4000-8000-000000000001',
 	email: 'raj@acme.test',
 	first_name: 'Raj',
 	last_name: 'Verma',
@@ -29,9 +29,9 @@ const VALID_PERSON = {
 };
 
 const VALID_USER_DTO = {
-	membership_id: 'mid-001',
-	person_id: 'pid-001',
-	tenant_id: 'tid-001',
+	membership_id: '00000000-0000-4000-8000-000000000002',
+	person_id: '00000000-0000-4000-8000-000000000001',
+	tenant_id: '00000000-0000-4000-8000-000000000003',
 	email: 'raj@acme.test',
 	first_name: 'Raj',
 	last_name: 'Verma',
@@ -40,8 +40,6 @@ const VALID_USER_DTO = {
 	department: 'Tech',
 	status_message: '',
 	joined_at: '2026-01-01T00:00:00Z',
-	left_at: null,
-	reports_to: null,
 	role_ids: []
 };
 

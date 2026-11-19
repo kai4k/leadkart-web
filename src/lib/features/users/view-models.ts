@@ -14,8 +14,6 @@ export function userStatusBadge(status: UserDto['status']): {
 	switch (status) {
 		case 'active':
 			return { label: 'Active', variant: 'success' };
-		case 'pending':
-			return { label: 'Pending', variant: 'warning' };
 		case 'inactive':
 			return { label: 'Inactive', variant: 'neutral' };
 	}

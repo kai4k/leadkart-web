@@ -1,11 +1,6 @@
-import { z } from 'zod';
+import type { z } from 'zod';
+import { PlatformStatsResponse as PlatformStatsResponseContract } from '#lib/api/generated/index.ts';
 
-export const platformStatsResponseSchema = z.object({
-	tenants_total: z.number().int().nonnegative(),
-	tenants_active: z.number().int().nonnegative(),
-	tenants_suspended: z.number().int().nonnegative(),
-	persons_total: z.number().int().nonnegative(),
-	memberships_active: z.number().int().nonnegative()
-});
+export const platformStatsResponseSchema = PlatformStatsResponseContract;
 
 export type PlatformStatsResponse = z.output<typeof platformStatsResponseSchema>;

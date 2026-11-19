@@ -21,8 +21,8 @@ import { fakeUserDto, TEST_TENANT_ID, TEST_MEMBERSHIP_ID } from './helpers/fake-
  */
 
 const OTHER_USER = fakeUserDto({
-	membership_id: 'mem-aaa',
-	person_id: 'per-aaa',
+	membership_id: '00000000-0000-4000-8000-00000000010d',
+	person_id: '00000000-0000-4000-8000-00000000010e',
 	tenant_id: TEST_TENANT_ID,
 	email: 'alice@acme.test',
 	first_name: 'Alice',
@@ -142,8 +142,8 @@ test.describe('Tenant user management — positive', () => {
 				path: '/api/v1/users',
 				status: 201,
 				body: {
-					person_id: 'per-new',
-					membership_id: 'mem-new',
+					person_id: '00000000-0000-4000-8000-00000000010f',
+					membership_id: '00000000-0000-4000-8000-000000000110',
 					person_existed: false
 				}
 			}

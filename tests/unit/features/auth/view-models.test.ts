@@ -14,8 +14,6 @@ const baseUser: UserDto = {
 	department: 'Platform',
 	status_message: '',
 	joined_at: '2026-01-01T00:00:00Z',
-	left_at: null,
-	reports_to: null,
 	role_ids: []
 };
 

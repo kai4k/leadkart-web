@@ -130,10 +130,9 @@
 	const roleList = $derived(rolesQuery.data?.roles ?? []);
 
 	const statusCounts = $derived.by(() => {
-		const counts = { all: userList.length, active: 0, pending: 0, inactive: 0 };
+		const counts = { all: userList.length, active: 0, inactive: 0 };
 		for (const u of userList) {
 			if (u.status === 'active') counts.active++;
-			else if (u.status === 'pending') counts.pending++;
 			else if (u.status === 'inactive') counts.inactive++;
 		}
 		return counts;
@@ -142,7 +141,6 @@
 	const statusOptions = $derived([
 		{ value: 'all', label: 'All', count: statusCounts.all },
 		{ value: 'active', label: 'Active', count: statusCounts.active },
-		{ value: 'pending', label: 'Pending', count: statusCounts.pending },
 		{ value: 'inactive', label: 'Inactive', count: statusCounts.inactive }
 	] as const);
 

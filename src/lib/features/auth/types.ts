@@ -26,8 +26,8 @@ export interface SessionPrincipal {
 	tenantId: string;
 	tenantSlug?: string;
 	membershipId: string;
-	/** Captured from capabilities endpoint — email is in the server-side payload. */
-	email: string;
+	/** From the capabilities payload; Go omits it when empty (omitzero), so it may be absent. */
+	email?: string;
 	isPlatform?: boolean;
 	isSuperUser?: boolean;
 	permissions?: string[];

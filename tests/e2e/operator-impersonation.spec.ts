@@ -17,7 +17,7 @@ import { fakeTenantDto } from './helpers/fake-jwt';
  */
 
 const TARGET = fakeTenantDto({
-	id: 'tid-target',
+	id: '00000000-0000-4000-8000-000000000101',
 	slug: 'beta-meds',
 	display_name: 'Beta Meds',
 	legal_name: 'Beta Meds Ltd'
@@ -65,7 +65,7 @@ test.describe('Impersonation — positive', () => {
 			path: '/api/v1/platform/impersonation/sessions',
 			status: 201,
 			body: {
-				session_id: 'imp-sess-1',
+				session_id: '00000000-0000-4000-8000-000000000102',
 				expires_at_utc: new Date(Date.now() + 30 * 60_000).toISOString(),
 				access_token: 'fake.scoped.jwt',
 				refresh_token: 'fake.scoped.refresh',

@@ -285,7 +285,7 @@ test.describe('@a11y operator routes', () => {
 					tenants: [
 						fakeTenantDto({ slug: 'platform', display_name: 'LeadKart Platform' }),
 						fakeTenantDto({
-							id: '00000000-0000-0000-0000-000000000020',
+							id: '00000000-0000-4000-8000-000000000020',
 							slug: 'acme-pharma',
 							display_name: 'Acme Pharma'
 						})

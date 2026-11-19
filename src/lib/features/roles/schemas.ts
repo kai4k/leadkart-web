@@ -1,42 +1,27 @@
 /**
  * Zod schemas for the tenant role-management feature.
  */
-import { z } from 'zod';
+import {
+	CreateRoleRequest,
+	CreateRoleResponse,
+	ListRolesResponse,
+	ReplaceRolePermissionsRequest,
+	RoleDto,
+	RolePermissionRequest,
+	UpdateRoleRequest
+} from '#lib/api/generated/index.ts';
 
-export const roleDtoSchema = z.object({
-	id: z.string(),
-	tenant_id: z.string(),
-	name: z.string(),
-	is_system_default: z.boolean(),
-	is_super_admin: z.boolean(),
-	hierarchy_level: z.number().int(),
-	permissions: z.array(z.string()),
-	created_at: z.string(),
-	/** Optional single-parent hierarchy per ADR 0054 / Wave 9.1d.
-	 *  Server-validated; client accepts any string for boundary consistency. */
-	parent_role_id: z.string().optional()
-});
+export const roleDtoSchema = RoleDto;
 
-export const listRolesResponseSchema = z.object({ roles: z.array(roleDtoSchema) });
+export const listRolesResponseSchema = ListRolesResponse;
 
-export const createRoleRequestSchema = z
-	.object({
-		name: z.string().min(3).max(100),
-		hierarchy_level: z.number().int().min(0).max(100)
-	})
-	.strict();
+/** Name / level bounds are the generated ones (Go: name 2-100, level 0-99). */
+export const createRoleRequestSchema = CreateRoleRequest.strict();
 
-export const createRoleResponseSchema = z.object({ role_id: z.string() });
+export const createRoleResponseSchema = CreateRoleResponse;
 
-export const updateRoleRequestSchema = z
-	.object({
-		name: z.string().min(3).max(100).optional(),
-		hierarchy_level: z.number().int().min(0).max(100).optional()
-	})
-	.strict();
+export const updateRoleRequestSchema = UpdateRoleRequest.strict();
 
-export const replaceRolePermissionsRequestSchema = z
-	.object({ permissions: z.array(z.string()) })
-	.strict();
+export const replaceRolePermissionsRequestSchema = ReplaceRolePermissionsRequest.strict();
 
-export const rolePermissionRequestSchema = z.object({ permission: z.string() }).strict();
+export const rolePermissionRequestSchema = RolePermissionRequest.strict();

@@ -20,8 +20,6 @@ const u: UserDto = {
 	department: 'Plat',
 	status_message: '',
 	joined_at: '2026-01-01T00:00:00Z',
-	left_at: null,
-	reports_to: null,
 	role_ids: ['r1']
 };
 
@@ -42,9 +40,6 @@ describe('userStatusBadge', () => {
 	});
 	it('inactive → neutral', () => {
 		expect(userStatusBadge('inactive').variant).toBe('neutral');
-	});
-	it('pending → warning', () => {
-		expect(userStatusBadge('pending').variant).toBe('warning');
 	});
 });
 

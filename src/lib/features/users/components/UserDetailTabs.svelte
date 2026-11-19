@@ -84,7 +84,9 @@
 						</div>
 						<div class="flex justify-between gap-4">
 							<dt class="text-fg-muted">Joined</dt>
-							<dd class="text-fg tabular-nums">{new Date(user.joined_at).toLocaleDateString()}</dd>
+							<dd class="text-fg tabular-nums">
+								{user.joined_at ? new Date(user.joined_at).toLocaleDateString() : '—'}
+							</dd>
 						</div>
 						{#if user.left_at}
 							<div class="flex justify-between gap-4">

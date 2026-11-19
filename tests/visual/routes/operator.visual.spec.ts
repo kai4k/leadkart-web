@@ -26,21 +26,21 @@ const TENANTS_LIST_FIXTURE = {
 	tenants: [
 		fakeTenantDto({ slug: 'platform', display_name: 'LeadKart Platform' }),
 		fakeTenantDto({
-			id: '00000000-0000-0000-0000-000000000020',
+			id: '00000000-0000-4000-8000-000000000020',
 			slug: 'acme-pharma',
 			display_name: 'Acme Pharma',
 			legal_name: 'Acme Pharmaceutical Pvt. Ltd.',
 			status: 'active'
 		}),
 		fakeTenantDto({
-			id: '00000000-0000-0000-0000-000000000021',
+			id: '00000000-0000-4000-8000-000000000021',
 			slug: 'globex-rx',
 			display_name: 'Globex Rx',
 			legal_name: 'Globex Rx Wholesalers',
 			status: 'active'
 		}),
 		fakeTenantDto({
-			id: '00000000-0000-0000-0000-000000000022',
+			id: '00000000-0000-4000-8000-000000000022',
 			slug: 'sentinel-meds',
 			display_name: 'Sentinel Meds',
 			legal_name: 'Sentinel Meds Distribution LLP',

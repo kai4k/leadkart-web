@@ -25,13 +25,16 @@
  */
 import { api } from '#lib/api/client.ts';
 import { ApiError, type ApiErrorBody } from '$api/errors';
-import { userDtoSchema, listSessionsResponseSchema, capabilitiesSchema } from './schemas';
+import {
+	userDtoSchema,
+	listSessionsResponseSchema,
+	capabilitiesSchema,
+	revokeOtherSessionsResponseSchema
+} from './schemas';
 import type { UserDto, SessionDto, UpdateProfileRequest } from './types';
-import { z } from 'zod';
+import type { z } from 'zod';
 
 export type Capabilities = z.output<typeof capabilitiesSchema>;
-
-const revokeAllSessionsResponseSchema = z.object({ revoked_count: z.number().int().nonnegative() });
 
 // Login was migrated to a SvelteKit form action at
 // src/routes/(auth)/signin/+page.server.ts — per the "per-route shape"
@@ -212,5 +215,5 @@ export async function revokeSession(familyId: string): Promise<void> {
 export async function revokeOtherSessions(reason?: string): Promise<{ revoked_count: number }> {
 	const body: { except_current: true; reason?: string } = { except_current: true };
 	if (reason) body.reason = reason;
-	return api.deleteJson('/v1/auth/sessions', body, revokeAllSessionsResponseSchema);
+	return api.deleteJson('/v1/auth/sessions', body, revokeOtherSessionsResponseSchema);
 }

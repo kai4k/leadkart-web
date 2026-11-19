@@ -177,7 +177,7 @@
 										<td class="text-fg py-2 pe-4">{m.designation || '—'}</td>
 										<td class="text-fg py-2 pe-4">{m.department || '—'}</td>
 										<td class="text-fg-muted py-2 pe-4 tabular-nums">
-											{new Date(m.joined_at).toLocaleDateString()}
+											{m.joined_at ? new Date(m.joined_at).toLocaleDateString() : '—'}
 										</td>
 										<td class="py-2 pe-4">
 											<Badge

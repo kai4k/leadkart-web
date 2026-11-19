@@ -10,23 +10,17 @@
  * context or from the platform persons/memberships endpoint.
  */
 import { z } from 'zod';
+import { ListPersonMembershipsResponse, PersonDto } from '#lib/api/generated/index.ts';
 import { userDtoSchema } from '#lib/features/auth/schemas.ts';
 
-export const personDtoSchema = z.object({
-	id: z.string(),
-	email: z.string(),
-	first_name: z.string(),
-	last_name: z.string(),
-	is_active: z.boolean(),
-	is_anonymised: z.boolean(),
-	is_globally_suspended: z.boolean(),
-	global_suspension_reason: z.string().optional().default(''),
-	globally_suspended_at: z.string().optional().default(''),
-	created_at: z.string(),
-	anonymised_at: z.string().optional().default('')
+/** The suspension / anonymisation fields are omitzero in Go; an absent value is read as ''. */
+export const personDtoSchema = PersonDto.extend({
+	global_suspension_reason: z.string().default(''),
+	globally_suspended_at: z.string().default(''),
+	anonymised_at: z.string().default('')
 });
 
-export const listPersonMembershipsResponseSchema = z.object({
+export const listPersonMembershipsResponseSchema = ListPersonMembershipsResponse.extend({
 	memberships: z.array(userDtoSchema)
 });
 

@@ -11,8 +11,8 @@ export function tenantLifecycleBadge(tenant: TenantDto): {
 			return { label: 'Active', variant: 'success' };
 		case 'suspended':
 			return { label: 'Suspended', variant: 'warning' };
-		case 'marked_for_deletion':
-			return { label: 'Marked for deletion', variant: 'danger' };
+		case 'pending_deletion':
+			return { label: 'Pending deletion', variant: 'danger' };
 		case 'pending':
 			return { label: 'Pending', variant: 'info' };
 		default:
@@ -33,5 +33,5 @@ export function canMarkForDeletion(tenant: TenantDto): boolean {
 }
 
 export function canRestore(tenant: TenantDto): boolean {
-	return tenant.status === 'marked_for_deletion';
+	return tenant.status === 'pending_deletion';
 }

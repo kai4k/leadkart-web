@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { deactivateUser, listAllUsers, reactivateUser } from '#lib/features/users/api.ts';
 
-const user = (id: string) => ({
-	membership_id: id,
-	person_id: `p-${id}`,
-	tenant_id: 't1',
-	email: `${id}@example.com`,
+const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+const user = (n: number) => ({
+	membership_id: uuid(n),
+	person_id: uuid(100 + n),
+	tenant_id: uuid(200),
+	email: `u${n}@example.com`,
 	first_name: 'A',
 	last_name: 'B',
 	status: 'active',
@@ -24,12 +25,12 @@ describe('users gateway', () => {
 	it('listAllUsers follows next_cursor with page_size=200', async () => {
 		const fetchMock = vi
 			.fn()
-			.mockResolvedValueOnce(json({ users: [user('a')], has_more: true, next_cursor: 'n1' }))
-			.mockResolvedValueOnce(json({ users: [user('b')], has_more: false }));
+			.mockResolvedValueOnce(json({ users: [user(1)], has_more: true, next_cursor: 'n1' }))
+			.mockResolvedValueOnce(json({ users: [user(2)], has_more: false }));
 		vi.stubGlobal('fetch', fetchMock);
 		const all = await listAllUsers();
 		expect(all.truncated).toBe(false);
-		expect(all.items.map((u) => u.membership_id)).toEqual(['a', 'b']);
+		expect(all.items.map((u) => u.membership_id)).toEqual([uuid(1), uuid(2)]);
 		expect(fetchMock.mock.calls[0]![0]).toBe('/api/v1/users?page_size=200');
 		expect(fetchMock.mock.calls[1]![0]).toBe('/api/v1/users?cursor=n1&page_size=200');
 	});

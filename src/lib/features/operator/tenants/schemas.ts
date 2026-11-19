@@ -10,6 +10,7 @@
  * naming convention (dto suffix makes the gateway-boundary role explicit).
  */
 import { z } from 'zod';
+import { RegisterTenantResponse } from '#lib/api/generated/index.ts';
 import { tenantSchema } from '#lib/features/tenant/schemas.ts';
 
 export { tenantSchema as tenantDtoSchema } from '#lib/features/tenant/schemas.ts';
@@ -33,11 +34,7 @@ export const registerTenantRequestSchema = z
 	})
 	.strict();
 
-export const registerTenantResponseSchema = z.object({
-	tenant_id: z.string(),
-	person_id: z.string(),
-	membership_id: z.string()
-});
+export const registerTenantResponseSchema = RegisterTenantResponse;
 
 export const suspendTenantRequestSchema = z.object({ reason: z.string().min(1).max(500) }).strict();
 

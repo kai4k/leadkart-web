@@ -8,6 +8,11 @@
  *   listImpersonationSessionsResponseSchema — GET /sessions wrapper
  */
 import { z } from 'zod';
+import {
+	CreateImpersonationSessionResponse,
+	ImpersonationSessionDto,
+	ListImpersonationSessionsResponse
+} from '#lib/api/generated/index.ts';
 
 export const createImpersonationSessionRequestSchema = z
 	.object({
@@ -17,20 +22,12 @@ export const createImpersonationSessionRequestSchema = z
 	})
 	.strict();
 
-export const createImpersonationSessionResponseSchema = z.object({
-	session_id: z.string(),
-	expires_at_utc: z.string()
+/** The access token in the 201 body is consumed by the BFF only; the browser keeps the id + expiry. */
+export const createImpersonationSessionResponseSchema = CreateImpersonationSessionResponse.pick({
+	session_id: true,
+	expires_at_utc: true
 });
 
-export const impersonationSessionDtoSchema = z.object({
-	session_id: z.string(),
-	operator_id: z.string(),
-	target_tenant_id: z.string(),
-	reason: z.string(),
-	created_at: z.string(),
-	expires_at: z.string()
-});
+export const impersonationSessionDtoSchema = ImpersonationSessionDto;
 
-export const listImpersonationSessionsResponseSchema = z.object({
-	sessions: z.array(impersonationSessionDtoSchema)
-});
+export const listImpersonationSessionsResponseSchema = ListImpersonationSessionsResponse;

@@ -53,7 +53,7 @@ const LEAD = {
 };
 
 const ROLE = {
-	id: 'role-custom',
+	id: '00000000-0000-4000-8000-000000000108',
 	tenant_id: TEST_TENANT_ID,
 	name: 'Sales Lead',
 	hierarchy_level: 5,
