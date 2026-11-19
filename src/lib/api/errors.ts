@@ -20,17 +20,30 @@ export const CORRELATION_ID_HEADER = 'x-correlation-id';
 export const SESSION_EXPIRED_CODE = 'session_expired';
 export const SCOPE_INVALID_CODE = 'scope_invalid';
 export const SCHEMA_MISMATCH_CODE = 'schema_mismatch';
+export const CSRF_MISMATCH_CODE = 'csrf_mismatch';
+/** Go (authn/tenant_scope.go) answers these when the BFF-injected X-Tenant-Id is unusable. */
+const GO_SCOPE_CODES: ReadonlySet<string> = new Set([
+	'invalid_tenant_scope',
+	'tenant_scope_not_found',
+	'tenant_scope_conflict',
+	'tenant_scope_not_supported'
+]);
+/** A suspended/deleted tenant: a scope problem only when the request was scope-marked. */
+const TENANT_NOT_ACTIVE_CODE = 'tenant_not_active';
+const SCOPE_EXPIRED_COPY = 'Operator scope expired — select the tenant again';
 
 function firstText(...values: Array<string | undefined>): string | undefined {
 	for (const v of values) if (typeof v === 'string' && v.trim() !== '') return v.trim();
 	return undefined;
 }
 
-export function flattenFieldErrors(errors: ApiErrorBody['errors']): Record<string, string> {
+/** First non-blank message per field. Malformed input (non-object, non-array values, non-string entries) is ignored. */
+export function flattenFieldErrors(errors: unknown): Record<string, string> {
 	const out: Record<string, string> = {};
-	if (!errors) return out;
+	if (typeof errors !== 'object' || errors === null || Array.isArray(errors)) return out;
 	for (const [field, messages] of Object.entries(errors)) {
-		const first = messages?.find((m) => m.trim() !== '');
+		if (!Array.isArray(messages)) continue;
+		const first = messages.find((m): m is string => typeof m === 'string' && m.trim() !== '');
 		if (first) out[field] = first;
 	}
 	return out;
@@ -48,6 +61,8 @@ export class ApiError extends Error {
 	readonly status: number | undefined;
 	readonly traceId: string | undefined;
 	code: string | undefined;
+	/** Seconds from `Retry-After` (429 rate limit, 423 account_locked, ...), any status. */
+	retryAfterSeconds: number | undefined;
 
 	constructor(status?: number, traceId?: string, code?: string) {
 		super('An unexpected error occurred.');
@@ -57,39 +72,56 @@ export class ApiError extends Error {
 		this.code = code;
 	}
 
-	static fromResponse(response: Response, body: ApiErrorBody | null): ApiError {
+	/** `ctx.scopeRequired`: the request carried the operator-scope marker header. */
+	static fromResponse(
+		response: Response,
+		rawBody: ApiErrorBody | null,
+		ctx: { scopeRequired?: boolean } = {}
+	): ApiError {
+		const body = typeof rawBody === 'object' && rawBody !== null ? rawBody : null;
 		const code = firstText(body?.error);
 		const text = firstText(body?.message, body?.detail);
 		const traceId = response.headers.get(CORRELATION_ID_HEADER) ?? undefined;
+		const retryAfter = parseRetryAfter(response.headers.get('retry-after'));
 		let err: ApiError;
+		if (
+			code !== undefined &&
+			(GO_SCOPE_CODES.has(code) || (code === TENANT_NOT_ACTIVE_CODE && ctx.scopeRequired === true))
+		) {
+			err = new ScopeInvalidError(text ?? SCOPE_EXPIRED_COPY, traceId, response.status);
+			err.code = code;
+			err.retryAfterSeconds = retryAfter;
+			return err;
+		}
 		switch (response.status) {
 			case 400:
 			case 422:
 				err = new ValidationError(flattenFieldErrors(body?.errors), response.status, text, traceId);
 				break;
 			case 401:
-				err = new AuthError(401, traceId);
+				// session_expired (BFF) stays generic; other 401s (incorrect_current_password, ...) speak for themselves.
+				err = new AuthError(401, traceId, code === SESSION_EXPIRED_CODE ? undefined : text);
 				break;
 			case 403:
-				err = new AuthError(403, traceId, text);
+				err = new AuthError(
+					403,
+					traceId,
+					code === CSRF_MISMATCH_CODE
+						? 'Your session token is out of date — reload the page and try again.'
+						: text
+				);
 				break;
 			case 404:
-				err = new NotFoundError(response.url || 'unknown resource', traceId);
+				err = new NotFoundError(response.url || 'unknown resource', traceId, text);
 				break;
 			case 409:
 				err =
 					code === SCOPE_INVALID_CODE
-						? new ScopeInvalidError(
-								text ?? 'Operator scope expired — select the tenant again',
-								traceId
-							)
-						: new ConflictError(
-								text ?? 'This conflicts with the current state. Refresh and try again.',
-								traceId
-							);
+						? new ScopeInvalidError(text ?? SCOPE_EXPIRED_COPY, traceId)
+						: new ConflictError(text, traceId);
 				break;
 			case 429:
-				err = new RateLimitError(parseRetryAfter(response.headers.get('retry-after')), traceId);
+				err = new RateLimitError(retryAfter, traceId);
 				break;
 			default:
 				if (response.status >= 500) {
@@ -100,6 +132,7 @@ export class ApiError extends Error {
 				}
 		}
 		if (code) err.code = code;
+		err.retryAfterSeconds ??= retryAfter;
 		return err;
 	}
 
@@ -164,7 +197,6 @@ export class SchemaError extends ApiError {
 
 export class RateLimitError extends ApiError {
 	declare readonly status: 429;
-	readonly retryAfterSeconds: number | undefined;
 	constructor(retryAfterSeconds?: number, traceId?: string) {
 		super(429, traceId);
 		this.name = 'RateLimitError';
@@ -213,57 +245,60 @@ export class ServerError extends ApiError {
 export class AuthError extends ApiError {
 	declare readonly status: 401 | 403;
 
-	/** `detail` is Go's own 403 text (forbidden, self_modification_forbidden, grant_exceeds_authority); 401 stays generic. */
+	/** `detail` is Go's own text (403: forbidden, self_modification_forbidden, ...; 401 other than session_expired: incorrect_current_password, ...). */
 	constructor(status: 401 | 403, traceId?: string, detail?: string) {
 		super(status, traceId);
 		this.name = 'AuthError';
 		this.message =
-			status === 401
-				? 'Sign in to continue.'
-				: (detail ?? "You don't have permission for this action.");
+			detail ??
+			(status === 401 ? 'Sign in to continue.' : "You don't have permission for this action.");
 	}
 }
 
-/** 404 — resource not found. */
+/** 404 — resource not found. `resource` (the request URL) is diagnostic only; never shown to users. */
 export class NotFoundError extends ApiError {
 	declare readonly status: 404;
 
 	constructor(
 		public readonly resource: string,
-		traceId?: string
+		traceId?: string,
+		text?: string
 	) {
 		super(404, traceId);
 		this.name = 'NotFoundError';
-		this.message = `${resource} not found.`;
+		this.message = text ?? 'This item no longer exists.';
 	}
 }
 
 /** 409 — conflict (slug taken, duplicate record, etc.). */
 export class ConflictError extends ApiError {
 	declare readonly status: 409;
+	/** Go's text; undefined when Go sent none, so callers' `err.detail || '<specific copy>'` fallbacks work. */
+	readonly detail: string | undefined;
 
-	constructor(
-		public readonly detail: string,
-		traceId?: string
-	) {
+	constructor(detail?: string, traceId?: string) {
 		super(409, traceId);
 		this.name = 'ConflictError';
-		this.message = detail;
+		this.detail = detail;
+		this.message = detail ?? 'This conflicts with the current state. Refresh and try again.';
 	}
 }
 
 /**
- * 409 `scope_invalid` — raised by the BFF proxy, never by Go. Not a domain
- * conflict: the global handler sends the operator back to /operator/tenants.
+ * The operator scope is unusable: 409 `scope_invalid` from the BFF proxy, or one of Go's
+ * tenant-scope codes (400/403/404, see GO_SCOPE_CODES). Not a domain conflict: the
+ * session guard sends the operator back to /operator/tenants whatever the status.
+ * `code` keeps the original code.
  */
 export class ScopeInvalidError extends ApiError {
-	declare readonly status: 409;
+	declare readonly status: number;
 
 	constructor(
 		public readonly detail: string,
-		traceId?: string
+		traceId?: string,
+		status = 409
 	) {
-		super(409, traceId, SCOPE_INVALID_CODE);
+		super(status, traceId, SCOPE_INVALID_CODE);
 		this.name = 'ScopeInvalidError';
 		this.message = detail;
 	}

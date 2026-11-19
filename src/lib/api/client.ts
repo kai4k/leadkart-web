@@ -108,7 +108,10 @@ async function send(
 		dispose();
 	}
 	const data = text.length > 0 ? safeJsonParse(text) : undefined;
-	if (!response.ok) throw ApiError.fromResponse(response, (data ?? null) as ApiErrorBody | null);
+	if (!response.ok)
+		throw ApiError.fromResponse(response, (data ?? null) as ApiErrorBody | null, {
+			scopeRequired: headers.has(SCOPE_REQUIRED_HEADER)
+		});
 	if (expectJson && data === undefined)
 		throw new SchemaError(`${method} ${path}`, [], {
 			message: `expected a JSON body, got ${response.status} with an empty/non-JSON body`

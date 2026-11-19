@@ -233,3 +233,110 @@ describe('ApiError.transport', () => {
 		expect(err).toBeInstanceOf(NetworkError);
 	});
 });
+
+describe('scope codes reach ScopeInvalidError (any status)', () => {
+	it.each([
+		['invalid_tenant_scope', 400],
+		['tenant_scope_conflict', 400],
+		['tenant_scope_not_found', 404],
+		['tenant_scope_not_supported', 403],
+		['scope_invalid', 409]
+	])('%s (%i) -> ScopeInvalidError keeping its code and status', (code, status) => {
+		const err = ApiError.fromResponse(res(status), { error: code, message: 'Go says no' });
+		expect(err).toBeInstanceOf(ScopeInvalidError);
+		expect(err.code).toBe(code);
+		expect(err.status).toBe(status);
+		expect(err.message).toBe('Go says no');
+	});
+	it('tenant_not_active is a scope error only when the request was scope-marked', () => {
+		const body = { error: 'tenant_not_active', message: 'Tenant is suspended' };
+		expect(ApiError.fromResponse(res(409), body, { scopeRequired: true })).toBeInstanceOf(
+			ScopeInvalidError
+		);
+		expect(ApiError.fromResponse(res(409), body)).toBeInstanceOf(ConflictError);
+		expect(ApiError.fromResponse(res(409), body, { scopeRequired: true }).code).toBe(
+			'tenant_not_active'
+		);
+	});
+	it('a scope error without Go text gets the default copy', () => {
+		expect(ApiError.fromResponse(res(404), { error: 'tenant_scope_not_found' }).message).toMatch(
+			/select the tenant again/i
+		);
+	});
+});
+
+describe('NotFoundError copy', () => {
+	it('never leaks the URL or ids; the URL stays in `resource`', () => {
+		const r = new Response(null, { status: 404 });
+		Object.defineProperty(r, 'url', { value: 'http://host/api/v1/users/0b1c-uuid' });
+		const err = ApiError.fromResponse(r, null) as NotFoundError;
+		expect(err.message).toBe('This item no longer exists.');
+		expect(err.message).not.toMatch(/http|uuid/);
+		expect(err.resource).toBe('http://host/api/v1/users/0b1c-uuid');
+	});
+	it("uses Go's text when present", () => {
+		expect(
+			ApiError.fromResponse(res(404), { error: 'user_not_found', message: 'User not found' })
+				.message
+		).toBe('User not found');
+	});
+});
+
+describe('fromResponse robustness', () => {
+	it('flattenFieldErrors ignores malformed entries instead of throwing', () => {
+		const bad = {
+			errors: { a: 'str', b: 5, c: null, d: [1, '', '  ', 'ok'], e: {}, f: ['first'] }
+		} as never;
+		const err = ApiError.fromResponse(res(422), bad) as ValidationError;
+		expect(err.fields).toEqual({ d: 'ok', f: 'first' });
+		expect(ApiError.fromResponse(res(422), { errors: 'nope' } as never)).toBeInstanceOf(
+			ValidationError
+		);
+		expect(ApiError.fromResponse(res(422), { errors: [1, 2] } as never)).toBeInstanceOf(
+			ValidationError
+		);
+	});
+	it('a body that is not an object does not throw', () => {
+		expect(ApiError.fromResponse(res(500), 'oops' as never)).toBeInstanceOf(ServerError);
+		expect(ApiError.fromResponse(res(400), 7 as never)).toBeInstanceOf(ValidationError);
+	});
+	it('a 409 without Go text leaves ConflictError.detail undefined (callers keep their own fallback)', () => {
+		const err = ApiError.fromResponse(res(409), { error: 'x' }) as ConflictError;
+		expect(err.detail).toBeUndefined();
+		expect(err.message).toMatch(/conflicts/i);
+		expect((ApiError.fromResponse(res(409), { message: 'taken' }) as ConflictError).detail).toBe(
+			'taken'
+		);
+	});
+	it('403 csrf_mismatch gets reload copy', () => {
+		const err = ApiError.fromResponse(res(403), {
+			error: 'csrf_mismatch',
+			message: 'CSRF token missing or invalid'
+		});
+		expect(err).toBeInstanceOf(AuthError);
+		expect(err.message).toMatch(/reload the page/i);
+	});
+	it('a 401 that is not session_expired shows the message; session_expired and bare 401 stay generic', () => {
+		expect(
+			ApiError.fromResponse(res(401), {
+				error: 'incorrect_current_password',
+				message: 'Current password is incorrect'
+			}).message
+		).toBe('Current password is incorrect');
+		expect(ApiError.fromResponse(res(401), null).message).toBe('Sign in to continue.');
+		expect(
+			ApiError.fromResponse(res(401), { error: 'session_expired', message: 'Session expired' })
+				.message
+		).toBe('Sign in to continue.');
+	});
+	it('parses Retry-After for any status (423 account_locked)', () => {
+		const err = ApiError.fromResponse(res(423, { 'retry-after': '120' }), {
+			error: 'account_locked',
+			message: 'Account locked'
+		});
+		expect(err.code).toBe('account_locked');
+		expect(err.retryAfterSeconds).toBe(120);
+		expect(ApiError.fromResponse(res(500, { 'retry-after': '5' }), null).retryAfterSeconds).toBe(5);
+		expect(ApiError.fromResponse(res(423), null).retryAfterSeconds).toBeUndefined();
+	});
+});

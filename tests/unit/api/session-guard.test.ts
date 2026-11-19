@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createSessionGuard } from '#lib/api/session-guard.ts';
 import {
+	ApiError,
 	AuthError,
 	ConflictError,
 	ScopeInvalidError,
@@ -118,5 +119,25 @@ describe('session guard — scope_invalid', () => {
 		await Promise.resolve();
 		guard.handle(scopeError());
 		await vi.waitFor(() => expect(deps.goto).toHaveBeenCalledTimes(2));
+	});
+});
+
+describe('session guard: scope errors regardless of HTTP status', () => {
+	it('handles a ScopeInvalidError that arrived as 404 tenant_scope_not_found', async () => {
+		const deps = {
+			goto: vi.fn(() => Promise.resolve()),
+			clearCache: vi.fn(),
+			resetCache: vi.fn(),
+			notify: vi.fn(),
+			exitScope: vi.fn(() => Promise.resolve()),
+			location: () => ({ pathname: '/operator/scope/members', search: '' })
+		};
+		const guard = createSessionGuard(deps);
+		const err = ApiError.fromResponse(new Response(null, { status: 404 }), {
+			error: 'tenant_scope_not_found'
+		});
+		expect(guard.handle(err)).toBe(true);
+		await vi.waitFor(() => expect(deps.goto).toHaveBeenCalledWith('/operator/tenants'));
+		expect(deps.exitScope).toHaveBeenCalledTimes(1);
 	});
 });
