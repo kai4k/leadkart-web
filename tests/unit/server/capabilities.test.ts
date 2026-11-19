@@ -64,7 +64,9 @@ describe('loadCapabilities success', () => {
 			is_super_user: false,
 			permissions: [],
 			effective_permissions: [],
-			roles: []
+			roles: [],
+			rank: 99,
+			tier: 'user'
 		});
 		const caps = await loadCapabilities({} as never);
 		expect(caps).not.toBeNull();

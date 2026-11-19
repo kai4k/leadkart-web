@@ -4296,6 +4296,7 @@ export interface paths {
 		 *     PATCH /api/v1/users/{userId}/profile.
 		 *
 		 *     Requires `platform.users.manage` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
+		 *     An operator cannot change their own Person: the caller's own `personId` is refused with 403 `self_modification_forbidden` (super users exempt).
 		 */
 		patch: {
 			parameters: {
@@ -4351,6 +4352,7 @@ export interface paths {
 		 * @description Reason is mandatory per data-retention.md audit canon.
 		 *
 		 *     Requires `platform.users.manage` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
+		 *     An operator cannot change their own Person: the caller's own `personId` is refused with 403 `self_modification_forbidden` (super users exempt).
 		 */
 		post: {
 			parameters: {
@@ -4407,6 +4409,7 @@ export interface paths {
 		/**
 		 * Lift a previously applied global suspension
 		 * @description Requires `platform.users.manage` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
+		 *     An operator cannot change their own Person: the caller's own `personId` is refused with 403 `self_modification_forbidden` (super users exempt).
 		 */
 		post: {
 			parameters: {
@@ -4459,6 +4462,7 @@ export interface paths {
 		/**
 		 * Anonymise a Person record directly (DPDP §12 / GDPR Art. 17)
 		 * @description Requires `identity.users.anonymise` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
+		 *     An operator cannot change their own Person: the caller's own `personId` is refused with 403 `self_modification_forbidden` (super users exempt).
 		 */
 		post: {
 			parameters: {
@@ -12241,6 +12245,17 @@ export interface components {
 			/** @description Every catalogue permission the caller satisfies in their own tenant (tenant.admin expanded). Use this, not permissions[], for UI gating. */
 			effective_permissions: string[];
 			roles: components['schemas']['CapabilityRoleDto'][];
+			/**
+			 * @description Seniority from the access token's `rank` claim (ADR 0069): 0 = owner, lower is more senior,
+			 *     99 = no role. Tokens minted before the claim existed read as 99. Hide actions on members whose
+			 *     rank is not strictly greater than this (owners may also act on owners).
+			 */
+			rank: number;
+			/**
+			 * @description Band of `rank`: owner 0; admin 1-10; manager 11-20; team_lead 21-30; user 31-99.
+			 * @enum {string}
+			 */
+			tier: 'owner' | 'admin' | 'manager' | 'team_lead' | 'user';
 		};
 		CapabilityRoleDto: {
 			/** Format: uuid */

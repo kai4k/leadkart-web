@@ -127,9 +127,9 @@ function base64url(s: string): string {
  * capabilitiesSchema. Must be returned by every (app) route that
  * signs in — the Sidebar + UserMenu query this on mount.
  *
- * NOTE: `tier` is NOT a backend field — it is derived client-side via
- * deriveTier(). Do not pass `tier` here; pass is_platform + is_super_user
- * + permissions instead so deriveTier() produces the right result.
+ * `effective_permissions` is what the web authorises on (Go expands
+ * tenant.admin / super-user authority into it server-side); `rank` and
+ * `tier` are Go's seniority, presentation only.
  */
 export function fakeCapabilitiesResponse(overrides?: {
 	permissions?: Permission[];
@@ -143,6 +143,11 @@ export function fakeCapabilitiesResponse(overrides?: {
 	first_name?: string;
 	last_name?: string;
 	roles?: Array<{ id: string; name: string; is_super_admin: boolean }>;
+	/** What Go computed for the caller; defaults to `permissions` (no expansion). */
+	effective_permissions?: Permission[];
+	/** Seniority (0 = owner, 99 = no role) and its band; presentation only. */
+	rank?: number;
+	tier?: 'owner' | 'admin' | 'manager' | 'team_lead' | 'user';
 }) {
 	return {
 		person_id: overrides?.person_id ?? TEST_PERSON_ID,
@@ -155,8 +160,10 @@ export function fakeCapabilitiesResponse(overrides?: {
 		is_platform: overrides?.is_platform ?? false,
 		is_super_user: overrides?.is_super_user ?? false,
 		permissions: overrides?.permissions ?? [],
-		effective_permissions: overrides?.permissions ?? [],
-		roles: overrides?.roles ?? []
+		effective_permissions: overrides?.effective_permissions ?? overrides?.permissions ?? [],
+		roles: overrides?.roles ?? [],
+		rank: overrides?.rank ?? 99,
+		tier: overrides?.tier ?? 'user'
 	};
 }
 

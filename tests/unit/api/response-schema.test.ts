@@ -49,7 +49,9 @@ const capsBase = {
 	is_super_user: false,
 	permissions: [],
 	effective_permissions: [],
-	roles: []
+	roles: [],
+	rank: 99,
+	tier: 'user'
 };
 const person = {
 	id: UUID(2),
@@ -91,6 +93,8 @@ describe.each(GO_ONLY_ADDRESSES)('response schemas accept %s', (email) => {
 			permissions: [],
 			effective_permissions: [],
 			roles: [],
+			rank: 99,
+			tier: 'user',
 			email
 		});
 		expect(r.success).toBe(true);

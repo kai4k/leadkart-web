@@ -22,6 +22,8 @@ function caps(overrides: Partial<Capabilities> = {}): Capabilities {
 		permissions: [],
 		effective_permissions: [],
 		roles: [],
+		rank: 99,
+		tier: 'user',
 		...overrides
 	};
 }

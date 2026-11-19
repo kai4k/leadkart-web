@@ -125,7 +125,9 @@ describe('capabilitiesSchema (generated CapabilitiesDto)', () => {
 		is_super_user: false,
 		permissions: [],
 		effective_permissions: [],
-		roles: []
+		roles: [],
+		rank: 99,
+		tier: 'user'
 	};
 
 	it('parses a body without email / first_name / last_name (omitzero in Go)', () => {

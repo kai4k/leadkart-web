@@ -60,7 +60,9 @@ export const CapabilitiesDto = z
 		is_super_user: z.boolean(),
 		permissions: z.array(z.string()),
 		effective_permissions: z.array(z.string()),
-		roles: z.array(CapabilityRoleDto)
+		roles: z.array(CapabilityRoleDto),
+		rank: z.number().int().gte(0).lte(99),
+		tier: z.enum(['owner', 'admin', 'manager', 'team_lead', 'user'])
 	})
 	.passthrough();
 export const AuditEventDto = z
@@ -5478,6 +5480,7 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 		path: '/api/v1/platform/persons/:personId/anonymise',
 		alias: 'postApiv1platformpersonsPersonIdanonymise',
 		description: `Requires &#x60;identity.users.anonymise&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+An operator cannot change their own Person: the caller&#x27;s own &#x60;personId&#x60; is refused with 403 &#x60;self_modification_forbidden&#x60; (super users exempt).
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -5518,6 +5521,7 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 		description: `Reason is mandatory per data-retention.md audit canon.
 
 Requires &#x60;platform.users.manage&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+An operator cannot change their own Person: the caller&#x27;s own &#x60;personId&#x60; is refused with 403 &#x60;self_modification_forbidden&#x60; (super users exempt).
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -5561,6 +5565,7 @@ Requires &#x60;platform.users.manage&#x60; held by a platform-tenant operator; p
 		path: '/api/v1/platform/persons/:personId/lift-global-suspension',
 		alias: 'postApiv1platformpersonsPersonIdliftGlobalSuspension',
 		description: `Requires &#x60;platform.users.manage&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+An operator cannot change their own Person: the caller&#x27;s own &#x60;personId&#x60; is refused with 403 &#x60;self_modification_forbidden&#x60; (super users exempt).
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -5631,6 +5636,7 @@ per-Tenant designation/department/status_message which move via
 PATCH /api/v1/users/{userId}/profile.
 
 Requires &#x60;platform.users.manage&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+An operator cannot change their own Person: the caller&#x27;s own &#x60;personId&#x60; is refused with 403 &#x60;self_modification_forbidden&#x60; (super users exempt).
 `,
 		requestFormat: 'json',
 		parameters: [
