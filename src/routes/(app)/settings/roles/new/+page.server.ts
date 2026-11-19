@@ -5,7 +5,8 @@
  * can immediately assign permissions.
  */
 import { fail, redirect } from '@sveltejs/kit';
-import { goFetch, readGoFailure, readGoJson } from '#lib/server/go.ts';
+import { callGoForAction, failFromGo } from '#lib/server/form-action.ts';
+import { goFetch, readGoJson } from '#lib/server/go.ts';
 import { createRoleRequestSchema } from '$features/roles/schemas';
 import { P } from '#lib/features/auth/permissions.ts';
 import { guardPage, requireCapability } from '#lib/server/guards.ts';
@@ -37,20 +38,16 @@ export const actions: Actions = {
 			});
 		}
 
-		const resp = await goFetch(cookies, '/v1/roles', {
-			method: 'POST',
-			body: JSON.stringify(parsed.data)
-		});
+		const call = await callGoForAction(() =>
+			goFetch(cookies, '/v1/roles', { method: 'POST', body: JSON.stringify(parsed.data) })
+		);
+		if (!call.ok) return fail(call.status, { values: payload, formErrorKey: call.key });
 
-		if (resp.ok) {
-			const body = (await readGoJson<CreateRoleResponse>(resp)) as CreateRoleResponse;
+		if (call.resp.ok) {
+			const body = (await readGoJson<CreateRoleResponse>(call.resp)) as CreateRoleResponse;
 			throw redirect(303, `/settings/roles/${body.role_id}`);
 		}
 
-		const failure = await readGoFailure(resp, { fallback: 'Create failed' });
-		if (Object.keys(failure.fields).length > 0) {
-			return fail(failure.status, { values: payload, errors: failure.fields });
-		}
-		return fail(failure.status, { values: payload, bannerError: failure.message });
+		return failFromGo(call.resp, payload, { fallback: 'Create failed' });
 	}
 };

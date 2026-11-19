@@ -18,6 +18,7 @@
  *     token is still valid, so the view offers a retry
  *   - 'rateLimited' → 429: same, wait and retry
  */
+import { confirmEmailChange } from '$features/auth/api';
 import type { PageLoad } from './$types';
 
 export type ConfirmPhase = 'missing' | 'success' | 'invalid' | 'unreachable' | 'rateLimited';
@@ -26,19 +27,5 @@ export const load: PageLoad = async ({ url, fetch }) => {
 	const token = url.searchParams.get('token') ?? '';
 	if (!token) return { phase: 'missing' as ConfirmPhase };
 
-	try {
-		const resp = await fetch('/auth/confirm-email-change', {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ token })
-		});
-		if (resp.ok || resp.status === 204) {
-			return { phase: 'success' as ConfirmPhase };
-		}
-		if (resp.status === 429) return { phase: 'rateLimited' as ConfirmPhase };
-		if (resp.status >= 500) return { phase: 'unreachable' as ConfirmPhase };
-		return { phase: 'invalid' as ConfirmPhase };
-	} catch {
-		return { phase: 'unreachable' as ConfirmPhase };
-	}
+	return { phase: await confirmEmailChange(token, fetch) };
 };

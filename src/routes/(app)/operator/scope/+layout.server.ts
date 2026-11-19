@@ -18,7 +18,7 @@ import { redirect, error } from '@sveltejs/kit';
 import { clearOperatorScope, readOperatorScope } from '#lib/server/scope.ts';
 import { goErrorStatus, goFetch, readGoJson } from '#lib/server/go.ts';
 import { OPERATOR_SCOPE_PERMISSION, requireCapability } from '#lib/server/guards.ts';
-import { isUpstreamTimeout } from '#lib/server/proxy.ts';
+import { upstreamStatus } from '#lib/server/proxy.ts';
 import { tenantDtoSchema } from '#lib/features/operator/tenants/schemas.ts';
 import type { LayoutServerLoad } from './$types';
 
@@ -41,7 +41,7 @@ export const load: LayoutServerLoad = async ({ cookies, parent }) => {
 		// Body read inside the try: undici's body timeout (a stalled stream) is also a 504.
 		tenantJson = resp.ok ? await readGoJson<unknown>(resp) : null;
 	} catch (err) {
-		if (isUpstreamTimeout(err)) {
+		if (upstreamStatus(err) === 504) {
 			throw error(504, 'Tenant service timed out');
 		}
 		throw err;

@@ -194,3 +194,52 @@ describe('readGoError / flattenGoErrors', () => {
 		expect(await readGoError(new Response('<html>', { status: 502 }))).toEqual({});
 	});
 });
+
+describe('goAuthFetch bounds the body read by the same deadline', () => {
+	it('rejects with a timeout when the body stalls after headers arrived', async () => {
+		vi.useFakeTimers();
+		try {
+			const fetchFn = vi.fn((_url: string, init: RequestInit) => {
+				const body = new ReadableStream<Uint8Array>({
+					start(controller) {
+						init.signal?.addEventListener('abort', () => controller.error(init.signal?.reason));
+					}
+				});
+				return Promise.resolve(new Response(body, { status: 200 }));
+			});
+			const caught = goAuthFetch(
+				'/v1/auth/refresh',
+				{ body: { refresh_token: 'r' } },
+				fetchFn as never
+			).catch((e: unknown) => e);
+			await vi.advanceTimersByTimeAsync(config.UPSTREAM_TIMEOUT_MS + 1);
+			expect(isUpstreamTimeout(await caught)).toBe(true);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('returns a Response with the same status, headers and body text', async () => {
+		const fetchFn = vi.fn(() =>
+			Promise.resolve(
+				new Response('{"a":1}', {
+					status: 401,
+					headers: { 'content-type': 'application/json', 'www-authenticate': 'Bearer' }
+				})
+			)
+		);
+		const resp = await goAuthFetch('/v1/auth/login', { body: {} }, fetchFn as never);
+		expect(resp.status).toBe(401);
+		expect(resp.headers.get('www-authenticate')).toBe('Bearer');
+		expect(await resp.json()).toEqual({ a: 1 });
+	});
+
+	it('keeps a 3xx (redirect: manual) as it came, without a body', async () => {
+		const fetchFn = vi.fn(() =>
+			Promise.resolve(new Response(null, { status: 302, headers: { location: '/x' } }))
+		);
+		const resp = await goAuthFetch('/v1/auth/login', { body: {} }, fetchFn as never);
+		expect(resp.status).toBe(302);
+		expect(resp.headers.get('location')).toBe('/x');
+	});
+});

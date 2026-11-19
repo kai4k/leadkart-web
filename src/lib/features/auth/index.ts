@@ -11,7 +11,6 @@
 export {
 	logout,
 	confirmEmailChange,
-	requestEmailChange,
 	changePassword,
 	getMyCapabilities,
 	getMyProfile,
@@ -20,7 +19,7 @@ export {
 	revokeSession,
 	revokeOtherSessions
 } from './api';
-export type { Capabilities } from './api';
+export type { Capabilities, ConfirmEmailChangeOutcome } from './api';
 
 export {
 	myCapabilitiesQuery,

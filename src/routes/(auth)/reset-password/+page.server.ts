@@ -3,9 +3,7 @@
  * fetch wrapper for the page flow.
  *
  * BFF preserved: action runs server-side in adapter-node, calls Go's
- * POST /api/v1/auth/reset-password directly. The legacy
- * /auth/reset-password +server.ts BFF endpoint stays in place for any
- * non-browser caller.
+ * POST /api/v1/auth/reset-password directly.
  *
  * The token comes from the URL query string (`?token=...`) — read via
  * the load function and passed as a hidden form field, OR re-read from
@@ -14,12 +12,8 @@
  */
 import { fail } from '@sveltejs/kit';
 import { newPasswordField } from '#lib/api/request-schema.ts';
-import {
-	goFailureKey,
-	passwordErrorKey,
-	RESET_TOKEN_INVALID,
-	upstreamFailure
-} from '#lib/server/auth-errors.ts';
+import { passwordErrorKey, RESET_TOKEN_INVALID } from '#lib/server/auth-errors.ts';
+import { callGoForAction, goFailureKey } from '#lib/server/form-action.ts';
 import { goAuthFetch, goErrorStatus, readGoError } from '#lib/server/go.ts';
 import type { Actions } from './$types';
 
@@ -43,15 +37,11 @@ export const actions: Actions = {
 			});
 		}
 
-		let resp: Response;
-		try {
-			resp = await goAuthFetch('/v1/auth/reset-password', {
-				body: { token, new_password: parsed.data }
-			});
-		} catch (err) {
-			const { status, key } = upstreamFailure(err);
-			return fail(status, { formErrorKey: key });
-		}
+		const call = await callGoForAction(() =>
+			goAuthFetch('/v1/auth/reset-password', { body: { token, new_password: parsed.data } })
+		);
+		if (!call.ok) return fail(call.status, { formErrorKey: call.key });
+		const resp = call.resp;
 
 		if (resp.ok || resp.status === 204) {
 			return { success: true };

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { _ } from 'svelte-i18n';
 	import { TextField } from '#lib/components/form/index.ts';
 	import { Alert, Button } from '$ui';
 	import { displayName } from '$features/auth/view-models';
@@ -15,6 +16,8 @@
 		values?: { designation: string; department: string; status_message: string };
 		errors?: Record<string, string[] | undefined> | Record<string, string>;
 		bannerError?: string;
+		/** i18n key: outage or rate limit (copy that has no Go code behind it). */
+		formErrorKey?: string;
 		success?: boolean;
 	};
 	type Props = { profile: UserDto; form?: FormResult };
@@ -105,7 +108,9 @@
 		/>
 	</section>
 
-	{#if form?.bannerError}
+	{#if form?.formErrorKey}
+		<Alert variant="danger">{$_(form.formErrorKey)}</Alert>
+	{:else if form?.bannerError}
 		<Alert variant="danger">{form.bannerError}</Alert>
 	{:else if form?.success}
 		<Alert variant="success">Profile saved.</Alert>

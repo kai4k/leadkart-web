@@ -18,7 +18,6 @@
  * profile read/update and session list/revoke.
  */
 import { api } from '#lib/api/client.ts';
-import { ApiError, type ApiErrorBody } from '$api/errors';
 import {
 	userDtoSchema,
 	listSessionsResponseSchema,
@@ -68,33 +67,34 @@ export function getMyCapabilities(signal?: AbortSignal): Promise<Capabilities> {
 	return api.get('/v1/auth/me/capabilities', capabilitiesSchema, { signal });
 }
 
-/**
- * Authenticated. Initiates an email change. Go emails a one-shot
- * confirmation link to the NEW address; the change does not apply until
- * the user clicks the link (handled by confirmEmailChange below). Returns
- * 204 on success; backend may emit 409 if the new email is already in use.
- */
-export async function requestEmailChange(body: { new_email: string }): Promise<void> {
-	await api.post('/v1/auth/request-email-change', body);
-}
+/** What the confirm-email-change link did, as the page needs it. */
+export type ConfirmEmailChangeOutcome = 'success' | 'invalid' | 'unreachable' | 'rateLimited';
 
 /**
- * Public — no auth required. Confirms the email change using the token
- * Go emailed. Single-use, time-boxed server-side. 204 on success.
- *
- * Failure modes (server-mapped — caller switches on err.status):
- *   400 invalid_token / token_consumed / token_expired → top banner
- *   409 email_in_use → top banner
+ * Public — no auth. Confirms the email change with the token Go emailed (single-use, time-boxed
+ * server-side) through the BFF route `/auth/confirm-email-change`. Never throws: the page shows a
+ * state, not an error. `fetchFn` is SvelteKit's load `fetch`.
+ *   2xx → success · 429 → rateLimited (token still valid, retry) · 5xx / network → unreachable
+ *   (token still valid, retry) · any other 4xx → invalid (expired / consumed / malformed).
  */
-export async function confirmEmailChange(body: { token: string }): Promise<void> {
-	const resp = await fetch('/auth/confirm-email-change', {
-		method: 'POST',
-		headers: { 'content-type': 'application/json' },
-		credentials: 'same-origin',
-		body: JSON.stringify(body)
-	});
-	if (resp.ok) return;
-	throw await readBffError(resp);
+export async function confirmEmailChange(
+	token: string,
+	fetchFn: typeof fetch = fetch
+): Promise<ConfirmEmailChangeOutcome> {
+	try {
+		const resp = await fetchFn('/auth/confirm-email-change', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			credentials: 'same-origin',
+			body: JSON.stringify({ token })
+		});
+		if (resp.ok) return 'success';
+		if (resp.status === 429) return 'rateLimited';
+		if (resp.status >= 500) return 'unreachable';
+		return 'invalid';
+	} catch {
+		return 'unreachable';
+	}
 }
 
 /**
@@ -107,28 +107,6 @@ export function changePassword(body: {
 	new_password: string;
 }): Promise<void> {
 	return api.post('/v1/auth/change-password', body);
-}
-
-/**
- * Read a non-OK BFF response and surface it as a typed `ApiError`
- * subclass (AuthError / ValidationError / ConflictError / ServerError /
- * NotFoundError / generic ApiError). The factory does the discriminated-
- * union dispatch on `resp.status` + parsed body; callers pattern-match
- * on `instanceof <Subclass>` rather than poking at monkey-patched fields.
- *
- * Message resolution is owned by `ApiError.fromResponse` — RFC 9457
- * `detail` / `title` → legacy `message` → `statusText` fallback — so
- * the gateway no longer needs to inject a per-endpoint fallback string.
- */
-async function readBffError(resp: Response): Promise<ApiError> {
-	const text = await resp.text();
-	let parsed: ApiErrorBody | null = null;
-	try {
-		parsed = text.length > 0 ? (JSON.parse(text) as ApiErrorBody) : null;
-	} catch {
-		/* non-JSON */
-	}
-	return ApiError.fromResponse(resp, parsed);
 }
 
 /**

@@ -9,9 +9,10 @@
  *
  * Both call Go directly via goFetch (cookie → Bearer).
  */
-import { fail, isRedirect } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
 import { formEmailField } from '#lib/api/request-schema.ts';
-import { changePasswordViaGo, goFailureKey, upstreamFailure } from '#lib/server/auth-errors.ts';
+import { changePasswordViaGo } from '#lib/server/auth-errors.ts';
+import { callGoForAction, goFailureKey } from '#lib/server/form-action.ts';
 import { setMustChangePassword } from '#lib/server/cookies.ts';
 import { goErrorStatus, goFetch, readGoError } from '#lib/server/go.ts';
 import type { Actions } from './$types';
@@ -44,18 +45,21 @@ export const actions: Actions = {
 			});
 		}
 
-		let resp: Response;
-		try {
-			resp = await goFetch(cookies, '/v1/auth/request-email-change', {
+		const call = await callGoForAction(() =>
+			goFetch(cookies, '/v1/auth/request-email-change', {
 				method: 'POST',
 				body: JSON.stringify({ new_email: parsed.data }),
 				scoped: false
+			})
+		);
+		if (!call.ok) {
+			return fail(call.status, {
+				which: 'changeEmail' as const,
+				email: newEmail,
+				formErrorKey: call.key
 			});
-		} catch (err) {
-			if (isRedirect(err)) throw err;
-			const { status, key } = upstreamFailure(err);
-			return fail(status, { which: 'changeEmail' as const, email: newEmail, formErrorKey: key });
 		}
+		const resp = call.resp;
 
 		if (resp.ok || resp.status === 204) {
 			return { which: 'changeEmail' as const, submitted: true };

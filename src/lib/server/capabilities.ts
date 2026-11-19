@@ -8,7 +8,7 @@ import { error, isHttpError, isRedirect, type Cookies } from '@sveltejs/kit';
 import type { z } from 'zod';
 import { capabilitiesSchema } from '#lib/features/auth/schemas.ts';
 import { goFetch, readGoJson } from './go.ts';
-import { isUpstreamTimeout } from './proxy.ts';
+import { upstreamStatus } from './proxy.ts';
 
 type Capabilities = z.output<typeof capabilitiesSchema>;
 
@@ -35,7 +35,8 @@ export async function loadCapabilities(cookies: Cookies): Promise<Capabilities |
 	} catch (err) {
 		if (isRedirect(err) || isHttpError(err)) throw err;
 		if (err instanceof SyntaxError) throw error(502, UNREADABLE); // 2xx, but not JSON
-		if (isUpstreamTimeout(err)) throw error(504, 'Go API did not respond in time');
+		// 503 (not 502) for a plain transport failure: the session is intact, a reload retries.
+		if (upstreamStatus(err) === 504) throw error(504, 'Go API did not respond in time');
 		throw error(503, 'Service temporarily unavailable');
 	}
 	if (body === null) return null;

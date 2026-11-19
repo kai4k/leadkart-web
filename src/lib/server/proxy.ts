@@ -58,7 +58,7 @@ export function buildUpstreamUrl(base: string, path: string, search: string): UR
 	return url;
 }
 
-/** Endpoints whose whole purpose is to return tokens. Reached only through /auth/* BFF routes. */
+/** Endpoints whose whole purpose is to return tokens. The browser can never reach them through the /api proxy (it refuses these paths); only the BFF's own routes and actions call them, via goAuthFetch. */
 const TOKEN_ENDPOINTS = new Set(['v1/auth/login', 'v1/auth/refresh']);
 export function isTokenEndpoint(path: string): boolean {
 	return TOKEN_ENDPOINTS.has(path);
@@ -136,7 +136,11 @@ export function upstreamTimeout(parent: AbortSignal | undefined, ms: number): Up
 
 /**
  * Pre-login Go call (login, password reset, refresh, ...): POST JSON, no auth, no
- * scope. Never follows redirects; the timeout bounds time-to-first-byte.
+ * scope. Never follows redirects. The deadline covers the WHOLE exchange: these bodies are
+ * small token / error envelopes, so the body is read before the clock stops and returned as a
+ * fresh `Response` (same status and headers). A stalled body therefore rejects with the same
+ * timeout as a stalled header, instead of waiting for undici's 300 s body timeout while a
+ * single-flight refresh holds every request of the session.
  * Throws on transport failure or timeout: callers catch, use
  * `isUpstreamTimeout` and answer 504 / 502. Never logs the body (it can hold
  * a password or token). `fetchFn` is for tests (refresh).
@@ -149,17 +153,26 @@ export async function goAuthFetch(
 ): Promise<Response> {
 	const timeout = upstreamTimeout(undefined, config.UPSTREAM_TIMEOUT_MS);
 	try {
-		return await fetchFn(`${config.GO_API_URL}/api${path}`, {
+		const resp = await fetchFn(`${config.GO_API_URL}/api${path}`, {
 			method: init.method ?? 'POST',
 			redirect: 'manual',
 			signal: timeout.signal,
 			headers: { 'content-type': 'application/json', accept: 'application/json' },
 			body: init.body === undefined ? undefined : JSON.stringify(init.body)
 		});
+		// A status that cannot carry a body (redirects arrive as-is under redirect: 'manual').
+		const text = NULL_BODY_STATUS.has(resp.status) ? null : await resp.text();
+		return new Response(text, {
+			status: resp.status,
+			statusText: resp.statusText,
+			headers: resp.headers
+		});
 	} finally {
 		timeout.headersReceived();
 	}
 }
+
+const NULL_BODY_STATUS = new Set([101, 204, 205, 304]);
 
 /**
  * True when the browser says the request is made from inside the operator
@@ -183,4 +196,9 @@ export function isUpstreamTimeout(err: unknown): boolean {
 	if (err instanceof DOMException && err.name === 'TimeoutError') return true;
 	if (!(err instanceof TypeError)) return false;
 	return (err.cause as { code?: unknown } | undefined)?.code === 'UND_ERR_BODY_TIMEOUT';
+}
+
+/** The status a failed upstream call is reported as: 504 when Go was too slow, else 502. The one mapping. */
+export function upstreamStatus(err: unknown): 502 | 504 {
+	return isUpstreamTimeout(err) ? 504 : 502;
 }

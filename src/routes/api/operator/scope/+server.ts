@@ -29,7 +29,7 @@ import { loadCapabilities } from '#lib/server/capabilities.ts';
 import { goFetch } from '#lib/server/go.ts';
 import { hasRequiredCapability, OPERATOR_SCOPE_PERMISSION } from '#lib/server/guards.ts';
 import { jsonError } from '#lib/server/http.ts';
-import { isUpstreamTimeout } from '#lib/server/proxy.ts';
+import { upstreamStatus } from '#lib/server/proxy.ts';
 
 const sessionExpired = (): Response =>
 	jsonError(401, SESSION_EXPIRED_CODE, 'Your session has expired');
@@ -96,7 +96,7 @@ export async function POST(event: RequestEvent): Promise<Response> {
 		}
 		tenant = payload.data.tenants?.[0];
 	} catch (err) {
-		return isUpstreamTimeout(err)
+		return upstreamStatus(err) === 504
 			? jsonError(504, 'upstream_timeout', 'Go API did not respond in time')
 			: jsonError(502, 'tenant_lookup_failed', 'Tenant lookup failed');
 	}

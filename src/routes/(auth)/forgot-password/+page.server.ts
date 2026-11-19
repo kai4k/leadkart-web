@@ -4,8 +4,7 @@
  *
  * BFF preserved: this action runs server-side in adapter-node, calls
  * Go's POST /api/v1/auth/request-password-reset directly, and returns
- * a typed `form` prop. The legacy /auth/request-password-reset
- * +server.ts BFF endpoint stays in place for any non-browser caller.
+ * a typed `form` prop.
  *
  * Anti-enumeration: Go returns 204 regardless of whether the email is
  * registered (Auth0/Okta canon). The action returns `submitted: true`
@@ -13,7 +12,7 @@
  */
 import { fail } from '@sveltejs/kit';
 import { lookupEmailField } from '#lib/api/request-schema.ts';
-import { goFailureKey, upstreamFailure } from '#lib/server/auth-errors.ts';
+import { callGoForAction, goFailureKey } from '#lib/server/form-action.ts';
 import { goAuthFetch } from '#lib/server/go.ts';
 import type { Actions } from './$types';
 
@@ -30,13 +29,11 @@ export const actions: Actions = {
 			});
 		}
 
-		let resp: Response;
-		try {
-			resp = await goAuthFetch('/v1/auth/request-password-reset', { body: { email: parsed.data } });
-		} catch (err) {
-			const { status, key } = upstreamFailure(err);
-			return fail(status, { email, formError: key });
-		}
+		const call = await callGoForAction(() =>
+			goAuthFetch('/v1/auth/request-password-reset', { body: { email: parsed.data } })
+		);
+		if (!call.ok) return fail(call.status, { email, formError: call.key });
+		const resp = call.resp;
 
 		// Go answers 204 for every email, registered or not (even malformed or an
 		// internal error), so the only non-2xx it can send here are transport-level:

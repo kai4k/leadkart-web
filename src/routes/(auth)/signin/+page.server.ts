@@ -18,7 +18,7 @@
  */
 import { fail, redirect } from '@sveltejs/kit';
 import { parseRetryAfter } from '#lib/api/errors.ts';
-import { goFailureKey, upstreamFailure } from '#lib/server/auth-errors.ts';
+import { callGoForAction, goFailureKey } from '#lib/server/form-action.ts';
 import { goAuthFetch, goErrorStatus } from '#lib/server/go.ts';
 import { establishSession, tokenPairSchema } from '#lib/server/auth-refresh.ts';
 import { safeRedirectPath } from '#lib/server/redirect.ts';
@@ -43,13 +43,9 @@ export const actions: Actions = {
 			});
 		}
 
-		let resp: Response;
-		try {
-			resp = await goAuthFetch('/v1/auth/login', { body: parsed.data });
-		} catch (err) {
-			const { status, key } = upstreamFailure(err);
-			return fail(status, { email, formError: key });
-		}
+		const call = await callGoForAction(() => goAuthFetch('/v1/auth/login', { body: parsed.data }));
+		if (!call.ok) return fail(call.status, { email, formError: call.key });
+		const resp = call.resp;
 
 		if (!resp.ok) {
 			// Go: 423 account_locked (+ Retry-After) is the one deliberate difference;

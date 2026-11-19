@@ -13,7 +13,8 @@
  * without a manual invalidate() call.
  */
 import { fail, redirect } from '@sveltejs/kit';
-import { goFetch, readGoFailure, readGoJson } from '#lib/server/go.ts';
+import { callGoForAction, failFromGo } from '#lib/server/form-action.ts';
+import { goFetch, readGoJson } from '#lib/server/go.ts';
 import { updateProfileRequestSchema } from '$features/auth/schemas';
 import { decodeJwtPrincipal } from '$api/jwt';
 import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
@@ -54,19 +55,16 @@ export const actions: Actions = {
 			});
 		}
 
-		const resp = await goFetch(cookies, `/v1/users/${membershipId}/profile`, {
-			method: 'PATCH',
-			body: JSON.stringify(parsed.data),
-			scoped: false
-		});
+		const call = await callGoForAction(() =>
+			goFetch(cookies, `/v1/users/${membershipId}/profile`, {
+				method: 'PATCH',
+				body: JSON.stringify(parsed.data),
+				scoped: false
+			})
+		);
+		if (!call.ok) return fail(call.status, { values: patch, formErrorKey: call.key });
 
-		if (!resp.ok) {
-			const failure = await readGoFailure(resp, { fallback: 'Save failed' });
-			if (Object.keys(failure.fields).length > 0) {
-				return fail(failure.status, { values: patch, errors: failure.fields });
-			}
-			return fail(failure.status, { values: patch, bannerError: failure.message });
-		}
+		if (!call.resp.ok) return failFromGo(call.resp, patch, { fallback: 'Save failed' });
 
 		return { success: true };
 	}

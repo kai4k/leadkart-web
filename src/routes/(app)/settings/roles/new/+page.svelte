@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { untrack } from 'svelte';
+	import { _ } from 'svelte-i18n';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { Alert, Breadcrumbs, Button, Card, type BreadcrumbItem } from '$ui';
@@ -41,7 +42,10 @@
 		hierarchyLevel = initial.hierarchy_level;
 	});
 
-	const bannerError = $derived((form as { bannerError?: string } | null)?.bannerError ?? null);
+	const bannerError = $derived.by(() => {
+		const f = form as { bannerError?: string; formErrorKey?: string } | null;
+		return f?.formErrorKey ? $_(f.formErrorKey) : (f?.bannerError ?? null);
+	});
 
 	const breadcrumbs: BreadcrumbItem[] = [
 		{ label: 'Settings' },

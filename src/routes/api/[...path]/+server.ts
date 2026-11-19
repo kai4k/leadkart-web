@@ -36,11 +36,11 @@ import { jsonError } from '#lib/server/http.ts';
 import {
 	buildUpstreamUrl,
 	isTokenEndpoint,
-	isUpstreamTimeout,
 	pickResponseHeaders,
 	scopeRequired,
 	scrubsTokens,
 	stripTokenFields,
+	upstreamStatus,
 	upstreamTimeout
 } from '#lib/server/proxy.ts';
 
@@ -51,11 +51,10 @@ const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const REDIRECTABLE_METHODS = new Set(['GET', 'HEAD']);
 
 /** 504/502 for a failed upstream call, logged without query string, headers or body. */
-function upstreamFailure(err: unknown, method: string, path: string): Response {
-	const timedOut = isUpstreamTimeout(err);
-	const status = timedOut ? 504 : 502;
+function upstreamErrorResponse(err: unknown, method: string, path: string): Response {
+	const status = upstreamStatus(err);
 	console.warn('[bff-proxy]', status, method, `/${path}`);
-	return timedOut
+	return status === 504
 		? jsonError(504, 'upstream_timeout', 'Go API did not respond in time')
 		: jsonError(502, 'upstream_unavailable', 'Go API is unreachable');
 }
@@ -116,7 +115,7 @@ async function proxy(
 	} catch (err) {
 		// The browser went away: nothing to report and nobody to answer.
 		if (request.signal.aborted) return new Response(null, { status: 499 });
-		return upstreamFailure(err, request.method, path);
+		return upstreamErrorResponse(err, request.method, path);
 	} finally {
 		// Headers in (or the call failed): stop the clock either way.
 		timeout.headersReceived();

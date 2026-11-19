@@ -14,7 +14,7 @@
 import type { RequestHandler } from './$types';
 import { goAuthFetch, goErrorStatus } from '#lib/server/go.ts';
 import { jsonError } from '#lib/server/http.ts';
-import { isUpstreamTimeout } from '#lib/server/proxy.ts';
+import { upstreamStatus } from '#lib/server/proxy.ts';
 
 export const POST: RequestHandler = async (event) => {
 	let body: unknown;
@@ -31,7 +31,7 @@ export const POST: RequestHandler = async (event) => {
 	try {
 		resp = await goAuthFetch('/v1/auth/confirm-email-change', { body });
 	} catch (err) {
-		return isUpstreamTimeout(err)
+		return upstreamStatus(err) === 504
 			? jsonError(504, 'upstream_timeout', 'Go API did not answer in time')
 			: jsonError(502, 'upstream_unavailable', 'Go API is unreachable');
 	}

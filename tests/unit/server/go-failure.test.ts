@@ -155,3 +155,62 @@ describe('actions that used to print Go detail raw', () => {
 		expect(r.data.bannerError).toBe('You can only make this change for people below your level.');
 	});
 });
+
+describe('form actions keep the form on an outage and share one 429 line', () => {
+	const cookies = {
+		get: (n: string) => (n === 'lk_access' ? 'tok' : undefined),
+		set: vi.fn(),
+		delete: vi.fn()
+	} as never;
+	type Out = { status: number; data: { values?: unknown; formErrorKey?: string } };
+	const profile = () =>
+		(profileActions.default as (e: never) => Promise<unknown>)({
+			request: new Request('http://x/', {
+				method: 'POST',
+				body: new URLSearchParams({ designation: 'a', department: 'b', status_message: 'c' })
+			}),
+			cookies
+		} as never) as Promise<Out>;
+	const newRole = () => {
+		capabilities.loadCapabilities.mockResolvedValue({
+			is_platform: false,
+			is_super_user: true,
+			permissions: [],
+			effective_permissions: ['identity.roles.create']
+		});
+		return (newRoleActions.default as (e: never) => Promise<unknown>)({
+			request: new Request('http://x/', {
+				method: 'POST',
+				body: new URLSearchParams({ name: 'Auditor', hierarchy_level: '5' })
+			}),
+			cookies
+		} as never) as Promise<Out>;
+	};
+
+	it.each([
+		['profile', profile],
+		['new role', newRole]
+	])('%s: a transport failure returns the kept form, not the error page', async (_n, run) => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(() => Promise.reject(new TypeError('fetch failed')))
+		);
+		const r = await run();
+		expect(r.status).toBe(502);
+		expect(r.data.formErrorKey).toBe('auth.errors.upstreamUnavailable');
+		expect(r.data.values).toBeTruthy();
+	});
+
+	it.each([
+		['profile', profile],
+		['new role', newRole]
+	])('%s: Go 429 uses the shared rate-limited key', async (_n, run) => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(() => goError(429, { error: 'rate_limited' }))
+		);
+		const r = await run();
+		expect(r.status).toBe(429);
+		expect(r.data.formErrorKey).toBe('auth.errors.rateLimited');
+	});
+});
