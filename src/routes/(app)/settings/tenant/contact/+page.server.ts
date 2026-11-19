@@ -9,15 +9,16 @@ export const actions: Actions = {
 			cookies,
 			pathSuffix: '/admin-contact',
 			schema: updateTenantAdminContactSchema,
+			// Every field is sent, blank as ''. Go rejects a body with a missing address field.
 			payload: {
 				phone: (fd.get('phone') ?? '').toString(),
 				address: {
-					street: (fd.get('address.street') ?? '').toString() || undefined,
-					city: (fd.get('address.city') ?? '').toString() || undefined,
-					district: (fd.get('address.district') ?? '').toString() || undefined,
-					state: (fd.get('address.state') ?? '').toString() || undefined,
-					state_code: (fd.get('address.state_code') ?? '').toString() || undefined,
-					pincode: (fd.get('address.pincode') ?? '').toString() || undefined
+					street: (fd.get('address.street') ?? '').toString(),
+					city: (fd.get('address.city') ?? '').toString(),
+					district: (fd.get('address.district') ?? '').toString(),
+					state: (fd.get('address.state') ?? '').toString(),
+					state_code: (fd.get('address.state_code') ?? '').toString(),
+					pincode: (fd.get('address.pincode') ?? '').toString()
 				}
 			}
 		});
