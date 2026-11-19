@@ -27,7 +27,7 @@
  * Auth is handled by the cross-cutting client (`$api/client`) which
  * injects the bearer token + handles 401-silent-refresh.
  */
-import { apiLegacy, parseResponse } from '#lib/api/client.ts';
+import { api } from '#lib/api/client.ts';
 import { tenantSchema } from './schemas';
 import type {
 	Tenant,
@@ -42,42 +42,41 @@ function tenantPath(tenantId: string, suffix = ''): string {
 	return `/v1/tenants/${encodeURIComponent(tenantId)}${suffix}`;
 }
 
-export async function getTenant(tenantId: string): Promise<Tenant> {
-	const raw = await apiLegacy.get<unknown>(tenantPath(tenantId));
-	return parseResponse(tenantSchema, raw);
+export function getTenant(tenantId: string, signal?: AbortSignal): Promise<Tenant> {
+	return api.get(tenantPath(tenantId), tenantSchema, { signal });
 }
 
-export function updateTenantProfile(
+export async function updateTenantProfile(
 	tenantId: string,
 	body: UpdateTenantProfileRequest
 ): Promise<void> {
-	return apiLegacy.patch<void>(tenantPath(tenantId, '/profile'), body);
+	await api.patch(tenantPath(tenantId, '/profile'), body);
 }
 
-export function updateTenantStatutory(
+export async function updateTenantStatutory(
 	tenantId: string,
 	body: UpdateTenantStatutoryRequest
 ): Promise<void> {
-	return apiLegacy.patch<void>(tenantPath(tenantId, '/statutory'), body);
+	await api.patch(tenantPath(tenantId, '/statutory'), body);
 }
 
-export function updateTenantAdminContact(
+export async function updateTenantAdminContact(
 	tenantId: string,
 	body: UpdateTenantAdminContactRequest
 ): Promise<void> {
-	return apiLegacy.patch<void>(tenantPath(tenantId, '/admin-contact'), body);
+	await api.patch(tenantPath(tenantId, '/admin-contact'), body);
 }
 
-export function updateTenantSettings(
+export async function updateTenantSettings(
 	tenantId: string,
 	body: UpdateTenantSettingsRequest
 ): Promise<void> {
-	return apiLegacy.patch<void>(tenantPath(tenantId, '/settings'), body);
+	await api.patch(tenantPath(tenantId, '/settings'), body);
 }
 
-export function updateTenantDisplayPreferences(
+export async function updateTenantDisplayPreferences(
 	tenantId: string,
 	body: UpdateTenantDisplayPreferencesRequest
 ): Promise<void> {
-	return apiLegacy.patch<void>(tenantPath(tenantId, '/display-preferences'), body);
+	await api.patch(tenantPath(tenantId, '/display-preferences'), body);
 }

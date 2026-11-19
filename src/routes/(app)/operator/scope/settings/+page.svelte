@@ -24,7 +24,17 @@
 
 <svelte:head><title>Settings · {tenant.display_name} · LeadKart</title></svelte:head>
 
-<TenantActionPanel {tenant} {onAction} />
+<TenantActionPanel {tenant} {onAction} reloadPageData />
 
-<SuspendDialog bind:open={suspendOpen} tenant={target} onOpenChange={(o) => (suspendOpen = o)} />
-<MarkForDeletionDialog bind:open={markOpen} tenant={target} onOpenChange={(o) => (markOpen = o)} />
+<SuspendDialog
+	bind:open={suspendOpen}
+	tenant={target}
+	onOpenChange={(o) => (suspendOpen = o)}
+	reloadPageData
+/>
+<MarkForDeletionDialog
+	bind:open={markOpen}
+	tenant={target}
+	onOpenChange={(o) => (markOpen = o)}
+	reloadPageData
+/>

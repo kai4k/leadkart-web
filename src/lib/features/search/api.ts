@@ -1,4 +1,4 @@
-import { apiLegacy, parseResponse } from '#lib/api/client.ts';
+import { api } from '#lib/api/client.ts';
 import { searchResponseSchema, type SearchResponse } from './schemas';
 
 export interface SearchParams {
@@ -7,11 +7,7 @@ export interface SearchParams {
 	include?: string;
 }
 
-export async function omniSearch(params: SearchParams): Promise<SearchResponse> {
-	const qs = new URLSearchParams();
-	qs.set('q', params.q);
-	if (params.limit != null) qs.set('limit', String(params.limit));
-	if (params.include) qs.set('include', params.include);
-	const raw = await apiLegacy.get<unknown>(`/v1/search?${qs}`);
-	return parseResponse(searchResponseSchema, raw);
+/** GET /v1/search — Go reads `q`, `limit` and `include` (search_http.go). */
+export function omniSearch(params: SearchParams, signal?: AbortSignal): Promise<SearchResponse> {
+	return api.get('/v1/search', searchResponseSchema, { query: { ...params }, signal });
 }

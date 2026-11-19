@@ -10,15 +10,25 @@
 		NetworkError
 	} from '$api/errors';
 
-	type Props = { open: boolean; tenant: TenantDto | null; onOpenChange: (open: boolean) => void };
-	let { open = $bindable(false), tenant, onOpenChange }: Props = $props();
+	type Props = {
+		open: boolean;
+		tenant: TenantDto | null;
+		onOpenChange: (open: boolean) => void;
+		/** Inside the operator scope tree the tenant is server-loaded: reload it after the change. */
+		reloadPageData?: boolean;
+	};
+	let { open = $bindable(false), tenant, onOpenChange, reloadPageData = false }: Props = $props();
 
 	let reason = $state('');
 	let reasonError = $state<string | null>(null);
 	let bannerError = $state<string | null>(null);
 
 	// TanStack Query v6 (Svelte 5): result is Svelte 5 reactive state, accessed directly.
-	const suspendMutation = suspendTenantMutation();
+	const suspendMutation = suspendTenantMutation({
+		get reloadPageData() {
+			return reloadPageData;
+		}
+	});
 	const isPending = $derived(suspendMutation.isPending);
 
 	async function onConfirm() {

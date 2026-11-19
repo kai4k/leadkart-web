@@ -7,15 +7,18 @@
  *   - No optimistic rollback dance — invalidate + refetch is simpler
  *     and the network round-trip is fast enough to skip.
  *   - Toasts in the mutation hook, not the calling component.
+ *   - Lifecycle calls answer 204; inside the scope tree the layout's tenant comes
+ *     from a server load, so `reloadPageData` also runs `refreshAll()`.
  *
  * Active-tenant resolution is now server-side: the /operator/scope/*
  * layout reads the lk_op_tenant cookie and fetches the canonical
  * TenantDto via +layout.server.ts. There is no client-side
  * tenantBySlugQuery — the slug never appears in a browser URL.
  */
-import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
+import { createQuery } from '@tanstack/svelte-query';
+import { refreshAll } from '$app/navigation';
+import { createResourceMutation } from '#lib/api/mutations.ts';
 import * as api from './api';
-import { toast } from '$ui';
 import type { RegisterTenantRequest } from './types';
 
 const tenantsKeys = {
@@ -24,66 +27,64 @@ const tenantsKeys = {
 	detail: (id: string) => [...tenantsKeys.all, 'detail', id] as const
 };
 
+/** Lifecycle hooks accept this; pass `reloadPageData` from the scope tree (server-loaded tenant). */
+export interface LifecycleMutationOptions {
+	reloadPageData?: boolean;
+}
+
 export function tenantsListQuery() {
 	return createQuery(() => ({
 		queryKey: tenantsKeys.list(),
-		queryFn: () => api.listTenants()
+		queryFn: ({ signal }) => api.listTenants(signal)
 	}));
 }
 
 export function registerTenantMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: (req: RegisterTenantRequest) => api.registerTenant(req),
-		onSuccess: () => {
-			void qc.invalidateQueries({ queryKey: tenantsKeys.all });
-			toast.success('Tenant registered');
-		}
-	}));
+	return createResourceMutation({
+		fn: (req: RegisterTenantRequest) => api.registerTenant(req),
+		invalidate: () => [tenantsKeys.all],
+		successToast: 'Tenant registered'
+	});
 }
 
-export function suspendTenantMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-			api.suspendTenant(id, { reason }),
-		onSuccess: () => {
-			void qc.invalidateQueries({ queryKey: tenantsKeys.all });
-			toast.success('Tenant suspended');
-		}
-	}));
+/** Shared by the four lifecycle hooks: invalidate the tenants tree, optionally reload server data. */
+function lifecycleMutation<TVars extends { id: string } | string>(
+	fn: (vars: TVars) => Promise<void>,
+	successToast: string,
+	opts: LifecycleMutationOptions,
+	inlineErrors = false
+) {
+	return createResourceMutation({
+		fn,
+		invalidate: () => [tenantsKeys.all],
+		successToast,
+		inlineErrors,
+		onSuccess: () => (opts.reloadPageData ? refreshAll() : undefined)
+	});
 }
 
-export function activateTenantMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: (id: string) => api.activateTenant(id),
-		onSuccess: () => {
-			void qc.invalidateQueries({ queryKey: tenantsKeys.all });
-			toast.success('Tenant activated');
-		}
-	}));
+export function suspendTenantMutation(opts: LifecycleMutationOptions = {}) {
+	return lifecycleMutation(
+		({ id, reason }: { id: string; reason: string }) => api.suspendTenant(id, { reason }),
+		'Tenant suspended',
+		opts,
+		true
+	);
 }
 
-export function markForDeletionMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-			api.markForDeletion(id, { reason }),
-		onSuccess: () => {
-			void qc.invalidateQueries({ queryKey: tenantsKeys.all });
-			toast.success('Tenant marked for deletion');
-		}
-	}));
+export function activateTenantMutation(opts: LifecycleMutationOptions = {}) {
+	return lifecycleMutation((id: string) => api.activateTenant(id), 'Tenant activated', opts);
 }
 
-export function restoreTenantMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: (id: string) => api.restoreTenant(id),
-		onSuccess: () => {
-			void qc.invalidateQueries({ queryKey: tenantsKeys.all });
-			toast.success('Tenant restored');
-		}
-	}));
+export function markForDeletionMutation(opts: LifecycleMutationOptions = {}) {
+	return lifecycleMutation(
+		({ id, reason }: { id: string; reason: string }) => api.markForDeletion(id, { reason }),
+		'Tenant marked for deletion',
+		opts,
+		true
+	);
+}
+
+export function restoreTenantMutation(opts: LifecycleMutationOptions = {}) {
+	return lifecycleMutation((id: string) => api.restoreTenant(id), 'Tenant restored', opts);
 }

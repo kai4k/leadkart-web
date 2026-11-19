@@ -6,10 +6,10 @@
  *   endImpersonation    — DELETE /v1/platform/impersonation/sessions/{sessionId}
  *   listImpersonationSessions — GET /v1/platform/impersonation/sessions
  *
- * Each function Zod-parses the response at the boundary so upstream
- * callers receive typed DTOs, never raw unknowns.
+ * Reads and the create call Zod-parse the response at the boundary so upstream
+ * callers receive typed DTOs, never raw unknowns; end is 204.
  */
-import { apiLegacy, parseResponse } from '#lib/api/client.ts';
+import { api } from '#lib/api/client.ts';
 import {
 	createImpersonationSessionResponseSchema,
 	listImpersonationSessionsResponseSchema
@@ -21,20 +21,26 @@ import type {
 } from './types';
 
 /** POST /v1/platform/impersonation/sessions — open an audited session. */
-export async function startImpersonation(
+export function startImpersonation(
 	req: CreateImpersonationSessionRequest
 ): Promise<CreateImpersonationSessionResponse> {
-	const raw = await apiLegacy.post<unknown>('/v1/platform/impersonation/sessions', req);
-	return parseResponse(createImpersonationSessionResponseSchema, raw);
+	return api.postJson(
+		'/v1/platform/impersonation/sessions',
+		req,
+		createImpersonationSessionResponseSchema
+	);
 }
 
 /** DELETE /v1/platform/impersonation/sessions/{sessionId} — close the session. */
 export async function endImpersonation(sessionId: string): Promise<void> {
-	await apiLegacy.delete<void>(`/v1/platform/impersonation/sessions/${sessionId}`);
+	await api.delete(`/v1/platform/impersonation/sessions/${sessionId}`);
 }
 
 /** GET /v1/platform/impersonation/sessions — list active sessions for the caller. */
-export async function listImpersonationSessions(): Promise<ListImpersonationSessionsResponse> {
-	const raw = await apiLegacy.get<unknown>('/v1/platform/impersonation/sessions');
-	return parseResponse(listImpersonationSessionsResponseSchema, raw);
+export function listImpersonationSessions(
+	signal?: AbortSignal
+): Promise<ListImpersonationSessionsResponse> {
+	return api.get('/v1/platform/impersonation/sessions', listImpersonationSessionsResponseSchema, {
+		signal
+	});
 }

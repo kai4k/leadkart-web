@@ -9,14 +9,11 @@
  * Why mutations (not just imperative gateway calls): the operator-list
  * row click is a write (sets the lk_op_tenant cookie) + a navigation +
  * a cache wipe. Wrapping it in createMutation gives consistent isPending
- * UX, error funneling through onError, and uniform toast semantics with
- * the rest of the operator surface.
+ * UX, errors toast once through the global MutationCache handler.
  */
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { goto, refreshAll } from '$app/navigation';
 import { resolve } from '$app/paths';
-import { toast } from '$ui';
-import { AuthError, NetworkError, NotFoundError } from '$api/errors';
 import * as api from './api';
 import type { EnterScopeRequest } from './api';
 
@@ -35,28 +32,13 @@ export function enterScopeMutation() {
 			qc.clear();
 			await refreshAll();
 			await goto(resolve('operator/scope/profile'));
-		},
-		onError: (err) => {
-			if (err instanceof NetworkError) {
-				toast.error('Check your network connection and try again.');
-			} else if (err instanceof AuthError) {
-				toast.error(
-					err.status === 403
-						? "You don't have permission to open this tenant."
-						: 'Your session expired. Sign in again.'
-				);
-			} else if (err instanceof NotFoundError) {
-				toast.error('This tenant was deleted or moved.');
-			} else {
-				toast.error('Could not open tenant');
-			}
 		}
 	}));
 }
 
 /**
  * Exit tenant scope: DELETE cookie → clear cache → invalidate loads →
- * navigate back to /operator/tenants. Failures stay-in-scope and toast.
+ * navigate back to /operator/tenants. Failures stay in scope (the global handler toasts).
  */
 export function exitScopeMutation() {
 	const qc = useQueryClient();
@@ -66,9 +48,6 @@ export function exitScopeMutation() {
 			qc.clear();
 			await refreshAll();
 			await goto(resolve('operator/tenants'));
-		},
-		onError: () => {
-			toast.error('Could not exit scope — try again.');
 		}
 	}));
 }

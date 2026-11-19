@@ -13,7 +13,7 @@ const dashboardKeys = {
 export function platformStatsQuery() {
 	return createQuery(() => ({
 		queryKey: dashboardKeys.stats(),
-		queryFn: () => api.getPlatformStats(),
+		queryFn: ({ signal }) => api.getPlatformStats(signal),
 		refetchInterval: 60_000
 	}));
 }

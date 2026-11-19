@@ -15,7 +15,7 @@ export function omniSearchQuery(getQuery: () => string) {
 		const q = getQuery();
 		return {
 			queryKey: ['search', 'omni', q],
-			queryFn: () => api.omniSearch({ q, limit: 5 }),
+			queryFn: ({ signal }) => api.omniSearch({ q, limit: 5 }, signal),
 			enabled: q.trim().length >= 2,
 			placeholderData: keepPreviousData,
 			staleTime: 30_000

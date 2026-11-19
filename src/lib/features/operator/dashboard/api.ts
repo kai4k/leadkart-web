@@ -1,9 +1,8 @@
-import { apiLegacy, parseResponse } from '#lib/api/client.ts';
+import { api } from '#lib/api/client.ts';
 import { platformStatsResponseSchema, type PlatformStatsResponse } from './schemas';
 
 /** Fetch platform-wide aggregate stats — operator-scoped.
  *  Calls GET /v1/platform/stats. */
-export async function getPlatformStats(): Promise<PlatformStatsResponse> {
-	const raw = await apiLegacy.get<unknown>('/v1/platform/stats');
-	return parseResponse(platformStatsResponseSchema, raw);
+export function getPlatformStats(signal?: AbortSignal): Promise<PlatformStatsResponse> {
+	return api.get('/v1/platform/stats', platformStatsResponseSchema, { signal });
 }
