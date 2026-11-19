@@ -10,7 +10,8 @@
  */
 import { fail, isRedirect, redirect } from '@sveltejs/kit';
 import { z } from 'zod';
-import { goErrorStatus, goFetch } from '#lib/server/go.ts';
+import { passwordErrorKey } from '#lib/server/auth-errors.ts';
+import { goErrorStatus, goFetch, readGoError } from '#lib/server/go.ts';
 import { setMustChangePassword } from '#lib/server/cookies.ts';
 import { safeRedirectPath } from '#lib/server/redirect.ts';
 import type { Actions } from './$types';
@@ -19,11 +20,6 @@ const schema = z.object({
 	current_password: z.string().min(1),
 	new_password: z.string().min(12)
 });
-
-interface GoErrorBody {
-	code?: string;
-	message?: string;
-}
 
 export const actions: Actions = {
 	default: async ({ request, cookies, url }) => {
@@ -75,22 +71,10 @@ export const actions: Actions = {
 			throw redirect(303, safeRedirectPath(url.searchParams.get('next'), url.origin));
 		}
 
-		const body = (await resp.json().catch(() => ({}))) as GoErrorBody;
-		const code = body.code ?? '';
-
-		if (resp.status === 401) {
-			return fail(401, {
-				fieldKeys: { current: 'account.security.changePassword.errors.incorrectCurrent' }
-			});
-		}
-		if (resp.status === 422 && code === 'password_breached') {
-			return fail(422, { fieldKeys: { new: 'auth.resetPassword.errors.breached' } });
-		}
-		if (resp.status === 422 && code === 'password_same') {
-			return fail(422, { fieldKeys: { new: 'auth.resetPassword.errors.same' } });
-		}
-		if (resp.status === 422) {
-			return fail(422, { fieldKeys: { new: 'auth.resetPassword.errors.weak' } });
+		const body = await readGoError(resp);
+		const mapped = passwordErrorKey(resp.status, body.error);
+		if (mapped) {
+			return fail(resp.status, { fieldKeys: { [mapped.field]: mapped.key } });
 		}
 		return fail(goErrorStatus(resp), { formErrorKey: 'auth.errors.unexpected' });
 	}

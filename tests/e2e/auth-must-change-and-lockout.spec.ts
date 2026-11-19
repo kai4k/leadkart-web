@@ -170,7 +170,7 @@ test.describe('Auth — account lockout (423)', () => {
 				path: '/api/v1/auth/login',
 				status: 423,
 				headers: { 'retry-after': '120' },
-				body: { code: 'account_locked', message: 'Account locked' }
+				body: { error: 'account_locked', message: '' }
 			}
 		]);
 

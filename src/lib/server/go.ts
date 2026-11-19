@@ -14,6 +14,7 @@
  * Per CLAUDE.md rule 6 + the BFF cookie-auth ADR.
  */
 import { error, redirect, type Cookies } from '@sveltejs/kit';
+import { flattenFieldErrors, type ApiErrorBody } from '../api/errors.ts';
 import { isAuthExpired, refreshSession } from './auth-refresh.ts';
 import { config } from './config.ts';
 import { ACCESS_COOKIE, REFRESH_COOKIE } from './cookies.ts';
@@ -113,6 +114,31 @@ export async function goFetch(
 }
 
 /**
+ * Pre-login Go call (login, password reset, ...): POST JSON, no auth, no
+ * scope. Never follows redirects; the timeout bounds time-to-first-byte.
+ * Throws on transport failure or timeout: callers catch, use
+ * `isUpstreamTimeout` and answer 504 / 502. Never logs the body (it can hold
+ * a password or token).
+ */
+export async function goAuthFetch(
+	path: `/v1/${string}`,
+	init: { method?: 'POST'; body?: unknown } = {}
+): Promise<Response> {
+	const timeout = upstreamTimeout(undefined, config.UPSTREAM_TIMEOUT_MS);
+	try {
+		return await fetch(`${config.GO_API_URL}/api${path}`, {
+			method: init.method ?? 'POST',
+			redirect: 'manual',
+			signal: timeout.signal,
+			headers: { 'content-type': 'application/json', accept: 'application/json' },
+			body: init.body === undefined ? undefined : JSON.stringify(init.body)
+		});
+	} finally {
+		timeout.headersReceived();
+	}
+}
+
+/**
  * Status to report for a non-2xx Go response via `error()` / `fail()`.
  * goFetch never follows redirects, so a 3xx reaches callers; Kit accepts only
  * 4xx/5xx there, and a Go redirect is a bad gateway answer anyway: 502.
@@ -130,39 +156,26 @@ export async function readGoJson<T>(resp: Response): Promise<T | null> {
 }
 
 /**
- * Map a Go ProblemDetails-style error response to a typed shape.
- * Returns `{}` on unparseable bodies so callers can safely destructure.
+ * Go's error envelope (`error` is the code; `errors` the field map). One type
+ * for the browser client and the server actions: see `ApiErrorBody`.
  */
-export interface GoErrorBody {
-	type?: string;
-	title?: string;
-	status?: number;
-	detail?: string;
-	code?: string;
-	message?: string;
-	errors?: Record<string, string[] | undefined>;
-}
+export type GoErrorBody = ApiErrorBody;
 
+/** Returns `{}` on empty or unparseable bodies so callers can safely destructure. */
 export async function readGoError(resp: Response): Promise<GoErrorBody> {
 	try {
 		const text = await resp.text();
 		if (text.length === 0) return {};
-		return JSON.parse(text) as GoErrorBody;
+		const parsed: unknown = JSON.parse(text);
+		return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+			? (parsed as GoErrorBody)
+			: {};
 	} catch {
 		return {};
 	}
 }
 
-/**
- * Map Go's `errors: { field: [msg] }` into a flat `{ field: msg }`
- * suitable for form action `fail(422, { errors })` responses.
- */
+/** Go's `errors: { field: [msg] }` as a flat `{ field: msg }` for `fail(422, { errors })`. */
 export function flattenGoErrors(body: GoErrorBody): Record<string, string> {
-	const out: Record<string, string> = {};
-	if (!body.errors) return out;
-	for (const [k, v] of Object.entries(body.errors)) {
-		const first = v?.[0];
-		if (first) out[k] = first;
-	}
-	return out;
+	return flattenFieldErrors(body.errors);
 }

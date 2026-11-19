@@ -13,6 +13,7 @@
 		which?: 'changePassword' | 'changeEmail';
 		email?: string;
 		fieldError?: string;
+		fieldErrorKey?: string;
 		formErrorKey?: string;
 		submitted?: boolean;
 	};
@@ -23,7 +24,13 @@
 
 	const ours = $derived(form?.which === 'changeEmail');
 	const submitted = $derived(Boolean(ours && form?.submitted));
-	const fieldError = $derived(ours && form?.fieldError ? form.fieldError : null);
+	const fieldError = $derived(
+		ours && form?.fieldErrorKey
+			? $_(form.fieldErrorKey)
+			: ours && form?.fieldError
+				? form.fieldError
+				: null
+	);
 	const formErrorKey = $derived(ours && form?.formErrorKey ? form.formErrorKey : null);
 	const formError = $derived(formErrorKey ? $_(formErrorKey) : null);
 	const initialEmail = $derived(ours && form?.email ? form.email : '');

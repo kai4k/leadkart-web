@@ -11,7 +11,7 @@
  */
 
 import type { RequestHandler } from './$types';
-import { config } from '#lib/server/config.ts';
+import { goAuthFetch } from '#lib/server/go.ts';
 import { clearAuthCookies, REFRESH_COOKIE } from '#lib/server/cookies.ts';
 import { clearOperatorScope } from '#lib/server/scope.ts';
 import { assertCsrf } from '#lib/server/csrf.ts';
@@ -22,12 +22,7 @@ export const POST: RequestHandler = async (event) => {
 
 	const refresh = event.cookies.get(REFRESH_COOKIE);
 	if (refresh) {
-		await fetch(`${config.GO_API_URL}/api/v1/auth/logout`, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ refresh_token: refresh }),
-			signal: AbortSignal.timeout(config.UPSTREAM_TIMEOUT_MS)
-		}).catch(() => {
+		await goAuthFetch('/v1/auth/logout', { body: { refresh_token: refresh } }).catch(() => {
 			// Logout is local even if Go is unreachable
 		});
 	}

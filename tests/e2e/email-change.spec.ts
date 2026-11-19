@@ -39,19 +39,21 @@ test.describe('Email change — request (authenticated)', () => {
 		});
 	});
 
-	test('409 email in use: top banner', async ({ page }) => {
+	test('400 invalid_email: inline field error (a taken address is a silent 204 in Go)', async ({
+		page
+	}) => {
 		await signInAsTier(page, { tier: 'tenant-user' });
 		await registerMock({
 			method: 'POST',
 			path: '/api/v1/auth/request-email-change',
-			status: 409,
-			body: { code: 'email_in_use', message: 'Email already in use' }
+			status: 400,
+			body: { error: 'invalid_email', message: 'invalid email' }
 		});
 		await page.goto('/settings/account/security');
 
 		await page.getByLabel(/new email/i).fill('taken@example.com');
 		await page.getByRole('button', { name: /send confirmation link/i }).click();
-		await expect(page.getByText(/already in use/i)).toBeVisible({ timeout: 5000 });
+		await expect(page.getByText('Invalid email format.')).toBeVisible({ timeout: 5000 });
 	});
 });
 
@@ -77,12 +79,12 @@ test.describe('Email change — confirm (public)', () => {
 		).toBeVisible();
 	});
 
-	test('400 invalid_token: error alert', async ({ page }) => {
+	test('400 email_change_token_invalid: error alert', async ({ page }) => {
 		await registerMock({
 			method: 'POST',
 			path: '/api/v1/auth/confirm-email-change',
 			status: 400,
-			body: { code: 'invalid_token', message: 'Token is invalid' }
+			body: { error: 'email_change_token_invalid', message: '' }
 		});
 		await page.goto('/confirm-email-change?token=expired');
 		await expect(page.locator('[role="alert"]').first()).toBeVisible({ timeout: 5000 });

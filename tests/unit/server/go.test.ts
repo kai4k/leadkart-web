@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Cookies } from '@sveltejs/kit';
-import { goErrorStatus, goFetch } from '#lib/server/go.ts';
+import { config } from '#lib/server/config.ts';
+import {
+	flattenGoErrors,
+	goAuthFetch,
+	goErrorStatus,
+	goFetch,
+	readGoError
+} from '#lib/server/go.ts';
+import { isUpstreamTimeout } from '#lib/server/proxy.ts';
 
 function jar(values: Record<string, string>): Cookies {
 	const store = new Map(Object.entries(values));
@@ -62,5 +70,80 @@ describe('goErrorStatus', () => {
 		for (const status of [301, 302, 303, 307, 308]) {
 			expect(goErrorStatus(new Response(null, { status }))).toBe(502);
 		}
+	});
+});
+
+describe('goAuthFetch', () => {
+	it('POSTs JSON to the Go API, never follows redirects, carries no auth or scope', async () => {
+		const fetchFn = vi.fn((_url: string, _init: RequestInit) =>
+			Promise.resolve(new Response(null, { status: 204 }))
+		);
+		vi.stubGlobal('fetch', fetchFn);
+
+		const resp = await goAuthFetch('/v1/auth/login', { body: { email: 'a@b.test' } });
+
+		expect(resp.status).toBe(204);
+		const [url, init] = fetchFn.mock.calls[0];
+		expect(url).toMatch(/\/api\/v1\/auth\/login$/);
+		expect(init.method).toBe('POST');
+		expect(init.redirect).toBe('manual');
+		expect(init.body).toBe('{"email":"a@b.test"}');
+		expect(init.signal).toBeInstanceOf(AbortSignal);
+		const sent = Object.fromEntries(
+			Object.entries(init.headers as Record<string, string>).map(([k, v]) => [k.toLowerCase(), v])
+		);
+		expect(sent['content-type']).toBe('application/json');
+		expect(sent['authorization']).toBeUndefined();
+		expect(sent['x-tenant-id']).toBeUndefined();
+	});
+
+	it('rejects on transport failure so the caller can answer 502/504', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(() => Promise.reject(new TypeError('fetch failed')))
+		);
+		await expect(goAuthFetch('/v1/auth/login', { body: {} })).rejects.toThrow('fetch failed');
+	});
+
+	it('aborts with a TimeoutError when Go sends no headers in time', async () => {
+		vi.useFakeTimers();
+		try {
+			vi.stubGlobal(
+				'fetch',
+				vi.fn(
+					(_url: string, init: RequestInit) =>
+						new Promise((_resolve, reject) => {
+							init.signal?.addEventListener('abort', () => reject(init.signal?.reason));
+						})
+				)
+			);
+			const pending = goAuthFetch('/v1/auth/login', { body: {} });
+			const caught = pending.catch((e: unknown) => e);
+			await vi.advanceTimersByTimeAsync(config.UPSTREAM_TIMEOUT_MS + 1);
+			expect(isUpstreamTimeout(await caught)).toBe(true);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+});
+
+describe('readGoError / flattenGoErrors', () => {
+	it('reads Go’s envelope (error code, message, errors map)', async () => {
+		const resp = new Response(
+			JSON.stringify({
+				error: 'invalid_password',
+				message: 'x',
+				errors: { new_password: ['too short'] }
+			}),
+			{ status: 400 }
+		);
+		const body = await readGoError(resp);
+		expect(body.error).toBe('invalid_password');
+		expect(flattenGoErrors(body)).toEqual({ new_password: 'too short' });
+	});
+
+	it('returns {} for an empty or unparseable body', async () => {
+		expect(await readGoError(new Response('', { status: 500 }))).toEqual({});
+		expect(await readGoError(new Response('<html>', { status: 502 }))).toEqual({});
 	});
 });

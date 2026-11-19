@@ -14,15 +14,12 @@
  */
 import { fail } from '@sveltejs/kit';
 import { z } from 'zod';
-import { config } from '#lib/server/config.ts';
+import { passwordErrorKey, RESET_TOKEN_INVALID } from '#lib/server/auth-errors.ts';
+import { goAuthFetch, goErrorStatus, readGoError } from '#lib/server/go.ts';
+import { isUpstreamTimeout } from '#lib/server/proxy.ts';
 import type { Actions } from './$types';
 
 const newPasswordSchema = z.string().min(12);
-
-interface GoErrorBody {
-	code?: string;
-	message?: string;
-}
 
 export const actions: Actions = {
 	default: async ({ request, url }) => {
@@ -46,37 +43,25 @@ export const actions: Actions = {
 
 		let resp: Response;
 		try {
-			resp = await fetch(`${config.GO_API_URL}/api/v1/auth/reset-password`, {
-				method: 'POST',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ token, new_password: parsed.data })
+			resp = await goAuthFetch('/v1/auth/reset-password', {
+				body: { token, new_password: parsed.data }
 			});
-		} catch {
-			return fail(502, { formErrorKey: 'auth.errors.unexpected' });
+		} catch (err) {
+			return fail(isUpstreamTimeout(err) ? 504 : 502, { formErrorKey: 'auth.errors.unexpected' });
 		}
 
 		if (resp.ok || resp.status === 204) {
 			return { success: true };
 		}
 
-		const body = (await resp.json().catch(() => ({}))) as GoErrorBody;
-		const code = body.code ?? '';
-
-		if (
-			resp.status === 400 &&
-			(code === 'invalid_token' || code === 'token_consumed' || code === 'token_expired')
-		) {
+		const body = await readGoError(resp);
+		if (resp.status === 400 && body.error === RESET_TOKEN_INVALID) {
 			return fail(400, { formErrorKey: 'auth.resetPassword.errors.invalidToken' });
 		}
-		if (resp.status === 422 && code === 'password_breached') {
-			return fail(422, { fieldKeys: { new_password: 'auth.resetPassword.errors.breached' } });
+		const mapped = passwordErrorKey(resp.status, body.error);
+		if (mapped) {
+			return fail(resp.status, { fieldKeys: { new_password: mapped.key } });
 		}
-		if (resp.status === 422 && code === 'password_same') {
-			return fail(422, { fieldKeys: { new_password: 'auth.resetPassword.errors.same' } });
-		}
-		if (resp.status === 422) {
-			return fail(422, { fieldKeys: { new_password: 'auth.resetPassword.errors.weak' } });
-		}
-		return fail(resp.status, { formErrorKey: 'auth.errors.unexpected' });
+		return fail(goErrorStatus(resp), { formErrorKey: 'auth.errors.unexpected' });
 	}
 };

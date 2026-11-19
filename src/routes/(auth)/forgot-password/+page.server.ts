@@ -13,7 +13,8 @@
  */
 import { fail } from '@sveltejs/kit';
 import { z } from 'zod';
-import { config } from '#lib/server/config.ts';
+import { goAuthFetch } from '#lib/server/go.ts';
+import { isUpstreamTimeout } from '#lib/server/proxy.ts';
 import type { Actions } from './$types';
 
 const emailSchema = z.string().min(1, 'Email is required').email('Invalid email format');
@@ -33,27 +34,22 @@ export const actions: Actions = {
 
 		let resp: Response;
 		try {
-			resp = await fetch(`${config.GO_API_URL}/api/v1/auth/request-password-reset`, {
-				method: 'POST',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ email: parsed.data })
-			});
-		} catch {
-			return fail(502, {
+			resp = await goAuthFetch('/v1/auth/request-password-reset', { body: { email: parsed.data } });
+		} catch (err) {
+			return fail(isUpstreamTimeout(err) ? 504 : 502, {
 				email,
-				formError: 'Check your network connection and try again.'
+				formError: 'auth.errors.upstreamUnavailable'
 			});
 		}
 
-		if (!resp.ok && resp.status !== 204) {
-			// Anti-enumeration: Go normally returns 204; if it doesn't, still
-			// behave as success unless it's a clearly server-side fault.
-			if (resp.status === 422) {
-				return fail(422, { email, fieldError: 'Invalid email format.' });
-			}
-			if (resp.status >= 500) {
-				return fail(resp.status, { email, formError: 'auth.errors.unexpected' });
-			}
+		// Go answers 204 for every email, registered or not (even malformed or an
+		// internal error), so the only non-2xx it can send here are transport-level:
+		// the IP rate limiter (429) or a gateway fault. Anything else reads as sent.
+		if (resp.status === 429) {
+			return fail(429, { email, formError: 'auth.errors.rateLimited' });
+		}
+		if (resp.status >= 500) {
+			return fail(resp.status, { email, formError: 'auth.errors.unexpected' });
 		}
 
 		return { submitted: true };

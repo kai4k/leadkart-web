@@ -47,8 +47,7 @@
 			"submit": "Send confirmation link",
 			"successCopy": "Check your new inbox for a confirmation link. The change isn't applied until you click it.",
 			"errors": {
-				"invalid": "Invalid email format.",
-				"inUse": "That email is already in use on another account."
+				"invalid": "Invalid email format."
 			},
 			"confirm": {
 				"title": "Confirm your new email",
@@ -62,7 +61,9 @@
 			"invalidCredentials": "Email or password is incorrect.",
 			"accountLocked": "Account locked after too many failed attempts. Try again in {seconds} seconds.",
 			"mustChangePassword": "Set a new password to continue.",
-			"unexpected": "Something went wrong. Please try again."
+			"unexpected": "Something went wrong. Please try again.",
+			"rateLimited": "Too many attempts. Wait a moment and try again.",
+			"upstreamUnavailable": "Can't reach the server. Check your connection and try again."
 		},
 		"mustChange": {
 			"title": "Set a new password",

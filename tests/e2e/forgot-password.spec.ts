@@ -18,7 +18,7 @@ import { resetMock, registerMock } from './helpers/mock';
  *     the email was registered.
  *   Reset (positive): valid token + matching passwords → 204 → /signin.
  *   Reset (negative): missing token, mismatched confirm, weak new password,
- *     400 invalid_token, 422 password_breached, 422 password_same.
+ *     400 reset_token_invalid, 422 password_breached, 422 password_same_as_current.
  */
 
 test.describe('Forgot password — discovery', () => {
@@ -135,12 +135,12 @@ test.describe('Reset password — confirm', () => {
 		});
 	});
 
-	test('400 invalid_token: top banner', async ({ page }) => {
+	test('400 reset_token_invalid: top banner', async ({ page }) => {
 		await registerMock({
 			method: 'POST',
 			path: '/api/v1/auth/reset-password',
 			status: 400,
-			body: { code: 'invalid_token', message: 'Token is invalid' }
+			body: { error: 'reset_token_invalid', message: '' }
 		});
 		await page.goto('/reset-password?token=expired');
 		await page
@@ -159,7 +159,7 @@ test.describe('Reset password — confirm', () => {
 			method: 'POST',
 			path: '/api/v1/auth/reset-password',
 			status: 422,
-			body: { code: 'password_breached', message: 'Password appears in HIBP' }
+			body: { error: 'password_breached', message: 'Password appears in HIBP' }
 		});
 		await page.goto('/reset-password?token=t');
 		await page
@@ -172,12 +172,12 @@ test.describe('Reset password — confirm', () => {
 		await expect(page.getByText(/breach lists/i)).toBeVisible({ timeout: 5000 });
 	});
 
-	test('422 password_same: inline new-password field error', async ({ page }) => {
+	test('422 password_same_as_current: inline new-password field error', async ({ page }) => {
 		await registerMock({
 			method: 'POST',
 			path: '/api/v1/auth/reset-password',
 			status: 422,
-			body: { code: 'password_same', message: 'New password must differ' }
+			body: { error: 'password_same_as_current', message: 'New password must differ' }
 		});
 		await page.goto('/reset-password?token=t');
 		await page

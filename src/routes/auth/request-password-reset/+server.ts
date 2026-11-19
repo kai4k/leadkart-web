@@ -11,7 +11,9 @@
  */
 
 import type { RequestHandler } from './$types';
-import { config } from '#lib/server/config.ts';
+import { goAuthFetch, goErrorStatus } from '#lib/server/go.ts';
+import { jsonError } from '#lib/server/http.ts';
+import { isUpstreamTimeout } from '#lib/server/proxy.ts';
 
 export const POST: RequestHandler = async (event) => {
 	let body: unknown;
@@ -26,22 +28,17 @@ export const POST: RequestHandler = async (event) => {
 
 	let resp: Response;
 	try {
-		resp = await fetch(`${config.GO_API_URL}/api/v1/auth/request-password-reset`, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify(body)
-		});
-	} catch {
-		return Response.json(
-			{ error: 'upstream_unavailable', message: 'Go API is unreachable' },
-			{ status: 502 }
-		);
+		resp = await goAuthFetch('/v1/auth/request-password-reset', { body });
+	} catch (err) {
+		return isUpstreamTimeout(err)
+			? jsonError(504, 'upstream_timeout', 'Go API did not answer in time')
+			: jsonError(502, 'upstream_unavailable', 'Go API is unreachable');
 	}
 
 	if (!resp.ok) {
 		const errorBody = await resp.text();
 		return new Response(errorBody, {
-			status: resp.status,
+			status: goErrorStatus(resp),
 			headers: { 'content-type': resp.headers.get('content-type') ?? 'application/json' }
 		});
 	}

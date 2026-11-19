@@ -44,6 +44,7 @@ async function callRefresh(refresh: string, fetchFn: typeof fetch): Promise<Refr
 	try {
 		resp = await fetchFn(`${config.GO_API_URL}/api/v1/auth/refresh`, {
 			method: 'POST',
+			redirect: 'manual',
 			headers: { 'content-type': 'application/json', accept: 'application/json' },
 			body: JSON.stringify({ refresh_token: refresh }),
 			signal: AbortSignal.timeout(config.UPSTREAM_TIMEOUT_MS)

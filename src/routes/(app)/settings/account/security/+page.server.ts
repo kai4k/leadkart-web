@@ -11,6 +11,7 @@
  */
 import { fail } from '@sveltejs/kit';
 import { z } from 'zod';
+import { passwordErrorKey } from '#lib/server/auth-errors.ts';
 import { setMustChangePassword } from '#lib/server/cookies.ts';
 import { goErrorStatus, goFetch, readGoError } from '#lib/server/go.ts';
 import { changePasswordSchema } from '$features/auth/schemas';
@@ -63,29 +64,11 @@ export const actions: Actions = {
 		}
 
 		const body = await readGoError(resp);
-		const code = body.code ?? '';
-		if (resp.status === 401) {
-			return fail(401, {
+		const mapped = passwordErrorKey(resp.status, body.error);
+		if (mapped) {
+			return fail(resp.status, {
 				which: 'changePassword' as const,
-				fieldKeys: { current: 'account.security.changePassword.errors.incorrectCurrent' }
-			});
-		}
-		if (resp.status === 422 && code === 'password_breached') {
-			return fail(422, {
-				which: 'changePassword' as const,
-				fieldKeys: { new: 'auth.resetPassword.errors.breached' }
-			});
-		}
-		if (resp.status === 422 && code === 'password_same') {
-			return fail(422, {
-				which: 'changePassword' as const,
-				fieldKeys: { new: 'auth.resetPassword.errors.same' }
-			});
-		}
-		if (resp.status === 422) {
-			return fail(422, {
-				which: 'changePassword' as const,
-				fieldKeys: { new: 'auth.resetPassword.errors.weak' }
+				fieldKeys: { [mapped.field]: mapped.key }
 			});
 		}
 		return fail(goErrorStatus(resp), {
@@ -118,25 +101,13 @@ export const actions: Actions = {
 		}
 
 		const body = await readGoError(resp);
-		if (resp.status === 422) {
-			return fail(422, {
+		// Go: 400 invalid_email. A taken or rejected address collapses to 204 there
+		// (anti-enumeration), so there is no 409 to read.
+		if (resp.status === 400 && body.error === 'invalid_email') {
+			return fail(400, {
 				which: 'changeEmail' as const,
 				email: newEmail,
-				fieldError: body.detail ?? 'auth.changeEmail.errors.invalid'
-			});
-		}
-		if (resp.status === 409) {
-			return fail(409, {
-				which: 'changeEmail' as const,
-				email: newEmail,
-				formErrorKey: 'auth.changeEmail.errors.inUse'
-			});
-		}
-		if (resp.status === 401 || resp.status === 403) {
-			return fail(goErrorStatus(resp), {
-				which: 'changeEmail' as const,
-				email: newEmail,
-				formErrorKey: 'auth.errors.unexpected'
+				fieldErrorKey: 'auth.changeEmail.errors.invalid'
 			});
 		}
 		return fail(goErrorStatus(resp), {

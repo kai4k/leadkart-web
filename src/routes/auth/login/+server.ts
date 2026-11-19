@@ -15,7 +15,9 @@
  */
 
 import type { RequestHandler } from './$types';
-import { config } from '#lib/server/config.ts';
+import { goAuthFetch, goErrorStatus } from '#lib/server/go.ts';
+import { jsonError } from '#lib/server/http.ts';
+import { isUpstreamTimeout } from '#lib/server/proxy.ts';
 import { establishSession, tokenPairSchema } from '#lib/server/auth-refresh.ts';
 
 export const POST: RequestHandler = async (event) => {
@@ -31,16 +33,11 @@ export const POST: RequestHandler = async (event) => {
 
 	let resp: Response;
 	try {
-		resp = await fetch(`${config.GO_API_URL}/api/v1/auth/login`, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify(body)
-		});
-	} catch {
-		return Response.json(
-			{ error: 'upstream_unavailable', message: 'Go API is unreachable' },
-			{ status: 502 }
-		);
+		resp = await goAuthFetch('/v1/auth/login', { body });
+	} catch (err) {
+		return isUpstreamTimeout(err)
+			? jsonError(504, 'upstream_timeout', 'Go API did not answer in time')
+			: jsonError(502, 'upstream_unavailable', 'Go API is unreachable');
 	}
 
 	if (!resp.ok) {
@@ -52,7 +49,7 @@ export const POST: RequestHandler = async (event) => {
 		// so the form can render a useful countdown.
 		const retryAfter = resp.headers.get('retry-after');
 		if (retryAfter) headers.set('retry-after', retryAfter);
-		return new Response(errorBody, { status: resp.status, headers });
+		return new Response(errorBody, { status: goErrorStatus(resp), headers });
 	}
 
 	const parsed = tokenPairSchema.safeParse(await resp.json().catch(() => null));

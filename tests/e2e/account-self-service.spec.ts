@@ -60,7 +60,7 @@ test.describe('Account security — change password', () => {
 			method: 'POST',
 			path: '/api/v1/auth/change-password',
 			status: 401,
-			body: { code: 'invalid_current_password', message: 'Current password is incorrect' }
+			body: { error: 'incorrect_current_password', message: '' }
 		});
 		await page.goto('/settings/account/security');
 		await page.getByLabel(/current password/i).fill('WrongOldP@ssw0rd!');
@@ -71,10 +71,10 @@ test.describe('Account security — change password', () => {
 		await page.getByLabel(/confirm/i).fill('N3wP@ssw0rd!');
 		await page.getByRole('button', { name: /change password|update password/i }).click();
 
-		// useForm sets bannerError from the thrown ApiError; an alert renders
-		// with the server's message. Match any visible alert (not just text
-		// containing 'password' — the i18n message wording may differ).
-		await expect(page.locator('[role="alert"]').first()).toBeVisible({ timeout: 5000 });
+		// Go's incorrect_current_password lands on the current-password field.
+		await expect(page.getByText("That doesn't match your current password.")).toBeVisible({
+			timeout: 5000
+		});
 	});
 
 	test('wrong current password is not treated as expiry: 1 change call, 0 refresh calls', async ({
@@ -123,7 +123,7 @@ test.describe('Account sessions', () => {
 			method: 'GET',
 			path: '/api/v1/auth/sessions',
 			status: 500,
-			body: { code: 'internal_error', message: 'session list failed' }
+			body: { error: 'internal_error', message: 'session list failed' }
 		});
 		await page.goto('/settings/account/sessions');
 		await expect(page.locator('[role="alert"]').first()).toBeVisible();

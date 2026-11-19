@@ -8,7 +8,8 @@
  *   1. 200 with must_change_password=true → redirect to /must-change-password
  *   2. 200 with must_change_password=false → redirect to /dashboard (or ?next=)
  *   3. 423 locked → return fail() with `retryAfterSeconds` so the form
- *      renders a countdown.
+ *      renders a countdown; 429 → rate-limited copy; any other 401 → one
+ *      uniform invalid-credentials message (no enumeration).
  *
  * Progressive enhancement: works without JS (standard POST + redirect)
  * AND with JS (use:enhance keeps it on-page + updates `form` prop).
@@ -16,7 +17,9 @@
  * Per ADR: docs/superpowers/specs/2026-05-20-bff-cookie-auth-adr.md
  */
 import { fail, redirect } from '@sveltejs/kit';
-import { config } from '#lib/server/config.ts';
+import { parseRetryAfter } from '#lib/api/errors.ts';
+import { goAuthFetch, goErrorStatus } from '#lib/server/go.ts';
+import { isUpstreamTimeout } from '#lib/server/proxy.ts';
 import { establishSession, tokenPairSchema } from '#lib/server/auth-refresh.ts';
 import { safeRedirectPath } from '#lib/server/redirect.ts';
 import { loginRequestSchema } from '$features/auth/schemas';
@@ -42,33 +45,33 @@ export const actions: Actions = {
 
 		let resp: Response;
 		try {
-			resp = await fetch(`${config.GO_API_URL}/api/v1/auth/login`, {
-				method: 'POST',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify(parsed.data)
-			});
-		} catch {
-			return fail(502, {
+			resp = await goAuthFetch('/v1/auth/login', { body: parsed.data });
+		} catch (err) {
+			return fail(isUpstreamTimeout(err) ? 504 : 502, {
 				email,
 				formError: 'auth.errors.upstreamUnavailable'
 			});
 		}
 
 		if (!resp.ok) {
+			// Go: 423 account_locked (+ Retry-After) is the one deliberate difference;
+			// unknown email, wrong password and a malformed email all answer the same
+			// 401 invalid_credentials, so there is one copy for all of them.
 			if (resp.status === 423) {
-				const retryAfterRaw = resp.headers.get('retry-after');
-				const retryAfterSeconds =
-					retryAfterRaw && !Number.isNaN(Number(retryAfterRaw)) ? Number(retryAfterRaw) : undefined;
 				return fail(423, {
 					email,
 					formError: 'auth.errors.accountLocked',
-					retryAfterSeconds
+					retryAfterSeconds: parseRetryAfter(resp.headers.get('retry-after'))
 				});
+			}
+			// Go's IP rate limiter (429 rate_limited + Retry-After).
+			if (resp.status === 429) {
+				return fail(429, { email, formError: 'auth.errors.rateLimited' });
 			}
 			if (resp.status === 401) {
 				return fail(401, { email, formError: 'auth.errors.invalidCredentials' });
 			}
-			return fail(resp.status, { email, formError: 'auth.errors.unexpected' });
+			return fail(goErrorStatus(resp), { email, formError: 'auth.errors.unexpected' });
 		}
 
 		const parsedTokens = tokenPairSchema.safeParse(await resp.json().catch(() => null));
