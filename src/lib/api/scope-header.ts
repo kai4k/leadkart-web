@@ -9,3 +9,6 @@ export const SCOPE_REQUIRED_HEADER = 'x-lk-scope-required';
 export function isOperatorScopePath(pathname: string): boolean {
 	return pathname === '/operator/scope' || pathname.startsWith('/operator/scope/');
 }
+
+/** The one user-facing line for a dead operator scope (BFF 409, Go invalid/unknown scope, session guard toast). */
+export const SCOPE_EXPIRED_MESSAGE = 'Operator scope expired — select the tenant again';

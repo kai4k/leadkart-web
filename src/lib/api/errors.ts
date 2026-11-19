@@ -1,3 +1,5 @@
+import { SCOPE_EXPIRED_MESSAGE } from './scope-header.ts';
+
 /**
  * Typed API errors. Two JSON envelopes reach the browser:
  *   Go (relayed by the BFF proxy): { type?, title?, status?, detail?, error: <code>, message?, errors?: { field: string[] } }
@@ -21,16 +23,23 @@ export const SESSION_EXPIRED_CODE = 'session_expired';
 export const SCOPE_INVALID_CODE = 'scope_invalid';
 export const SCHEMA_MISMATCH_CODE = 'schema_mismatch';
 export const CSRF_MISMATCH_CODE = 'csrf_mismatch';
-/** Go (authn/tenant_scope.go) answers these when the BFF-injected X-Tenant-Id is unusable. */
-const GO_SCOPE_CODES: ReadonlySet<string> = new Set([
+/**
+ * Go (authn/tenant_scope.go) answers these when the BFF-injected X-Tenant-Id is unusable: the
+ * scope is dead, so the session guard exits it. The other tenant-scope codes are ordinary
+ * request errors inside a valid scope (see fromResponse) and must NOT exit it.
+ */
+const GO_SCOPE_EXIT_CODES: ReadonlySet<string> = new Set([
 	'invalid_tenant_scope',
-	'tenant_scope_not_found',
-	'tenant_scope_conflict',
-	'tenant_scope_not_supported'
+	'tenant_scope_not_found'
 ]);
-/** A suspended/deleted tenant: a scope problem only when the request was scope-marked. */
+const SCOPE_NOT_SUPPORTED_CODE = 'tenant_scope_not_supported';
 const TENANT_NOT_ACTIVE_CODE = 'tenant_not_active';
-const SCOPE_EXPIRED_COPY = 'Operator scope expired — select the tenant again';
+const SCOPE_NOT_SUPPORTED_COPY =
+	'Not available while acting in a tenant. Exit the tenant context first.';
+const TENANT_SUSPENDED_COPY = 'This tenant is suspended. Changes are disabled.';
+const MAX_RETRY_AFTER_SECONDS = 86_400;
+const IMF_FIXDATE =
+	/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{2} (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4} \d{2}:\d{2}:\d{2} GMT$/;
 
 function firstText(...values: Array<string | undefined>): string | undefined {
 	for (const v of values) if (typeof v === 'string' && v.trim() !== '') return v.trim();
@@ -49,12 +58,15 @@ export function flattenFieldErrors(errors: unknown): Record<string, string> {
 	return out;
 }
 
+/** Retry-After: delta-seconds or an HTTP-date (IMF-fixdate). Anything else is `undefined`; capped at 24 h. */
 export function parseRetryAfter(value: string | null): number | undefined {
-	if (!value) return undefined;
-	const seconds = Number(value);
-	if (Number.isFinite(seconds) && seconds >= 0) return Math.ceil(seconds);
-	const at = Date.parse(value);
-	return Number.isNaN(at) ? undefined : Math.max(0, Math.ceil((at - Date.now()) / 1000));
+	const v = value?.trim();
+	if (!v) return undefined;
+	if (/^\d+$/.test(v)) return Math.min(Number(v), MAX_RETRY_AFTER_SECONDS);
+	if (!IMF_FIXDATE.test(v)) return undefined;
+	const at = Date.parse(v);
+	if (Number.isNaN(at)) return undefined;
+	return Math.min(Math.max(0, Math.ceil((at - Date.now()) / 1000)), MAX_RETRY_AFTER_SECONDS);
 }
 
 export class ApiError extends Error {
@@ -72,23 +84,15 @@ export class ApiError extends Error {
 		this.code = code;
 	}
 
-	/** `ctx.scopeRequired`: the request carried the operator-scope marker header. */
-	static fromResponse(
-		response: Response,
-		rawBody: ApiErrorBody | null,
-		ctx: { scopeRequired?: boolean } = {}
-	): ApiError {
+	static fromResponse(response: Response, rawBody: ApiErrorBody | null): ApiError {
 		const body = typeof rawBody === 'object' && rawBody !== null ? rawBody : null;
 		const code = firstText(body?.error);
 		const text = firstText(body?.message, body?.detail);
 		const traceId = response.headers.get(CORRELATION_ID_HEADER) ?? undefined;
 		const retryAfter = parseRetryAfter(response.headers.get('retry-after'));
 		let err: ApiError;
-		if (
-			code !== undefined &&
-			(GO_SCOPE_CODES.has(code) || (code === TENANT_NOT_ACTIVE_CODE && ctx.scopeRequired === true))
-		) {
-			err = new ScopeInvalidError(text ?? SCOPE_EXPIRED_COPY, traceId, response.status);
+		if (code !== undefined && GO_SCOPE_EXIT_CODES.has(code)) {
+			err = new ScopeInvalidError(text, traceId, response.status);
 			err.code = code;
 			err.retryAfterSeconds = retryAfter;
 			return err;
@@ -108,7 +112,9 @@ export class ApiError extends Error {
 					traceId,
 					code === CSRF_MISMATCH_CODE
 						? 'Your session token is out of date — reload the page and try again.'
-						: text
+						: code === SCOPE_NOT_SUPPORTED_CODE
+							? SCOPE_NOT_SUPPORTED_COPY
+							: text
 				);
 				break;
 			case 404:
@@ -117,8 +123,11 @@ export class ApiError extends Error {
 			case 409:
 				err =
 					code === SCOPE_INVALID_CODE
-						? new ScopeInvalidError(text ?? SCOPE_EXPIRED_COPY, traceId)
-						: new ConflictError(text, traceId);
+						? new ScopeInvalidError(text, traceId)
+						: new ConflictError(
+								code === TENANT_NOT_ACTIVE_CODE ? TENANT_SUSPENDED_COPY : text,
+								traceId
+							);
 				break;
 			case 429:
 				err = new RateLimitError(retryAfter, traceId);
@@ -285,22 +294,22 @@ export class ConflictError extends ApiError {
 }
 
 /**
- * The operator scope is unusable: 409 `scope_invalid` from the BFF proxy, or one of Go's
- * tenant-scope codes (400/403/404, see GO_SCOPE_CODES). Not a domain conflict: the
+ * The operator scope is dead: 409 `scope_invalid` from the BFF proxy, or Go's
+ * `invalid_tenant_scope` (400) / `tenant_scope_not_found` (404). Not a domain conflict: the
  * session guard sends the operator back to /operator/tenants whatever the status.
- * `code` keeps the original code.
+ * `message` is the fixed user copy; Go's technical text (if any) is `detail`. `code` keeps the original code.
  */
 export class ScopeInvalidError extends ApiError {
 	declare readonly status: number;
 
 	constructor(
-		public readonly detail: string,
+		public readonly detail?: string,
 		traceId?: string,
 		status = 409
 	) {
 		super(status, traceId, SCOPE_INVALID_CODE);
 		this.name = 'ScopeInvalidError';
-		this.message = detail;
+		this.message = SCOPE_EXPIRED_MESSAGE;
 	}
 }
 

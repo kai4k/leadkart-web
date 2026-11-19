@@ -29,6 +29,7 @@ import { config } from '#lib/server/config.ts';
 import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
 import { isAuthExpired, refreshSession } from '#lib/server/auth-refresh.ts';
 import { SESSION_EXPIRED_CODE } from '#lib/api/errors.ts';
+import { SCOPE_EXPIRED_MESSAGE } from '#lib/api/scope-header.ts';
 import { readOperatorScope } from '#lib/server/scope.ts';
 import { assertCsrf } from '#lib/server/csrf.ts';
 import { jsonError } from '#lib/server/http.ts';
@@ -91,7 +92,7 @@ async function proxy(
 	// getting 409 until the user exits scope or selects a tenant again.
 	const scope = readOperatorScope(cookies);
 	if (scope.state === 'invalid' || (scope.state === 'none' && scopeRequired(request.headers))) {
-		return jsonError(409, 'scope_invalid', 'Operator scope expired — select the tenant again');
+		return jsonError(409, 'scope_invalid', SCOPE_EXPIRED_MESSAGE);
 	}
 	if (scope.state === 'valid') upstreamHeaders.set('x-tenant-id', scope.scope.id);
 

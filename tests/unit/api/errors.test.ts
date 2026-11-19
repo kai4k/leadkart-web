@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
 	ApiError,
 	NetworkError,
@@ -10,8 +10,10 @@ import {
 	ConflictError,
 	ScopeInvalidError,
 	SchemaError,
-	RateLimitError
+	RateLimitError,
+	parseRetryAfter
 } from '#lib/api/errors.ts';
+import { SCOPE_EXPIRED_MESSAGE } from '#lib/api/scope-header.ts';
 
 describe('Error subclass hierarchy', () => {
 	describe('NetworkError', () => {
@@ -234,34 +236,85 @@ describe('ApiError.transport', () => {
 	});
 });
 
-describe('scope codes reach ScopeInvalidError (any status)', () => {
+describe('Go tenant-scope codes', () => {
 	it.each([
 		['invalid_tenant_scope', 400],
-		['tenant_scope_conflict', 400],
 		['tenant_scope_not_found', 404],
-		['tenant_scope_not_supported', 403],
 		['scope_invalid', 409]
-	])('%s (%i) -> ScopeInvalidError keeping its code and status', (code, status) => {
-		const err = ApiError.fromResponse(res(status), { error: code, message: 'Go says no' });
+	])('%s (%i) -> ScopeInvalidError: fixed copy, Go text in detail, code kept', (code, status) => {
+		const err = ApiError.fromResponse(res(status), {
+			error: code,
+			message: 'X-Tenant-Id must be a tenant UUID'
+		}) as ScopeInvalidError;
 		expect(err).toBeInstanceOf(ScopeInvalidError);
 		expect(err.code).toBe(code);
 		expect(err.status).toBe(status);
-		expect(err.message).toBe('Go says no');
+		expect(err.message).toBe(SCOPE_EXPIRED_MESSAGE);
+		expect(err.detail).toBe('X-Tenant-Id must be a tenant UUID');
 	});
-	it('tenant_not_active is a scope error only when the request was scope-marked', () => {
-		const body = { error: 'tenant_not_active', message: 'Tenant is suspended' };
-		expect(ApiError.fromResponse(res(409), body, { scopeRequired: true })).toBeInstanceOf(
-			ScopeInvalidError
-		);
-		expect(ApiError.fromResponse(res(409), body)).toBeInstanceOf(ConflictError);
-		expect(ApiError.fromResponse(res(409), body, { scopeRequired: true }).code).toBe(
-			'tenant_not_active'
+	it('a scope error without Go text still carries the fixed copy', () => {
+		const err = ApiError.fromResponse(res(404), { error: 'tenant_scope_not_found' });
+		expect(err.message).toBe(SCOPE_EXPIRED_MESSAGE);
+	});
+	it('tenant_scope_not_supported (403) is an AuthError that does not exit scope', () => {
+		const err = ApiError.fromResponse(res(403), {
+			error: 'tenant_scope_not_supported',
+			message: 'not for tenant scope'
+		});
+		expect(err).toBeInstanceOf(AuthError);
+		expect(err).not.toBeInstanceOf(ScopeInvalidError);
+		expect(err.status).toBe(403);
+		expect(err.code).toBe('tenant_scope_not_supported');
+		expect(err.message).toBe(
+			'Not available while acting in a tenant. Exit the tenant context first.'
 		);
 	});
-	it('a scope error without Go text gets the default copy', () => {
-		expect(ApiError.fromResponse(res(404), { error: 'tenant_scope_not_found' }).message).toMatch(
-			/select the tenant again/i
-		);
+	it('tenant_scope_conflict (400) is a ValidationError that does not exit scope', () => {
+		const err = ApiError.fromResponse(res(400), {
+			error: 'tenant_scope_conflict',
+			message: 'tenant_id conflicts with X-Tenant-Id'
+		});
+		expect(err).toBeInstanceOf(ValidationError);
+		expect(err.code).toBe('tenant_scope_conflict');
+		expect(err.message).toBe('tenant_id conflicts with X-Tenant-Id');
+	});
+	it('tenant_not_active (409) is a ConflictError with suspended copy', () => {
+		const err = ApiError.fromResponse(res(409), { error: 'tenant_not_active', message: 'x' });
+		expect(err).toBeInstanceOf(ConflictError);
+		expect(err.code).toBe('tenant_not_active');
+		expect(err.message).toBe('This tenant is suspended. Changes are disabled.');
+	});
+});
+
+describe('parseRetryAfter', () => {
+	afterEach(() => vi.useRealTimers());
+	it.each([
+		['30', 30],
+		[' 7 ', 7],
+		['0', 0],
+		['999999', 86_400],
+		[' ', undefined],
+		['', undefined],
+		[null, undefined],
+		['0x1E', undefined],
+		['-5', undefined],
+		['1.5', undefined],
+		['1e3', undefined],
+		['foo 2099', undefined],
+		['soon', undefined]
+	])('%j -> %j', (input, expected) => {
+		expect(parseRetryAfter(input)).toBe(expected);
+	});
+	it('accepts an IMF-fixdate relative to now; past -> 0; far future capped', () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date('Wed, 21 Oct 2015 07:28:00 GMT'));
+		expect(parseRetryAfter('Wed, 21 Oct 2015 07:28:30 GMT')).toBe(30);
+		expect(parseRetryAfter('Wed, 21 Oct 2015 07:00:00 GMT')).toBe(0);
+		expect(parseRetryAfter('Thu, 21 Oct 2100 07:28:00 GMT')).toBe(86_400);
+	});
+	it('rejects a non-IMF date string even if Date.parse accepts it', () => {
+		expect(parseRetryAfter('2099-01-01')).toBeUndefined();
+		expect(parseRetryAfter('foo Thu, 21 Oct 2100 07:28:00 GMT')).toBeUndefined();
 	});
 });
 

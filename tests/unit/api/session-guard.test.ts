@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { SCOPE_EXPIRED_MESSAGE } from '#lib/api/scope-header.ts';
 import { createSessionGuard } from '#lib/api/session-guard.ts';
 import {
 	ApiError,
@@ -71,6 +72,31 @@ describe('session guard — 401', () => {
 	});
 });
 
+describe('session guard — scope codes', () => {
+	const res = (status: number) => new Response(null, { status });
+	it.each([
+		['tenant_scope_not_supported', 403],
+		['tenant_scope_conflict', 400],
+		['tenant_not_active', 409]
+	])('%s (%i) from Go does not leave the scope', (code, status) => {
+		const { deps, guard } = setup({ pathname: '/operator/scope/members', search: '' });
+		expect(guard.handle(ApiError.fromResponse(res(status), { error: code }))).toBe(false);
+		expect(deps.exitScope).not.toHaveBeenCalled();
+		expect(deps.resetCache).not.toHaveBeenCalled();
+		expect(deps.notify).not.toHaveBeenCalled();
+		expect(deps.goto).not.toHaveBeenCalled();
+	});
+	it.each([
+		['invalid_tenant_scope', 400],
+		['tenant_scope_not_found', 404]
+	])('%s (%i) still exits the scope', async (code, status) => {
+		const { deps, guard } = setup({ pathname: '/operator/scope/members', search: '' });
+		expect(guard.handle(ApiError.fromResponse(res(status), { error: code }))).toBe(true);
+		await vi.waitFor(() => expect(deps.goto).toHaveBeenCalledWith('/operator/tenants'));
+		expect(deps.exitScope).toHaveBeenCalledTimes(1);
+	});
+});
+
 describe('session guard — scope_invalid', () => {
 	const scopeError = () => new ScopeInvalidError('expired');
 
@@ -83,7 +109,7 @@ describe('session guard — scope_invalid', () => {
 		expect(deps.resetCache).toHaveBeenCalledTimes(1);
 		expect(deps.clearCache).not.toHaveBeenCalled();
 		expect(deps.notify).toHaveBeenCalledTimes(1);
-		expect(deps.notify).toHaveBeenCalledWith('Operator scope expired — select the tenant again');
+		expect(deps.notify).toHaveBeenCalledWith(SCOPE_EXPIRED_MESSAGE);
 		expect(deps.goto).toHaveBeenCalledWith('/operator/tenants');
 		// The cache is emptied before navigation, not after.
 		expect(deps.resetCache.mock.invocationCallOrder[0]).toBeLessThan(

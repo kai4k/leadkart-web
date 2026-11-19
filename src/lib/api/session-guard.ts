@@ -6,7 +6,7 @@
  *                            the cache and go to /signin?next=. Any other 401
  *                            (e.g. a credential check failing) is the call's own
  *                            error and does NOT sign the user out.
- *   409 ScopeInvalidError -> the operator scope cookie is expired/tampered/gone:
+ *   ScopeInvalidError     -> the operator scope cookie is expired/tampered/gone:
  *                            drop the stale cookie (exit scope), reset the cache
  *                            and go back to /operator/tenants. If leaving scope
  *                            fails, sign out instead (the server clears the scope
@@ -16,6 +16,7 @@
  * the navigation settles. Dependencies are injected so the guard is
  * unit-testable without a router.
  */
+import { SCOPE_EXPIRED_MESSAGE } from './scope-header.ts';
 import { AuthError, ScopeInvalidError, SESSION_EXPIRED_CODE } from './errors';
 
 export interface SessionGuardDeps {
@@ -38,7 +39,6 @@ export interface SessionGuard {
 	handle: (error: unknown) => boolean;
 }
 
-const SCOPE_EXPIRED_MESSAGE = 'Operator scope expired — select the tenant again';
 const SCOPE_EXIT_FAILED_MESSAGE = 'Could not leave the tenant context — signing out';
 
 export function createSessionGuard(deps: SessionGuardDeps): SessionGuard {
