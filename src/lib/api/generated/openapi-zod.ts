@@ -1529,6 +1529,11 @@ themselves; callers WITH it see the full tenant set per ADR 0060.
 				name: 'dosage_form',
 				type: 'Query',
 				schema: z.array(z.string()).optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: ListLeadsResponse,
@@ -1541,6 +1546,11 @@ themselves; callers WITH it see the full tenant set per ADR 0060.
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
 			},
 			{
@@ -1565,6 +1575,11 @@ themselves; callers WITH it see the full tenant set per ADR 0060.
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: CrmLeadDto,
@@ -1609,6 +1624,11 @@ AssignmentHistory audit table. Emits &#x60;crm.lead_assigned.v1&#x60;.
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: AssignLeadResponse,
@@ -1658,6 +1678,11 @@ terminal leads (converted / lost).
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.object({ call_id: z.string().uuid() }).passthrough(),
@@ -1702,6 +1727,11 @@ this is the future Orders module&#x27;s create-trigger per ADR 0060.
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -1751,6 +1781,11 @@ Emits &#x60;crm.lead_lost.v1&#x60;.
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -1808,6 +1843,11 @@ Emits &#x60;crm.reminder_created.v1&#x60;.
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.object({ reminder_id: z.string().uuid() }).passthrough(),
@@ -1825,6 +1865,13 @@ Emits &#x60;crm.reminder_created.v1&#x60;.
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `The tenant selected by &#x60;X-Tenant-Id&#x60; is suspended or pending deletion, so it can be
+read and its lifecycle managed but not written otherwise (&#x60;tenant_not_active&#x60;).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -1858,6 +1905,11 @@ Emits &#x60;crm.lead_stage_changed.v1&#x60;.
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -1912,6 +1964,11 @@ non-terminal stage. Emits &#x60;crm.lead_temperature_changed.v1&#x60;.
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -1975,6 +2032,11 @@ assignee bucket per ADR 0060.
 				name: 'lead_id',
 				type: 'Query',
 				schema: z.string().uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: ListRemindersResponse,
@@ -1992,6 +2054,11 @@ assignee bucket per ADR 0060.
 			{
 				status: 403,
 				description: `Caller probed another assignee without crm.leads.read_all`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
 			},
 			{
@@ -2025,6 +2092,11 @@ doctrine). Refused on already-terminal reminders. Emits
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -2074,6 +2146,11 @@ Emits &#x60;crm.reminder_marked_sent.v1&#x60;.
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -2120,6 +2197,11 @@ a pre-existing note returns 200 with &#x60;already_existed: true&#x60;.
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: CreateConsignmentNoteResponse,
@@ -2132,6 +2214,18 @@ a pre-existing note returns 200 with &#x60;already_existed: true&#x60;.
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `The tenant selected by &#x60;X-Tenant-Id&#x60; is suspended or pending deletion, so it can be
+read and its lifecycle managed but not written otherwise (&#x60;tenant_not_active&#x60;).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -2157,6 +2251,11 @@ a pre-existing note returns 200 with &#x60;already_existed: true&#x60;.
 				name: 'order_id',
 				type: 'Query',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: ConsignmentNoteDto,
@@ -2193,6 +2292,11 @@ a pre-existing note returns 200 with &#x60;already_existed: true&#x60;.
 				name: 'consignmentNoteId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: ConsignmentNoteDto,
@@ -2234,6 +2338,11 @@ a pre-existing note returns 200 with &#x60;already_existed: true&#x60;.
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -2285,6 +2394,11 @@ a pre-existing note returns 200 with &#x60;already_existed: true&#x60;.
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -2341,6 +2455,11 @@ a pre-existing note returns 200 with &#x60;already_existed: true&#x60;.
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -2392,6 +2511,11 @@ a pre-existing note returns 200 with &#x60;already_existed: true&#x60;.
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -2436,10 +2560,23 @@ Cross-tenant access surfaces as 404 per ADR 0044.
 				name: 'batchId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: BatchDto,
 		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
+may use the header ever see it; every other caller has the header ignored.
+`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -2479,10 +2616,23 @@ modification after retry cap).
 				name: 'batchId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: LogMovementResponse,
 		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
+may use the header ever see it; every other caller has the header ignored.
+`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -2529,6 +2679,11 @@ Append-only ledger ordered (occurred_at, id) DESC. Optional
 				name: 'type',
 				type: 'Query',
 				schema: z.enum(['inbound', 'outbound', 'adjustment', 'reservation', 'release']).optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: ListMovementsResponse,
@@ -2536,6 +2691,11 @@ Append-only ledger ordered (occurred_at, id) DESC. Optional
 			{
 				status: 400,
 				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
 			}
 		]
@@ -2559,6 +2719,11 @@ SKU collision. 422 on field-validation failure.
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.object({ product_id: z.string().uuid() }).passthrough(),
@@ -2571,6 +2736,11 @@ SKU collision. 422 on field-validation failure.
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
 			},
 			{
@@ -2624,6 +2794,11 @@ ordered (created_at, id) DESC. Filters narrow the result set.
 				name: 'search',
 				type: 'Query',
 				schema: z.string().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: ListProductsResponse,
@@ -2636,6 +2811,11 @@ ordered (created_at, id) DESC. Filters narrow the result set.
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
 			}
 		]
@@ -2653,10 +2833,23 @@ as 404 per ADR 0044 enumeration-safety.
 				name: 'productId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: ProductDto,
 		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
+may use the header ever see it; every other caller has the header ignored.
+`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -2691,10 +2884,23 @@ invariant failure (out-of-range GST bps, oversized name, etc).
 				name: 'productId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
+may use the header ever see it; every other caller has the header ignored.
+`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -2726,10 +2932,28 @@ live batch with quantity_on_hand &gt; 0 exists.
 				name: 'productId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
+may use the header ever see it; every other caller has the header ignored.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
 			{
 				status: 409,
 				description: `Product has live batches with non-zero stock`,
@@ -2761,10 +2985,23 @@ batch_number is unique per product on live rows.
 				name: 'productId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.object({ batch_id: z.string().uuid() }).passthrough(),
 		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
+may use the header ever see it; every other caller has the header ignored.
+`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -2811,9 +3048,29 @@ excluded by default (pass &#x60;include_expired&#x3D;true&#x60; to include).
 				name: 'include_expired',
 				type: 'Query',
 				schema: z.enum(['true', 'false']).optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
-		response: ListBatchesResponse
+		response: ListBatchesResponse,
+		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
+may use the header ever see it; every other caller has the header ignored.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			}
+		]
 	},
 	{
 		method: 'get',
@@ -2832,9 +3089,29 @@ multi-batch allocations against a single order quantity.
 				name: 'productId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
-		response: FefoBatchesResponse
+		response: FefoBatchesResponse,
+		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
+may use the header ever see it; every other caller has the header ignored.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			}
+		]
 	},
 	{
 		method: 'get',
@@ -2913,6 +3190,11 @@ enforced server-side — a caller only ever sees their own inbox.
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -2930,6 +3212,13 @@ enforced server-side — a caller only ever sees their own inbox.
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `The tenant selected by &#x60;X-Tenant-Id&#x60; is suspended or pending deletion, so it can be
+read and its lifecycle managed but not written otherwise (&#x60;tenant_not_active&#x60;).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -2949,6 +3238,11 @@ enforced server-side — a caller only ever sees their own inbox.
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -2985,13 +3279,38 @@ enforced server-side — a caller only ever sees their own inbox.
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.object({ marked_read: z.number().int() }).passthrough(),
 		errors: [
 			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
+may use the header ever see it; every other caller has the header ignored.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `The tenant selected by &#x60;X-Tenant-Id&#x60; is suspended or pending deletion, so it can be
+read and its lifecycle managed but not written otherwise (&#x60;tenant_not_active&#x60;).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -3006,11 +3325,31 @@ enforced server-side — a caller only ever sees their own inbox.
 		path: '/api/v1/notifications/unread-count',
 		alias: 'getApiv1notificationsunreadCount',
 		requestFormat: 'json',
+		parameters: [
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
+			}
+		],
 		response: z.object({ unread_count: z.number().int() }).passthrough(),
 		errors: [
 			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
+may use the header ever see it; every other caller has the header ignored.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
 			},
 			{
@@ -3030,6 +3369,11 @@ enforced server-side — a caller only ever sees their own inbox.
 				name: 'orderId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: OrderDto,
@@ -3076,6 +3420,11 @@ enforced server-side — a caller only ever sees their own inbox.
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -3122,10 +3471,23 @@ enforced server-side — a caller only ever sees their own inbox.
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
+may use the header ever see it; every other caller has the header ignored.
+`,
+				schema: ErrorResponse
+			},
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
@@ -3163,10 +3525,23 @@ enforced server-side — a caller only ever sees their own inbox.
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
+may use the header ever see it; every other caller has the header ignored.
+`,
+				schema: ErrorResponse
+			},
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
@@ -3213,6 +3588,11 @@ allowed) against the order&#x27;s invoice with a gapless number. Requires
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: MintCreditNoteResponse,
@@ -3230,6 +3610,13 @@ allowed) against the order&#x27;s invoice with a gapless number. Requires
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `The tenant selected by &#x60;X-Tenant-Id&#x60; is suspended or pending deletion, so it can be
+read and its lifecycle managed but not written otherwise (&#x60;tenant_not_active&#x60;).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -3254,6 +3641,11 @@ allowed) against the order&#x27;s invoice with a gapless number. Requires
 				name: 'orderId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: InvoiceDto,
@@ -3295,10 +3687,23 @@ allowed) against the order&#x27;s invoice with a gapless number. Requires
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: InvoiceOrderResponse,
 		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
+may use the header ever see it; every other caller has the header ignored.
+`,
+				schema: ErrorResponse
+			},
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
@@ -3341,6 +3746,11 @@ allowed) against the order&#x27;s invoice with a gapless number. Requires
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -3382,6 +3792,11 @@ allowed) against the order&#x27;s invoice with a gapless number. Requires
 				name: 'orderId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: ListPaymentsResponse,
@@ -3394,6 +3809,11 @@ allowed) against the order&#x27;s invoice with a gapless number. Requires
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
 			},
 			{
@@ -3423,6 +3843,11 @@ allowed) against the order&#x27;s invoice with a gapless number. Requires
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.object({ payment_id: z.string().uuid() }).passthrough(),
@@ -3435,6 +3860,11 @@ allowed) against the order&#x27;s invoice with a gapless number. Requires
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
 			},
 			{
@@ -3474,6 +3904,11 @@ allowed) against the order&#x27;s invoice with a gapless number. Requires
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -3525,6 +3960,11 @@ allowed) against the order&#x27;s invoice with a gapless number. Requires
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.object({ quotation_id: z.string().uuid() }).passthrough(),
@@ -3537,6 +3977,18 @@ allowed) against the order&#x27;s invoice with a gapless number. Requires
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `The tenant selected by &#x60;X-Tenant-Id&#x60; is suspended or pending deletion, so it can be
+read and its lifecycle managed but not written otherwise (&#x60;tenant_not_active&#x60;).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -3561,6 +4013,11 @@ allowed) against the order&#x27;s invoice with a gapless number. Requires
 				name: 'quotationId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: QuotationDto,
@@ -3602,10 +4059,23 @@ allowed) against the order&#x27;s invoice with a gapless number. Requires
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.object({ order_id: z.string().uuid() }).passthrough(),
 		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
+may use the header ever see it; every other caller has the header ignored.
+`,
+				schema: ErrorResponse
+			},
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
@@ -3653,6 +4123,11 @@ allowed) against the order&#x27;s invoice with a gapless number. Requires
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -3704,6 +4179,11 @@ allowed) against the order&#x27;s invoice with a gapless number. Requires
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -4112,8 +4592,23 @@ impersonation-session resolver).
 		path: '/api/v1/platform/lead-credits/balance',
 		alias: 'getApiv1platformleadCreditsbalance',
 		requestFormat: 'json',
+		parameters: [
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
+			}
+		],
 		response: LeadCreditBalanceResponse,
 		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
+may use the header ever see it; every other caller has the header ignored.
+`,
+				schema: ErrorResponse
+			},
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
@@ -4122,6 +4617,11 @@ impersonation-session resolver).
 			{
 				status: 403,
 				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
 			}
 		]
@@ -4549,10 +5049,23 @@ active SuperAdmin role refuse with 422
 				name: 'tenantId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
+may use the header ever see it; every other caller has the header ignored.
+`,
+				schema: ErrorResponse
+			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
@@ -5233,6 +5746,11 @@ the same tenant (otherwise 422 &#x60;assignee_inactive&#x60;). Emits
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.object({ work_item_id: z.string().uuid() }).passthrough(),
@@ -5245,6 +5763,18 @@ the same tenant (otherwise 422 &#x60;assignee_inactive&#x60;). Emits
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `The tenant selected by &#x60;X-Tenant-Id&#x60; is suspended or pending deletion, so it can be
+read and its lifecycle managed but not written otherwise (&#x60;tenant_not_active&#x60;).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -5315,6 +5845,11 @@ returns 403).
 				name: 'due_after',
 				type: 'Query',
 				schema: z.string().datetime({ offset: true }).optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: ListWorkItemsResponse,
@@ -5335,6 +5870,11 @@ returns 403).
 				schema: ErrorResponse
 			},
 			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 500,
 				description: `Server error`,
 				schema: ErrorResponse
@@ -5351,6 +5891,11 @@ returns 403).
 				name: 'workItemId',
 				type: 'Path',
 				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: WorkItemDto,
@@ -5397,6 +5942,11 @@ returns 403).
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -5443,10 +5993,23 @@ returns 403).
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
 		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
+may use the header ever see it; every other caller has the header ignored.
+`,
+				schema: ErrorResponse
+			},
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
@@ -5489,6 +6052,11 @@ caller&#x27;s subordinate scope (or be the caller themselves). 403
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -5540,6 +6108,11 @@ caller&#x27;s subordinate scope (or be the caller themselves). 403
 				name: 'X-Command-Id',
 				type: 'Header',
 				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -5581,10 +6154,23 @@ actor&#x27;s subordinate scope via the hierarchy traversal (requires
 				name: 'include_team',
 				type: 'Query',
 				schema: z.boolean().optional().default(false)
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
 			}
 		],
 		response: DashboardResponse,
 		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Only operators who
+may use the header ever see it; every other caller has the header ignored.
+`,
+				schema: ErrorResponse
+			},
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
@@ -5593,6 +6179,11 @@ actor&#x27;s subordinate scope via the hierarchy traversal (requires
 			{
 				status: 403,
 				description: `Authenticated but missing the required permission`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
 			},
 			{

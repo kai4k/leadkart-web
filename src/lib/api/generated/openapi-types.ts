@@ -722,16 +722,27 @@ export interface paths {
 				header?: {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -795,16 +806,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -868,16 +890,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -938,16 +971,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1008,16 +1052,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1078,16 +1133,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1144,16 +1210,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1210,16 +1287,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1278,16 +1366,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1344,16 +1443,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1454,16 +1564,27 @@ export interface paths {
 				header?: {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1515,16 +1636,27 @@ export interface paths {
 				header?: {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1565,16 +1697,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1622,16 +1765,27 @@ export interface paths {
 				header?: {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1695,16 +1849,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1760,16 +1925,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1828,16 +2004,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1892,16 +2079,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -1970,16 +2168,27 @@ export interface paths {
 				header?: {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2043,16 +2252,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2110,16 +2330,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2157,16 +2388,27 @@ export interface paths {
 				header?: {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2223,16 +2465,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2277,16 +2530,27 @@ export interface paths {
 				header?: {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2327,16 +2591,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2384,16 +2659,27 @@ export interface paths {
 				header?: {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2428,16 +2714,27 @@ export interface paths {
 				header?: {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2482,16 +2779,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2579,16 +2887,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2662,16 +2981,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2733,16 +3063,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2803,16 +3144,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -2900,7 +3252,33 @@ export interface paths {
 		delete: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path: {
 					tenantId: components['parameters']['TenantId'];
 				};
@@ -2915,6 +3293,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['TenantScopeInvalid'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['Unprocessable'];
 			};
@@ -3495,16 +3874,27 @@ export interface paths {
 				header?: {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -3550,16 +3940,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -3619,16 +4020,27 @@ export interface paths {
 				header?: {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -3690,16 +4102,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -3778,16 +4201,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -3867,16 +4301,27 @@ export interface paths {
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators: the request
-					 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-					 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-					 *     other caller (tenant members, impersonation tokens) and by
-					 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-					 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-					 *     tenant wins and a different header value is rejected.
-					 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-					 *     `tenant_scope_conflict` (differs from the path tenant), 404
-					 *     `tenant_scope_not_found` (unknown or deleted tenant).
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
 					 */
 					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
@@ -4380,7 +4825,33 @@ export interface paths {
 		get: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path?: never;
 				cookie?: never;
 			};
@@ -4395,8 +4866,10 @@ export interface paths {
 						'application/json': components['schemas']['LeadCreditBalanceResponse'];
 					};
 				};
+				400: components['responses']['TenantScopeInvalid'];
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['Forbidden'];
+				404: components['responses']['NotFound'];
 			};
 		};
 		put?: never;
@@ -4433,7 +4906,33 @@ export interface paths {
 					/** @description pg_trgm fuzzy match on (sku || name) per ADR 0040. */
 					search?: string;
 				};
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path?: never;
 				cookie?: never;
 			};
@@ -4450,6 +4949,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
 			};
 		};
 		put?: never;
@@ -4472,6 +4972,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path?: never;
 				cookie?: never;
@@ -4493,6 +5018,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
 				/** @description SKU already exists in this tenant */
 				409: {
 					headers: {
@@ -4526,7 +5052,33 @@ export interface paths {
 		get: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path: {
 					productId: components['parameters']['ProductId'];
 				};
@@ -4543,6 +5095,7 @@ export interface paths {
 						'application/json': components['schemas']['ProductDto'];
 					};
 				};
+				400: components['responses']['TenantScopeInvalid'];
 				404: components['responses']['NotFound'];
 			};
 		};
@@ -4557,7 +5110,33 @@ export interface paths {
 		delete: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path: {
 					productId: components['parameters']['ProductId'];
 				};
@@ -4572,6 +5151,8 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['TenantScopeInvalid'];
+				404: components['responses']['NotFound'];
 				/** @description Product has live batches with non-zero stock */
 				409: {
 					headers: {
@@ -4607,6 +5188,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					productId: components['parameters']['ProductId'];
@@ -4626,6 +5232,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['TenantScopeInvalid'];
 				404: components['responses']['NotFound'];
 				/** @description Product is deleted */
 				409: {
@@ -4662,7 +5269,33 @@ export interface paths {
 					page_size?: components['parameters']['PageSize'];
 					include_expired?: 'true' | 'false';
 				};
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path: {
 					productId: components['parameters']['ProductId'];
 				};
@@ -4679,6 +5312,8 @@ export interface paths {
 						'application/json': components['schemas']['ListBatchesResponse'];
 					};
 				};
+				400: components['responses']['TenantScopeInvalid'];
+				404: components['responses']['NotFound'];
 			};
 		};
 		put?: never;
@@ -4701,6 +5336,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					productId: components['parameters']['ProductId'];
@@ -4722,6 +5382,7 @@ export interface paths {
 						'application/json': components['schemas']['AddBatchResponse'];
 					};
 				};
+				400: components['responses']['TenantScopeInvalid'];
 				404: components['responses']['NotFound'];
 				/** @description batch_number already exists for this product */
 				409: {
@@ -4760,7 +5421,33 @@ export interface paths {
 		get: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path: {
 					productId: components['parameters']['ProductId'];
 				};
@@ -4777,6 +5464,8 @@ export interface paths {
 						'application/json': components['schemas']['FefoBatchesResponse'];
 					};
 				};
+				400: components['responses']['TenantScopeInvalid'];
+				404: components['responses']['NotFound'];
 			};
 		};
 		put?: never;
@@ -4802,7 +5491,33 @@ export interface paths {
 		get: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path: {
 					batchId: components['parameters']['BatchId'];
 				};
@@ -4819,6 +5534,7 @@ export interface paths {
 						'application/json': components['schemas']['BatchDto'];
 					};
 				};
+				400: components['responses']['TenantScopeInvalid'];
 				404: components['responses']['NotFound'];
 			};
 		};
@@ -4851,7 +5567,33 @@ export interface paths {
 					page_size?: components['parameters']['PageSize'];
 					type?: 'inbound' | 'outbound' | 'adjustment' | 'reservation' | 'release';
 				};
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path: {
 					batchId: components['parameters']['BatchId'];
 				};
@@ -4869,6 +5611,7 @@ export interface paths {
 					};
 				};
 				400: components['responses']['BadRequest'];
+				404: components['responses']['NotFound'];
 			};
 		};
 		put?: never;
@@ -4899,6 +5642,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					batchId: components['parameters']['BatchId'];
@@ -4920,6 +5688,7 @@ export interface paths {
 						'application/json': components['schemas']['LogMovementResponse'];
 					};
 				};
+				400: components['responses']['TenantScopeInvalid'];
 				404: components['responses']['NotFound'];
 				/** @description Insufficient stock / batch expired / concurrency conflict */
 				409: {
@@ -4976,7 +5745,33 @@ export interface paths {
 					product_range?: string[];
 					dosage_form?: string[];
 				};
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path?: never;
 				cookie?: never;
 			};
@@ -4993,6 +5788,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -5025,6 +5821,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					leadId: components['parameters']['LeadId'];
@@ -5082,6 +5903,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					leadId: components['parameters']['LeadId'];
@@ -5151,6 +5997,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					leadId: components['parameters']['LeadId'];
@@ -5218,6 +6089,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					leadId: components['parameters']['LeadId'];
@@ -5284,6 +6180,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					leadId: components['parameters']['LeadId'];
@@ -5352,6 +6273,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					leadId: components['parameters']['LeadId'];
@@ -5414,7 +6360,33 @@ export interface paths {
 					due_before?: string;
 					due_after?: string;
 				};
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path?: never;
 				cookie?: never;
 			};
@@ -5432,6 +6404,7 @@ export interface paths {
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['Forbidden'];
+				404: components['responses']['NotFound'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -5457,6 +6430,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path?: never;
 				cookie?: never;
@@ -5478,6 +6476,8 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				409: components['responses']['TenantNotActive'];
 				422: components['responses']['Unprocessable'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -5507,7 +6507,33 @@ export interface paths {
 				query?: {
 					include_team?: boolean;
 				};
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path?: never;
 				cookie?: never;
 			};
@@ -5522,8 +6548,10 @@ export interface paths {
 						'application/json': components['schemas']['DashboardResponse'];
 					};
 				};
+				400: components['responses']['TenantScopeInvalid'];
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['Forbidden'];
+				404: components['responses']['NotFound'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -5546,7 +6574,33 @@ export interface paths {
 		get: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path: {
 					workItemId: components['parameters']['WorkItemId'];
 				};
@@ -5600,6 +6654,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					workItemId: components['parameters']['WorkItemId'];
@@ -5658,6 +6737,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					workItemId: components['parameters']['WorkItemId'];
@@ -5673,6 +6777,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['TenantScopeInvalid'];
 				401: components['responses']['Unauthorized'];
 				404: components['responses']['NotFound'];
 				/** @description Cannot complete a cancelled task */
@@ -5715,6 +6820,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					workItemId: components['parameters']['WorkItemId'];
@@ -5792,6 +6922,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					workItemId: components['parameters']['WorkItemId'];
@@ -5857,7 +7012,33 @@ export interface paths {
 				query: {
 					order_id: string;
 				};
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path?: never;
 				cookie?: never;
 			};
@@ -5899,6 +7080,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path?: never;
 				cookie?: never;
@@ -5929,6 +7135,8 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				409: components['responses']['TenantNotActive'];
 				422: components['responses']['Unprocessable'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -5950,7 +7158,33 @@ export interface paths {
 		get: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path: {
 					consignmentNoteId: components['parameters']['ConsignmentNoteId'];
 				};
@@ -6004,6 +7238,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					consignmentNoteId: components['parameters']['ConsignmentNoteId'];
@@ -6068,6 +7327,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					consignmentNoteId: components['parameters']['ConsignmentNoteId'];
@@ -6127,6 +7411,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					consignmentNoteId: components['parameters']['ConsignmentNoteId'];
@@ -6186,6 +7495,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					consignmentNoteId: components['parameters']['ConsignmentNoteId'];
@@ -6250,6 +7584,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path?: never;
 				cookie?: never;
@@ -6271,6 +7630,8 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				409: components['responses']['TenantNotActive'];
 				422: components['responses']['Unprocessable'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -6292,7 +7653,33 @@ export interface paths {
 		get: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path: {
 					quotationId: components['parameters']['QuotationId'];
 				};
@@ -6346,6 +7733,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					quotationId: components['parameters']['QuotationId'];
@@ -6410,6 +7822,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					quotationId: components['parameters']['QuotationId'];
@@ -6427,6 +7864,7 @@ export interface paths {
 						'application/json': components['schemas']['ApproveQuotationResponse'];
 					};
 				};
+				400: components['responses']['TenantScopeInvalid'];
 				401: components['responses']['Unauthorized'];
 				404: components['responses']['NotFound'];
 				/** @description Quotation already rejected */
@@ -6471,6 +7909,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					quotationId: components['parameters']['QuotationId'];
@@ -6522,7 +7985,33 @@ export interface paths {
 		get: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path: {
 					orderId: components['parameters']['OrderId'];
 				};
@@ -6576,6 +8065,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					orderId: components['parameters']['OrderId'];
@@ -6640,6 +8154,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					orderId: components['parameters']['OrderId'];
@@ -6655,6 +8194,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['TenantScopeInvalid'];
 				401: components['responses']['Unauthorized'];
 				404: components['responses']['NotFound'];
 				/** @description Invalid state transition */
@@ -6698,6 +8238,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					orderId: components['parameters']['OrderId'];
@@ -6749,7 +8314,33 @@ export interface paths {
 		get: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path: {
 					orderId: components['parameters']['OrderId'];
 				};
@@ -6787,6 +8378,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					orderId: components['parameters']['OrderId'];
@@ -6804,6 +8420,7 @@ export interface paths {
 						'application/json': components['schemas']['InvoiceOrderResponse'];
 					};
 				};
+				400: components['responses']['TenantScopeInvalid'];
 				401: components['responses']['Unauthorized'];
 				404: components['responses']['NotFound'];
 				/** @description Invalid transition or invoice already exists */
@@ -6847,6 +8464,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					orderId: components['parameters']['OrderId'];
@@ -6910,6 +8552,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					orderId: components['parameters']['OrderId'];
@@ -6925,6 +8592,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['TenantScopeInvalid'];
 				401: components['responses']['Unauthorized'];
 				404: components['responses']['NotFound'];
 				/** @description Invalid state transition */
@@ -6956,7 +8624,33 @@ export interface paths {
 		get: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path: {
 					orderId: components['parameters']['OrderId'];
 				};
@@ -6975,6 +8669,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -6993,6 +8688,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					orderId: components['parameters']['OrderId'];
@@ -7016,6 +8736,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
 				/** @description Duplicate external reference */
 				409: {
 					headers: {
@@ -7063,6 +8784,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					orderId: components['parameters']['OrderId'];
@@ -7087,6 +8833,7 @@ export interface paths {
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
 				404: components['responses']['NotFound'];
+				409: components['responses']['TenantNotActive'];
 				422: components['responses']['Unprocessable'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -7124,6 +8871,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					leadId: components['parameters']['LeadId'];
@@ -7202,6 +8974,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					leadId: components['parameters']['LeadId'];
@@ -7226,6 +9023,7 @@ export interface paths {
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
 				404: components['responses']['NotFound'];
+				409: components['responses']['TenantNotActive'];
 				/** @description Invalid due_at / assignee */
 				422: {
 					headers: {
@@ -7269,7 +9067,33 @@ export interface paths {
 					assignee?: string;
 					lead_id?: string;
 				};
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path?: never;
 				cookie?: never;
 			};
@@ -7295,6 +9119,7 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				404: components['responses']['NotFound'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -7333,6 +9158,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					reminderId: components['parameters']['ReminderId'];
@@ -7396,6 +9246,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					reminderId: components['parameters']['ReminderId'];
@@ -7514,7 +9389,33 @@ export interface paths {
 		get: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
 				path?: never;
 				cookie?: never;
 			};
@@ -7529,7 +9430,9 @@ export interface paths {
 						'application/json': components['schemas']['UnreadCountResponse'];
 					};
 				};
+				400: components['responses']['TenantScopeInvalid'];
 				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -7564,6 +9467,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path?: never;
 				cookie?: never;
@@ -7579,7 +9507,10 @@ export interface paths {
 						'application/json': components['schemas']['MarkAllReadResponse'];
 					};
 				};
+				400: components['responses']['TenantScopeInvalid'];
 				401: components['responses']['Unauthorized'];
+				404: components['responses']['NotFound'];
+				409: components['responses']['TenantNotActive'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -7612,6 +9543,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					notificationId: components['parameters']['NotificationId'];
@@ -7670,6 +9626,31 @@ export interface paths {
 					 *     (token operations are idempotent at the token-family level).
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid: the request then runs in that tenant (RLS
+					 *     `app.tenant_id`) and permissions are evaluated there via the
+					 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+					 *     audit) for every other caller (tenant members, impersonation tokens)
+					 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+					 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+					 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+					 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *     A scoped request is attributed durably: its outbox and audit rows
+					 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+					 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+					 *     `tenant_not_active` (a write other than tenant lifecycle into a
+					 *     suspended or pending-deletion tenant; reads are allowed), 403
+					 *     `tenant_scope_not_supported` (routes that act on the caller's own
+					 *     tenant only: permission requests and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
 				};
 				path: {
 					notificationId: components['parameters']['NotificationId'];
@@ -7688,6 +9669,7 @@ export interface paths {
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
 				404: components['responses']['NotFound'];
+				409: components['responses']['TenantNotActive'];
 			};
 		};
 		delete?: never;
@@ -9110,6 +11092,31 @@ export interface components {
 				'application/json': components['schemas']['ErrorResponse'];
 			};
 		};
+		/**
+		 * @description `X-Tenant-Id` is malformed or supplied more than once (`invalid_tenant_scope`), or
+		 *     differs from the tenant in the URL (`tenant_scope_conflict`). Only operators who
+		 *     may use the header ever see it; every other caller has the header ignored.
+		 */
+		TenantScopeInvalid: {
+			headers: {
+				[name: string]: unknown;
+			};
+			content: {
+				'application/json': components['schemas']['ErrorResponse'];
+			};
+		};
+		/**
+		 * @description The tenant selected by `X-Tenant-Id` is suspended or pending deletion, so it can be
+		 *     read and its lifecycle managed but not written otherwise (`tenant_not_active`).
+		 */
+		TenantNotActive: {
+			headers: {
+				[name: string]: unknown;
+			};
+			content: {
+				'application/json': components['schemas']['ErrorResponse'];
+			};
+		};
 		/** @description Rate limit exceeded; `Retry-After` carries the seconds to wait. */
 		TooManyRequests: {
 			headers: {
@@ -9155,16 +11162,27 @@ export interface components {
 		PageSize: number;
 		/**
 		 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-		 *     slug-anchored, non-impersonation platform operators: the request
-		 *     then runs in that tenant (RLS `app.tenant_id`) and permissions are
-		 *     evaluated there via the `platform.*` equivalents. IGNORED for every
-		 *     other caller (tenant members, impersonation tokens) and by
-		 *     `GET /api/v1/auth/me/capabilities`. Without it, operators act in
-		 *     their own tenant. On `/api/v1/tenants/{tenantId}` routes the path
-		 *     tenant wins and a different header value is rejected.
-		 *     Errors: 400 `invalid_tenant_scope` (not a UUID), 400
-		 *     `tenant_scope_conflict` (differs from the path tenant), 404
-		 *     `tenant_scope_not_found` (unknown or deleted tenant).
+		 *     slug-anchored, non-impersonation platform operators whose token and
+		 *     security stamp are valid: the request then runs in that tenant (RLS
+		 *     `app.tenant_id`) and permissions are evaluated there via the
+		 *     `platform.*` equivalents. IGNORED (no validation, no lookup, no
+		 *     audit) for every other caller (tenant members, impersonation tokens)
+		 *     and on routes where it cannot apply: all `/api/v1/auth/*` routes,
+		 *     `/api/v1/platform/*` routes other than the lead-credit balance read,
+		 *     `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup and
+		 *     `GET /api/v1/search`. Without it, operators act in their own tenant.
+		 *     A scoped request is attributed durably: its outbox and audit rows
+		 *     carry `act_operator_id` (the operator) with reason `tenant-via-header`.
+		 *
+		 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+		 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+		 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+		 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 404
+		 *     `tenant_scope_not_found` (unknown or deleted tenant), 409
+		 *     `tenant_not_active` (a write other than tenant lifecycle into a
+		 *     suspended or pending-deletion tenant; reads are allowed), 403
+		 *     `tenant_scope_not_supported` (routes that act on the caller's own
+		 *     tenant only: permission requests and the marketplace lead purchase).
 		 */
 		XTenantId: string;
 		TenantId: string;
