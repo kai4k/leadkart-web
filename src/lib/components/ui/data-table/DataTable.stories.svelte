@@ -6,7 +6,7 @@
 	import StatusPill from '$ui/StatusPill.svelte';
 	import { EmptyState } from '$ui';
 	import { createBulkSelection } from '#lib/hooks/index.ts';
-	import { Edit, Trash2, Database } from '$icons';
+	import { Edit, Trash2, Boxes } from '$icons';
 
 	const { Story } = defineMeta({
 		title: 'Data/DataTable',
@@ -188,7 +188,7 @@
 		<DataTable columns={COLUMNS} rows={[]} rowKey={(t: Tenant) => t.id} state="empty">
 			{#snippet emptyState()}
 				<EmptyState
-					icon={Database}
+					icon={Boxes}
 					title="No tenants yet"
 					description="Onboard your first tenant to populate this list."
 				>

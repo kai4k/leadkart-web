@@ -1,10 +1,11 @@
 <script context="module" lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import * as Stepper from '$ui/stepper';
+	import StepperRoot from './Stepper.svelte';
 
 	const { Story } = defineMeta({
 		title: 'UI/Stepper',
-		component: Stepper.Root,
+		component: StepperRoot,
 		tags: ['autodocs']
 	});
 </script>

@@ -1,11 +1,12 @@
 <script context="module" lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import * as Kanban from '$ui/kanban';
+	import KanbanBoard from './KanbanBoard.svelte';
 	import { Badge } from '$ui/badge';
 
 	const { Story } = defineMeta({
 		title: 'UI/Kanban',
-		component: Kanban.Board,
+		component: KanbanBoard,
 		tags: ['autodocs']
 	});
 

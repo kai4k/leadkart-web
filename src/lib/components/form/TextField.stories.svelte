@@ -1,6 +1,6 @@
 <script context="module" lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
-	import { Mail, Search, Icon } from '#lib/icons/index.ts';
+	import { Inbox, Search, Icon } from '#lib/icons/index.ts';
 	import TextField from './TextField.svelte';
 
 	const { Story } = defineMeta({
@@ -59,7 +59,7 @@
 	<div style="width: 320px;">
 		<TextField label="Email" placeholder="you@example.com">
 			{#snippet leading()}
-				<Icon icon={Mail} size="sm" />
+				<Icon icon={Inbox} size="sm" />
 			{/snippet}
 		</TextField>
 	</div>

@@ -1,11 +1,12 @@
 <script context="module" lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import * as Timeline from '$ui/timeline';
-	import { Check, Truck, MessageCircle, AlertTriangle, FileText } from '$icons';
+	import TimelineRoot from './Timeline.svelte';
+	import { Check, Truck, Info, AlertTriangle, FileText } from '$icons';
 
 	const { Story } = defineMeta({
 		title: 'UI/Timeline',
-		component: Timeline.Root,
+		component: TimelineRoot,
 		tags: ['autodocs']
 	});
 </script>
@@ -52,7 +53,7 @@
 	<div style="width: 480px;">
 		<Timeline.Root>
 			<Timeline.Item
-				icon={MessageCircle}
+				icon={Info}
 				iconAccent="neutral"
 				time="10:14"
 				title="Priya Sharma commented"
