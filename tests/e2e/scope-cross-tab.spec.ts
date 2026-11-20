@@ -160,6 +160,8 @@ const documentIsNew = (page: Page) =>
 async function exitContextInSecondTab(context: BrowserContext): Promise<void> {
 	const second = await context.newPage();
 	await second.goto('/operator/scope/profile');
+	// The Exit button is server-rendered; its click handler exists only once the page is hydrated.
+	await expect(second.locator('html[data-hydrated="true"]')).toBeAttached();
 	await second.getByRole('button', { name: /exit context/i }).click();
 	await second.waitForURL(/\/operator\/tenants$/);
 }
