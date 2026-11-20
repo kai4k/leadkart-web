@@ -9,6 +9,7 @@ vi.mock('#lib/server/scope.ts', () => ({ readOperatorScope, clearOperatorScope }
 
 import { load } from '../../../src/routes/(app)/+layout.server.ts';
 
+const depends = vi.fn();
 const event = () =>
 	({
 		cookies: {
@@ -17,7 +18,8 @@ const event = () =>
 			delete: vi.fn()
 		},
 		url: new URL('http://x/dashboard'),
-		locals: {}
+		locals: {},
+		depends
 	}) as never;
 const run = () => (load as unknown as (e: never) => Promise<unknown>)(event());
 
@@ -33,6 +35,12 @@ describe('(app) layout: sign-in only for a real auth failure', () => {
 	it('Go answered 2xx with a body the web cannot read -> 502, never a sign-in loop', async () => {
 		loadCapabilities.mockImplementationOnce(() => error(502, 'The service answered unexpectedly'));
 		await expect(run()).rejects.toMatchObject({ status: 502 });
+	});
+
+	it('declares the scope dependency, so entering / leaving a tenant context can re-run it', async () => {
+		loadCapabilities.mockResolvedValueOnce({ person_id: 'p' });
+		await run();
+		expect(depends).toHaveBeenCalledWith('app:scope');
 	});
 
 	it('usable capabilities pass through', async () => {

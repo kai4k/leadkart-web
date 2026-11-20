@@ -11,7 +11,7 @@ vi.mock('#lib/utils/private-caches.ts', () => ({
 }));
 vi.mock('$api/client', () => ({ api: { delete: apiDelete } }));
 vi.mock('$api/csrf', () => ({ getCsrfToken: () => 'csrf' }));
-vi.mock('$app/navigation', () => ({ goto }));
+vi.mock('$app/navigation', () => ({ goto, invalidate: vi.fn(() => Promise.resolve()) }));
 vi.mock('$app/state', () => ({ page: { data: {} } }));
 vi.mock('$ui', () => ({ toast: { error: vi.fn() } }));
 vi.mock('#lib/features/auth/api.ts', () => ({ logout: logoutRequest }));

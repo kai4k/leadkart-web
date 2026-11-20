@@ -4,7 +4,7 @@
 	import { resolve } from '$app/paths';
 	import { Search, Building2, User, Icon } from '$icons';
 	import { omniSearchQuery } from '$features/search/queries';
-	import { enterScope } from '$features/operator';
+	import { enterScopeMutation } from '$features/operator';
 	import { P, session } from '$features/auth';
 	import { visibleNav } from '#lib/config/nav.ts';
 	import { NAV_ICONS } from '#lib/config/nav-icons.ts';
@@ -48,15 +48,10 @@
 		if (!open) q = '';
 	});
 
-	async function enterTenantScope(slug: string) {
-		// Reuse the BFF scope endpoint — same flow as the tenants-list row click.
-		try {
-			await enterScope({ slug });
-			onOpenChange(false);
-			goto(resolve('operator/scope/profile'));
-		} catch {
-			// Toast surfaces via global mutation cache — no inline error needed
-		}
+	// The one enter flow (same as the tenants-list row click): cookie, cache, layout reload, navigate.
+	const enterMutation = enterScopeMutation();
+	function enterTenantScope(slug: string) {
+		enterMutation.mutate({ slug }, { onSuccess: () => onOpenChange(false) });
 	}
 
 	function openPerson(id: string) {

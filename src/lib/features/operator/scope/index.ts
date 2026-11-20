@@ -1,6 +1,6 @@
 /**
- * Operator scope feature barrel — see api.ts for the gateway and
- * the BFF cookie-auth ADR for the surrounding flow.
+ * Operator scope feature barrel — see api.ts for the gateway, service.ts for the enter / exit
+ * flows and the BFF cookie-auth ADR for the surrounding picture.
  */
-export { enterScope, exitScope, type EnterScopeRequest, type EnterScopeResponse } from './api';
+export type { EnterScopeRequest, EnterScopeResponse } from './api';
 export { enterScopeMutation, exitScopeMutation } from './queries';

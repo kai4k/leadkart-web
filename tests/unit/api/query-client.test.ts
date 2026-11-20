@@ -4,7 +4,7 @@ import { QueryObserver } from '@tanstack/svelte-query';
 const goto = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 const apiDelete = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 
-vi.mock('$app/navigation', () => ({ goto }));
+vi.mock('$app/navigation', () => ({ goto, invalidate: vi.fn(() => Promise.resolve()) }));
 vi.mock('$ui', () => ({ toast: { error: vi.fn() } }));
 vi.mock('#lib/utils/private-caches.ts', () => ({
 	clearPrivateCaches: vi.fn(),

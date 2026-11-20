@@ -1,12 +1,9 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { page } from '$app/state';
-	import { goto, refreshAll } from '$app/navigation';
-	import { resolve } from '$app/paths';
-	import { useQueryClient } from '@tanstack/svelte-query';
 	import { Badge, Breadcrumbs, Button, type BreadcrumbItem } from '$ui';
 	import { Building2, Icon, Shield, LogOut } from '$icons';
-	import { exitScope as exitScopeApi } from '$features/operator/scope';
+	import { exitScopeMutation } from '$features/operator/scope';
 	import { session } from '$features/auth';
 	import { visibleNav } from '#lib/config/nav.ts';
 	import { NAV_ICONS } from '#lib/config/nav-icons.ts';
@@ -30,18 +27,8 @@
 		return page.url.pathname === href || page.url.pathname.startsWith(`${href}/`);
 	}
 
-	const qc = useQueryClient();
-
-	async function exitScope() {
-		await exitScopeApi();
-		// Drop the entire TanStack cache — the previous scope's data is
-		// no longer authoritative once the X-Tenant-Id header changes.
-		qc.clear();
-		// Re-run server loads so capabilities + nav refresh under the
-		// non-scoped principal.
-		await refreshAll();
-		goto(resolve('operator/tenants'), { replace: true });
-	}
+	// The one exit flow: cookie, cache, layout reload, navigate (shared with the session guard's BFF half).
+	const exit = exitScopeMutation();
 </script>
 
 <div class="stack stack-relaxed">
@@ -59,7 +46,7 @@
 				<Badge variant="brand" appearance="soft" size="sm">Platform</Badge>
 			{/if}
 		</div>
-		<Button variant="ghost" size="sm" onclick={exitScope}>
+		<Button variant="ghost" size="sm" onclick={() => exit.mutate()} loading={exit.isPending}>
 			<Icon icon={LogOut} size="sm" /> Exit context
 		</Button>
 	</header>
