@@ -147,12 +147,13 @@
 				'flex min-h-10 w-full flex-wrap items-center gap-2 rounded-md border border-input bg-transparent px-2 py-1 text-start transition-colors dark:bg-input-fill',
 				'focus-within:border-ring focus-within:ring-3 focus-within:ring-ring',
 				(error || localError) && 'border-destructive',
-				disabled && 'cursor-not-allowed bg-muted opacity-50'
+				// Not `opacity-50`: it drops the chips' text below AA, which axe cannot excuse inside a div.
+				disabled && 'cursor-not-allowed bg-muted'
 			)}
 			onclick={() => inputEl?.focus()}
 		>
 			{#each value as tag, i (tag)}
-				<Badge variant="brand" class="gap-1 ps-2.5 pe-1">
+				<Badge variant={disabled ? 'secondary' : 'brand'} class="gap-1 ps-2.5 pe-1">
 					<span>{tag}</span>
 					<button
 						type="button"
