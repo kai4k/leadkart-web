@@ -74,9 +74,9 @@ const RAW_PAIRS = [
 	['muted-foreground', 'input-fill', TEXT, { over: 'card' }],
 	['foreground', 'input-fill', TEXT, { over: 'muted' }],
 	['muted-foreground', 'input-fill', TEXT, { over: 'muted' }],
-	// field error text (Field.Error) and the invalid border (WCAG 1.4.3 / 1.4.11)
-	// (not on `muted`: destructive 600 is 3.84:1 there; forms sit on background, card and popover)
-	...['background', 'card', 'popover'].map((s) => ['destructive', s, TEXT]),
+	// field error text (Field.Error) and the invalid border (WCAG 1.4.3 / 1.4.11), on every surface a
+	// field can sit on (muted included: destructive 600 was 3.84:1 there, so light destructive is 700)
+	...[...SURFACES, 'popover'].map((s) => ['destructive', s, TEXT]),
 	// floating surfaces (select, combobox, calendar popups) and their highlighted / today / range cells
 	['popover-foreground', 'popover', TEXT],
 	['muted-foreground', 'popover', TEXT],

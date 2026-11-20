@@ -31,7 +31,10 @@
  *   page, muted and primary-soft surfaces, so the gate checks it there, not only under white
  *   text. Dark steps did not need to move.
  *
- *   status (light): destructive 600; success, warning, info 700. Dark: step 400.
+ *   status (light): destructive, success, warning, info 700. Dark: step 400.
+ *   (destructive was 600: its text reached only 3.84:1 on `muted`, which the field error text
+ *   sits on in a muted section; 700 passes on background, card, popover and muted. A default
+ *   pending the owner's confirmation: it darkens every destructive button and error by one step.)
  *   input (dark): neutral step 400 (500-600 reach only 2.3-2.8:1 on the card / muted).
  *   Opaque hover (--primary-hover, --destructive-hover), the full-strength ring, --input-fill,
  *   --sidebar-ring and --sidebar-muted-foreground exist so no component needs an alpha
@@ -113,7 +116,7 @@
 	);
 
 	/* status */
-	--destructive: light-dark(var(--palette-danger-600), var(--palette-danger-400));
+	--destructive: light-dark(var(--palette-danger-700), var(--palette-danger-400));
 	--destructive-foreground: light-dark(oklch(1 0 0), var(--palette-danger-950));
 	--destructive-hover: light-dark(
 		color-mix(in oklch, var(--destructive) 85%, black),
