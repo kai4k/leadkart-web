@@ -14,14 +14,16 @@ import type { ClientInit, HandleClientError } from '@sveltejs/kit/hooks';
  * https://svelte.dev/docs/kit/hooks#shared-hooks-handleerror
  */
 import { waitLocale } from 'svelte-i18n';
-import { initI18n } from '#lib/i18n/index.ts';
+import { initI18n, readDocumentLocale } from '#lib/i18n/index.ts';
 
 // Kit's client `init` hook is awaited before hydration, so the locale is
 // set before first paint (module-level init raced the first format call).
 // A locale chunk that fails to load must not block hydration: the page
 // hydrates with the SSR text and svelte-i18n falls back to message ids.
 export const init: ClientInit = async () => {
-	initI18n();
+	// Start from the language the server rendered the page in (<html lang>), so there is no
+	// English-then-Hindi flash on hydration.
+	initI18n(readDocumentLocale());
 	try {
 		await waitLocale();
 	} catch (error) {

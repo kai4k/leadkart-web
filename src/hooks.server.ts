@@ -10,6 +10,7 @@
 import { sequence, type Handle, type ServerInit } from '@sveltejs/kit/hooks';
 import { waitLocale } from 'svelte-i18n';
 import { initI18n } from '#lib/i18n/index.ts';
+import { addServerMessages } from '#lib/server/i18n.ts';
 import { htmlShellHandle } from '#lib/server/html-shell.ts';
 import { refreshSession } from '#lib/server/auth-refresh.ts';
 import { isProd, validateConfig } from '#lib/server/config.ts';
@@ -18,11 +19,13 @@ import { applySecurityHeaders } from '#lib/server/security-headers.ts';
 
 // Runs once at server start (never during `vite build`).
 // 1. A bad environment must stop the process now, not on the first request.
-// 2. svelte-i18n throws on `$_` during SSR unless a locale is set. The server
-//    always renders the fallback locale (per-request locale is not built).
+// 2. svelte-i18n throws on `$_` during SSR unless a locale is set. Both dictionaries
+//    are added up front and the root layout sets the request's locale before it
+//    renders, so the locale given here is only the fallback.
 export const init: ServerInit = async () => {
 	validateConfig();
-	initI18n();
+	addServerMessages();
+	initI18n('en');
 	await waitLocale();
 };
 

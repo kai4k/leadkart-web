@@ -1,6 +1,7 @@
 // See https://svelte.dev/docs/kit/types#app
 // for information about these interfaces
 import type { Capabilities } from '#lib/features/auth/api.ts';
+import type { AppLocale } from '#lib/i18n/index.ts';
 import type { Preferences } from '#lib/features/preferences/schema.ts';
 
 declare global {
@@ -9,6 +10,8 @@ declare global {
 		interface Locals {
 			/** The decoded `lk_ui` cookie (presentation only), set by htmlShellHandle. */
 			preferences: Preferences;
+			/** The request's language, negotiated from Accept-Language by htmlShellHandle. */
+			locale: AppLocale;
 			/**
 			 * Outcome of the silent refresh in hooks.server.ts; unset when none was
 			 * attempted. `unavailable` = Go could not be reached: the session may be fine.

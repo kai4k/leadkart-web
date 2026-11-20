@@ -10,5 +10,7 @@ import type { LayoutServerLoad } from './$types';
 export const load: LayoutServerLoad = ({ cookies, locals }) => ({
 	csrfToken: cookies.get(CSRF_COOKIE) ?? null,
 	// Presentation only (the lk_ui cookie, already validated against the enum by htmlShellHandle).
-	preferences: locals.preferences
+	preferences: locals.preferences,
+	// The request's language; the layout sets svelte-i18n's locale from it before rendering.
+	locale: locals.locale
 });

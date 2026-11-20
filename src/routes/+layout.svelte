@@ -1,6 +1,8 @@
 <script lang="ts">
 	import '../app.css';
 	import { onMount } from 'svelte';
+	import { browser } from '$app/env';
+	import { locale } from 'svelte-i18n';
 	import { Tooltip } from '$ui';
 	import {
 		createPreferences,
@@ -10,6 +12,13 @@
 	} from '$features/preferences';
 
 	let { children, data } = $props();
+
+	// The server renders in the language of THIS request. svelte-i18n's locale is one global store,
+	// but Svelte renders the whole tree in a single synchronous pass (both dictionaries are already
+	// loaded, so `set` is synchronous too): no other request can change it mid-render. It must stay
+	// the first statement that touches i18n. In the browser the client hook has already started
+	// from <html lang>.
+	if (!browser) locale.set(data.locale);
 
 	// Per request (context), never a module singleton: the server renders many requests in one process.
 	// `data.preferences` is the decoded lk_ui cookie; the store keeps <html data-*> in step with it.
