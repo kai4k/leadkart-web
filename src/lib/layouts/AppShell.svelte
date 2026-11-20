@@ -3,7 +3,8 @@
 	import Topbar from './Topbar.svelte';
 	import Sidebar from './Sidebar.svelte';
 	import Footer from './Footer.svelte';
-	import { Drawer } from '$ui';
+	import { _ } from 'svelte-i18n';
+	import { Sheet } from '$ui';
 	import { getPreferences } from '$features/preferences';
 
 	/**
@@ -76,21 +77,13 @@
 		<Sidebar onNavigate={closeDrawer} />
 	</aside>
 
-	<!-- Mobile drawer — left-side slide-over.
-	     Overrides the Drawer primitive's default right-edge geometry
-	     (right-0 → left-0, border-l → border-r, slide-in-right →
-	     slide-in-left) via tailwind-merge inside cn(). Follow-up:
-	     promote a `position="left"` prop into the Drawer primitive. -->
-	<Drawer.Root bind:open={sidebarOpen} onOpenChange={(o) => (sidebarOpen = o)}>
-		<!-- rtl-allow: left-edge mobile drawer is a fixed design choice
-			(matches Sidebar position in LTR + RTL — opening from the same
-			edge keeps spatial memory consistent for users switching locales). -->
-		<Drawer.Content
-			class="lk-mobile-drawer animate-slide-in-left right-auto left-0 border-r border-l-0 lg:hidden"
-		>
+	<!-- Mobile navigation — a left-side Sheet. -->
+	<Sheet.Root bind:open={sidebarOpen} onOpenChange={(o) => (sidebarOpen = o)}>
+		<Sheet.Content side="left" showCloseButton={false} class="lk-mobile-drawer lg:hidden">
+			<Sheet.Title class="sr-only">{$_('common.navigation')}</Sheet.Title>
 			<Sidebar onNavigate={closeDrawer} />
-		</Drawer.Content>
-	</Drawer.Root>
+		</Sheet.Content>
+	</Sheet.Root>
 
 	<main id="main-content" class="lk-page-wrapper" tabindex="-1">
 		<div class="lk-page-inner">

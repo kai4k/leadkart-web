@@ -1,21 +1,23 @@
+/**
+ * `ui/drawer` — a shim over `ui/sheet` under the old vaul-era names (plan L17). New code uses
+ * `ui/sheet` (or FormSheet); this goes when its last leads/orders/inventory user is rebuilt.
+ */
+import * as Sheet from '../sheet/index.ts';
 import Root from './drawer.svelte';
-import Trigger from './drawer-trigger.svelte';
 import Content from './drawer-content.svelte';
 import Header from './drawer-header.svelte';
-import Footer from './drawer-footer.svelte';
 import Body from './drawer-body.svelte';
-import Title from './drawer-title.svelte';
-import Description from './drawer-description.svelte';
-import Close from './drawer-close.svelte';
-import Overlay from './drawer-overlay.svelte';
+import Footer from './drawer-footer.svelte';
+
+const { Trigger, Title, Description, Close, Overlay } = Sheet;
 
 export {
 	Root,
 	Trigger,
 	Content,
 	Header,
-	Footer,
 	Body,
+	Footer,
 	Title,
 	Description,
 	Close,
@@ -24,8 +26,8 @@ export {
 	Trigger as DrawerTrigger,
 	Content as DrawerContent,
 	Header as DrawerHeader,
-	Footer as DrawerFooter,
 	Body as DrawerBody,
+	Footer as DrawerFooter,
 	Title as DrawerTitle,
 	Description as DrawerDescription,
 	Close as DrawerClose,

@@ -1,37 +1,26 @@
 <script lang="ts">
-	import { Drawer as DrawerPrimitive } from 'vaul-svelte';
-	import { cn } from '#lib/utils/cn.ts';
-	import DrawerOverlay from './drawer-overlay.svelte';
+	import * as Sheet from '../sheet/index.ts';
+	import { getDrawerConfig } from './context.ts';
+	import type { ComponentProps } from 'svelte';
+
 	let {
 		ref = $bindable(null),
-		class: className,
+		side,
+		showCloseButton = false,
 		children,
 		...rest
-	}: DrawerPrimitive.ContentProps = $props();
+	}: ComponentProps<typeof Sheet.Content> = $props();
+
+	const config = getDrawerConfig();
 </script>
 
-<DrawerPrimitive.Portal>
-	<DrawerOverlay />
-	<DrawerPrimitive.Content
-		bind:ref
-		data-slot="drawer-content"
-		class={cn(
-			'bg-bg-elevated border border-border rounded-xl shadow-card fixed z-50 flex h-auto flex-col text-sm',
-			'data-[vaul-drawer-direction=bottom]:inset-x-0 data-[vaul-drawer-direction=bottom]:bottom-0',
-			'data-[vaul-drawer-direction=bottom]:mt-24 data-[vaul-drawer-direction=bottom]:max-h-[80vh]',
-			'data-[vaul-drawer-direction=left]:inset-y-0 data-[vaul-drawer-direction=left]:left-0',
-			'data-[vaul-drawer-direction=left]:w-3/4 data-[vaul-drawer-direction=left]:sm:max-w-sm',
-			'data-[vaul-drawer-direction=right]:inset-y-0 data-[vaul-drawer-direction=right]:right-0',
-			'data-[vaul-drawer-direction=right]:w-3/4 data-[vaul-drawer-direction=right]:sm:max-w-sm',
-			'data-[vaul-drawer-direction=top]:inset-x-0 data-[vaul-drawer-direction=top]:top-0',
-			'data-[vaul-drawer-direction=top]:mb-24 data-[vaul-drawer-direction=top]:max-h-[80vh]',
-			className
-		)}
-		{...rest}
-	>
-		<div
-			class="mx-auto mt-4 hidden h-1 w-[100px] shrink-0 rounded-full bg-bg-muted data-[vaul-drawer-direction=bottom]:block"
-		></div>
-		{@render children?.()}
-	</DrawerPrimitive.Content>
-</DrawerPrimitive.Portal>
+<Sheet.Content
+	bind:ref
+	side={side ?? config?.side ?? 'right'}
+	{showCloseButton}
+	escapeKeydownBehavior={config?.dismissible === false ? 'ignore' : 'close'}
+	interactOutsideBehavior={config?.dismissible === false ? 'ignore' : 'close'}
+	{...rest}
+>
+	{@render children?.()}
+</Sheet.Content>

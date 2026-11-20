@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/env';
 	import { locale } from 'svelte-i18n';
-	import { Tooltip } from '$ui';
+	import { Toaster, Tooltip } from '$ui';
 	import {
 		createPreferences,
 		DEFAULT_PREFERENCES,
@@ -23,7 +23,12 @@
 	// Per request (context), never a module singleton: the server renders many requests in one process.
 	// `data.preferences` is the decoded lk_ui cookie; the store keeps <html data-*> in step with it.
 	// svelte-ignore state_referenced_locally
-	setPreferences(createPreferences(data.preferences ?? DEFAULT_PREFERENCES));
+	const preferences = createPreferences(data.preferences ?? DEFAULT_PREFERENCES);
+	setPreferences(preferences);
+	// `auto` follows the OS (sonner's `system`); `black-white` is the light palette under the filter.
+	const toastTheme = $derived(
+		preferences.mode === 'dark' ? 'dark' : preferences.mode === 'auto' ? 'system' : 'light'
+	);
 
 	// Children mount before their parent, so this runs once the whole tree is
 	// hydrated. E2E checks wait for it: SSR-rendered controls prove nothing.
@@ -40,3 +45,4 @@
 <Tooltip.Provider delayDuration={200}>
 	{@render children()}
 </Tooltip.Provider>
+<Toaster theme={toastTheme} />

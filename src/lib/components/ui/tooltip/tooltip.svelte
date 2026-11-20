@@ -1,6 +1,7 @@
-<script lang="ts">
+<script lang="ts" generics="T = never">
 	import { Tooltip as TooltipPrimitive } from 'bits-ui';
-	let { delayDuration = 200, ...rest }: TooltipPrimitive.RootProps = $props();
+
+	let { open = $bindable(false), ...restProps }: TooltipPrimitive.RootProps<T> = $props();
 </script>
 
-<TooltipPrimitive.Root {delayDuration} {...rest} />
+<TooltipPrimitive.Root bind:open {...restProps} />

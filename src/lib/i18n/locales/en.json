@@ -108,7 +108,8 @@
 	"common": {
 		"loading": "Loading…",
 		"cancel": "Cancel",
-		"save": "Save"
+		"save": "Save",
+		"navigation": "Navigation"
 	},
 	"orders": {
 		"quotation": {

@@ -108,7 +108,8 @@
 	"common": {
 		"loading": "लोड हो रहा है…",
 		"cancel": "रद्द करें",
-		"save": "सेव करें"
+		"save": "सेव करें",
+		"navigation": "नेविगेशन"
 	},
 	"orders": {
 		"quotation": {

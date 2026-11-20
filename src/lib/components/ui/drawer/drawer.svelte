@@ -1,35 +1,44 @@
 <script lang="ts">
 	/**
-	 * `busy`: a save is in flight, so Escape, outside click, drag and every Close are refused (vaul's
-	 * `dismissible`, which vetoes at the root). The failure then lands where the user can see it.
-	 * The veto is bounded (see `createBusyVeto`): past the client read timeout of continuous `busy`
-	 * the user can leave, with one neutral "couldn't confirm" line.
+	 * `Drawer` is a SHIM over `ui/sheet` (plan L17): the vaul-svelte drawer is gone, and the leads /
+	 * orders / inventory surfaces that still import `ui/drawer` get a Sheet through the old names.
+	 * It is deleted when its last user is rebuilt; `check-ui-imports` (Task 16) blocks new importers.
+	 *
+	 * Accepted and ignored (vaul-only): `shouldScaleBackground`, `activeSnapPoint`, `snapPoints`.
+	 * `direction` picks the sheet's side. `dismissible={false}` refuses Escape and outside presses,
+	 * like vaul did. `busy` is the Sheet's own veto (Escape, outside press, every Close).
 	 */
-	import { Drawer as DrawerPrimitive } from 'vaul-svelte';
-	import { createBusyVeto } from '#lib/hooks/use-busy-veto.svelte.ts';
-	let {
-		shouldScaleBackground = true,
-		direction = 'right',
-		open = $bindable(false),
-		activeSnapPoint = $bindable(null),
-		dismissible = true,
-		busy = false,
-		onOpenChange,
-		...rest
-	}: DrawerPrimitive.RootProps & { busy?: boolean } = $props();
+	import * as Sheet from '../sheet/index.ts';
+	import { setDrawerConfig } from './context.ts';
+	import type { ComponentProps } from 'svelte';
 
-	const veto = createBusyVeto(() => busy);
+	type VaulOnly = {
+		shouldScaleBackground?: boolean;
+		activeSnapPoint?: number | string | null;
+		snapPoints?: Array<number | string>;
+	};
+	let {
+		open = $bindable(false),
+		direction = 'right',
+		dismissible = true,
+		shouldScaleBackground: _scale,
+		activeSnapPoint: _active,
+		snapPoints: _snaps,
+		...rest
+	}: ComponentProps<typeof Sheet.Root> &
+		VaulOnly & {
+			direction?: 'top' | 'right' | 'bottom' | 'left';
+			dismissible?: boolean;
+		} = $props();
+
+	setDrawerConfig({
+		get side() {
+			return direction;
+		},
+		get dismissible() {
+			return dismissible;
+		}
+	});
 </script>
 
-<DrawerPrimitive.Root
-	{shouldScaleBackground}
-	{direction}
-	dismissible={dismissible && !veto.holding}
-	bind:open
-	bind:activeSnapPoint
-	onOpenChange={(next) => {
-		if (!next) veto.dismiss();
-		onOpenChange?.(next);
-	}}
-	{...rest}
-/>
+<Sheet.Root bind:open {...rest} />

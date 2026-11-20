@@ -1,15 +1,37 @@
-import Root from './sheet.svelte';
-import Trigger from './sheet-trigger.svelte';
+import Body from './sheet-body.svelte';
+import Close from './sheet-close.svelte';
 import Content from './sheet-content.svelte';
+import Description from './sheet-description.svelte';
+import Footer from './sheet-footer.svelte';
+import Header from './sheet-header.svelte';
 import Overlay from './sheet-overlay.svelte';
+import Portal from './sheet-portal.svelte';
+import Title from './sheet-title.svelte';
+import Trigger from './sheet-trigger.svelte';
+import Root from './sheet.svelte';
 
 export {
 	Root,
+	Body,
+	Close,
 	Trigger,
-	Content,
+	Portal,
 	Overlay,
+	Content,
+	Header,
+	Footer,
+	Title,
+	Description,
+	//
 	Root as Sheet,
+	Body as SheetBody,
+	Close as SheetClose,
 	Trigger as SheetTrigger,
+	Portal as SheetPortal,
+	Overlay as SheetOverlay,
 	Content as SheetContent,
-	Overlay as SheetOverlay
+	Header as SheetHeader,
+	Footer as SheetFooter,
+	Title as SheetTitle,
+	Description as SheetDescription
 };

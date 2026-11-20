@@ -12,6 +12,7 @@
 	<Dialog.Content>
 		<Dialog.Title>Host</Dialog.Title>
 		<Dialog.Description>Test dialog</Dialog.Description>
+		<input aria-label="Name" />
 		<Dialog.Close>Close it</Dialog.Close>
 	</Dialog.Content>
 </Dialog.Root>

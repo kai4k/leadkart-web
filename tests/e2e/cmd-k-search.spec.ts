@@ -44,12 +44,12 @@ test.describe('Cmd+K search palette — visibility gate', () => {
 		await page.locator('button[aria-label="Search (Cmd+K)"]').click();
 		const dialog = page.getByRole('dialog');
 		await expect(dialog.getByPlaceholder('Search pages…')).toBeVisible();
-		await expect(dialog.getByRole('link', { name: 'Leads' })).toBeVisible();
-		await expect(dialog.getByRole('link', { name: 'Tenants' })).toHaveCount(0);
-		await dialog.getByRole('searchbox').fill('perm');
-		await expect(dialog.getByRole('link', { name: 'Permission requests' })).toBeVisible();
-		await expect(dialog.getByRole('link', { name: 'Leads' })).toHaveCount(0);
-		await dialog.getByRole('link', { name: 'Permission requests' }).click();
+		await expect(dialog.getByRole('option', { name: 'Leads' })).toBeVisible();
+		await expect(dialog.getByRole('option', { name: 'Tenants' })).toHaveCount(0);
+		await dialog.getByRole('combobox', { name: 'Search' }).fill('perm');
+		await expect(dialog.getByRole('option', { name: 'Permission requests' })).toBeVisible();
+		await expect(dialog.getByRole('option', { name: 'Leads' })).toHaveCount(0);
+		await dialog.getByRole('option', { name: 'Permission requests' }).click();
 		await expect(page).toHaveURL(/\/permission-requests$/);
 	});
 });
