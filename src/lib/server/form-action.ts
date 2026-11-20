@@ -53,6 +53,16 @@ export async function callGoForAction(call: () => Promise<Response>): Promise<Go
 /** The kept-form failure a refused action returns (a `fail()` carrying the form's values and one banner key). */
 type Refusal<V extends object> = ReturnType<typeof failForm<V>>;
 
+/**
+ * The values a refusal gives back to the form: the object itself, or a function that builds it. A
+ * function lets the action call the guard FIRST (its first statements are `formData()` and the
+ * guard, nothing between: the walker's positional contract) and still echo what was typed: reading
+ * the fields is a call, and it runs only when the guard refuses.
+ */
+export type RefusalValues<V extends object> = V | (() => V);
+const valuesOf = <V extends object>(values: RefusalValues<V>): V =>
+	typeof values === 'function' ? (values as () => V)() : values;
+
 type Bound<V extends object> = { refused: Refusal<V> } | { refused: null; scope: ScopeReading };
 
 /**
@@ -70,19 +80,20 @@ type Bound<V extends object> = { refused: Refusal<V> } | { refused: null; scope:
 function bindToPage<V extends object>(
 	cookies: RequestEvent['cookies'],
 	form: FormData,
-	values: V
+	refusalValues: RefusalValues<V>
 ): Bound<V> {
+	const values = () => valuesOf(refusalValues);
 	if (sessionRenewalPending(cookies)) {
-		return { refused: failForm(503, { values, formErrorKey: UPSTREAM_UNAVAILABLE_KEY }) };
+		return { refused: failForm(503, { values: values(), formErrorKey: UPSTREAM_UNAVAILABLE_KEY }) };
 	}
 	if (!cookies.get(ACCESS_COOKIE())) redirect(303, '/signin');
 	const scope = readOperatorScope(cookies);
 	if (scope.state === 'invalid') {
-		return { refused: failForm(409, { values, formErrorKey: SCOPE_INVALID_KEY }) };
+		return { refused: failForm(409, { values: values(), formErrorKey: SCOPE_INVALID_KEY }) };
 	}
 	const claimed = form.get(SCOPE_CONTEXT_FIELD);
 	if (typeof claimed !== 'string' || !pageShowsContext(claimed, scope, cookies)) {
-		return { refused: failForm(409, { values, formErrorKey: SCOPE_CHANGED_KEY }) };
+		return { refused: failForm(409, { values: values(), formErrorKey: SCOPE_CHANGED_KEY }) };
 	}
 	return { refused: null, scope };
 }
@@ -97,7 +108,7 @@ function bindToPage<V extends object>(
 export function authoriseSelfService<V extends object>(
 	event: Pick<RequestEvent, 'cookies'>,
 	form: FormData,
-	values: V
+	values: RefusalValues<V>
 ): Promise<Refusal<V> | null> {
 	// A promise like `authoriseAction`'s, so both guards are used the same way (`await`, then `if (refused)`).
 	return Promise.resolve().then(() => bindToPage(event.cookies, form, values).refused);
@@ -122,10 +133,11 @@ export async function authoriseAction<V extends object>(
 	event: Pick<RequestEvent, 'cookies' | 'route'>,
 	form: FormData,
 	permission: string | readonly string[],
-	values: V
+	refusalValues: RefusalValues<V>
 ) {
+	const values = () => valuesOf(refusalValues);
 	const { cookies, route } = event;
-	const bound = bindToPage(cookies, form, values);
+	const bound = bindToPage(cookies, form, refusalValues);
 	if (bound.refused) return bound.refused;
 	const { scope } = bound;
 	let caps;
@@ -134,22 +146,22 @@ export async function authoriseAction<V extends object>(
 	} catch (err) {
 		const status = asOutage(err);
 		if (status === null) throw err;
-		return failForm(status, { values, formErrorKey: UPSTREAM_UNAVAILABLE_KEY });
+		return failForm(status, { values: values(), formErrorKey: UPSTREAM_UNAVAILABLE_KEY });
 	}
 	if (!caps) redirect(303, '/signin');
 	const permissions = typeof permission === 'string' ? [permission] : permission;
 	const inTenantContext = scope.state === 'valid';
 	const entry = route.id === null ? null : routeForPath(pathForRouteId(route.id));
-	if (!entry) return failForm(403, { values, formErrorKey: goFailureKey(403) });
+	if (!entry) return failForm(403, { values: values(), formErrorKey: goFailureKey(403) });
 	if (!contextMatches(entry, inTenantContext)) {
 		return failForm(403, {
-			values,
+			values: values(),
 			formErrorKey: inTenantContext ? 'auth.errors.tenantContext' : goFailureKey(403)
 		});
 	}
 	return canAny(caps, permissions, inTenantContext)
 		? null
-		: failForm(403, { values, formErrorKey: goFailureKey(403) });
+		: failForm(403, { values: values(), formErrorKey: goFailureKey(403) });
 }
 
 /**

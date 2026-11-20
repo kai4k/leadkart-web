@@ -6,7 +6,7 @@
  * outside a guarded layout, fails here; then run every persona × tenant
  * context × page through the guard and compare it with what the sidebar shows.
  */
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { canSee, routeForPath, visibleNav } from '#lib/config/nav.ts';
@@ -23,10 +23,10 @@ import {
 	TEAM_LEAD,
 	caps
 } from '../../support/go-personas.ts';
+import { createAnalysis } from '../../support/server-file-guards.ts';
 
 const APP_DIR = join(process.cwd(), 'src/routes/(app)');
 const PAGE_FILES = ['+page.svelte', '+page.ts', '+page.server.ts'];
-const GUARD_NAME = 'guardAppRoute';
 
 /**
  * Pages deliberately outside the guard, each with the reason. Keep this list
@@ -60,14 +60,29 @@ function pageRouteIds(): string[] {
 		.sort();
 }
 
-/** Is `guardAppRoute` exported as a load from a layout/page server file on the way down to this page? */
+/** Every layout/page server file of the tree, read as one program: "guarded" is decided on the syntax tree. */
+function serverFiles(dir: string): string[] {
+	return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+		e.isDirectory()
+			? serverFiles(join(dir, e.name))
+			: /\+(page|layout)\.server\.ts$/.test(e.name)
+				? [join(dir, e.name)]
+				: []
+	);
+}
+const analysis = createAnalysis(serverFiles(APP_DIR));
+
+/**
+ * Is `export const load = guardAppRoute` (the real one, resolved by the type checker, never a name in
+ * a comment or a local stub) exported from a layout/page server file on the way down to this page?
+ */
 function isGuarded(routeId: string): boolean {
 	const segments = routeId.split('/').slice(2); // drop '' and '(app)'
 	for (let depth = segments.length; depth >= 1; depth--) {
 		const dir = join(APP_DIR, ...segments.slice(0, depth));
 		for (const f of ['+layout.server.ts', '+page.server.ts']) {
 			const file = join(dir, f);
-			if (existsSync(file) && readFileSync(file, 'utf8').includes(GUARD_NAME)) return true;
+			if (existsSync(file) && analysis.isSharedGuard(file)) return true;
 		}
 	}
 	return false;
@@ -86,6 +101,23 @@ describe('the (app) route tree', () => {
 
 	it.each(GUARDED_IDS)('%s is under a guardAppRoute layout', (id) => {
 		expect(isGuarded(id), id).toBe(true);
+	});
+
+	it('a comment, a string or a local stub that names guardAppRoute does not count as the guard', () => {
+		const dir = join(APP_DIR, '__synthetic_guard__');
+		const comment = join(dir, 'comment', '+layout.server.ts');
+		const stub = join(dir, 'stub', '+layout.server.ts');
+		const real = join(dir, 'real', '+layout.server.ts');
+		const local = createAnalysis([], {
+			[comment]:
+				'// export const load = guardAppRoute;\nexport const load = async () => ({ note: "guardAppRoute" });',
+			[stub]: 'const guardAppRoute = async () => {};\nexport const load = guardAppRoute;',
+			[real]:
+				"import { guardAppRoute } from '#lib/server/guards.ts';\nexport const load = guardAppRoute;"
+		});
+		expect(local.isSharedGuard(comment)).toBe(false);
+		expect(local.isSharedGuard(stub)).toBe(false);
+		expect(local.isSharedGuard(real)).toBe(true);
 	});
 
 	it('pinned exceptions name real pages and are really unguarded', () => {

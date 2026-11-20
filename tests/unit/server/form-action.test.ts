@@ -384,3 +384,38 @@ describe('authoriseSelfService: the same session and fingerprint prefix, no perm
 		await expect(run(jar({}), 'stale')).rejects.toMatchObject({ status: 303, location: '/signin' });
 	});
 });
+
+describe('refusal values may be a function: built only when the guard refuses', () => {
+	beforeEach(() => {
+		loadCapabilities.mockReset();
+		readOperatorScope.mockReturnValue({ state: 'none' });
+	});
+	const form = (ctx: string) => new URLSearchParams({ scope_context: ctx }) as unknown as FormData;
+
+	it('authoriseSelfService: not called when the form is current, called once to echo a refusal', async () => {
+		const values = vi.fn(() => ({ typed: 'x' }));
+		expect(
+			await authoriseSelfService({ cookies: jar() as never }, form('none'), values)
+		).toBeNull();
+		expect(values).not.toHaveBeenCalled();
+		expect(
+			await authoriseSelfService({ cookies: jar() as never }, form('stale'), values)
+		).toMatchObject({
+			status: 409,
+			data: { values: { typed: 'x' } }
+		});
+		expect(values).toHaveBeenCalledTimes(1);
+	});
+
+	it('authoriseAction: a 403 echoes the built values', async () => {
+		loadCapabilities.mockResolvedValue(caps([P.identityTenantsView]));
+		const values = vi.fn(() => ({ typed: 'y' }));
+		const r = await authoriseAction(
+			{ cookies: jar(), route: { id: '/(app)/settings/tenant/profile' } } as never,
+			form('none'),
+			P.identityTenantsUpdate,
+			values
+		);
+		expect(r).toMatchObject({ status: 403, data: { values: { typed: 'y' } } });
+	});
+});

@@ -16,11 +16,12 @@ import { safeRedirectPath } from '#lib/server/redirect.ts';
 import type { Actions } from './$types';
 
 export const actions: Actions = {
-	default: async ({ request, cookies, url }) => {
-		const formData = await request.formData();
+	default: async (event) => {
+		const formData = await event.request.formData();
 		// Own account, no permission; bound to the page of the person the browser holds now.
-		const refused = await authoriseSelfService({ cookies }, formData, {});
+		const refused = await authoriseSelfService(event, formData, {});
 		if (refused) return refused;
+		const { cookies, url } = event;
 		const result = await changePasswordViaGo(cookies, {
 			current: (formData.get('current_password') ?? '').toString(),
 			next: (formData.get('new_password') ?? '').toString(),

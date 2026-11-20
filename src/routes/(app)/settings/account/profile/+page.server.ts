@@ -42,19 +42,22 @@ export const load: PageServerLoad = async ({ cookies, parent }) => {
 	return { profile };
 };
 
-export const actions: Actions = {
-	default: async ({ request, cookies }) => {
-		const formData = await request.formData();
-		const patch = {
-			designation: (formData.get('designation') ?? '').toString(),
-			department: (formData.get('department') ?? '').toString(),
-			status_message: (formData.get('status_message') ?? '').toString()
-		};
+/** The typed profile fields: what a refused submit gives back to the form, and what is validated. */
+const profilePatch = (formData: FormData) => ({
+	designation: (formData.get('designation') ?? '').toString(),
+	department: (formData.get('department') ?? '').toString(),
+	status_message: (formData.get('status_message') ?? '').toString()
+});
 
+export const actions: Actions = {
+	default: async (event) => {
+		const formData = await event.request.formData();
 		// The caller's own profile needs no permission, but the form must come from the page of the
 		// person the browser holds now (session first, then the fingerprint).
-		const refused = await authoriseSelfService({ cookies }, formData, patch);
+		const refused = await authoriseSelfService(event, formData, () => profilePatch(formData));
 		if (refused) return refused;
+		const { cookies } = event;
+		const patch = profilePatch(formData);
 		const membershipId = getMembershipId(cookies);
 		const parsed = updateProfileRequestSchema.safeParse(patch);
 		if (!parsed.success) {

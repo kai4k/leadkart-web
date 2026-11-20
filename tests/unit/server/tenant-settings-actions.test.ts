@@ -173,12 +173,7 @@ describe('the permission per section is what Go requires', () => {
 
 describe('saveTenantSection answers', () => {
 	const call = (payload = { legal_name: 'Acme', display_name: 'A' }) =>
-		saveTenantSection({
-			event: { cookies, route } as never,
-			form: new URLSearchParams({ scope_context: 'none' }) as never,
-			section: 'profile',
-			payload
-		});
+		saveTenantSection('profile')(form(payload));
 	beforeEach(() => {
 		loadCapabilities.mockResolvedValue(caps([P.identityTenantsUpdate]));
 	});

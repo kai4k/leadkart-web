@@ -1,41 +1,39 @@
 /**
  * The analysis behind `tests/unit/server/app-server-files.test.ts`: is every server load and form
- * action under `src/routes/(app)` provably guarded? Read from the TypeScript AST AND the type
- * checker (one `ts.Program` for all the files), never from text and never from names alone: a name
- * counts as a guard, or as something that reaches Go, only when it RESOLVES to the real declaration.
+ * action under `src/routes` guarded? A POSITIONAL contract, read from the TypeScript syntax tree:
+ * **the guard is the first thing a load or an action does, and nothing else may run before it.**
  *
- * What resolves to what (all through `checker.getSymbolAtLocation` / `getAliasedSymbol`, following
- * `const alias = original` chains and namespace imports):
- *   - guards:   `guardAppRoute` (lib/server/guards.ts), `authoriseAction` and `authoriseSelfService`
- *               (lib/server/form-action.ts); `parent` only as the destructured (or `event.`) member
- *               of the LOAD's own event parameter. A local stub, a module-level `const parent`, an
- *               `x.parent()` of anything else is not a guard.
- *   - reaches Go: the global `fetch`; `goFetch` / `loadCapabilities`; ANY function imported from a
- *               server module (lib/server/**, a route-local `_x.ts`, a feature `server.ts`) unless it
- *               is on PURE_HELPERS (exact `file#name`); a function of the SAME file whose body (to a
- *               fixed point, however deep) makes such a call.
- *   - indirect call forms (`.call` / `.apply` / `.bind` / `Reflect.apply` on a guard or on something
- *               that reaches Go, any element-access call `m['goFetch'](...)`) are refused outright.
+ * It does not try to recognise which calls reach Go (an open-ended set: three review rounds found a
+ * new way past every classifier). The type checker is used ONLY to prove that the guard identifiers
+ * resolve to the real declarations (through imports, aliases, namespaces), never to classify a call.
  *
- * LOAD rule. A load that reaches Go must have, BEFORE the first such call, an UNCONDITIONAL
- * TOP-LEVEL statement that awaits the guard: `await parent()` / `const x = await parent()` / `await
- * guardAppRoute(event)`, with no call inside its own arguments. Not inside an `if` / `try` / loop,
- * not un-awaited, not one branch of `Promise.all`. `export const load = guardAppRoute` must resolve
- * to the real one.
+ * LOAD (`+layout.server.ts` / `+page.server.ts`), declared in the file itself (no re-export):
+ *   - `export const load = guardAppRoute` (the identifier resolves to the real export), or
+ *   - a function whose FIRST statement is `await parent();` or `const <pattern> = await parent();`,
+ *     where `parent` is the destructured `parent` of the load event parameter (or `event.parent` of
+ *     the first parameter), proved by the checker. No default-parameter initialiser and no
+ *     destructuring default in the parameters may contain a call (they run before the first statement).
  *
- * ACTION rule, per ACTION. Before the first Go-reaching call, the top-level pair
- *     const refused = await authoriseAction(event, form, <permission>, values);
+ * ACTION, per action, in `export const actions = { ... }` (an object literal declared in the file;
+ * properties are function expressions / arrows / methods, or the ONE pinned helper
+ * `saveTenantSection(<string literal>)`, whose returned function is held to this same contract; no
+ * spread, no factory call, no shorthand, no re-export). The body starts, in order and with nothing
+ * between, with
+ *     [const fd = await <event>.request.formData();]          (optional, once; `request` destructured
+ *                                                              from the parameter is accepted too)
+ *     const refused = await authoriseAction(<event>, fd, <permission>, <values>);
+ *                                       or authoriseSelfService(<event>, fd, <values>);
  *     if (refused) return refused;
- * where `<permission>` resolves to a member of the `P` / `ACTION` tables (or of a table all of whose
- * members are such members): never a string literal, never empty. Or a top-level hand-off
- * `return helper(...)` to a PINNED authorising helper whose own body has the pair. A self-service
- * action is exempt from the permission only, by `<file>#<action>`: it holds the same pair with
- * `authoriseSelfService` (session + context fingerprint).
+ * where both guards resolve to the real exports, the result is a `const`, the first argument is the
+ * action's own event parameter (not a spread, an object literal or another value), no argument runs
+ * a call / `new` / `await` / tagged template (a function expression is fine: it is not run), and the
+ * permission is a member of the `P` / `ACTION` tables. Everything after the `if` is unrestricted.
  *
- * `export { load } from './x'` and `export { load }` are followed; `export * from` and a spread inside
- * `actions` are refused (they hide what is exported).
+ * MODULE LEVEL of a held file: no top-level `await`, no call / `new` / tagged template that runs at
+ * module scope (function and method bodies do not run there; computed keys, `extends` and static
+ * initialisers do), except the pinned `saveTenantSection('<literal>')` as an action.
  */
-import { basename, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import ts from 'typescript';
 import { aliases } from '../../aliases.js';
 
@@ -48,28 +46,7 @@ const rel = (p: string): string => {
 	return n.startsWith(`${ROOT}/`) ? n.slice(ROOT.length + 1) : n;
 };
 
-/**
- * Functions of a server module that never reach Go, pinned EXACTLY (`file#name`). Everything else
- * imported from a server module counts as reaching Go. Each reads or builds a response from data it
- * is given: no request, no cookie read that selects a Go call, no network.
- */
-export const PURE_HELPERS: ReadonlySet<string> = new Set([
-	'src/lib/server/form-action.ts#failForm',
-	'src/lib/server/form-action.ts#failOutage',
-	'src/lib/server/form-action.ts#failFromStatus',
-	'src/lib/server/form-action.ts#zodFieldMessages',
-	'src/lib/server/redirect.ts#safeRedirectPath',
-	'src/lib/server/cookies.ts#setMustChangePassword',
-	'src/lib/server/cookies.ts#mustChangePassword',
-	'src/lib/server/auth-errors.ts#fieldValidationKeys'
-]);
-
-const GO_PRIMITIVES: ReadonlySet<string> = new Set([
-	'src/lib/server/go.ts#goFetch',
-	'src/lib/server/capabilities.ts#loadCapabilities'
-]);
-
-type GuardKind = 'parent' | 'guardAppRoute' | 'authoriseAction' | 'authoriseSelfService';
+type GuardKind = 'guardAppRoute' | 'authoriseAction' | 'authoriseSelfService';
 const GUARD_DECLS: Record<string, GuardKind> = {
 	'src/lib/server/guards.ts#guardAppRoute': 'guardAppRoute',
 	'src/lib/server/form-action.ts#authoriseAction': 'authoriseAction',
@@ -79,12 +56,31 @@ const PERMISSION_TABLES: ReadonlySet<string> = new Set([
 	'src/lib/features/auth/permissions.ts#P',
 	'src/lib/features/auth/permissions.ts#ACTION'
 ]);
+/** The one helper that builds an action: `saveTenantSection('<literal section>')`. */
+export const PINNED_ACTION_HELPER =
+	'src/routes/(app)/settings/tenant/_actions.ts#saveTenantSection';
 
-export interface Resolution {
-	node: ts.Node;
-	sf: ts.SourceFile;
+export interface ActionReport {
+	name: string;
+	problems: string[];
+	guard: 'authoriseAction' | 'authoriseSelfService' | null;
 }
-export type Resolved = Resolution | { error: string } | null;
+
+export interface Analysis {
+	program: ts.Program;
+	/** Null when the file has no `load`. */
+	loadProblems(file: string): string[] | null;
+	/** Null when the file has no `actions`. `errors` are problems of the object itself. */
+	actionReports(
+		file: string,
+		selfService?: (action: string) => boolean
+	): { reports: ActionReport[]; errors: string[] } | null;
+	moduleProblems(file: string): string[];
+	/** Is the file's `load` the real shared guard (`export const load = guardAppRoute`)? */
+	isSharedGuard(file: string): boolean;
+	/** The pinned helper's returned function, held to the action contract itself. */
+	pinnedHelperProblems(): string[];
+}
 
 type FnLike =
 	| ts.FunctionDeclaration
@@ -104,60 +100,78 @@ const unwrap = (n: ts.Node): ts.Node => {
 			ts.isParenthesizedExpression(cur) ||
 			ts.isAsExpression(cur) ||
 			ts.isSatisfiesExpression(cur) ||
-			ts.isNonNullExpression(cur)
+			ts.isNonNullExpression(cur) ||
+			ts.isTypeAssertionExpression(cur)
 		)
 			cur = cur.expression;
 		else return cur;
 	}
 };
 
-/** True when any call / await sits anywhere under the node. */
-function containsCall(node: ts.Node): boolean {
-	let found = false;
-	const visit = (n: ts.Node) => {
+const isFunctionBoundary = (n: ts.Node): boolean =>
+	ts.isFunctionDeclaration(n) ||
+	ts.isFunctionExpression(n) ||
+	ts.isArrowFunction(n) ||
+	ts.isMethodDeclaration(n) ||
+	ts.isGetAccessorDeclaration(n) ||
+	ts.isSetAccessorDeclaration(n) ||
+	ts.isConstructorDeclaration(n);
+
+interface Runs {
+	node: ts.Node;
+	kind: 'await' | 'call';
+	text: string;
+}
+
+/**
+ * The first thing under `node` that RUNS when `node` is evaluated: a call, `new`, tagged template,
+ * `await`. Function and method bodies are not entered (defining a function runs nothing); a class
+ * runs its `extends` expression, computed member names, static initialisers and static blocks.
+ * Types are skipped. `allowed` call nodes are not reported.
+ */
+function firstRun(node: ts.Node, allowed: ReadonlySet<ts.Node> = new Set()): Runs | null {
+	let found: Runs | null = null;
+	const visit = (n: ts.Node): void => {
 		if (found) return;
-		if (ts.isCallExpression(n) || ts.isNewExpression(n) || ts.isAwaitExpression(n)) found = true;
-		else ts.forEachChild(n, visit);
+		if (ts.isTypeNode(n) || ts.isImportDeclaration(n)) return;
+		if (isFunctionBoundary(n)) return;
+		if (ts.isAwaitExpression(n)) {
+			found = { node: n, kind: 'await', text: n.getText() };
+			return;
+		}
+		if (ts.isCallExpression(n) || ts.isNewExpression(n) || ts.isTaggedTemplateExpression(n)) {
+			if (!allowed.has(n)) {
+				found = { node: n, kind: 'call', text: n.getText() };
+				return;
+			}
+		}
+		if (ts.isClassDeclaration(n) || ts.isClassExpression(n)) {
+			for (const h of n.heritageClauses ?? []) for (const t of h.types) visit(t.expression);
+			for (const m of n.members) {
+				if (m.name && ts.isComputedPropertyName(m.name)) visit(m.name);
+				if (ts.isClassStaticBlockDeclaration(m)) visit(m.body);
+				else if (
+					ts.isPropertyDeclaration(m) &&
+					m.initializer &&
+					m.modifiers?.some((x) => x.kind === ts.SyntaxKind.StaticKeyword)
+				)
+					visit(m.initializer);
+			}
+			return;
+		}
+		ts.forEachChild(n, visit);
 	};
 	visit(node);
 	return found;
 }
 
-export interface Call {
-	name: string;
-	start: number;
-	node: ts.CallExpression;
-}
-export type Kind = 'go' | 'guard' | 'none';
-
-export interface Analysis {
-	program: ts.Program;
-	sourceFile(path: string): ts.SourceFile;
-	resolveExport(sf: ts.SourceFile, name: string): Resolved;
-	analyzeLoad(node: ts.Node): string[];
-	analyzeAction(
-		node: ts.Node,
-		mode?: 'permission' | 'self',
-		helpers?: ReadonlySet<string>
-	): string[];
-	analyzeActions(
-		resolved: Resolution,
-		helpers: ReadonlySet<string>,
-		selfService?: (action: string) => boolean
-	): { reports: ActionReport[]; errors: string[] };
-	/** Every call under the node that reaches Go, in source order (for diagnostics and tests). */
-	goCalls(node: ts.Node): Call[];
-}
-export interface ActionReport {
-	name: string;
-	problems: string[];
-	selfService: boolean;
-}
+const short = (n: ts.Node | undefined): string =>
+	n ? n.getText().replace(/\s+/g, ' ').slice(0, 70) : 'nothing';
 
 /**
- * One program over `files` (plus in-memory `overlay` files, keyed by absolute path, used by the
- * self-test for synthetic offenders). Module resolution is the repository's own: package `imports`
- * (`#lib/*`) and the `$`-aliases of `aliases.js`.
+ * One program over `files` plus the in-memory `overlay` (absolute path -> source; the self-test's
+ * synthetic offenders). Module resolution is the repository's own: package `imports` (`#lib/*`) and
+ * the `$`-aliases of `aliases.js`.
  */
 export function createAnalysis(files: string[], overlay: Record<string, string> = {}): Analysis {
 	const paths: Record<string, string[]> = {};
@@ -179,11 +193,10 @@ export function createAnalysis(files: string[], overlay: Record<string, string> 
 	};
 	const ov = new Map(Object.entries(overlay).map(([k, v]) => [norm(k), v]));
 	const host = ts.createCompilerHost(options, true);
-	const { fileExists, readFile, getSourceFile } = host;
+	const { fileExists, readFile, getSourceFile, directoryExists } = host;
 	host.fileExists = (f) => ov.has(norm(f)) || fileExists(f);
 	host.readFile = (f) => ov.get(norm(f)) ?? readFile(f);
 	const overlayDirs = new Set([...ov.keys()].map((k) => k.slice(0, k.lastIndexOf('/'))));
-	const { directoryExists } = host;
 	host.directoryExists = (d) => overlayDirs.has(norm(d)) || (directoryExists?.(d) ?? false);
 	host.getSourceFile = (f, lang, ...rest) => {
 		const text = ov.get(norm(f));
@@ -191,8 +204,9 @@ export function createAnalysis(files: string[], overlay: Record<string, string> 
 			? getSourceFile(f, lang, ...rest)
 			: ts.createSourceFile(f, text, lang, true);
 	};
+	const helperFile = `${ROOT}/${PINNED_ACTION_HELPER.split('#')[0]}`;
 	const program = ts.createProgram({
-		rootNames: [...files, ...ov.keys()].map(norm),
+		rootNames: [...new Set([...files.map(norm), ...ov.keys(), helperFile])],
 		options,
 		host
 	});
@@ -221,244 +235,180 @@ export function createAnalysis(files: string[], overlay: Record<string, string> 
 		}
 		return d;
 	}
-
 	const nameOf = (d: ts.Declaration): string => {
 		const n = (d as ts.NamedDeclaration).name;
 		return n && ts.isIdentifier(n) ? n.text : '';
 	};
 	const idOf = (d: ts.Declaration): string => `${rel(d.getSourceFile().fileName)}#${nameOf(d)}`;
 
-	/** The function a declaration holds (a function, a method, or a const initialised with one). */
-	function fnOf(d: ts.Declaration): FnLike | undefined {
-		if (isFnLike(d)) return d;
-		if (ts.isVariableDeclaration(d) && d.initializer) {
-			const init = unwrap(d.initializer);
-			if (isFnLike(init)) return init;
-		}
-		return undefined;
+	function guardKindOf(callee: ts.Node): GuardKind | null {
+		const c = unwrap(callee);
+		if (!ts.isIdentifier(c) && !ts.isPropertyAccessExpression(c)) return null;
+		const d = declOf(c);
+		return d ? (GUARD_DECLS[idOf(d)] ?? null) : null;
 	}
 
-	const isServerModule = (file: string): boolean => {
-		const f = norm(file);
+	/** The declaration the identifier `node` refers to, no alias chasing (a parameter, a local const). */
+	function localDecl(node: ts.Node): ts.Declaration | undefined {
+		const e = unwrap(node);
+		if (!ts.isIdentifier(e)) return undefined;
+		const sym = checker.getSymbolAtLocation(e);
+		return sym?.valueDeclaration ?? sym?.declarations?.[0];
+	}
+
+	/** Is `e` the first parameter of `fn` itself (an identifier-named parameter)? */
+	function isEventParam(e: ts.Node, fn: FnLike): boolean {
+		const p = fn.parameters[0];
+		return !!p && ts.isIdentifier(p.name) && localDecl(e) === p;
+	}
+
+	/** Is `e` a name bound by destructuring the first parameter of `fn`, under the key `key`? */
+	function isDestructuredMember(e: ts.Node, fn: FnLike, key: string): boolean {
+		const p = fn.parameters[0];
+		const d = localDecl(e);
+		if (!p || !d || !ts.isBindingElement(d)) return false;
+		const k = d.propertyName ?? d.name;
 		return (
-			f.includes('/src/lib/server/') ||
-			f.includes('/src/routes/') ||
-			basename(f).startsWith('server.') ||
-			f.includes('/server/')
+			!d.initializer &&
+			ts.isIdentifier(k) &&
+			k.text === key &&
+			ts.isObjectBindingPattern(d.parent) &&
+			d.parent.parent === p
 		);
-	};
-
-	/** Is `d` the destructured `parent` (or `event` itself) of `fn`'s first parameter? */
-	function isLoadEventMember(d: ts.Declaration, fn: FnLike): boolean {
-		const param = fn.parameters[0];
-		if (!param) return false;
-		if (ts.isBindingElement(d)) {
-			const key = d.propertyName ?? d.name;
-			return (
-				ts.isIdentifier(key) &&
-				key.text === 'parent' &&
-				ts.isObjectBindingPattern(d.parent) &&
-				d.parent.parent === param
-			);
-		}
-		return false;
 	}
 
-	/** Which guard a call is, or null. `loadFn` is the load whose event `parent` must come from. */
-	function guardKindOf(call: ts.CallExpression, loadFn?: FnLike): GuardKind | null {
-		const callee = unwrap(call.expression);
-		if (loadFn && ts.isPropertyAccessExpression(callee) && callee.name.text === 'parent') {
-			const recv = declOf(callee.expression);
-			const param = loadFn.parameters[0];
-			if (recv && param && recv === param && ts.isIdentifier(param.name)) return 'parent';
-		}
-		if (!ts.isIdentifier(callee) && !ts.isPropertyAccessExpression(callee)) return null;
-		const d = declOf(callee);
-		if (!d) return null;
-		if (loadFn && ts.isIdentifier(callee) && isLoadEventMember(d, loadFn)) return 'parent';
-		return GUARD_DECLS[idOf(d)] ?? null;
-	}
+	/* ------------------------------------ exports ----------------------------------- */
 
-	/** What a declaration means for "does a call to it reach Go". Same-file functions: their bodies. */
-	const fnKind = new Map<ts.Node, Kind>();
-	function classify(d: ts.Declaration, callSiteFile: string): Kind {
-		const id = idOf(d);
-		if (id in GUARD_DECLS) return 'guard';
-		if (GO_PRIMITIVES.has(id)) return 'go';
-		const sf = d.getSourceFile();
-		if (sf.isDeclarationFile) return nameOf(d) === 'fetch' ? 'go' : 'none';
-		if (!isServerModule(sf.fileName)) return 'none';
-		if (PURE_HELPERS.has(id)) return 'none';
-		if (sf.fileName !== callSiteFile) return fnOf(d) || ts.isVariableDeclaration(d) ? 'go' : 'none';
-		const fn = fnOf(d);
-		if (!fn) return 'none';
-		const known = fnKind.get(fn);
-		if (known) return known;
-		fnKind.set(fn, 'none'); // while computing: a cycle adds nothing
-		const kind: Kind = calls(fn).some((c) => c.kind === 'go') ? 'go' : 'none';
-		fnKind.set(fn, kind);
-		return kind;
-	}
+	type Exported = { node: ts.Node } | { error: string } | null;
 
-	interface Classified extends Call {
-		kind: Kind;
-		problem?: string;
-	}
-
-	/** Every call under `node` (deep, nested closures included), classified. */
-	function calls(node: ts.Node): Classified[] {
-		const out: Classified[] = [];
-		const site = node.getSourceFile().fileName;
-		const visit = (n: ts.Node) => {
-			if (ts.isCallExpression(n)) {
-				const callee = unwrap(n.expression);
-				const base = { start: n.getStart(), node: n };
-				if (ts.isElementAccessExpression(callee)) {
-					out.push({
-						...base,
-						name: '[...]',
-						kind: 'go',
-						problem: 'a call through an element access (`m["goFetch"](...)`) hides what is called'
-					});
-				} else if (
-					ts.isPropertyAccessExpression(callee) &&
-					['call', 'apply', 'bind'].includes(callee.name.text) &&
-					isGoOrGuard(callee.expression, site)
-				) {
-					out.push({
-						...base,
-						name: callee.name.text,
-						kind: 'go',
-						problem: `\`.${callee.name.text}\` on a guard or on something that reaches Go`
-					});
-				} else if (
-					ts.isPropertyAccessExpression(callee) &&
-					ts.isIdentifier(callee.expression) &&
-					callee.expression.text === 'Reflect' &&
-					callee.name.text === 'apply' &&
-					n.arguments[0] &&
-					isGoOrGuard(n.arguments[0], site)
-				) {
-					out.push({
-						...base,
-						name: 'Reflect.apply',
-						kind: 'go',
-						problem: '`Reflect.apply` on a guard or on something that reaches Go'
-					});
-				} else if (ts.isIdentifier(callee) || ts.isPropertyAccessExpression(callee)) {
-					const d = declOf(callee);
-					const name = ts.isIdentifier(callee) ? callee.text : callee.name.text;
-					out.push({ ...base, name, kind: d ? classify(d, site) : 'none' });
+	/** The initialiser / function of `export const name` or `export function name`, declared IN this file. */
+	function exportedHere(sf: ts.SourceFile, name: string): Exported {
+		const hasModifier = (s: ts.Node) =>
+			ts.canHaveModifiers(s) &&
+			ts.getModifiers(s)?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
+		const localInit = (id: string): Exported => {
+			for (const s of sf.statements) {
+				if (ts.isFunctionDeclaration(s) && s.name?.text === id && s.body) return { node: s };
+				if (ts.isVariableStatement(s)) {
+					for (const d of s.declarationList.declarations) {
+						if (ts.isIdentifier(d.name) && d.name.text === id) {
+							return d.initializer
+								? { node: unwrap(d.initializer) }
+								: { error: `"${id}" has no initializer the walker can read` };
+						}
+					}
 				}
 			}
-			ts.forEachChild(n, visit);
+			return null;
 		};
-		visit(node);
-		return out.sort((a, b) => a.start - b.start);
+		for (const s of sf.statements) {
+			if (!ts.isExportDeclaration(s) || !s.exportClause || !ts.isNamedExports(s.exportClause)) {
+				continue;
+			}
+			for (const el of s.exportClause.elements) {
+				if (el.name.text !== name) continue;
+				if (s.moduleSpecifier)
+					return { error: `"${name}" must be declared in this file, not re-exported` };
+				return (
+					localInit((el.propertyName ?? el.name).text) ?? {
+						error: `"${name}" is not declared in this file`
+					}
+				);
+			}
+		}
+		for (const s of sf.statements) {
+			if (ts.isFunctionDeclaration(s) && s.name?.text === name && hasModifier(s)) {
+				return s.body ? { node: s } : { error: `"${name}" has no body` };
+			}
+			if (ts.isVariableStatement(s) && hasModifier(s)) {
+				for (const d of s.declarationList.declarations) {
+					if (ts.isIdentifier(d.name) && d.name.text === name) {
+						return d.initializer
+							? { node: unwrap(d.initializer) }
+							: { error: `"${name}" has no initializer the walker can read` };
+					}
+				}
+			}
+		}
+		if (sf.statements.some((s) => ts.isExportDeclaration(s) && !s.exportClause)) {
+			return {
+				error: `"${name}" may hide behind \`export * from\` and must be declared in this file`
+			};
+		}
+		return null;
 	}
 
-	function isGoOrGuard(expr: ts.Node, site: string): boolean {
-		const d = declOf(expr);
-		return d !== undefined && classify(d, site) !== 'none';
-	}
-
-	const goCalls = (node: ts.Node): Call[] => calls(node).filter((c) => c.kind === 'go');
-	const problemsOf = (node: ts.Node): string[] =>
-		calls(node).flatMap((c) => (c.problem ? [c.problem] : []));
-
-	/* ---------------------------------- exports ---------------------------------- */
-
-	function sourceFile(path: string): ts.SourceFile {
+	function sourceFileOf(path: string): ts.SourceFile {
 		const sf = program.getSourceFile(norm(path));
 		if (!sf) throw new Error(`not in the program: ${path}`);
 		return sf;
 	}
 
-	function resolveExport(sf: ts.SourceFile, name: string): Resolved {
-		const mod = checker.getSymbolAtLocation(sf);
-		const star = sf.statements.some((s) => ts.isExportDeclaration(s) && !s.exportClause);
-		const direct = mod?.exports?.get(name as ts.__String);
-		if (!direct) {
-			return star ? { error: `"${name}" may hide behind \`export * from\` (not followed)` } : null;
-		}
-		const sym = direct.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(direct) : direct;
-		const d = sym.valueDeclaration ?? sym.declarations?.[0];
-		if (!d) return { error: `"${name}" is re-exported from an unreadable module` };
-		if (ts.isVariableDeclaration(d)) {
-			return d.initializer
-				? { node: unwrap(d.initializer), sf: d.getSourceFile() }
-				: { error: `"${name}" has no initializer the walker can read` };
-		}
-		if (ts.isFunctionDeclaration(d)) return { node: d, sf: d.getSourceFile() };
-		return { error: `"${name}" is not a declaration the walker can read` };
-	}
+	/* ------------------------------------- loads ------------------------------------ */
 
-	/* ------------------------------------ loads ------------------------------------ */
-
-	const statementsOf = (node: ts.Node): readonly ts.Statement[] | null =>
-		isFnLike(node) && node.body && ts.isBlock(node.body) ? node.body.statements : null;
-
-	/** `await <call>` (optionally `const x = await <call>`) of the wanted guard, with no call in its arguments. */
-	function awaitedGuard(
-		e: ts.Expression | undefined,
-		wanted: readonly GuardKind[],
-		loadFn?: FnLike
-	): ts.CallExpression | null {
-		if (!e) return null;
+	/** `await parent()` of the load's own event, as an expression? */
+	function isAwaitedParent(e: ts.Expression | undefined, fn: FnLike): boolean {
+		if (!e) return false;
 		const x = unwrap(e);
-		if (!ts.isAwaitExpression(x)) return null;
+		if (!ts.isAwaitExpression(x)) return false;
 		const call = unwrap(x.expression);
-		if (!ts.isCallExpression(call)) return null;
-		const kind = guardKindOf(call, loadFn);
-		if (!kind || !wanted.includes(kind)) return null;
-		if (call.arguments.some(containsCall)) return null;
-		return call;
+		if (!ts.isCallExpression(call) || call.arguments.length !== 0) return false;
+		const callee = unwrap(call.expression);
+		if (ts.isIdentifier(callee)) return isDestructuredMember(callee, fn, 'parent');
+		return (
+			ts.isPropertyAccessExpression(callee) &&
+			callee.name.text === 'parent' &&
+			isEventParam(callee.expression, fn)
+		);
 	}
 
-	function isLoadGuardStatement(st: ts.Statement, loadFn: FnLike): boolean {
-		const wanted: GuardKind[] = ['parent', 'guardAppRoute'];
-		if (ts.isExpressionStatement(st)) return awaitedGuard(st.expression, wanted, loadFn) !== null;
-		if (ts.isVariableStatement(st))
-			return st.declarationList.declarations.some(
-				(d) => awaitedGuard(d.initializer, wanted, loadFn) !== null
-			);
-		return false;
+	function loadFnProblems(fn: FnLike): string[] {
+		const start = 'load must start with `await parent()` (of its own event)';
+		if (!fn.body || !ts.isBlock(fn.body)) return [`${start}: it has an expression body`];
+		for (const p of fn.parameters) {
+			const run = firstRun(p);
+			if (run)
+				return [
+					`a call in the load's parameters (${short(run.node)}) runs before \`await parent()\``
+				];
+		}
+		const first = fn.body.statements[0];
+		const ok =
+			first &&
+			((ts.isExpressionStatement(first) && isAwaitedParent(first.expression, fn)) ||
+				(ts.isVariableStatement(first) &&
+					first.declarationList.flags & ts.NodeFlags.Const &&
+					first.declarationList.declarations.length === 1 &&
+					isAwaitedParent(first.declarationList.declarations[0]!.initializer, fn)));
+		return ok ? [] : [`${start}; its first statement is: ${short(first)}`];
 	}
 
-	function analyzeLoad(node: ts.Node): string[] {
-		const n = unwrap(node);
+	function loadProblems(file: string): string[] | null {
+		const exp = exportedHere(sourceFileOf(file), 'load');
+		if (!exp) return null;
+		if ('error' in exp) return [exp.error];
+		const n = unwrap(exp.node);
 		if (ts.isIdentifier(n) || ts.isPropertyAccessExpression(n)) {
-			const d = declOf(n);
-			return d && GUARD_DECLS[idOf(d)] === 'guardAppRoute'
+			return guardKindOf(n) === 'guardAppRoute'
 				? []
 				: [`load is \`${n.getText()}\`, which does not resolve to the real guardAppRoute`];
 		}
-		if (!isFnLike(n)) return ['load is not a function the walker can read'];
-		const problems = problemsOf(n);
-		const go = goCalls(n);
-		if (go.length === 0) return problems;
-		const statements = statementsOf(n);
-		if (!statements)
-			return [
-				...problems,
-				`load reaches Go (${go[0]!.name}) from an expression body: no guard statement`
-			];
-		const guardAt = statements.findIndex((s) => isLoadGuardStatement(s, n));
-		if (guardAt === -1)
-			return [
-				...problems,
-				`load reaches Go (${go[0]!.name}) with no unconditional top-level \`await parent()\` of its own event (not in an if/try/loop, not un-awaited, not inside Promise.all, no call in its arguments)`
-			];
-		const guardStart = statements[guardAt]!.getStart();
-		const early = go.find((c) => c.start < guardStart);
-		return early
-			? [...problems, `load reaches Go (${early.name}) before \`await parent()\``]
-			: problems;
+		if (!isFnLike(n))
+			return ['load must be the real guardAppRoute or a function the walker can read'];
+		return loadFnProblems(n);
 	}
 
-	/* ----------------------------------- actions ----------------------------------- */
+	function isSharedGuard(file: string): boolean {
+		const exp = exportedHere(sourceFileOf(file), 'load');
+		if (!exp || 'error' in exp) return false;
+		const n = unwrap(exp.node);
+		return (
+			(ts.isIdentifier(n) || ts.isPropertyAccessExpression(n)) && guardKindOf(n) === 'guardAppRoute'
+		);
+	}
 
-	/** The table an object-literal member belongs to (`P`, `ACTION`, a derived table), or undefined. */
+	/* ------------------------------------ actions ----------------------------------- */
+
 	function tableOfMember(d: ts.Declaration): ts.VariableDeclaration | undefined {
 		if (!ts.isPropertyAssignment(d) && !ts.isShorthandPropertyAssignment(d)) return undefined;
 		let cur: ts.Node = d.parent;
@@ -471,7 +421,6 @@ export function createAnalysis(files: string[], overlay: Record<string, string> 
 			cur = cur.parent;
 		return ts.isVariableDeclaration(cur.parent) ? cur.parent : undefined;
 	}
-
 	function isPermissionTable(v: ts.VariableDeclaration, depth = 0): boolean {
 		if (PERMISSION_TABLES.has(idOf(v))) return true;
 		if (depth > 3 || !v.initializer) return false;
@@ -484,7 +433,6 @@ export function createAnalysis(files: string[], overlay: Record<string, string> 
 			)
 		);
 	}
-
 	/** Does the expression resolve to a member of the P / ACTION tables (or a table made only of them)? */
 	function permissionOk(expr: ts.Node, depth = 0): boolean {
 		const e = unwrap(expr);
@@ -501,153 +449,257 @@ export function createAnalysis(files: string[], overlay: Record<string, string> 
 		return !!table && isPermissionTable(table, depth);
 	}
 
-	/** `const X = await <guard>(...)` with a top-level `if (X) return X;` after it -> index after the `if`. */
-	function authorisationEnd(
-		statements: readonly ts.Statement[],
-		mode: 'permission' | 'self'
-	): { end: number } | { error: string } {
-		const wanted: GuardKind = mode === 'self' ? 'authoriseSelfService' : 'authoriseAction';
-		for (let i = 0; i < statements.length; i++) {
-			const st = statements[i]!;
-			if (!ts.isVariableStatement(st)) continue;
-			const decl = st.declarationList.declarations.find(
-				(d) => ts.isIdentifier(d.name) && awaitedGuard(d.initializer, [wanted]) !== null
+	const GUARD_SHAPE =
+		'the action must start with [`const fd = await <event>.request.formData();`] `const refused = await authoriseAction(<event>, fd, <permission>, <values>);` (or authoriseSelfService) and `if (refused) return refused;`';
+
+	/** `await <event>.request.formData()` (or `request.formData()` of the destructured `request`). */
+	function isFormDataRead(e: ts.Expression | undefined, fn: FnLike): boolean {
+		if (!e) return false;
+		const x = unwrap(e);
+		if (!ts.isAwaitExpression(x)) return false;
+		const call = unwrap(x.expression);
+		if (!ts.isCallExpression(call) || call.arguments.length !== 0) return false;
+		const callee = unwrap(call.expression);
+		if (!ts.isPropertyAccessExpression(callee) || callee.name.text !== 'formData') return false;
+		const recv = unwrap(callee.expression);
+		if (ts.isIdentifier(recv)) return isDestructuredMember(recv, fn, 'request');
+		return (
+			ts.isPropertyAccessExpression(recv) &&
+			recv.name.text === 'request' &&
+			isEventParam(recv.expression, fn)
+		);
+	}
+
+	function actionFnProblems(fn: FnLike): { problems: string[]; guard: ActionReport['guard'] } {
+		const fail = (p: string) => ({ problems: [p], guard: null as ActionReport['guard'] });
+		if (!fn.body || !ts.isBlock(fn.body)) return fail(`an expression body: ${GUARD_SHAPE}`);
+		const statements = fn.body.statements;
+		let i = 0;
+		const first = statements[0];
+		if (
+			first &&
+			ts.isVariableStatement(first) &&
+			first.declarationList.flags & ts.NodeFlags.Const &&
+			first.declarationList.declarations.length === 1 &&
+			ts.isIdentifier(first.declarationList.declarations[0]!.name) &&
+			isFormDataRead(first.declarationList.declarations[0]!.initializer, fn)
+		)
+			i = 1;
+
+		const st = statements[i];
+		const decl =
+			st && ts.isVariableStatement(st) && st.declarationList.declarations.length === 1
+				? st.declarationList.declarations[0]!
+				: undefined;
+		const awaited = decl?.initializer ? unwrap(decl.initializer) : undefined;
+		const call = awaited && ts.isAwaitExpression(awaited) ? unwrap(awaited.expression) : undefined;
+		const kind = call && ts.isCallExpression(call) ? guardKindOf(call.expression) : null;
+		if (
+			!st ||
+			!decl ||
+			!call ||
+			!ts.isCallExpression(call) ||
+			(kind !== 'authoriseAction' && kind !== 'authoriseSelfService')
+		) {
+			return fail(`${GUARD_SHAPE}; found: ${short(st)}`);
+		}
+		if (!ts.isVariableStatement(st) || !(st.declarationList.flags & ts.NodeFlags.Const)) {
+			return fail(
+				'the guard result must be a `const` (a `let` can be reassigned before it is checked)'
 			);
-			if (!decl) continue;
-			const call = awaitedGuard(decl.initializer, [wanted])!;
-			if (mode === 'permission') {
-				const permission = call.arguments[2];
-				if (!permission || !permissionOk(permission))
-					return {
-						error:
-							'the permission of authoriseAction does not resolve to a member of the P / ACTION tables'
-					};
+		}
+		if (!ts.isIdentifier(decl.name))
+			return fail(`${GUARD_SHAPE}; the result must be one identifier`);
+		const result = decl.name;
+		const args = call.arguments;
+		if (args.some(ts.isSpreadElement) || !args[0] || !isEventParam(args[0], fn)) {
+			return fail(
+				"the first argument of the guard must be the action's own event parameter (not a spread, an object literal or another value)"
+			);
+		}
+		for (const a of args) {
+			const run = firstRun(a);
+			if (run) {
+				return fail(
+					`no call, new, await or tagged template may run inside the guard arguments (found ${short(run.node)})`
+				);
 			}
-			const name = (decl.name as ts.Identifier).text;
-			for (let j = i + 1; j < statements.length; j++) {
-				const next = statements[j]!;
-				if (!ts.isIfStatement(next)) continue;
-				const cond = unwrap(next.expression);
-				if (!ts.isIdentifier(cond) || cond.text !== name) continue;
-				const then = next.thenStatement;
-				const returns = (s: ts.Statement): boolean =>
-					ts.isReturnStatement(s) &&
-					!!s.expression &&
-					ts.isIdentifier(unwrap(s.expression)) &&
-					(unwrap(s.expression) as ts.Identifier).text === name;
-				const ok = ts.isBlock(then) ? then.statements.some(returns) : returns(then);
-				if (ok) return { end: next.getEnd() };
-			}
+		}
+		if (kind === 'authoriseAction' && (!args[2] || !permissionOk(args[2]))) {
+			return fail(
+				'the permission of authoriseAction does not resolve to a member of the P / ACTION tables'
+			);
+		}
+		// `if (refused) return refused;` immediately after.
+		const next = statements[i + 1];
+		const returnsResult = (s: ts.Statement): boolean =>
+			ts.isReturnStatement(s) && !!s.expression && localDecl(s.expression) === decl;
+		const checks =
+			next &&
+			ts.isIfStatement(next) &&
+			!next.elseStatement &&
+			localDecl(next.expression) === decl &&
+			(ts.isBlock(next.thenStatement)
+				? next.thenStatement.statements.length === 1 &&
+					returnsResult(next.thenStatement.statements[0]!)
+				: returnsResult(next.thenStatement));
+		if (!checks) {
 			return {
-				error: `the result of ${wanted} (\`${name}\`) is never returned on refusal (\`if (${name}) return ${name};\`)`
+				problems: [
+					`\`if (${result.text}) return ${result.text};\` (the guard result, returned on refusal) must follow the guard immediately; found: ${short(next)}`
+				],
+				guard: kind
 			};
 		}
-		return { error: `no unconditional top-level \`const refused = await ${wanted}(...)\`` };
+		return { problems: [], guard: kind };
 	}
 
-	function analyzeAction(
-		node: ts.Node,
-		mode: 'permission' | 'self' = 'permission',
-		helpers: ReadonlySet<string> = new Set()
-	): string[] {
-		const n = unwrap(node);
-		if (!isFnLike(n)) return ['action is not a function the walker can read'];
-		const statements = statementsOf(n);
-		if (!statements) return ['action has an expression body: no authorisation statement'];
-		const problems = problemsOf(n);
-		const go = goCalls(n);
-
-		const pair = authorisationEnd(statements, mode);
-		if (!('error' in pair)) {
-			const early = go.find((c) => c.start < pair.end);
-			return early
-				? [...problems, `action reaches Go (${early.name}) before it is authorised`]
-				: problems;
-		}
-		// A top-level hand-off to a PINNED authorising helper whose own body has the pair.
-		if (mode === 'permission') {
-			for (const st of statements) {
-				if (!ts.isReturnStatement(st) || !st.expression) continue;
-				let e = unwrap(st.expression);
-				if (ts.isAwaitExpression(e)) e = unwrap(e.expression);
-				if (!ts.isCallExpression(e)) continue;
-				const d = declOf(e.expression);
-				if (!d || !helpers.has(idOf(d))) continue;
-				const helper = fnOf(d);
-				if (!helper) return [...problems, `helper ${nameOf(d)} is not a readable function`];
-				const hp = analyzeAction(helper, 'permission');
-				if (hp.length > 0) return [...problems, ...hp.map((p) => `helper ${nameOf(d)}: ${p}`)];
-				const early = go.find((c) => c.start < st.getStart());
-				return early
-					? [...problems, `action reaches Go (${early.name}) before it hands off to ${nameOf(d)}`]
-					: problems;
-			}
-		}
-		return [...problems, pair.error];
+	/** The pinned helper `saveTenantSection('<literal>')`: callee resolves to it, one string literal argument. */
+	function isPinnedHelperCall(e: ts.Node): e is ts.CallExpression {
+		const call = unwrap(e);
+		if (!ts.isCallExpression(call)) return false;
+		const d = declOf(call.expression);
+		return (
+			!!d &&
+			idOf(d) === PINNED_ACTION_HELPER &&
+			call.arguments.length === 1 &&
+			ts.isStringLiteral(call.arguments[0]!)
+		);
 	}
 
-	function actionFunctions(actions: ts.Node): {
-		fns: Array<{ name: string; node: ts.Node }>;
-		errors: string[];
-	} {
-		const fns: Array<{ name: string; node: ts.Node }> = [];
-		const errors: string[] = [];
-		let obj = unwrap(actions);
-		if (ts.isIdentifier(obj)) {
-			const d = declOf(obj);
-			if (d && ts.isVariableDeclaration(d) && d.initializer) obj = unwrap(d.initializer);
+	let helperCache: string[] | undefined;
+	function pinnedHelperProblems(): string[] {
+		if (helperCache) return helperCache;
+		const [file] = PINNED_ACTION_HELPER.split('#') as [string];
+		const sf = program.getSourceFile(`${ROOT}/${file}`);
+		const exp = sf ? exportedHere(sf, 'saveTenantSection') : null;
+		if (
+			!exp ||
+			'error' in exp ||
+			!isFnLike(exp.node) ||
+			!exp.node.body ||
+			!ts.isBlock(exp.node.body)
+		) {
+			return (helperCache = [
+				'the pinned action helper saveTenantSection is not a function the walker can read'
+			]);
 		}
+		const body = exp.node.body.statements;
+		const ret = body.length === 1 ? body[0] : undefined;
+		const returned =
+			ret && ts.isReturnStatement(ret) && ret.expression ? unwrap(ret.expression) : undefined;
+		if (!returned || !isFnLike(returned)) {
+			return (helperCache = [
+				'saveTenantSection must consist of one `return <function>`: nothing may run before the returned action'
+			]);
+		}
+		const { problems, guard } = actionFnProblems(returned);
+		return (helperCache = [
+			...problems.map((p) => `saveTenantSection: ${p}`),
+			...(problems.length === 0 && guard !== 'authoriseAction'
+				? ['saveTenantSection must authorise with authoriseAction (a permission per section)']
+				: [])
+		]);
+	}
+
+	/** The pinned helper calls of an `actions` object (the only calls allowed at module level). */
+	function pinnedCallsOf(sf: ts.SourceFile): Set<ts.Node> {
+		const out = new Set<ts.Node>();
+		const exp = exportedHere(sf, 'actions');
+		if (!exp || 'error' in exp) return out;
+		const obj = unwrap(exp.node);
+		if (!ts.isObjectLiteralExpression(obj)) return out;
+		for (const p of obj.properties) {
+			if (ts.isPropertyAssignment(p) && isPinnedHelperCall(p.initializer))
+				out.add(unwrap(p.initializer));
+		}
+		return out;
+	}
+
+	function actionReports(
+		file: string,
+		selfService: (action: string) => boolean = () => false
+	): { reports: ActionReport[]; errors: string[] } | null {
+		const exp = exportedHere(sourceFileOf(file), 'actions');
+		if (!exp) return null;
+		if ('error' in exp) return { reports: [], errors: [exp.error] };
+		const obj = unwrap(exp.node);
 		if (!ts.isObjectLiteralExpression(obj)) {
-			return { fns, errors: ['actions is not an object literal the walker can read'] };
+			return { reports: [], errors: ['actions must be an object literal declared in this file'] };
 		}
+		const reports: ActionReport[] = [];
+		const errors: string[] = [];
 		for (const p of obj.properties) {
 			if (ts.isSpreadAssignment(p)) {
 				errors.push('actions contains a spread: what it exports is hidden');
 				continue;
 			}
 			const nn = p.name;
-			const name = nn && (ts.isIdentifier(nn) || ts.isStringLiteral(nn)) ? nn.text : '?';
-			if (ts.isMethodDeclaration(p)) fns.push({ name, node: p });
-			else if (ts.isPropertyAssignment(p) || ts.isShorthandPropertyAssignment(p)) {
-				const init = ts.isPropertyAssignment(p) ? unwrap(p.initializer) : p.name;
-				if (ts.isIdentifier(init)) {
-					const d = declOf(init);
-					const fn = d && fnOf(d);
-					if (fn) fns.push({ name, node: fn });
-					else
-						errors.push(
-							`action "${name}" is \`${init.text}\`, which is not a function the walker can read`
-						);
-				} else fns.push({ name, node: init });
+			if (!nn || !(ts.isIdentifier(nn) || ts.isStringLiteral(nn))) {
+				errors.push('actions: an action name must be an identifier or a string literal');
+				continue;
 			}
+			const name = nn.text;
+			let result: { problems: string[]; guard: ActionReport['guard'] };
+			if (ts.isMethodDeclaration(p)) result = actionFnProblems(p);
+			else if (ts.isPropertyAssignment(p)) {
+				const init = unwrap(p.initializer);
+				if (isFnLike(init) && !ts.isFunctionDeclaration(init)) result = actionFnProblems(init);
+				else if (isPinnedHelperCall(init)) {
+					result = { problems: pinnedHelperProblems(), guard: 'authoriseAction' };
+				} else {
+					result = {
+						problems: [
+							`actions: "${name}" must be a function expression or the pinned saveTenantSection('<section>'), not \`${short(init)}\``
+						],
+						guard: null
+					};
+				}
+			} else {
+				result = {
+					problems: [
+						`actions: "${name}" must be a function expression, not a shorthand or accessor`
+					],
+					guard: null
+				};
+			}
+			const pinnedSelf = selfService(name);
+			const problems = [...result.problems];
+			if (problems.length === 0) {
+				if (result.guard === 'authoriseSelfService' && !pinnedSelf)
+					problems.push('authoriseSelfService is only for the pinned self-service actions');
+				if (pinnedSelf && result.guard !== 'authoriseSelfService')
+					problems.push('a pinned self-service action must use authoriseSelfService');
+			}
+			reports.push({ name, problems, guard: result.guard });
 		}
-		return { fns, errors };
+		return { reports, errors };
 	}
 
-	function analyzeActions(
-		resolved: Resolution,
-		helpers: ReadonlySet<string>,
-		selfService: (action: string) => boolean = () => false
-	): { reports: ActionReport[]; errors: string[] } {
-		const { fns, errors } = actionFunctions(resolved.node);
-		const reports = fns.map(({ name, node }) => {
-			const exempt = selfService(name);
-			return {
-				name,
-				selfService: exempt,
-				problems: analyzeAction(node, exempt ? 'self' : 'permission', helpers)
-			};
-		});
-		return { reports, errors };
+	/* -------------------------------- module level ---------------------------------- */
+
+	function moduleProblems(file: string): string[] {
+		const sf = sourceFileOf(file);
+		const allowed = pinnedCallsOf(sf);
+		const problems: string[] = [];
+		for (const s of sf.statements) {
+			const run = firstRun(s, allowed);
+			if (!run) continue;
+			problems.push(
+				run.kind === 'await'
+					? `top-level await at module level: ${short(run.node)}`
+					: `a call at module level (${short(run.node)}) runs before any guard`
+			);
+		}
+		return problems;
 	}
 
 	return {
 		program,
-		sourceFile,
-		resolveExport,
-		analyzeLoad,
-		analyzeAction,
-		analyzeActions,
-		goCalls
+		loadProblems,
+		actionReports,
+		moduleProblems,
+		isSharedGuard,
+		pinnedHelperProblems
 	};
 }

@@ -24,18 +24,20 @@ interface CreateRoleResponse {
 	role_id: string;
 }
 
+/** The typed role fields: what a refused submit gives back to the form, and what is validated. */
+const rolePayload = (fd: FormData) => ({
+	name: (fd.get('name') ?? '').toString(),
+	hierarchy_level: Number(fd.get('hierarchy_level') ?? 0)
+});
+
 export const actions: Actions = {
 	default: async (event) => {
-		const { cookies } = event;
 		const fd = await event.request.formData();
-		const payload = {
-			name: (fd.get('name') ?? '').toString(),
-			hierarchy_level: Number(fd.get('hierarchy_level') ?? 0)
-		};
-
-		// An action is a separate entry point from the page guard: authorise before any Go call.
-		const refused = await authoriseAction(event, fd, ACTION.roleCreate, payload);
+		// An action is a separate entry point from the page guard: authorise before anything else.
+		const refused = await authoriseAction(event, fd, ACTION.roleCreate, () => rolePayload(fd));
 		if (refused) return refused;
+		const { cookies } = event;
+		const payload = rolePayload(fd);
 
 		const parsed = createRoleRequestSchema.safeParse(payload);
 		if (!parsed.success) {

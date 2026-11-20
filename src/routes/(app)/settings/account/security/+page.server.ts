@@ -22,13 +22,19 @@ import { setMustChangePassword } from '#lib/server/cookies.ts';
 import { goFetch, readGoError } from '#lib/server/go.ts';
 import type { Actions } from './$types';
 
+/** The typed new email: what a refused submit gives back to the form. */
+const emailValues = (formData: FormData) => ({
+	email: (formData.get('new_email') ?? '').toString()
+});
+
 export const actions: Actions = {
-	changePassword: async ({ request, cookies }) => {
-		const formData = await request.formData();
+	changePassword: async (event) => {
+		const formData = await event.request.formData();
 		// Own account, no permission; bound to the page of the person the browser holds now. No values
 		// are kept: never a password.
-		const refused = await authoriseSelfService({ cookies }, formData, {});
+		const refused = await authoriseSelfService(event, formData, {});
 		if (refused) return refused;
+		const { cookies } = event;
 		const result = await changePasswordViaGo(cookies, {
 			current: (formData.get('current_password') ?? '').toString(),
 			next: (formData.get('new_password') ?? '').toString(),
@@ -41,15 +47,15 @@ export const actions: Actions = {
 		return { which: 'changePassword' as const, success: true };
 	},
 
-	changeEmail: async ({ request, cookies }) => {
-		const formData = await request.formData();
-		const newEmail = (formData.get('new_email') ?? '').toString();
+	changeEmail: async (event) => {
+		const formData = await event.request.formData();
 
-		const values = { email: newEmail };
-		const which = { which: 'changeEmail' as const };
-
-		const refused = await authoriseSelfService({ cookies }, formData, values);
+		const refused = await authoriseSelfService(event, formData, () => emailValues(formData));
 		if (refused) return refused;
+		const { cookies } = event;
+		const values = emailValues(formData);
+		const newEmail = values.email;
+		const which = { which: 'changeEmail' as const };
 
 		const parsed = formEmailField.safeParse(newEmail);
 		if (!parsed.success) {
