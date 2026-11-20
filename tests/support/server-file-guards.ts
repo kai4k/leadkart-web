@@ -37,18 +37,42 @@
  * (including compound / destructuring assignment, `delete`, `Object.assign(actions, ...)`,
  * `Object.defineProperty`, `Reflect.set`).
  *
+ * PARAMETERS of a load and of an action: exactly the event. No second parameter, no rest, no
+ * initialiser on the event or inside its destructuring pattern, no computed key in it. Parameters run
+ * before the body: `(event, _ = (event = forged))` and `({ parent }, _ = (parent = stub))` contain no
+ * call yet rewrite what the guard reads.
+ *
  * PLACEMENT of a held file: under `src/routes/(app)/`, and a real `guardAppRoute` layout load in its
- * own directory or above it (or it is that guard); a new route group needs an explicit decision.
+ * own directory or above it (or it is that guard); a new route group needs an explicit decision. No
+ * Kit layout reset (`+page@*.svelte`, `+layout@*.svelte`) anywhere under `src/routes` unless pinned
+ * with a reason (`PINNED_LAYOUT_RESETS`, none today): Kit drops every layout below the `@` target, so
+ * the guard layouts the directory walk finds would never run (Kit source: `create_manifest_data`,
+ * `uses_layout`). `kitModuleFileProblems` refuses `.js` route modules and hooks (Kit routes them too).
+ *
+ * PINNED (unguarded) files are not walked. `pinnedFileProblems` holds what they may import: no
+ * namespace or dynamic import of `#lib/server/**` and no `export *` from it (a computed key would
+ * read any export unseen), and every value import from a local module OUTSIDE `src/lib/server` is
+ * listed in the file's pin (a helper there can call Go). Two limits remain and are inherent: a file
+ * pinned to `goFetch` may add a second Go call unnoticed, and the proxy's global `fetch` is not
+ * pinned. What covers them is review: the unit test records `contentHash` of every pinned file, so
+ * ANY edit to one fails until the reviewed hash is updated on purpose.
  *
  * OUT OF THE CONTRACT: the evaluation of IMPORTED modules. A module runs once per process, when it is
  * first imported, not per request; what it does at import time is not a property of a route file and
  * is not walked. Static code in `src/lib/server/**` is covered by its own tests.
  *
  * The guard's arguments: the first is the action's event parameter; the second is the `FormData` read
- * by the statement before it; the values is an object literal or a function that only reads the form
- * (`<fd>.get(...)`, `<fd>.getAll(...)`, the global `String(...)`, and the pinned field readers below).
+ * by the statement before it; the VALUES are held to a whitelisted shape (not "no calls": implicit
+ * calls such as getters, `toString` through template literals and computed keys, and spreads are not
+ * call nodes): an object literal, or an arrow function with no parameters whose body is exactly such
+ * an object literal (or one `return` of it) or a pinned field reader applied to the form. The
+ * property values are string / number / boolean / null literals, `<fd>.get('<literal>')`,
+ * `<fd>.getAll('<literal>')`, `String(<fd>.get('<literal>') ?? '')` or a pinned field reader applied
+ * to `<fd>` (below). No spread, no shorthand, no computed key, no nested object, no other reads.
  */
-import { resolve } from 'node:path';
+import { createHash } from 'node:crypto';
+import { existsSync, readdirSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import ts from 'typescript';
 import { aliases } from '../../aliases.js';
 
@@ -60,6 +84,72 @@ const rel = (p: string): string => {
 	const n = norm(p);
 	return n.startsWith(`${ROOT}/`) ? n.slice(ROOT.length + 1) : n;
 };
+
+/** Every file under `dir` (absolute, forward slashes); empty when the directory does not exist. */
+export function listFiles(dir: string): string[] {
+	if (!existsSync(dir)) return [];
+	return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+		e.isDirectory() ? listFiles(join(dir, e.name)) : [norm(join(dir, e.name))]
+	);
+}
+
+/**
+ * Kit layout resets that are allowed, EXACTLY (`<path from the repository root>` -> reason). None
+ * today. `+page@(app).svelte` / `+layout@.svelte` make Kit drop every layout BELOW the `@` target
+ * (Kit source: `create_manifest_data` records the reset in the route's `layouts` and `uses_layout`;
+ * the server `load` chain is built from that list), so the section's `guardAppRoute` never runs even
+ * though the file's directory ancestors still show it. A reset is a decision with a reason.
+ */
+export const PINNED_LAYOUT_RESETS: Readonly<Record<string, string>> = {};
+
+const LAYOUT_RESET_FILE = /(^|\/)\+(page|layout)@[^/]*\.svelte$/;
+
+/** The Kit layout resets among `files` that are not pinned (with a reason): why each is refused. */
+export function layoutResetProblems(
+	files: readonly string[],
+	pinned: Readonly<Record<string, string>> = PINNED_LAYOUT_RESETS
+): string[] {
+	return files
+		.map(norm)
+		.filter((f) => LAYOUT_RESET_FILE.test(f))
+		.filter((f) => (pinned[rel(f)] ?? '').length < 20)
+		.map(
+			(f) =>
+				`${rel(f)} is a Kit layout reset: Kit drops every layout below its @ target, so the guardAppRoute layouts (and their server loads) never run for it. Remove it, or pin it in PINNED_LAYOUT_RESETS with a reason`
+		);
+}
+
+const KIT_JS_ROUTE = /^\+(page|layout)(@[^./]*)?(\.server)?\.js$|^\+server\.js$/;
+const KIT_JS_HOOKS = /^src\/hooks(\.(server|client))?(\.js|\/index\.js)$/;
+
+/**
+ * Kit routes `.js` modules too (`kit.moduleExtensions` defaults to ['.js', '.ts']): a `+page.server.js`
+ * is a server load the `.ts`-only enumeration never sees. CLAUDE.md already says TypeScript everywhere;
+ * this makes it a gate for every file Kit would route (route modules and hooks). Paths are relative to
+ * the repository root.
+ */
+export function kitModuleFileProblems(files: readonly string[]): string[] {
+	const problems: string[] = [];
+	for (const raw of files) {
+		const f = norm(raw);
+		const base = f.slice(f.lastIndexOf('/') + 1);
+		const route = f.startsWith('src/routes/') && KIT_JS_ROUTE.test(base);
+		if (route || KIT_JS_HOOKS.test(f)) {
+			problems.push(
+				`${f}: Kit routes .js modules but the guard walkers read only .ts files: write it as .ts`
+			);
+		}
+	}
+	return problems;
+}
+
+/**
+ * Stable hash of a file's content (line endings normalised), for the pinned-file acknowledgement: a
+ * pinned file is not walked, so any edit to it must be a deliberate, reviewed one.
+ */
+export function contentHash(text: string): string {
+	return createHash('sha256').update(text.replace(/\r\n/g, '\n')).digest('hex').slice(0, 24);
+}
 
 type GuardKind = 'guardAppRoute' | 'authoriseAction' | 'authoriseSelfService';
 const GUARD_DECLS: Record<string, GuardKind> = {
@@ -117,6 +207,12 @@ export interface Analysis {
 	placementProblems(file: string, opts?: { guardChain?: boolean }): string[];
 	/** Every value exported by src/lib/server/** that the file references (`<file>#<name>`, sorted). */
 	serverCallees(file: string): string[];
+	/**
+	 * What a PINNED file may import: no namespace or dynamic import of `#lib/server/**`, no `export *`
+	 * from it, and every value import from a local module outside `src/lib/server` listed in
+	 * `allowedLocalImports` (repo-relative paths; a listed one the file no longer imports is stale).
+	 */
+	pinnedFileProblems(file: string, allowedLocalImports?: readonly string[]): string[];
 }
 
 type FnLike =
@@ -381,6 +477,38 @@ export function createAnalysis(files: string[], overlay: Record<string, string> 
 		return sf;
 	}
 
+	/**
+	 * Null when the function's parameter list is exactly the event: ONE parameter, no rest, no
+	 * initialiser on it or anywhere inside its destructuring pattern, no computed key. Parameters
+	 * (their defaults, initialisers, the keys of a pattern) run before the body: an assignment there
+	 * (`_ = (event = forged)`, `{ cookies = (x = 1) }`) is not a call node yet changes what the guard
+	 * reads, and a getter or `toString` behind a computed key runs unseen. Loads and actions take the
+	 * event; nothing they do needs a default.
+	 */
+	function eventParameterProblem(fn: FnLike, what: 'load' | 'action'): string | null {
+		const [first, ...rest] = fn.parameters;
+		const lead = `the parameters of a ${what} must be exactly the event, with no default, rest, initialiser or computed key`;
+		if (!first) return null;
+		if (rest.length > 0) return `${lead}: a parameter after the event (${short(rest[0])})`;
+		if (first.dotDotDotToken) return `${lead}: a rest parameter (${short(first)})`;
+		if (first.initializer) return `${lead}: an initialiser on the event (${short(first)})`;
+		const inPattern = (name: ts.BindingName): string | null => {
+			if (ts.isIdentifier(name)) return null;
+			for (const el of name.elements) {
+				if (ts.isOmittedExpression(el)) continue;
+				if (el.initializer) return `a default in the event pattern (${short(el)})`;
+				if (el.propertyName && ts.isComputedPropertyName(el.propertyName)) {
+					return `a computed key in the event pattern (${short(el)})`;
+				}
+				const nested = inPattern(el.name);
+				if (nested) return nested;
+			}
+			return null;
+		};
+		const bad = inPattern(first.name);
+		return bad ? `${lead}: ${bad}` : null;
+	}
+
 	/* ------------------------------------- loads ------------------------------------ */
 
 	/** `await parent()` of the load's own event, as an expression? */
@@ -402,6 +530,8 @@ export function createAnalysis(files: string[], overlay: Record<string, string> 
 	function loadFnProblems(fn: FnLike): string[] {
 		const start = 'load must start with `await parent()` (of its own event)';
 		if (!fn.body || !ts.isBlock(fn.body)) return [`${start}: it has an expression body`];
+		const parameterProblem = eventParameterProblem(fn, 'load');
+		if (parameterProblem) return [`${parameterProblem} (it would run before \`await parent()\`)`];
 		for (const p of fn.parameters) {
 			const run = firstRun(p);
 			if (run)
@@ -542,50 +672,104 @@ export function createAnalysis(files: string[], overlay: Record<string, string> 
 	): string | null {
 		if (!arg) return 'it is missing';
 		const v = unwrap(arg);
-		if (ts.isObjectLiteralExpression(v)) {
-			let hidden: ts.Node | null = null;
-			const visit = (n: ts.Node): void => {
-				if (hidden) return;
-				if (isFunctionBoundary(n)) {
-					hidden = n;
-					return;
-				}
-				ts.forEachChild(n, visit);
-			};
-			ts.forEachChild(v, visit);
-			return hidden
-				? `an object literal must not contain a function or accessor (${short(hidden)}): it can run when the values are read`
-				: null;
-		}
-		if (!isFnLike(v) || ts.isFunctionDeclaration(v)) {
-			return `it must be an object literal or a function that only reads the form, not \`${short(v)}\``;
-		}
-		for (const p of v.parameters) {
-			const run = firstRun(p);
-			if (run) return `a call in the parameters (${short(run.node)}) is not a form read`;
-		}
-		const allowed = new Set<ts.Node>();
-		const collect = (n: ts.Node): void => {
-			if (isFunctionBoundary(n)) return;
-			if (
-				ts.isCallExpression(n) &&
-				(isFormRead(n.expression, formData) ||
-					isGlobalString(n.expression) ||
-					isPinnedReaderCall(n, formData))
-			)
-				allowed.add(n);
-			ts.forEachChild(n, collect);
+		const shapes =
+			"the values are an object literal, or an arrow function with no parameters whose body is exactly such an object literal (or one return of it) or a pinned field reader applied to the form; the property values are string / number / boolean / null literals, <fd>.get('<literal>'), <fd>.getAll('<literal>'), String(<fd>.get('<literal>') ?? '') or a pinned field reader applied to <fd>";
+
+		/** A literal that evaluates to itself: no getter, no `toString`, nothing to run. */
+		const isLiteral = (e: ts.Node): boolean => {
+			const x = unwrap(e);
+			return (
+				ts.isStringLiteral(x) ||
+				ts.isNoSubstitutionTemplateLiteral(x) ||
+				ts.isNumericLiteral(x) ||
+				x.kind === ts.SyntaxKind.TrueKeyword ||
+				x.kind === ts.SyntaxKind.FalseKeyword ||
+				x.kind === ts.SyntaxKind.NullKeyword ||
+				(ts.isPrefixUnaryExpression(x) &&
+					x.operator === ts.SyntaxKind.MinusToken &&
+					ts.isNumericLiteral(x.operand))
+			);
 		};
-		if (v.body) collect(v.body);
-		const run = v.body ? firstRun(v.body, allowed) : null;
-		return run
-			? `${run.kind === 'await' ? 'an await' : 'the call'} \`${short(run.node)}\` is not a read of the form (only <fd>.get, <fd>.getAll, String and the pinned field readers are allowed)`
-			: null;
+		const isKeyLiteral = (e: ts.Node): boolean =>
+			ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e);
+		/** `<fd>.get('<literal>')` / `<fd>.getAll('<literal>')` on exactly the guard's FormData. */
+		const isLiteralFormRead = (e: ts.Node): boolean => {
+			const x = unwrap(e);
+			return (
+				ts.isCallExpression(x) &&
+				isFormRead(x.expression, formData) &&
+				x.arguments.length === 1 &&
+				isKeyLiteral(unwrap(x.arguments[0]!))
+			);
+		};
+		/** The pinned reader applied to the FormData; an element-access callee has a plain index. */
+		const isPinnedRead = (e: ts.Node): boolean => {
+			const x = unwrap(e);
+			if (!ts.isCallExpression(x) || !isPinnedReaderCall(x, formData)) return false;
+			const callee = unwrap(x.expression);
+			if (!ts.isElementAccessExpression(callee)) return true;
+			const index = unwrap(callee.argumentExpression);
+			return ts.isIdentifier(index) || isKeyLiteral(index);
+		};
+		const isStringOfFormRead = (e: ts.Node): boolean => {
+			const x = unwrap(e);
+			if (!ts.isCallExpression(x) || !isGlobalString(x.expression) || x.arguments.length !== 1) {
+				return false;
+			}
+			const a = unwrap(x.arguments[0]!);
+			if (isLiteralFormRead(a)) return true;
+			return (
+				ts.isBinaryExpression(a) &&
+				a.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken &&
+				isLiteralFormRead(a.left) &&
+				isKeyLiteral(unwrap(a.right))
+			);
+		};
+		const propertyValueOk = (e: ts.Node): boolean =>
+			isLiteral(e) || isLiteralFormRead(e) || isStringOfFormRead(e) || isPinnedRead(e);
+
+		const objectProblem = (obj: ts.ObjectLiteralExpression): string | null => {
+			for (const p of obj.properties) {
+				if (!ts.isPropertyAssignment(p)) {
+					return `a ${ts.SyntaxKind[p.kind]} (${short(p)}) can run code when the values are read; ${shapes}`;
+				}
+				if (
+					!(ts.isIdentifier(p.name) || ts.isStringLiteral(p.name) || ts.isNumericLiteral(p.name))
+				) {
+					return `a computed property name (${short(p)}) can run code when the values are read; ${shapes}`;
+				}
+				if (!propertyValueOk(p.initializer)) {
+					return `the property \`${short(p)}\` is not a literal or a form read: it could run code when the values are read; ${shapes}`;
+				}
+			}
+			return null;
+		};
+
+		if (ts.isObjectLiteralExpression(v)) return objectProblem(v);
+		if (!ts.isArrowFunction(v)) return `${shapes}; not \`${short(v)}\``;
+		if (v.parameters.length > 0) {
+			return `an arrow function with parameters (${short(v)}): their defaults run when it is called; ${shapes}`;
+		}
+		if (ts.getModifiers(v)?.length) return `an async arrow function (${short(v)}); ${shapes}`;
+		let body: ts.Node = v.body;
+		if (ts.isBlock(body)) {
+			const only = body.statements.length === 1 ? body.statements[0] : undefined;
+			if (!only || !ts.isReturnStatement(only) || !only.expression) {
+				return `an arrow function with a block body that is not one return (${short(v)}); ${shapes}`;
+			}
+			body = only.expression;
+		}
+		const result = unwrap(body);
+		if (ts.isObjectLiteralExpression(result)) return objectProblem(result);
+		if (isPinnedRead(result)) return null;
+		return `the arrow function returns \`${short(result)}\`; ${shapes}`;
 	}
 
 	function actionFnProblems(fn: FnLike): { problems: string[]; guard: ActionReport['guard'] } {
 		const fail = (p: string) => ({ problems: [p], guard: null as ActionReport['guard'] });
 		// Parameters (and their defaults) run before the body, so before everything the contract reads.
+		const parameterProblem = eventParameterProblem(fn, 'action');
+		if (parameterProblem) return fail(`${parameterProblem} (it would run before the guard)`);
 		for (const p of fn.parameters) {
 			const run = firstRun(p);
 			if (run) {
@@ -645,7 +829,14 @@ export function createAnalysis(files: string[], overlay: Record<string, string> 
 				'the second argument of the guard must be the FormData read by `const fd = await <event>.request.formData();` in the statement before it'
 			);
 		}
-		for (const a of args) {
+		const valuesIndex = kind === 'authoriseAction' ? 3 : 2;
+		// An object literal or arrow function as the values is held to a WHITELISTED shape below (form
+		// reads are calls, and are allowed there); anything else may not run at all.
+		for (const [index, a] of args.entries()) {
+			const u = unwrap(a);
+			if (index === valuesIndex && (ts.isObjectLiteralExpression(u) || ts.isArrowFunction(u))) {
+				continue;
+			}
 			const run = firstRun(a);
 			if (run) {
 				return fail(
@@ -653,7 +844,6 @@ export function createAnalysis(files: string[], overlay: Record<string, string> 
 				);
 			}
 		}
-		const valuesIndex = kind === 'authoriseAction' ? 3 : 2;
 		const valuesProblem = valuesArgumentProblem(args[valuesIndex], formData);
 		if (valuesProblem) return fail(`the values argument of the guard: ${valuesProblem}`);
 		if (kind === 'authoriseAction' && (!args[2] || !permissionOk(args[2]))) {
@@ -964,7 +1154,23 @@ export function createAnalysis(files: string[], overlay: Record<string, string> 
 
 	/* --------------------------------- placement, callees --------------------------------- */
 
+	/** Every file under src/routes: the real tree plus the in-memory overlay. */
+	let realRouteFiles: string[] | undefined;
+	function routeFiles(): string[] {
+		realRouteFiles ??= listFiles(`${ROOT}/src/routes`);
+		return [
+			...realRouteFiles,
+			...[...ov.keys()].filter((k) => k.startsWith(`${ROOT}/src/routes/`))
+		];
+	}
+
 	function placementProblems(file: string, opts: { guardChain?: boolean } = {}): string[] {
+		// A Kit layout reset drops every layout below its target, server loads included: the
+		// directory ancestors below say nothing once one exists (see `layoutResetProblems`).
+		return [...layoutResetProblems(routeFiles()), ...placementOnly(file, opts)];
+	}
+
+	function placementOnly(file: string, opts: { guardChain?: boolean }): string[] {
 		const f = norm(file);
 		const appDir = `${ROOT}/src/routes/(app)`;
 		if (!f.startsWith(`${appDir}/`)) {
@@ -1018,8 +1224,131 @@ export function createAnalysis(files: string[], overlay: Record<string, string> 
 		return [...found].sort();
 	}
 
+	/* ------------------------------ what a pinned file may import ------------------------------ */
+
+	const KIT_VIRTUAL = /^\$(app|env|service-worker)(\/|$)/;
+	const isLocalSpecifierText = (spec: string): boolean =>
+		/^[./#]/.test(spec) || (spec.startsWith('$') && !KIT_VIRTUAL.test(spec));
+
+	function pinnedFileProblems(file: string, allowedLocalImports: readonly string[] = []): string[] {
+		const sf = sourceFileOf(file);
+		const serverDir = `${ROOT}/src/lib/server/`;
+		const problems: string[] = [];
+		const used = new Set<string>();
+		const resolved = (spec: string): string | undefined => {
+			const r = ts.resolveModuleName(spec, sf.fileName, options, host).resolvedModule
+				?.resolvedFileName;
+			return r ? norm(r) : undefined;
+		};
+		const classify = (spec: string): 'server' | 'local' | 'external' => {
+			const r = resolved(spec);
+			if (spec.startsWith('#lib/server/') || r?.startsWith(serverDir)) return 'server';
+			if (isLocalSpecifierText(spec)) return 'local';
+			if (r && r.startsWith(`${ROOT}/`) && !r.includes('/node_modules/')) return 'local';
+			return 'external';
+		};
+		const keyOf = (spec: string): string => {
+			const r = resolved(spec);
+			return r && r.startsWith(`${ROOT}/`) ? rel(r) : spec;
+		};
+		const needPin = (spec: string, how: string): void => {
+			const key = keyOf(spec);
+			used.add(key);
+			if (!allowedLocalImports.includes(key)) {
+				problems.push(
+					`${how} of the local module ${key} is not pinned: it can reach Go from outside src/lib/server; list it in the file's pin with a reason (and review it)`
+				);
+			}
+		};
+		const specifierOf = (e: ts.Expression | undefined): string | undefined =>
+			e && ts.isStringLiteralLike(e) ? e.text : undefined;
+
+		for (const s of sf.statements) {
+			if (ts.isImportDeclaration(s)) {
+				const spec = specifierOf(s.moduleSpecifier);
+				if (spec === undefined) continue;
+				const clause = s.importClause;
+				const named = clause?.namedBindings;
+				const typeOnly =
+					!!clause &&
+					(clause.isTypeOnly ||
+						(!clause.name &&
+							!!named &&
+							ts.isNamedImports(named) &&
+							named.elements.length > 0 &&
+							named.elements.every((el) => el.isTypeOnly)));
+				if (typeOnly) continue;
+				const kind = classify(spec);
+				if (kind === 'external') continue;
+				if (named && ts.isNamespaceImport(named)) {
+					problems.push(
+						`a namespace import of ${spec} hides which of its exports the file uses (\`ns['name']\` is no direct reference): import the names`
+					);
+					continue;
+				}
+				if (kind === 'local') needPin(spec, 'a value import');
+			} else if (ts.isExportDeclaration(s) && s.moduleSpecifier && !s.isTypeOnly) {
+				const spec = specifierOf(s.moduleSpecifier);
+				if (spec === undefined) continue;
+				const kind = classify(spec);
+				if (kind === 'external') continue;
+				if (kind === 'server') {
+					if (!s.exportClause || ts.isNamespaceExport(s.exportClause)) {
+						problems.push(
+							`\`export *\` from ${spec} hides which of its exports the file re-exports`
+						);
+					}
+				} else needPin(spec, 'a re-export');
+			} else if (
+				ts.isImportEqualsDeclaration(s) &&
+				ts.isExternalModuleReference(s.moduleReference) &&
+				!s.isTypeOnly
+			) {
+				const spec = specifierOf(s.moduleReference.expression);
+				if (spec === undefined) {
+					problems.push('an `import x = require(<computed>)` hides what it loads');
+					continue;
+				}
+				const kind = classify(spec);
+				if (kind === 'server') problems.push(`\`import x = require\` of ${spec} hides its exports`);
+				else if (kind === 'local') needPin(spec, 'an `import = require`');
+			}
+		}
+		const visit = (n: ts.Node): void => {
+			if (ts.isTypeNode(n)) return;
+			if (ts.isCallExpression(n)) {
+				if (n.expression.kind === ts.SyntaxKind.ImportKeyword) {
+					const spec = specifierOf(n.arguments[0]);
+					if (spec === undefined) {
+						problems.push(
+							`a dynamic import with a computed specifier (${short(n)}) loads a module the pin cannot name`
+						);
+					} else {
+						const kind = classify(spec);
+						if (kind === 'server') {
+							problems.push(
+								`a dynamic import of ${spec} hides which of its exports the file uses (a computed key reads any of them)`
+							);
+						} else if (kind === 'local') needPin(spec, 'a dynamic import');
+					}
+				} else if (ts.isIdentifier(n.expression) && n.expression.text === 'require') {
+					problems.push(`\`require(...)\` (${short(n)}) loads a module the pin cannot name`);
+				}
+			}
+			ts.forEachChild(n, visit);
+		};
+		visit(sf);
+		for (const key of allowedLocalImports) {
+			if (!used.has(key)) {
+				problems.push(`the pin lists ${key}, which the file no longer imports (remove it)`);
+			}
+		}
+		return problems;
+	}
+
 	return {
 		program,
+		pinnedFileProblems,
 		loadProblems,
 		actionReports,
 		moduleProblems,

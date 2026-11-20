@@ -9,22 +9,36 @@
  * reviews found (tests/support/server-file-offenders.ts), each refused for a stated reason, so a
  * walker that stops catching a shape fails here.
  */
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createAnalysis, type Analysis } from '../../support/server-file-guards.ts';
+import {
+	PINNED_LAYOUT_RESETS,
+	contentHash,
+	createAnalysis,
+	kitModuleFileProblems,
+	layoutResetProblems,
+	listFiles,
+	type Analysis
+} from '../../support/server-file-guards.ts';
 import {
 	ACTION_OK,
 	ACTION_REFUSED,
 	CALLEE_CASES,
+	KIT_FILES_OK,
+	KIT_FILES_REFUSED,
 	LOAD_OK,
 	LOAD_REFUSED,
 	MODULE_OK,
 	MODULE_OK_MORE,
 	MODULE_REFUSED,
 	MODULE_REFUSED_MORE,
+	PINNED_OK,
+	PINNED_REFUSED,
 	PLACEMENT_OK,
 	PLACEMENT_REFUSED,
+	RESET_OK,
+	RESET_REFUSED,
 	SELF_OK,
 	SELF_REFUSED,
 	SUPPORT_MODULES,
@@ -182,6 +196,66 @@ const UNGUARDED_CALLEES: Record<string, Record<string, string>> = {
 };
 
 /**
+ * The LOCAL modules (outside `src/lib/server`) each UNGUARDED file may import as values, EXACTLY
+ * (repo-relative path with the reason). A helper there can call Go without any `#lib/server` reference,
+ * so the callee pin above cannot see it: a new local value import fails until it is listed here.
+ * Namespace and dynamic imports of `#lib/server/**` are refused outright (see `pinnedFileProblems`).
+ */
+const UNGUARDED_LOCAL_IMPORTS: Record<string, Record<string, string>> = {
+	'(app)/+layout.server.ts': {
+		'src/lib/config/nav.ts':
+			'The nav table the layout filters by capabilities: pure data and predicates.',
+		'src/lib/api/capabilities-refresh.ts':
+			'Only the CAPABILITIES_DEPENDENCY constant (the layout depends on it).',
+		'src/lib/api/scope-header.ts': 'Only the SCOPE_DEPENDENCY constant and the operator path test.'
+	},
+	'(auth)/signin/+page.server.ts': {
+		'src/lib/api/errors.ts': 'Error code constants and classes: no I/O.',
+		'src/lib/features/auth/schemas.ts': 'Zod schemas of the login form and answer: no I/O.'
+	},
+	'(auth)/forgot-password/+page.server.ts': {
+		'src/lib/api/request-schema.ts': 'Zod request schemas: no I/O.'
+	},
+	'(auth)/reset-password/+page.server.ts': {
+		'src/lib/api/request-schema.ts': 'Zod request schemas: no I/O.'
+	},
+	'auth/confirm-email-change/+server.ts': {
+		'src/lib/features/auth/schemas.ts': 'Zod schemas of the confirmation answer: no I/O.'
+	},
+	'api/[...path]/+server.ts': {
+		'src/lib/api/errors.ts': 'Error code constants: no I/O.',
+		'src/lib/api/scope-header.ts':
+			'The scope-context header and the scope_changed answer constants.'
+	},
+	'api/operator/scope/+server.ts': {
+		'src/lib/api/errors.ts': 'Error code constants: no I/O.',
+		'src/lib/api/scope-header.ts': 'The scope_changed answer constants.',
+		'src/lib/config/nav.ts': 'The nav table the permission check reads: pure data and predicates.'
+	}
+};
+
+/**
+ * The reviewed content hash of every UNGUARDED file. Two limits of the pins above are inherent: a
+ * file pinned to `goFetch` may add a second Go call unnoticed, and the proxy's global `fetch` is not
+ * pinned. What covers them is a person reading the file when it changes: any edit to one of these files
+ * fails `the reviewed hash` test until the file has been read (every call it makes, every cookie it
+ * sets) and the hash below is updated on purpose, in the same commit. Never update it from the failure
+ * output alone.
+ */
+const UNGUARDED_REVIEWED: Record<string, string> = {
+	'+layout.server.ts': 'a3aa6cf586cade7fa9c7c830',
+	'+page.server.ts': 'd584880de3ad98cfcd66b155',
+	'(app)/+layout.server.ts': '93a6ed11812ad24b97dcb985',
+	'(auth)/signin/+page.server.ts': '790ecc9ce9c495203e9e71ef',
+	'(auth)/forgot-password/+page.server.ts': '234d7157d19409c9ddf6ad3b',
+	'(auth)/reset-password/+page.server.ts': '3e7321dc0a8fc0387c411bbd',
+	'auth/logout/+server.ts': 'bcd677fad56c1d16ab658be0',
+	'auth/confirm-email-change/+server.ts': '05096bba008b2810c60afd42',
+	'api/[...path]/+server.ts': '30cf34a801cdfaf57e1d5564',
+	'api/operator/scope/+server.ts': '38bfa0d8e667c367d3ca291d'
+};
+
+/**
  * Held files that are under (app) but NOT under a guardAppRoute layout, EXACTLY, with the reason. The
  * location rule (under src/routes/(app)/) has no exception.
  */
@@ -244,8 +318,13 @@ const calleeFiles = CALLEE_CASES.map((c, i) => ({
 	...c,
 	file: join(SYNTH_DIR, `callee-${i}.server.ts`)
 }));
+const pinnedCases = [...PINNED_OK, ...PINNED_REFUSED].map((c, i) => ({
+	...c,
+	file: join(SYNTH_DIR, `pinned-${i}.server.ts`)
+}));
 const OVERLAY: Record<string, string> = {
 	...SUPPORT_MODULES,
+	...Object.fromEntries(pinnedCases.map((c) => [c.file, c.src])),
 	...placementFiles,
 	...Object.fromEntries(calleeFiles.map((c) => [c.file, c.src])),
 	...Object.fromEntries(
@@ -317,6 +396,55 @@ describe('unguarded files: the server functions each may reference are pinned', 
 			for (const [callee, reason] of Object.entries(callees)) {
 				expect(reason.length, `${name} ${callee}`).toBeGreaterThan(10);
 			}
+		}
+	});
+});
+
+describe('unguarded files: what they may import, and the reviewed hash', () => {
+	it.each(Object.keys(UNGUARDED))(
+		'%s: no namespace / dynamic server import, local imports pinned',
+		(name) => {
+			const pinned = Object.keys(UNGUARDED_LOCAL_IMPORTS[name] ?? {}).sort();
+			expect(an.pinnedFileProblems(join(ROUTES_DIR, name), pinned), name).toEqual([]);
+		}
+	);
+
+	it('every local import pin has a reason', () => {
+		for (const [name, imports] of Object.entries(UNGUARDED_LOCAL_IMPORTS)) {
+			expect(Object.keys(UNGUARDED), name).toContain(name);
+			for (const [path, reason] of Object.entries(imports)) {
+				expect(existsSync(join(process.cwd(), path)), `${name} ${path} exists`).toBe(true);
+				expect(reason.length, `${name} ${path}`).toBeGreaterThan(10);
+			}
+		}
+	});
+
+	it('the reviewed hash: any edit to an unguarded file is acknowledged on purpose', () => {
+		expect(Object.keys(UNGUARDED_REVIEWED).sort()).toEqual(Object.keys(UNGUARDED).sort());
+		for (const [name, reviewed] of Object.entries(UNGUARDED_REVIEWED)) {
+			const now = contentHash(readFileSync(join(ROUTES_DIR, name), 'utf8'));
+			expect(
+				now,
+				`${name} changed since it was reviewed. Read it (every Go call, every cookie, every import), then set its hash in UNGUARDED_REVIEWED to ${now}`
+			).toBe(reviewed);
+		}
+	});
+});
+
+describe('files Kit routes: .js modules and layout resets cannot hide a server file', () => {
+	it('no .js route module or hooks file under src (Kit routes .js too; the walkers read .ts)', () => {
+		const files = listFiles(join(process.cwd(), 'src')).map((f) =>
+			relative(process.cwd(), f).split(sep).join('/')
+		);
+		expect(files.length).toBeGreaterThan(100);
+		expect(kitModuleFileProblems(files)).toEqual([]);
+	});
+
+	it('no Kit layout reset (+page@*.svelte, +layout@*.svelte) under src/routes unless pinned with a reason', () => {
+		expect(layoutResetProblems(listFiles(ROUTES_DIR))).toEqual([]);
+		for (const [file, reason] of Object.entries(PINNED_LAYOUT_RESETS)) {
+			expect(existsSync(join(process.cwd(), file)), file).toBe(true);
+			expect(reason.length, file).toBeGreaterThan(20);
 		}
 	});
 });
@@ -456,6 +584,82 @@ describe('walker self-test: the server functions a file references', () => {
 			expect(an.serverCallees(file)).toEqual(callees);
 		}
 	);
+});
+
+describe('walker self-test: pinned files', () => {
+	it.each(pinnedCases.filter((c) => !c.reason).map((c) => [c.name, c.file, c.allowed] as const))(
+		'accepts %s',
+		(_n, file, allowed) => {
+			expect(an.pinnedFileProblems(file, allowed)).toEqual([]);
+		}
+	);
+
+	it.each(
+		pinnedCases.filter((c) => c.reason).map((c) => [c.name, c.file, c.allowed, c.reason] as const)
+	)('refuses %s', (_n, file, allowed, reason) => {
+		const problems = an.pinnedFileProblems(file, allowed);
+		expect(problems).not.toEqual([]);
+		expect(problems.join(' | ')).toContain(reason);
+	});
+
+	it('the content hash ignores line endings and changes with any edit', () => {
+		expect(contentHash('a\r\nb\r\n')).toBe(contentHash('a\nb\n'));
+		expect(contentHash('a\nb\n')).not.toBe(contentHash('a\nb \n'));
+		expect(contentHash('a\nb\n')).toMatch(/^[0-9a-f]{24}$/);
+	});
+});
+
+describe('walker self-test: Kit files', () => {
+	it.each(KIT_FILES_OK)('accepts %s', (path) => {
+		expect(kitModuleFileProblems([path])).toEqual([]);
+	});
+
+	it.each(KIT_FILES_REFUSED)('refuses %s', (path) => {
+		const problems = kitModuleFileProblems([path]);
+		expect(problems).not.toEqual([]);
+		expect(problems.join(' | ')).toContain('.js');
+	});
+});
+
+describe('walker self-test: layout resets', () => {
+	const local = (files: Record<string, string>) =>
+		createAnalysis([], { ...SUPPORT_MODULES, ...files });
+
+	it.each(RESET_REFUSED.map((c) => [c.name, c.files] as const))(
+		'refuses %s (the placement check sees it)',
+		(_n, files) => {
+			const first = Object.keys(files).find((f) => f.endsWith('+page.server.ts'))!;
+			const problems = local(files).placementProblems(first);
+			expect(problems).not.toEqual([]);
+			expect(problems.join(' | ')).toContain('layout reset');
+		}
+	);
+
+	it.each(RESET_OK.map((c) => [c.name, c.files] as const))('accepts %s', (_n, files) => {
+		const first = Object.keys(files).find((f) => f.endsWith('+page.server.ts'))!;
+		expect(local(files).placementProblems(first)).toEqual([]);
+	});
+
+	it('a pinned reset (with a reason) is allowed, one without a reason is not', () => {
+		const path = join(ROUTES_DIR, '(app)/x/+page@(app).svelte');
+		expect(layoutResetProblems([path])).not.toEqual([]);
+		expect(layoutResetProblems([path], { '(app)': 'x' })).not.toEqual([]);
+		expect(
+			layoutResetProblems([path], {
+				'src/routes/(app)/x/+page@(app).svelte': 'A print page that needs no shell: reviewed.'
+			})
+		).toEqual([]);
+	});
+
+	it('an ordinary page and layout are not resets', () => {
+		expect(
+			layoutResetProblems([
+				join(ROUTES_DIR, '(app)/+page.svelte'),
+				join(ROUTES_DIR, '(app)/+layout.svelte'),
+				join(ROUTES_DIR, '(app)/a@b/+page.svelte')
+			])
+		).toEqual([]);
+	});
 });
 
 describe('walker self-test: actions', () => {

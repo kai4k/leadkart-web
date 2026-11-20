@@ -65,8 +65,7 @@ export const LOAD_OK: Offender[] = toList({
 	'an alias of the real guard': `${PRELUDE}\nconst g = guardAppRoute; export const load = g;`,
 	'a load that returns data after the guard': loadSrc('await parent(); return { a: 1 };'),
 	'event.parent() of the load event': `${PRELUDE}\nexport async function load(event) { await event.parent(); await goFetch(event.cookies, '/v1/x'); }`,
-	'a function declaration with a destructured parent': `${PRELUDE}\nexport async function load({ parent }) { await parent(); await goFetch(); }`,
-	'a default parameter without a call': loadSrc('await parent();', '', '{ parent }, extra = 1')
+	'a function declaration with a destructured parent': `${PRELUDE}\nexport async function load({ parent }) { await parent(); await goFetch(); }`
 });
 
 export const LOAD_REFUSED: Offender[] = toList({
@@ -133,6 +132,32 @@ export const LOAD_REFUSED: Offender[] = toList({
 	],
 	'a call in a destructuring default of the event': [
 		loadSrc('await parent();', '', '{ parent, cookies = goFetch() }'),
+		'before'
+	],
+	// Fix round 13 (4): ANY second parameter or initialiser, with or without a call. The walker that
+	// only looked for calls in the parameters accepted every one of these.
+	'(4) a second parameter whose default assigns parent (no call)': [
+		loadSrc('await parent();', '', '{ parent, cookies }, _ = (parent = async () => ({}))'),
+		'before'
+	],
+	'(4) a plain second parameter with a default': [
+		loadSrc('await parent();', '', '{ parent }, extra = 1'),
+		'before'
+	],
+	'(4) an initialiser on the event that assigns a forged one (no call)': [
+		loadSrc('await parent();', 'let g: any;', '{ parent } = (g = { parent: async () => ({}) })'),
+		'before'
+	],
+	'(4) a destructuring default in the event pattern that assigns (no call)': [
+		loadSrc('await parent();', 'let x: any;', '{ parent, cookies = (x = 1) }'),
+		'before'
+	],
+	'(4) a computed key in the event pattern': [
+		loadSrc('await parent();', 'const k = "cookies";', '{ parent, [k]: c }'),
+		'before'
+	],
+	'(4) a second parameter without a default': [
+		loadSrc('await parent();', '', '{ parent }, second'),
 		'before'
 	],
 	// The shapes the review found past the old walker: each hides a Go call before the guard.
@@ -349,6 +374,12 @@ export const ACTION_OK: Offender[] = toList({
 	'(11) values: a function with a block body and no calls': actionSrc(
 		`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, () => { return { a: 1 }; }); if (refused) return refused; ${GO}`
 	),
+	'(5) values: an object literal of literals and form reads': actionSrc(
+		`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, { a: fd.get('a'), b: fd.getAll('b'), c: 'x', d: 1, e: true, f: null, g: -1, h: String(fd.get('h') ?? '') }); if (refused) return refused; ${GO}`
+	),
+	'(5) values: a no-parameter arrow whose block body is one return of such a literal': actionSrc(
+		`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, () => { return { a: fd.get('a') }; }); if (refused) return refused; ${GO}`
+	),
 	'a permission from the ACTION table': actionSrc(
 		`${FD} const refused = await authoriseAction(event, fd, ACTION.roleCreate, () => ({})); if (refused) return refused; ${GO}`
 	),
@@ -373,6 +404,13 @@ export const SELF_REFUSED: Offender[] = toList({
 		actionSrc(
 			`${FD} const refused = await authoriseSelfService(event, fd, () => readIt(fd)); if (refused) return refused; ${GO}`,
 			'const readIt = (f) => ({});'
+		),
+		'values'
+	],
+	'(5m) the self-service values spreads an object (a getter runs)': [
+		actionSrc(
+			`${FD} const refused = await authoriseSelfService(event, fd, () => ({ ...tricky })); if (refused) return refused; ${GO}`,
+			'const tricky = { get a() { return 1; } };'
 		),
 		'values'
 	],
@@ -531,6 +569,106 @@ export const ACTION_REFUSED: Offender[] = toList({
 	'(4c) a call in a default parameter of a method action': [
 		`${PRELUDE}\nexport const actions = { async a(event, _ = goFetch(event.cookies, '/v1/x')) { ${FD} ${AUTH} } };`,
 		'parameters'
+	],
+	// Fix round 13 (4): parameters after the event, and initialisers in the event (no call needed).
+	'(4d) a second parameter whose default assigns the event (forges the route)': [
+		actionSrc(
+			`${FD} ${AUTH} ${GO}`,
+			'',
+			'event, _ = (event = { ...event, route: { id: "/(app)/dashboard" } })'
+		),
+		'parameters'
+	],
+	'(4e) a plain second parameter': [
+		actionSrc(`${FD} ${AUTH} ${GO}`, '', 'event, extra'),
+		'parameters'
+	],
+	'(4f) an initialiser on the event parameter': [
+		actionSrc(`${FD} ${AUTH} ${GO}`, 'const forged: any = {};', 'event = forged'),
+		'parameters'
+	],
+	'(4g) a rest event parameter': [actionSrc(`${FD} ${AUTH} ${GO}`, '', '...event'), 'parameters'],
+	// Fix round 13 (5): the values are WHITELISTED in shape. Each of these was accepted by the walker
+	// that only looked for call nodes: an implicit call (getter, toString, spread) is not one.
+	'(5a) a spread in the values object': [
+		actionSrc(
+			`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, () => ({ ...tricky })); if (refused) return refused; ${GO}`,
+			'const tricky = { get a() { return 1; } };'
+		),
+		'values'
+	],
+	'(5b) a template literal with an expression (toString runs)': [
+		actionSrc(
+			`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, () => ({ a: \`\${tricky}\` })); if (refused) return refused; ${GO}`,
+			'const tricky = { toString() { return "x"; } };'
+		),
+		'values'
+	],
+	'(5c) a property read on another object (a getter runs)': [
+		actionSrc(
+			`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, () => ({ a: tricky.a })); if (refused) return refused; ${GO}`,
+			'const tricky = { get a() { return 1; } };'
+		),
+		'values'
+	],
+	'(5d) a computed key (toString runs)': [
+		actionSrc(
+			`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, () => ({ [tricky as any]: 1 })); if (refused) return refused; ${GO}`,
+			'const tricky = { toString() { return "x"; } };'
+		),
+		'values'
+	],
+	'(5e) a shorthand property': [
+		actionSrc(
+			`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, () => ({ tricky })); if (refused) return refused; ${GO}`,
+			'const tricky = 1;'
+		),
+		'values'
+	],
+	'(5f) an arrow function with a parameter': [
+		actionSrc(
+			`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, (x) => ({ a: 1 })); if (refused) return refused; ${GO}`
+		),
+		'values'
+	],
+	'(5g) an arrow function whose parameter default is a getter read': [
+		actionSrc(
+			`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, (x = tricky.a) => ({})); if (refused) return refused; ${GO}`,
+			'const tricky = { get a() { return 1; } };'
+		),
+		'values'
+	],
+	'(5h) a form read with a non-literal key (toString runs)': [
+		actionSrc(
+			`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, () => ({ a: fd.get(tricky as any) })); if (refused) return refused; ${GO}`,
+			'const tricky = { toString() { return "x"; } };'
+		),
+		'values'
+	],
+	'(5i) String of a non-form value (toString runs)': [
+		actionSrc(
+			`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, () => ({ a: String(tricky) })); if (refused) return refused; ${GO}`,
+			'const tricky = { toString() { return "x"; } };'
+		),
+		'values'
+	],
+	'(5j) an arrow function with a block body of more than one statement': [
+		actionSrc(
+			`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, () => { const a = 1; return { a: 1 }; }); if (refused) return refused; ${GO}`
+		),
+		'values'
+	],
+	'(5k) an async arrow function': [
+		actionSrc(
+			`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, async () => ({ a: 1 })); if (refused) return refused; ${GO}`
+		),
+		'values'
+	],
+	'(5l) a nested object in the values': [
+		actionSrc(
+			`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, () => ({ a: { b: 1 } })); if (refused) return refused; ${GO}`
+		),
+		'values'
 	],
 	// finding 11: the second argument and the values
 	'(11a) the second argument is an object literal, not the form data read before': [
@@ -783,5 +921,167 @@ import type { goFetch as G } from '#lib/server/go.ts';
 export type T = typeof G;
 export const x = (c: Cookies) => c;`,
 		callees: []
+	}
+];
+
+/**
+ * Kit layout resets (fix round 13, item 2): `+page@(app).svelte` / `+layout@.svelte` make Kit drop
+ * every layout below the `@` target, server loads included, so a section's `guardAppRoute` never runs
+ * although the file's directory ancestors still show it. Each case is the files of one route (in
+ * memory; `.svelte` files are only listed, never parsed). The placement check must refuse the first
+ * file because a reset sits in its directory chain (or anywhere under src/routes).
+ */
+export interface ResetCase {
+	name: string;
+	files: Record<string, string>;
+}
+const resetRoute = (dir: string, svelteName: string): ResetCase['files'] => ({
+	[join(dir, '+page.server.ts')]: GUARDED_LOAD,
+	[join(dir, '+layout.server.ts')]: GUARD_LAYOUT,
+	[join(dir, svelteName)]: ''
+});
+export const RESET_REFUSED: ResetCase[] = [
+	{
+		name: 'a page that resets to the (app) layout, beside a guarded server load',
+		files: resetRoute(join(SYNTH_DIR, 'print'), '+page@(app).svelte')
+	},
+	{
+		name: 'a page that resets to the root layout',
+		files: resetRoute(join(SYNTH_DIR, 'print-root'), '+page@.svelte')
+	},
+	{
+		name: 'a layout that resets to a named layout',
+		files: resetRoute(join(SYNTH_DIR, 'print-layout'), '+layout@(app).svelte')
+	},
+	{
+		name: 'a reset in a directory ABOVE the held file',
+		files: {
+			[join(SYNTH_DIR, 'above/deep/+page.server.ts')]: GUARDED_LOAD,
+			[join(SYNTH_DIR, 'above/+layout.server.ts')]: GUARD_LAYOUT,
+			[join(SYNTH_DIR, 'above/+layout@.svelte')]: ''
+		}
+	}
+];
+export const RESET_OK: ResetCase[] = [
+	{
+		name: 'a page with an ordinary +page.svelte and +layout.svelte',
+		files: {
+			[join(SYNTH_DIR, 'plain-ok/+page.server.ts')]: GUARDED_LOAD,
+			[join(SYNTH_DIR, 'plain-ok/+layout.server.ts')]: GUARD_LAYOUT,
+			[join(SYNTH_DIR, 'plain-ok/+page.svelte')]: '',
+			[join(SYNTH_DIR, 'plain-ok/+layout.svelte')]: ''
+		}
+	}
+];
+
+/** Files Kit would route (relative to the repository root): only `.ts` modules are allowed (item 3). */
+export const KIT_FILES_OK: string[] = [
+	'src/routes/(app)/leads/+page.server.ts',
+	'src/routes/(app)/leads/+page.ts',
+	'src/routes/api/[...path]/+server.ts',
+	'src/hooks.server.ts',
+	'src/hooks.client.ts',
+	'src/lib/hooks/theme.svelte.ts',
+	'src/lib/utils/helper.js.ts',
+	'src/service-worker/index.ts'
+];
+export const KIT_FILES_REFUSED: string[] = [
+	'src/routes/(app)/leads/+page.server.js',
+	'src/routes/(app)/leads/+layout.server.js',
+	'src/routes/api/x/+server.js',
+	'src/routes/(app)/leads/+page.js',
+	'src/routes/(app)/leads/+layout.js',
+	'src/routes/(app)/leads/+page@(app).js',
+	'src/hooks.server.js',
+	'src/hooks.client.js',
+	'src/hooks.js'
+];
+
+/**
+ * Pinned (unguarded) files (item 6): what a pinned file may import. Each case is ONE pinned file (in
+ * memory under SYNTH_DIR) with the local value imports its pin allows (`allowed`, repo-relative).
+ */
+export interface PinnedCase {
+	name: string;
+	src: string;
+	allowed: string[];
+	/** Fragment of the reason (refused cases only). */
+	reason: string;
+}
+const REACH = 'src/lib/utils/__synthetic_reach.ts';
+export const PINNED_OK: PinnedCase[] = [
+	{
+		name: 'a named value import of a server module, and type imports of anything',
+		src: `import { goFetch } from '#lib/server/go.ts';\nimport type { Cookies } from '@sveltejs/kit';\nimport type { reach } from '#lib/utils/__synthetic_reach.ts';\nimport { type reach as r2 } from '#lib/utils/__synthetic_reach.ts';\nexport const x = (c: Cookies) => goFetch(c, '/v1/x');`,
+		allowed: [],
+		reason: ''
+	},
+	{
+		name: 'a local value import that the pin lists',
+		src: `import { reach } from '#lib/utils/__synthetic_reach.ts';\nexport const x = reach;`,
+		allowed: [REACH],
+		reason: ''
+	},
+	{
+		name: 'a package import (a namespace one too) and a Kit virtual module',
+		src: `import * as z from 'zod';\nimport { error } from '@sveltejs/kit';\nimport { resolve } from '$app/paths';\nexport const x = [z, error, resolve];`,
+		allowed: [],
+		reason: ''
+	}
+];
+export const PINNED_REFUSED: PinnedCase[] = [
+	{
+		name: 'a namespace import of a server module (go["goFetch"] is no direct reference)',
+		src: `import * as go from '#lib/server/go.ts';\nexport const x = (c) => go['goFetch'](c, '/v1/x');`,
+		allowed: [],
+		reason: 'namespace import'
+	},
+	{
+		name: 'a dynamic import of a server module (a computed destructuring key hides the callee)',
+		src: `export const x = async (c) => { const { ['goFetch']: f } = await import('#lib/server/go.ts'); return f(c, '/v1/x'); };`,
+		allowed: [],
+		reason: 'dynamic import'
+	},
+	{
+		name: 'a helper OUTSIDE src/lib/server that reaches Go, not in the pin',
+		src: `import { reach } from '#lib/utils/__synthetic_reach.ts';\nexport const x = (c) => reach(c);`,
+		allowed: [],
+		reason: 'not pinned'
+	},
+	{
+		name: 'a side-effect import of a local module',
+		src: `import '#lib/utils/__synthetic_reach.ts';\nexport const x = 1;`,
+		allowed: [],
+		reason: 'not pinned'
+	},
+	{
+		name: 'a re-export from a local module',
+		src: `export { reach } from '#lib/utils/__synthetic_reach.ts';`,
+		allowed: [],
+		reason: 'not pinned'
+	},
+	{
+		name: 'an export * from a server module',
+		src: `export * from '#lib/server/go.ts';`,
+		allowed: [],
+		reason: 'export *'
+	},
+	{
+		name: 'a dynamic import with a computed specifier',
+		src: `export const x = async (s: string) => import(s);`,
+		allowed: [],
+		reason: 'dynamic import'
+	},
+	{
+		name: 'import x = require(...) of a local module',
+		src: `import reach = require('#lib/utils/__synthetic_reach.ts');\nexport const x = reach;`,
+		allowed: [],
+		reason: 'not pinned'
+	},
+	{
+		name: 'a pin that lists an import the file no longer has',
+		src: `export const x = 1;`,
+		allowed: [REACH],
+		reason: 'no longer imports'
 	}
 ];
