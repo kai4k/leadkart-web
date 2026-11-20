@@ -43,7 +43,7 @@
 			<div class="stack stack-tight">
 				<Dialog.Title class="h5 text-base">Write off batch</Dialog.Title>
 				{#if batch}
-					<p class="caption text-fg-muted">
+					<p class="caption text-muted-foreground">
 						Batch <code>{batch.batch_number}</code> · {batch.quantity_available} available
 					</p>
 				{/if}
@@ -55,18 +55,18 @@
 					This permanently writes off the batch. Stock movements are preserved.
 				</Alert>
 				<label class="stack stack-tight">
-					<span class="label text-fg">Reason</span>
+					<span class="label text-foreground">Reason</span>
 					<textarea
 						bind:value={form.values.reason}
 						maxlength={500}
 						rows={3}
 						placeholder="e.g. damaged in transit; failed QC"
 						required
-						class="bg-bg-elevated border border-border rounded-md body-sm text-fg w-full rounded-md px-3 py-2"
+						class="bg-card border border-border rounded-md body-sm text-foreground w-full rounded-md px-3 py-2"
 						data-testid="write-off-reason"
 					></textarea>
 					{#if form.errors.reason}
-						<span class="caption text-danger-700">{form.errors.reason}</span>
+						<span class="caption text-destructive">{form.errors.reason}</span>
 					{/if}
 				</label>
 				{#if form.bannerError}

@@ -36,7 +36,7 @@
 		<Drawer.Header>
 			<div class="stack stack-tight">
 				<Drawer.Title class="h4">Request permission</Drawer.Title>
-				<p class="caption text-fg-muted">
+				<p class="caption text-muted-foreground">
 					Time-bound elevation. Routes to your manager (or a Platform operator if you have none).
 				</p>
 			</div>
@@ -45,7 +45,7 @@
 					<button
 						{...props}
 						type="button"
-						class="hover:bg-bg-muted rounded-md p-1.5"
+						class="hover:bg-muted rounded-md p-1.5"
 						aria-label="Close">×</button
 					>
 				{/snippet}
@@ -74,9 +74,9 @@
 						bind:value={form.values.duration_days}
 						min={1}
 						max={PERMISSION_REQUEST_MAX_DAYS}
-						class="bg-bg-elevated border border-border rounded-md rounded-md px-3 py-2 text-sm"
+						class="bg-card border border-border rounded-md rounded-md px-3 py-2 text-sm"
 					/>
-					<span class="caption text-fg-subtle">Leave blank for the tenant default.</span>
+					<span class="caption text-muted-foreground">Leave blank for the tenant default.</span>
 				</label>
 				<label class="stack stack-tight">
 					<span class="label">Reason</span>
@@ -86,10 +86,10 @@
 						minlength={10}
 						maxlength={1024}
 						rows={4}
-						class="bg-bg-elevated border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
+						class="bg-card border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
 					></textarea>
 					{#if form.errors.reason}
-						<span class="caption text-danger-700">{form.errors.reason}</span>
+						<span class="caption text-destructive">{form.errors.reason}</span>
 					{/if}
 				</label>
 				{#if form.bannerError}<Alert variant="destructive">{form.bannerError}</Alert>{/if}

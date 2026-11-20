@@ -75,7 +75,7 @@
 		<Drawer.Header>
 			<div class="stack stack-tight">
 				<Drawer.Title class="h4">Register tenant</Drawer.Title>
-				<p class="caption text-fg-muted">
+				<p class="caption text-muted-foreground">
 					Creates the tenant + a CompanyOwner membership for the seed admin. The admin signs in with
 					the credentials below.
 				</p>
@@ -85,7 +85,7 @@
 					<button
 						{...props}
 						type="button"
-						class="hover:bg-bg-muted rounded-md p-1.5"
+						class="hover:bg-muted rounded-md p-1.5"
 						aria-label="Close">×</button
 					>
 				{/snippet}
@@ -101,9 +101,9 @@
 				<Card.Root class="mt-4">
 					<Card.Content class="stack stack-tight">
 						<div class="cluster cluster-spread">
-							<span class="caption text-fg-muted">Tenant ID</span>
+							<span class="caption text-muted-foreground">Tenant ID</span>
 							<div class="cluster cluster-tight">
-								<code class="caption text-fg-subtle">{credentials.tenantId}</code>
+								<code class="caption text-muted-foreground">{credentials.tenantId}</code>
 								<Button
 									variant="ghost"
 									size="sm"
@@ -115,7 +115,7 @@
 							</div>
 						</div>
 						<div class="cluster cluster-spread">
-							<span class="caption text-fg-muted">Email</span>
+							<span class="caption text-muted-foreground">Email</span>
 							<div class="cluster cluster-tight">
 								<code class="label">{credentials.email}</code>
 								<Button
@@ -129,7 +129,7 @@
 							</div>
 						</div>
 						<div class="cluster cluster-spread">
-							<span class="caption text-fg-muted">Password</span>
+							<span class="caption text-muted-foreground">Password</span>
 							<div class="cluster cluster-tight">
 								<code class="label">{credentials.password}</code>
 								<Button
@@ -144,7 +144,7 @@
 						</div>
 					</Card.Content>
 				</Card.Root>
-				<p class="caption text-warning-900 mt-4">
+				<p class="caption text-warning mt-4">
 					This password forces a change on first sign-in. Share via a secure channel only.
 				</p>
 				<div class="cluster mt-4">

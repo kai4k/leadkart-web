@@ -70,7 +70,7 @@
 		<Drawer.Header>
 			<div class="stack stack-tight">
 				<Drawer.Title class="h4">Roles for {user ? displayName(user) : 'user'}</Drawer.Title>
-				<p class="caption text-fg-muted">
+				<p class="caption text-muted-foreground">
 					Assignments are immediate. Each role contributes its default permissions; user-level
 					grants/revokes overlay on top.
 				</p>
@@ -80,7 +80,7 @@
 					<button
 						{...props}
 						type="button"
-						class="hover:bg-bg-muted rounded-md p-1.5"
+						class="hover:bg-muted rounded-md p-1.5"
 						aria-label="Close">×</button
 					>
 				{/snippet}
@@ -90,7 +90,7 @@
 			<section class="stack stack-tight mb-6">
 				<h3 class="overline">Assigned</h3>
 				{#if assignedRoles.length === 0}
-					<p class="body-sm text-fg-muted">No roles assigned.</p>
+					<p class="body-sm text-muted-foreground">No roles assigned.</p>
 				{:else}
 					<ul class="stack stack-tight" aria-label="Assigned roles">
 						{#each assignedRoles as role (role.id)}
@@ -116,7 +116,7 @@
 			<section class="stack stack-tight">
 				<h3 class="overline">Available</h3>
 				{#if availableRoles.length === 0}
-					<p class="body-sm text-fg-muted">All catalogue roles already assigned.</p>
+					<p class="body-sm text-muted-foreground">All catalogue roles already assigned.</p>
 				{:else}
 					<ul class="stack stack-tight" aria-label="Available roles">
 						{#each availableRoles as role (role.id)}

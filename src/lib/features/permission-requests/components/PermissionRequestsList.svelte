@@ -92,7 +92,7 @@
 </script>
 
 {#snippet permissionCell(req: PermissionRequestDto)}
-	<code class="caption text-fg">{req.permission}</code>
+	<code class="caption text-foreground">{req.permission}</code>
 {/snippet}
 
 {#snippet stateCell(req: PermissionRequestDto)}
@@ -101,14 +101,14 @@
 {/snippet}
 
 {#snippet dateCell(req: PermissionRequestDto)}
-	<span class="caption text-fg-muted">{formatDate(req.created_at)}</span>
+	<span class="caption text-muted-foreground">{formatDate(req.created_at)}</span>
 {/snippet}
 
 <div class="stack stack-relaxed">
 	<header class="cluster cluster-spread">
 		<div class="stack stack-tight">
 			<h1 class="h1">Permission requests</h1>
-			<p class="caption text-fg-muted">
+			<p class="caption text-muted-foreground">
 				Request time-bound elevated permissions; approve or deny requests waiting on you.
 			</p>
 		</div>
@@ -132,10 +132,10 @@
 						class={[
 							'label -mb-px inline-block border-b-2 px-4 py-2 transition-colors',
 							'focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none',
-							'focus-visible:ring-focus-ring',
+							'focus-visible:ring-ring',
 							active
 								? 'border-primary text-primary'
-								: 'text-fg-muted hover:text-fg border-transparent'
+								: 'text-muted-foreground hover:text-foreground border-transparent'
 						]}
 					>
 						{tab.label}

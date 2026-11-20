@@ -43,13 +43,13 @@
 		<div class="stack stack-tight min-w-0">
 			<h1 class="h1 truncate">{lead.contact_name}</h1>
 			<div class="cluster cluster-tight flex-wrap">
-				<span class="caption text-fg-muted"
+				<span class="caption text-muted-foreground"
 					><Icon icon={Users} size="xs" /> {lead.mobile_number}</span
 				>
 				{#if lead.email}
-					<span class="caption text-fg-muted">· {lead.email}</span>
+					<span class="caption text-muted-foreground">· {lead.email}</span>
 				{/if}
-				<span class="caption text-fg-muted">· {locationLabel(lead)}</span>
+				<span class="caption text-muted-foreground">· {locationLabel(lead)}</span>
 			</div>
 		</div>
 		<div class="cluster cluster-tight shrink-0">
@@ -67,14 +67,14 @@
 	</div>
 
 	<div class="cluster cluster-tight">
-		<span class="caption text-fg-muted">Stage:</span>
+		<span class="caption text-muted-foreground">Stage:</span>
 		<StatusPill
 			value={lead.stage}
 			options={[...STAGE_OPTIONS]}
 			onChange={changeStage}
 			disabled={!mayManage}
 		/>
-		<span class="caption text-fg-muted">· Temperature:</span>
+		<span class="caption text-muted-foreground">· Temperature:</span>
 		<StatusPill
 			value={lead.temperature}
 			options={[...TEMPERATURE_OPTIONS]}

@@ -9,7 +9,7 @@
  * Phase B (bits-ui-refactor): the `.glass-*` utility CSS layer was
  * dropped. Liquid Glass material comes from Svelte Bits GlassSurface
  * composed inside surface compounds (Dialog/Sheet/Popover/Card) on
- * demand. Plain surfaces use `bg-bg-elevated border border-border
+ * demand. Plain surfaces use `bg-card border border-border
  * rounded-* shadow-*` Tailwind utilities directly.
  * ───────────────────────────────────────────────────────────────────── */
 
@@ -82,8 +82,8 @@
 	/* ═══ Scroll-shadow — top/bottom fade on scrollable lists */
 	.scroll-shadow {
 		background:
-			linear-gradient(var(--color-bg-elevated) 30%, transparent),
-			linear-gradient(transparent, var(--color-bg-elevated) 70%) 0 100%,
+			linear-gradient(var(--card) 30%, transparent),
+			linear-gradient(transparent, var(--card) 70%) 0 100%,
 			radial-gradient(at top, rgb(0 0 0 / 12%) 0, transparent 70%),
 			radial-gradient(at bottom, rgb(0 0 0 / 12%) 0, transparent 70%) 0 100%;
 		background-repeat: no-repeat;
@@ -148,7 +148,7 @@
 		inset-block-start: 2rem;
 		inset-block-end: 0;
 		inline-size: 2px;
-		background: var(--color-border);
+		background: var(--border);
 		z-index: 0;
 	}
 }

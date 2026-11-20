@@ -57,18 +57,18 @@
 		default: { icon: null, iconClass: '', bgClass: '' },
 		info: {
 			icon: Info as unknown as Component,
-			iconClass: 'text-info-700',
-			bgClass: 'bg-info-50'
+			iconClass: 'text-info',
+			bgClass: 'bg-info-soft'
 		},
 		warning: {
 			icon: AlertTriangle as unknown as Component,
-			iconClass: 'text-warning-700',
-			bgClass: 'bg-warning-50'
+			iconClass: 'text-warning',
+			bgClass: 'bg-warning-soft'
 		},
 		danger: {
 			icon: AlertCircle as unknown as Component,
-			iconClass: 'text-danger-700',
-			bgClass: 'bg-danger-50'
+			iconClass: 'text-destructive',
+			bgClass: 'bg-destructive-soft'
 		}
 	};
 	const vc = $derived(VARIANT_CONFIG[variant]);
@@ -93,7 +93,7 @@
 				{/if}
 				<div class="stack stack-tight">
 					<Dialog.Title class="h5 text-base">{title}</Dialog.Title>
-					{#if description}<p class="body-sm text-fg-muted">{description}</p>{/if}
+					{#if description}<p class="body-sm text-muted-foreground">{description}</p>{/if}
 				</div>
 			</div>
 		</Dialog.Header>

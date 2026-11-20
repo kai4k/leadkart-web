@@ -54,7 +54,7 @@
 		<Drawer.Header>
 			<div class="stack stack-tight">
 				<Drawer.Title class="h4">Add team member</Drawer.Title>
-				<p class="caption text-fg-muted">
+				<p class="caption text-muted-foreground">
 					Sends a sign-in to the email below. Roles can be assigned after creation.
 				</p>
 			</div>
@@ -63,7 +63,7 @@
 					<button
 						{...props}
 						type="button"
-						class="hover:bg-bg-muted rounded-md p-1.5"
+						class="hover:bg-muted rounded-md p-1.5"
 						aria-label="Close"
 					>
 						×
@@ -120,7 +120,7 @@
 						error={form.errors.password}
 						onblur={() => form.validateField('password')}
 					/>
-					<p class="caption text-fg-subtle">
+					<p class="caption text-muted-foreground">
 						The user will be prompted to change this on first sign-in.
 					</p>
 					{#if form.bannerError}<Alert variant="destructive">{form.bannerError}</Alert>{/if}

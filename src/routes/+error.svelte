@@ -21,14 +21,14 @@
 
 <div class="flex min-h-screen items-center justify-center p-6">
 	<div class="max-w-3xl text-center">
-		<h1 class="text-fg text-6xl font-bold">{page.status}</h1>
-		<p class="text-fg-muted mt-4 text-lg">
+		<h1 class="text-foreground text-6xl font-bold">{page.status}</h1>
+		<p class="text-muted-foreground mt-4 text-lg">
 			{page.error?.message ?? 'Something went wrong.'}
 		</p>
 		<div class="mt-6 flex items-center justify-center gap-4">
 			<a
 				href={resolve('/')}
-				class="bg-primary text-primary-fg hover:bg-primary-hover focus-visible:ring-focus-ring inline-block rounded-md px-4 py-2 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
+				class="bg-primary text-primary-foreground hover:bg-primary-hover focus-visible:ring-ring inline-block rounded-md px-4 py-2 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
 			>
 				Back to home
 			</a>

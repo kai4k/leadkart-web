@@ -91,7 +91,7 @@
 		font-size: var(--text-lg);
 		line-height: var(--leading-relaxed);
 		letter-spacing: var(--tracking-body);
-		color: var(--color-fg-muted);
+		color: var(--muted-foreground);
 	}
 
 	.body-lg {
@@ -121,8 +121,8 @@
 
 	   Color stays SEPARATE (Apple HIG splits typographic style from
 	   color hierarchy — .primaryLabel vs .secondaryLabel use the same
-	   text-style + different tokens). Compose with text-fg-muted /
-	   text-fg-subtle utilities for hierarchy.
+	   text-style + different tokens). Compose with text-muted-foreground /
+	   text-muted-foreground utilities for hierarchy.
 
 	   Two tiers:
 	     .label        text-sm  + medium 500 + body tracking
@@ -151,7 +151,7 @@
 		font-size: var(--text-xs);
 		line-height: var(--text-xs--line-height);
 		letter-spacing: var(--tracking-caption);
-		color: var(--color-fg-muted);
+		color: var(--muted-foreground);
 	}
 
 	.overline {
@@ -160,7 +160,7 @@
 		text-transform: uppercase;
 		letter-spacing: var(--tracking-wide);
 		font-weight: var(--font-weight-semibold);
-		color: var(--color-fg-subtle);
+		color: var(--muted-foreground);
 	}
 
 	/* ═══ Code / monospace ═══ */
@@ -169,7 +169,7 @@
 		font-size: 0.9em;
 		padding: 0.125em 0.375em;
 		border-radius: var(--radius-sm);
-		background: var(--color-bg-muted);
+		background: var(--muted);
 	}
 
 	.kbd {
@@ -179,11 +179,11 @@
 		font-family: var(--font-mono);
 		font-size: var(--text-xs);
 		padding: 0.125em 0.5em;
-		border: var(--border-thin) solid var(--color-border-strong);
+		border: var(--border-thin) solid var(--input);
 		border-radius: var(--radius-sm);
-		background: var(--color-bg-elevated);
+		background: var(--card);
 		box-shadow: var(--shadow-xs);
-		color: var(--color-fg);
+		color: var(--foreground);
 	}
 
 	/* ═══ Truncation helpers ═══ */

@@ -36,11 +36,11 @@
 <div class="stack stack-relaxed">
 	<header class="stack stack-tight">
 		<h2 class="h5">Stock movements</h2>
-		<p class="caption text-fg-muted">Every adjustment that has touched this product.</p>
+		<p class="caption text-muted-foreground">Every adjustment that has touched this product.</p>
 	</header>
 
 	{#if query.isError}
-		<div class="border-danger-500 text-danger-700 rounded-md border p-4">
+		<div class="border-destructive/40 text-destructive rounded-md border p-4">
 			Couldn't load movements. {errorCopy}
 		</div>
 	{:else if query.isPending}

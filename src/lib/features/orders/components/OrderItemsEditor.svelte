@@ -148,7 +148,7 @@
 				gst_percentage: cat?.gst_percentage ?? 0
 			})}
 			<div
-				class="border-border bg-bg-elevated stack stack-tight rounded-md border p-3"
+				class="border-border bg-card stack stack-tight rounded-md border p-3"
 				data-testid={`line-${idx}`}
 			>
 				<div class="grid grid-cols-1 gap-3 md:grid-cols-12">
@@ -193,10 +193,10 @@
 							srLabel={idx > 0}
 						/>
 					</div>
-					<div class="text-fg-muted body-sm flex items-end justify-between md:col-span-1">
+					<div class="text-muted-foreground body-sm flex items-end justify-between md:col-span-1">
 						<button
 							type="button"
-							class="text-fg-muted hover:text-danger-700 mb-2 inline-flex items-center"
+							class="text-muted-foreground hover:text-destructive mb-2 inline-flex items-center"
 							aria-label="Remove line"
 							onclick={() => removeRow(idx)}
 							data-testid={`line-${idx}-remove`}
@@ -207,13 +207,13 @@
 				</div>
 
 				<div class="cluster cluster-spread">
-					<div class="caption text-fg-muted tabular-nums">
+					<div class="caption text-muted-foreground tabular-nums">
 						GST {cat?.gst_percentage ?? 0}% · net {formatMoney(lineTotals.net, currency)} · gst {formatMoney(
 							lineTotals.gst,
 							currency
 						)}
 					</div>
-					<div class="body-sm text-fg tabular-nums">
+					<div class="body-sm text-foreground tabular-nums">
 						Line total <span class="font-semibold">{formatMoney(lineTotals.total, currency)}</span>
 					</div>
 				</div>
@@ -236,22 +236,25 @@
 		<Button variant="ghost" onclick={addRow} data-testid="add-line">
 			<Icon icon={Plus} size="sm" /> Add line
 		</Button>
-		<dl class="cluster cluster-tight text-fg body-sm tabular-nums" data-testid="editor-totals">
+		<dl
+			class="cluster cluster-tight text-foreground body-sm tabular-nums"
+			data-testid="editor-totals"
+		>
 			<div class="cluster cluster-tight">
-				<dt class="text-fg-muted">Subtotal</dt>
+				<dt class="text-muted-foreground">Subtotal</dt>
 				<dd>{formatMoney(totals.subtotal, currency)}</dd>
 			</div>
 			<div class="cluster cluster-tight">
-				<dt class="text-fg-muted">Discount</dt>
+				<dt class="text-muted-foreground">Discount</dt>
 				<dd>−{formatMoney(totals.discount_total, currency)}</dd>
 			</div>
 			<div class="cluster cluster-tight">
-				<dt class="text-fg-muted">GST</dt>
+				<dt class="text-muted-foreground">GST</dt>
 				<dd>{formatMoney(totals.gst_total, currency)}</dd>
 			</div>
 			<div class="cluster cluster-tight">
-				<dt class="label text-fg">Total</dt>
-				<dd class="label text-fg font-semibold" data-testid="editor-total">
+				<dt class="label text-foreground">Total</dt>
+				<dd class="label text-foreground font-semibold" data-testid="editor-total">
 					{formatMoney(totals.total, currency)}
 				</dd>
 			</div>

@@ -62,7 +62,9 @@
 		<Dialog.Header>
 			<div class="stack stack-tight">
 				<Dialog.Title class="h5 text-base">Log call</Dialog.Title>
-				<p class="body-sm text-fg-muted">Record the outcome and optionally schedule a callback.</p>
+				<p class="body-sm text-muted-foreground">
+					Record the outcome and optionally schedule a callback.
+				</p>
 			</div>
 		</Dialog.Header>
 
@@ -84,11 +86,11 @@
 						bind:value={form.values.notes}
 						rows={3}
 						maxlength={2000}
-						class="bg-bg-elevated border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
+						class="bg-card border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
 						placeholder="What did the lead say?"
 					></textarea>
 					{#if form.errors.notes}
-						<span class="caption text-danger-700">{form.errors.notes}</span>
+						<span class="caption text-destructive">{form.errors.notes}</span>
 					{/if}
 				</label>
 
@@ -98,7 +100,7 @@
 						type="datetime-local"
 						name="callback_at"
 						bind:value={form.values.callback_at}
-						class="bg-bg-elevated border border-border rounded-md rounded-md px-3 py-2 text-sm"
+						class="bg-card border border-border rounded-md rounded-md px-3 py-2 text-sm"
 					/>
 				</label>
 

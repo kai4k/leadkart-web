@@ -13,22 +13,22 @@
 	<div class="stack stack-loose" style="width: 360px;">
 		<div class="stack stack-tight">
 			<div class="flex justify-between">
-				<span class="caption text-fg-muted">Upload progress</span>
-				<span class="caption text-fg tabular-nums">25%</span>
+				<span class="caption text-muted-foreground">Upload progress</span>
+				<span class="caption text-foreground tabular-nums">25%</span>
 			</div>
 			<Progress value={25} label="Upload progress" />
 		</div>
 		<div class="stack stack-tight">
 			<div class="flex justify-between">
-				<span class="caption text-fg-muted">Onboarding</span>
-				<span class="caption text-fg tabular-nums">60%</span>
+				<span class="caption text-muted-foreground">Onboarding</span>
+				<span class="caption text-foreground tabular-nums">60%</span>
 			</div>
 			<Progress value={60} label="Onboarding progress" />
 		</div>
 		<div class="stack stack-tight">
 			<div class="flex justify-between">
-				<span class="caption text-fg-muted">Almost done</span>
-				<span class="caption text-fg tabular-nums">90%</span>
+				<span class="caption text-muted-foreground">Almost done</span>
+				<span class="caption text-foreground tabular-nums">90%</span>
 			</div>
 			<Progress value={90} label="Process progress" />
 		</div>
@@ -38,19 +38,19 @@
 <Story name="Variant semantics">
 	<div class="stack stack-loose" style="width: 360px;">
 		<div class="stack stack-tight">
-			<span class="caption text-fg-muted">Primary (default)</span>
+			<span class="caption text-muted-foreground">Primary (default)</span>
 			<Progress value={50} variant="primary" />
 		</div>
 		<div class="stack stack-tight">
-			<span class="caption text-success-700">Success — quota safe</span>
+			<span class="caption text-success">Success — quota safe</span>
 			<Progress value={45} variant="success" label="Quota usage" />
 		</div>
 		<div class="stack stack-tight">
-			<span class="caption text-warning-700">Warning — approaching limit</span>
+			<span class="caption text-warning">Warning — approaching limit</span>
 			<Progress value={78} variant="warning" label="Quota usage" />
 		</div>
 		<div class="stack stack-tight">
-			<span class="caption text-danger-700">Danger — over budget</span>
+			<span class="caption text-destructive">Danger — over budget</span>
 			<Progress value={94} variant="danger" label="Quota usage" />
 		</div>
 	</div>
@@ -59,7 +59,7 @@
 <Story name="Indeterminate">
 	<div style="width: 360px;">
 		<div class="stack stack-tight">
-			<span class="caption text-fg-muted">Fetching marketplace listings…</span>
+			<span class="caption text-muted-foreground">Fetching marketplace listings…</span>
 			<Progress value={null} label="Loading" />
 		</div>
 	</div>
@@ -69,8 +69,8 @@
 	<div style="width: 360px;">
 		<div class="stack stack-tight">
 			<div class="flex justify-between">
-				<span class="caption text-fg-muted">Onboarding</span>
-				<span class="caption text-fg tabular-nums">5 / 10 steps</span>
+				<span class="caption text-muted-foreground">Onboarding</span>
+				<span class="caption text-foreground tabular-nums">5 / 10 steps</span>
 			</div>
 			<Progress value={5} min={0} max={10} variant="primary" label="Onboarding" />
 		</div>

@@ -3,8 +3,8 @@
 	export const avatarGroupItemVariants = cva(
 		[
 			'inline-flex items-center justify-center rounded-full font-medium uppercase',
-			'ring-2 ring-bg-elevated',
-			'bg-[linear-gradient(135deg,var(--color-primary-soft),var(--color-bg-muted))]',
+			'ring-2 ring-card',
+			'bg-[linear-gradient(135deg,var(--primary-soft),var(--muted))]',
 			'text-primary'
 		],
 		{
@@ -77,7 +77,7 @@
 		<span
 			class={cn(
 				avatarGroupItemVariants({ size }),
-				'bg-bg-muted text-fg-muted -ml-[40%] bg-none',
+				'bg-muted text-muted-foreground -ml-[40%] bg-none',
 				'tabular-nums'
 			)}
 			aria-label={$_('common.members.more', { values: { count: overflow } })}

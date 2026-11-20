@@ -164,7 +164,7 @@
 					{#each columns as col (col.id)}
 						<th
 							class={cn(
-								'text-fg-muted px-3 py-3 align-middle text-xs font-medium tracking-wide uppercase',
+								'text-muted-foreground px-3 py-3 align-middle text-xs font-medium tracking-wide uppercase',
 								isSelectCol(col) && 'w-10',
 								getHideBreakpoint(col),
 								col.class
@@ -212,7 +212,7 @@
 					{#each columns as col (col.id)}
 						<th
 							class={cn(
-								'text-fg-muted px-3 py-3 align-middle text-xs font-medium tracking-wide uppercase',
+								'text-muted-foreground px-3 py-3 align-middle text-xs font-medium tracking-wide uppercase',
 								isSelectCol(col) && 'w-10',
 								getHideBreakpoint(col),
 								col.class
@@ -232,7 +232,7 @@
 							{:else if col.sortBy && onSortChange}
 								<button
 									type="button"
-									class="cluster cluster-tight hover:text-fg inline-flex items-center gap-1"
+									class="cluster cluster-tight hover:text-foreground inline-flex items-center gap-1"
 									onclick={() => onHeaderClick(col)}
 								>
 									{col.header}
@@ -264,9 +264,9 @@
 					{@const navKey = nav ? rowKey(row) : ''}
 					<tr
 						class={cn(
-							'border-border hover:bg-bg-muted border-b transition-colors',
+							'border-border hover:bg-muted border-b transition-colors',
 							onRowClick && 'cursor-pointer',
-							focused && 'bg-bg-muted border-l-primary border-s-4'
+							focused && 'bg-muted border-l-primary border-s-4'
 						)}
 						onclick={onRowClick ? () => onRowClick(row) : undefined}
 						tabindex={nav ? navTabIndex : onRowClick ? 0 : undefined}

@@ -9,7 +9,7 @@
 <div class="stack stack-relaxed">
 	<header class="stack stack-tight">
 		<h2 class="h4">My activity</h2>
-		<p class="caption text-fg-muted">Your recent account actions and events.</p>
+		<p class="caption text-muted-foreground">Your recent account actions and events.</p>
 	</header>
 
 	{#snippet activitySection()}

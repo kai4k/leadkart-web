@@ -39,7 +39,7 @@
 			{#if tenant.slug === 'platform'}
 				<Icon icon={Shield} size="sm" class="text-primary" />
 			{:else}
-				<Icon icon={Building2} size="sm" class="text-fg-muted" />
+				<Icon icon={Building2} size="sm" class="text-muted-foreground" />
 			{/if}
 			<h1 class="h2">{tenant.display_name}</h1>
 			{#if tenant.slug === 'platform'}
@@ -82,19 +82,19 @@
 		border-radius: 0.375rem;
 		font-size: var(--text-sm);
 		font-weight: 500;
-		color: var(--color-fg-muted);
+		color: var(--muted-foreground);
 		transition:
 			background 0.15s,
 			color 0.15s;
 	}
 	.lk-tenant-tab--active {
-		background: var(--color-bg-elevated);
-		color: var(--color-fg);
+		background: var(--card);
+		color: var(--foreground);
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.lk-tenant-tab:not(.lk-tenant-tab--active):hover {
-			background: var(--color-bg-muted);
-			color: var(--color-fg);
+			background: var(--muted);
+			color: var(--foreground);
 		}
 	}
 </style>

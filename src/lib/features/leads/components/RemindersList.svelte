@@ -70,7 +70,7 @@
 			{#if g[group.key].length > 0}
 				<div class="stack stack-tight">
 					<div class="cluster cluster-tight">
-						<h4 class="label text-fg">{group.label}</h4>
+						<h4 class="label text-foreground">{group.label}</h4>
 						<Badge variant={group.variant} size="sm">{g[group.key].length}</Badge>
 					</div>
 					{#each g[group.key] as r (r.id)}
@@ -80,11 +80,11 @@
 									<div class="stack stack-tight min-w-0">
 										<div class="cluster cluster-tight">
 											<Icon icon={Bell} size="xs" />
-											<span class="label text-fg">{REMINDER_KIND_LABEL[r.kind]}</span>
-											<span class="caption text-fg-muted">· {relativeTime(r.due_at)}</span>
+											<span class="label text-foreground">{REMINDER_KIND_LABEL[r.kind]}</span>
+											<span class="caption text-muted-foreground">· {relativeTime(r.due_at)}</span>
 										</div>
 										{#if r.note}
-											<p class="body-sm text-fg-muted">{r.note}</p>
+											<p class="body-sm text-muted-foreground">{r.note}</p>
 										{/if}
 									</div>
 									<div class="cluster cluster-tight">

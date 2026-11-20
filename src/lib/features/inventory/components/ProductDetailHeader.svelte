@@ -33,7 +33,7 @@
 <header class="stack stack-tight">
 	<button
 		type="button"
-		class="caption text-fg-muted hover:text-fg cluster cluster-tight self-start"
+		class="caption text-muted-foreground hover:text-foreground cluster cluster-tight self-start"
 		onclick={back}
 	>
 		<Icon icon={ArrowLeft} size="xs" /> Back to inventory
@@ -43,7 +43,7 @@
 		<div class="stack stack-tight min-w-0">
 			<h1 class="h1 truncate">{product.brand_name}</h1>
 			{#if product.generic_name}
-				<p class="body-base text-fg-muted truncate">{product.generic_name}</p>
+				<p class="body-base text-muted-foreground truncate">{product.generic_name}</p>
 			{/if}
 			<div class="cluster cluster-tight pt-2">
 				<Badge variant="info">{product.product_category}</Badge>
@@ -61,7 +61,7 @@
 					<span data-testid="stock-pill">
 						<Badge variant={stock.variant}>{stock.label}</Badge>
 					</span>
-					<span class="body-base text-fg tabular-nums" data-testid="stock-count">
+					<span class="body-base text-foreground tabular-nums" data-testid="stock-count">
 						{product.total_quantity_available} units
 					</span>
 				</div>

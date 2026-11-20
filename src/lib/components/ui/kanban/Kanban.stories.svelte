@@ -56,10 +56,10 @@
 				{#each NEW_LEADS as lead (lead.id)}
 					<Kanban.Card id={lead.id} aria-label={lead.name}>
 						<div class="stack stack-tight">
-							<p class="body-sm text-fg font-medium">{lead.name}</p>
-							<p class="caption text-fg-muted truncate-1">{lead.company}</p>
+							<p class="body-sm text-foreground font-medium">{lead.name}</p>
+							<p class="caption text-muted-foreground truncate-1">{lead.company}</p>
 							<div class="flex items-center justify-between">
-								<span class="caption text-fg tabular-nums">{lead.value}</span>
+								<span class="caption text-foreground tabular-nums">{lead.value}</span>
 								<Badge variant="neutral" size="sm">{lead.owner}</Badge>
 							</div>
 						</div>
@@ -71,10 +71,10 @@
 				{#each CONTACTED as lead (lead.id)}
 					<Kanban.Card id={lead.id} aria-label={lead.name}>
 						<div class="stack stack-tight">
-							<p class="body-sm text-fg font-medium">{lead.name}</p>
-							<p class="caption text-fg-muted truncate-1">{lead.company}</p>
+							<p class="body-sm text-foreground font-medium">{lead.name}</p>
+							<p class="caption text-muted-foreground truncate-1">{lead.company}</p>
 							<div class="flex items-center justify-between">
-								<span class="caption text-fg tabular-nums">{lead.value}</span>
+								<span class="caption text-foreground tabular-nums">{lead.value}</span>
 								<Badge variant="neutral" size="sm">{lead.owner}</Badge>
 							</div>
 						</div>
@@ -86,10 +86,10 @@
 				{#each QUALIFIED as lead (lead.id)}
 					<Kanban.Card id={lead.id} aria-label={lead.name}>
 						<div class="stack stack-tight">
-							<p class="body-sm text-fg font-medium">{lead.name}</p>
-							<p class="caption text-fg-muted truncate-1">{lead.company}</p>
+							<p class="body-sm text-foreground font-medium">{lead.name}</p>
+							<p class="caption text-muted-foreground truncate-1">{lead.company}</p>
 							<div class="flex items-center justify-between">
-								<span class="caption text-fg tabular-nums">{lead.value}</span>
+								<span class="caption text-foreground tabular-nums">{lead.value}</span>
 								<Badge variant="neutral" size="sm">{lead.owner}</Badge>
 							</div>
 						</div>
@@ -101,10 +101,10 @@
 				{#each CLOSED as lead (lead.id)}
 					<Kanban.Card id={lead.id} aria-label={lead.name}>
 						<div class="stack stack-tight">
-							<p class="body-sm text-fg font-medium">{lead.name}</p>
-							<p class="caption text-fg-muted truncate-1">{lead.company}</p>
+							<p class="body-sm text-foreground font-medium">{lead.name}</p>
+							<p class="caption text-muted-foreground truncate-1">{lead.company}</p>
 							<div class="flex items-center justify-between">
-								<span class="caption text-fg tabular-nums">{lead.value}</span>
+								<span class="caption text-foreground tabular-nums">{lead.value}</span>
 								<Badge variant="neutral" size="sm">{lead.owner}</Badge>
 							</div>
 						</div>
@@ -121,7 +121,7 @@
 			<Kanban.Column id="new" label="New" count={0} accent="info" />
 			<Kanban.Column id="active" label="Active" count={1} accent="primary">
 				<Kanban.Card id="x1" aria-label="Sample card">
-					<p class="body-sm text-fg font-medium">Sample card</p>
+					<p class="body-sm text-foreground font-medium">Sample card</p>
 				</Kanban.Card>
 			</Kanban.Column>
 		</Kanban.Board>

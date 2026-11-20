@@ -19,35 +19,39 @@
 	<Card.Content>
 		<dl class="grid gap-3 sm:grid-cols-2">
 			<div class="stack stack-tight">
-				<dt class="caption text-fg-muted">Pack</dt>
-				<dd class="body-sm text-fg">
+				<dt class="caption text-muted-foreground">Pack</dt>
+				<dd class="body-sm text-foreground">
 					{product.pack_size || '—'} · {product.pack_type || '—'} · {product.units_per_pack} units
 				</dd>
 			</div>
 			<div class="stack stack-tight">
-				<dt class="caption text-fg-muted">HSN</dt>
-				<dd class="body-sm text-fg"><code>{product.hsn_code}</code></dd>
+				<dt class="caption text-muted-foreground">HSN</dt>
+				<dd class="body-sm text-foreground"><code>{product.hsn_code}</code></dd>
 			</div>
 			<div class="stack stack-tight">
-				<dt class="caption text-fg-muted">MRP</dt>
-				<dd class="body-sm text-fg tabular-nums">{formatPrice(product.mrp)}</dd>
+				<dt class="caption text-muted-foreground">MRP</dt>
+				<dd class="body-sm text-foreground tabular-nums">{formatPrice(product.mrp)}</dd>
 			</div>
 			<div class="stack stack-tight">
-				<dt class="caption text-fg-muted">GST</dt>
-				<dd class="body-sm text-fg tabular-nums">{product.gst_percentage}%</dd>
+				<dt class="caption text-muted-foreground">GST</dt>
+				<dd class="body-sm text-foreground tabular-nums">{product.gst_percentage}%</dd>
 			</div>
 			<div class="stack stack-tight">
-				<dt class="caption text-fg-muted">Purchase rate</dt>
-				<dd class="body-sm text-fg tabular-nums">
+				<dt class="caption text-muted-foreground">Purchase rate</dt>
+				<dd class="body-sm text-foreground tabular-nums">
 					{formatPrice(product.purchase_rate)}
-					<span class="caption text-fg-muted">(incl. GST: {formatPrice(purchaseRateWithGst)})</span>
+					<span class="caption text-muted-foreground"
+						>(incl. GST: {formatPrice(purchaseRateWithGst)})</span
+					>
 				</dd>
 			</div>
 			<div class="stack stack-tight">
-				<dt class="caption text-fg-muted">Sale rate</dt>
-				<dd class="body-sm text-fg tabular-nums">
+				<dt class="caption text-muted-foreground">Sale rate</dt>
+				<dd class="body-sm text-foreground tabular-nums">
 					{formatPrice(product.sale_rate)}
-					<span class="caption text-fg-muted">(incl. GST: {formatPrice(saleRateWithGst)})</span>
+					<span class="caption text-muted-foreground"
+						>(incl. GST: {formatPrice(saleRateWithGst)})</span
+					>
 				</dd>
 			</div>
 		</dl>

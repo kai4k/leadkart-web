@@ -65,7 +65,7 @@
 		<Dialog.Header>
 			<div class="stack stack-tight">
 				<Dialog.Title class="h5 text-base">Reassign lead</Dialog.Title>
-				<p class="body-sm text-fg-muted">
+				<p class="body-sm text-muted-foreground">
 					Transfer ownership to another team member. The history tab keeps an audit trail.
 				</p>
 			</div>
@@ -100,7 +100,7 @@
 						bind:value={form.values.reason}
 						rows={3}
 						maxlength={500}
-						class="bg-bg-elevated border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
+						class="bg-card border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
 						placeholder="Why the lead is being moved"
 					></textarea>
 				</label>

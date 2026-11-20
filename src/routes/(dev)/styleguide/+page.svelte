@@ -45,7 +45,7 @@
 <div class="container-page stack stack-loose py-8">
 	<header class="stack stack-tight">
 		<h1 class="display-1">LeadKart design system</h1>
-		<p class="body-lg text-fg-muted">
+		<p class="body-lg text-muted-foreground">
 			Every Button variant × size × state, every Card variant, the full token catalogue. This page
 			is the a11y CI ground truth — if a variant fails axe-core here, it will fail in production
 			wherever it's used.
@@ -98,7 +98,7 @@
 					<Card.Description>elevation="sm" padding="md"</Card.Description>
 				</Card.Header>
 				<Card.Content>
-					<p class="body-sm text-fg-muted">Standard surface for most content.</p>
+					<p class="body-sm text-muted-foreground">Standard surface for most content.</p>
 				</Card.Content>
 			</Card.Root>
 
@@ -108,7 +108,7 @@
 					<Card.Description>Spring lift on hover · scale on press</Card.Description>
 				</Card.Header>
 				<Card.Content>
-					<p class="body-sm text-fg-muted">For clickable grid items + dashboard widgets.</p>
+					<p class="body-sm text-muted-foreground">For clickable grid items + dashboard widgets.</p>
 				</Card.Content>
 			</Card.Root>
 
@@ -118,7 +118,7 @@
 					<Card.Description>Frosted iOS-style surface</Card.Description>
 				</Card.Header>
 				<Card.Content>
-					<p class="body-sm text-fg-muted">For overlays + popovers + customiser panels.</p>
+					<p class="body-sm text-muted-foreground">For overlays + popovers + customiser panels.</p>
 				</Card.Content>
 			</Card.Root>
 		</div>
@@ -138,7 +138,7 @@
 	<!-- ═══ COLOUR PALETTES ══════════════════════════════════════════════ -->
 	<section aria-labelledby="colors-heading" class="stack stack-loose">
 		<h2 id="colors-heading" class="h2">Colour palette</h2>
-		<p class="body-sm text-fg-muted">
+		<p class="body-sm text-muted-foreground">
 			OKLCH 11-stop scales — perceptually uniform lightness stepping. Each chip shows the token
 			alias plus its stop number; hover for the CSS variable.
 		</p>
@@ -148,7 +148,7 @@
 				<div class="grid grid-cols-6 gap-1 lg:grid-cols-11">
 					{#each brandShades as shade (shade)}
 						<!-- Label OUTSIDE the chip so axe-core checks contrast against the
-						     known page bg (text-fg-muted is AA-safe), not against the
+						     known page bg (text-muted-foreground is AA-safe), not against the
 						     dynamically-coloured swatch — axe can't resolve var() inline
 						     bgs on dark stops, false-positives the foreground span. -->
 						<div class="stack stack-tight gap-1">
@@ -159,7 +159,7 @@
 								aria-label="{palette} {shade}"
 								title="--color-{palette}-{shade}"
 							></div>
-							<span class="text-fg-muted text-center font-mono text-[10px]">{shade}</span>
+							<span class="text-muted-foreground text-center font-mono text-[10px]">{shade}</span>
 						</div>
 					{/each}
 				</div>
@@ -170,7 +170,7 @@
 	<!-- ═══ THEME PICKER (programmatic API) ══════════════════════════════ -->
 	<section aria-labelledby="theme-heading" class="stack stack-loose">
 		<h2 id="theme-heading" class="h2">Theme picker</h2>
-		<p class="body-sm text-fg-muted">
+		<p class="body-sm text-muted-foreground">
 			8 primary colour choices. <strong>LeadKart</strong> is the default (logo wordmark). Picking
 			re-skins the primary tokens instantly via a <code>&lt;html data-colors="X"&gt;</code> attribute
 			swap.
@@ -200,17 +200,17 @@
 		<h2 id="glass-heading" class="h2">Glass surfaces</h2>
 		<div
 			class="relative h-64 overflow-hidden rounded-lg"
-			style="background: linear-gradient(135deg, var(--color-brand-500), var(--color-secondary-500));"
+			style="background: linear-gradient(135deg, var(--primary-500), var(--success));"
 		>
 			<!-- rtl-allow: centered glass demo in styleguide catalog — physical
 				center-positioning is the visual demonstration. -->
 			<div
-				class="bg-bg-elevated border border-border rounded-md shadow-md absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg p-6"
+				class="bg-card border border-border rounded-md shadow-md absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg p-6"
 			>
 				<p class="h4">Frosted glass overlay</p>
-				<p class="body-sm text-fg-muted mt-2">
-					Hover to see the sheen sweep. Composes bg-bg-elevated border border-border rounded-md
-					shadow-md + .
+				<p class="body-sm text-muted-foreground mt-2">
+					Hover to see the sheen sweep. Composes bg-card border border-border rounded-md shadow-md +
+					.
 				</p>
 			</div>
 		</div>

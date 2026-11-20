@@ -50,7 +50,7 @@
 	<header class="stack stack-tight">
 		{#if profileData}
 			<h1 class="h1">{displayName(profileData)}</h1>
-			<p class="body-sm text-fg-muted">
+			<p class="body-sm text-muted-foreground">
 				{profileData.email}
 			</p>
 		{:else}
@@ -69,10 +69,10 @@
 						class={cn(
 							'label -mb-px inline-block border-b-2 px-4 py-2 transition-colors',
 							'focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none',
-							'focus-visible:ring-focus-ring',
+							'focus-visible:ring-ring',
 							active
 								? 'border-primary text-primary'
-								: 'text-fg-muted hover:text-fg border-transparent'
+								: 'text-muted-foreground hover:text-foreground border-transparent'
 						)}
 					>
 						{tab.label}

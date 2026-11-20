@@ -19,7 +19,7 @@
 			{#snippet title()}
 				<div class="stack stack-tight">
 					<h1 class="h4">Tenants</h1>
-					<p class="caption text-fg-muted">All tenants across the platform.</p>
+					<p class="caption text-muted-foreground">All tenants across the platform.</p>
 				</div>
 			{/snippet}
 			{#snippet search()}
@@ -75,7 +75,7 @@
 			{#snippet title()}
 				<div class="stack stack-tight">
 					<h1 class="h4">Settings</h1>
-					<p class="caption text-fg-muted">Manage your account preferences.</p>
+					<p class="caption text-muted-foreground">Manage your account preferences.</p>
 				</div>
 			{/snippet}
 		</Toolbar>

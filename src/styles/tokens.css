@@ -551,7 +551,7 @@
 	   parent glass + this darken combine to read as "selected
 	   refraction" without competing with the active state's brand
 	   tint. */
-	--bg-bg-muted-bg: color-mix(in srgb, var(--color-fg) 5%, transparent);
+	--lk-muted-tint: color-mix(in srgb, var(--color-fg) 5%, transparent);
 }
 
 /* ═══════════════════════════════════════════════════════════════════

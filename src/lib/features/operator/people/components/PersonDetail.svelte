@@ -105,11 +105,11 @@
 								<Badge variant={badge.variant} size="sm">{badge.label}</Badge>
 							</div>
 							<div class="cluster cluster-tight flex-wrap">
-								<p class="body-base text-fg-muted break-all">{p.email}</p>
+								<p class="body-base text-muted-foreground break-all">{p.email}</p>
 								<CopyButton value={p.email} label="Copy email" />
 							</div>
 							<div class="cluster cluster-tight flex-wrap">
-								<p class="caption text-fg-subtle">
+								<p class="caption text-muted-foreground">
 									ID <code class="break-all">{p.id}</code>
 								</p>
 								<CopyButton value={p.id} label="Copy person ID" />
@@ -144,18 +144,18 @@
 							{/each}
 						{/snippet}
 						{#snippet empty()}
-							<p class="body-base text-fg-muted">No memberships found.</p>
+							<p class="body-base text-muted-foreground">No memberships found.</p>
 						{/snippet}
 						<div class="overflow-x-auto">
 							<table class="w-full text-sm">
 								<thead>
 									<tr class="border-border border-b">
-										<th class="caption text-fg-muted py-2 pe-4 text-start">Tenant</th>
-										<th class="caption text-fg-muted py-2 pe-4 text-start">Designation</th>
-										<th class="caption text-fg-muted py-2 pe-4 text-start">Department</th>
-										<th class="caption text-fg-muted py-2 pe-4 text-start">Joined</th>
-										<th class="caption text-fg-muted py-2 pe-4 text-start">Status</th>
-										<th class="caption text-fg-muted py-2 text-end"></th>
+										<th class="caption text-muted-foreground py-2 pe-4 text-start">Tenant</th>
+										<th class="caption text-muted-foreground py-2 pe-4 text-start">Designation</th>
+										<th class="caption text-muted-foreground py-2 pe-4 text-start">Department</th>
+										<th class="caption text-muted-foreground py-2 pe-4 text-start">Joined</th>
+										<th class="caption text-muted-foreground py-2 pe-4 text-start">Status</th>
+										<th class="caption text-muted-foreground py-2 text-end"></th>
 									</tr>
 								</thead>
 								<tbody>
@@ -166,16 +166,16 @@
 											<td class="py-2 pe-4">
 												{#if t}
 													<div class="stack stack-tight">
-														<span class="text-fg font-medium">{t.display_name}</span>
-														<code class="caption text-fg-muted">{t.slug}</code>
+														<span class="text-foreground font-medium">{t.display_name}</span>
+														<code class="caption text-muted-foreground">{t.slug}</code>
 													</div>
 												{:else}
-													<code class="caption text-fg-muted">{m.tenant_id}</code>
+													<code class="caption text-muted-foreground">{m.tenant_id}</code>
 												{/if}
 											</td>
-											<td class="text-fg py-2 pe-4">{m.designation || '—'}</td>
-											<td class="text-fg py-2 pe-4">{m.department || '—'}</td>
-											<td class="text-fg-muted py-2 pe-4 tabular-nums">
+											<td class="text-foreground py-2 pe-4">{m.designation || '—'}</td>
+											<td class="text-foreground py-2 pe-4">{m.department || '—'}</td>
+											<td class="text-muted-foreground py-2 pe-4 tabular-nums">
 												{formatDate(m.joined_at)}
 											</td>
 											<td class="py-2 pe-4">

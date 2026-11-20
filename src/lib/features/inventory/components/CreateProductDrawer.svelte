@@ -134,14 +134,14 @@
 		<Drawer.Header>
 			<div class="stack stack-tight">
 				<Drawer.Title class="h4">Create product</Drawer.Title>
-				<p class="caption text-fg-muted">Add a pharma product to the tenant catalog.</p>
+				<p class="caption text-muted-foreground">Add a pharma product to the tenant catalog.</p>
 			</div>
 			<Drawer.Close>
 				{#snippet child({ props })}
 					<button
 						{...props}
 						type="button"
-						class="hover:bg-bg-muted rounded-md p-1.5"
+						class="hover:bg-muted rounded-md p-1.5"
 						aria-label="Close"
 					>
 						<Icon icon={X} size="sm" />

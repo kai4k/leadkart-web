@@ -14,11 +14,11 @@
 		variants: {
 			accent: {
 				primary: 'text-primary bg-primary-soft',
-				success: 'text-success-900 bg-success-50',
-				warning: 'text-warning-900 bg-warning-50',
-				danger: 'text-danger-900 bg-danger-50',
-				info: 'text-info-900 bg-info-50',
-				neutral: 'text-fg-muted bg-bg-muted'
+				success: 'text-success bg-success-soft',
+				warning: 'text-warning bg-warning-soft',
+				danger: 'text-destructive bg-destructive-soft',
+				info: 'text-info bg-info-soft',
+				neutral: 'text-muted-foreground bg-muted'
 			}
 		},
 		defaultVariants: { accent: 'neutral' }
@@ -66,19 +66,19 @@
 <Card.Root surface="solid" padding="md" class={className}>
 	<div class="flex items-start justify-between gap-3">
 		<div class="stack stack-tight min-w-0 flex-1">
-			<p class="caption text-fg-muted overline">{label}</p>
+			<p class="caption text-muted-foreground overline">{label}</p>
 			{#if loading}
 				<Skeleton class="h-8 w-24" />
 			{:else}
-				<p class="display-2 text-fg break-words tabular-nums">{value}</p>
+				<p class="display-2 text-foreground break-words tabular-nums">{value}</p>
 			{/if}
 			{#if delta && !loading}
 				<span
 					class={cn(
 						'caption inline-flex items-center gap-1 self-start rounded-full px-2 py-0.5',
-						deltaPositive && 'bg-success-50 text-success-900',
-						deltaNegative && 'bg-danger-50 text-danger-900',
-						!deltaPositive && !deltaNegative && 'bg-bg-muted text-fg-muted'
+						deltaPositive && 'bg-success-soft text-success',
+						deltaNegative && 'bg-destructive-soft text-destructive',
+						!deltaPositive && !deltaNegative && 'bg-muted text-muted-foreground'
 					)}
 				>
 					{#if deltaPositive}
@@ -87,7 +87,7 @@
 						<Icon icon={ArrowDown} size="xs" />
 					{/if}
 					<span class="tabular-nums">{deltaFormatted}</span>
-					<span class="text-fg-muted">{delta.period}</span>
+					<span class="text-muted-foreground">{delta.period}</span>
 				</span>
 			{:else if loading}
 				<Skeleton class="h-4 w-32" />

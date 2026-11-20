@@ -91,25 +91,25 @@
 	   thin-chrome canon — visual consistency wins over per-surface
 	   density variation. */
 	--lk-sidebar-bg: var(--glass-bg-thick);
-	--lk-sidebar-bg-solid: var(--color-bg-elevated); /* fallback for reduced-transparency */
-	--lk-sidebar-fg: var(--color-fg);
-	--lk-sidebar-fg-muted: var(--color-fg-muted);
+	--lk-sidebar-bg-solid: var(--card); /* fallback for reduced-transparency */
+	--lk-sidebar-fg: var(--foreground);
+	--lk-sidebar-fg-muted: var(--muted-foreground);
 	/* Hover state — SUBTLE DARKEN (fg-tinted) against the white-
 	   tinted sidebar chrome. iOS Mail / Music / Finder canon: hover
 	   over white-glass chrome is a 5-8% black overlay (a direction
 	   shift toward fg), NOT another layer of white. The ring uses
 	   the same direction (fg-alpha) so the pill edge stays crisp. */
-	--lk-sidebar-hover-bg: var(--bg-bg-muted-bg);
-	--lk-sidebar-hover-ring: color-mix(in srgb, var(--color-fg) 8%, transparent);
-	/* Active state — light brand-tint over bg-bg-muted. 10% primary
+	--lk-sidebar-hover-bg: var(--lk-muted-tint);
+	--lk-sidebar-hover-ring: color-mix(in srgb, var(--foreground) 8%, transparent);
+	/* Active state — light brand-tint over bg-muted. 10% primary
 	   mix (was 16%) keeps the active state reading as GLASS with a
 	   primary hint rather than as a solid paint patch — Apple Music
 	   selected-item canon. The ring + tinted shadow carry the brand
 	   weight so the bg fill can stay glass-like. */
-	--lk-sidebar-active-bg: color-mix(in srgb, var(--color-primary) 10%, var(--bg-bg-muted-bg));
-	--lk-sidebar-active-fg: var(--color-primary);
-	--lk-sidebar-active-ring: color-mix(in srgb, var(--color-primary) 22%, transparent);
-	--lk-sidebar-border: color-mix(in srgb, var(--color-bg-elevated) 40%, transparent);
+	--lk-sidebar-active-bg: color-mix(in srgb, var(--primary) 10%, var(--lk-muted-tint));
+	--lk-sidebar-active-fg: var(--primary);
+	--lk-sidebar-active-ring: color-mix(in srgb, var(--primary) 22%, transparent);
+	--lk-sidebar-border: color-mix(in srgb, var(--card) 40%, transparent);
 	--lk-sidebar-specular: var(--glass-specular);
 
 	/* Page content max-width — soft cap so wide screens don't sprawl.
@@ -216,22 +216,22 @@
 		background:
 			radial-gradient(
 				ellipse 80% 60% at 0% 0%,
-				color-mix(in srgb, var(--color-brand-200) 90%, transparent),
+				color-mix(in srgb, var(--primary-200) 90%, transparent),
 				transparent 65%
 			),
 			radial-gradient(
 				ellipse 70% 70% at 100% 100%,
-				color-mix(in srgb, var(--color-secondary-100) 85%, transparent),
+				color-mix(in srgb, var(--success-soft) 85%, transparent),
 				transparent 70%
 			),
 			radial-gradient(
 				ellipse 60% 50% at 50% 0%,
-				color-mix(in srgb, var(--color-brand-100) 60%, transparent),
+				color-mix(in srgb, var(--primary-100) 60%, transparent),
 				transparent 60%
 			),
-			var(--color-bg);
+			var(--background);
 		background-attachment: fixed;
-		color: var(--color-fg);
+		color: var(--foreground);
 		font-size: var(--text-base);
 		line-height: var(--text-base--line-height);
 	}
@@ -239,16 +239,16 @@
 	/* Default focus ring — keyboard-only via :focus-visible.
 	 * Industry canon since 2021 (W3C focus-visible spec). NEVER
 	 * suppress focus globally — accessibility violation.
-	 * Uses --color-focus-ring semantic alias so the focus visual can
+	 * Uses --ring semantic alias so the focus visual can
 	 * be retargeted in one place. */
 	:focus-visible {
-		outline: var(--border-medium) solid var(--color-focus-ring);
+		outline: var(--border-medium) solid var(--ring);
 		outline-offset: var(--border-medium);
 	}
 
 	::selection {
-		background: var(--color-brand-200);
-		color: var(--color-brand-900);
+		background: var(--primary-200);
+		color: var(--primary-900);
 	}
 
 	/* Reduced-motion respect — mandatory per WCAG 2.3.3.
@@ -268,19 +268,19 @@
 	/* Reduced-transparency respect — iOS / macOS Accessibility setting
 	 * (and Windows "Transparency effects: Off"). When the user has
 	 * disabled material translucency, fall back to the solid surface
-	 * tokens (--lk-sidebar-bg-solid, --color-bg-elevated) and skip the
+	 * tokens (--lk-sidebar-bg-solid, --card) and skip the
 	 * backdrop-filter cost. Liquid Glass surfaces consult the
 	 * `--glass-bg*` vars normally; the override below substitutes
 	 * opaque values so the visual remains legible. */
 	@media (prefers-reduced-transparency: reduce) {
 		:root {
-			--glass-bg-thin: var(--color-bg-elevated);
-			--glass-bg: var(--color-bg-elevated);
-			--glass-bg-elevated: var(--color-bg-elevated);
-			--glass-bg-thick: var(--color-bg-elevated);
+			--glass-bg-thin: var(--card);
+			--glass-bg: var(--card);
+			--glass-bg-elevated: var(--card);
+			--glass-bg-thick: var(--card);
 			--glass-bg-dark: oklch(0.22 0.015 256);
-			--bg-bg-muted-bg: var(--color-bg-muted);
-			--bg-bg-muted-bg-dark: oklch(0.32 0.04 260);
+			--lk-muted-tint: var(--muted);
+			--lk-muted-tint-dark: oklch(0.32 0.04 260);
 			--glass-blur: 0px;
 			--glass-blur-strong: 0px;
 			--glass-saturate: 100%;

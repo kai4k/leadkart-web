@@ -43,7 +43,7 @@
 	<Dialog.Content size="xl">
 		<Dialog.Header>
 			<Dialog.Title class="h5 text-base">Cancel order</Dialog.Title>
-			<p class="body-sm text-fg-muted">
+			<p class="body-sm text-muted-foreground">
 				Cancelling triggers compensation: stock unreserve, invoice cancellation, and a credit note
 				if an invoice was already issued.
 			</p>

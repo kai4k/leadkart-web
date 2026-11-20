@@ -93,7 +93,7 @@
 				Admin
 			</span>
 		</div>
-		<p class="body-sm text-fg-muted">
+		<p class="body-sm text-muted-foreground">
 			Signed in as <code class="code-inline">{email}</code>. Full team overview across CRM, orders,
 			inventory, and dispatch.
 		</p>
@@ -101,7 +101,7 @@
 
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 		{#each tiles as tile (tile.label)}
-			<Card.Root surface="glass" class="hover:bg-bg-muted">
+			<Card.Root surface="glass" class="hover:bg-muted">
 				<Card.Header>
 					<div class="cluster" style="--cluster-gap: var(--spacing-3);">
 						<span class={`lk-dash-tile-icon lk-dash-tile-icon--${tile.accent}`} aria-hidden="true">
@@ -111,8 +111,8 @@
 					</div>
 				</Card.Header>
 				<Card.Content>
-					<p class="display-2 text-fg-subtle tabular-nums">—</p>
-					<p class="caption text-fg-subtle mt-1">{tile.hint}</p>
+					<p class="display-2 text-muted-foreground tabular-nums">—</p>
+					<p class="caption text-muted-foreground mt-1">{tile.hint}</p>
 				</Card.Content>
 			</Card.Root>
 		{/each}
@@ -136,19 +136,19 @@
 		flex-shrink: 0;
 	}
 	.lk-dash-tile-icon--brand {
-		background: var(--color-primary-soft);
-		color: var(--color-primary);
+		background: var(--primary-soft);
+		color: var(--primary);
 	}
 	.lk-dash-tile-icon--success {
-		background: var(--color-success-50);
-		color: var(--color-success-700);
+		background: var(--success-soft);
+		color: var(--success);
 	}
 	.lk-dash-tile-icon--warning {
-		background: var(--color-warning-50);
-		color: var(--color-warning-700);
+		background: var(--warning-soft);
+		color: var(--warning);
 	}
 	.lk-dash-tile-icon--danger {
-		background: var(--color-danger-50);
-		color: var(--color-danger-700);
+		background: var(--destructive-soft);
+		color: var(--destructive);
 	}
 </style>

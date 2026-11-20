@@ -184,9 +184,9 @@
 						<h1 class="h1">{role.name}</h1>
 						<Badge variant={badge.variant} size="sm">{badge.label}</Badge>
 					</div>
-					<p class="caption text-fg-muted">Hierarchy level {role.hierarchy_level}</p>
+					<p class="caption text-muted-foreground">Hierarchy level {role.hierarchy_level}</p>
 					<div class="cluster cluster-tight">
-						<code class="caption text-fg-subtle">{role.id}</code>
+						<code class="caption text-muted-foreground">{role.id}</code>
 						<CopyButton value={role.id} label="Copy role ID" />
 					</div>
 				</div>
@@ -224,7 +224,7 @@
 							min={ROLE_LEVEL_MIN}
 							max={ROLE_LEVEL_MAX}
 							disabled={!canUpdate}
-							class="bg-bg-elevated border border-border rounded-md rounded-md px-3 py-2 text-sm"
+							class="bg-card border border-border rounded-md rounded-md px-3 py-2 text-sm"
 						/>
 					</label>
 				</Card.Content>

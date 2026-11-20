@@ -38,7 +38,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="stack stack-tight" onclick={open} data-testid="lead-kanban-card" data-lead-id={lead.id}>
 	<div class="cluster cluster-spread items-start">
-		<span class="label text-fg truncate font-semibold">{lead.contact_name}</span>
+		<span class="label text-foreground truncate font-semibold">{lead.contact_name}</span>
 		<StatusPill
 			value={lead.temperature}
 			options={onTemperatureChange ? [...TEMPERATURE_OPTIONS] : undefined}
@@ -46,8 +46,8 @@
 		/>
 	</div>
 
-	<p class="caption text-fg-muted truncate">{lead.mobile_number}</p>
-	<p class="caption text-fg-muted truncate">{locationLabel(lead)}</p>
+	<p class="caption text-muted-foreground truncate">{lead.mobile_number}</p>
+	<p class="caption text-muted-foreground truncate">{locationLabel(lead)}</p>
 
 	<div class="cluster cluster-tight">
 		<Badge variant="neutral" size="sm">

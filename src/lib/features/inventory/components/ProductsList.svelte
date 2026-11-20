@@ -288,9 +288,9 @@
 
 {#snippet brandCell(product: ProductDto)}
 	<div class="stack stack-tight">
-		<span class="body-base text-fg truncate font-medium">{product.brand_name}</span>
+		<span class="body-base text-foreground truncate font-medium">{product.brand_name}</span>
 		{#if product.generic_name}
-			<span class="caption text-fg-muted truncate">{product.generic_name}</span>
+			<span class="caption text-muted-foreground truncate">{product.generic_name}</span>
 		{/if}
 	</div>
 {/snippet}
@@ -304,7 +304,9 @@
 	{@const stock = stockLevelBadge(product)}
 	<div class="cluster cluster-tight">
 		<Badge variant={stock.variant} size="sm">{stock.label}</Badge>
-		<span class="caption text-fg-muted tabular-nums">{product.total_quantity_available}</span>
+		<span class="caption text-muted-foreground tabular-nums"
+			>{product.total_quantity_available}</span
+		>
 	</div>
 {/snippet}
 
@@ -313,12 +315,12 @@
 	{#if expiry}
 		<Badge variant={expiry.variant} size="sm">{expiry.label}</Badge>
 	{:else}
-		<span class="caption text-fg-subtle">—</span>
+		<span class="caption text-muted-foreground">—</span>
 	{/if}
 {/snippet}
 
 {#snippet mrpCell(product: ProductDto)}
-	<span class="body-base text-fg">{formatPrice(product.mrp)}</span>
+	<span class="body-base text-foreground">{formatPrice(product.mrp)}</span>
 {/snippet}
 
 {#snippet statusCell(product: ProductDto)}
@@ -361,7 +363,7 @@
 >
 	{#if query.isError}
 		<div
-			class="border-danger-500 text-danger-700 rounded-md border p-4"
+			class="border-destructive/40 text-destructive rounded-md border p-4"
 			data-testid="products-error"
 		>
 			Couldn't load products. {errorCopy}
@@ -383,7 +385,7 @@
 
 		{#if query.isFetchingNextPage}
 			<div class="flex justify-center py-3">
-				<span class="caption text-fg-muted">Loading more…</span>
+				<span class="caption text-muted-foreground">Loading more…</span>
 			</div>
 		{/if}
 	{/if}

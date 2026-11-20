@@ -190,7 +190,7 @@
 			<div class="stack stack-tight">
 				<Drawer.Title class="h4">{title}</Drawer.Title>
 				{#if description}
-					<p class="caption text-fg-muted">{description}</p>
+					<p class="caption text-muted-foreground">{description}</p>
 				{/if}
 			</div>
 			<Drawer.Close>
@@ -198,7 +198,7 @@
 					<button
 						{...props}
 						type="button"
-						class="hover:bg-bg-muted rounded-md p-1.5"
+						class="hover:bg-muted rounded-md p-1.5"
 						aria-label={$_('common.close')}
 					>
 						<Icon icon={X} size="sm" />
@@ -232,13 +232,13 @@
 						class={[
 							'border-border rounded-lg border-2 border-dashed px-6 py-12 text-center',
 							'transition-colors duration-[var(--duration-fast)]',
-							dragOver ? 'border-primary bg-primary-soft' : 'bg-bg-muted'
+							dragOver ? 'border-primary bg-primary-soft' : 'bg-muted'
 						]}
 						data-testid="bulk-upload-dropzone"
 					>
 						<div class="stack stack-tight items-center">
 							<Icon icon={Upload} size="lg" />
-							<p class="body-sm text-fg-muted">
+							<p class="body-sm text-muted-foreground">
 								Drop a file here, or
 								<button
 									type="button"
@@ -246,7 +246,7 @@
 									onclick={() => fileInput?.click()}>browse</button
 								>
 							</p>
-							<p class="caption text-fg-subtle">{accept}</p>
+							<p class="caption text-muted-foreground">{accept}</p>
 							<input
 								bind:this={fileInput}
 								type="file"
@@ -261,12 +261,12 @@
 					{#if file}
 						<div class="cluster cluster-spread border-border rounded-md border p-3">
 							<div class="stack stack-tight">
-								<p class="label text-fg">{file.name}</p>
-								<p class="caption text-fg-muted">{fileSize(file.size)}</p>
+								<p class="label text-foreground">{file.name}</p>
+								<p class="caption text-muted-foreground">{fileSize(file.size)}</p>
 							</div>
 							<button
 								type="button"
-								class="hover:bg-bg-muted rounded-md p-1.5"
+								class="hover:bg-muted rounded-md p-1.5"
 								aria-label={$_('common.upload.removeFile')}
 								onclick={() => {
 									file = null;
@@ -283,7 +283,7 @@
 							<span class="label">Upsert mode</span>
 							<select
 								bind:value={upsertBy}
-								class="bg-bg-elevated border border-border rounded-md body-sm text-fg rounded-md px-3 py-2"
+								class="bg-card border border-border rounded-md body-sm text-foreground rounded-md px-3 py-2"
 							>
 								{#each upsertOptions as opt (opt.value)}
 									<option value={opt.value}>{opt.label}</option>
@@ -309,19 +309,19 @@
 					{#if preview.errors.length > 0}
 						<div class="border-border max-h-64 overflow-auto rounded-md border">
 							<table class="w-full text-start">
-								<thead class="bg-bg-muted">
+								<thead class="bg-muted">
 									<tr>
-										<th class="caption text-fg-muted px-3 py-2">Row</th>
-										<th class="caption text-fg-muted px-3 py-2">Field</th>
-										<th class="caption text-fg-muted px-3 py-2">Message</th>
+										<th class="caption text-muted-foreground px-3 py-2">Row</th>
+										<th class="caption text-muted-foreground px-3 py-2">Field</th>
+										<th class="caption text-muted-foreground px-3 py-2">Message</th>
 									</tr>
 								</thead>
 								<tbody>
 									{#each preview.errors as err (`${err.row_number}-${err.field}`)}
 										<tr class="border-border border-t">
-											<td class="caption text-fg px-3 py-2">#{err.row_number}</td>
-											<td class="caption text-fg px-3 py-2">{err.field}</td>
-											<td class="caption text-danger-700 px-3 py-2">{err.message}</td>
+											<td class="caption text-foreground px-3 py-2">#{err.row_number}</td>
+											<td class="caption text-foreground px-3 py-2">{err.field}</td>
+											<td class="caption text-destructive px-3 py-2">{err.message}</td>
 										</tr>
 									{/each}
 								</tbody>
@@ -331,11 +331,11 @@
 
 					{#if preview.rows.length > 0}
 						<details>
-							<summary class="caption text-fg-muted cursor-pointer">
+							<summary class="caption text-muted-foreground cursor-pointer">
 								Preview first {Math.min(preview.rows.length, 50)} rows
 							</summary>
 							<div class="border-border mt-2 max-h-64 overflow-auto rounded-md border">
-								<pre class="caption text-fg p-3 whitespace-pre-wrap">{JSON.stringify(
+								<pre class="caption text-foreground p-3 whitespace-pre-wrap">{JSON.stringify(
 										preview.rows.slice(0, 50),
 										null,
 										2
@@ -350,7 +350,7 @@
 				</div>
 			{:else if step === 'result' && result}
 				<div class="stack stack-relaxed text-center">
-					<div class="text-success-700 mx-auto inline-flex">
+					<div class="text-success mx-auto inline-flex">
 						<Icon icon={CheckCircle2} size="xl" />
 					</div>
 					<h3 class="h5">Upload complete</h3>
@@ -364,17 +364,17 @@
 					{#if result.errors.length > 0}
 						<div class="border-border max-h-64 overflow-auto rounded-md border text-start">
 							<table class="w-full text-start">
-								<thead class="bg-bg-muted">
+								<thead class="bg-muted">
 									<tr>
-										<th class="caption text-fg-muted px-3 py-2">Row</th>
-										<th class="caption text-fg-muted px-3 py-2">Message</th>
+										<th class="caption text-muted-foreground px-3 py-2">Row</th>
+										<th class="caption text-muted-foreground px-3 py-2">Message</th>
 									</tr>
 								</thead>
 								<tbody>
 									{#each result.errors as err (`${err.row_number}-${err.field}`)}
 										<tr class="border-border border-t">
-											<td class="caption text-fg px-3 py-2">#{err.row_number}</td>
-											<td class="caption text-danger-700 px-3 py-2">{err.message}</td>
+											<td class="caption text-foreground px-3 py-2">#{err.row_number}</td>
+											<td class="caption text-destructive px-3 py-2">{err.message}</td>
 										</tr>
 									{/each}
 								</tbody>

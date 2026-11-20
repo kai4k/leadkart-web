@@ -26,10 +26,10 @@
 		border-radius: 0.375rem;
 		font-size: var(--text-sm);
 		font-weight: 500;
-		color: var(--color-fg-muted);
+		color: var(--muted-foreground);
 	}
 	.lk-link-btn:hover {
-		color: var(--color-fg);
-		background: var(--color-bg-muted);
+		color: var(--foreground);
+		background: var(--muted);
 	}
 </style>

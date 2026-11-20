@@ -85,7 +85,7 @@
 			<div class="stack stack-tight">
 				<Dialog.Title class="h5 text-base">Adjust stock</Dialog.Title>
 				{#if batch}
-					<p class="caption text-fg-muted">
+					<p class="caption text-muted-foreground">
 						Batch <code>{batch.batch_number}</code>
 					</p>
 				{/if}
@@ -95,12 +95,12 @@
 			<form id="adjust-stock-form" class="stack stack-relaxed" onsubmit={onSubmit} novalidate>
 				<div class="grid gap-3 sm:grid-cols-2">
 					<label class="stack stack-tight">
-						<span class="label text-fg">Current available</span>
+						<span class="label text-foreground">Current available</span>
 						<input
 							type="number"
 							readonly
 							value={currentAvailable}
-							class="bg-bg-elevated border border-border rounded-md body-sm text-fg bg-bg-muted rounded-md px-3 py-2"
+							class="bg-card border border-border rounded-md body-sm text-foreground bg-muted rounded-md px-3 py-2"
 							aria-label="Current available"
 						/>
 					</label>
@@ -125,19 +125,19 @@
 				</RadioGroup>
 
 				<label class="stack stack-tight">
-					<span class="label text-fg">Note (optional)</span>
+					<span class="label text-foreground">Note (optional)</span>
 					<textarea
 						bind:value={form.values.note}
 						maxlength={1000}
 						rows={2}
 						placeholder="Anything worth remembering for the audit trail…"
-						class="bg-bg-elevated border border-border rounded-md body-sm text-fg w-full rounded-md px-3 py-2"
+						class="bg-card border border-border rounded-md body-sm text-foreground w-full rounded-md px-3 py-2"
 					></textarea>
 				</label>
 
-				<div class="border-border bg-bg-muted rounded-md border px-3 py-2">
-					<p class="caption text-fg-muted">
-						New balance: <strong class="text-fg" data-testid="new-balance-preview"
+				<div class="border-border bg-muted rounded-md border px-3 py-2">
+					<p class="caption text-muted-foreground">
+						New balance: <strong class="text-foreground" data-testid="new-balance-preview"
 							>{newBalance}</strong
 						>
 					</p>

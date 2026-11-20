@@ -12,7 +12,7 @@
 <h3
 	bind:this={ref}
 	data-slot="card-title"
-	class={cn('text-base font-semibold leading-tight text-fg', className)}
+	class={cn('text-base font-semibold leading-tight text-foreground', className)}
 	{...rest}
 >
 	{@render children?.()}

@@ -95,8 +95,8 @@
 					{#if manager}
 						<div class="cluster cluster-spread">
 							<div class="cluster cluster-tight">
-								<Icon icon={Users} size="sm" class="text-fg-muted" />
-								<span class="body-base text-fg">{manager}</span>
+								<Icon icon={Users} size="sm" class="text-muted-foreground" />
+								<span class="body-base text-foreground">{manager}</span>
 							</div>
 							{#if may.update}
 								<div class="cluster cluster-tight">
@@ -190,10 +190,10 @@
 					</div>
 				</Card.Header>
 				<Card.Content>
-					<p class="body-sm text-fg-muted">
+					<p class="body-sm text-muted-foreground">
 						Edit overrides via the side panel. Granted permissions extend role defaults; revoked
 						permissions remove them even when a role would grant access. Per BRD §6.1:
-						<code class="caption text-fg">effective = role + grants − revocations</code>.
+						<code class="caption text-foreground">effective = role + grants − revocations</code>.
 					</p>
 				</Card.Content>
 			</Card.Root>
@@ -223,14 +223,14 @@
 							<li>
 								<a
 									href={resolve('/(app)/settings/users/[id]', { id: report.membership_id })}
-									class="hover:bg-bg-muted -mx-2 flex items-center gap-3 rounded-md px-2 py-2 transition-colors"
+									class="hover:bg-muted -mx-2 flex items-center gap-3 rounded-md px-2 py-2 transition-colors"
 								>
 									<Avatar initials={initials(displayName(report))} size="sm" />
 									<div class="stack stack-tight min-w-0 flex-1">
-										<span class="body-sm text-fg truncate font-medium">
+										<span class="body-sm text-foreground truncate font-medium">
 											{displayName(report)}
 										</span>
-										<span class="caption text-fg-muted truncate">{report.email}</span>
+										<span class="caption text-muted-foreground truncate">{report.email}</span>
 									</div>
 									<Badge variant={rs.variant} size="sm">{rs.label}</Badge>
 								</a>

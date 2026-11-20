@@ -68,9 +68,9 @@
 				maxlength={500}
 				rows={3}
 				aria-invalid={reasonError ? 'true' : undefined}
-				class="bg-bg-elevated border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
+				class="bg-card border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
 			></textarea>
-			{#if reasonError}<span class="body-sm text-danger-700">{reasonError}</span>{/if}
+			{#if reasonError}<span class="body-sm text-destructive">{reasonError}</span>{/if}
 		</label>
 		<Alert variant="warning">Reversible for 30 days via Restore.</Alert>
 		{#if bannerError}<Alert variant="destructive">{bannerError}</Alert>{/if}

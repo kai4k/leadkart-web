@@ -77,9 +77,9 @@
 							<h1 class="h2">{displayName(user)}</h1>
 							<Badge variant={status.variant}>{status.label}</Badge>
 						</div>
-						<p class="body-sm text-fg-muted">{user.email}</p>
+						<p class="body-sm text-muted-foreground">{user.email}</p>
 						{#if user.designation || user.department}
-							<p class="caption text-fg-subtle">
+							<p class="caption text-muted-foreground">
 								{user.designation || '—'} · {user.department || '—'}
 							</p>
 						{/if}

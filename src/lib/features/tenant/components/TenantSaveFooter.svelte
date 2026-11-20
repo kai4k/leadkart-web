@@ -40,6 +40,6 @@
 	{#if allowed}
 		<Button type="submit" {loading}>Save changes</Button>
 	{:else}
-		<p class="caption text-fg-muted">You don't have permission to change these settings.</p>
+		<p class="caption text-muted-foreground">You don't have permission to change these settings.</p>
 	{/if}
 </div>

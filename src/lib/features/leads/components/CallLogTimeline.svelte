@@ -43,10 +43,10 @@
 				datetime={call.called_at}
 			>
 				{#if call.notes}
-					<p class="body-sm text-fg-muted">{call.notes}</p>
+					<p class="body-sm text-muted-foreground">{call.notes}</p>
 				{/if}
 				{#if call.callback_at}
-					<p class="caption text-fg-muted">
+					<p class="caption text-muted-foreground">
 						Callback scheduled · {relativeTime(call.callback_at)}
 					</p>
 				{/if}

@@ -42,8 +42,8 @@
 	<div class="flex flex-col items-center gap-6">
 		<Logo size="2xl" />
 		<div class="stack stack-tight text-center">
-			<h1 class="h1 text-brand-heading">{$_('auth.resetPassword.title')}</h1>
-			<p class="body-sm text-fg-muted">{$_('auth.resetPassword.subtitle')}</p>
+			<h1 class="h1 text-primary">{$_('auth.resetPassword.title')}</h1>
+			<p class="body-sm text-muted-foreground">{$_('auth.resetPassword.subtitle')}</p>
 		</div>
 	</div>
 
@@ -51,7 +51,7 @@
 		<Alert variant="warning">
 			<p>{$_('auth.resetPassword.errors.missingToken')}</p>
 		</Alert>
-		<p class="caption text-fg-muted text-center">
+		<p class="caption text-muted-foreground text-center">
 			<a href={resolve('forgot-password')} class="text-primary hover:underline"
 				>{$_('auth.resetPassword.requestNew')}</a
 			>
@@ -98,7 +98,7 @@
 		</form>
 
 		<div
-			class="border-border text-fg-subtle flex flex-col items-center gap-2 border-t pt-4 sm:flex-row sm:justify-center"
+			class="border-border text-muted-foreground flex flex-col items-center gap-2 border-t pt-4 sm:flex-row sm:justify-center"
 		>
 			<Icon icon={Lock} size="xs" />
 			<span class="caption">

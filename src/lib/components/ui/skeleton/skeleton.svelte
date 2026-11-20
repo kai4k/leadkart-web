@@ -1,6 +1,6 @@
 <script lang="ts" module>
 	import { cva, type VariantProps } from 'class-variance-authority';
-	export const skeletonVariants = cva('animate-shimmer bg-bg-muted block', {
+	export const skeletonVariants = cva('animate-shimmer bg-muted block', {
 		variants: { shape: { line: 'rounded', circle: 'rounded-full', rect: 'rounded-md' } },
 		defaultVariants: { shape: 'line' }
 	});

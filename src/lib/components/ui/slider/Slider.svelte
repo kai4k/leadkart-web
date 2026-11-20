@@ -55,7 +55,7 @@
 	aria-label={ariaLabel}
 	class={cn(
 		'relative flex w-full touch-none items-center select-none',
-		'bg-bg-muted h-1 rounded-full',
+		'bg-muted h-1 rounded-full',
 		"data-[orientation='vertical']:h-full data-[orientation='vertical']:w-1 data-[orientation='vertical']:flex-col",
 		'data-[disabled]:opacity-50',
 		className
@@ -68,9 +68,9 @@
 		index={0}
 		class={cn(
 			'bg-primary block size-4 rounded-full shadow-md',
-			'border-2 border-[var(--color-bg-elevated)]',
+			'border-2 border-[var(--card)]',
 			'transition-transform duration-[var(--duration-fast)]',
-			'focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none',
+			'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none',
 			'hover:scale-110 active:scale-95',
 			'data-[disabled]:pointer-events-none data-[disabled]:opacity-50'
 		)}

@@ -27,9 +27,9 @@
 			variants: {
 				variant: {
 					primary: 'bg-primary',
-					success: 'bg-success-500',
-					warning: 'bg-warning-500',
-					danger: 'bg-danger-500'
+					success: 'bg-success',
+					warning: 'bg-warning',
+					danger: 'bg-destructive'
 				}
 			},
 			defaultVariants: { variant: 'primary' }
@@ -71,7 +71,7 @@
 	{max}
 	{min}
 	aria-label={label}
-	class={cn('bg-bg-muted relative h-2 w-full overflow-hidden rounded-full', className)}
+	class={cn('bg-muted relative h-2 w-full overflow-hidden rounded-full', className)}
 >
 	{#if pct === null}
 		<!-- Indeterminate state — animated sliver crossing the track. -->

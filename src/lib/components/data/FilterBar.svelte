@@ -96,9 +96,7 @@
 </script>
 
 {#if open}
-	<div
-		class={cn('border-border bg-bg-elevated stack stack-tight rounded-md border p-4', className)}
-	>
+	<div class={cn('border-border bg-card stack stack-tight rounded-md border p-4', className)}>
 		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 			{#each fields as field (field.key)}
 				{#if field.type === 'select' && field.options}
@@ -111,11 +109,11 @@
 					/>
 				{:else if field.type === 'multi-select' && field.options}
 					<div class="stack stack-tight">
-						<label class="label text-fg" for="filterbar-{field.key}">{field.label}</label>
+						<label class="label text-foreground" for="filterbar-{field.key}">{field.label}</label>
 						<select
 							id="filterbar-{field.key}"
 							multiple
-							class="bg-bg-elevated border border-border rounded-md body-sm text-fg min-h-24 w-full rounded-md px-3 py-2"
+							class="bg-card border border-border rounded-md body-sm text-foreground min-h-24 w-full rounded-md px-3 py-2"
 							value={multiValueOf(field.key)}
 							onchange={(e) => onMultiChange(field.key, e)}
 						>
@@ -133,21 +131,21 @@
 					/>
 				{:else if field.type === 'date-range'}
 					<div class="stack stack-tight">
-						<span class="label text-fg">{field.label}</span>
+						<span class="label text-foreground">{field.label}</span>
 						<div class="cluster cluster-tight">
 							<input
 								type="date"
 								aria-label={$_('common.filter.from', { values: { label: field.label } })}
-								class="bg-bg-elevated border border-border rounded-md body-sm text-fg flex-1 rounded-md px-3 py-2"
+								class="bg-card border border-border rounded-md body-sm text-foreground flex-1 rounded-md px-3 py-2"
 								value={dateValueOf(field.key, 'from')}
 								onchange={(e) =>
 									setScalar(`${field.key}_from`, (e.currentTarget as HTMLInputElement).value)}
 							/>
-							<span class="caption text-fg-muted" aria-hidden="true">—</span>
+							<span class="caption text-muted-foreground" aria-hidden="true">—</span>
 							<input
 								type="date"
 								aria-label={$_('common.filter.to', { values: { label: field.label } })}
-								class="bg-bg-elevated border border-border rounded-md body-sm text-fg flex-1 rounded-md px-3 py-2"
+								class="bg-card border border-border rounded-md body-sm text-foreground flex-1 rounded-md px-3 py-2"
 								value={dateValueOf(field.key, 'to')}
 								onchange={(e) =>
 									setScalar(`${field.key}_to`, (e.currentTarget as HTMLInputElement).value)}
@@ -155,10 +153,10 @@
 						</div>
 					</div>
 				{:else if field.type === 'boolean'}
-					<label class="cluster cluster-tight body-sm text-fg cursor-pointer">
+					<label class="cluster cluster-tight body-sm text-foreground cursor-pointer">
 						<input
 							type="checkbox"
-							class="text-primary focus-visible:ring-focus-ring h-4 w-4 rounded"
+							class="text-primary focus-visible:ring-ring h-4 w-4 rounded"
 							checked={valueOf(field.key) === 'true'}
 							onchange={(e) => setBoolean(field.key, (e.currentTarget as HTMLInputElement).checked)}
 						/>
@@ -171,14 +169,14 @@
 		<div class="cluster cluster-spread pt-2">
 			<button
 				type="button"
-				class="label text-fg-muted hover:text-fg inline-flex items-center gap-1"
+				class="label text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
 				onclick={() => (open = false)}
 			>
 				<Icon icon={ChevronUp} size="xs" /> Hide filters
 			</button>
 			<button
 				type="button"
-				class="label text-fg-muted hover:text-fg"
+				class="label text-muted-foreground hover:text-foreground"
 				onclick={() => urlFilters.clearAll()}
 			>
 				Reset filters
@@ -189,7 +187,7 @@
 	<button
 		type="button"
 		class={cn(
-			'label text-fg-muted hover:text-fg inline-flex items-center gap-1 self-start',
+			'label text-muted-foreground hover:text-foreground inline-flex items-center gap-1 self-start',
 			className
 		)}
 		onclick={() => (open = true)}

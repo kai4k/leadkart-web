@@ -16,18 +16,18 @@
 	<Card.Content>
 		<dl class="grid gap-3 sm:grid-cols-2">
 			<div class="stack stack-tight">
-				<dt class="caption text-fg-muted">Drug schedule</dt>
+				<dt class="caption text-muted-foreground">Drug schedule</dt>
 				<dd>
 					<Badge variant={sched.variant}>{sched.label}</Badge>
 				</dd>
 			</div>
 			<div class="stack stack-tight">
-				<dt class="caption text-fg-muted">Shelf life</dt>
-				<dd class="body-sm text-fg tabular-nums">{product.shelf_life_months} months</dd>
+				<dt class="caption text-muted-foreground">Shelf life</dt>
+				<dd class="body-sm text-foreground tabular-nums">{product.shelf_life_months} months</dd>
 			</div>
 			<div class="stack stack-tight sm:col-span-2">
-				<dt class="caption text-fg-muted">Storage condition</dt>
-				<dd class="body-sm text-fg">{product.storage_condition || '—'}</dd>
+				<dt class="caption text-muted-foreground">Storage condition</dt>
+				<dd class="body-sm text-foreground">{product.storage_condition || '—'}</dd>
 			</div>
 		</dl>
 	</Card.Content>

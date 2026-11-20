@@ -7,11 +7,11 @@
 			variants: {
 				accent: {
 					primary: 'bg-primary',
-					success: 'bg-success-500',
-					warning: 'bg-warning-500',
-					danger: 'bg-danger-500',
-					info: 'bg-info-500',
-					neutral: 'bg-fg-subtle'
+					success: 'bg-success',
+					warning: 'bg-warning',
+					danger: 'bg-destructive',
+					info: 'bg-info',
+					neutral: 'bg-muted-foreground'
 				}
 			},
 			defaultVariants: { accent: 'neutral' }
@@ -92,7 +92,7 @@
 	class={cn(
 		'flex w-72 min-w-72 flex-col gap-2 rounded-xl p-2 transition-colors',
 		'snap-start',
-		isDragOver ? 'bg-primary-soft' : 'bg-bg-muted',
+		isDragOver ? 'bg-primary-soft' : 'bg-muted',
 		className
 	)}
 	role="listitem"
@@ -104,7 +104,7 @@
 	<header class="flex items-center justify-between gap-2 px-2 pt-1">
 		<div class="flex items-center gap-2">
 			<span class={kanbanColumnHeaderVariants({ accent })} aria-hidden="true"></span>
-			<h3 class="body-sm text-fg font-semibold">{label}</h3>
+			<h3 class="body-sm text-foreground font-semibold">{label}</h3>
 		</div>
 		{#if count !== undefined}
 			<Badge variant="neutral" size="sm">{count}</Badge>

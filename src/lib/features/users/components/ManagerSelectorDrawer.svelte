@@ -83,7 +83,7 @@
 		<Drawer.Header>
 			<div class="stack stack-tight">
 				<Drawer.Title class="h4">Manager for {user ? displayName(user) : 'user'}</Drawer.Title>
-				<p class="caption text-fg-muted">
+				<p class="caption text-muted-foreground">
 					Used by hierarchy-scoped lists (lead reports, leave approvals) and the org tree.
 				</p>
 			</div>
@@ -92,7 +92,7 @@
 					<button
 						{...props}
 						type="button"
-						class="hover:bg-bg-muted rounded-md p-1.5"
+						class="hover:bg-muted rounded-md p-1.5"
 						aria-label="Close">×</button
 					>
 				{/snippet}

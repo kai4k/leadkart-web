@@ -46,7 +46,7 @@
 	<header class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
 		<div class="stack stack-tight">
 			<h2 class="h5">Active sessions</h2>
-			<p class="caption text-fg-muted">
+			<p class="caption text-muted-foreground">
 				Each row is a device or browser signed in to your account.
 			</p>
 		</div>
@@ -63,7 +63,7 @@
 	{#if sessionList.length === 0 && !sessionsQuery.isPending}
 		<Card.Root>
 			<Card.Content class="text-center">
-				<p class="body-base text-fg-muted">No active sessions.</p>
+				<p class="body-base text-muted-foreground">No active sessions.</p>
 			</Card.Content>
 		</Card.Root>
 	{:else}
@@ -77,14 +77,14 @@
 						>
 							<div class="stack stack-tight min-w-0">
 								<div class="cluster flex-wrap">
-									<p class="body-base text-fg truncate font-medium">
+									<p class="body-base text-foreground truncate font-medium">
 										{sess.device_label || 'Unknown device'}
 									</p>
 									{#if current}
 										<Badge variant="success" size="sm">This device</Badge>
 									{/if}
 								</div>
-								<p class="caption text-fg-muted">
+								<p class="caption text-muted-foreground">
 									Last active {relativeTime(sess.last_used_at)} · Started
 									{relativeTime(sess.created_at)}
 								</p>

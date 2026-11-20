@@ -116,8 +116,8 @@
 		inset-block-start: var(--spacing-3);
 		z-index: var(--z-tooltip);
 		padding: var(--spacing-2) var(--spacing-4);
-		background: var(--color-bg-elevated);
-		color: var(--color-fg);
+		background: var(--card);
+		color: var(--foreground);
 		border-radius: var(--radius-md);
 		box-shadow: var(--shadow);
 		transform: translateY(-200%);

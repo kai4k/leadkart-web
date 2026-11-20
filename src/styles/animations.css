@@ -209,7 +209,7 @@
 }
 
 /* Glass border-glow — subtle 4s pulse cycling border-color toward
- * --color-brand-400 at 45% mix. Originally on AuthCard only as a
+ * --primary-400 at 45% mix. Originally on AuthCard only as a
  * focal-CTA highlight; promoted here for use across any glass surface
  * that should "breathe" attention (login modal, chrome surfaces).
  * Applied via the . utility class (defined below in
@@ -217,10 +217,10 @@
 @keyframes {
 	0%,
 	100% {
-		border-color: color-mix(in srgb, var(--color-fg) 8%, transparent);
+		border-color: color-mix(in srgb, var(--foreground) 8%, transparent);
 	}
 	50% {
-		border-color: color-mix(in srgb, var(--color-brand-400) 45%, transparent);
+		border-color: color-mix(in srgb, var(--primary-400) 45%, transparent);
 	}
 }
 
@@ -267,12 +267,7 @@
 
 	/* Shimmer for loading skeletons. Pair with bg-gradient-to-r. */
 	.animate-shimmer {
-		background: linear-gradient(
-			90deg,
-			var(--color-bg-muted) 0%,
-			var(--color-bg-subtle) 50%,
-			var(--color-bg-muted) 100%
-		);
+		background: linear-gradient(90deg, var(--muted) 0%, var(--muted) 50%, var(--muted) 100%);
 		background-size: 200% 100%;
 		animation: shimmer 2s var(--ease-linear) infinite;
 	}
@@ -296,7 +291,7 @@
 	/* Border-glow — slow 4s pulse cycling border-color toward
 	 * brand-400 and back. Use on glass surfaces that should subtly
 	 * "breathe" to draw the eye (focal call-to-action modals, chrome
-	 * surfaces with one-edge borders). Plays well with .bg-bg-elevated border border-border rounded-xl shadow-card
+	 * surfaces with one-edge borders). Plays well with .bg-card border border-border rounded-xl shadow-card
 	 * since it animates only border-color, not other border longhands. */
 	. {
 		animation: 4s ease-in-out 1s infinite;

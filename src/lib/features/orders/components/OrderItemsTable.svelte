@@ -22,7 +22,7 @@
 <div class="overflow-x-auto">
 	<table class="w-full text-start text-sm" data-testid="order-items-table">
 		<thead>
-			<tr class="border-border text-fg-muted border-b">
+			<tr class="border-border text-muted-foreground border-b">
 				<th class="px-2 py-2 text-xs uppercase">Brand</th>
 				<th class="px-2 py-2 text-xs uppercase">Batch</th>
 				<th class="px-2 py-2 text-xs uppercase">HSN</th>
@@ -37,9 +37,9 @@
 				<tr class="border-border border-b">
 					<td class="px-2 py-2">
 						<div class="stack stack-tight">
-							<span class="body-sm text-fg">{item.brand_name}</span>
+							<span class="body-sm text-foreground">{item.brand_name}</span>
 							{#if item.pack_size}
-								<span class="caption text-fg-muted">{item.pack_size}</span>
+								<span class="caption text-muted-foreground">{item.pack_size}</span>
 							{/if}
 						</div>
 					</td>
@@ -60,32 +60,32 @@
 			<tfoot>
 				{#if subtotal != null}
 					<tr>
-						<td colspan="6" class="text-fg-muted px-2 py-1 text-end">Subtotal</td>
-						<td class="text-fg px-2 py-1 text-end tabular-nums">
+						<td colspan="6" class="text-muted-foreground px-2 py-1 text-end">Subtotal</td>
+						<td class="text-foreground px-2 py-1 text-end tabular-nums">
 							{formatMoney(subtotal, currency)}
 						</td>
 					</tr>
 				{/if}
 				{#if discountTotal != null && discountTotal > 0}
 					<tr>
-						<td colspan="6" class="text-fg-muted px-2 py-1 text-end">Discount</td>
-						<td class="text-fg px-2 py-1 text-end tabular-nums">
+						<td colspan="6" class="text-muted-foreground px-2 py-1 text-end">Discount</td>
+						<td class="text-foreground px-2 py-1 text-end tabular-nums">
 							−{formatMoney(discountTotal, currency)}
 						</td>
 					</tr>
 				{/if}
 				{#if gstTotal != null}
 					<tr>
-						<td colspan="6" class="text-fg-muted px-2 py-1 text-end">GST</td>
-						<td class="text-fg px-2 py-1 text-end tabular-nums">
+						<td colspan="6" class="text-muted-foreground px-2 py-1 text-end">GST</td>
+						<td class="text-foreground px-2 py-1 text-end tabular-nums">
 							{formatMoney(gstTotal, currency)}
 						</td>
 					</tr>
 				{/if}
 				<tr class="border-border border-t">
-					<td colspan="6" class="text-fg px-2 py-2 text-end font-semibold">Total</td>
+					<td colspan="6" class="text-foreground px-2 py-2 text-end font-semibold">Total</td>
 					<td
-						class="text-fg px-2 py-2 text-end font-semibold tabular-nums"
+						class="text-foreground px-2 py-2 text-end font-semibold tabular-nums"
 						data-testid="order-total"
 					>
 						{formatMoney(total, currency)}
@@ -96,6 +96,6 @@
 	</table>
 
 	{#if items.length === 0}
-		<p class="caption text-fg-muted py-4 text-center">No line items</p>
+		<p class="caption text-muted-foreground py-4 text-center">No line items</p>
 	{/if}
 </div>

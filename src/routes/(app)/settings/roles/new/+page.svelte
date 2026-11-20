@@ -51,7 +51,7 @@
 
 	<header class="stack stack-tight">
 		<h1 class="h1">Create role</h1>
-		<p class="body-sm text-fg-muted">
+		<p class="body-sm text-muted-foreground">
 			Roles bundle permissions for assignment to members. After creating the role, you'll be
 			redirected to its detail page where you can assign permissions and set its place in the
 			reporting hierarchy.

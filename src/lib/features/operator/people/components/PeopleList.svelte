@@ -73,9 +73,9 @@
 		<div class="stack stack-tight min-w-0">
 			<a
 				href={resolve('/(app)/operator/persons/[id]', { id: p.id })}
-				class="text-fg hover:text-primary truncate font-medium hover:underline">{name}</a
+				class="text-foreground hover:text-primary truncate font-medium hover:underline">{name}</a
 			>
-			<span class="caption text-fg-muted truncate">{p.email}</span>
+			<span class="caption text-muted-foreground truncate">{p.email}</span>
 		</div>
 	</div>
 {/snippet}
@@ -86,26 +86,26 @@
 {/snippet}
 
 {#snippet dateCell(p: PersonDto)}
-	<span class="caption text-fg-muted">{formatDate(p.created_at)}</span>
+	<span class="caption text-muted-foreground">{formatDate(p.created_at)}</span>
 {/snippet}
 
 <div class="stack stack-relaxed">
 	<header class="stack stack-tight">
 		<h1 class="h1">Platform users</h1>
-		<p class="caption text-fg-muted">Cross-tenant person identity management.</p>
+		<p class="caption text-muted-foreground">Cross-tenant person identity management.</p>
 	</header>
 
 	<div class="flex flex-col gap-3 md:flex-row md:items-center">
 		<div class="relative flex-1">
 			<span class="pointer-events-none absolute inset-y-0 start-3 flex items-center">
-				<Icon icon={Search} size="sm" class="text-fg-subtle" />
+				<Icon icon={Search} size="sm" class="text-muted-foreground" />
 			</span>
 			<input
 				type="search"
 				placeholder="Search by email or name"
 				value={urlSearch}
 				oninput={onSearchInput}
-				class="bg-bg-elevated border border-border rounded-md w-full rounded-md py-2 ps-9 pe-3 text-sm"
+				class="bg-card border border-border rounded-md w-full rounded-md py-2 ps-9 pe-3 text-sm"
 				aria-label="Search persons by email or name"
 			/>
 		</div>

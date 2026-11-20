@@ -46,9 +46,9 @@
 				datetime={h.assigned_at}
 			>
 				{#if h.reason}
-					<p class="body-sm text-fg-muted">{h.reason}</p>
+					<p class="body-sm text-muted-foreground">{h.reason}</p>
 				{/if}
-				<p class="caption text-fg-subtle">By {shorten(h.assigned_by_membership_id)}</p>
+				<p class="caption text-muted-foreground">By {shorten(h.assigned_by_membership_id)}</p>
 			</Timeline.Item>
 		{/each}
 	</Timeline.Root>

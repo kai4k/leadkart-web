@@ -28,40 +28,40 @@
 	<Card.Content>
 		<dl class="grid grid-cols-1 gap-3 md:grid-cols-2">
 			<div class="stack stack-tight">
-				<dt class="caption text-fg-muted">Business type</dt>
-				<dd class="label text-fg">{BUSINESS_TYPE_LABEL[lead.business_type]}</dd>
+				<dt class="caption text-muted-foreground">Business type</dt>
+				<dd class="label text-foreground">{BUSINESS_TYPE_LABEL[lead.business_type]}</dd>
 			</div>
 			<div class="stack stack-tight">
-				<dt class="caption text-fg-muted">Medicine system</dt>
-				<dd class="label text-fg">{MEDICINE_SYSTEM_LABEL[lead.medicine_system]}</dd>
+				<dt class="caption text-muted-foreground">Medicine system</dt>
+				<dd class="label text-foreground">{MEDICINE_SYSTEM_LABEL[lead.medicine_system]}</dd>
 			</div>
 			<div class="stack stack-tight">
-				<dt class="caption text-fg-muted">Order value band</dt>
-				<dd class="label text-fg">{ORDER_VALUE_BAND_LABEL[lead.order_value_band]}</dd>
+				<dt class="caption text-muted-foreground">Order value band</dt>
+				<dd class="label text-foreground">{ORDER_VALUE_BAND_LABEL[lead.order_value_band]}</dd>
 			</div>
 			<div class="stack stack-tight">
-				<dt class="caption text-fg-muted">Buy timeline</dt>
-				<dd class="label text-fg">{BUY_TIMELINE_LABEL[lead.buy_timeline]}</dd>
+				<dt class="caption text-muted-foreground">Buy timeline</dt>
+				<dd class="label text-foreground">{BUY_TIMELINE_LABEL[lead.buy_timeline]}</dd>
 			</div>
 
 			<div class="stack stack-tight md:col-span-2">
-				<dt class="caption text-fg-muted">Product ranges</dt>
+				<dt class="caption text-muted-foreground">Product ranges</dt>
 				<dd class="cluster cluster-tight flex-wrap">
 					{#each lead.product_ranges as range (range)}
 						<Badge variant="brand" size="sm">{range}</Badge>
 					{:else}
-						<span class="caption text-fg-subtle">—</span>
+						<span class="caption text-muted-foreground">—</span>
 					{/each}
 				</dd>
 			</div>
 
 			<div class="stack stack-tight md:col-span-2">
-				<dt class="caption text-fg-muted">Dosage forms</dt>
+				<dt class="caption text-muted-foreground">Dosage forms</dt>
 				<dd class="cluster cluster-tight flex-wrap">
 					{#each lead.dosage_forms as form (form)}
 						<Badge variant="neutral" size="sm">{form}</Badge>
 					{:else}
-						<span class="caption text-fg-subtle">—</span>
+						<span class="caption text-muted-foreground">—</span>
 					{/each}
 				</dd>
 			</div>

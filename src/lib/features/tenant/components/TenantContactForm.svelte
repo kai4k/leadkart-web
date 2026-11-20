@@ -75,7 +75,7 @@
 	/>
 
 	<fieldset class="stack stack-tight">
-		<legend class="label text-fg">Postal address</legend>
+		<legend class="label text-foreground">Postal address</legend>
 
 		<TextField
 			label="Street"

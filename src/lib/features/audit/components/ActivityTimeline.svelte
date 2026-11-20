@@ -107,7 +107,7 @@
 	</ol>
 {:else if isError}
 	<div class="stack stack-tight">
-		<p class="body-sm text-danger-700">{errorMessage}</p>
+		<p class="body-sm text-destructive">{errorMessage}</p>
 	</div>
 {:else if items.length === 0}
 	<EmptyState icon={Activity} title="No activity" description="Nothing recorded yet." />
@@ -122,10 +122,10 @@
 					<Card.Content class="grid grid-cols-[auto_1fr] gap-3">
 						<!-- Timeline dot + icon -->
 						<span
-							class="bg-bg-muted mt-0.5 inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full"
+							class="bg-muted mt-0.5 inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full"
 							aria-hidden="true"
 						>
-							<EventIcon size={14} class="text-fg-muted" />
+							<EventIcon size={14} class="text-muted-foreground" />
 						</span>
 
 						<div class="stack stack-tight min-w-0">
@@ -133,12 +133,12 @@
 							<div
 								class="flex flex-col gap-1 md:flex-row md:items-center md:justify-between md:gap-2"
 							>
-								<p class="body-sm text-fg truncate font-medium">
+								<p class="body-sm text-foreground truncate font-medium">
 									{summarise(ev)}
 								</p>
 								<time
 									datetime={ev.occurred_at}
-									class="caption text-fg-subtle flex-shrink-0"
+									class="caption text-muted-foreground flex-shrink-0"
 									title={new Date(ev.occurred_at).toLocaleString()}
 								>
 									{relativeTime(ev.occurred_at)}
@@ -147,7 +147,7 @@
 
 							<!-- Trace ID chip -->
 							{#if ev.trace_id}
-								<p class="caption text-fg-subtle font-mono">
+								<p class="caption text-muted-foreground font-mono">
 									ref: {ev.trace_id}
 								</p>
 							{/if}
@@ -156,7 +156,7 @@
 							{#if hasPayload}
 								<button
 									type="button"
-									class="caption text-primary focus-visible:ring-focus-ring self-start hover:underline focus-visible:ring-2 focus-visible:outline-none"
+									class="caption text-primary focus-visible:ring-ring self-start hover:underline focus-visible:ring-2 focus-visible:outline-none"
 									onclick={() => toggle(ev.id)}
 									aria-expanded={isExpanded}
 								>
@@ -164,7 +164,7 @@
 								</button>
 								{#if isExpanded}
 									<pre
-										class="body-xs bg-bg-muted text-fg-muted mt-1 overflow-x-auto rounded-md p-2">{JSON.stringify(
+										class="body-xs bg-muted text-muted-foreground mt-1 overflow-x-auto rounded-md p-2">{JSON.stringify(
 											ev.payload,
 											null,
 											2

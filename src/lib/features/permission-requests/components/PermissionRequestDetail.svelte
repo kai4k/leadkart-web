@@ -89,7 +89,7 @@
 <div class="stack stack-relaxed">
 	<a
 		href={resolve('permission-requests')}
-		class="cluster cluster-tight text-fg-muted hover:text-fg caption inline-flex"
+		class="cluster cluster-tight text-muted-foreground hover:text-foreground caption inline-flex"
 	>
 		<Icon icon={ChevronLeft} size="xs" /> Back to requests
 	</a>
@@ -107,7 +107,7 @@
 					<Badge variant={badge.variant} size="sm">{badge.label}</Badge>
 				</div>
 				<div class="cluster cluster-tight">
-					<code class="caption text-fg-subtle">{req.id}</code>
+					<code class="caption text-muted-foreground">{req.id}</code>
 					<CopyButton value={req.id} label="Copy request ID" />
 				</div>
 			</header>

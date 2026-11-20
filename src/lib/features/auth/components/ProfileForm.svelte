@@ -66,7 +66,7 @@
 				{ label: 'Status', value: userStatus(profile.status).label }
 			]}
 		/>
-		<p class="caption text-fg-muted">
+		<p class="caption text-muted-foreground">
 			Name + email are managed by your tenant administrator. To change them, ask your admin.
 		</p>
 	</section>

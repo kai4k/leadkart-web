@@ -21,7 +21,7 @@
 			<div class="cluster cluster-spread items-start">
 				<div class="stack stack-tight">
 					<Card.Title>Invoice {invoice.invoice_number}</Card.Title>
-					<p class="caption text-fg-muted">
+					<p class="caption text-muted-foreground">
 						FY {invoice.fy} · Generated {longDate(invoice.generated_at)}
 					</p>
 				</div>
@@ -31,29 +31,29 @@
 			</div>
 		</Card.Header>
 		<Card.Content>
-			<dl class="text-fg flex flex-col gap-1 text-sm tabular-nums">
+			<dl class="text-foreground flex flex-col gap-1 text-sm tabular-nums">
 				<div class="cluster cluster-spread">
-					<dt class="text-fg-muted">Taxable</dt>
+					<dt class="text-muted-foreground">Taxable</dt>
 					<dd>{formatMoney(invoice.taxable_total, currency)}</dd>
 				</div>
 				<div class="cluster cluster-spread">
-					<dt class="text-fg-muted">GST</dt>
+					<dt class="text-muted-foreground">GST</dt>
 					<dd>{formatMoney(invoice.gst_total, currency)}</dd>
 				</div>
 				<div class="border-border cluster cluster-spread border-t pt-2">
-					<dt class="label text-fg">Grand total</dt>
-					<dd class="label text-fg" data-testid="invoice-grand-total">
+					<dt class="label text-foreground">Grand total</dt>
+					<dd class="label text-foreground" data-testid="invoice-grand-total">
 						{formatMoney(invoice.grand_total, currency)}
 					</dd>
 				</div>
 			</dl>
 			{#if invoice.cancellation_reason}
-				<p class="caption text-danger-700 mt-3">
+				<p class="caption text-destructive mt-3">
 					Cancelled: {invoice.cancellation_reason}
 				</p>
 			{/if}
 		</Card.Content>
 	</Card.Root>
 {:else}
-	<p class="caption text-fg-muted py-4">Invoice not yet generated.</p>
+	<p class="caption text-muted-foreground py-4">Invoice not yet generated.</p>
 {/if}

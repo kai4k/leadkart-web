@@ -141,7 +141,7 @@
 			<div class="stack stack-tight">
 				<Drawer.Title class="h4">Edit product</Drawer.Title>
 				{#if product}
-					<p class="caption text-fg-muted">{product.brand_name}</p>
+					<p class="caption text-muted-foreground">{product.brand_name}</p>
 				{/if}
 			</div>
 			<Drawer.Close>
@@ -149,7 +149,7 @@
 					<button
 						{...props}
 						type="button"
-						class="hover:bg-bg-muted rounded-md p-1.5"
+						class="hover:bg-muted rounded-md p-1.5"
 						aria-label="Close"
 					>
 						<Icon icon={X} size="sm" />

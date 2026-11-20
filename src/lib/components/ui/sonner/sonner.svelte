@@ -15,7 +15,7 @@
 	class="toaster group"
 	position="bottom-right"
 	closeButton
-	style="--normal-bg: var(--color-popover); --normal-text: var(--color-popover-foreground); --normal-border: var(--color-border);"
+	style="--normal-bg: var(--popover); --normal-text: var(--popover-foreground); --normal-border: var(--border);"
 	toastOptions={{
 		classes: {
 			toast:

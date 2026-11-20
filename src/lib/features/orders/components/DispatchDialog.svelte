@@ -45,7 +45,7 @@
 	<Dialog.Content size="xl">
 		<Dialog.Header>
 			<Dialog.Title class="h5 text-base">Dispatch order</Dialog.Title>
-			<p class="body-sm text-fg-muted">
+			<p class="body-sm text-muted-foreground">
 				Creates a consignment note in Dispatch and flips the order to dispatched.
 			</p>
 		</Dialog.Header>

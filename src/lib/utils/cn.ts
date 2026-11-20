@@ -8,7 +8,7 @@ import { twMerge } from 'tailwind-merge';
  * every modern Svelte project.
  *
  * @example
- *   <button class={cn('px-4 py-2', isPrimary && 'bg-brand-600', class)}>
+ *   <button class={cn('px-4 py-2', isPrimary && 'bg-primary', class)}>
  */
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));

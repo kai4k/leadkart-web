@@ -130,7 +130,7 @@
 	<Drawer.Content>
 		<Drawer.Header>
 			<Drawer.Title class="h5 text-base">Revise quotation</Drawer.Title>
-			<p class="body-sm text-fg-muted">
+			<p class="body-sm text-muted-foreground">
 				Edits create a new revision; previous revisions remain on file.
 			</p>
 		</Drawer.Header>

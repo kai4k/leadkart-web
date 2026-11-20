@@ -12,7 +12,7 @@ describe('skeletonVariants', () => {
 		const cls = skeletonVariants({});
 		expect(cls).toContain('rounded');
 		expect(cls).toContain('animate-shimmer');
-		expect(cls).toContain('bg-bg-muted');
+		expect(cls).toContain('bg-muted');
 	});
 
 	it('shape=line applies rounded', () => {

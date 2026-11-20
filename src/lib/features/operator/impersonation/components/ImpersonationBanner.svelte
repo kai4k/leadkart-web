@@ -67,8 +67,8 @@
 		gap: var(--spacing-2);
 		padding-inline: var(--spacing-4);
 		padding-block: var(--spacing-2);
-		background: var(--color-warning-500);
-		color: var(--color-fg-on-brand);
+		background: var(--warning);
+		color: var(--primary-foreground);
 	}
 
 	@media (min-width: 768px) {

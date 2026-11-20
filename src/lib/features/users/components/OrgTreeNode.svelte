@@ -21,13 +21,13 @@
 <li class="relative">
 	<a
 		href={resolve('/(app)/settings/users/[id]', { id: node.user.membership_id })}
-		class="border-border bg-bg-elevated hover:border-primary focus-visible:ring-focus-ring flex items-center gap-3 rounded-md border px-3 py-2 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+		class="border-border bg-card hover:border-primary focus-visible:ring-ring flex items-center gap-3 rounded-md border px-3 py-2 transition-colors focus-visible:ring-2 focus-visible:outline-none"
 		aria-label={`${displayName(node.user)}${node.cycleBroken ? ' (cycle detected — review reporting line)' : ''}`}
 	>
 		<Avatar initials={initials(displayName(node.user))} size="sm" />
 		<div class="stack stack-tight min-w-0 flex-1">
-			<span class="body-sm text-fg truncate font-medium">{displayName(node.user)}</span>
-			<span class="caption text-fg-muted truncate">
+			<span class="body-sm text-foreground truncate font-medium">{displayName(node.user)}</span>
+			<span class="caption text-muted-foreground truncate">
 				{node.user.designation || node.user.email}
 			</span>
 		</div>

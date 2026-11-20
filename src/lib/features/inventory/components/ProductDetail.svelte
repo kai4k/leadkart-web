@@ -104,34 +104,34 @@
 					<h2 class="h5">Pricing breakdown</h2>
 					<dl class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
 						<div class="stack stack-tight">
-							<dt class="caption text-fg-muted">MRP</dt>
-							<dd class="body-base text-fg tabular-nums">{formatPrice(product.mrp)}</dd>
+							<dt class="caption text-muted-foreground">MRP</dt>
+							<dd class="body-base text-foreground tabular-nums">{formatPrice(product.mrp)}</dd>
 						</div>
 						<div class="stack stack-tight">
-							<dt class="caption text-fg-muted">Purchase rate</dt>
-							<dd class="body-base text-fg tabular-nums">
+							<dt class="caption text-muted-foreground">Purchase rate</dt>
+							<dd class="body-base text-foreground tabular-nums">
 								{formatPrice(product.purchase_rate)}
 							</dd>
 						</div>
 						<div class="stack stack-tight">
-							<dt class="caption text-fg-muted">Sale rate</dt>
-							<dd class="body-base text-fg tabular-nums">
+							<dt class="caption text-muted-foreground">Sale rate</dt>
+							<dd class="body-base text-foreground tabular-nums">
 								{formatPrice(product.sale_rate)}
 							</dd>
 						</div>
 						<div class="stack stack-tight">
-							<dt class="caption text-fg-muted">GST</dt>
-							<dd class="body-base text-fg tabular-nums">{product.gst_percentage}%</dd>
+							<dt class="caption text-muted-foreground">GST</dt>
+							<dd class="body-base text-foreground tabular-nums">{product.gst_percentage}%</dd>
 						</div>
 						<div class="stack stack-tight">
-							<dt class="caption text-fg-muted">Purchase rate (incl. GST)</dt>
-							<dd class="body-base text-fg tabular-nums" data-testid="purchase-with-gst">
+							<dt class="caption text-muted-foreground">Purchase rate (incl. GST)</dt>
+							<dd class="body-base text-foreground tabular-nums" data-testid="purchase-with-gst">
 								{formatPrice(purchaseWithGst)}
 							</dd>
 						</div>
 						<div class="stack stack-tight">
-							<dt class="caption text-fg-muted">Sale rate (incl. GST)</dt>
-							<dd class="body-base text-fg tabular-nums" data-testid="sale-with-gst">
+							<dt class="caption text-muted-foreground">Sale rate (incl. GST)</dt>
+							<dd class="body-base text-foreground tabular-nums" data-testid="sale-with-gst">
 								{formatPrice(saleWithGst)}
 							</dd>
 						</div>
@@ -140,7 +140,7 @@
 			</Tabs.Content>
 
 			<Tabs.Content value="activity">
-				<p class="caption text-fg-muted">
+				<p class="caption text-muted-foreground">
 					Audit log of edits and bulk actions — coming in a follow-up.
 				</p>
 			</Tabs.Content>

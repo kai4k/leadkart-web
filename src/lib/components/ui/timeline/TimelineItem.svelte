@@ -4,17 +4,17 @@
 	export const timelineIconVariants = cva(
 		[
 			'relative z-[1] inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full',
-			'ring-4 ring-bg-elevated'
+			'ring-4 ring-card'
 		],
 		{
 			variants: {
 				accent: {
 					primary: 'bg-primary-soft text-primary border border-primary',
-					success: 'bg-success-50 text-success-900 border border-success-500',
-					warning: 'bg-warning-50 text-warning-900 border border-warning-500',
-					danger: 'bg-danger-50 text-danger-900 border border-danger-500',
-					info: 'bg-info-50 text-info-900 border border-info-500',
-					neutral: 'bg-bg-muted text-fg-muted border border-border'
+					success: 'bg-success-soft text-success border border-success',
+					warning: 'bg-warning-soft text-warning border border-warning',
+					danger: 'bg-destructive-soft text-destructive border border-destructive',
+					info: 'bg-info-soft text-info border border-info',
+					neutral: 'bg-muted text-muted-foreground border border-border'
 				}
 			},
 			defaultVariants: { accent: 'neutral' }
@@ -63,11 +63,11 @@
 					class={cn(
 						'block h-2 w-2 rounded-full',
 						iconAccent === 'primary' && 'bg-primary',
-						iconAccent === 'success' && 'bg-success-500',
-						iconAccent === 'warning' && 'bg-warning-500',
-						iconAccent === 'danger' && 'bg-danger-500',
-						iconAccent === 'info' && 'bg-info-500',
-						iconAccent === 'neutral' && 'bg-fg-subtle'
+						iconAccent === 'success' && 'bg-success',
+						iconAccent === 'warning' && 'bg-warning',
+						iconAccent === 'danger' && 'bg-destructive',
+						iconAccent === 'info' && 'bg-info',
+						iconAccent === 'neutral' && 'bg-muted-foreground'
 					)}
 				></span>
 			{/if}
@@ -75,18 +75,18 @@
 
 		<div class="stack stack-tight min-w-0 flex-1 pb-6">
 			<div class="flex flex-wrap items-baseline justify-between gap-2">
-				<p class="body-sm text-fg font-medium">{title}</p>
+				<p class="body-sm text-foreground font-medium">{title}</p>
 				{#if time}
-					<time class="caption text-fg-muted tabular-nums" datetime={datetime ?? undefined}
+					<time class="caption text-muted-foreground tabular-nums" datetime={datetime ?? undefined}
 						>{time}</time
 					>
 				{/if}
 			</div>
 			{#if description}
-				<p class="body-sm text-fg-muted">{description}</p>
+				<p class="body-sm text-muted-foreground">{description}</p>
 			{/if}
 			{#if children}
-				<div class="body-sm text-fg-muted">{@render children()}</div>
+				<div class="body-sm text-muted-foreground">{@render children()}</div>
 			{/if}
 		</div>
 	</div>

@@ -21,7 +21,7 @@
 	<Card.Content>
 		<dl class="stack stack-tight">
 			<div class="cluster cluster-spread">
-				<dt class="label text-fg-muted">Drug licence</dt>
+				<dt class="label text-muted-foreground">Drug licence</dt>
 				<dd>
 					{#if lead.has_drug_licence}
 						<Badge variant="success" size="sm">
@@ -38,10 +38,10 @@
 			</div>
 
 			<div class="cluster cluster-spread">
-				<dt class="label text-fg-muted">GST</dt>
+				<dt class="label text-muted-foreground">GST</dt>
 				<dd class="cluster cluster-tight">
 					{#if lead.has_gst}
-						<code class="caption text-fg">{lead.gst_number ?? '—'}</code>
+						<code class="caption text-foreground">{lead.gst_number ?? '—'}</code>
 						{#if lead.gst_verified}
 							<Badge variant="success" size="sm">Verified</Badge>
 						{:else}
@@ -54,10 +54,10 @@
 			</div>
 
 			<div class="cluster cluster-spread">
-				<dt class="label text-fg-muted">PAN</dt>
+				<dt class="label text-muted-foreground">PAN</dt>
 				<dd>
 					{#if lead.has_pan}
-						<code class="caption text-fg">{lead.pan_number ?? '—'}</code>
+						<code class="caption text-foreground">{lead.pan_number ?? '—'}</code>
 					{:else}
 						<Badge variant="neutral" size="sm">Not provided</Badge>
 					{/if}

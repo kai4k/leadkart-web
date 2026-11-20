@@ -76,7 +76,7 @@
 		{/each}
 	</div>
 {:else if list.state === 'error'}
-	<div class="bg-danger-50 text-danger-900 border-danger-500 rounded-md border-s-4 p-4">
+	<div class="bg-destructive-soft text-destructive border-destructive/40 rounded-md border-s-4 p-4">
 		<p class="label">Couldn't load leads. {list.error ?? ''}</p>
 	</div>
 {:else if list.state === 'empty'}
@@ -100,32 +100,32 @@
 						/>
 					</th>
 
-					<th class="text-fg-muted px-3 py-3 text-xs font-medium tracking-wide uppercase"
+					<th class="text-muted-foreground px-3 py-3 text-xs font-medium tracking-wide uppercase"
 						>Contact</th
 					>
 
 					<th
-						class="text-fg-muted hidden px-3 py-3 text-xs font-medium tracking-wide uppercase md:table-cell"
+						class="text-muted-foreground hidden px-3 py-3 text-xs font-medium tracking-wide uppercase md:table-cell"
 					>
 						Location
 					</th>
 					<th
-						class="text-fg-muted hidden px-3 py-3 text-xs font-medium tracking-wide uppercase md:table-cell"
+						class="text-muted-foreground hidden px-3 py-3 text-xs font-medium tracking-wide uppercase md:table-cell"
 					>
 						Stage
 					</th>
 					<th
-						class="text-fg-muted hidden px-3 py-3 text-xs font-medium tracking-wide uppercase lg:table-cell"
+						class="text-muted-foreground hidden px-3 py-3 text-xs font-medium tracking-wide uppercase lg:table-cell"
 					>
 						Temp
 					</th>
 					<th
-						class="text-fg-muted hidden px-3 py-3 text-xs font-medium tracking-wide uppercase lg:table-cell"
+						class="text-muted-foreground hidden px-3 py-3 text-xs font-medium tracking-wide uppercase lg:table-cell"
 					>
 						Business
 					</th>
 					<th
-						class="text-fg-muted hidden px-3 py-3 text-xs font-medium tracking-wide uppercase xl:table-cell"
+						class="text-muted-foreground hidden px-3 py-3 text-xs font-medium tracking-wide uppercase xl:table-cell"
 					>
 						Last contacted
 					</th>
@@ -145,8 +145,8 @@
 						data-testid="lead-row"
 						data-lead-id={lead.id}
 						class={[
-							'border-border hover:bg-bg-muted cursor-pointer border-b transition-colors',
-							focused && 'bg-bg-muted',
+							'border-border hover:bg-muted cursor-pointer border-b transition-colors',
+							focused && 'bg-muted',
 							focused && 'border-l-primary border-s-4'
 						]}
 						onclick={() => openDetail(lead)}
@@ -173,20 +173,20 @@
 						<td class="px-3 py-3">
 							<div class="stack stack-tight">
 								<div class="cluster cluster-tight">
-									<span class="label text-fg">{lead.contact_name}</span>
+									<span class="label text-foreground">{lead.contact_name}</span>
 									{#if stale}
 										<span
-											class="bg-warning-500 inline-block h-2 w-2 rounded-full"
+											class="bg-warning inline-block h-2 w-2 rounded-full"
 											aria-label="Stale lead"
 											title="No contact in 7+ days"
 										></span>
 									{/if}
 								</div>
-								<span class="caption text-fg-muted">{lead.mobile_number}</span>
+								<span class="caption text-muted-foreground">{lead.mobile_number}</span>
 							</div>
 						</td>
 						<td class="hidden px-3 py-3 md:table-cell">
-							<span class="caption text-fg-muted">{locationLabel(lead)}</span>
+							<span class="caption text-muted-foreground">{locationLabel(lead)}</span>
 						</td>
 						<td
 							class="hidden px-3 py-3 md:table-cell"
@@ -213,10 +213,14 @@
 							/>
 						</td>
 						<td class="hidden px-3 py-3 lg:table-cell">
-							<span class="caption text-fg-muted">{BUSINESS_TYPE_LABEL[lead.business_type]}</span>
+							<span class="caption text-muted-foreground"
+								>{BUSINESS_TYPE_LABEL[lead.business_type]}</span
+							>
 						</td>
 						<td class="hidden px-3 py-3 xl:table-cell">
-							<span class="caption text-fg-muted">{relativeTime(lead.last_contacted_at)}</span>
+							<span class="caption text-muted-foreground"
+								>{relativeTime(lead.last_contacted_at)}</span
+							>
 						</td>
 					</tr>
 				{/each}

@@ -117,12 +117,12 @@
 {#if selection.count > 0}
 	<div
 		class={cn(
-			'bg-bg-elevated border border-border rounded-xl shadow-card sticky bottom-4 z-10 mx-auto w-full max-w-3xl',
+			'bg-card border border-border rounded-xl shadow-card sticky bottom-4 z-10 mx-auto w-full max-w-3xl',
 			'cluster cluster-spread items-center gap-4 px-4 py-3',
 			className
 		)}
 	>
-		<p class="label text-fg" role="status" aria-live="polite">
+		<p class="label text-foreground" role="status" aria-live="polite">
 			<span class="font-semibold">{selection.count}</span> selected
 		</p>
 
@@ -169,7 +169,7 @@
 
 		<button
 			type="button"
-			class="label text-fg-muted hover:text-fg hover:underline"
+			class="label text-muted-foreground hover:text-foreground hover:underline"
 			onclick={() => selection.clear()}
 		>
 			Clear selection

@@ -121,7 +121,7 @@
 		<Drawer.Header>
 			<div class="stack stack-tight">
 				<Drawer.Title class="h4">Edit lead</Drawer.Title>
-				<p class="caption text-fg-muted">
+				<p class="caption text-muted-foreground">
 					Contact, mobile number, and pin/city/state are locked at lead-purchase time.
 				</p>
 			</div>
@@ -130,7 +130,7 @@
 					<button
 						{...props}
 						type="button"
-						class="hover:bg-bg-muted rounded-md p-1.5"
+						class="hover:bg-muted rounded-md p-1.5"
 						aria-label="Close"
 					>
 						<Icon icon={X} size="sm" />
@@ -224,7 +224,7 @@
 						bind:value={form.values.notes}
 						rows={4}
 						maxlength={4000}
-						class="bg-bg-elevated border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
+						class="bg-card border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
 					></textarea>
 				</label>
 

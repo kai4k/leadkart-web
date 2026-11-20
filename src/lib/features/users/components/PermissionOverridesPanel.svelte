@@ -94,7 +94,7 @@
 				<Drawer.Title class="h4"
 					>Permission overrides for {user ? displayName(user) : 'user'}</Drawer.Title
 				>
-				<p class="caption text-fg-muted">
+				<p class="caption text-muted-foreground">
 					Atomic replace: this exact set of grants and revokes overlays on top of role-default
 					permissions. Empty arrays clear the overlay.
 				</p>
@@ -104,7 +104,7 @@
 					<button
 						{...props}
 						type="button"
-						class="hover:bg-bg-muted rounded-md p-1.5"
+						class="hover:bg-muted rounded-md p-1.5"
 						aria-label="Close">×</button
 					>
 				{/snippet}
@@ -115,14 +115,14 @@
 				<h3 class="overline">Extra grants</h3>
 				<div class="cluster">
 					<input
-						class="bg-bg-elevated border border-border rounded-md flex-1 rounded-md px-3 py-2 text-sm"
+						class="bg-card border border-border rounded-md flex-1 rounded-md px-3 py-2 text-sm"
 						placeholder="e.g. crm.leads.reassign"
 						aria-invalid={grantedError ? 'true' : undefined}
 						bind:value={newGrant}
 					/>
 					<Button variant="ghost" onclick={addGrant}>Add</Button>
 				</div>
-				{#if grantedError}<span class="body-sm text-danger-700">{grantedError}</span>{/if}
+				{#if grantedError}<span class="body-sm text-destructive">{grantedError}</span>{/if}
 				{#if granted.length > 0}
 					<ul class="cluster" aria-label="Granted permissions">
 						{#each granted as p (p)}
@@ -145,14 +145,14 @@
 				<h3 class="overline">Revocations</h3>
 				<div class="cluster">
 					<input
-						class="bg-bg-elevated border border-border rounded-md flex-1 rounded-md px-3 py-2 text-sm"
+						class="bg-card border border-border rounded-md flex-1 rounded-md px-3 py-2 text-sm"
 						placeholder="e.g. crm.leads.delete"
 						aria-invalid={revokedError ? 'true' : undefined}
 						bind:value={newRevoke}
 					/>
 					<Button variant="ghost" onclick={addRevoke}>Add</Button>
 				</div>
-				{#if revokedError}<span class="body-sm text-danger-700">{revokedError}</span>{/if}
+				{#if revokedError}<span class="body-sm text-destructive">{revokedError}</span>{/if}
 				{#if revoked.length > 0}
 					<ul class="cluster" aria-label="Revoked permissions">
 						{#each revoked as p (p)}

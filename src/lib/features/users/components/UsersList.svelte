@@ -244,16 +244,16 @@
 	<div class="cluster cluster-tight">
 		<Avatar initials={initials(displayName(user))} size="md" />
 		<div class="stack stack-tight min-w-0">
-			<span class="body-base text-fg truncate font-medium">{displayName(user)}</span>
-			<span class="caption text-fg-muted truncate">{user.email}</span>
+			<span class="body-base text-foreground truncate font-medium">{displayName(user)}</span>
+			<span class="caption text-muted-foreground truncate">{user.email}</span>
 		</div>
 	</div>
 {/snippet}
 
 {#snippet workCell(user: UserDto)}
 	<div class="stack stack-tight">
-		<span class="caption text-fg-muted">{user.designation || '—'}</span>
-		<span class="caption text-fg-subtle">{user.department || '—'}</span>
+		<span class="caption text-muted-foreground">{user.designation || '—'}</span>
+		<span class="caption text-muted-foreground">{user.department || '—'}</span>
 	</div>
 {/snippet}
 
@@ -313,7 +313,7 @@
 	<header class="cluster cluster-spread">
 		<div class="stack stack-tight">
 			<h1 class="h1">Team</h1>
-			<p class="caption text-fg-muted">
+			<p class="caption text-muted-foreground">
 				{userList.length} member{userList.length === 1 ? '' : 's'}
 			</p>
 		</div>
@@ -323,7 +323,7 @@
 				placeholder="Search by name, email, role…"
 				value={search}
 				oninput={(e) => setSearch((e.currentTarget as HTMLInputElement).value)}
-				class="bg-bg-elevated border border-border rounded-md w-64 rounded-md px-3 py-2 text-sm"
+				class="bg-card border border-border rounded-md w-64 rounded-md px-3 py-2 text-sm"
 			/>
 
 			<a
@@ -349,8 +349,8 @@
 				onclick={() => setStatusFilter(opt.value)}
 				aria-pressed={active}
 				class="label inline-flex items-center gap-2 rounded-full px-3 py-1 transition-colors {active
-					? 'bg-primary text-primary-fg'
-					: 'bg-bg-muted text-fg-muted hover:text-fg'}"
+					? 'bg-primary text-primary-foreground'
+					: 'bg-muted text-muted-foreground hover:text-foreground'}"
 			>
 				{opt.label}
 				<span class="caption tabular-nums opacity-70">{opt.count}</span>

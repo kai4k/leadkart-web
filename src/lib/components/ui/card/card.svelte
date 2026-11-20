@@ -18,9 +18,9 @@
 				},
 				elevation: { none: '', sm: 'shadow-card', md: 'shadow-md' },
 				surface: {
-					default: 'bg-bg-elevated text-fg',
-					solid: 'bg-bg-elevated text-fg',
-					glass: 'bg-bg-elevated border border-border rounded-xl shadow-card text-fg'
+					default: 'bg-card text-foreground',
+					solid: 'bg-card text-foreground',
+					glass: 'bg-card border border-border rounded-xl shadow-card text-foreground'
 				},
 				interactive: { true: 'interactive cursor-pointer', false: '' }
 			},

@@ -26,14 +26,14 @@
 			<span
 				class={cn(
 					'cluster cluster-tight items-center',
-					'bg-bg-muted text-fg label rounded-full px-3 py-1'
+					'bg-muted text-foreground label rounded-full px-3 py-1'
 				)}
 			>
-				<span class="caption text-fg-muted">{chip.label}:</span>
+				<span class="caption text-muted-foreground">{chip.label}:</span>
 				<span class="label">{chip.value}</span>
 				<button
 					type="button"
-					class="text-fg-muted hover:text-fg focus-visible:ring-focus-ring -me-1 inline-flex h-4 w-4 items-center justify-center rounded focus-visible:ring-2 focus-visible:outline-none"
+					class="text-muted-foreground hover:text-foreground focus-visible:ring-ring -me-1 inline-flex h-4 w-4 items-center justify-center rounded focus-visible:ring-2 focus-visible:outline-none"
 					aria-label={$_('common.filter.remove', {
 						values: { label: chip.label, value: chip.value }
 					})}
@@ -47,7 +47,7 @@
 		{#if urlFilters.activeChips.length >= 2}
 			<button
 				type="button"
-				class="label text-fg-muted hover:text-fg ms-1 hover:underline"
+				class="label text-muted-foreground hover:text-foreground ms-1 hover:underline"
 				onclick={() => urlFilters.clearAll()}
 			>
 				Clear all

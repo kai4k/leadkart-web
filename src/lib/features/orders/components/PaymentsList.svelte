@@ -31,12 +31,12 @@
 </script>
 
 {#if sorted.length === 0}
-	<p class="caption text-fg-muted py-4">No payments recorded yet.</p>
+	<p class="caption text-muted-foreground py-4">No payments recorded yet.</p>
 {:else}
 	<div class="overflow-x-auto">
 		<table class="w-full text-start text-sm" data-testid="payments-list">
 			<thead>
-				<tr class="border-border text-fg-muted border-b">
+				<tr class="border-border text-muted-foreground border-b">
 					<th class="px-2 py-2 text-xs uppercase">Kind</th>
 					<th class="px-2 py-2 text-end text-xs uppercase">Amount</th>
 					<th class="px-2 py-2 text-xs uppercase">Method</th>
@@ -60,10 +60,10 @@
 							{#if p.reference}
 								<code class="caption">{p.reference}</code>
 							{:else}
-								<span class="text-fg-subtle">—</span>
+								<span class="text-muted-foreground">—</span>
 							{/if}
 						</td>
-						<td class="text-fg-muted caption px-2 py-2">{longDate(p.received_at)}</td>
+						<td class="text-muted-foreground caption px-2 py-2">{longDate(p.received_at)}</td>
 					</tr>
 				{/each}
 			</tbody>

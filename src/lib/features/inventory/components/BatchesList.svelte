@@ -57,7 +57,7 @@
 	<header class="cluster cluster-spread">
 		<div class="stack stack-tight">
 			<h2 class="h5">Batches</h2>
-			<p class="caption text-fg-muted">First-Expiry-First-Out (FEFO) ordering.</p>
+			<p class="caption text-muted-foreground">First-Expiry-First-Out (FEFO) ordering.</p>
 		</div>
 		{#if mayStock}
 			<Button onclick={() => (addBatchOpen = true)} data-testid="add-batch">
@@ -67,7 +67,7 @@
 	</header>
 
 	{#if query.isError}
-		<div class="border-danger-500 text-danger-700 rounded-md border p-4">
+		<div class="border-destructive/40 text-destructive rounded-md border p-4">
 			Couldn't load batches. {errorCopy}
 		</div>
 	{:else if isEmpty}
@@ -89,31 +89,31 @@
 			<table class="w-full text-start" data-testid="batches-table">
 				<thead>
 					<tr class="border-border border-b">
-						<th class="text-fg-muted px-3 py-3 text-xs font-medium tracking-wide uppercase">
+						<th class="text-muted-foreground px-3 py-3 text-xs font-medium tracking-wide uppercase">
 							Batch
 						</th>
-						<th class="text-fg-muted px-3 py-3 text-xs font-medium tracking-wide uppercase">
+						<th class="text-muted-foreground px-3 py-3 text-xs font-medium tracking-wide uppercase">
 							Expires
 						</th>
 						<th
-							class="text-fg-muted hidden px-3 py-3 text-xs font-medium tracking-wide uppercase md:table-cell"
+							class="text-muted-foreground hidden px-3 py-3 text-xs font-medium tracking-wide uppercase md:table-cell"
 						>
 							Manufactured
 						</th>
-						<th class="text-fg-muted px-3 py-3 text-xs font-medium tracking-wide uppercase">
+						<th class="text-muted-foreground px-3 py-3 text-xs font-medium tracking-wide uppercase">
 							Available
 						</th>
 						<th
-							class="text-fg-muted hidden px-3 py-3 text-xs font-medium tracking-wide uppercase lg:table-cell"
+							class="text-muted-foreground hidden px-3 py-3 text-xs font-medium tracking-wide uppercase lg:table-cell"
 						>
 							Supplier
 						</th>
 						<th
-							class="text-fg-muted hidden px-3 py-3 text-xs font-medium tracking-wide uppercase lg:table-cell"
+							class="text-muted-foreground hidden px-3 py-3 text-xs font-medium tracking-wide uppercase lg:table-cell"
 						>
 							Purchase rate
 						</th>
-						<th class="text-fg-muted px-3 py-3 text-xs font-medium tracking-wide uppercase">
+						<th class="text-muted-foreground px-3 py-3 text-xs font-medium tracking-wide uppercase">
 							Status
 						</th>
 						<th class="w-12"></th>
@@ -145,37 +145,41 @@
 								data-batch-id={batch.id}
 							>
 								<td class="px-3 py-3">
-									<code class="caption text-fg">{batch.batch_number}</code>
+									<code class="caption text-foreground">{batch.batch_number}</code>
 								</td>
 								<td class="px-3 py-3">
 									{#if expiry}
 										<Badge variant={expiry.variant} size="sm">{expiry.label}</Badge>
 									{:else}
-										<span class="caption text-fg-subtle">—</span>
+										<span class="caption text-muted-foreground">—</span>
 									{/if}
 								</td>
-								<td class="caption text-fg-muted hidden px-3 py-3 md:table-cell">
+								<td class="caption text-muted-foreground hidden px-3 py-3 md:table-cell">
 									{new Date(batch.manufactured_at).toLocaleDateString()}
 								</td>
 								<td class="px-3 py-3">
 									{#if mayStock}
 										<button
 											type="button"
-											class="focus-visible:ring-focus-ring hover:bg-bg-elevated rounded-md px-1.5 py-0.5 focus-visible:ring-2 focus-visible:outline-none"
+											class="focus-visible:ring-ring hover:bg-card rounded-md px-1.5 py-0.5 focus-visible:ring-2 focus-visible:outline-none"
 											onclick={() => openAdjust(batch)}
 											data-testid={`adjust-batch-${batch.id}`}
 											aria-label={`Adjust stock for batch ${batch.batch_number}, currently ${batch.quantity_available}`}
 										>
-											<span class="body-base text-fg tabular-nums">{batch.quantity_available}</span>
+											<span class="body-base text-foreground tabular-nums"
+												>{batch.quantity_available}</span
+											>
 										</button>
 									{:else}
-										<span class="body-base text-fg tabular-nums">{batch.quantity_available}</span>
+										<span class="body-base text-foreground tabular-nums"
+											>{batch.quantity_available}</span
+										>
 									{/if}
 								</td>
-								<td class="caption text-fg-muted hidden px-3 py-3 lg:table-cell">
+								<td class="caption text-muted-foreground hidden px-3 py-3 lg:table-cell">
 									{batch.supplier_name ?? '—'}
 								</td>
-								<td class="body-sm text-fg hidden px-3 py-3 tabular-nums lg:table-cell">
+								<td class="body-sm text-foreground hidden px-3 py-3 tabular-nums lg:table-cell">
 									{formatPrice(batch.purchase_rate)}
 								</td>
 								<td class="px-3 py-3">

@@ -154,7 +154,7 @@
 			header: 'Slug',
 			accessor: 'slug',
 			hideBelow: 'md',
-			class: 'text-fg-muted font-mono text-xs'
+			class: 'text-muted-foreground font-mono text-xs'
 		},
 		{ id: 'status', header: 'Status', accessor: (t) => t.status, cell: statusCell },
 		{ id: 'legal', header: 'Legal name', accessor: 'legal_name', hideBelow: 'lg' }
@@ -192,7 +192,7 @@
 		{#if tenant.slug === 'platform'}
 			<Icon icon={Shield} size="sm" class="text-primary" />
 		{/if}
-		<span class="text-fg font-medium">{tenant.display_name}</span>
+		<span class="text-foreground font-medium">{tenant.display_name}</span>
 		{#if tenant.slug === 'platform'}
 			<Badge variant="brand" size="sm">Platform</Badge>
 		{/if}
@@ -208,7 +208,7 @@
 	{#if openingScopeSlug === tenant.slug}
 		<div class="cluster cluster-tight" aria-label="Opening {tenant.display_name}">
 			<Spinner size={14} />
-			<span class="caption text-fg-muted">Opening…</span>
+			<span class="caption text-muted-foreground">Opening…</span>
 		</div>
 	{:else if tenant.slug !== 'platform'}
 		<div class="cluster cluster-tight">
@@ -279,7 +279,7 @@
 	<header class="cluster cluster-spread">
 		<div class="stack stack-tight">
 			<h1 class="h1">Tenants</h1>
-			<p class="caption text-fg-muted">Operator-side tenant management.</p>
+			<p class="caption text-muted-foreground">Operator-side tenant management.</p>
 		</div>
 		{#if canCreate}
 			<Button onclick={() => (createOpen = true)}>
@@ -292,14 +292,14 @@
 		<div class="cluster">
 			<div class="relative flex-1">
 				<span class="pointer-events-none absolute inset-y-0 start-3 flex items-center">
-					<Icon icon={Search} size="sm" class="text-fg-subtle" />
+					<Icon icon={Search} size="sm" class="text-muted-foreground" />
 				</span>
 				<input
 					type="search"
 					placeholder="Filter by name, slug, or legal name"
 					value={search}
 					oninput={(e) => setSearch((e.currentTarget as HTMLInputElement).value)}
-					class="bg-bg-elevated border border-border rounded-md w-full rounded-md py-2 ps-9 pe-3 text-sm"
+					class="bg-card border border-border rounded-md w-full rounded-md py-2 ps-9 pe-3 text-sm"
 					aria-label="Filter tenants"
 				/>
 			</div>
@@ -313,8 +313,8 @@
 					onclick={() => setStatusFilter(opt.value)}
 					aria-pressed={active}
 					class="label inline-flex items-center gap-2 rounded-full px-3 py-1 transition-colors {active
-						? 'bg-primary text-primary-fg'
-						: 'bg-bg-muted text-fg-muted hover:text-fg'}"
+						? 'bg-primary text-primary-foreground'
+						: 'bg-muted text-muted-foreground hover:text-foreground'}"
 				>
 					{opt.label}
 					<span class="caption tabular-nums opacity-70">{opt.count}</span>
@@ -366,7 +366,7 @@
 
 	{#if pagination.pageCount > 1}
 		<nav class="cluster cluster-spread" aria-label="Tenant list pagination">
-			<p class="caption text-fg-muted">
+			<p class="caption text-muted-foreground">
 				{(pagination.currentPage - 1) * PAGE_SIZE + 1}–{Math.min(
 					pagination.currentPage * PAGE_SIZE,
 					filtered.length

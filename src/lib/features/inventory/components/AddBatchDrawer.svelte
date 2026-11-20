@@ -68,7 +68,7 @@
 		<Drawer.Header>
 			<div class="stack stack-tight">
 				<Drawer.Title class="h4">Add batch</Drawer.Title>
-				<p class="caption text-fg-muted">
+				<p class="caption text-muted-foreground">
 					Record an inward batch with quantity, expiry, and supplier info.
 				</p>
 			</div>
@@ -77,7 +77,7 @@
 					<button
 						{...props}
 						type="button"
-						class="hover:bg-bg-muted rounded-md p-1.5"
+						class="hover:bg-muted rounded-md p-1.5"
 						aria-label="Close"
 					>
 						<Icon icon={X} size="sm" />
@@ -101,31 +101,31 @@
 
 				<div class="grid gap-3 sm:grid-cols-2">
 					<label class="stack stack-tight">
-						<span class="label text-fg">Manufactured at</span>
+						<span class="label text-foreground">Manufactured at</span>
 						<input
 							type="date"
 							name="manufactured_at"
 							bind:value={form.values.manufactured_at}
-							class="bg-bg-elevated border border-border rounded-md body-sm text-fg rounded-md px-3 py-2"
+							class="bg-card border border-border rounded-md body-sm text-foreground rounded-md px-3 py-2"
 							data-testid="batch-manufactured-at"
 							required
 						/>
 						{#if form.errors.manufactured_at}
-							<span class="caption text-danger-700">{form.errors.manufactured_at}</span>
+							<span class="caption text-destructive">{form.errors.manufactured_at}</span>
 						{/if}
 					</label>
 					<label class="stack stack-tight">
-						<span class="label text-fg">Expires at</span>
+						<span class="label text-foreground">Expires at</span>
 						<input
 							type="date"
 							name="expires_at"
 							bind:value={form.values.expires_at}
-							class="bg-bg-elevated border border-border rounded-md body-sm text-fg rounded-md px-3 py-2"
+							class="bg-card border border-border rounded-md body-sm text-foreground rounded-md px-3 py-2"
 							data-testid="batch-expires-at"
 							required
 						/>
 						{#if form.errors.expires_at}
-							<span class="caption text-danger-700" data-testid="expires-at-error"
+							<span class="caption text-destructive" data-testid="expires-at-error"
 								>{form.errors.expires_at}</span
 							>
 						{/if}

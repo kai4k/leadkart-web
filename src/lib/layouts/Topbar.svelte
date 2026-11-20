@@ -316,13 +316,13 @@
 			color 0.15s;
 	}
 	.lk-topbar-iconbtn:active {
-		background: var(--bg-bg-muted-bg);
+		background: var(--lk-muted-tint);
 		box-shadow: var(--glass-specular);
 		color: var(--color-primary-active);
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.lk-topbar-iconbtn:hover {
-			background: var(--bg-bg-muted-bg);
+			background: var(--lk-muted-tint);
 			box-shadow: var(--glass-specular);
 			color: var(--color-primary-hover);
 		}

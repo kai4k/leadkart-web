@@ -39,10 +39,10 @@
 >
 	{#each items as item (item.label)}
 		<div class={cn('stack stack-tight', item.span === 2 && 'sm:col-span-2')}>
-			<dt class="caption text-fg-muted">{item.label}</dt>
+			<dt class="caption text-muted-foreground">{item.label}</dt>
 			<dd
 				class={cn(
-					'body-base text-fg',
+					'body-base text-foreground',
 					item.mono && 'font-mono',
 					item.multiline && 'whitespace-pre-wrap'
 				)}

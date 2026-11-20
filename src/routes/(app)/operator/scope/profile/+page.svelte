@@ -19,7 +19,7 @@
 
 {#snippet slug()}
 	<span class="cluster cluster-tight">
-		<code class="caption text-fg-subtle">{tenant.slug}</code>
+		<code class="caption text-muted-foreground">{tenant.slug}</code>
 		<CopyButton value={tenant.slug} label="Copy slug" />
 	</span>
 {/snippet}

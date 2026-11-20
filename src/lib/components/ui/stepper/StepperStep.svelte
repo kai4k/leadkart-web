@@ -28,28 +28,28 @@
 	const indicatorClass = $derived.by(() => {
 		switch (state) {
 			case 'complete':
-				return 'bg-primary text-primary-fg border-primary';
+				return 'bg-primary text-primary-foreground border-primary';
 			case 'current':
 				return 'bg-primary-soft text-primary border-primary';
 			case 'error':
-				return 'bg-danger-50 text-danger-900 border-danger-500';
+				return 'bg-destructive-soft text-destructive border-destructive';
 			case 'pending':
 			default:
-				return 'bg-bg-muted text-fg-muted border-border';
+				return 'bg-muted text-muted-foreground border-border';
 		}
 	});
 
 	const labelClass = $derived.by(() => {
 		switch (state) {
 			case 'current':
-				return 'text-fg font-semibold';
+				return 'text-foreground font-semibold';
 			case 'complete':
-				return 'text-fg';
+				return 'text-foreground';
 			case 'error':
-				return 'text-danger-700 font-medium';
+				return 'text-destructive font-medium';
 			case 'pending':
 			default:
-				return 'text-fg-muted';
+				return 'text-muted-foreground';
 		}
 	});
 
@@ -93,7 +93,7 @@
 	<div class="stack stack-tight mt-2 max-w-full text-center">
 		<span class={cn('body-sm truncate-1', labelClass)}>{label}</span>
 		{#if optional}
-			<span class="caption text-fg-subtle">Optional</span>
+			<span class="caption text-muted-foreground">Optional</span>
 		{/if}
 	</div>
 </li>

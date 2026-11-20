@@ -20,7 +20,7 @@
 </script>
 
 {#if sorted.length === 0}
-	<p class="caption text-fg-muted py-4">No quotation revisions yet.</p>
+	<p class="caption text-muted-foreground py-4">No quotation revisions yet.</p>
 {:else}
 	<Timeline.Root data-testid="quotation-revisions-timeline">
 		{#each sorted as rev (rev.revision_number)}
@@ -32,7 +32,7 @@
 				title={`Revision ${rev.revision_number} — ${formatMoney(rev.total, currency)}`}
 			>
 				<div class="stack stack-tight">
-					<p class="caption text-fg-muted tabular-nums">
+					<p class="caption text-muted-foreground tabular-nums">
 						{$_('orders.quotation.revisionLineSummary', {
 							values: {
 								lineCount: rev.items.length,
@@ -42,7 +42,7 @@
 						})}
 					</p>
 					{#if rev.notes}
-						<p class="body-sm text-fg whitespace-pre-wrap">{rev.notes}</p>
+						<p class="body-sm text-foreground whitespace-pre-wrap">{rev.notes}</p>
 					{/if}
 				</div>
 			</Timeline.Item>

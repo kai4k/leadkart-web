@@ -90,7 +90,7 @@
 {#snippet nameCell(role: RoleDto)}
 	<a
 		href={resolve('/(app)/settings/roles/[id]', { id: role.id })}
-		class="text-fg hover:text-primary font-medium hover:underline">{role.name}</a
+		class="text-foreground hover:text-primary font-medium hover:underline">{role.name}</a
 	>
 {/snippet}
 
@@ -126,7 +126,7 @@
 	<header class="cluster cluster-spread">
 		<div class="stack stack-tight">
 			<h1 class="h1">Roles</h1>
-			<p class="caption text-fg-muted">
+			<p class="caption text-muted-foreground">
 				{roleList.length} role{roleList.length === 1 ? '' : 's'}
 			</p>
 		</div>

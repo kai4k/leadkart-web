@@ -79,7 +79,7 @@
 	<div class="stack stack-tight">
 		<h1 class="h1">{title}</h1>
 		{#if subtitle}
-			<p class="caption text-fg-muted">{subtitle}</p>
+			<p class="caption text-muted-foreground">{subtitle}</p>
 		{/if}
 	</div>
 {/snippet}
@@ -116,15 +116,15 @@
 							class={[
 								'label -mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2 transition-colors',
 								'focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none',
-								'focus-visible:ring-focus-ring',
+								'focus-visible:ring-ring',
 								active
 									? 'border-primary text-primary'
-									: 'text-fg-muted hover:text-fg border-transparent'
+									: 'text-muted-foreground hover:text-foreground border-transparent'
 							]}
 						>
 							{v.label}
 							{#if count !== null}
-								<span class="caption text-fg-subtle">{count}</span>
+								<span class="caption text-muted-foreground">{count}</span>
 							{/if}
 						</button>
 					</li>

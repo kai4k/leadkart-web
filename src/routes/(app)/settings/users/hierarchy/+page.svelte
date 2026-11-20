@@ -35,7 +35,7 @@
 
 	<header class="stack stack-tight">
 		<h1 class="h1">Reporting hierarchy</h1>
-		<p class="body-sm text-fg-muted">
+		<p class="body-sm text-muted-foreground">
 			Who reports to whom. Each member can have at most one manager — the line of authority used for
 			task visibility and management chains.
 		</p>
@@ -74,10 +74,10 @@
 
 				{#if tree.orphans.length > 0}
 					<div class="border-border mt-6 border-t pt-4">
-						<p class="label text-warning-700 mb-2">
+						<p class="label text-warning mb-2">
 							{tree.orphans.length} orphaned member{tree.orphans.length === 1 ? '' : 's'}
 						</p>
-						<p class="caption text-fg-muted mb-3">
+						<p class="caption text-muted-foreground mb-3">
 							These members reference a manager that doesn't exist in the current tenant (usually a
 							deactivated or deleted member). Reassign their reporting line.
 						</p>

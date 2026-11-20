@@ -3,16 +3,16 @@
 	import { cn } from '#lib/utils/cn.ts';
 
 	/**
-	 * AuthCard — composes the universal `.bg-bg-elevated border border-border rounded-xl shadow-card` material with
+	 * AuthCard — composes the universal `.bg-card border border-border rounded-xl shadow-card` material with
 	 * auth-shell-specific extras: built-in padding + entrance animation
 	 * + slow border-glow pulse. The glass material itself (bg + blur +
 	 * saturate + brightness + specular + inner gradient + 1.5rem radius)
-	 * comes from `.bg-bg-elevated border border-border rounded-xl shadow-card` in utilities.css — same recipe every
+	 * comes from `.bg-card border border-border rounded-xl shadow-card` in utilities.css — same recipe every
 	 * modal / popover / dashboard tile in the product uses.
 	 *
 	 * API:
 	 *   - children   — required; the form content (rendered inside the
-	 *                  flow z-index from .bg-bg-elevated border border-border rounded-xl shadow-card).
+	 *                  flow z-index from .bg-card border border-border rounded-xl shadow-card).
 	 *   - class      — append-only token classes for caller overrides.
 	 *   - layoutClass — content layout (default `stack stack-relaxed`).
 	 */
@@ -27,16 +27,14 @@
 	let { class: className = '', layoutClass = 'stack stack-relaxed', children }: Props = $props();
 </script>
 
-<div
-	class={cn('lk-auth-card bg-bg-elevated border border-border rounded-xl shadow-card ', className)}
->
+<div class={cn('lk-auth-card bg-card border border-border rounded-xl shadow-card ', className)}>
 	<div class={cn(layoutClass)}>
 		{@render children()}
 	</div>
 </div>
 
 <style>
-	/* Auth-card-specific extras layered on top of `.bg-bg-elevated border border-border rounded-xl shadow-card`.
+	/* Auth-card-specific extras layered on top of `.bg-card border border-border rounded-xl shadow-card`.
 	   Border-glow pulse comes from the `.` utility
 	   (animations.css). Local concern: the entrance animation only. */
 	.lk-auth-card {

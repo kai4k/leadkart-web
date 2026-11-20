@@ -82,7 +82,7 @@
 <div class="stack stack-relaxed">
 	<a
 		href={resolve('orders')}
-		class="cluster cluster-tight text-fg-muted hover:text-fg caption inline-flex"
+		class="cluster cluster-tight text-muted-foreground hover:text-foreground caption inline-flex"
 	>
 		<Icon icon={ChevronLeft} size="xs" /> Back to orders
 	</a>
@@ -193,57 +193,57 @@
 						</Card.Description>
 					</Card.Header>
 					<Card.Content>
-						<dl class="text-fg flex flex-col gap-2 text-sm">
+						<dl class="text-foreground flex flex-col gap-2 text-sm">
 							{#if order.quotation_approved_at}
 								<div>
-									<dt class="caption text-fg-muted">Quotation approved</dt>
+									<dt class="caption text-muted-foreground">Quotation approved</dt>
 									<dd>{longDate(order.quotation_approved_at)}</dd>
 								</div>
 							{/if}
 							{#if order.confirmed_at}
 								<div>
-									<dt class="caption text-fg-muted">Confirmed</dt>
+									<dt class="caption text-muted-foreground">Confirmed</dt>
 									<dd>{longDate(order.confirmed_at)}</dd>
 								</div>
 							{/if}
 							{#if order.packed_at}
 								<div>
-									<dt class="caption text-fg-muted">Packed</dt>
+									<dt class="caption text-muted-foreground">Packed</dt>
 									<dd>{longDate(order.packed_at)}</dd>
 								</div>
 							{/if}
 							{#if order.invoice_generated_at}
 								<div>
-									<dt class="caption text-fg-muted">Invoice generated</dt>
+									<dt class="caption text-muted-foreground">Invoice generated</dt>
 									<dd>{longDate(order.invoice_generated_at)}</dd>
 								</div>
 							{/if}
 							{#if order.dispatched_at}
 								<div>
-									<dt class="caption text-fg-muted">Dispatched</dt>
+									<dt class="caption text-muted-foreground">Dispatched</dt>
 									<dd>{longDate(order.dispatched_at)}</dd>
 								</div>
 							{/if}
 							{#if order.delivered_at}
 								<div>
-									<dt class="caption text-fg-muted">Delivered</dt>
+									<dt class="caption text-muted-foreground">Delivered</dt>
 									<dd>{longDate(order.delivered_at)}</dd>
 								</div>
 							{/if}
 							{#if order.completed_at}
 								<div>
-									<dt class="caption text-fg-muted">Completed</dt>
+									<dt class="caption text-muted-foreground">Completed</dt>
 									<dd>{longDate(order.completed_at)}</dd>
 								</div>
 							{/if}
 							{#if order.cancelled_at}
 								<div>
-									<dt class="caption text-fg-muted">Cancelled</dt>
+									<dt class="caption text-muted-foreground">Cancelled</dt>
 									<dd>{longDate(order.cancelled_at)}</dd>
 								</div>
 								{#if order.cancel_reason}
 									<div>
-										<dt class="caption text-fg-muted">Cancel reason</dt>
+										<dt class="caption text-muted-foreground">Cancel reason</dt>
 										<dd class="body-base whitespace-pre-wrap">{order.cancel_reason}</dd>
 									</div>
 								{/if}

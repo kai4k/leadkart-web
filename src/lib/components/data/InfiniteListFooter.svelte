@@ -42,7 +42,7 @@
 	<div bind:this={list.sentinelRef} class="h-px w-full" aria-hidden="true"></div>
 	<p
 		bind:this={statusRegion}
-		class="caption text-fg-muted text-center"
+		class="caption text-muted-foreground text-center"
 		aria-live="polite"
 		tabindex="-1"
 	>

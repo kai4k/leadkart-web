@@ -33,12 +33,16 @@
 		{#each items as item, i (item.label)}
 			{@const isLast = i === items.length - 1}
 			<li class="flex items-center gap-1">
-				{#if i > 0}<Icon icon={ChevronRight} size="xs" class="text-fg-subtle flex-shrink-0" />{/if}
+				{#if i > 0}<Icon
+						icon={ChevronRight}
+						size="xs"
+						class="text-muted-foreground flex-shrink-0"
+					/>{/if}
 				{#if isLast || !item.href}
 					<span
 						class={cn(
 							'label-small inline-flex items-center gap-1',
-							isLast ? 'text-fg' : 'text-fg-muted'
+							isLast ? 'text-foreground' : 'text-muted-foreground'
 						)}
 						aria-current={isLast ? 'page' : undefined}
 					>
@@ -49,7 +53,7 @@
 					{@const href = item.href as ResolvedPathname}
 					<a
 						{href}
-						class="label-small text-fg-muted hover:text-fg focus-visible:ring-focus-ring inline-flex items-center gap-1 transition-colors focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-background focus-visible:outline-none"
+						class="label-small text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1 transition-colors focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-background focus-visible:outline-none"
 					>
 						{#if item.icon}<Icon icon={item.icon} size="xs" />{/if}
 						{item.label}

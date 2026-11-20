@@ -76,7 +76,7 @@
 				/>
 
 				<div class="stack stack-tight">
-					<p class="label text-fg">Required character classes</p>
+					<p class="label text-foreground">Required character classes</p>
 					<Switch
 						label="Require uppercase letter (A–Z)"
 						name="require_uppercase"
