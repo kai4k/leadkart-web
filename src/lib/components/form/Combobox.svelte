@@ -80,6 +80,26 @@
 
 	let open = $state(false);
 	let query = $state('');
+	let filterInput = $state<HTMLElement | null>(null);
+	// The list mounts two frames after the popover opens. Command scrolls its highlighted item into
+	// view the moment it mounts; before floating-ui has placed the popover that item sits at the
+	// document's top-left, so mounting early scrolled the whole page to the top.
+	let placed = $state(false);
+	$effect(() => {
+		if (!open) return;
+		let second = 0;
+		const first = requestAnimationFrame(() => {
+			second = requestAnimationFrame(() => (placed = true));
+		});
+		return () => {
+			cancelAnimationFrame(first);
+			cancelAnimationFrame(second);
+			placed = false;
+		};
+	});
+	$effect(() => {
+		if (placed) filterInput?.focus({ preventScroll: true });
+	});
 
 	const selectedLabel = $derived(options.find((o) => o.value === value)?.label ?? '');
 
@@ -121,39 +141,46 @@
 			<Icon icon={ChevronDown} size="sm" class="shrink-0 text-muted-foreground" />
 		</Popover.Trigger>
 
-		<Popover.Content align="start" class="w-(--bits-popover-anchor-width) min-w-56 gap-0 p-0">
-			<Command.Root shouldFilter={!onInput} class="p-1">
-				<Command.Input
-					aria-label={$_('form.combobox.filter')}
-					placeholder={$_('form.combobox.search')}
-					bind:value={query}
-					oninput={() => onInput?.(query)}
-				/>
-				<Command.List id={listId} aria-label={label}>
-					{#if loading}
-						<div class="px-3 py-2 text-sm text-muted-foreground">{$_('common.loading')}</div>
-					{:else}
-						<Command.Empty>{emptyState ?? $_('form.combobox.empty')}</Command.Empty>
-						{#each options as opt (opt.value)}
-							<Command.Item
-								value={opt.value}
-								keywords={[opt.label, opt.description ?? '']}
-								disabled={opt.disabled}
-								data-checked={opt.value === value}
-								onSelect={() => select(opt)}
-								class="items-start"
-							>
-								<span class="flex min-w-0 flex-1 flex-col">
-									<span>{opt.label}</span>
-									{#if opt.description}
-										<span class="text-xs text-muted-foreground">{opt.description}</span>
-									{/if}
-								</span>
-							</Command.Item>
-						{/each}
-					{/if}
-				</Command.List>
-			</Command.Root>
+		<Popover.Content
+			align="start"
+			class="w-(--bits-popover-anchor-width) min-w-56 gap-0 p-0"
+			onOpenAutoFocus={(event) => event.preventDefault()}
+		>
+			{#if placed}
+				<Command.Root shouldFilter={!onInput} class="p-1">
+					<Command.Input
+						bind:ref={filterInput}
+						aria-label={$_('form.combobox.filter')}
+						placeholder={$_('form.combobox.search')}
+						bind:value={query}
+						oninput={() => onInput?.(query)}
+					/>
+					<Command.List id={listId} aria-label={label}>
+						{#if loading}
+							<div class="px-3 py-2 text-sm text-muted-foreground">{$_('common.loading')}</div>
+						{:else}
+							<Command.Empty>{emptyState ?? $_('form.combobox.empty')}</Command.Empty>
+							{#each options as opt (opt.value)}
+								<Command.Item
+									value={opt.value}
+									keywords={[opt.label, opt.description ?? '']}
+									disabled={opt.disabled}
+									data-checked={opt.value === value}
+									onSelect={() => select(opt)}
+									class="items-start"
+								>
+									<span class="flex min-w-0 flex-1 flex-col">
+										<span>{opt.label}</span>
+										{#if opt.description}
+											<span class="text-xs text-muted-foreground">{opt.description}</span>
+										{/if}
+									</span>
+								</Command.Item>
+							{/each}
+						{/if}
+					</Command.List>
+				</Command.Root>
+			{/if}
 		</Popover.Content>
 	</Popover.Root>
 

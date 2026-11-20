@@ -18,6 +18,7 @@
 	import { Button, Card, Alert } from '#lib/components/ui/index.ts';
 	import { getPreferences, PREFERENCE_VALUES } from '$features/preferences';
 	import { Icon, Plus } from '#lib/icons/index.ts';
+	import Fields from './Fields.svelte';
 
 	const prefs = getPreferences();
 
@@ -78,6 +79,9 @@
 			</Card.Root>
 		{/each}
 	</section>
+
+	<!-- ═══ FIELDS ═══════════════════════════════════════════════════════ -->
+	<Fields />
 
 	<!-- ═══ CARDS ════════════════════════════════════════════════════════ -->
 	<section aria-labelledby="cards-heading" class="stack stack-loose">
