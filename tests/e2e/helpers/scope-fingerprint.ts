@@ -26,10 +26,15 @@ export async function currentFingerprint(context: BrowserContext): Promise<strin
 	const cookies = await context.cookies();
 	const access = cookies.find((c) => c.name === 'lk_access')?.value;
 	if (!access) return 'invalid';
-	const person = String(decodePart(access, 1).sub ?? '');
-	const scope = cookies.find((c) => c.name === 'lk_op_tenant')?.value;
-	const tenant = scope ? String(decodePart(scope, 0).id ?? 'none') : 'none';
-	return createHmac('sha256', E2E_SCOPE_COOKIE_SECRET)
-		.update(`scope-context:${person}:${tenant}`)
-		.digest('base64url');
+	try {
+		const person = String(decodePart(access, 1).sub ?? '');
+		const scope = cookies.find((c) => c.name === 'lk_op_tenant')?.value;
+		const tenant = scope ? String(decodePart(scope, 0).id ?? 'none') : 'none';
+		return createHmac('sha256', E2E_SCOPE_COOKIE_SECRET)
+			.update(`scope-context:${person}:${tenant}`)
+			.digest('base64url');
+	} catch {
+		// A spec that signs in with a token that is not a decodable JWT has no person to name.
+		return 'invalid';
+	}
 }
