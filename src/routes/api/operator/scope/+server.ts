@@ -3,9 +3,16 @@
  *
  *   POST   /api/operator/scope  { slug }   → resolve slug→UUID server-side,
  *                                            store {id, slug, display_name}
- *                                            in httpOnly cookie. Returns 204.
- *   DELETE /api/operator/scope             → clear cookie. Returns 204. Needs the page's context
+ *                                            in httpOnly cookie. Returns 200
+ *                                            `{ scope_context }`: the fingerprint of the context
+ *                                            the cookie now names.
+ *   DELETE /api/operator/scope             → clear cookie. Returns 200 `{ scope_context }` (the
+ *                                            fingerprint of "no context"). Needs the page's context
  *                                            fingerprint like every proxied call (409 scope_changed).
+ *
+ * The returned fingerprint is not a secret (the page data carries it): the tab records it as the
+ * context its own change is expected to commit, so a commit of any OTHER value is recognised as
+ * somebody else's change.
  *
  * No tenant identifier ever appears in the URL. Subsequent API calls
  * under /api/* automatically receive X-Tenant-Id from the cookie via
@@ -20,11 +27,16 @@
  * the user to /signin.
  */
 
-import { isHttpError, type RequestEvent } from '@sveltejs/kit';
+import { isHttpError, type Cookies, type RequestEvent } from '@sveltejs/kit';
 import { z } from 'zod';
 import { SESSION_EXPIRED_CODE, SESSION_RENEWAL_FAILED_MESSAGE } from '#lib/api/errors.ts';
 import { SCOPE_CHANGED_CODE, SCOPE_CHANGED_MESSAGE } from '#lib/api/scope-header.ts';
-import { setOperatorScope, clearOperatorScope, readOperatorScope } from '#lib/server/scope.ts';
+import {
+	setOperatorScope,
+	clearOperatorScope,
+	readOperatorScope,
+	scopeFingerprint
+} from '#lib/server/scope.ts';
 import { pageShowsCurrentContext } from '#lib/server/scope-context.ts';
 import { assertCsrf } from '#lib/server/csrf.ts';
 import { ACCESS_COOKIE, sessionEnded, sessionRenewalPending } from '#lib/server/cookies.ts';
@@ -32,6 +44,10 @@ import { loadCapabilities } from '#lib/server/capabilities.ts';
 import { goFetch } from '#lib/server/go.ts';
 import { meetsAccess, NAV_ROUTES } from '#lib/config/nav.ts';
 import { jsonError, upstreamJsonError } from '#lib/server/http.ts';
+
+/** The 200 answer to a change: the fingerprint of the context the cookie names now. */
+const changed = (cookies: Cookies): Response =>
+	Response.json({ scope_context: scopeFingerprint(readOperatorScope(cookies), cookies) });
 
 const sessionExpired = (): Response =>
 	jsonError(401, SESSION_EXPIRED_CODE, 'Your session has expired');
@@ -126,7 +142,7 @@ export async function POST(event: RequestEvent): Promise<Response> {
 		);
 		return jsonError(502, 'tenant_lookup_failed', 'Tenant lookup failed');
 	}
-	return new Response(null, { status: 204 });
+	return changed(event.cookies);
 }
 
 // eslint-disable-next-line @typescript-eslint/require-await -- SvelteKit handler signature is async by contract
@@ -150,5 +166,5 @@ export async function DELETE(event: RequestEvent): Promise<Response> {
 		return jsonError(409, SCOPE_CHANGED_CODE, SCOPE_CHANGED_MESSAGE);
 	}
 	clearOperatorScope(cookies);
-	return new Response(null, { status: 204 });
+	return changed(cookies);
 }

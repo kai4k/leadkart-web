@@ -6,23 +6,38 @@
  */
 export type ResetBlockKind = 'offline' | 'loop';
 
+/** What the declined reset was for, so a retry (back online) is the SAME reset. */
+export interface ResetRetry {
+	reason: 'context' | 'session' | 'scope';
+	source: 'announcement' | 'refusal';
+}
+
 export interface ResetBlock {
 	readonly kind: ResetBlockKind | null;
-	show: (kind: ResetBlockKind) => void;
+	readonly retry: ResetRetry;
+	show: (kind: ResetBlockKind, retry?: ResetRetry) => void;
 	clear: () => void;
 }
 
+const DEFAULT_RETRY: ResetRetry = { reason: 'context', source: 'refusal' };
+
 export function createResetBlock(): ResetBlock {
 	let kind = $state<ResetBlockKind | null>(null);
+	let retry: ResetRetry = DEFAULT_RETRY;
 	return {
 		get kind() {
 			return kind;
 		},
-		show(next) {
+		get retry() {
+			return retry;
+		},
+		show(next, forRetry = DEFAULT_RETRY) {
 			kind = next;
+			retry = forRetry;
 		},
 		clear() {
 			kind = null;
+			retry = DEFAULT_RETRY;
 		}
 	};
 }

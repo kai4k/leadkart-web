@@ -1,11 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const apiDelete = vi.hoisted(() => vi.fn(() => Promise.resolve()));
-const apiPost = vi.hoisted(() => vi.fn((_path: string, _body?: unknown) => Promise.resolve()));
+const CHANGED = { scope_context: 'fp-new' };
+const apiDelete = vi.hoisted(() =>
+	vi.fn((_path: string, _body?: unknown, _schema?: unknown) =>
+		Promise.resolve({ scope_context: 'fp-new' })
+	)
+);
+const apiPost = vi.hoisted(() =>
+	vi.fn((_path: string, _body?: unknown, _schema?: unknown) =>
+		Promise.resolve({ scope_context: 'fp-new' })
+	)
+);
 const logoutRequest = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 const goto = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 
-vi.mock('$api/client', () => ({ api: { delete: apiDelete, post: apiPost } }));
+vi.mock('$api/client', () => ({ api: { deleteJson: apiDelete, postJson: apiPost } }));
 vi.mock('$api/csrf', () => ({ getCsrfToken: () => 'csrf' }));
 vi.mock('$app/navigation', () => ({ goto, invalidate: vi.fn(() => Promise.resolve()) }));
 vi.mock('$app/state', () => ({ page: { data: {} } }));
@@ -44,18 +53,20 @@ describe('browser state clearing triggers (the worker stores nothing private: no
 		createQueryClient()
 			.getQueryCache()
 			.config.onError?.(new ScopeInvalidError('expired'), { state: { data: undefined } } as never);
-		await vi.waitFor(() => expect(apiDelete).toHaveBeenCalledWith('/operator/scope'));
+		await vi.waitFor(() =>
+			expect(apiDelete).toHaveBeenCalledWith('/operator/scope', undefined, expect.anything())
+		);
 		await vi.waitFor(() => expect(replace).toHaveBeenCalledWith('/operator/tenants'));
 	});
 
 	it('scope exit is one DELETE through the API client', async () => {
-		await exitOperatorScope();
-		expect(apiDelete).toHaveBeenCalledWith('/operator/scope');
+		await expect(exitOperatorScope()).resolves.toBe(CHANGED.scope_context);
+		expect(apiDelete).toHaveBeenCalledWith('/operator/scope', undefined, expect.anything());
 	});
 
 	it('scope enter goes through the one API client and surfaces a failure', async () => {
-		await enterScope({ slug: 'acme' });
-		expect(apiPost).toHaveBeenCalledWith('/operator/scope', { slug: 'acme' });
+		await expect(enterScope({ slug: 'acme' })).resolves.toBe(CHANGED.scope_context);
+		expect(apiPost).toHaveBeenCalledWith('/operator/scope', { slug: 'acme' }, expect.anything());
 		apiPost.mockRejectedValueOnce(new Error('not found'));
 		await expect(enterScope({ slug: 'nope' })).rejects.toBeInstanceOf(Error);
 	});

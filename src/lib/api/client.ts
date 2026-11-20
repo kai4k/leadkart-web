@@ -11,7 +11,17 @@
  * ONE transport (`send`) serves both `api` and the deprecated `apiLegacy`.
  */
 import type { z } from 'zod';
-import { ApiError, isApiError, SchemaError, TimeoutError, type ApiErrorBody } from './errors.ts';
+import {
+	ApiError,
+	DownloadTooLargeError,
+	DownloadTooLongError,
+	isApiError,
+	ScopeChangedError,
+	SchemaError,
+	TimeoutError,
+	type ApiErrorBody
+} from './errors.ts';
+import { resetPending } from './hard-reset.ts';
 import { requestSignal } from './abort.ts';
 import { DEFAULT_READ_TIMEOUT_MS } from './timeouts.ts';
 import { getCsrfToken } from './csrf.ts';
@@ -24,6 +34,10 @@ import { SCOPE_CONTEXT_HEADER, SESSION_RENEWED_HEADER } from './scope-header.ts'
  * is cancelled (a stalled export would otherwise hold the connection and the button for ever).
  */
 export const DOWNLOAD_IDLE_TIMEOUT_MS = 30_000;
+/** The whole body, however steadily it drips: 10 minutes (`maxDownloadMs` overrides). */
+export const DOWNLOAD_MAX_DURATION_MS = 10 * 60_000;
+/** The whole body, in bytes: 100 MB (`maxDownloadBytes` overrides). */
+export const DOWNLOAD_MAX_BYTES = 100 * 1024 * 1024;
 
 /** Default client timeout for reads. Must exceed 3 x the BFF upstream timeout; see timeouts.ts. */
 export const DEFAULT_TIMEOUT_MS = DEFAULT_READ_TIMEOUT_MS;
@@ -40,6 +54,15 @@ export interface RequestOptions {
 	signal?: AbortSignal;
 	timeoutMs?: number;
 	headers?: Record<string, string>;
+	/** `getBlob` only: cap on the body's total duration (default `DOWNLOAD_MAX_DURATION_MS`; Infinity = none). */
+	maxDownloadMs?: number;
+	/** `getBlob` only: cap on the body's size in bytes (default `DOWNLOAD_MAX_BYTES`; Infinity = none). */
+	maxDownloadBytes?: number;
+}
+interface BlobLimits {
+	idleMs: number;
+	maxMs: number;
+	maxBytes: number;
 }
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -77,19 +100,23 @@ export function buildQueryString(query?: QueryParams): string {
  */
 async function readBlobBody(
 	response: Response,
-	idleMs: number,
+	{ idleMs, maxMs, maxBytes }: BlobLimits,
 	signal: AbortSignal | undefined
 ): Promise<Blob> {
 	if (!response.body) return response.blob();
 	const reader = response.body.getReader();
 	const chunks: Uint8Array<ArrayBuffer>[] = [];
+	let received = 0;
 	let idle: ReturnType<typeof setTimeout> | undefined;
+	let total: ReturnType<typeof setTimeout> | undefined;
 	let stop: (() => void) | undefined;
 	const gone = new Promise<never>((_, reject) => {
 		const onAbort = () => reject(signal?.reason ?? new DOMException('Aborted', 'AbortError'));
 		if (signal?.aborted) onAbort();
 		else signal?.addEventListener('abort', onAbort, { once: true });
 		stop = () => signal?.removeEventListener('abort', onAbort);
+		// The overall cap: a body that drips for ever never trips the idle clock.
+		if (Number.isFinite(maxMs)) total = setTimeout(() => reject(new DownloadTooLongError()), maxMs);
 	});
 	gone.catch(() => {});
 	try {
@@ -107,6 +134,8 @@ async function readBlobBody(
 			]);
 			clearTimeout(idle);
 			if (next.done) break;
+			received += next.value.byteLength;
+			if (received > maxBytes) throw new DownloadTooLargeError();
 			chunks.push(next.value as Uint8Array<ArrayBuffer>);
 		}
 		return new Blob(chunks);
@@ -115,6 +144,7 @@ async function readBlobBody(
 		throw cause;
 	} finally {
 		clearTimeout(idle);
+		clearTimeout(total);
 		stop?.();
 	}
 }
@@ -135,6 +165,10 @@ async function send(
 	expectJson = false,
 	asBlob = false
 ): Promise<unknown> {
+	// A hard reset is under way, or was declined and the page is stale behind its banner: nothing
+	// leaves this page. Code outside the children the layout removed (a toast's Undo) would
+	// otherwise send under the fingerprint of the NEW context with data meant for the old one.
+	if (resetPending()) throw new ScopeChangedError();
 	const headers = new Headers(opts.headers);
 	headers.set('Accept', asBlob ? '*/*' : 'application/json');
 	// A form goes out untouched: the browser writes the multipart content type with its boundary.
@@ -176,13 +210,36 @@ async function send(
 		// answer is a small JSON body: it is read under the normal deadline.
 		if (asBlob && response.ok) {
 			stopTimer();
-			blob = await readBlobBody(response, DOWNLOAD_IDLE_TIMEOUT_MS, signal);
+			blob = await readBlobBody(
+				response,
+				{
+					idleMs: DOWNLOAD_IDLE_TIMEOUT_MS,
+					maxMs: opts.maxDownloadMs ?? DOWNLOAD_MAX_DURATION_MS,
+					maxBytes: opts.maxDownloadBytes ?? DOWNLOAD_MAX_BYTES
+				},
+				signal
+			);
 		} else if (asBlob) {
-			text = await (await readBlobBody(response, Number.POSITIVE_INFINITY, signal)).text();
+			text = await (
+				await readBlobBody(
+					response,
+					{
+						idleMs: Number.POSITIVE_INFINITY,
+						maxMs: Number.POSITIVE_INFINITY,
+						maxBytes: Number.POSITIVE_INFINITY
+					},
+					signal
+				)
+			).text();
 		} else text = await response.text();
 	} catch (cause) {
 		if (opts.signal?.aborted) throw opts.signal.reason ?? cause;
-		if (cause instanceof TimeoutError) throw cause;
+		if (
+			cause instanceof TimeoutError ||
+			cause instanceof DownloadTooLongError ||
+			cause instanceof DownloadTooLargeError
+		)
+			throw cause;
 		// The deadline's own signal decides, not the rejection reason (a stalled body read may reject with anything).
 		if (timedOut()) throw new TimeoutError();
 		throw ApiError.transport(cause);

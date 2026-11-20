@@ -49,8 +49,10 @@ describe('DELETE /api/operator/scope', () => {
 		const jar = newJar();
 		setOperatorScope(jar.api as never, TENANT_A);
 		const res = await exit(jar, fp({ state: 'valid', scope: TENANT_A }, jar));
-		expect(res.status).toBe(204);
+		expect(res.status).toBe(200);
 		expect(jar.store.has('lk_op_tenant')).toBe(false);
+		// the answer is the fingerprint of "no context": what the layout will commit next
+		expect(await res.json()).toEqual({ scope_context: fp({ state: 'none' }, jar) });
 	});
 
 	it('refuses a tab showing another context (409 scope_changed) and keeps the cookie', async () => {
@@ -73,7 +75,7 @@ describe('DELETE /api/operator/scope', () => {
 		const jar = newJar();
 		jar.store.set('lk_op_tenant', 'garbage.sig');
 		const res = await exit(jar, 'invalid');
-		expect(res.status).toBe(204);
+		expect(res.status).toBe(200);
 		expect(jar.store.has('lk_op_tenant')).toBe(false);
 	});
 

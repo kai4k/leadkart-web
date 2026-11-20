@@ -20,7 +20,7 @@ function setup(location = { pathname: '/leads', search: '?page=2' }) {
 		clearCache: vi.fn(),
 		notify: vi.fn(),
 		exitScope: vi.fn(() => Promise.resolve()),
-		leaveScope: vi.fn(),
+		leaveScope: vi.fn(() => true),
 		foreignChange: vi.fn(),
 		location: () => location
 	};
@@ -119,6 +119,17 @@ describe('session guard — scope_invalid', () => {
 		);
 	});
 
+	it('a leave that did not navigate (declined, or blocked behind a banner) releases the guard: a later session_expired is still handled', async () => {
+		const { deps, guard } = setup({ pathname: '/operator/scope/members', search: '' });
+		deps.leaveScope.mockReturnValue(false);
+		guard.handle(scopeError());
+		await vi.waitFor(() => expect(deps.leaveScope).toHaveBeenCalledTimes(1));
+		const expired = new AuthError(401);
+		expired.code = SESSION_EXPIRED_CODE;
+		expect(guard.handle(expired)).toBe(true);
+		expect(deps.goto).toHaveBeenCalledWith('/signin?next=%2Foperator%2Fscope%2Fmembers');
+	});
+
 	it('exit fails: one toast, one navigation to /signin, no second DELETE on a later 409', async () => {
 		const { deps, guard } = setup({ pathname: '/operator/scope/members', search: '' });
 		deps.exitScope.mockRejectedValue(new Error('offline'));
@@ -158,7 +169,7 @@ describe('session guard: scope errors regardless of HTTP status', () => {
 			clearCache: vi.fn(),
 			notify: vi.fn(),
 			exitScope: vi.fn(() => Promise.resolve()),
-			leaveScope: vi.fn(),
+			leaveScope: vi.fn(() => true),
 			foreignChange: vi.fn(),
 			location: () => ({ pathname: '/operator/scope/members', search: '' })
 		};

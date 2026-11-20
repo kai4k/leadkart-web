@@ -28,6 +28,7 @@
  * Reset (not clear) because a mounted observer keeps working through a reset.
  */
 import type { QueryClient } from '@tanstack/svelte-query';
+import { z } from 'zod';
 import { invalidate } from '$app/navigation';
 import { api } from './client';
 import { hardReset, type ResetReason } from './hard-reset.ts';
@@ -38,9 +39,15 @@ function refreshTenantContext(): Promise<void> {
 	return invalidate(SCOPE_DEPENDENCY);
 }
 
-/** DELETE the scope cookie. Follow it with `changeScopeContext` (or use `leaveTenantContext`). */
-export async function exitOperatorScope(): Promise<void> {
-	await api.delete('/operator/scope');
+/** What the BFF answers when it enters or ends a context: the fingerprint the layout will commit. */
+export const scopeChangeSchema = z.object({ scope_context: z.string().min(1) });
+
+/**
+ * DELETE the scope cookie; resolves to the NEW context fingerprint. Follow it with
+ * `changeScopeContext` (or use `leaveTenantContext`).
+ */
+export async function exitOperatorScope(): Promise<string> {
+	return (await api.deleteJson('/operator/scope', undefined, scopeChangeSchema)).scope_context;
 }
 
 type ContextCache = Pick<QueryClient, 'removeQueries' | 'resetQueries'>;
@@ -64,52 +71,76 @@ export function announceContextChange(reason: 'context' | 'session' = 'context')
 	scopeChannel()?.postMessage(reason);
 }
 
-/** Own changes in progress (a POST/DELETE has gone out and the layout has not committed yet). */
-let ownChangesInFlight = 0;
-/** A foreign announcement arrived while an own change was in flight: act on it once that has committed. */
+/**
+ * The fingerprint this tab's own enter / exit is waiting to see committed by the layout, until it
+ * does (or `OWN_CHANGE_WINDOW_MS` passes). It is the BFF's own answer to the change, so the commit
+ * that follows is recognised by its VALUE: another invalidate superseding the scope one still
+ * lands on it (absorbed), and a foreign cookie change landing inside the window lands on a
+ * different one (a reset). There is no counter of "own changes in flight" deciding that.
+ */
+let expected: { fingerprint: string; until: number } | undefined;
+/** Own calls (POST / DELETE) between "sent" and "answered": the answer does not exist yet. */
+let callsInFlight = 0;
+/** A foreign announcement arrived while an own call was in flight: act on it once that has committed. */
 let foreignDuringOwn: ResetReason | null = null;
 
-/** True while this tab's own enter / exit is between its call and the layout commit. */
-export function ownScopeChangeInFlight(): boolean {
-	return ownChangesInFlight > 0;
+/** How long a refusal is blamed on this tab's own change after the BFF answered it. */
+const OWN_CHANGE_WINDOW_MS = 5_000;
+
+/**
+ * True while this tab's own enter / exit is between its call and the layout commit: a refetch that
+ * started then is refused by OUR change (the page still shows the old fingerprint), not by another tab.
+ */
+function ownScopeChangeInFlight(): boolean {
+	return callsInFlight > 0 || (expected !== undefined && Date.now() < expected.until);
 }
 
 /** Which kind of evidence says the context was changed by somebody else. */
 type ForeignSource = 'announcement' | 'refusal';
 
+function resetForForeignChange(
+	qc: Pick<QueryClient, 'clear'> | undefined,
+	source: ForeignSource,
+	reason: ResetReason
+): boolean {
+	expected = undefined;
+	return hardReset(reason, qc, source);
+}
+
 /**
  * The context was changed by someone else (another tab, a sign-in or sign-out elsewhere, a cookie
  * change nothing announced): hard reset this tab (`hard-reset.ts`: `replace`, the reason left for
- * the next page to show, never offline, never in a loop). Returns true when THIS call started the
- * reset, false when it was not needed or not possible: the tab's own change is in flight (a refetch
- * that started between the POST/DELETE and the layout commit is refused by OUR change, not by
- * another tab), the reset is already under way, or a block banner took over. An announcement that
- * arrives during an own change is not lost: the reset runs once that change has committed.
+ * the next page to show, never offline, never in a loop of refusals). Returns true when THIS call
+ * started the reset, false when it was not needed or not possible: the tab's own change is between
+ * its call and its commit (a refetch that started then is refused by OUR change, not by another
+ * tab), the reset is already under way, or a block banner took over. An announcement that arrives
+ * while an own call is in flight is not lost: the reset runs once that call has settled.
  *
  * `qc` is cleared first when the caller has one; the reload drops the in-memory cache either way.
- * This is the ONE function that decides own versus foreign; the layout's committed-context check,
- * the announcements and the BFF's refusals all end here.
+ * The layout's committed-context check, the announcements and the BFF's refusals all end here (the
+ * check compares values and does not ask whether this tab is changing, see `createCommittedContext`).
  */
 export function scopeChangedElsewhere(
 	qc?: Pick<QueryClient, 'clear'>,
 	source: ForeignSource = 'refusal',
 	reason: ResetReason = 'context'
 ): boolean {
-	if (ownChangesInFlight > 0) {
+	if (source === 'announcement' ? callsInFlight > 0 : ownScopeChangeInFlight()) {
 		if (source === 'announcement') foreignDuringOwn = reason;
 		return false;
 	}
-	return hardReset(reason, qc);
+	return resetForForeignChange(qc, source, reason);
 }
 
 /**
  * What the (app) layout last committed as the tab's context. `observe` takes the fingerprint of
- * every commit: the first is remembered; the same one is nothing; a different one is either this
- * tab's own enter / exit (remembered, the in-place flow) or somebody else's, which goes to
- * `scopeChangedElsewhere` and is reported as moved. Cookie changes nothing announced (the layout
- * clearing the cookie on lost permission, a sign-in elsewhere that was not enhanced) re-run the
- * layout in place through a capabilities refresh or any navigation; without this check the page
- * would re-bind under mounted forms and no refusal would ever come (the fingerprint now matches).
+ * every commit: the first is remembered; the same one is nothing; the one this tab's own enter /
+ * exit was told to expect is absorbed (the in-place flow); ANY other value is somebody else's
+ * change (the layout clearing the cookie on lost permission, a sign-in elsewhere, a foreign enter
+ * landing inside our own window) and hard-resets the tab, reported as moved. Cookie changes
+ * nothing announced re-run the layout in place through a capabilities refresh or any navigation;
+ * without this check the page would re-bind under mounted forms and no refusal would ever come
+ * (the fingerprint now matches).
  */
 export function createCommittedContext(qc: Pick<QueryClient, 'clear'>): {
 	observe: (fingerprint: string | undefined) => boolean;
@@ -123,37 +154,42 @@ export function createCommittedContext(qc: Pick<QueryClient, 'clear'>): {
 				committed = fingerprint;
 				return false;
 			}
-			if (fingerprint === committed) return false;
-			if (ownChangesInFlight > 0) {
+			if (fingerprint !== undefined && fingerprint === expected?.fingerprint) {
+				expected = undefined;
 				committed = fingerprint;
 				return false;
 			}
-			scopeChangedElsewhere(qc, 'refusal');
+			if (fingerprint === committed) return false;
+			resetForForeignChange(qc, 'refusal', 'context');
 			return true;
 		}
 	};
 }
 
 /**
- * This tab changes the context: `change` is the call that moves the cookie (enter / exit), then the
- * change is followed in place (see the header for the order) and the other tabs are told. The
- * in-flight flag spans the call AND the layout commit, so refusals caused by this very change are not
- * mistaken for another tab's.
+ * This tab changes the context: `change` is the call that moves the cookie (enter / exit) and
+ * answers with the NEW fingerprint, then the change is followed in place (see the header for the
+ * order) and the other tabs are told. The call is "in flight" until it answers, and the answer is
+ * the fingerprint the layout is expected to commit (see `expected`).
  */
 export async function changeScopeContext(
 	qc: ContextCache & Pick<QueryClient, 'clear'>,
-	change: () => Promise<unknown>
+	change: () => Promise<string>
 ): Promise<void> {
-	ownChangesInFlight++;
+	callsInFlight++;
 	try {
-		await change();
+		try {
+			const fingerprint = await change();
+			expected = { fingerprint, until: Date.now() + OWN_CHANGE_WINDOW_MS };
+		} finally {
+			callsInFlight--;
+		}
 		qc.removeQueries({ type: 'inactive' });
 		await refreshTenantContext();
 		void qc.resetQueries();
 		announceContextChange();
 	} finally {
-		ownChangesInFlight--;
-		if (ownChangesInFlight === 0 && foreignDuringOwn) {
+		if (callsInFlight === 0 && foreignDuringOwn) {
 			const reason = foreignDuringOwn;
 			foreignDuringOwn = null;
 			scopeChangedElsewhere(qc, 'announcement', reason);

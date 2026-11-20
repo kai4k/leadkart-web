@@ -3,9 +3,9 @@
  *
  * `enterScope` POSTs to the BFF (`/api/operator/scope`), which resolves
  * the tenant slug server-side, sets the `lk_op_tenant` httpOnly cookie,
- * and returns 204 (no body) or a small body identifying the resolved
- * tenant. The frontend never sees the tenant UUID in the URL bar — only
- * the slug used in the request payload.
+ * and answers with the fingerprint of the context it now names (the
+ * layout is expected to commit exactly that). The frontend never sees
+ * the tenant UUID in the URL bar — only the slug used in the request payload.
  *
  * `exitScope` clears the cookie via DELETE so subsequent Go calls are
  * unscoped again (platform context).
@@ -20,26 +20,22 @@
  * the exiting DELETE is not.
  */
 import { api } from '$api/client';
-import { exitOperatorScope } from '$api/operator-scope';
+import { exitOperatorScope, scopeChangeSchema } from '$api/operator-scope';
 
 export interface EnterScopeRequest {
 	slug: string;
 }
 
-/** The BFF answers 204: the resolved tenant lives in the cookie, not in a body. */
-export type EnterScopeResponse = Record<string, never>;
-
 /**
- * Enter tenant scope. The BFF resolves `slug` → tenant UUID, sets the
+ * Enter tenant scope; resolves to the NEW context fingerprint. The BFF resolves `slug` → tenant UUID, sets the
  * `lk_op_tenant` httpOnly cookie, and the proxy auto-injects
  * `X-Tenant-Id` from that cookie on every subsequent Go call.
  *
  * Throws a typed [ApiError] subclass on non-2xx — callers pattern-match
  * (`NetworkError`, `AuthError`, `NotFoundError`, etc.).
  */
-export async function enterScope(req: EnterScopeRequest): Promise<EnterScopeResponse> {
-	await api.post('/operator/scope', req);
-	return {};
+export async function enterScope(req: EnterScopeRequest): Promise<string> {
+	return (await api.postJson('/operator/scope', req, scopeChangeSchema)).scope_context;
 }
 
 /**
@@ -47,6 +43,6 @@ export async function enterScope(req: EnterScopeRequest): Promise<EnterScopeResp
  * shared implementation in `$api/operator-scope`). Throws on non-2xx;
  * callers typically treat any failure as "stay in scope, surface a toast".
  */
-export function exitScope(): Promise<void> {
+export function exitScope(): Promise<string> {
 	return exitOperatorScope();
 }

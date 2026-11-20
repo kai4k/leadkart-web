@@ -36,8 +36,10 @@
 	$effect(() => {
 		if (resetBlock.kind !== 'offline') return;
 		const retry = () => {
+			// The SAME reset that was declined (its reason and what started it).
+			const { reason, source } = resetBlock.retry;
 			resetBlock.clear();
-			hardReset('context');
+			hardReset(reason, undefined, source);
 		};
 		window.addEventListener('online', retry);
 		return () => window.removeEventListener('online', retry);

@@ -253,6 +253,24 @@ export class TimeoutError extends ApiError {
 	}
 }
 
+/** A download ran past its overall time cap (it kept sending, but never finished). Not the idle clock. */
+export class DownloadTooLongError extends ApiError {
+	constructor() {
+		super(undefined, undefined);
+		this.name = 'DownloadTooLongError';
+		this.message = 'The download took too long and was stopped.';
+	}
+}
+
+/** A download body grew past its byte cap and was stopped. */
+export class DownloadTooLargeError extends ApiError {
+	constructor() {
+		super(undefined, undefined);
+		this.name = 'DownloadTooLargeError';
+		this.message = 'The download is too large and was stopped.';
+	}
+}
+
 /** 5xx response — server-side fault, retryable. */
 export class ServerError extends ApiError {
 	declare readonly status: number;

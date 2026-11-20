@@ -13,7 +13,12 @@ vi.mock('#lib/server/cookies.ts', () => ({
 	// no refresh cookie in this suite: the session is over exactly when the access cookie is gone
 	sessionEnded: (c: { get(n: string): string | undefined }) => !c.get('lk_access')
 }));
-vi.mock('#lib/server/scope.ts', () => ({ setOperatorScope, clearOperatorScope: vi.fn() }));
+vi.mock('#lib/server/scope.ts', () => ({
+	setOperatorScope,
+	clearOperatorScope: vi.fn(),
+	readOperatorScope: () => ({ state: 'valid' }),
+	scopeFingerprint: () => 'fp-entered'
+}));
 
 import { POST } from '../../../src/routes/api/operator/scope/+server.ts';
 
@@ -136,7 +141,10 @@ describe('POST /api/operator/scope', () => {
 	it('sets the scope for a platform user', async () => {
 		loadCapabilities.mockResolvedValue(PLATFORM);
 		goFetch.mockResolvedValue(Response.json({ tenants: [TENANT] }));
-		expect((await post()).status).toBe(204);
+		const res = await post();
+		expect(res.status).toBe(200);
+		// the BFF's own answer to the change: the fingerprint the layout will commit
+		expect(await res.json()).toEqual({ scope_context: 'fp-entered' });
 		expect(setOperatorScope).toHaveBeenCalledWith(expect.anything(), TENANT);
 	});
 });

@@ -20,7 +20,7 @@
  *                            flight is not a foreign change and is ignored there.
  *
  * Each fires once; later failures from in-flight queries are swallowed until
- * the navigation settles. Dependencies are injected so the guard is
+ * the navigation settles (a navigation that never started releases it at once). Dependencies are injected so the guard is
  * unit-testable without a router.
  */
 import { AuthError, ScopeChangedError, ScopeInvalidError, SESSION_EXPIRED_CODE } from './errors';
@@ -32,8 +32,12 @@ export interface SessionGuardDeps {
 	notify: (message: string) => void;
 	/** Delete the stale scope cookie server-side so /operator/tenants is not itself answered 409. */
 	exitScope: () => Promise<unknown>;
-	/** The cookie is gone: leave for /operator/tenants with a full navigation (cache cleared, reason kept for after the load). */
-	leaveScope: () => void;
+	/**
+	 * The cookie is gone: leave for /operator/tenants with a full navigation (cache cleared, reason
+	 * kept for after the load). False when the navigation did not start (declined, or blocked behind
+	 * a banner): the guard must not then swallow every later session error for the tab's life.
+	 */
+	leaveScope: () => boolean;
 	/** The context was changed by someone else: hard reset this tab (declined while an own change is in flight). */
 	foreignChange: () => void;
 	location: () => { pathname: string; search: string };
@@ -91,7 +95,7 @@ export function createSessionGuard(deps: SessionGuardDeps): SessionGuard {
 						// The page never follows the new "no context" in place, so no form of it can submit into
 						// the home tenant before the navigation lands. `redirecting` stays set: the page is
 						// leaving, a straggling 409 must not start a second exit.
-						deps.leaveScope();
+						if (!deps.leaveScope()) redirecting = false;
 					},
 					(failure: unknown) => {
 						// The exit itself was refused because another tab moved the context meanwhile: a valid

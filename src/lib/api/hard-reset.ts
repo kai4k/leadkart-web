@@ -9,11 +9,19 @@
  *     navigation, so the page that loads can tell the user why (`takeReloadReason`, shown by
  *     `ReloadNotice.svelte`). A toast posted before the navigation dies with the document.
  *   - Not while offline: the reload would land on the offline page. The block banner stands in.
- *   - Never twice in a row: when the page that just loaded was itself the result of a reset (flag
- *     under 10 s old) another reset would loop; the block banner offers signing in again instead.
+ *   - Never twice in a row, for resets a REFUSAL or the layout's committed-context check start: when
+ *     the page that just loaded was itself the result of such a reset (flag under 10 s old) another
+ *     one would loop; the block banner offers signing in again instead. An ANNOUNCEMENT from another
+ *     tab always resets and never counts towards the loop: a tab never hears its own announcement,
+ *     so announcements cannot loop, and two legitimate changes made in another tab seconds apart
+ *     must both be followed.
  *   - `reloading` swallows the burst of refusals that follows the first one. A reset the browser
  *     cancels (a `beforeunload` prompt, Stop) must not leave it set for ever: it is released on
- *     `pageshow` and after a short timeout, and the stale reason with it.
+ *     `pageshow` and after a short timeout. The reason flag is NOT cleared by the timeout (a slow
+ *     navigation would then land without its toast); it expires by its own timestamp.
+ *   - `resetPending()` is true while a reset is under way or a declined one has a banner up: the API
+ *     client sends nothing then, so no code outside the page's removed children (a toast's Undo)
+ *     can write under the new context.
  *
  * Storage can be unavailable (privacy mode): the reset then works without the reason.
  */
@@ -35,10 +43,16 @@ const REASONS: readonly ResetReason[] = ['context', 'session', 'scope'];
 let reloading = false;
 /** When the page this document replaced started its reset (set once the reason was taken). */
 let arrivedByResetAt: number | undefined;
+/** The `at` of the flag THIS document wrote: such a flag is for the next page, not evidence about this one. */
+let wroteFlagAt: number | undefined;
+
+/** What started a reset: another tab's announcement, or a refusal / the layout's own check. */
+export type ResetSource = 'announcement' | 'refusal';
 
 interface Flag {
 	reason: ResetReason;
 	at: number;
+	source: ResetSource;
 }
 
 function readFlag(): Flag | null {
@@ -52,7 +66,12 @@ function readFlag(): Flag | null {
 			typeof parsed.at === 'number' &&
 			Number.isFinite(parsed.at)
 		) {
-			return { reason: parsed.reason as ResetReason, at: parsed.at };
+			return {
+				reason: parsed.reason as ResetReason,
+				at: parsed.at,
+				// A flag without a source predates the field: it counts towards the loop stop.
+				source: parsed.source === 'announcement' ? 'announcement' : 'refusal'
+			};
 		}
 	} catch {
 		// unavailable or not ours
@@ -60,9 +79,13 @@ function readFlag(): Flag | null {
 	return null;
 }
 
-function writeFlag(reason: ResetReason): void {
+function writeFlag(reason: ResetReason, source: ResetSource): void {
 	try {
-		sessionStorage.setItem(RELOAD_REASON_KEY, JSON.stringify({ reason, at: Date.now() }));
+		wroteFlagAt = Date.now();
+		sessionStorage.setItem(
+			RELOAD_REASON_KEY,
+			JSON.stringify({ reason, at: wroteFlagAt, source } satisfies Flag)
+		);
 	} catch {
 		// unavailable: the reset still happens, just without a reason to show
 	}
@@ -84,12 +107,16 @@ export function takeReloadReason(): ResetReason | null {
 	const flag = readFlag();
 	clearFlag();
 	if (!flag) return null;
-	arrivedByResetAt = flag.at;
+	// Only a reset a refusal started can be one step of a loop (see the header).
+	arrivedByResetAt = flag.source === 'refusal' ? flag.at : undefined;
 	return Date.now() - flag.at < REASON_MAX_AGE_MS ? flag.reason : null;
 }
 
 function arrivedByRecentReset(): boolean {
-	const at = arrivedByResetAt ?? readFlag()?.at;
+	// Before the reason is taken, the flag in storage is the previous page's, unless this document wrote it.
+	const flag = readFlag();
+	const left = flag && flag.at !== wroteFlagAt && flag.source === 'refusal' ? flag.at : undefined;
+	const at = arrivedByResetAt ?? left;
 	if (at === undefined) return false;
 	const age = Date.now() - at;
 	return age >= 0 && age < LOOP_WINDOW_MS;
@@ -103,7 +130,6 @@ export function replaceLocation(url: string): void {
 function armRelease(): void {
 	const release = () => {
 		reloading = false;
-		clearFlag();
 		window.removeEventListener('pageshow', release);
 	};
 	window.addEventListener('pageshow', release);
@@ -111,32 +137,46 @@ function armRelease(): void {
 }
 
 /**
+ * True while a reset is under way, or one was declined and its banner is showing: the page is stale
+ * and nothing may be sent from it (the API client refuses, before any network call).
+ */
+export function resetPending(): boolean {
+	return reloading || resetBlock.kind !== null;
+}
+
+/**
  * Hard-navigate this tab to `url` for `reason`. True when THIS call started it; false when it was
  * declined (already under way, a block banner took over). `qc` is cleared first when given.
+ * `source` says what started it: only a `refusal` is subject to the loop stop.
  */
 export function navigateHard(
 	url: string,
 	reason: ResetReason,
-	qc?: { clear: () => void }
+	qc?: { clear: () => void },
+	source: ResetSource = 'refusal'
 ): boolean {
 	if (reloading) return false;
-	if (arrivedByRecentReset()) {
-		resetBlock.show('loop');
+	if (source === 'refusal' && arrivedByRecentReset()) {
+		resetBlock.show('loop', { reason, source });
 		return false;
 	}
 	if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-		resetBlock.show('offline');
+		resetBlock.show('offline', { reason, source });
 		return false;
 	}
 	reloading = true;
 	qc?.clear();
-	writeFlag(reason);
+	writeFlag(reason, source);
 	armRelease();
 	replaceLocation(url);
 	return true;
 }
 
 /** Reload this page's own URL as a GET (see the header). */
-export function hardReset(reason: ResetReason, qc?: { clear: () => void }): boolean {
-	return navigateHard(location.pathname + location.search, reason, qc);
+export function hardReset(
+	reason: ResetReason,
+	qc?: { clear: () => void },
+	source: ResetSource = 'refusal'
+): boolean {
+	return navigateHard(location.pathname + location.search, reason, qc, source);
 }

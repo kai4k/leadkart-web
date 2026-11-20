@@ -74,3 +74,20 @@ describe('ReloadNotice banner when a reset could not happen', () => {
 		expect(target.querySelector('button')?.textContent).toContain(en.reload.loop.action);
 	});
 });
+
+describe('ReloadNotice offline retry', () => {
+	it('retries the SAME reset (its reason and what started it) once the connection is back', async () => {
+		const replace = vi.fn();
+		vi.stubGlobal('location', { replace, pathname: '/leads', search: '' });
+		resetBlock.show('offline', { reason: 'session', source: 'announcement' });
+		await render();
+		window.dispatchEvent(new Event('online'));
+		expect(replace).toHaveBeenCalledWith('/leads');
+		expect(JSON.parse(sessionStorage.getItem(RELOAD_REASON_KEY) ?? 'null')).toMatchObject({
+			reason: 'session',
+			source: 'announcement'
+		});
+		expect(resetBlock.kind).toBeNull();
+		vi.unstubAllGlobals();
+	});
+});

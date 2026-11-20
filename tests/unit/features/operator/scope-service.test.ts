@@ -18,8 +18,8 @@ const gw = vi.hoisted(() => ({ enterScope: vi.fn(), exitScope: vi.fn() }));
 vi.mock('#lib/features/operator/scope/api.ts', () => gw);
 vi.mock('#lib/features/operator/scope/api', () => gw);
 const del = vi.hoisted(() => vi.fn());
-vi.mock('#lib/api/client.ts', () => ({ api: { delete: del } }));
-vi.mock('#lib/api/client', () => ({ api: { delete: del } }));
+vi.mock('#lib/api/client.ts', () => ({ api: { deleteJson: del } }));
+vi.mock('#lib/api/client', () => ({ api: { deleteJson: del } }));
 
 import type * as ScopeModule from '#lib/api/operator-scope.ts';
 import type * as ServiceModule from '#lib/features/operator/scope/service.ts';
@@ -95,7 +95,7 @@ beforeEach(() => {
 describe('enterTenantContext (tenants list and command palette share it)', () => {
 	it('sets the cookie, drops unshown cache, re-runs the (app) layout, resets what is mounted, then navigates', async () => {
 		const { service } = await tab();
-		gw.enterScope.mockResolvedValue({});
+		gw.enterScope.mockResolvedValue('fp-a');
 		const client = qc();
 		await service.enterTenantContext(client as never, 'acme');
 		expect(gw.enterScope).toHaveBeenCalledWith({ slug: 'acme' });
@@ -118,7 +118,7 @@ describe('enterTenantContext (tenants list and command palette share it)', () =>
 describe('exit', () => {
 	it('exitTenantContext follows the change, then navigates back to the tenant list', async () => {
 		const { service } = await tab();
-		gw.exitScope.mockResolvedValue(undefined);
+		gw.exitScope.mockResolvedValue('fp-none');
 		const client = qc();
 		await service.exitTenantContext(client as never);
 		expect(calls).toEqual(['removeInactive', 'invalidate', 'reset', 'goto']);
@@ -128,17 +128,17 @@ describe('exit', () => {
 
 	it('the shared BFF exit only changes the cookie and the offline copies; following it is separate', async () => {
 		const { scope } = await tab();
-		del.mockResolvedValue(undefined);
+		del.mockResolvedValue({ scope_context: 'fp-none' });
 		await scope.exitOperatorScope();
-		expect(del).toHaveBeenCalledWith('/operator/scope');
+		expect(del).toHaveBeenCalledWith('/operator/scope', undefined, expect.anything());
 		expect(nav.invalidate).not.toHaveBeenCalled();
 	});
 
 	it('the session guard leaves through the same two steps', async () => {
 		const { scope } = await tab();
-		del.mockResolvedValue(undefined);
+		del.mockResolvedValue({ scope_context: 'fp-none' });
 		await scope.leaveTenantContext(qc() as never);
-		expect(del).toHaveBeenCalledWith('/operator/scope');
+		expect(del).toHaveBeenCalledWith('/operator/scope', undefined, expect.anything());
 		expect(calls).toEqual(['removeInactive', 'invalidate', 'reset']);
 	});
 });
@@ -150,7 +150,7 @@ describe('the other tabs of the browser', () => {
 		const mineTab = await tab();
 		const otherTab = await tab(); // a second tab is a second copy of the module (its own channel object)
 		const stop = otherTab.scope.listenForScopeChanges(theirs as never);
-		del.mockResolvedValue(undefined);
+		del.mockResolvedValue({ scope_context: 'fp-none' });
 		await mineTab.scope.leaveTenantContext(mine as never);
 		expect(theirs.clear).toHaveBeenCalledTimes(1);
 		expect(reload).toHaveBeenCalledTimes(1);
@@ -165,7 +165,7 @@ describe('the other tabs of the browser', () => {
 		const { scope } = await tab();
 		const a = qc();
 		const stopA = scope.listenForScopeChanges(a as never);
-		del.mockResolvedValue(undefined);
+		del.mockResolvedValue({ scope_context: 'fp-none' });
 		await scope.leaveTenantContext(a as never);
 		await Promise.resolve();
 		expect(a.resetQueries).toHaveBeenCalledTimes(1); // once, from its own call
@@ -179,7 +179,7 @@ describe('the other tabs of the browser', () => {
 		const theirs = qc();
 		const stop = otherTab.scope.listenForScopeChanges(theirs as never);
 		stop();
-		del.mockResolvedValue(undefined);
+		del.mockResolvedValue({ scope_context: 'fp-none' });
 		await mineTab.scope.leaveTenantContext(qc() as never);
 		await Promise.resolve();
 		expect(reload).not.toHaveBeenCalled();
@@ -243,8 +243,13 @@ describe('a refusal this tab did not cause', () => {
 			expect(scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(true);
 			expect(scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(false);
 			vi.advanceTimersByTime(6_000);
-			expect(sessionStorage.getItem('lk_reload_reason')).toBeNull();
+			// The flag is NOT cleared by the release (a slow navigation would land without its toast):
+			// it expires by its own timestamp, and it is not evidence that THIS document came from a reset.
+			expect(sessionStorage.getItem('lk_reload_reason')).not.toBeNull();
 			expect(scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(true);
+			vi.advanceTimersByTime(61_000);
+			const hard = await import('#lib/api/hard-reset.ts');
+			expect(hard.takeReloadReason()).toBeNull();
 		} finally {
 			vi.useRealTimers();
 		}
@@ -261,14 +266,19 @@ describe('a refusal this tab did not cause', () => {
 		const { scope } = await tab();
 		const client = qc();
 		let during: boolean | undefined;
+		const watch = scope.createCommittedContext(client as never);
+		watch.observe('fp-a');
 		del.mockImplementation(() => {
 			during = scope.scopeChangedElsewhere(client as never, 'refusal');
-			return Promise.resolve();
+			return Promise.resolve({ scope_context: 'fp-none' });
 		});
 		await scope.leaveTenantContext(client as never);
 		expect(during).toBe(false);
 		expect(reload).not.toHaveBeenCalled();
-		// ... and once the change is committed the same refusal IS foreign again.
+		// Still between the answer and the layout's commit: a refetch refused now is OUR change's.
+		expect(scope.scopeChangedElsewhere(client as never, 'refusal')).toBe(false);
+		// ... once the layout has committed the expected fingerprint the same refusal IS foreign again.
+		expect(watch.observe('fp-none')).toBe(false);
 		expect(scope.scopeChangedElsewhere(client as never, 'refusal')).toBe(true);
 	});
 
@@ -278,7 +288,7 @@ describe('a refusal this tab did not cause', () => {
 		del.mockImplementation(() => {
 			scope.scopeChangedElsewhere(client as never, 'announcement');
 			expect(reload).not.toHaveBeenCalled();
-			return Promise.resolve();
+			return Promise.resolve({ scope_context: 'fp-none' });
 		});
 		await scope.leaveTenantContext(client as never);
 		expect(reload).toHaveBeenCalledTimes(1);
@@ -384,7 +394,7 @@ describe('the layout commits a context (item: a page never keeps its state when 
 
 	it('an own enter / exit commits a different fingerprint in place, as before: remembered, no reset', async () => {
 		const { scope } = await tab();
-		del.mockResolvedValue(undefined);
+		del.mockResolvedValue({ scope_context: 'fp-b' });
 		const watch = scope.createCommittedContext(qc() as never);
 		watch.observe('fp-a');
 		nav.invalidate.mockImplementation(() => {
@@ -396,5 +406,111 @@ describe('the layout commits a context (item: a page never keeps its state when 
 		// ... and the new fingerprint is now the baseline.
 		expect(watch.observe('fp-b')).toBe(false);
 		expect(watch.observe('fp-c')).toBe(true);
+	});
+});
+
+describe('a reset another tab asked for is never mistaken for a loop', () => {
+	/** The document a reset lands on: fresh modules, the flag in sessionStorage, the reason taken. */
+	async function landAfterReset() {
+		const next = await tab();
+		const hard = await import('#lib/api/hard-reset.ts');
+		hard.takeReloadReason();
+		return next;
+	}
+
+	it('two announcements two seconds apart are two resets, and no banner', async () => {
+		vi.useFakeTimers({ toFake: ['Date'] });
+		try {
+			const first = await tab();
+			expect(first.scope.scopeChangedElsewhere(qc() as never, 'announcement')).toBe(true);
+			vi.setSystemTime(Date.now() + 2_000);
+			const second = await landAfterReset();
+			expect(second.scope.scopeChangedElsewhere(qc() as never, 'announcement')).toBe(true);
+			const block = await import('#lib/api/reset-block.svelte.ts');
+			expect(block.resetBlock.kind).toBeNull();
+			expect(reload).toHaveBeenCalledTimes(2);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('a refusal on a page an announcement just reset is a real change: it resets too', async () => {
+		const first = await tab();
+		first.scope.scopeChangedElsewhere(qc() as never, 'announcement');
+		const second = await landAfterReset();
+		expect(second.scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(true);
+		expect(reload).toHaveBeenCalledTimes(2);
+	});
+
+	it('resets that refusals start still stop at the second one: the banner, and no third reload', async () => {
+		const first = await tab();
+		expect(first.scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(true);
+		const second = await landAfterReset();
+		const block = await import('#lib/api/reset-block.svelte.ts');
+		expect(second.scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(false);
+		expect(block.resetBlock.kind).toBe('loop');
+		expect(reload).toHaveBeenCalledTimes(1);
+		// the announcement of a third change is still followed (it can never be a loop)
+		block.resetBlock.clear();
+		expect(second.scope.scopeChangedElsewhere(qc() as never, 'announcement')).toBe(true);
+		expect(reload).toHaveBeenCalledTimes(2);
+	});
+});
+
+describe("this tab's own change is recognised by the fingerprint the BFF answered", () => {
+	it("another invalidate superseding the scope one: the commit still lands on the expected value, so the tab's OWN enter is not reset", async () => {
+		const { scope } = await tab();
+		gw.exitScope.mockResolvedValue('fp-b');
+		del.mockResolvedValue({ scope_context: 'fp-b' });
+		const watch = scope.createCommittedContext(qc() as never);
+		watch.observe('fp-a');
+		// the scope invalidate is superseded: it settles with nothing committed ...
+		nav.invalidate.mockResolvedValue(undefined);
+		await scope.leaveTenantContext(qc() as never);
+		// ... and the superseding load (a capabilities refresh) commits the new context afterwards
+		expect(watch.observe('fp-b')).toBe(false);
+		expect(reload).not.toHaveBeenCalled();
+	});
+
+	it('the cookie ends as B while this tab entered A: the commit of B is foreign and resets', async () => {
+		const { scope } = await tab();
+		del.mockResolvedValue({ scope_context: 'fp-a' }); // what the BFF answered for OUR change
+		const client = qc();
+		const watch = scope.createCommittedContext(client as never);
+		watch.observe('fp-none');
+		nav.invalidate.mockImplementation(() => {
+			// another tab moved the cookie to B before the layout re-ran: the layout commits B
+			expect(watch.observe('fp-b')).toBe(true);
+			return Promise.resolve();
+		});
+		await scope.leaveTenantContext(client as never);
+		expect(reload).toHaveBeenCalledWith('/leads?page=2');
+		expect(client.clear).toHaveBeenCalledTimes(1);
+	});
+
+	it('a foreign change landing inside the window is not absorbed: any value but the expected one resets', async () => {
+		const { scope } = await tab();
+		del.mockResolvedValue({ scope_context: 'fp-a' });
+		const watch = scope.createCommittedContext(qc() as never);
+		watch.observe('fp-none');
+		nav.invalidate.mockResolvedValue(undefined);
+		await scope.leaveTenantContext(qc() as never); // answered, not yet committed
+		expect(watch.observe('fp-b')).toBe(true);
+		expect(reload).toHaveBeenCalledTimes(1);
+	});
+
+	it("a refusal inside the window after the answer is this tab's own change; after the window it is foreign", async () => {
+		vi.useFakeTimers({ toFake: ['Date'] });
+		try {
+			const { scope } = await tab();
+			del.mockResolvedValue({ scope_context: 'fp-a' });
+			nav.invalidate.mockResolvedValue(undefined);
+			await scope.leaveTenantContext(qc() as never);
+			expect(scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(false);
+			vi.setSystemTime(Date.now() + 6_000);
+			expect(scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(true);
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 });

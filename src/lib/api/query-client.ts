@@ -53,7 +53,7 @@ export function createQueryClient(): QueryClient {
 		clearCache: () => clearUserBrowserState(),
 		notify: (message) => toast.error(message),
 		exitScope: () => exitOperatorScope(),
-		leaveScope: () => void navigateHard('/operator/tenants', 'scope', client),
+		leaveScope: () => navigateHard('/operator/tenants', 'scope', client),
 		// A refusal this tab did not cause: the one foreign-change path (hard reset, own change excepted).
 		foreignChange: () => void scopeChangedElsewhere(client, 'refusal'),
 		location: () => window.location

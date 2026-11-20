@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryObserver } from '@tanstack/svelte-query';
 
 const goto = vi.hoisted(() => vi.fn(() => Promise.resolve()));
-const apiDelete = vi.hoisted(() => vi.fn(() => Promise.resolve()));
+const apiDelete = vi.hoisted(() => vi.fn(() => Promise.resolve({ scope_context: 'fp-none' })));
 
 vi.mock('$app/navigation', () => ({ goto, invalidate: vi.fn(() => Promise.resolve()) }));
 vi.mock('$ui', () => ({ toast: { error: vi.fn() } }));
-vi.mock('#lib/api/client.ts', () => ({ api: { delete: apiDelete } }));
+vi.mock('#lib/api/client.ts', () => ({ api: { deleteJson: apiDelete } }));
 
 import { NetworkError, ScopeInvalidError, TimeoutError } from '#lib/api/errors.ts';
 import { createQueryClient, renderQueryClient } from '#lib/api/query-client.ts';

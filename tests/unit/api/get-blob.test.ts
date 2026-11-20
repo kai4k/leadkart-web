@@ -8,8 +8,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const downloaded = vi.hoisted(() => vi.fn());
 vi.mock('#lib/utils/download.ts', () => ({ CSV_TYPE: 'text/csv', downloadBlob: downloaded }));
 
-import { api, DEFAULT_TIMEOUT_MS } from '#lib/api/client.ts';
-import { TimeoutError } from '#lib/api/errors.ts';
+import {
+	api,
+	DEFAULT_TIMEOUT_MS,
+	DOWNLOAD_MAX_BYTES,
+	DOWNLOAD_MAX_DURATION_MS
+} from '#lib/api/client.ts';
+import { DownloadTooLargeError, DownloadTooLongError, TimeoutError } from '#lib/api/errors.ts';
 import { exportLeads } from '#lib/features/leads/api.ts';
 import { exportProducts } from '#lib/features/inventory/api.ts';
 
@@ -123,6 +128,97 @@ describe('api.getBlob: a stalled body', () => {
 		const p = api.getBlob('/v1/x/export', 'text/csv').catch((e: unknown) => e);
 		await vi.advanceTimersByTimeAsync(DEFAULT_TIMEOUT_MS + 1_000);
 		expect(await p).toBeInstanceOf(TimeoutError);
+	});
+});
+
+describe('api.getBlob: caps on the whole body', () => {
+	const enc = new TextEncoder();
+	/** A body that sends `chunk` every `everyMs`, for ever, and records that it was cancelled. */
+	function dripping(everyMs: number, chunk: string) {
+		let cancelled = false;
+		let timer: ReturnType<typeof setInterval> | undefined;
+		const stream = new ReadableStream<Uint8Array>({
+			start(c) {
+				timer = setInterval(() => c.enqueue(enc.encode(chunk)), everyMs);
+			},
+			cancel() {
+				cancelled = true;
+				clearInterval(timer);
+			}
+		});
+		return {
+			response: new Response(stream, { headers: { 'content-type': 'text/csv' } }),
+			wasCancelled: () => cancelled,
+			stop: () => clearInterval(timer)
+		};
+	}
+
+	it('defaults: 10 minutes and 100 MB', () => {
+		expect(DOWNLOAD_MAX_DURATION_MS).toBe(10 * 60_000);
+		expect(DOWNLOAD_MAX_BYTES).toBe(100 * 1024 * 1024);
+	});
+
+	it('a body that drips for ever (never idle for 30 s) is stopped at 10 minutes: DownloadTooLongError, stream cancelled', async () => {
+		const d = dripping(20_000, 'x');
+		vi.stubGlobal('fetch', () => Promise.resolve(d.response));
+		const p = api.getBlob('/v1/x/export', 'text/csv').catch((e: unknown) => e);
+		await vi.advanceTimersByTimeAsync(DOWNLOAD_MAX_DURATION_MS - 1_000);
+		expect(d.wasCancelled()).toBe(false);
+		await vi.advanceTimersByTimeAsync(2_000);
+		const err = await p;
+		expect(err).toBeInstanceOf(DownloadTooLongError);
+		expect((err as Error).name).toBe('DownloadTooLongError');
+		expect(err).not.toBeInstanceOf(TimeoutError);
+		expect(d.wasCancelled()).toBe(true);
+		d.stop();
+	});
+
+	it('the duration cap is overridable by the caller (shorter, and none)', async () => {
+		const short = dripping(1_000, 'x');
+		vi.stubGlobal('fetch', () => Promise.resolve(short.response));
+		const p = api
+			.getBlob('/v1/x/export', 'text/csv', { maxDownloadMs: 5_000 })
+			.catch((e: unknown) => e);
+		await vi.advanceTimersByTimeAsync(5_500);
+		expect(await p).toBeInstanceOf(DownloadTooLongError);
+		short.stop();
+
+		const enc2 = new TextEncoder();
+		let controller!: ReadableStreamDefaultController<Uint8Array>;
+		const body = new ReadableStream<Uint8Array>({
+			start(c) {
+				controller = c;
+			}
+		});
+		vi.stubGlobal('fetch', () => Promise.resolve(new Response(body)));
+		const q = api.getBlob('/v1/x/export', 'text/csv', { maxDownloadMs: Infinity });
+		for (let i = 0; i < 40; i++) {
+			await vi.advanceTimersByTimeAsync(20_000); // 800 s: past the default cap
+			controller.enqueue(enc2.encode('r'));
+		}
+		controller.close();
+		expect((await q).size).toBe(40);
+	});
+
+	it('a body past the byte cap is stopped: DownloadTooLargeError (a different name), stream cancelled', async () => {
+		const d = dripping(1_000, 'abcdef');
+		vi.stubGlobal('fetch', () => Promise.resolve(d.response));
+		const p = api
+			.getBlob('/v1/x/export', 'text/csv', { maxDownloadBytes: 10 })
+			.catch((e: unknown) => e);
+		await vi.advanceTimersByTimeAsync(3_000); // 18 bytes
+		const err = await p;
+		expect(err).toBeInstanceOf(DownloadTooLargeError);
+		expect((err as Error).name).toBe('DownloadTooLargeError');
+		expect(err).not.toBeInstanceOf(DownloadTooLongError);
+		expect(d.wasCancelled()).toBe(true);
+		d.stop();
+	});
+
+	it('a body exactly at the byte cap still arrives', async () => {
+		vi.stubGlobal('fetch', () => answer('text/csv', '0123456789'));
+		const blob = await api.getBlob('/v1/x/export', 'text/csv', { maxDownloadBytes: 10 });
+		expect(blob.size).toBe(10);
 	});
 });
 

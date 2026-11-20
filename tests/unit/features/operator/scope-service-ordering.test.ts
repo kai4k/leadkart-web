@@ -15,8 +15,8 @@ const gw = vi.hoisted(() => ({ enterScope: vi.fn(), exitScope: vi.fn() }));
 vi.mock('#lib/features/operator/scope/api.ts', () => gw);
 vi.mock('#lib/features/operator/scope/api', () => gw);
 const del = vi.hoisted(() => vi.fn());
-vi.mock('#lib/api/client.ts', () => ({ api: { delete: del } }));
-vi.mock('#lib/api/client', () => ({ api: { delete: del } }));
+vi.mock('#lib/api/client.ts', () => ({ api: { deleteJson: del } }));
+vi.mock('#lib/api/client', () => ({ api: { deleteJson: del } }));
 
 import { exitOperatorScope } from '#lib/api/operator-scope.ts';
 import { enterTenantContext, exitTenantContext } from '#lib/features/operator/scope/service.ts';
@@ -41,8 +41,8 @@ beforeEach(() => {
 	stop = undefined;
 	qc = new QueryClient();
 	gw.exitScope.mockImplementation(() => exitOperatorScope());
-	gw.enterScope.mockResolvedValue({});
-	del.mockResolvedValue(undefined);
+	gw.enterScope.mockResolvedValue('fp-b');
+	del.mockResolvedValue({ scope_context: 'fp-none' });
 	nav.goto.mockResolvedValue(undefined);
 	nav.invalidate.mockImplementation(async () => {
 		await Promise.resolve();
