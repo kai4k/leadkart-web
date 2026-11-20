@@ -206,7 +206,12 @@ test.describe('Loading + feedback canon', () => {
 			await route.continue();
 		});
 		await page.goto('/settings/roles/role-x');
-		await expect(page.locator('[aria-busy="true"]').first()).toBeVisible({ timeout: 3000 });
+		await expect(
+			page
+				.getByRole('status')
+				.filter({ hasText: /loading/i })
+				.first()
+		).toBeVisible({ timeout: 3000 });
 	});
 });
 

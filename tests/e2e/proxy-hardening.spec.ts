@@ -132,6 +132,9 @@ test.describe('server-side Go calls never follow redirects', () => {
 			},
 			{ method: 'GET', path: `/api/v1/tenants/${OTHER_TENANT}`, status: 200, body: tenant }
 		]);
+		// The cookie is planted behind the signed-in page's back: that is "another tab changed the
+		// context" to a live page (it reloads, and would abort the navigation below). Leave the page first.
+		await page.goto('about:blank');
 		await context.addCookies([
 			{
 				name: 'lk_op_tenant',
