@@ -59,7 +59,10 @@
 		is_active: true
 	};
 
-	const form = useForm(createProductRequestSchema, initialValues, { validateOn: 'blur' });
+	const form = useForm(createProductRequestSchema, initialValues, {
+		open: () => open,
+		validateOn: 'blur'
+	});
 
 	// ── Reference data ────────────────────────────────────────────────
 	const categoriesQ = categoriesQuery();
@@ -103,7 +106,7 @@
 	});
 
 	async function onSubmit(e: SubmitEvent) {
-		await form.submit(e, async (values) => {
+		await form.submit(e, async (values, current) => {
 			// Strip empty optional strings.
 			const cleaned: CreateProductRequest = { ...values };
 			for (const key of [
@@ -119,6 +122,7 @@
 				if (typeof v === 'string' && v === '') cleaned[key] = undefined;
 			}
 			await mutation.mutateAsync(cleaned);
+			if (!current()) return;
 			form.reset();
 			onOpenChange(false);
 		});

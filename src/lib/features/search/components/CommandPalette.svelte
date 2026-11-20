@@ -56,6 +56,7 @@
 
 	function openPerson(id: string) {
 		onOpenChange(false);
+		// not-a-guard: opens the person picked from a search hit; capabilities only choose which groups are listed
 		goto(resolve('/(app)/operator/persons/[id]', { id }));
 	}
 </script>

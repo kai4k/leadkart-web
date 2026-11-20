@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ACTION, session } from '$features/auth';
 	/**
 	 * LeadDetailHeader — top-of-page identity strip for a single lead.
 	 *
@@ -21,6 +22,8 @@
 	};
 
 	let { lead, onEdit, onReassign }: Props = $props();
+	const mayAssign = $derived(session.canAny(...ACTION.leadAssign));
+	const mayManage = $derived(session.canAny(...ACTION.leadManage));
 
 	const stageMut = changeStageMutation();
 	const tempMut = changeTemperatureMutation();
@@ -50,23 +53,33 @@
 			</div>
 		</div>
 		<div class="cluster cluster-tight shrink-0">
-			<Button variant="tonal" size="sm" onclick={onReassign}>
-				<Icon icon={UserCheck} size="xs" /> Reassign
-			</Button>
-			<Button size="sm" onclick={onEdit}>
-				<Icon icon={Edit} size="xs" /> Edit
-			</Button>
+			{#if mayAssign}
+				<Button variant="tonal" size="sm" onclick={onReassign}>
+					<Icon icon={UserCheck} size="xs" /> Reassign
+				</Button>
+			{/if}
+			{#if mayManage}
+				<Button size="sm" onclick={onEdit}>
+					<Icon icon={Edit} size="xs" /> Edit
+				</Button>
+			{/if}
 		</div>
 	</div>
 
 	<div class="cluster cluster-tight">
 		<span class="caption text-fg-muted">Stage:</span>
-		<StatusPill value={lead.stage} options={[...STAGE_OPTIONS]} onChange={changeStage} />
+		<StatusPill
+			value={lead.stage}
+			options={[...STAGE_OPTIONS]}
+			onChange={changeStage}
+			disabled={!mayManage}
+		/>
 		<span class="caption text-fg-muted">· Temperature:</span>
 		<StatusPill
 			value={lead.temperature}
 			options={[...TEMPERATURE_OPTIONS]}
 			onChange={changeTemperature}
+			disabled={!mayManage}
 		/>
 	</div>
 </header>

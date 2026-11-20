@@ -14,7 +14,7 @@ import {
 } from '#lib/server/form-action.ts';
 import { z } from 'zod';
 import { P } from '#lib/features/auth/permissions.ts';
-import { caps } from '../helpers/capability-personas.ts';
+import { caps } from '../../support/go-personas.ts';
 import { upstreamStatus } from '#lib/server/proxy.ts';
 
 describe('upstreamStatus', () => {

@@ -21,7 +21,7 @@
 	const cancelM = cancelOrderMutation();
 	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
 	useResetOnChange(() => open, cancelM);
-	const form = useForm(cancelOrderRequestSchema, { reason: '' });
+	const form = useForm(cancelOrderRequestSchema, { reason: '' }, { open: () => open });
 
 	async function handleSubmit(e: SubmitEvent) {
 		await runSubmit(e);
@@ -29,8 +29,9 @@
 
 	async function runSubmit(e?: SubmitEvent) {
 		const synthetic = e ?? (new Event('submit') as unknown as SubmitEvent);
-		await form.submit(synthetic, async (values) => {
+		await form.submit(synthetic, async (values, current) => {
 			await cancelM.mutateAsync({ id: orderId, ...values });
+			if (!current()) return;
 			onOpenChange(false);
 			form.reset();
 			onCancelled?.();

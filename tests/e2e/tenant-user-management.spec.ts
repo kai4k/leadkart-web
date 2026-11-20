@@ -207,7 +207,7 @@ test.describe('Tenant user management — negative', () => {
 				path: '/api/v1/users',
 				status: 409,
 				body: {
-					error: 'membership_exists',
+					error: 'email_has_active_membership',
 					message: 'A membership already exists for this email in this tenant'
 				}
 			}

@@ -18,10 +18,14 @@
 
 	const isPending = $derived(impersonation.status === 'mutating');
 
-	const form = useForm(impersonateFormSchema, {
-		reason: '',
-		duration_minutes: 30
-	});
+	const form = useForm(
+		impersonateFormSchema,
+		{
+			reason: '',
+			duration_minutes: 30
+		},
+		{ open: () => open }
+	);
 
 	async function onSubmit(e: SubmitEvent) {
 		if (!tenant) {
@@ -33,12 +37,13 @@
 		// boundary. Canon TS pattern for "I checked the value, now use
 		// it in a callback".
 		const target = tenant;
-		await form.submit(e, async (values) => {
+		await form.submit(e, async (values, current) => {
 			await impersonation.start({
 				target_tenant_id: target.id,
 				reason: values.reason,
 				duration_minutes: values.duration_minutes
 			});
+			if (!current()) return;
 			form.reset();
 			onOpenChange(false);
 		});

@@ -6,12 +6,7 @@ import {
 	requireRouteAccess
 } from '#lib/server/guards.ts';
 import { P } from '#lib/features/auth/permissions.ts';
-import {
-	caps,
-	OPERATOR_ONE_PERMISSION,
-	OWNER,
-	SUPER_USER
-} from '../helpers/capability-personas.ts';
+import { caps, OPERATOR_ONE_PERMISSION, OWNER, SUPER_USER } from '../../support/go-personas.ts';
 
 function thrown(fn: () => void): { status: number; location?: string } | null {
 	try {

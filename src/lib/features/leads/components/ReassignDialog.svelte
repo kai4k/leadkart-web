@@ -35,7 +35,7 @@
 	const form = useForm(
 		reassignLeadSchema,
 		{ to_membership_id: '', reason: '' },
-		{ validateOn: 'blur' }
+		{ open: () => open, validateOn: 'blur' }
 	);
 
 	let memberQuery = $state('');
@@ -50,8 +50,9 @@
 	);
 
 	async function onSubmit(e: SubmitEvent) {
-		await form.submit(e, async (values) => {
+		await form.submit(e, async (values, current) => {
 			await mutation.mutateAsync({ id: leadId, req: values });
+			if (!current()) return;
 			form.reset();
 			memberQuery = '';
 			onOpenChange(false);

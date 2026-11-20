@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ACTION, session } from '$features/auth';
 	/**
 	 * LeadsTable — table view of leads with cursor-based infinite scroll,
 	 * bulk select, inline stage + temperature pickers, and Linear-style
@@ -36,6 +37,7 @@
 
 	const rows = $derived(list.items);
 
+	const mayManage = $derived(session.canAny(...ACTION.leadManage));
 	const stageMut = changeStageMutation();
 	const tempMut = changeTemperatureMutation();
 
@@ -54,6 +56,7 @@
 	}
 
 	function openDetail(lead: CrmLeadDto) {
+		// not-a-guard: opens the lead row; capabilities only disable the inline stage / temperature pickers
 		goto(resolve('/(app)/leads/[id]', { id: lead.id }));
 	}
 
@@ -194,6 +197,7 @@
 								value={lead.stage}
 								options={[...STAGE_OPTIONS]}
 								onChange={(v) => changeStageInline(lead, v)}
+								disabled={!mayManage}
 							/>
 						</td>
 						<td
@@ -205,6 +209,7 @@
 								value={lead.temperature}
 								options={[...TEMPERATURE_OPTIONS]}
 								onChange={(v) => changeTemperatureInline(lead, v)}
+								disabled={!mayManage}
 							/>
 						</td>
 						<td class="hidden px-3 py-3 lg:table-cell">

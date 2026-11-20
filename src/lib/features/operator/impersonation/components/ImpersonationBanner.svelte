@@ -2,14 +2,13 @@
 	import { Button } from '$ui';
 	import { Eye, LogOut, Icon } from '$icons';
 	import { impersonation } from '../stores/impersonation.svelte';
-	import { myCapabilitiesQuery } from '$features/auth';
+	import { session } from '$features/auth';
 
-	// Reconcile impersonation state once capabilities are resolved.
+	// Reconcile impersonation state once the session's capabilities are there.
 	// Must live here (inside <QueryClientProvider>) not in (app)/+layout.svelte
 	// (the provider) — TanStack Query v6 uses getContext() to find the client.
-	const capsQuery = myCapabilitiesQuery();
 	$effect(() => {
-		if (capsQuery.data) {
+		if (session.capabilities) {
 			impersonation.reconcile().catch(() => {});
 		}
 	});

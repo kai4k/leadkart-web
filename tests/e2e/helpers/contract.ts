@@ -46,6 +46,40 @@ export const SPEC_OVERRIDES: ReadonlyArray<{
 }> = [];
 
 /**
+ * Error statuses Go's CODE sends but its openapi.yaml does not document for the operation. The status
+ * guard would refuse them; each entry says where the code sends it, so the Go spec can be fixed and
+ * the entry deleted (a status the spec documents needs no entry).
+ */
+const SPEC_STATUS_GAPS: ReadonlyArray<{
+	method: string;
+	path: string;
+	statuses: number[];
+	reason: string;
+}> = [
+	{
+		method: 'post',
+		path: '/api/v1/users',
+		statuses: [409],
+		reason:
+			'internal/identity/ports/users_http.go:378 answers 409 email_has_active_membership; the spec documents 201 / 403'
+	},
+	{
+		method: 'get',
+		path: '/api/v1/roles/{}',
+		statuses: [404],
+		reason:
+			'internal/identity/ports/roles_http.go:40 answers 404 role_not_found; the spec documents 200 / 403'
+	},
+	{
+		method: 'get',
+		path: '/api/v1/platform/persons/{}',
+		statuses: [404],
+		reason:
+			'internal/identity/ports/platform_http.go:120 answers 404 person_not_found; the spec documents 200 / 403'
+	}
+];
+
+/**
  * Areas whose specs still register pre-Go fixtures. Each re-contract task
  * deletes its line; the last one leaves the list empty. The guard is on by
  * default: a fixture outside this list must match the Go contract.
@@ -77,10 +111,10 @@ function segmentsMatch(a: string[], b: string[], prefix = false): boolean {
 }
 
 /**
- * The 2xx statuses Go documents per operation, read from the generated types
+ * The statuses Go documents per operation, read from the generated types
  * (`'/api/...': { post: { responses: { 201: ... } } }`; the generated zod map keeps no status).
  */
-const SUCCESS_STATUSES: ReadonlyMap<string, readonly number[]> = (() => {
+const DOCUMENTED_STATUSES: ReadonlyMap<string, readonly number[]> = (() => {
 	const src = readFileSync(
 		new URL('../../../src/lib/api/generated/openapi-types.ts', import.meta.url),
 		'utf8'
@@ -103,7 +137,7 @@ const SUCCESS_STATUSES: ReadonlyMap<string, readonly number[]> = (() => {
 		}
 		if (/^\t\t\tresponses: \{$/.test(line)) inResponses = true;
 		else if (/^\t\t\t\S/.test(line)) inResponses = false;
-		const code = inResponses ? /^\t\t\t\t(2\d\d): \{$/.exec(line) : null;
+		const code = inResponses ? /^\t\t\t\t(\d{3}): /.exec(line) : null;
 		if (code && path && method) {
 			const key = `${method} ${path}`;
 			out.set(key, [...(out.get(key) ?? []), Number(code[1])]);
@@ -112,8 +146,28 @@ const SUCCESS_STATUSES: ReadonlyMap<string, readonly number[]> = (() => {
 	return out;
 })();
 
+const documentedStatuses = (e: GeneratedEndpoint): readonly number[] =>
+	DOCUMENTED_STATUSES.get(`${e.method} ${normalizePath(e.path)}`) ?? [];
+
 const documentedSuccess = (e: GeneratedEndpoint): readonly number[] =>
-	SUCCESS_STATUSES.get(`${e.method} ${normalizePath(e.path)}`) ?? [];
+	documentedStatuses(e).filter((c) => c >= 200 && c < 300);
+
+/** Statuses that come from the platform in front of every route (auth, rate limiter, gateway), not from one operation. */
+const PLATFORM_STATUSES: readonly number[] = [401, 429, 500, 502, 503, 504];
+
+/** An error status Go does not document for this operation (and the platform does not add), or null. */
+function errorStatusError(candidates: GeneratedEndpoint[], status: number): string | null {
+	if (PLATFORM_STATUSES.includes(status)) return null;
+	const gaps = candidates.flatMap(
+		(e) =>
+			SPEC_STATUS_GAPS.find((g) => g.method === e.method && g.path === normalizePath(e.path))
+				?.statuses ?? []
+	);
+	const documented = [...candidates.flatMap(documentedStatuses), ...gaps];
+	// Where the generated types say nothing about the operation, there is nothing to hold it to.
+	if (documented.length === 0 || documented.includes(status)) return null;
+	return `the Go route does not document a ${status} (it documents ${[...new Set(documented)].join(' / ')})`;
+}
 
 /** Endpoints whose method and path template match a concrete (or `{}`-templated) path. */
 function matching(method: string, path: string, prefix = false): GeneratedEndpoint[] {
@@ -181,6 +235,8 @@ export function validateFixture(f: MockFixture, opts: { strict?: boolean } = {})
 	}
 	// A 3xx is not an answer Go gives (infrastructure in front of it can): the route must exist, the body is not Go's.
 	if (f.status >= 300 && f.status < 400) return null;
+	const undocumented = errorStatusError(candidates, f.status);
+	if (undocumented) return undocumented;
 	const r = ErrorResponse.safeParse(f.body);
 	if (!r.success)
 		return `error fixture must be Go's ErrorResponse { error, message? }: ${z.prettifyError(r.error)}`;

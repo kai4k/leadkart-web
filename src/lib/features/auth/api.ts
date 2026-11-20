@@ -22,8 +22,8 @@ import { getCsrfToken } from '#lib/api/csrf.ts';
 import {
 	userDtoSchema,
 	listSessionsResponseSchema,
-	capabilitiesSchema,
-	revokeOtherSessionsResponseSchema
+	revokeOtherSessionsResponseSchema,
+	type capabilitiesSchema
 } from './schemas';
 import type { UserDto, SessionDto } from './types';
 import type { z } from 'zod';
@@ -51,17 +51,6 @@ export async function logout(): Promise<void> {
 		},
 		credentials: 'same-origin'
 	});
-}
-
-/**
- * Authenticated. Returns the caller's capability set — tier, permissions,
- * features — synthesized from JWT claims server-side per ADR 0038 N1.
- * staleTime 5 min in the query layer; gcTime 30 min.
- *
- * Goes through /api/[...path] BFF proxy which injects Bearer from cookie.
- */
-export function getMyCapabilities(signal?: AbortSignal): Promise<Capabilities> {
-	return api.get('/v1/auth/me/capabilities', capabilitiesSchema, { signal });
 }
 
 /** What the confirm-email-change link did, as the page needs it. */

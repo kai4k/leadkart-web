@@ -45,7 +45,9 @@ test.describe('Role-aware shell — happy paths', () => {
 		const sidebar = page.getByRole('navigation', { name: 'Main navigation' });
 		await expect(sidebar.getByRole('link', { name: 'Tenants' })).toBeVisible();
 		await expect(sidebar.getByRole('link', { name: 'Account' })).toBeVisible();
-		await expect(sidebar.getByRole('link', { name: 'Tenant Settings' })).toHaveCount(0);
+		// Go gives a platform super user every catalogue name, identity.tenants.view included, so the
+		// operator's own (platform) tenant page is listed too (the old persona held only platform names).
+		await expect(sidebar.getByRole('link', { name: 'Tenant Settings' })).toBeVisible();
 	});
 
 	test('Tenant Admin sees Tenant Dashboard + admin nav', async ({ page }) => {

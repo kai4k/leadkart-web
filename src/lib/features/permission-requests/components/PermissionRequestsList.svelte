@@ -34,6 +34,7 @@
 		const url = new SvelteURL(page.url.href);
 		if (next === 'requester') url.searchParams.delete('role');
 		else url.searchParams.set('role', next);
+		// not-a-guard: syncs the requester / approver tab into the URL
 		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
 			replace: true,
 			reset: false
@@ -81,6 +82,7 @@
 	];
 
 	function onRowClick(req: PermissionRequestDto) {
+		// not-a-guard: opens the request row; capabilities only hide the request button
 		goto(resolve('/(app)/permission-requests/[id]', { id: req.id }));
 	}
 </script>

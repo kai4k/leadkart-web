@@ -11,7 +11,6 @@
 export {
 	logout,
 	confirmEmailChange,
-	getMyCapabilities,
 	getMyProfile,
 	listSessions,
 	revokeSession,
@@ -20,12 +19,10 @@ export {
 export type { Capabilities, ConfirmEmailChangeOutcome } from './api';
 
 export {
-	myCapabilitiesQuery,
 	myProfileQuery,
 	mySessionsQuery,
 	revokeSessionMutation,
-	revokeOtherSessionsMutation,
-	capabilitiesKey
+	revokeOtherSessionsMutation
 } from './queries';
 
 export { displayName, initials } from './view-models';

@@ -57,7 +57,7 @@
 			order_value_band: 'below_5000' as OrderValueBand,
 			buy_timeline: 'within_month' as BuyTimeline
 		},
-		{ validateOn: 'blur' }
+		{ open: () => open, validateOn: 'blur' }
 	);
 
 	// Local mirrors for the array fields — TagInput requires a concrete
@@ -108,8 +108,9 @@
 		// before validation runs.
 		form.values.product_ranges = productRanges;
 		form.values.dosage_forms = dosageForms;
-		await form.submit(e, async (values) => {
+		await form.submit(e, async (values, current) => {
 			await mutation.mutateAsync({ id: leadId, req: values });
+			if (!current()) return;
 			onOpenChange(false);
 		});
 	}

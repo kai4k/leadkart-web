@@ -53,6 +53,7 @@ export function approvePermissionRequestMutation() {
 	return createResourceMutation({
 		fn: ({ id, decision_reason }: { id: string; decision_reason?: string }) =>
 			api.approvePermissionRequest(id, decision_reason ? { decision_reason } : {}),
+		refreshesCapabilities: true,
 		invalidate: () => [permissionRequestsKeys.all],
 		successToast: 'Request approved'
 	});

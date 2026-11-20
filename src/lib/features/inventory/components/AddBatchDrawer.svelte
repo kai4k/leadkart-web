@@ -43,19 +43,20 @@
 		supplier_invoice_no: ''
 	};
 
-	const form = useForm(createBatchRequestSchema, initial, { validateOn: 'blur' });
+	const form = useForm(createBatchRequestSchema, initial, { open: () => open, validateOn: 'blur' });
 
 	$effect(() => {
 		if (!open) form.reset();
 	});
 
 	async function onSubmit(e: SubmitEvent) {
-		await form.submit(e, async (values) => {
+		await form.submit(e, async (values, current) => {
 			const cleaned: CreateBatchRequest = { ...values };
 			for (const key of ['supplier_name', 'supplier_invoice_no'] as const) {
 				if (cleaned[key] === '') cleaned[key] = undefined;
 			}
 			await mutation.mutateAsync({ productId, body: cleaned });
+			if (!current()) return;
 			form.reset();
 			onOpenChange(false);
 		});

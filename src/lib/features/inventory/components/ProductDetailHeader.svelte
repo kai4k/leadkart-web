@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ACTION, session } from '$features/auth';
 	import { Badge, Dropdown } from '$ui';
 	import { Icon, ArrowLeft, MoreVertical, Edit, Trash2 } from '$icons';
 	import { goto } from '$app/navigation';
@@ -17,18 +18,23 @@
 		onDelete: () => void;
 	};
 	let { product, onEdit, onDelete }: Props = $props();
+	const mayCatalog = $derived(session.canAny(...ACTION.catalogManage));
 
 	const sched = $derived(drugScheduleBadge(product.drug_schedule));
 	const stock = $derived(stockLevelBadge(product));
 	const expiry = $derived(expiryStatus(product.earliest_expiry_at));
 	const active = $derived(activeBadge(product));
+	function back() {
+		// not-a-guard: the back arrow; capabilities only hide edit / delete
+		goto(resolve('inventory'));
+	}
 </script>
 
 <header class="stack stack-tight">
 	<button
 		type="button"
 		class="caption text-fg-muted hover:text-fg cluster cluster-tight self-start"
-		onclick={() => goto(resolve('inventory'))}
+		onclick={back}
 	>
 		<Icon icon={ArrowLeft} size="xs" /> Back to inventory
 	</button>
@@ -71,13 +77,15 @@
 					<Icon icon={MoreVertical} size="sm" />
 				</Dropdown.Trigger>
 				<Dropdown.Menu>
-					<Dropdown.Item onSelect={onEdit}>
-						<Icon icon={Edit} size="sm" /> Edit
-					</Dropdown.Item>
-					<Dropdown.Separator />
-					<Dropdown.Item variant="danger" onSelect={onDelete}>
-						<Icon icon={Trash2} size="sm" /> Delete
-					</Dropdown.Item>
+					{#if mayCatalog}
+						<Dropdown.Item onSelect={onEdit}>
+							<Icon icon={Edit} size="sm" /> Edit
+						</Dropdown.Item>
+						<Dropdown.Separator />
+						<Dropdown.Item variant="danger" onSelect={onDelete}>
+							<Icon icon={Trash2} size="sm" /> Delete
+						</Dropdown.Item>
+					{/if}
 				</Dropdown.Menu>
 			</Dropdown.Root>
 		</div>

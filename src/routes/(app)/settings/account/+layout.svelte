@@ -2,7 +2,8 @@
 	import { page } from '$app/state';
 	import type { ResolvedPathname } from '$app/types';
 	import { Alert, Breadcrumbs, Skeleton, type BreadcrumbItem } from '$ui';
-	import { myCapabilitiesQuery, myProfileQuery } from '$features/auth/queries';
+	import { myProfileQuery } from '$features/auth/queries';
+	import { session } from '$features/auth';
 	import { displayName } from '$features/auth/view-models';
 	import { cn } from '#lib/utils/cn.ts';
 
@@ -16,8 +17,7 @@
 
 	let { children } = $props();
 
-	const capsQuery = myCapabilitiesQuery();
-	const membershipId = $derived(capsQuery.data?.membership_id ?? '');
+	const membershipId = $derived(session.principal?.membershipId ?? '');
 	const profileQuery = myProfileQuery(() => membershipId);
 	const profileData = $derived(profileQuery.data ?? null);
 

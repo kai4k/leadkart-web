@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ACTION, session } from '$features/auth';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { Badge, Button, DataTable, EmptyState, type DataTableColumn } from '$ui';
@@ -175,22 +176,28 @@
 	let createOpen = $state(false);
 	let bulkUploadOpen = $state(false);
 
-	const primaryAction: ResourceListAction = {
-		label: 'Create product',
-		icon: Plus as never,
-		onClick: () => (createOpen = true)
-	};
-	const secondaryActions: ResourceListAction[] = [
-		{
-			label: 'Bulk upload',
-			icon: UploadCloud as never,
-			onClick: () => (bulkUploadOpen = true)
-		}
-	];
+	const mayCatalog = $derived(session.canAny(...ACTION.catalogManage));
+	const primaryAction: ResourceListAction | undefined = $derived(
+		mayCatalog
+			? { label: 'Create product', icon: Plus as never, onClick: () => (createOpen = true) }
+			: undefined
+	);
+	const secondaryActions: ResourceListAction[] = $derived(
+		mayCatalog
+			? [
+					{
+						label: 'Bulk upload',
+						icon: UploadCloud as never,
+						onClick: () => (bulkUploadOpen = true)
+					}
+				]
+			: []
+	);
 
 	const isEmpty = $derived(!query.isPending && !query.isError && products.length === 0);
 
 	function openDetail(p: ProductDto) {
+		// not-a-guard: opens the product row; capabilities only hide create / bulk upload
 		goto(resolve('/(app)/inventory/[id]', { id: p.id }));
 	}
 
@@ -329,13 +336,15 @@
 	>
 		{#snippet action()}
 			<div class="cluster cluster-tight">
-				<Button onclick={() => (createOpen = true)} data-testid="empty-create-product"
-					><Icon icon={Plus} size="sm" /> Create product</Button
-				>
+				{#if mayCatalog}
+					<Button onclick={() => (createOpen = true)} data-testid="empty-create-product"
+						><Icon icon={Plus} size="sm" /> Create product</Button
+					>
 
-				<Button variant="tonal" onclick={() => (bulkUploadOpen = true)}
-					><Icon icon={UploadCloud} size="sm" /> Bulk upload</Button
-				>
+					<Button variant="tonal" onclick={() => (bulkUploadOpen = true)}
+						><Icon icon={UploadCloud} size="sm" /> Bulk upload</Button
+					>
+				{/if}
 			</div>
 		{/snippet}
 	</EmptyState>

@@ -9,6 +9,9 @@ import { findEndpoint, normalizePath } from '../../e2e/helpers/contract.ts';
  * route in leadkart-go api/openapi.yaml. Paths that do not are the remaining
  * contract debt: each is pinned here with the task that re-contracts it, so a
  * NEW unknown path fails the build and a fixed one cannot linger on the list.
+ * ONE mechanism: a pin is a pattern that matches exactly the paths it names (per path, or one
+ * per whole area where the area is not yet itemised: crm, inventory). A pin that ends in
+ * `(\/|$)` would swallow every path under it, so none is allowed for an area itemised below.
  */
 const KNOWN_DEBT: ReadonlyArray<{ pattern: RegExp; task: string }> = [
 	{ pattern: /^\/api\/v1\/crm\//, task: 'Tasks 16-19 (leads)' },
@@ -29,7 +32,28 @@ const KNOWN_DEBT: ReadonlyArray<{ pattern: RegExp; task: string }> = [
 		pattern: /^\/api\/v1\/orders\/\{\}\/credit-notes\/\{\}$/,
 		task: 'Tasks 20-23 (orders: credit note detail)'
 	},
-	{ pattern: /^\/api\/v1\/orders(\/|$)/, task: 'Tasks 20-23 (orders)' },
+	// The rest of the web's orders surface (one pin per path: a NEW unknown orders path must fail here).
+	{ pattern: /^\/api\/v1\/orders$/, task: 'Tasks 20-23 (orders: list, create)' },
+	{ pattern: /^\/api\/v1\/orders\/\{\}$/, task: 'Tasks 20-23 (orders: detail, update, delete)' },
+	{ pattern: /^\/api\/v1\/orders\/\{\}\/revise$/, task: 'Tasks 20-23 (orders: revise)' },
+	{
+		pattern: /^\/api\/v1\/orders\/\{\}\/approve-quotation$/,
+		task: 'Tasks 20-23 (orders: approve quotation)'
+	},
+	{ pattern: /^\/api\/v1\/orders\/\{\}\/confirm$/, task: 'Tasks 20-23 (orders: confirm)' },
+	{ pattern: /^\/api\/v1\/orders\/\{\}\/mark-packed$/, task: 'Tasks 20-23 (orders: pack)' },
+	{
+		pattern: /^\/api\/v1\/orders\/\{\}\/generate-invoice$/,
+		task: 'Tasks 20-23 (orders: invoice)'
+	},
+	{ pattern: /^\/api\/v1\/orders\/\{\}\/dispatch$/, task: 'Tasks 20-23 (orders: dispatch)' },
+	{
+		pattern: /^\/api\/v1\/orders\/\{\}\/mark-delivered$/,
+		task: 'Tasks 20-23 (orders: delivered)'
+	},
+	{ pattern: /^\/api\/v1\/orders\/\{\}\/complete$/, task: 'Tasks 20-23 (orders: complete)' },
+	{ pattern: /^\/api\/v1\/orders\/\{\}\/cancel$/, task: 'Tasks 20-23 (orders: cancel)' },
+	{ pattern: /^\/api\/v1\/orders\/bulk-action$/, task: 'Tasks 20-23 (orders: bulk action)' },
 	{ pattern: /^\/api\/v1\/inventory\//, task: 'Tasks 24-26 (inventory)' },
 	{ pattern: /^\/api\/v1\/tenants\/\{\}\/activity$/, task: 'Task 27 (activity)' },
 	{ pattern: /^\/api\/v1\/platform\/persons\/\{\}\/activity$/, task: 'Task 27 (activity)' }
@@ -130,6 +154,17 @@ describe('every web call targets a route in leadkart-go api/openapi.yaml', () =>
 	it('every unknown path is pinned to the task that re-contracts it', () => {
 		const unpinned = unknown.filter((c) => !debt(c));
 		expect(unpinned.map((c) => `${c.method} ${c.path} (${c.file}:${c.line})`)).toEqual([]);
+	});
+
+	it('no area catch-all pin sits beside per-path pins of the same area (it would pin nothing)', () => {
+		const sources = KNOWN_DEBT.map((d) => d.pattern.source);
+		const open = String.raw`(\/|$)`;
+		const catchAlls = sources.filter((x) => x.endsWith(String.raw`\/`) || x.endsWith(open));
+		for (const area of catchAlls) {
+			const prefix = area.replace(open, '');
+			const swallowed = sources.filter((x) => x !== area && x.startsWith(prefix));
+			expect(swallowed, `${area} swallows the per-path pins`).toEqual([]);
+		}
 	});
 
 	it('no pinned debt entry is stale (every entry still matches an unknown path)', () => {

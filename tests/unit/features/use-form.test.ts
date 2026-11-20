@@ -5,7 +5,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { useForm } from '#lib/hooks/use-form.svelte.ts';
+import { formInRoot } from '../helpers/form-root.svelte.ts';
 import { NetworkError, ValidationError } from '#lib/api/errors.ts';
 
 const testSchema = z.object({
@@ -19,12 +19,12 @@ function makeEvent(): SubmitEvent {
 
 describe('useForm factory', () => {
 	it('returns a Form instance', () => {
-		const form = useForm(testSchema, { email: '', name: '' });
+		const form = formInRoot(testSchema, { email: '', name: '' }).form;
 		expect(typeof form.submit).toBe('function');
 	});
 
 	it('initialises values from the initial argument', () => {
-		const form = useForm(testSchema, { email: 'a@b.com', name: 'Alice' });
+		const form = formInRoot(testSchema, { email: 'a@b.com', name: 'Alice' }).form;
 		expect(form.values.email).toBe('a@b.com');
 		expect(form.values.name).toBe('Alice');
 	});
@@ -32,7 +32,7 @@ describe('useForm factory', () => {
 
 describe('Form.submit — client-side Zod validation', () => {
 	it('sets field errors and does NOT call submitFn when validation fails', async () => {
-		const form = useForm(testSchema, { email: 'not-an-email', name: 'x' });
+		const form = formInRoot(testSchema, { email: 'not-an-email', name: 'x' }).form;
 		const submitFn = vi.fn();
 
 		await form.submit(makeEvent(), submitFn);
@@ -44,12 +44,15 @@ describe('Form.submit — client-side Zod validation', () => {
 	});
 
 	it('calls submitFn with parsed output when values are valid', async () => {
-		const form = useForm(testSchema, { email: 'alice@example.com', name: 'Alice' });
+		const form = formInRoot(testSchema, { email: 'alice@example.com', name: 'Alice' }).form;
 		const submitFn = vi.fn().mockResolvedValue(undefined);
 
 		await form.submit(makeEvent(), submitFn);
 
-		expect(submitFn).toHaveBeenCalledWith({ email: 'alice@example.com', name: 'Alice' });
+		expect(submitFn).toHaveBeenCalledWith(
+			{ email: 'alice@example.com', name: 'Alice' },
+			expect.any(Function)
+		);
 		expect(form.errors).toEqual({});
 		expect(form.bannerError).toBeNull();
 		expect(form.isSubmitting).toBe(false);
@@ -58,7 +61,7 @@ describe('Form.submit — client-side Zod validation', () => {
 
 describe('Form.submit — error handling', () => {
 	it('maps ValidationError.fields to form.errors', async () => {
-		const form = useForm(testSchema, { email: 'alice@example.com', name: 'Alice' });
+		const form = formInRoot(testSchema, { email: 'alice@example.com', name: 'Alice' }).form;
 		const ve = new ValidationError({ email: 'Already taken' }, 422);
 		const submitFn = vi.fn().mockRejectedValue(ve);
 
@@ -69,7 +72,7 @@ describe('Form.submit — error handling', () => {
 	});
 
 	it('sets bannerError from ApiError subclass message (e.g. NetworkError)', async () => {
-		const form = useForm(testSchema, { email: 'alice@example.com', name: 'Alice' });
+		const form = formInRoot(testSchema, { email: 'alice@example.com', name: 'Alice' }).form;
 		const submitFn = vi.fn().mockRejectedValue(new NetworkError(new Error('socket reset')));
 
 		await form.submit(makeEvent(), submitFn);
@@ -81,7 +84,7 @@ describe('Form.submit — error handling', () => {
 	});
 
 	it('sets bannerError to generic message for bare Error throws (programmer error)', async () => {
-		const form = useForm(testSchema, { email: 'alice@example.com', name: 'Alice' });
+		const form = formInRoot(testSchema, { email: 'alice@example.com', name: 'Alice' }).form;
 		const submitFn = vi.fn().mockRejectedValue(new Error('Network error'));
 
 		await form.submit(makeEvent(), submitFn);
@@ -93,7 +96,7 @@ describe('Form.submit — error handling', () => {
 	});
 
 	it('sets bannerError to generic message for non-Error throws', async () => {
-		const form = useForm(testSchema, { email: 'alice@example.com', name: 'Alice' });
+		const form = formInRoot(testSchema, { email: 'alice@example.com', name: 'Alice' }).form;
 		const submitFn = vi.fn().mockRejectedValue('string error');
 
 		await form.submit(makeEvent(), submitFn);
@@ -104,7 +107,7 @@ describe('Form.submit — error handling', () => {
 
 describe('Form.reset', () => {
 	it('restores initial values and clears errors/bannerError', () => {
-		const form = useForm(testSchema, { email: '', name: '' });
+		const form = formInRoot(testSchema, { email: '', name: '' }).form;
 		form.values.email = 'alice@example.com';
 		form.values.name = 'Alice';
 		form.errors = { email: 'some error' };
@@ -121,7 +124,7 @@ describe('Form.reset', () => {
 
 describe('Form.clearErrors', () => {
 	it('clears field errors and bannerError without touching values', () => {
-		const form = useForm(testSchema, { email: '', name: '' });
+		const form = formInRoot(testSchema, { email: '', name: '' }).form;
 		form.values.email = 'alice@example.com';
 		form.errors = { name: 'too short' };
 		form.bannerError = 'server error';
@@ -136,7 +139,7 @@ describe('Form.clearErrors', () => {
 
 describe('Form.validateField — blur validation', () => {
 	it('is a no-op when validateOn is not blur', () => {
-		const form = useForm(testSchema, { email: 'bad', name: 'x' });
+		const form = formInRoot(testSchema, { email: 'bad', name: 'x' }).form;
 		// submitAttempted defaults false; even if we set it, without validateOn blur it no-ops
 		form.submitAttempted = true;
 		form.validateField('email');
@@ -144,14 +147,14 @@ describe('Form.validateField — blur validation', () => {
 	});
 
 	it('is a no-op before first submit attempt even with validateOn: blur', () => {
-		const form = useForm(testSchema, { email: 'bad', name: 'x' }, { validateOn: 'blur' });
+		const form = formInRoot(testSchema, { email: 'bad', name: 'x' }, { validateOn: 'blur' }).form;
 		// submitAttempted is false — blur fires but does nothing
 		form.validateField('email');
 		expect(form.errors.email).toBeUndefined();
 	});
 
 	it('sets field error on blur after submit attempt with invalid value', async () => {
-		const form = useForm(testSchema, { email: 'bad', name: 'x' }, { validateOn: 'blur' });
+		const form = formInRoot(testSchema, { email: 'bad', name: 'x' }, { validateOn: 'blur' }).form;
 		// Trigger submit attempt (will fail validation)
 		await form.submit(makeEvent(), vi.fn());
 		// Clear errors to simulate user fixing something
@@ -162,7 +165,7 @@ describe('Form.validateField — blur validation', () => {
 	});
 
 	it('clears field error when value becomes valid on blur', async () => {
-		const form = useForm(testSchema, { email: 'bad', name: 'x' }, { validateOn: 'blur' });
+		const form = formInRoot(testSchema, { email: 'bad', name: 'x' }, { validateOn: 'blur' }).form;
 		await form.submit(makeEvent(), vi.fn());
 		// Fix the email
 		form.values.email = 'alice@example.com';
@@ -171,7 +174,7 @@ describe('Form.validateField — blur validation', () => {
 	});
 
 	it('reset clears submitAttempted so blur is silenced again', async () => {
-		const form = useForm(testSchema, { email: 'bad', name: 'x' }, { validateOn: 'blur' });
+		const form = formInRoot(testSchema, { email: 'bad', name: 'x' }, { validateOn: 'blur' }).form;
 		await form.submit(makeEvent(), vi.fn());
 		form.reset();
 		expect(form.submitAttempted).toBe(false);
@@ -180,7 +183,7 @@ describe('Form.validateField — blur validation', () => {
 	});
 
 	it('shows a ValidationError without field errors as the generic banner, never Go text', async () => {
-		const form = useForm(z.object({ email: z.string() }), { email: 'x' });
+		const form = formInRoot(z.object({ email: z.string() }), { email: 'x' }).form;
 		await form.submit(makeEvent(), () =>
 			Promise.reject(new ValidationError({}, 400, 'mail: missing @'))
 		);
@@ -189,8 +192,98 @@ describe('Form.validateField — blur validation', () => {
 	});
 
 	it('reset(next) reseeds the values', () => {
-		const form = useForm(testSchema, { email: '', name: '' });
+		const form = formInRoot(testSchema, { email: '', name: '' }).form;
 		form.reset({ email: 'a@b.com', name: 'Zed' });
 		expect(form.values.name).toBe('Zed');
+	});
+});
+
+describe('Form generations: a result from a previous open is ignored', () => {
+	const valid = { email: 'alice@example.com', name: 'Alice' };
+	const gate = () => {
+		let release!: () => void;
+		let fail!: (e: Error) => void;
+		const done = new Promise<void>((res, rej) => {
+			release = res;
+			fail = rej;
+		});
+		return { done, release, fail };
+	};
+
+	it('a late FAILURE after close + reopen sets no banner and no field errors on the new open', async () => {
+		const { form, setOpen } = formInRoot(testSchema, valid);
+		const g = gate();
+		const pending = form.submit(makeEvent(), () => g.done);
+		setOpen(false);
+		setOpen(true);
+		g.fail(new NetworkError('boom'));
+		await pending;
+		expect(form.bannerError).toBeNull();
+		expect(form.errors).toEqual({});
+	});
+
+	it('a late FAILURE that lands while closed (not yet reopened) is ignored too', async () => {
+		const { form, setOpen } = formInRoot(testSchema, valid);
+		const g = gate();
+		const pending = form.submit(makeEvent(), () => g.done);
+		setOpen(false);
+		g.fail(new NetworkError('boom'));
+		await pending;
+		expect(form.bannerError).toBeNull();
+	});
+
+	it('a late SUCCESS tells the callback it is no longer current, so it can skip its own close', async () => {
+		const { form, setOpen } = formInRoot(testSchema, valid);
+		const g = gate();
+		const close = vi.fn();
+		const pending = form.submit(makeEvent(), async (_v, current) => {
+			await g.done;
+			if (!current()) return;
+			close();
+		});
+		setOpen(false);
+		setOpen(true);
+		g.release();
+		await pending;
+		expect(close).not.toHaveBeenCalled();
+	});
+
+	it('a late result does not clear the busy flag of the new open', async () => {
+		const { form, setOpen } = formInRoot(testSchema, valid);
+		const first = gate();
+		const second = gate();
+		const p1 = form.submit(makeEvent(), () => first.done);
+		setOpen(false);
+		setOpen(true);
+		const p2 = form.submit(makeEvent(), () => second.done);
+		expect(form.isSubmitting).toBe(true);
+		first.release();
+		await p1;
+		expect(form.isSubmitting).toBe(true);
+		second.release();
+		await p2;
+		expect(form.isSubmitting).toBe(false);
+	});
+
+	it('within one open, a result is current: success closes, failure shows its banner', async () => {
+		const { form } = formInRoot(testSchema, valid);
+		const close = vi.fn();
+		await form.submit(makeEvent(), (_v, current) => {
+			if (current()) close();
+			return Promise.resolve();
+		});
+		expect(close).toHaveBeenCalledTimes(1);
+		await form.submit(makeEvent(), () => Promise.reject(new NetworkError('x')));
+		expect(form.bannerError).not.toBeNull();
+	});
+
+	it('reset() also starts a new generation', async () => {
+		const { form } = formInRoot(testSchema, valid);
+		const g = gate();
+		const pending = form.submit(makeEvent(), () => g.done);
+		form.reset();
+		g.fail(new NetworkError('boom'));
+		await pending;
+		expect(form.bannerError).toBeNull();
 	});
 });

@@ -34,7 +34,7 @@
 			callback_at: undefined as string | undefined,
 			callback_window_minutes: undefined as number | undefined
 		},
-		{ validateOn: 'blur' }
+		{ open: () => open, validateOn: 'blur' }
 	);
 
 	const outcomeOptions = (Object.keys(CALL_OUTCOME_LABEL) as CallOutcome[]).map((k) => ({
@@ -48,8 +48,9 @@
 
 	async function onSubmit(e: SubmitEvent) {
 		form.values.callback_window_minutes = callbackWindow ?? undefined;
-		await form.submit(e, async (values) => {
+		await form.submit(e, async (values, current) => {
 			await mutation.mutateAsync({ id: leadId, req: values });
+			if (!current()) return;
 			form.reset();
 			onOpenChange(false);
 		});

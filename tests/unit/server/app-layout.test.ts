@@ -37,10 +37,10 @@ describe('(app) layout: sign-in only for a real auth failure', () => {
 		await expect(run()).rejects.toMatchObject({ status: 502 });
 	});
 
-	it('declares the scope dependency, so entering / leaving a tenant context can re-run it', async () => {
+	it('declares the scope and capabilities dependencies, so a tenant context change or a permission change can re-run it', async () => {
 		loadCapabilities.mockResolvedValueOnce({ person_id: 'p' });
 		await run();
-		expect(depends).toHaveBeenCalledWith('app:scope');
+		expect(depends).toHaveBeenCalledWith('app:scope', 'app:capabilities');
 	});
 
 	it('usable capabilities pass through', async () => {

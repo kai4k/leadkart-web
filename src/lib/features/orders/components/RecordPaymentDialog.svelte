@@ -34,12 +34,16 @@
 	);
 	const initialAmount = $derived(outstandingBalance(order));
 
-	const form = useForm(recordPaymentRequestSchema, {
-		kind: untrack(() => initialKind),
-		amount: untrack(() => initialAmount),
-		method: 'upi',
-		reference: ''
-	});
+	const form = useForm(
+		recordPaymentRequestSchema,
+		{
+			kind: untrack(() => initialKind),
+			amount: untrack(() => initialAmount),
+			method: 'upi',
+			reference: ''
+		},
+		{ open: () => open }
+	);
 
 	// Sync initial values when the dialog opens with a new context.
 	$effect(() => {
@@ -59,8 +63,9 @@
 	];
 
 	async function handleSubmit(e: SubmitEvent) {
-		await form.submit(e, async (values) => {
+		await form.submit(e, async (values, current) => {
 			await recordM.mutateAsync({ id: order.id, ...values });
+			if (!current()) return;
 			onOpenChange(false);
 			form.reset();
 		});

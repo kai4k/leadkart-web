@@ -27,7 +27,7 @@
 			first_name: '',
 			last_name: ''
 		},
-		{ validateOn: 'blur' }
+		{ open: () => open, validateOn: 'blur' }
 	);
 
 	function resetAll() {
@@ -36,8 +36,9 @@
 	}
 
 	async function onSubmit(e: SubmitEvent) {
-		await form.submit(e, async (values) => {
+		await form.submit(e, async (values, current) => {
 			const resp = await mutation.mutateAsync(values);
+			if (!current()) return;
 			success = { membershipId: resp.membership_id, personExisted: resp.person_existed };
 		});
 	}

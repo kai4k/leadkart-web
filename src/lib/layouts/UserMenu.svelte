@@ -4,7 +4,7 @@
 	import { resolve } from '$app/paths';
 	import { Dropdown } from '$ui';
 	import { initials } from '#lib/utils/person-name.ts';
-	import { session, myCapabilitiesQuery } from '$features/auth';
+	import { session } from '$features/auth';
 
 	/**
 	 * UserMenu — avatar trigger + menu popover. Composes the canonical
@@ -23,8 +23,6 @@
 		}
 	}
 
-	const capsQuery = myCapabilitiesQuery();
-
 	/**
 	 * Initials from the email's local part — falls back to the first
 	 * letter of the local part if the email lacks separators (e.g.
@@ -33,7 +31,7 @@
 	 * canon for missing-display-name avatars.
 	 */
 	const monogram = $derived.by(() => {
-		const local = capsQuery.data?.email?.split('@')[0] ?? '';
+		const local = session.principal?.email?.split('@')[0] ?? '';
 		return initials(local.split(/[._-]+/).join(' '));
 	});
 </script>
@@ -45,7 +43,7 @@
 	<Dropdown.Menu align="end" class="lk-user-popover w-56">
 		<div class="lk-user-popover-header">
 			<p class="caption">Signed in as</p>
-			<p class="label truncate-1">{capsQuery.data?.email ?? '—'}</p>
+			<p class="label truncate-1">{session.principal?.email ?? '—'}</p>
 		</div>
 
 		<Dropdown.Item onSelect={() => goto(resolve('settings/account/security'))}

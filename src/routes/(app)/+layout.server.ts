@@ -21,13 +21,14 @@ import { assertRefreshReachable } from '#lib/server/auth-refresh.ts';
 import { ACCESS_COOKIE, mustChangePassword } from '#lib/server/cookies.ts';
 import { loadCapabilities } from '#lib/server/capabilities.ts';
 import { clearOperatorScope, readOperatorScope } from '#lib/server/scope.ts';
+import { CAPABILITIES_DEPENDENCY } from '#lib/api/capabilities-refresh.ts';
 import { SCOPE_DEPENDENCY } from '#lib/api/scope-header.ts';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ cookies, url, locals, depends }) => {
 	// Entering / leaving a tenant context changes the scope cookie without any navigation this
 	// load would notice: those flows invalidate this key (see api/operator-scope.ts).
-	depends(SCOPE_DEPENDENCY);
+	depends(SCOPE_DEPENDENCY, CAPABILITIES_DEPENDENCY);
 
 	// hooks.server.ts already tried to refresh an expired access cookie. Still
 	// missing: Go down → 503; otherwise the session is really gone.

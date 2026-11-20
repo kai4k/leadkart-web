@@ -5,3 +5,4 @@
  * alias.
  */
 export const goto: (...args: unknown[]) => Promise<void> = async () => {};
+export const invalidate: (...args: unknown[]) => Promise<void> = async () => {};

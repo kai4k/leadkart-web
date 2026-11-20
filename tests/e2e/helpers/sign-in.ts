@@ -32,7 +32,7 @@ import {
 	type Permission
 } from './fake-jwt';
 import { registerMocks } from './mock';
-import { OPERATOR_EFFECTIVE, TENANT_ADMIN_EFFECTIVE } from './permission-sets';
+import { effectivePermissions, tierOfRank } from '../../support/go-personas';
 
 export interface SignInOpts {
 	tier: Tier;
@@ -55,16 +55,18 @@ export async function signInAsTier(page: Page, opts: SignInOpts): Promise<void> 
 	const email = opts.email ?? 'test@example.com';
 	const isPlatform = opts.tier === 'platform-super' || opts.tier === 'platform-staff';
 	const isSuperUser = opts.is_super_user ?? opts.tier === 'platform-super';
-	const permissions = opts.permissions ?? [];
-	// What Go computes: an operator super user holds the platform-reserved names (what the operator pages gate on), a tenant.admin holder what it implies in
-	// its own tenant; anyone else exactly their permissions. Specs may override.
-	const effectivePermissions =
-		opts.effective_permissions ??
-		(opts.tier === 'platform-super'
-			? OPERATOR_EFFECTIVE
-			: opts.tier === 'tenant-admin'
-				? [...new Set([...TENANT_ADMIN_EFFECTIVE, ...permissions])]
-				: permissions);
+	// A tenant admin holds `tenant.admin` in its JWT (the seeded Owner / Administrator roles do).
+	const permissions = [
+		...new Set([
+			...(opts.tier === 'tenant-admin' ? ['tenant.admin'] : []),
+			...(opts.permissions ?? [])
+		])
+	];
+	// What Go computes from those claims (tests/support/go-personas.ts): never hand-written. A spec may
+	// still override it to model a state the rules cannot produce.
+	const effective =
+		opts.effective_permissions ?? effectivePermissions({ permissions, isPlatform, isSuperUser });
+	const rank = opts.tier === 'tenant-admin' ? 5 : 99;
 
 	const claimOverrides = {
 		is_platform: isPlatform,
@@ -78,9 +80,9 @@ export async function signInAsTier(page: Page, opts: SignInOpts): Promise<void> 
 
 	const capabilities = fakeCapabilitiesResponse({
 		permissions,
-		effective_permissions: effectivePermissions,
-		tier: opts.tier === 'tenant-admin' ? 'admin' : 'user',
-		rank: opts.tier === 'tenant-admin' ? 5 : 99,
+		effective_permissions: effective,
+		tier: tierOfRank(rank),
+		rank,
 		is_platform: isPlatform,
 		is_super_user: isSuperUser,
 		tenant_id: tenantId,

@@ -65,6 +65,7 @@
 		if (value && value !== 'all') url.searchParams.set('status', value);
 		else url.searchParams.delete('status');
 		url.searchParams.delete('page');
+		// not-a-guard: syncs the URL filters
 		void goto(`${url.pathname}${url.search}` as ResolvedPathname, { replace: true });
 	}
 
@@ -73,6 +74,7 @@
 		if (value) url.searchParams.set('q', value);
 		else url.searchParams.delete('q');
 		url.searchParams.delete('page');
+		// not-a-guard: syncs the URL filters
 		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
 			replace: true,
 			reset: false

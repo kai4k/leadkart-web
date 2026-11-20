@@ -8,6 +8,7 @@
 -->
 <script lang="ts">
 	import { Button } from '$ui';
+	import { ACTION, session } from '$features/auth';
 	import { Icon, Edit, Check, Truck, Package, X, CheckCircle2 } from '$icons';
 	import type { OrderDto } from '$features/orders/schemas';
 	import {
@@ -49,17 +50,24 @@
 	const markDeliveredM = markDeliveredMutation();
 	const completeM = completeOrderMutation();
 
-	const isRevise = $derived(canRevise(order.status));
-	const isApprove = $derived(canApprove(order.status));
-	const isTokenPay = $derived(canRecordTokenPayment(order.status));
-	const isConfirm = $derived(canConfirm(order.status));
-	const isPack = $derived(canMarkPacked(order.status));
-	const isInvoice = $derived(canGenerateInvoice(order.status));
-	const isDispatch = $derived(canDispatch(order.status));
-	const isDeliver = $derived(canMarkDelivered(order.status));
-	const isFullPay = $derived(canRecordFullPayment(order));
-	const isComplete = $derived(canComplete(order));
-	const isCancel = $derived(canCancel(order.status));
+	// Each group shows only with the permission Go's route for it needs (and never in an
+	// operator's tenant context, where every write is read-only).
+	const mayQuote = $derived(session.canAny(...ACTION.quotationManage));
+	const mayOrder = $derived(session.canAny(...ACTION.orderManage));
+	const mayPay = $derived(session.canAny(...ACTION.paymentRecord));
+	const mayDispatch = $derived(session.canAny(...ACTION.dispatchManage));
+
+	const isRevise = $derived(mayQuote && canRevise(order.status));
+	const isApprove = $derived(mayQuote && canApprove(order.status));
+	const isTokenPay = $derived(mayPay && canRecordTokenPayment(order.status));
+	const isConfirm = $derived(mayOrder && canConfirm(order.status));
+	const isPack = $derived(mayOrder && canMarkPacked(order.status));
+	const isInvoice = $derived(mayOrder && canGenerateInvoice(order.status));
+	const isDispatch = $derived(mayDispatch && canDispatch(order.status));
+	const isDeliver = $derived(mayDispatch && canMarkDelivered(order.status));
+	const isFullPay = $derived(mayPay && canRecordFullPayment(order));
+	const isComplete = $derived(mayOrder && canComplete(order));
+	const isCancel = $derived(mayOrder && canCancel(order.status));
 </script>
 
 <div class="cluster cluster-tight" data-testid="order-actions">

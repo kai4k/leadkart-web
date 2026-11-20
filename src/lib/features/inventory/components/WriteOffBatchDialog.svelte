@@ -16,7 +16,11 @@
 	const mutation = writeOffBatchMutation();
 	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
 	useResetOnChange(() => open, mutation);
-	const form = useForm(writeOffBatchRequestSchema, { reason: '' }, { validateOn: 'blur' });
+	const form = useForm(
+		writeOffBatchRequestSchema,
+		{ reason: '' },
+		{ open: () => open, validateOn: 'blur' }
+	);
 
 	$effect(() => {
 		if (!open) form.reset();
@@ -24,8 +28,9 @@
 
 	async function onSubmit(e: SubmitEvent) {
 		if (!batch) return;
-		await form.submit(e, async (values) => {
+		await form.submit(e, async (values, current) => {
 			await mutation.mutateAsync({ productId, batchId: batch.id, body: values });
+			if (!current()) return;
 			form.reset();
 			onOpenChange(false);
 		});

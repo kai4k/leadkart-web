@@ -7,8 +7,9 @@ const toastMock = vi.hoisted(() => ({
 	error: vi.fn()
 }));
 const gotoMock = vi.hoisted(() => vi.fn((_url: string) => Promise.resolve()));
+const invalidateMock = vi.hoisted(() => vi.fn((_key: string) => Promise.resolve()));
 vi.mock('$ui', () => ({ toast: toastMock }));
-vi.mock('$app/navigation', () => ({ goto: gotoMock }));
+vi.mock('$app/navigation', () => ({ goto: gotoMock, invalidate: invalidateMock }));
 vi.mock('#lib/utils/private-caches.ts', () => ({
 	clearPrivateCaches: vi.fn(),
 	IMPERSONATION_SESSION_KEY: 'leadkart-impersonation-session'
@@ -25,6 +26,28 @@ function deferred<T = void>() {
 	const promise = new Promise<T>((r) => (resolve = r));
 	return { promise, resolve };
 }
+
+describe('refreshesCapabilities', () => {
+	const run = async (refreshesCapabilities: boolean) => {
+		const qc = new QueryClient();
+		const opts = resourceMutationOptions(qc, {
+			fn: (_: { id: string }) => Promise.resolve(undefined),
+			invalidate: () => [['users', 'list']],
+			refreshesCapabilities
+		});
+		await opts.onSuccess(undefined, { id: 'm1' });
+	};
+
+	it('re-runs the (app) layout load (the session capabilities) after a mutation that can change the caller own access', async () => {
+		await run(true);
+		expect(invalidateMock).toHaveBeenCalledWith('app:capabilities');
+	});
+
+	it('leaves it alone for every other mutation', async () => {
+		await run(false);
+		expect(invalidateMock).not.toHaveBeenCalled();
+	});
+});
 
 describe('resourceMutationOptions', () => {
 	it('awaits invalidation of every key, then toasts', async () => {

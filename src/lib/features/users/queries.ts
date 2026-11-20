@@ -119,6 +119,7 @@ export function bulkUserStatusMutation() {
 export function assignRoleMutation() {
 	return createResourceMutation({
 		fn: ({ id, roleId }: { id: string; roleId: string }) => api.assignRole(id, { role_id: roleId }),
+		refreshesCapabilities: true,
 		invalidate: ({ id }) => [usersKeys.detail(id), usersKeys.list()],
 		successToast: 'Role assigned',
 		inlineErrors: true
@@ -128,6 +129,7 @@ export function assignRoleMutation() {
 export function revokeRoleMutation() {
 	return createResourceMutation({
 		fn: ({ id, roleId }: { id: string; roleId: string }) => api.revokeRole(id, roleId),
+		refreshesCapabilities: true,
 		invalidate: ({ id }) => [usersKeys.detail(id), usersKeys.list()],
 		successToast: 'Role revoked',
 		inlineErrors: true
@@ -138,6 +140,7 @@ export function replacePermissionOverridesMutation() {
 	return createResourceMutation({
 		fn: ({ id, body }: { id: string; body: ReplacePermissionOverridesRequest }) =>
 			api.replacePermissionOverrides(id, body),
+		refreshesCapabilities: true,
 		invalidate: ({ id }) => [usersKeys.detail(id)],
 		successToast: 'Permission overrides saved',
 		inlineErrors: true

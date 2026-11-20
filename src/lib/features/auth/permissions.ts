@@ -160,5 +160,21 @@ export const ACTION = {
 	/** Submit a permission request (own tenant only: Go refuses the route in tenant context). */
 	requestSubmit: [P.identityMetaRequestPermissionElevation],
 	/** Approve / deny. Go decides per request by the authority policy; this holds the permission. */
-	requestDecide: [P.identityRolesApprove]
+	requestDecide: [P.identityRolesApprove],
+
+	// Business modules, straight from Go's route gates (crm/ports/http.go, orders/ports/http.go,
+	// inventory/ports/http.go). In an operator's tenant context every one of them is blocked (writes
+	// answer `tenant_scope_read_only`), which `session.canAny` already subtracts: the buttons go.
+	/** Stage, temperature, log call, convert, lose, reminders. */
+	leadManage: [P.crmLeadsManage],
+	/** Reassign a lead. */
+	leadAssign: [P.crmLeadsAssign],
+	/** Revise / approve / reject a quotation. */
+	quotationManage: [P.ordersQuotationsManage],
+	/** Confirm, pack, invoice, cancel, complete, credit notes. */
+	orderManage: [P.ordersOrdersManage],
+	paymentRecord: [P.ordersPaymentsRecord],
+	dispatchManage: [P.dispatchManage],
+	catalogManage: [P.inventoryCatalogManage],
+	stockManage: [P.inventoryStockManage]
 } as const satisfies Record<string, readonly string[]>;

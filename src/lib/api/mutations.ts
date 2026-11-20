@@ -35,6 +35,7 @@ import {
 	type QueryKey
 } from '@tanstack/svelte-query';
 import { toast } from '$ui';
+import { refreshCapabilities } from './capabilities-refresh.ts';
 
 /**
  * THE inline-errors flag (`meta.skipErrorToast`): the consumer renders the failure itself, so the
@@ -47,6 +48,11 @@ export const INLINE_ERRORS_META = { skipErrorToast: true } as const;
 export interface ResourceMutationOptions<TVars, TData> {
 	fn: (vars: TVars) => Promise<TData>;
 	invalidate: (vars: TVars, data: TData) => readonly QueryKey[];
+	/**
+	 * The mutation can change the CALLER's own roles or permissions (role assignment, a role's
+	 * permissions, an approved request): the session's capabilities are re-read after it.
+	 */
+	refreshesCapabilities?: boolean;
 	/** An empty string shows no toast. */
 	successToast?: string | ((vars: TVars, data: TData) => string);
 	/** `warning` for a partial success; defaults to `success`. */
@@ -72,6 +78,7 @@ export function resourceMutationOptions<TVars, TData>(
 			await Promise.all(
 				o.invalidate(vars, data).map((queryKey) => qc.invalidateQueries({ queryKey }))
 			);
+			if (o.refreshesCapabilities) void refreshCapabilities();
 			const copy =
 				typeof o.successToast === 'function' ? o.successToast(vars, data) : o.successToast;
 			if (copy) {

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { AlarmClock, ClipboardList, Icon, PhoneCall, UserPlus } from '#lib/icons/index.ts';
 	import { Alert, Card } from '$ui';
-	import { myCapabilitiesQuery } from '$features/auth';
+	import { session } from '$features/auth';
 
 	/**
 	 * Regular-tenant-user dashboard skeleton.
@@ -17,8 +17,7 @@
 	 *   GET /api/v1/tasks/me                         — my open tasks
 	 */
 
-	const capsQuery = myCapabilitiesQuery();
-	const email = $derived(capsQuery.data?.email ?? '—');
+	const email = $derived(session.principal?.email ?? '—');
 
 	type TileAccent = 'brand' | 'success' | 'warning' | 'danger';
 

@@ -19,7 +19,7 @@ import {
 	SALES_MANAGER,
 	SUPER_USER,
 	TEAM_LEAD
-} from '../helpers/capability-personas.ts';
+} from '../../support/go-personas.ts';
 
 const hrefs = (c: Capabilities | null, inTenantContext: boolean) =>
 	visibleNav(c, inTenantContext).flatMap((s) => s.items.map((i) => i.href));
@@ -37,14 +37,11 @@ const OWN_ALL_TENANT_PAGES = [
 ];
 
 describe('visibleNav: capability set × tenant context → entries', () => {
-	const table: Array<[string, Capabilities, string[], string[]]> = [
-		['owner', OWNER, OWN_ALL_TENANT_PAGES, ['/dashboard', '/settings/account']],
-		[
-			'new-tenant admin',
-			NEW_TENANT_ADMIN,
-			OWN_ALL_TENANT_PAGES,
-			['/dashboard', '/settings/account']
-		],
+	// `inContext: null` = the state cannot occur: only a platform operator can act inside a tenant
+	// (Go: the scope header is honoured for operators), so no tenant member has that column.
+	const table: Array<[string, Capabilities, string[], string[] | null]> = [
+		['owner', OWNER, OWN_ALL_TENANT_PAGES, null],
+		['new-tenant admin', NEW_TENANT_ADMIN, OWN_ALL_TENANT_PAGES, null],
 		[
 			'existing-tenant admin with the read bundle',
 			EXISTING_ADMIN_READ_BUNDLE,
@@ -58,7 +55,7 @@ describe('visibleNav: capability set × tenant context → entries', () => {
 				'/permission-requests',
 				'/settings/account'
 			],
-			['/dashboard', '/settings/account']
+			null
 		],
 		[
 			'sales manager',
@@ -66,37 +63,48 @@ describe('visibleNav: capability set × tenant context → entries', () => {
 			[
 				'/dashboard',
 				'/settings/users',
+				'/settings/roles',
 				'/leads',
 				'/orders',
 				'/inventory',
 				'/permission-requests',
 				'/settings/account'
 			],
-			['/dashboard', '/settings/account']
+			null
 		],
 		[
+			// Go's Team Lead holds the directory views and crm leads, no orders.
 			'team lead',
 			TEAM_LEAD,
-			['/dashboard', '/leads', '/orders', '/permission-requests', '/settings/account'],
-			['/dashboard', '/settings/account']
-		],
-		[
-			'sales executive',
-			SALES_EXECUTIVE,
 			[
 				'/dashboard',
+				'/settings/users',
+				'/settings/roles',
 				'/leads',
-				'/orders',
-				'/inventory',
 				'/permission-requests',
 				'/settings/account'
 			],
-			['/dashboard', '/settings/account']
+			null
+		],
+		[
+			// Go's Sales Executive holds no inventory permission (the Sales Manager reads inventory).
+			'sales executive',
+			SALES_EXECUTIVE,
+			['/dashboard', '/leads', '/orders', '/permission-requests', '/settings/account'],
+			null
 		],
 		[
 			'operator with one platform permission',
 			OPERATOR_ONE_PERMISSION,
-			['/dashboard', '/operator/tenants', '/permission-requests', '/settings/account'],
+			// Go adds identity.tenants.view for platform.tenants.view, so the operator's OWN tenant page
+			// (the platform tenant) is readable too.
+			[
+				'/dashboard',
+				'/operator/tenants',
+				'/settings/tenant',
+				'/permission-requests',
+				'/settings/account'
+			],
 			[
 				'/dashboard',
 				'/operator/tenants',
@@ -141,7 +149,7 @@ describe('visibleNav: capability set × tenant context → entries', () => {
 
 	it.each(table)('%s', (_name, c, own, inContext) => {
 		expect(hrefs(c, false)).toEqual(own);
-		expect(hrefs(c, true)).toEqual(inContext);
+		if (inContext) expect(hrefs(c, true)).toEqual(inContext);
 	});
 
 	it('in tenant context a non-super operator loses Leads / Orders / Inventory (Go 403s their reads); a super user keeps them', () => {

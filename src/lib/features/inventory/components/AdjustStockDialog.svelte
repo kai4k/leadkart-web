@@ -51,7 +51,10 @@
 		note: ''
 	};
 
-	const form = useForm(createMovementRequestSchema, initial, { validateOn: 'blur' });
+	const form = useForm(createMovementRequestSchema, initial, {
+		open: () => open,
+		validateOn: 'blur'
+	});
 
 	$effect(() => {
 		if (open && batch) {
@@ -66,10 +69,11 @@
 
 	async function onSubmit(e: SubmitEvent) {
 		if (!batch) return;
-		await form.submit(e, async (values) => {
+		await form.submit(e, async (values, current) => {
 			const cleaned: CreateMovementRequest = { ...values, batch_id: batch.id };
 			if (cleaned.note === '') cleaned.note = undefined;
 			await mutation.mutateAsync({ productId, body: cleaned });
+			if (!current()) return;
 			onOpenChange(false);
 		});
 	}

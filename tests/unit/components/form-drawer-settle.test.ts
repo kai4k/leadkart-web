@@ -101,3 +101,40 @@ describe('a form drawer settles even when its mutation observer was detached', (
 		expect(invalidate).toHaveBeenCalledTimes(1);
 	});
 });
+
+describe('a result from a previous open never lands in the reopened drawer', () => {
+	it('late SUCCESS after close + reopen does not close the new open (its edits survive)', async () => {
+		let resolve!: (v: unknown) => void;
+		gw.createPermissionRequest.mockReturnValue(new Promise((r) => (resolve = r)));
+		submit();
+		await vi.waitFor(() => expect(gw.createPermissionRequest).toHaveBeenCalledTimes(1));
+
+		props.open = false;
+		flushSync();
+		props.open = true;
+		flushSync();
+		onOpenChange.mockClear();
+		resolve({ id: 'r1' });
+		await vi.waitFor(() => expect(toastMock.success).toHaveBeenCalled()); // the toast still reports it
+		await Promise.resolve();
+
+		expect(onOpenChange).not.toHaveBeenCalledWith(false);
+	});
+
+	it('late FAILURE after close + reopen shows no banner in the new open (the toast still reports it)', async () => {
+		let reject!: (e: unknown) => void;
+		gw.createPermissionRequest.mockReturnValue(new Promise((_r, j) => (reject = j)));
+		submit();
+		await vi.waitFor(() => expect(gw.createPermissionRequest).toHaveBeenCalledTimes(1));
+
+		props.open = false;
+		flushSync();
+		props.open = true;
+		flushSync();
+		reject(new Error('boom'));
+		await vi.waitFor(() => expect(toastMock.error).toHaveBeenCalled());
+		await Promise.resolve();
+
+		expect(document.querySelector('[role="alert"]')).toBeNull();
+	});
+});

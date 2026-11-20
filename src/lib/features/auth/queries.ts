@@ -1,7 +1,6 @@
 /**
  * Auth feature query hooks.
  *
- * myCapabilitiesQuery — server-driven capability discovery per ADR 0038 N1.
  * myProfileQuery      — caller's own membership profile (GET /v1/users/:id).
  * mySessionsQuery     — caller's active session families.
  * revokeSessionMutation, revokeOtherSessionsMutation.
@@ -11,42 +10,13 @@
  * reactive state accessed directly (no `$` prefix needed).
  */
 import { createQuery, useQueryClient } from '@tanstack/svelte-query';
-import { page } from '$app/state';
 import { queryRoots } from '#lib/api/query-keys.ts';
 import { useOptimisticMutation } from '#lib/hooks/index.ts';
 import * as api from './api';
 import type { SessionDto } from './types';
-import type { Capabilities } from './capabilities';
 
-export const capabilitiesKey = ['me', 'capabilities'] as const;
 const profileKey = (membershipId: string) => ['me', 'profile', membershipId] as const;
 const sessionsKey = queryRoots.mySessions;
-
-// ── Capabilities ───────────────────────────────────────────────────
-
-/**
- * Returns a TanStack Query for the current user's capability set.
- *
- * staleTime: 5 min — capabilities rarely change mid-session; background
- * refetch on window focus still fires to pick up permission updates.
- * gcTime: 30 min — keeps the result warm across route navigations.
- */
-export function myCapabilitiesQuery() {
-	return createQuery(() => ({
-		queryKey: capabilitiesKey,
-		queryFn: ({ signal }) => api.getMyCapabilities(signal),
-		// SSR-bootstrapped initial data from the (app) root layout server load.
-		// On first render this is baked into the page HTML — no loading skeleton,
-		// no network call needed before the nav renders. TanStack treats
-		// initialDataUpdatedAt=0 as stale and fires a background refetch to
-		// pick up any permission changes that happened mid-session.
-		initialData: () => (page.data as { capabilities?: Capabilities }).capabilities,
-		initialDataUpdatedAt: 0,
-		staleTime: 5 * 60_000,
-		gcTime: 30 * 60_000,
-		retry: 1
-	}));
-}
 
 // ── Profile ────────────────────────────────────────────────────────
 

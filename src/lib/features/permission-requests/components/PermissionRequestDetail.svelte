@@ -13,7 +13,7 @@
 		canDecide,
 		daysOrIndefinite
 	} from '$features/permission-requests/view-models';
-	import { ACTION, myCapabilitiesQuery, session } from '$features/auth';
+	import { ACTION, session } from '$features/auth';
 	import { resolve } from '$app/paths';
 
 	type Props = { id: string };
@@ -21,8 +21,7 @@
 
 	// Go decides per request by the authority policy; the buttons need the approve permission.
 	const mayDecide = $derived(session.canAny(...ACTION.requestDecide));
-	const capsQuery = myCapabilitiesQuery();
-	const callerMembershipId = $derived(capsQuery.data?.membership_id ?? '');
+	const callerMembershipId = $derived(session.principal?.membershipId ?? '');
 
 	const query = permissionRequestDetailQuery(() => id);
 	const req = $derived(query.data ?? null);

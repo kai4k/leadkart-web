@@ -21,7 +21,7 @@ import {
 	SUPER_USER,
 	TEAM_LEAD,
 	caps
-} from '../helpers/capability-personas.ts';
+} from '../../support/go-personas.ts';
 
 const APP_DIR = join(process.cwd(), 'src/routes/(app)');
 const PAGE_FILES = ['+page.svelte', '+page.ts', '+page.server.ts'];
@@ -127,7 +127,8 @@ async function outcome(
 
 describe('guard matrix: persona x tenant context x page = what the nav shows', () => {
 	for (const [name, persona] of Object.entries(PERSONAS)) {
-		for (const inTenantContext of [false, true]) {
+		// Only a platform operator can act inside a tenant; a member never has that state.
+		for (const inTenantContext of persona.is_platform ? [false, true] : [false]) {
 			it(`${name}, ${inTenantContext ? 'in' : 'out of'} tenant context`, async () => {
 				const listed = new Set(
 					visibleNav(persona, inTenantContext).flatMap((s) => s.items.map((i) => i.href))
@@ -164,12 +165,10 @@ describe('guard matrix: explicit expectations (independent of nav.ts)', () => {
 		'/settings/account/sessions'
 	];
 
-	it('sales executive: CRM, inventory, orders, permission requests, account', async () => {
+	it('sales executive: CRM, orders, permission requests, account (Go gives it no inventory)', async () => {
 		expect(await allowedIds(SALES_EXECUTIVE, false)).toEqual(
 			[
 				'/dashboard',
-				'/inventory',
-				'/inventory/[id]',
 				'/leads',
 				'/leads/[id]',
 				'/orders',
@@ -211,6 +210,13 @@ describe('guard matrix: explicit expectations (independent of nav.ts)', () => {
 		expect(await allowedIds(OPERATOR_ONE_PERMISSION, false)).toEqual(
 			[
 				'/dashboard',
+				// Go adds identity.tenants.view for platform.tenants.view: the operator's own tenant page.
+				'/settings/tenant',
+				'/settings/tenant/contact',
+				'/settings/tenant/preferences',
+				'/settings/tenant/profile',
+				'/settings/tenant/security',
+				'/settings/tenant/statutory',
 				'/operator/tenants',
 				'/permission-requests',
 				'/permission-requests/[id]',

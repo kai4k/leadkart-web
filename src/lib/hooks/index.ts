@@ -55,6 +55,12 @@ export {
 	type ListPaginationOptions
 } from './use-list-pagination.svelte';
 
+export {
+	createStaleGuard,
+	useRefreshOnFocus,
+	type StaleGuard
+} from './use-refresh-on-focus.svelte';
+
 export { useResetOnChange } from './use-reset-on-change.svelte';
 
 export { createPwa, type Pwa } from './use-pwa.svelte';

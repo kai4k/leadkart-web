@@ -19,11 +19,12 @@
 	const packM = markPackedMutation();
 	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
 	useResetOnChange(() => open, packM);
-	const form = useForm(markPackedRequestSchema, { box_count: 1 });
+	const form = useForm(markPackedRequestSchema, { box_count: 1 }, { open: () => open });
 
 	async function handleSubmit(e: SubmitEvent) {
-		await form.submit(e, async (values) => {
+		await form.submit(e, async (values, current) => {
 			await packM.mutateAsync({ id: orderId, ...values });
+			if (!current()) return;
 			onOpenChange(false);
 			form.reset();
 		});

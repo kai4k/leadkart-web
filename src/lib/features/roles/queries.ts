@@ -41,6 +41,7 @@ export function updateRoleMutation() {
 	return createResourceMutation({
 		fn: ({ id, req }: { id: string; req: UpdateRoleRequest }) => api.updateRole(id, req),
 		// `all` is a prefix of `detail`: invalidating both cancels and restarts the detail refetch.
+		refreshesCapabilities: true,
 		invalidate: () => [rolesKeys.all],
 		successToast: 'Role updated',
 		inlineErrors: true
@@ -51,6 +52,7 @@ export function replaceRolePermissionsMutation() {
 	return createResourceMutation({
 		fn: ({ id, permissions }: { id: string; permissions: string[] }) =>
 			api.replaceRolePermissions(id, { permissions }),
+		refreshesCapabilities: true,
 		invalidate: ({ id }) => [rolesKeys.detail(id), rolesKeys.list()],
 		successToast: 'Permissions saved',
 		inlineErrors: true
@@ -62,6 +64,7 @@ export function deleteRoleMutation() {
 		fn: (id: string) => api.deleteRole(id),
 		// Deleting a role unassigns it from its members, so every users view changes too
 		// (list and detail both show role names): the whole users root.
+		refreshesCapabilities: true,
 		invalidate: () => [rolesKeys.all, queryRoots.users],
 		successToast: 'Role deleted',
 		inlineErrors: true
@@ -72,6 +75,7 @@ export function setRoleParentMutation() {
 	return createResourceMutation({
 		fn: ({ id, parent_role_id }: { id: string; parent_role_id: string | null }) =>
 			api.setRoleParent(id, { parent_role_id }),
+		refreshesCapabilities: true,
 		invalidate: () => [rolesKeys.all],
 		successToast: ({ parent_role_id }) =>
 			parent_role_id ? 'Parent role set' : 'Parent role cleared',

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ACTION, session } from '$features/auth';
 	import { Badge, Button, Dropdown, EmptyState, Skeleton } from '$ui';
 	import { Icon, Plus, MoreVertical, Pause, Trash2, RotateCcw, Boxes } from '$icons';
 	import { batchesQuery } from '$features/inventory/queries';
@@ -49,6 +50,7 @@
 		if (!err) return '';
 		return getListErrorMessage(err, 'batches', 'This product was deleted or moved.') ?? '';
 	});
+	const mayStock = $derived(session.canAny(...ACTION.stockManage));
 </script>
 
 <div class="stack stack-relaxed">
@@ -57,9 +59,11 @@
 			<h2 class="h5">Batches</h2>
 			<p class="caption text-fg-muted">First-Expiry-First-Out (FEFO) ordering.</p>
 		</div>
-		<Button onclick={() => (addBatchOpen = true)} data-testid="add-batch">
-			<Icon icon={Plus} size="sm" /> Add batch
-		</Button>
+		{#if mayStock}
+			<Button onclick={() => (addBatchOpen = true)} data-testid="add-batch">
+				<Icon icon={Plus} size="sm" /> Add batch
+			</Button>
+		{/if}
 	</header>
 
 	{#if query.isError}
@@ -73,9 +77,11 @@
 			description="Inward your first batch to start tracking stock."
 		>
 			{#snippet action()}
-				<Button onclick={() => (addBatchOpen = true)}>
-					<Icon icon={Plus} size="sm" /> Add batch
-				</Button>
+				{#if mayStock}
+					<Button onclick={() => (addBatchOpen = true)}>
+						<Icon icon={Plus} size="sm" /> Add batch
+					</Button>
+				{/if}
 			{/snippet}
 		</EmptyState>
 	{:else}
@@ -154,15 +160,19 @@
 									{new Date(batch.manufactured_at).toLocaleDateString()}
 								</td>
 								<td class="px-3 py-3">
-									<button
-										type="button"
-										class="focus-visible:ring-focus-ring hover:bg-bg-elevated rounded-md px-1.5 py-0.5 focus-visible:ring-2 focus-visible:outline-none"
-										onclick={() => openAdjust(batch)}
-										data-testid={`adjust-batch-${batch.id}`}
-										aria-label={`Adjust stock for batch ${batch.batch_number}, currently ${batch.quantity_available}`}
-									>
+									{#if mayStock}
+										<button
+											type="button"
+											class="focus-visible:ring-focus-ring hover:bg-bg-elevated rounded-md px-1.5 py-0.5 focus-visible:ring-2 focus-visible:outline-none"
+											onclick={() => openAdjust(batch)}
+											data-testid={`adjust-batch-${batch.id}`}
+											aria-label={`Adjust stock for batch ${batch.batch_number}, currently ${batch.quantity_available}`}
+										>
+											<span class="body-base text-fg tabular-nums">{batch.quantity_available}</span>
+										</button>
+									{:else}
 										<span class="body-base text-fg tabular-nums">{batch.quantity_available}</span>
-									</button>
+									{/if}
 								</td>
 								<td class="caption text-fg-muted hidden px-3 py-3 lg:table-cell">
 									{batch.supplier_name ?? '—'}
@@ -182,31 +192,33 @@
 									</div>
 								</td>
 								<td class="w-12 px-3 py-3 text-end">
-									<Dropdown.Root>
-										<Dropdown.Trigger
-											variant="ghost"
-											size="sm"
-											aria-label={`Actions for batch ${batch.batch_number}`}
-										>
-											<Icon icon={MoreVertical} size="sm" />
-										</Dropdown.Trigger>
-										<Dropdown.Menu>
-											<Dropdown.Item onSelect={() => openAdjust(batch)}>
-												<Icon icon={RotateCcw} size="sm" /> Adjust stock
-											</Dropdown.Item>
-											{#if !batch.is_quarantined && !batch.is_written_off}
-												<Dropdown.Item onSelect={() => openQuarantine(batch)}>
-													<Icon icon={Pause} size="sm" /> Quarantine
+									{#if mayStock}
+										<Dropdown.Root>
+											<Dropdown.Trigger
+												variant="ghost"
+												size="sm"
+												aria-label={`Actions for batch ${batch.batch_number}`}
+											>
+												<Icon icon={MoreVertical} size="sm" />
+											</Dropdown.Trigger>
+											<Dropdown.Menu>
+												<Dropdown.Item onSelect={() => openAdjust(batch)}>
+													<Icon icon={RotateCcw} size="sm" /> Adjust stock
 												</Dropdown.Item>
-											{/if}
-											{#if !batch.is_written_off}
-												<Dropdown.Separator />
-												<Dropdown.Item variant="danger" onSelect={() => openWriteOff(batch)}>
-													<Icon icon={Trash2} size="sm" /> Write off
-												</Dropdown.Item>
-											{/if}
-										</Dropdown.Menu>
-									</Dropdown.Root>
+												{#if !batch.is_quarantined && !batch.is_written_off}
+													<Dropdown.Item onSelect={() => openQuarantine(batch)}>
+														<Icon icon={Pause} size="sm" /> Quarantine
+													</Dropdown.Item>
+												{/if}
+												{#if !batch.is_written_off}
+													<Dropdown.Separator />
+													<Dropdown.Item variant="danger" onSelect={() => openWriteOff(batch)}>
+														<Icon icon={Trash2} size="sm" /> Write off
+													</Dropdown.Item>
+												{/if}
+											</Dropdown.Menu>
+										</Dropdown.Root>
+									{/if}
 								</td>
 							</tr>
 						{/each}

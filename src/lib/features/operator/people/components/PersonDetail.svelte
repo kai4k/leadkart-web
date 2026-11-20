@@ -61,6 +61,10 @@
 	function liftSuspension(id: string) {
 		liftMutation.mutate(id);
 	}
+	function openTenant(slug: string) {
+		// not-a-guard: opens a tenant from a membership row; capabilities only hide manage / anonymise actions
+		goto(resolve(`/(app)/operator/tenants?q=${slug}`));
+	}
 </script>
 
 {#if isLoading}
@@ -194,7 +198,7 @@
 												<Button
 													variant="ghost"
 													size="sm"
-													onclick={() => goto(resolve(`/(app)/operator/tenants?q=${t.slug}`))}
+													onclick={() => openTenant(t.slug)}
 													aria-label={`Find tenant ${t.display_name}`}
 												>
 													<Icon icon={ArrowRight} size="sm" />

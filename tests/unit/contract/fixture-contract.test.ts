@@ -210,6 +210,26 @@ describe('fixture guard gaps', () => {
 		}
 	});
 
+	it('an error status Go does not document for that operation is refused; the platform ones always pass', () => {
+		const body = { error: 'whatever' };
+		const path = '/api/v1/auth/login';
+		const undocumented = validateFixture(fx({ method: 'POST', path, status: 409, body }));
+		expect(undocumented).toContain('does not document a 409');
+		for (const status of [401, 429, 500, 502, 503, 504]) {
+			expect(
+				validateFixture(fx({ method: 'POST', path, status, body })),
+				String(status)
+			).toBeNull();
+		}
+	});
+
+	it('a documented error status passes (POST /roles documents 403 and 409)', () => {
+		const body = { error: 'role_in_use' };
+		expect(
+			validateFixture(fx({ method: 'POST', path: '/api/v1/roles', status: 409, body }))
+		).toBeNull();
+	});
+
 	it('a wildcard fixture does not inherit an exact-path exemption', () => {
 		// `^/api/v1/platform/persons$` is exempt as an exact path only; a wildcard reaches other routes.
 		const f = fx({ method: 'GET', path: '/api/v1/platform/persons*', status: 200, body: {} });

@@ -34,7 +34,7 @@
 			admin_first_name: '',
 			admin_last_name: ''
 		},
-		{ validateOn: 'blur' }
+		{ open: () => open, validateOn: 'blur' }
 	);
 
 	function reset() {
@@ -43,8 +43,9 @@
 	}
 
 	async function onSubmit(e: SubmitEvent) {
-		await form.submit(e, async (values) => {
+		await form.submit(e, async (values, current) => {
 			const resp = await registerMutation.mutateAsync(values);
+			if (!current()) return;
 			credentials = {
 				email: values.admin_email,
 				password: values.admin_password,

@@ -51,10 +51,14 @@
 		}));
 	}
 
-	const form = useForm(reviseQuotationRequestSchema, {
-		items: untrack(() => seedRows()),
-		notes: ''
-	});
+	const form = useForm(
+		reviseQuotationRequestSchema,
+		{
+			items: untrack(() => seedRows()),
+			notes: ''
+		},
+		{ open: () => open }
+	);
 
 	/**
 	 * `OrderItemsEditor` requires `DraftItem[]` (discount_percentage:
@@ -98,13 +102,14 @@
 	});
 
 	async function onSubmit(e: SubmitEvent) {
-		await form.submit(e, async (values: ReviseQuotationRequest) => {
+		await form.submit(e, async (values: ReviseQuotationRequest, current) => {
 			try {
 				await reviseM.mutateAsync({ id: order.id, ...values });
 			} catch (err) {
 				// ValidationError → form.errors (handled by useForm).
 				// Map every other typed subclass to a human banner.
 				if (err instanceof ValidationError) throw err;
+				if (!current()) return;
 				form.bannerError = describeError(err, {
 					fallback: 'Failed to revise. Please try again.',
 					status: {
@@ -115,6 +120,7 @@
 				});
 				return;
 			}
+			if (!current()) return;
 			onOpenChange(false);
 		});
 	}

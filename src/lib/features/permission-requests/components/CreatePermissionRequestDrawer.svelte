@@ -18,12 +18,13 @@
 	const form = useForm(
 		createPermissionRequestSchema,
 		{ permission: '', duration_days: 30, reason: '' },
-		{ validateOn: 'blur' }
+		{ open: () => open, validateOn: 'blur' }
 	);
 
 	async function onSubmit(e: SubmitEvent) {
-		await form.submit(e, async (values) => {
+		await form.submit(e, async (values, current) => {
 			await mutation.mutateAsync(values);
+			if (!current()) return;
 			form.reset();
 			onOpenChange(false);
 		});

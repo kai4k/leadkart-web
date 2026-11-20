@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ACTION, session } from '$features/auth';
 	/**
 	 * LeadsKanban — kanban view of leads grouped by stage.
 	 *
@@ -24,10 +25,12 @@
 
 	const columns = $derived(groupByStage(leads));
 
+	const mayManage = $derived(session.canAny(...ACTION.leadManage));
 	const stageMut = changeStageMutation();
 	const tempMut = changeTemperatureMutation();
 
 	function handleMove(cardId: string, fromColumn: string, toColumn: string) {
+		if (!mayManage) return;
 		stageMut.mutate({
 			id: cardId,
 			stage: toColumn as LeadStage,
@@ -36,7 +39,7 @@
 	}
 
 	function handleTemperature(lead: CrmLeadDto, temperature: LeadTemperature) {
-		if (lead.temperature === temperature) return;
+		if (!mayManage || lead.temperature === temperature) return;
 		tempMut.mutate({ id: lead.id, temperature, previous: lead.temperature });
 	}
 </script>

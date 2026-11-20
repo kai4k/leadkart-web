@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ACTION, session } from '$features/auth';
 	/**
 	 * Leads list page — composes the canonical `<ResourceListPage>` shell
 	 * with a Kanban (default) / Table (alt) view switcher driven by the
@@ -32,7 +33,6 @@
 		bulkUploadCommitMutation,
 		bulkUploadPreviewMutation
 	} from '$features/leads/queries';
-	import { myCapabilitiesQuery } from '$features/auth/queries';
 	import { LeadsKanban, LeadsTable, EditLeadDrawer } from '$features/leads';
 	import { STAGE_META, TEMPERATURE_META } from '$features/leads/view-models';
 	import type {
@@ -61,8 +61,7 @@
 	});
 
 	// ── Saved views ──────────────────────────────────────────────────
-	const caps = myCapabilitiesQuery();
-	const callerMembershipId = $derived(caps.data?.membership_id ?? '');
+	const callerMembershipId = $derived(session.principal?.membershipId ?? '');
 
 	const savedViewDefs = $derived<SavedView<LeadUrlFilters>[]>([
 		{ id: 'all', label: 'All', filters: {} },
@@ -94,6 +93,7 @@
 		const url = new SvelteURL(page.url.href);
 		if (next === 'kanban') url.searchParams.delete('view');
 		else url.searchParams.set('view', 'table');
+		// not-a-guard: syncs the URL filters
 		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
 			replace: true,
 			reset: false
@@ -132,8 +132,9 @@
 	// focus when open, so j/k bubble naturally out of the row list
 	// instead of needing an `isAnyOverlayOpen` guard.
 	const nav = createKeyboardListNav<CrmLeadDto>({
-		onSelect: (lead) => goto(resolve('/(app)/leads/[id]', { id: lead.id })),
+		onSelect: (lead) => goto(resolve('/(app)/leads/[id]', { id: lead.id })), // not-a-guard: opens the lead row on keyboard select
 		onEdit: (lead) => {
+			if (!session.canAny(...ACTION.leadManage)) return;
 			editingLead = lead;
 			editOpen = true;
 		},
@@ -165,40 +166,46 @@
 		selection.clear();
 	}
 
-	const bulkActions: BulkAction[] = [
-		{
-			id: 'reassign',
-			label: 'Reassign',
-			// Bulk-reassign membership picker ships in a follow-up slice;
-			// v1 fires the canonical bulk endpoint without a target so the
-			// server records intent and surfaces a contract error.
-			onClick: () => {
-				bulkMut.mutate({
-					ids: [...selection.selected],
-					action: 'reassign'
-				});
-				selection.clear();
+	// Reassign needs `crm.leads.assign`; stage and temperature need `crm.leads.manage` (Go's gates).
+	// An action the caller cannot use is not offered (and in tenant context neither is anything).
+	const mayAssign = $derived(session.canAny(...ACTION.leadAssign));
+	const mayManage = $derived(session.canAny(...ACTION.leadManage));
+	const bulkActions: BulkAction[] = $derived(
+		[
+			{
+				id: 'reassign',
+				label: 'Reassign',
+				// Bulk-reassign membership picker ships in a follow-up slice;
+				// v1 fires the canonical bulk endpoint without a target so the
+				// server records intent and surfaces a contract error.
+				onClick: () => {
+					bulkMut.mutate({
+						ids: [...selection.selected],
+						action: 'reassign'
+					});
+					selection.clear();
+				}
+			},
+			{
+				id: 'change-stage',
+				label: 'Change stage',
+				subActions: STAGE_META.map((m) => ({
+					id: `stage-${m.value}`,
+					label: m.label,
+					onClick: () => applyStage(m.value)
+				}))
+			},
+			{
+				id: 'change-temperature',
+				label: 'Change temperature',
+				subActions: TEMPERATURE_META.map((m) => ({
+					id: `temp-${m.value}`,
+					label: m.label,
+					onClick: () => applyTemperature(m.value)
+				}))
 			}
-		},
-		{
-			id: 'change-stage',
-			label: 'Change stage',
-			subActions: STAGE_META.map((m) => ({
-				id: `stage-${m.value}`,
-				label: m.label,
-				onClick: () => applyStage(m.value)
-			}))
-		},
-		{
-			id: 'change-temperature',
-			label: 'Change temperature',
-			subActions: TEMPERATURE_META.map((m) => ({
-				id: `temp-${m.value}`,
-				label: m.label,
-				onClick: () => applyTemperature(m.value)
-			}))
-		}
-	];
+		].filter((action) => (action.id === 'reassign' ? mayAssign : mayManage))
+	);
 
 	// ── Bulk upload ──────────────────────────────────────────────────
 	const previewMut = bulkUploadPreviewMutation();

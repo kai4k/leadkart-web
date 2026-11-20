@@ -92,4 +92,33 @@ describe.each([
 		expect(onOpenChange).toHaveBeenCalledWith(false);
 		expect(sonner.toast).not.toHaveBeenCalled();
 	});
+
+	it('reopened after the expiry while the save is STILL busy: the bound is over, so it is not trapped again', async () => {
+		await wait(DEFAULT_READ_TIMEOUT_MS + 1);
+		press();
+		expect(onOpenChange).toHaveBeenCalledTimes(1);
+		props.open = false;
+		flushSync();
+		props.open = true; // the same save is still in flight
+		flushSync();
+		onOpenChange.mockClear();
+		sonner.toast.mockClear();
+
+		press();
+		expect(onOpenChange).toHaveBeenCalledWith(false);
+		expect(sonner.toast).toHaveBeenCalledWith(NOT_CONFIRMED);
+	});
+
+	it('reopened BEFORE the expiry while busy: still vetoed until the bound from the save start', async () => {
+		await wait(DEFAULT_READ_TIMEOUT_MS - 1000);
+		props.open = false;
+		flushSync();
+		props.open = true;
+		flushSync();
+		press();
+		expect(onOpenChange).not.toHaveBeenCalled();
+		await wait(1001);
+		press();
+		expect(onOpenChange).toHaveBeenCalledWith(false);
+	});
 });

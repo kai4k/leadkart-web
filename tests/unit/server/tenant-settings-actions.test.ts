@@ -4,7 +4,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { P } from '#lib/features/auth/permissions.ts';
-import { caps } from '../helpers/capability-personas.ts';
+import { caps } from '../../support/go-personas.ts';
 
 const goFetch = vi.hoisted(() => vi.fn());
 const loadCapabilities = vi.hoisted(() => vi.fn());

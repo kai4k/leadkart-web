@@ -40,7 +40,19 @@ export type FieldErrors = Record<string, string | undefined>;
  */
 export type FormOpts = {
 	validateOn?: 'submit' | 'blur';
+	/**
+	 * Whether the surface that shows this form is open. Every open and every close starts a new
+	 * generation (as does `reset()`): a submit started in an older generation is over as far as
+	 * this form is concerned, so its late failure sets no banner and its late success runs no
+	 * close (the global mutation toast still reports it). Without this, a result that lands after
+	 * the busy veto released and the surface was reopened (maybe for another record) would
+	 * overwrite or close the new session.
+	 */
+	open: () => boolean;
 };
+
+/** Passed to the submit callback: false once the form has moved on (closed, reopened, reset). */
+type SubmitIsCurrent = () => boolean;
 
 export interface Form<TSchema extends AnyObjectSchema> {
 	readonly schema: TSchema;
@@ -54,13 +66,16 @@ export interface Form<TSchema extends AnyObjectSchema> {
 	reset(next?: z.input<TSchema>): void;
 	clearErrors(): void;
 	validateField(field: string): void;
-	submit(e: SubmitEvent, submitFn: (values: z.output<TSchema>) => Promise<void>): Promise<void>;
+	submit(
+		e: SubmitEvent,
+		submitFn: (values: z.output<TSchema>, current: SubmitIsCurrent) => Promise<void>
+	): Promise<void>;
 }
 
 export function useForm<TSchema extends AnyObjectSchema>(
 	schema: TSchema,
 	initial: z.input<TSchema>,
-	opts: FormOpts = {}
+	opts: FormOpts
 ): Form<TSchema> {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let values: z.input<TSchema> = $state({ ...initial } as any);
@@ -69,7 +84,19 @@ export function useForm<TSchema extends AnyObjectSchema>(
 	let isSubmitting = $state(false);
 	let submitAttempted = $state(false);
 
+	// Bumped by every open / close / reset; plain (not reactive): nothing renders it.
+	let generation = 0;
+	// The latest submit owns the busy flag, whatever generation it started in.
+	let latestSubmit = 0;
+	let wasOpen: boolean | undefined;
+	$effect.pre(() => {
+		const isOpen = opts.open();
+		if (wasOpen !== undefined && isOpen !== wasOpen) generation++;
+		wasOpen = isOpen;
+	});
+
 	function reset(next?: z.input<TSchema>): void {
+		generation++;
 		values = { ...(next ?? initial) };
 		errors = {};
 		bannerError = null;
@@ -99,9 +126,12 @@ export function useForm<TSchema extends AnyObjectSchema>(
 
 	async function submit(
 		e: SubmitEvent,
-		submitFn: (values: z.output<TSchema>) => Promise<void>
+		submitFn: (values: z.output<TSchema>, current: SubmitIsCurrent) => Promise<void>
 	): Promise<void> {
 		e.preventDefault();
+		const mine = generation;
+		const myTurn = ++latestSubmit;
+		const current: SubmitIsCurrent = () => generation === mine;
 		submitAttempted = true;
 		clearErrors();
 
@@ -119,15 +149,17 @@ export function useForm<TSchema extends AnyObjectSchema>(
 
 		isSubmitting = true;
 		try {
-			await submitFn(result.data as z.output<TSchema>);
+			await submitFn(result.data as z.output<TSchema>, current);
 		} catch (err) {
+			if (!current()) return;
 			if (err instanceof ValidationError && err.hasFieldErrors) {
 				errors = err.fields as FieldErrors;
 			} else {
 				bannerError = describeError(err, { fallback: 'An unexpected error occurred' });
 			}
 		} finally {
-			isSubmitting = false;
+			// A newer submit owns the flag; a stale result must not clear it under that submit.
+			if (myTurn === latestSubmit) isSubmitting = false;
 		}
 	}
 

@@ -93,7 +93,10 @@
 		};
 	}
 
-	const form = useForm(createProductRequestSchema, valuesFrom(null), { validateOn: 'blur' });
+	const form = useForm(createProductRequestSchema, valuesFrom(null), {
+		open: () => open,
+		validateOn: 'blur'
+	});
 
 	$effect(() => {
 		if (open && product) {
@@ -111,7 +114,7 @@
 
 	async function onSubmit(e: SubmitEvent) {
 		if (!product) return;
-		await form.submit(e, async (values) => {
+		await form.submit(e, async (values, current) => {
 			const cleaned: UpdateProductRequest = { ...values };
 			for (const key of [
 				'generic_name',
@@ -126,6 +129,7 @@
 				if (typeof v === 'string' && v === '') cleaned[key] = undefined;
 			}
 			await mutation.mutateAsync({ id: product.id, body: cleaned });
+			if (!current()) return;
 			onOpenChange(false);
 		});
 	}
