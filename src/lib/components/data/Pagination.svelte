@@ -7,6 +7,7 @@
 	 * Offset pager: the app's `page / pageCount / onChange` API on the regenerated `ui/pagination`
 	 * parts (bits-ui Pagination). First and last page are always shown, `…` for the gaps.
 	 */
+	import { _ } from 'svelte-i18n';
 	import * as Pagination from '#lib/components/ui/pagination/index.ts';
 	import { buttonVariants } from '#lib/components/ui/button/index.ts';
 	import { ChevronLeft, ChevronRight } from '#lib/icons/index.ts';
@@ -21,7 +22,7 @@
 		class?: string;
 	};
 
-	let { page, pageCount, onChange, label = 'Pagination', class: className }: Props = $props();
+	let { page, pageCount, onChange, label, class: className }: Props = $props();
 </script>
 
 <Pagination.Root
@@ -29,17 +30,19 @@
 	perPage={1}
 	{page}
 	onPageChange={onChange}
-	aria-label={label}
+	aria-label={label ?? $_('common.pagination.label')}
 	class={cn('justify-start', className)}
 >
 	{#snippet children({ pages })}
 		<Pagination.Content>
 			<Pagination.Item>
 				<Pagination.PrevButton
-					aria-label="Previous page"
+					aria-label={$_('common.pagination.previousPage')}
 					class={buttonVariants({ variant: 'tonal', size: 'sm' })}
 				>
-					<ChevronLeft class="rtl:rotate-180" aria-hidden="true" />Prev
+					<ChevronLeft class="rtl:rotate-180" aria-hidden="true" />{$_(
+						'common.pagination.previous'
+					)}
 				</Pagination.PrevButton>
 			</Pagination.Item>
 			{#each pages as p (p.key)}
@@ -63,10 +66,10 @@
 			{/each}
 			<Pagination.Item>
 				<Pagination.NextButton
-					aria-label="Next page"
+					aria-label={$_('common.pagination.nextPage')}
 					class={buttonVariants({ variant: 'tonal', size: 'sm' })}
 				>
-					Next<ChevronRight class="rtl:rotate-180" aria-hidden="true" />
+					{$_('common.pagination.next')}<ChevronRight class="rtl:rotate-180" aria-hidden="true" />
 				</Pagination.NextButton>
 			</Pagination.Item>
 		</Pagination.Content>

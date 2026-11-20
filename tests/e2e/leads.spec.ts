@@ -2,6 +2,12 @@ import { expect, test, type Page } from './helpers/test';
 import { resetMock, registerMock, registerMocks } from './helpers/mock';
 import { signInAsTier } from './helpers/sign-in';
 import { TEST_MEMBERSHIP_ID, TEST_TENANT_ID } from './helpers/fake-jwt';
+import { readFileSync } from 'node:fs';
+
+// The accessible names come from the locale file, so a copy change does not break the selectors.
+const en = JSON.parse(
+	readFileSync(new URL('../../src/lib/i18n/locales/en.json', import.meta.url), 'utf8')
+) as { form: { combobox: { filter: string } } };
 
 /**
  * CRM Leads e2e — /leads
@@ -526,7 +532,7 @@ test.describe('CRM Leads — detail page tabs', () => {
 		// Combobox: open the field, then type two+ characters into its filter to
 		// trigger the membership search query (gated by q.length >= 2).
 		await page.getByRole('combobox', { name: 'New owner' }).click();
-		const filter = page.getByRole('combobox', { name: 'Filter options' });
+		const filter = page.getByRole('combobox', { name: en.form.combobox.filter });
 		await filter.pressSequentially('Asha', { delay: 30 });
 		await expect(page.getByRole('option').filter({ hasText: /Asha Verma/ })).toBeVisible({
 			timeout: 5000

@@ -109,7 +109,22 @@
 		"loading": "लोड हो रहा है…",
 		"cancel": "रद्द करें",
 		"save": "सेव करें",
-		"navigation": "नेविगेशन"
+		"navigation": "नेविगेशन",
+		"close": "बंद करें",
+		"pagination": {
+			"label": "पृष्ठ क्रम",
+			"previous": "पिछला",
+			"next": "अगला",
+			"previousPage": "पिछला पृष्ठ",
+			"nextPage": "अगला पृष्ठ",
+			"morePages": "और पृष्ठ",
+			"goToPrevious": "पिछले पृष्ठ पर जाएँ",
+			"goToNext": "अगले पृष्ठ पर जाएँ"
+		},
+		"commandPalette": {
+			"title": "कमांड पैलेट",
+			"description": "चलाने के लिए कमांड खोजें…"
+		}
 	},
 	"reload": {
 		"context": "आपने किसी दूसरे टैब में कंपनी या खाता बदला, इसलिए यह पेज फिर से लोड किया गया। यहाँ जो कुछ सहेजा नहीं गया था, वह सहेजा नहीं गया।",
@@ -174,6 +189,20 @@
 			"incorrect_current_password": "आपका वर्तमान पासवर्ड गलत है।",
 			"search_category_forbidden": "आपको उस खोज श्रेणी तक पहुँच नहीं है।",
 			"invalid_search_include": "अनुरोध स्वीकार नहीं किया गया। मान जाँचें और फिर कोशिश करें।"
+		}
+	},
+	"form": {
+		"combobox": {
+			"filter": "विकल्प फ़िल्टर करें",
+			"search": "खोजें…",
+			"select": "चुनें…",
+			"empty": "कोई परिणाम नहीं"
+		},
+		"datePicker": {
+			"placeholder": "तारीख़ चुनें"
+		},
+		"dateRangePicker": {
+			"placeholder": "तारीख़ों की सीमा चुनें"
 		}
 	}
 }

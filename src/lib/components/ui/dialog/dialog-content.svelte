@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { Dialog as DialogPrimitive } from 'bits-ui';
 	import { X as XIcon } from '#lib/icons/index.ts';
 	import { Button } from '#lib/components/ui/button/index.ts';
@@ -13,7 +14,7 @@
 		portalProps,
 		children,
 		showCloseButton = true,
-		closeLabel = 'Close',
+		closeLabel,
 		...restProps
 	}: WithoutChildrenOrChild<DialogPrimitive.ContentProps> & {
 		portalProps?: WithoutChildrenOrChild<ComponentProps<typeof DialogPortal>>;
@@ -41,7 +42,7 @@
 				{#snippet child({ props })}
 					<Button variant="ghost" class="absolute top-3 end-3" size="icon-sm" {...props}>
 						<XIcon />
-						<span class="sr-only">{closeLabel}</span>
+						<span class="sr-only">{closeLabel ?? $_('common.close')}</span>
 					</Button>
 				{/snippet}
 			</DialogPrimitive.Close>

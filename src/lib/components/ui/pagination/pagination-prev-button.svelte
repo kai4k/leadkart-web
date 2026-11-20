@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { Pagination as PaginationPrimitive } from 'bits-ui';
 	import { ChevronLeft as ChevronLeftIcon } from '#lib/icons/index.ts';
 	import { cn } from '#lib/utils/cn.ts';
@@ -19,7 +20,7 @@
 
 <PaginationPrimitive.PrevButton
 	bind:ref
-	aria-label="Go to previous page"
+	aria-label={$_('common.pagination.goToPrevious')}
 	class={cn(buttonVariants({ variant: 'ghost' }), 'ps-1.5!', className)}
 	{...restProps}
 >

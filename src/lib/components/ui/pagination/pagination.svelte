@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { Pagination as PaginationPrimitive } from 'bits-ui';
 	import { cn } from '#lib/utils/cn.ts';
 
@@ -17,7 +18,7 @@
 	bind:ref
 	bind:page
 	role="navigation"
-	aria-label="pagination"
+	aria-label={$_('common.pagination.label')}
 	data-slot="pagination"
 	{count}
 	{perPage}

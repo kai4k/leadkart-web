@@ -20,6 +20,7 @@
 </script>
 
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { Calendar as CalendarIcon, Icon } from '#lib/icons/index.ts';
 	import * as Field from '#lib/components/ui/field/index.ts';
 	import * as Popover from '#lib/components/ui/popover/index.ts';
@@ -106,7 +107,7 @@
 			class={cn(fieldControlClass, 'justify-between gap-2 text-start')}
 		>
 			<span class={cn('truncate', !text && 'text-muted-foreground')}>
-				{text || 'Pick a date range'}
+				{text || $_('form.dateRangePicker.placeholder')}
 			</span>
 			<Icon icon={CalendarIcon} size="sm" class="shrink-0 text-muted-foreground" />
 		</Popover.Trigger>

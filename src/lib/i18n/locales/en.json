@@ -109,7 +109,22 @@
 		"loading": "Loading…",
 		"cancel": "Cancel",
 		"save": "Save",
-		"navigation": "Navigation"
+		"navigation": "Navigation",
+		"close": "Close",
+		"pagination": {
+			"label": "Pagination",
+			"previous": "Previous",
+			"next": "Next",
+			"previousPage": "Previous page",
+			"nextPage": "Next page",
+			"morePages": "More pages",
+			"goToPrevious": "Go to previous page",
+			"goToNext": "Go to next page"
+		},
+		"commandPalette": {
+			"title": "Command Palette",
+			"description": "Search for a command to run…"
+		}
 	},
 	"reload": {
 		"context": "You switched company or account in another tab, so this page was reloaded. Anything unsaved here was not saved.",
@@ -174,6 +189,20 @@
 			"incorrect_current_password": "Your current password is incorrect.",
 			"search_category_forbidden": "You don't have access to that search category.",
 			"invalid_search_include": "The request was not accepted. Check the values and try again."
+		}
+	},
+	"form": {
+		"combobox": {
+			"filter": "Filter options",
+			"search": "Search…",
+			"select": "Select…",
+			"empty": "No results"
+		},
+		"datePicker": {
+			"placeholder": "Pick a date"
+		},
+		"dateRangePicker": {
+			"placeholder": "Pick a date range"
 		}
 	}
 }

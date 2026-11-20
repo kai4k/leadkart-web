@@ -12,6 +12,7 @@
 	ISO date (`2026-11-20`) for native form submission.
 -->
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { DateFormatter, getLocalTimeZone, type DateValue } from '@internationalized/date';
 	import { Calendar as CalendarIcon, Icon } from '#lib/icons/index.ts';
 	import { Calendar } from '#lib/components/ui/calendar/index.ts';
@@ -92,7 +93,9 @@
 			aria-describedby={describedBy}
 			class={cn(fieldControlClass, 'justify-between gap-2 text-start')}
 		>
-			<span class={cn('truncate', !text && 'text-muted-foreground')}>{text || 'Pick a date'}</span>
+			<span class={cn('truncate', !text && 'text-muted-foreground')}
+				>{text || $_('form.datePicker.placeholder')}</span
+			>
 			<Icon icon={CalendarIcon} size="sm" class="shrink-0 text-muted-foreground" />
 		</Popover.Trigger>
 

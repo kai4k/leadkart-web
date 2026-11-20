@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import * as Dialog from '#lib/components/ui/dialog/index.ts';
 	import { cn, type WithoutChildrenOrChild } from '#lib/utils/cn.ts';
 	import Command from './command.svelte';
@@ -9,8 +10,8 @@
 		open = $bindable(false),
 		ref = $bindable(null),
 		value = $bindable(''),
-		title = 'Command Palette',
-		description = 'Search for a command to run...',
+		title,
+		description,
 		showCloseButton = false,
 		portalProps,
 		children,
@@ -29,8 +30,9 @@
 
 <Dialog.Root bind:open {...restProps}>
 	<Dialog.Header class="sr-only">
-		<Dialog.Title>{title}</Dialog.Title>
-		<Dialog.Description>{description}</Dialog.Description>
+		<Dialog.Title>{title ?? $_('common.commandPalette.title')}</Dialog.Title>
+		<Dialog.Description>{description ?? $_('common.commandPalette.description')}</Dialog.Description
+		>
 	</Dialog.Header>
 	<Dialog.Content
 		class={cn('rounded-xl! top-1/3 translate-y-0 overflow-hidden p-0', className)}

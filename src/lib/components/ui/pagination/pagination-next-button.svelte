@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { Pagination as PaginationPrimitive } from 'bits-ui';
 	import { ChevronRight as ChevronRightIcon } from '#lib/icons/index.ts';
 	import { cn } from '#lib/utils/cn.ts';
@@ -19,7 +20,7 @@
 
 <PaginationPrimitive.NextButton
 	bind:ref
-	aria-label="Go to next page"
+	aria-label={$_('common.pagination.goToNext')}
 	class={cn(buttonVariants({ variant: 'ghost' }), 'pe-1.5!', className)}
 	{...restProps}
 >

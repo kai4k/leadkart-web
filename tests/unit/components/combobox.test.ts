@@ -1,6 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import Combobox from '#lib/components/form/Combobox.svelte';
+import en from '../../../src/lib/i18n/locales/en.json';
 
 // jsdom has no scrollIntoView; bits Command scrolls the highlighted item into view.
 beforeAll(() => {
@@ -34,7 +35,9 @@ function render(props: Record<string, unknown> = {}) {
 }
 
 const filterInput = () =>
-	document.querySelector<HTMLInputElement>('input[role="combobox"][aria-label="Filter options"]');
+	document.querySelector<HTMLInputElement>(
+		`input[role="combobox"][aria-label="${en.form.combobox.filter}"]`
+	);
 const optionTexts = () =>
 	[...document.querySelectorAll('[role="option"]')].map((o) => o.textContent?.trim());
 

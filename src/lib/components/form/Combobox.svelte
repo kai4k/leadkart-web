@@ -15,6 +15,7 @@
 	(Rule of Three).
 -->
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { ChevronDown, Icon } from '#lib/icons/index.ts';
 	import * as Command from '#lib/components/ui/command/index.ts';
 	import * as Field from '#lib/components/ui/field/index.ts';
@@ -57,9 +58,9 @@
 		value = $bindable(null),
 		onValueChange,
 		onInput,
-		placeholder = 'Select…',
+		placeholder,
 		loading = false,
-		emptyState = 'No results',
+		emptyState,
 		disabled = false,
 		required = false,
 		name,
@@ -115,7 +116,7 @@
 			class={cn(fieldControlClass, 'justify-between gap-2 text-start')}
 		>
 			<span class={cn('truncate', !selectedLabel && 'text-muted-foreground')}>
-				{selectedLabel || placeholder}
+				{selectedLabel || (placeholder ?? $_('form.combobox.select'))}
 			</span>
 			<Icon icon={ChevronDown} size="sm" class="shrink-0 text-muted-foreground" />
 		</Popover.Trigger>
@@ -123,16 +124,16 @@
 		<Popover.Content align="start" class="w-(--bits-popover-anchor-width) min-w-56 gap-0 p-0">
 			<Command.Root shouldFilter={!onInput} class="p-1">
 				<Command.Input
-					aria-label="Filter options"
-					placeholder="Search…"
+					aria-label={$_('form.combobox.filter')}
+					placeholder={$_('form.combobox.search')}
 					bind:value={query}
 					oninput={() => onInput?.(query)}
 				/>
 				<Command.List id={listId} aria-label={label}>
 					{#if loading}
-						<div class="px-3 py-2 text-sm text-muted-foreground">Loading…</div>
+						<div class="px-3 py-2 text-sm text-muted-foreground">{$_('common.loading')}</div>
 					{:else}
-						<Command.Empty>{emptyState}</Command.Empty>
+						<Command.Empty>{emptyState ?? $_('form.combobox.empty')}</Command.Empty>
 						{#each options as opt (opt.value)}
 							<Command.Item
 								value={opt.value}

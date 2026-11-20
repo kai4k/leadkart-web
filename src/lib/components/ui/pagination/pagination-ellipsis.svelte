@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { MoreHorizontal as MoreHorizontalIcon } from '#lib/icons/index.ts';
 	import { cn, type WithElementRef, type WithoutChildren } from '#lib/utils/cn.ts';
 	import type { HTMLAttributes } from 'svelte/elements';
@@ -21,5 +22,5 @@
 	{...restProps}
 >
 	<MoreHorizontalIcon />
-	<span class="sr-only">More pages</span>
+	<span class="sr-only">{$_('common.pagination.morePages')}</span>
 </span>
