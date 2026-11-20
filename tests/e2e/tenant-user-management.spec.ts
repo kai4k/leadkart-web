@@ -68,6 +68,7 @@ test.describe('Tenant user management — positive', () => {
 			page.locator('#main-content').getByRole('heading', { level: 1, name: 'Team' })
 		).toBeVisible();
 		await expect(page.getByText(/no team members yet/i)).toBeVisible();
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
 		// Header button. Use first() — EmptyState also renders an "Add member"
 		// CTA that resolves to the same target.
 		await page
@@ -149,6 +150,7 @@ test.describe('Tenant user management — positive', () => {
 			}
 		]);
 		await page.goto('/settings/users');
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
 		await page
 			.locator('#main-content')
 			.getByRole('button', { name: /add member/i })
@@ -180,6 +182,8 @@ test.describe('Tenant user management — negative', () => {
 			body: { users: [], has_more: false }
 		});
 		await page.goto('/settings/users');
+		// The button is server-rendered; clicking it before hydration is a no-op.
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
 		await page
 			.locator('#main-content')
 			.getByRole('button', { name: /add member/i })
@@ -213,6 +217,7 @@ test.describe('Tenant user management — negative', () => {
 			}
 		]);
 		await page.goto('/settings/users');
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
 		await page
 			.locator('#main-content')
 			.getByRole('button', { name: /add member/i })
