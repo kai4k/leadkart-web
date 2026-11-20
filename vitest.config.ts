@@ -26,7 +26,8 @@ export default defineConfig({
 			'$app/paths': resolve(__dirname, 'tests/unit/stubs/app-paths.ts'),
 			'$app/service-worker': resolve(__dirname, 'tests/unit/stubs/app-service-worker.ts'),
 			'$app/manifest': resolve(__dirname, 'tests/unit/stubs/app-manifest.ts'),
-			'$app/state': resolve(__dirname, 'tests/unit/stubs/app-state.ts')
+			'$app/state': resolve(__dirname, 'tests/unit/stubs/app-state.ts'),
+			'$app/server': resolve(__dirname, 'tests/unit/stubs/app-server.ts')
 		}
 	},
 	test: {

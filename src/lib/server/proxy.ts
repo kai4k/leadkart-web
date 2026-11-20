@@ -5,6 +5,7 @@
  */
 
 import { deadlineSignal } from '../api/abort.ts';
+import { currentClientAddress, FORWARDED_FOR_HEADER } from './client-address.ts';
 import { config } from './config.ts';
 
 const UPSTREAM_PREFIX = '/api/v1/';
@@ -152,11 +153,18 @@ export async function goAuthFetch(
 ): Promise<Response> {
 	const timeout = upstreamTimeout(undefined, config.UPSTREAM_TIMEOUT_MS);
 	try {
+		const requestHeaders: Record<string, string> = {
+			'content-type': 'application/json',
+			accept: 'application/json'
+		};
+		// Go rate-limits login / refresh / reset per client address: tell it whose call this is.
+		const address = currentClientAddress();
+		if (address !== undefined) requestHeaders[FORWARDED_FOR_HEADER] = address;
 		const resp = await fetchFn(`${config.GO_API_URL}/api${path}`, {
 			method: init.method ?? 'POST',
 			redirect: 'manual',
 			signal: timeout.signal,
-			headers: { 'content-type': 'application/json', accept: 'application/json' },
+			headers: requestHeaders,
 			body: init.body === undefined ? undefined : JSON.stringify(init.body)
 		});
 		// A status that cannot carry a body (redirects arrive as-is under redirect: 'manual').

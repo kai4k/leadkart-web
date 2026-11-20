@@ -21,6 +21,7 @@ import {
 } from '../api/errors.ts';
 import { isAuthExpired, refreshSession } from './auth-refresh.ts';
 import { config } from './config.ts';
+import { currentClientAddress, FORWARDED_FOR_HEADER, stripForwarding } from './client-address.ts';
 import { ACCESS_COOKIE, REFRESH_COOKIE, sessionRenewalPending } from './cookies.ts';
 import { upstreamTimeout } from './proxy.ts';
 import { clearOperatorScope, readOperatorScope } from './scope.ts';
@@ -68,6 +69,12 @@ export async function goFetch(
 	for (const name of Object.keys(headers)) {
 		if (name.toLowerCase() === 'x-tenant-id') delete headers[name];
 	}
+
+	// Where the call came from is the BFF's to say (see client-address.ts): whatever the caller put in
+	// is dropped, and the one address of the request being served is set.
+	stripForwarding(headers);
+	const address = currentClientAddress();
+	if (address !== undefined) headers[FORWARDED_FOR_HEADER] = address;
 
 	// Fail closed: a present-but-invalid scope cookie must never silently run
 	// the call in the operator's home tenant.

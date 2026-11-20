@@ -43,6 +43,7 @@ import {
 import { readOperatorScope } from '#lib/server/scope.ts';
 import { pageShowsCurrentContext } from '#lib/server/scope-context.ts';
 import { assertCsrf } from '#lib/server/csrf.ts';
+import { setClientAddress } from '#lib/server/client-address.ts';
 import { jsonError, upstreamJsonError } from '#lib/server/http.ts';
 import {
 	buildUpstreamUrl,
@@ -133,6 +134,10 @@ async function proxy(
 		return jsonError(409, SCOPE_CHANGED_CODE, SCOPE_CHANGED_MESSAGE);
 	}
 	if (scope.state === 'valid') upstreamHeaders.set('x-tenant-id', scope.scope.id);
+	// Whose call this is, for Go's per-address limits: the one address of this request. Nothing the
+	// browser sent (x-forwarded-for, forwarded, x-real-ip, x-command-id) is ever copied: the headers
+	// above are built from scratch.
+	setClientAddress(upstreamHeaders, () => event.getClientAddress());
 
 	// Buffered once so the request can be replayed after a refresh.
 	const body = MUTATING.has(request.method)
