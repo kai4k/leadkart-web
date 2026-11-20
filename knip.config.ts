@@ -53,8 +53,6 @@ const config: KnipConfig = {
 	// Kit 3 virtual modules ($app/*) have no file on disk. ($service-worker is removed in Kit 3 and banned by eslint.)
 	ignoreUnresolved: [/^\$app\//],
 	ignoreDependencies: [
-		// Fontsource referenced via @import in tokens.css
-		'@fontsource-variable/jetbrains-mono',
 		// Tailwind 4 — consumed via `@import 'tailwindcss'` in app.css
 		'tailwindcss',
 		// postcss — peer of stylelint declaration-strict-value plugin, resolved by stylelint itself

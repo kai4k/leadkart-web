@@ -28,10 +28,11 @@
  *
  * Poppins (legacy Blazor brand) + Inter (legacy CLAUDE.md spec) both
  * dropped 2026-05-16 — the project now reads as native on Apple
- * platforms first, native on Windows second. JetBrains Mono kept for
- * code blocks since SF Mono is licence-restricted and `ui-monospace`
- * falls back inconsistently across browsers. */
-@import '@fontsource-variable/jetbrains-mono';
+ * platforms first, native on Windows second. Monospace is the system
+ * stack too (`ui-monospace`, SF Mono, Cascadia, Menlo, Consolas): the
+ * `@fontsource-variable/jetbrains-mono` import was removed because
+ * Tailwind inlines the package CSS and its font URLs were emitted as
+ * absolute build-machine paths (the request aborted). */
 
 @theme {
 	/* ═══ COLOUR — there are none here. The semantic tokens live in theme/semantic.css and are
@@ -39,7 +40,7 @@
 	 * pre-Phase-2 colour names were deleted in Task 16 and `check-tokens` refuses them. */
 
 	/* ═══ TYPOGRAPHY — Poppins (LeadKart legacy from Blazor side)
-	 * + JetBrains Mono Variable for code/data.
+	 * + the system monospace stack for code/data.
 	 * Per ThemeBuilder.cs:67 the Blazor canon uses
 	 *   FontFamily = ["Poppins", "system-ui", "sans-serif"]
 	 * Keeping the same family on the Svelte side preserves brand
@@ -55,9 +56,7 @@
 	--font-sans:
 		-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Segoe UI Variable Text',
 		'Segoe UI', system-ui, 'Helvetica Neue', Arial, sans-serif;
-	--font-mono:
-		ui-monospace, 'SF Mono', 'JetBrains Mono Variable', 'JetBrains Mono', 'Cascadia Code', Menlo,
-		Consolas, monospace;
+	--font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
 
 	/* Fluid type scale per Utopia.fyi — clamp(min, preferred, max).
 	 * Each step has a paired line-height per Tailwind 4 convention
