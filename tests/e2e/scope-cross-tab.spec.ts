@@ -27,7 +27,16 @@ test.beforeEach(async ({ page }) => {
 		{ method: 'GET', path: '/api/v1/platform/tenants', status: 200, body: { tenants: [ACME] } },
 		{ method: 'GET', path: `/api/v1/tenants/${ACME.id}`, status: 200, body: ACME },
 		{ method: 'GET', path: '/api/v1/tenants', status: 200, body: { tenants: [ACME] } },
-		{ method: 'POST', path: '/api/v1/users', status: 201, body: {} }
+		{
+			method: 'POST',
+			path: '/api/v1/users',
+			status: 201,
+			body: {
+				person_id: '00000000-0000-4000-8000-000000000c01',
+				membership_id: '00000000-0000-4000-8000-000000000c02',
+				person_existed: false
+			}
+		}
 	]);
 });
 
