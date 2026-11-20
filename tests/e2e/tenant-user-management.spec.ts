@@ -230,8 +230,10 @@ test.describe('Tenant user management — negative', () => {
 		await page.getByLabel(/initial password/i).fill('Sup3rSecret!');
 		await page.getByRole('button', { name: /create user/i }).click();
 
-		// Error banner: the fixed conflict line, never Go's own text
-		await expect(page.getByText(/conflicts with the current state/i).first()).toBeVisible({
+		// Error banner: the fixed line of the code (errors.code.email_has_active_membership), never Go's own text
+		await expect(
+			page.getByText(/already belongs to an active member of another company/i).first()
+		).toBeVisible({
 			timeout: 5000
 		});
 		await expect(page.getByText(/membership.*exists/i)).toHaveCount(0);

@@ -249,7 +249,7 @@ test.describe('Permission requests — approver flow', () => {
 		await expect(page.getByRole('button', { name: /^approve$/i })).toHaveCount(0);
 	});
 
-	test('a request the queue does not list (no say over it): no decision controls at all', async ({
+	test('a request the queue does not list: Deny is still offered (Go shows the detail only to someone who may deny), Approve is not', async ({
 		page
 	}) => {
 		await signInAsTier(page, { tier: 'tenant-admin', permissions: ['tenant.admin'] });
@@ -265,7 +265,8 @@ test.describe('Permission requests — approver flow', () => {
 		]);
 		await page.goto(`/permission-requests/${req.id}`);
 		await expect(page.getByRole('heading', { name: 'Permission request' })).toBeVisible();
-		await expect(page.getByRole('button', { name: /^deny$/i })).toHaveCount(0);
+		await expect(page.getByRole('button', { name: /^deny$/i })).toBeVisible();
+		// can_approve is sent only by the queue, and the queue does not list it: no Approve.
 		await expect(page.getByRole('button', { name: /^approve$/i })).toHaveCount(0);
 	});
 
