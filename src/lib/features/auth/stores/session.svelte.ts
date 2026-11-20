@@ -84,7 +84,7 @@ function createSession(): Session {
 		try {
 			await logoutRequest();
 			// The person the browser holds just changed: the other tabs reload instead of collecting 409s.
-			announceContextChange();
+			announceContextChange('session');
 		} finally {
 			// Even when the request fails (offline) the user leaves and everything
 			// user-specific in the browser (query cache, offline caches) is dropped.

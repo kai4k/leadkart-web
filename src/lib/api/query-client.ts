@@ -39,7 +39,8 @@ import { browser } from '$app/env';
 import { goto } from '$app/navigation';
 import { toast } from '$ui';
 import { describeError, NetworkError, ServerError, AuthError, TimeoutError } from './errors';
-import { leaveTenantContext, scopeChangedElsewhere } from './operator-scope';
+import { exitOperatorScope, scopeChangedElsewhere } from './operator-scope';
+import { navigateHard } from './hard-reset';
 import { createSessionGuard } from './session-guard';
 import { IMPERSONATION_SESSION_KEY } from '#lib/utils/impersonation-session-key.ts';
 
@@ -51,9 +52,10 @@ export function createQueryClient(): QueryClient {
 		goto: (url) => goto(url),
 		clearCache: () => clearUserBrowserState(),
 		notify: (message) => toast.error(message),
-		exitScope: () => leaveTenantContext(client),
+		exitScope: () => exitOperatorScope(),
+		leaveScope: () => void navigateHard('/operator/tenants', 'scope', client),
 		// A refusal this tab did not cause: the one foreign-change path (hard reset, own change excepted).
-		foreignChange: () => scopeChangedElsewhere(client, 'refusal'),
+		foreignChange: () => void scopeChangedElsewhere(client, 'refusal'),
 		location: () => window.location
 	});
 

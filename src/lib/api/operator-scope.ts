@@ -30,6 +30,7 @@
 import type { QueryClient } from '@tanstack/svelte-query';
 import { invalidate } from '$app/navigation';
 import { api } from './client';
+import { hardReset, type ResetReason } from './hard-reset.ts';
 import { SCOPE_CHANGE_CHANNEL, SCOPE_DEPENDENCY } from './scope-header.ts';
 
 /** Re-run the (app) layout load: capabilities context, nav, guards and fingerprint follow the scope cookie. */
@@ -56,45 +57,81 @@ function scopeChannel(): BroadcastChannel | undefined {
 /**
  * Tell the other tabs the context (or the signed-in person) changed here: they reload at once,
  * instead of finding out on their next call, which the BFF refuses with `scope_changed` anyway
- * (this is the courtesy, the refusal is the guarantee). Sign-in and sign-out use it too.
+ * (this is the courtesy, the refusal is the guarantee). Sign-in and sign-out use it too, with the
+ * `session` reason (what the reloaded tab tells its user).
  */
-export function announceContextChange(): void {
-	scopeChannel()?.postMessage('changed');
+export function announceContextChange(reason: 'context' | 'session' = 'context'): void {
+	scopeChannel()?.postMessage(reason);
 }
 
 /** Own changes in progress (a POST/DELETE has gone out and the layout has not committed yet). */
 let ownChangesInFlight = 0;
 /** A foreign announcement arrived while an own change was in flight: act on it once that has committed. */
-let foreignDuringOwn = false;
-/** The hard reset has started: nothing after it matters, and a burst of refusals must not stack. */
-let reloading = false;
+let foreignDuringOwn: ResetReason | null = null;
+
+/** True while this tab's own enter / exit is between its call and the layout commit. */
+export function ownScopeChangeInFlight(): boolean {
+	return ownChangesInFlight > 0;
+}
 
 /** Which kind of evidence says the context was changed by somebody else. */
 type ForeignSource = 'announcement' | 'refusal';
 
 /**
- * The context was changed by someone else (another tab, a sign-in or sign-out elsewhere): hard
- * reset this tab. Returns true when THIS call started the reload (so the caller tells the user
- * once), false when it was not needed: the tab's own change is in flight (a refetch that started
- * between the POST/DELETE and the layout commit is refused by OUR change, not by another tab), or
- * the reload is already under way. An announcement that arrives during an own change is not lost:
- * the reload runs once that change has committed.
+ * The context was changed by someone else (another tab, a sign-in or sign-out elsewhere, a cookie
+ * change nothing announced): hard reset this tab (`hard-reset.ts`: `replace`, the reason left for
+ * the next page to show, never offline, never in a loop). Returns true when THIS call started the
+ * reset, false when it was not needed or not possible: the tab's own change is in flight (a refetch
+ * that started between the POST/DELETE and the layout commit is refused by OUR change, not by
+ * another tab), the reset is already under way, or a block banner took over. An announcement that
+ * arrives during an own change is not lost: the reset runs once that change has committed.
  *
  * `qc` is cleared first when the caller has one; the reload drops the in-memory cache either way.
+ * This is the ONE function that decides own versus foreign; the layout's committed-context check,
+ * the announcements and the BFF's refusals all end here.
  */
 export function scopeChangedElsewhere(
 	qc?: Pick<QueryClient, 'clear'>,
-	source: ForeignSource = 'refusal'
+	source: ForeignSource = 'refusal',
+	reason: ResetReason = 'context'
 ): boolean {
-	if (reloading) return false;
 	if (ownChangesInFlight > 0) {
-		if (source === 'announcement') foreignDuringOwn = true;
+		if (source === 'announcement') foreignDuringOwn = reason;
 		return false;
 	}
-	reloading = true;
-	qc?.clear();
-	location.reload();
-	return true;
+	return hardReset(reason, qc);
+}
+
+/**
+ * What the (app) layout last committed as the tab's context. `observe` takes the fingerprint of
+ * every commit: the first is remembered; the same one is nothing; a different one is either this
+ * tab's own enter / exit (remembered, the in-place flow) or somebody else's, which goes to
+ * `scopeChangedElsewhere` and is reported as moved. Cookie changes nothing announced (the layout
+ * clearing the cookie on lost permission, a sign-in elsewhere that was not enhanced) re-run the
+ * layout in place through a capabilities refresh or any navigation; without this check the page
+ * would re-bind under mounted forms and no refusal would ever come (the fingerprint now matches).
+ */
+export function createCommittedContext(qc: Pick<QueryClient, 'clear'>): {
+	observe: (fingerprint: string | undefined) => boolean;
+} {
+	let committed: string | undefined;
+	let seen = false;
+	return {
+		observe(fingerprint) {
+			if (!seen) {
+				seen = true;
+				committed = fingerprint;
+				return false;
+			}
+			if (fingerprint === committed) return false;
+			if (ownChangesInFlight > 0) {
+				committed = fingerprint;
+				return false;
+			}
+			scopeChangedElsewhere(qc, 'refusal');
+			return true;
+		}
+	};
 }
 
 /**
@@ -117,8 +154,9 @@ export async function changeScopeContext(
 	} finally {
 		ownChangesInFlight--;
 		if (ownChangesInFlight === 0 && foreignDuringOwn) {
-			foreignDuringOwn = false;
-			scopeChangedElsewhere(qc, 'announcement');
+			const reason = foreignDuringOwn;
+			foreignDuringOwn = null;
+			scopeChangedElsewhere(qc, 'announcement', reason);
 		}
 	}
 }
@@ -127,12 +165,17 @@ export async function changeScopeContext(
 export function listenForScopeChanges(qc: Pick<QueryClient, 'clear'>): () => void {
 	const ch = scopeChannel();
 	if (!ch) return () => {};
-	const onMessage = () => void scopeChangedElsewhere(qc, 'announcement');
+	const onMessage = (event?: MessageEvent) =>
+		void scopeChangedElsewhere(
+			qc,
+			'announcement',
+			event?.data === 'session' ? 'session' : 'context'
+		);
 	ch.addEventListener('message', onMessage);
 	return () => ch.removeEventListener('message', onMessage);
 }
 
-/** Leave the context for the session guard (a dead scope): cookie gone, then follow it. */
+/** Leave the context in place: cookie gone, then follow it (the own-exit flow, without navigating). */
 export function leaveTenantContext(qc: ContextCache & Pick<QueryClient, 'clear'>): Promise<void> {
 	return changeScopeContext(qc, exitOperatorScope);
 }

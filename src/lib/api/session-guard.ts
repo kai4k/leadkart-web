@@ -7,23 +7,22 @@
  *                            (e.g. a credential check failing) is the call's own
  *                            error and does NOT sign the user out.
  *   ScopeInvalidError     -> the operator scope cookie is expired/tampered/gone:
- *                            drop the stale cookie (exit scope: cookie, then the cache
- *                            and the layout, in `leaveTenantContext`'s order)
- *                            and go back to /operator/tenants. If leaving scope
+ *                            drop the stale cookie (the DELETE), then a FULL navigation to
+ *                            /operator/tenants (cache cleared, reason left for the toast after the
+ *                            load). Never an in-place follow: until it finished, the page would stay
+ *                            mounted on the home context with a live, filled-in form. If leaving scope
  *                            fails, sign out instead (the server clears the scope
  *                            cookie on sign-in) rather than loop on 409s.
- *   ScopeChangedError     -> another tab changed the tenant context this page shows: tell
- *                            the user and hand it to the one foreign-change path (a hard reset:
- *                            re-running the layout in place would re-bind forms that stay
- *                            mounted). Nothing was run. A refusal caused by THIS tab's own enter or
- *                            exit in flight is not a foreign change and is ignored there.
+ *   ScopeChangedError     -> another tab changed the tenant context this page shows: hand it to the
+ *                            one foreign-change path (a hard reset that tells the user AFTER the load:
+ *                            re-running the layout in place would re-bind forms that stay mounted).
+ *                            Nothing was run. A refusal caused by THIS tab's own enter or exit in
+ *                            flight is not a foreign change and is ignored there.
  *
  * Each fires once; later failures from in-flight queries are swallowed until
  * the navigation settles. Dependencies are injected so the guard is
  * unit-testable without a router.
  */
-import { codeCopy } from './code-copy.ts';
-import { SCOPE_CHANGED_MESSAGE, SCOPE_EXPIRED_MESSAGE } from './scope-header.ts';
 import { AuthError, ScopeChangedError, ScopeInvalidError, SESSION_EXPIRED_CODE } from './errors';
 
 export interface SessionGuardDeps {
@@ -31,16 +30,12 @@ export interface SessionGuardDeps {
 	/** Drop every cached query (the session is over; nothing may survive). */
 	clearCache: () => void;
 	notify: (message: string) => void;
-	/**
-	 * Delete the stale scope cookie server-side so /operator/tenants is not itself answered 409,
-	 * then follow the change (the cache and the (app) layout, mounted observers kept alive).
-	 */
+	/** Delete the stale scope cookie server-side so /operator/tenants is not itself answered 409. */
 	exitScope: () => Promise<unknown>;
-	/**
-	 * The context was changed by someone else: hard reset this tab. True when this call started the
-	 * reset (so the user is told once), false when it was declined (own change in flight, already under way).
-	 */
-	foreignChange: () => boolean;
+	/** The cookie is gone: leave for /operator/tenants with a full navigation (cache cleared, reason kept for after the load). */
+	leaveScope: () => void;
+	/** The context was changed by someone else: hard reset this tab (declined while an own change is in flight). */
+	foreignChange: () => void;
 	location: () => { pathname: string; search: string };
 }
 
@@ -74,11 +69,6 @@ export function createSessionGuard(deps: SessionGuardDeps): SessionGuard {
 		});
 	}
 
-	/** Another tab changed the context: one hard reset, told to the user once. */
-	function notifyForeign(): void {
-		if (deps.foreignChange()) deps.notify(codeCopy('scope_changed') ?? SCOPE_CHANGED_MESSAGE);
-	}
-
 	return {
 		handle(error) {
 			if (error instanceof AuthError && isSessionEndingError(error)) {
@@ -95,31 +85,31 @@ export function createSessionGuard(deps: SessionGuardDeps): SessionGuard {
 				// Already leaving for /signin (scope exit failed): nothing left to repair.
 				if (deps.location().pathname.startsWith('/signin')) return true;
 				redirecting = true;
-				settle(
-					deps.exitScope().then(
-						() => {
-							// The exit already followed the change (cache reset, layout re-run),
-							// so no scoped data survives and active queries run unscoped.
-							deps.notify(codeCopy('scope_invalid') ?? SCOPE_EXPIRED_MESSAGE);
-							return deps.goto('/operator/tenants');
-						},
-						(failure: unknown) => {
-							// The exit itself was refused because another tab moved the context meanwhile: a valid
-							// session in a new context, not a failure to leave. Reload; never sign out for it.
-							if (failure instanceof ScopeChangedError) {
-								notifyForeign();
-								return undefined;
-							}
-							deps.clearCache();
-							deps.notify(SCOPE_EXIT_FAILED_MESSAGE);
-							return deps.goto('/signin');
+				void deps.exitScope().then(
+					() => {
+						// The cookie is gone: leave by a full navigation (clears the cache, keeps the reason).
+						// The page never follows the new "no context" in place, so no form of it can submit into
+						// the home tenant before the navigation lands. `redirecting` stays set: the page is
+						// leaving, a straggling 409 must not start a second exit.
+						deps.leaveScope();
+					},
+					(failure: unknown) => {
+						// The exit itself was refused because another tab moved the context meanwhile: a valid
+						// session in a new context, not a failure to leave. Reset; never sign out for it.
+						if (failure instanceof ScopeChangedError) {
+							deps.foreignChange();
+							redirecting = false;
+							return;
 						}
-					)
+						deps.clearCache();
+						deps.notify(SCOPE_EXIT_FAILED_MESSAGE);
+						settle(deps.goto('/signin'));
+					}
 				);
 				return true;
 			}
 			if (error instanceof ScopeChangedError) {
-				notifyForeign();
+				deps.foreignChange();
 				return true;
 			}
 			return false;

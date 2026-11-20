@@ -14,27 +14,26 @@ import { createQueryClient, renderQueryClient } from '#lib/api/query-client.ts';
 beforeEach(() => vi.clearAllMocks());
 
 describe('scope guard wiring: operator already on /operator/tenants', () => {
-	it('refetches the tenants list after the scope exit, before navigating', async () => {
-		vi.stubGlobal('location', { pathname: '/operator/tenants', search: '' });
-		let scoped = true;
-		const queryFn = vi.fn(() =>
-			scoped ? Promise.reject(new ScopeInvalidError('expired')) : Promise.resolve(['acme'])
-		);
-		apiDelete.mockImplementation(() => {
-			scoped = false;
-			return Promise.resolve();
-		});
-
-		const observer = new QueryObserver(createQueryClient(), {
+	it('after the scope exit leaves by a FULL navigation (even when already there): nothing follows the new context in place', async () => {
+		sessionStorage.clear();
+		const replace = vi.fn();
+		vi.stubGlobal('location', { pathname: '/operator/tenants', search: '', replace });
+		vi.stubGlobal('navigator', { onLine: true });
+		const queryFn = vi.fn(() => Promise.reject(new ScopeInvalidError('expired')));
+		const client = createQueryClient();
+		const observer = new QueryObserver(client, {
 			queryKey: ['operator', 'tenants'],
 			queryFn,
 			retry: false
 		});
 		const unsubscribe = observer.subscribe(() => {});
 
-		await vi.waitFor(() => expect(goto).toHaveBeenCalledWith('/operator/tenants'));
-		await vi.waitFor(() => expect(observer.getCurrentResult().data).toEqual(['acme']));
+		await vi.waitFor(() => expect(replace).toHaveBeenCalledWith('/operator/tenants'));
 		expect(apiDelete).toHaveBeenCalledTimes(1);
+		expect(goto).not.toHaveBeenCalled(); // never an in-place follow
+		expect(JSON.parse(sessionStorage.getItem('lk_reload_reason') ?? 'null')).toMatchObject({
+			reason: 'scope'
+		});
 		unsubscribe();
 		vi.unstubAllGlobals();
 	});

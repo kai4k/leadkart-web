@@ -111,6 +111,20 @@
 		"save": "Save",
 		"navigation": "Navigation"
 	},
+	"reload": {
+		"context": "You switched company or account in another tab, so this page was reloaded. Anything unsaved here was not saved.",
+		"session": "You signed in or out in another tab, so this page was reloaded. Anything unsaved here was not saved.",
+		"offline": {
+			"title": "This page is out of date",
+			"body": "You switched company or account in another tab, but you are offline, so this page could not reload. Nothing you do here will be saved.",
+			"action": "Reload"
+		},
+		"loop": {
+			"title": "This page keeps reloading",
+			"body": "The page had to reload again right after the last reload. Sign in again to stop it.",
+			"action": "Sign in again"
+		}
+	},
 	"orders": {
 		"quotation": {
 			"revisionLineSummary": "{lineCount, plural, one {# line} other {# lines}} · subtotal {subtotal} · GST {gstTotal}"

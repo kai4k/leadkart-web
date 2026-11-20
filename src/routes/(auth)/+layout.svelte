@@ -1,6 +1,7 @@
 <script lang="ts">
 	import AuthShell from '$layouts/AuthShell.svelte';
 	import NavProgressBar from '$layouts/NavProgressBar.svelte';
+	import ReloadNotice from '$layouts/ReloadNotice.svelte';
 
 	import { onMount } from 'svelte';
 	import { clearUserBrowserState } from '#lib/api/query-client.ts';
@@ -16,6 +17,7 @@
 </script>
 
 <NavProgressBar />
+<ReloadNotice />
 <AuthShell>
 	{@render children()}
 </AuthShell>

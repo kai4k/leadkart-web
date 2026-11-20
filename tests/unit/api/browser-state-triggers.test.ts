@@ -39,11 +39,13 @@ describe('browser state clearing triggers (the worker stores nothing private: no
 	});
 
 	it('session guard: scope_invalid exits the scope', async () => {
-		vi.stubGlobal('location', { pathname: '/operator/scope/members', search: '' });
+		const replace = vi.fn();
+		vi.stubGlobal('location', { pathname: '/operator/scope/members', search: '', replace });
 		createQueryClient()
 			.getQueryCache()
 			.config.onError?.(new ScopeInvalidError('expired'), { state: { data: undefined } } as never);
 		await vi.waitFor(() => expect(apiDelete).toHaveBeenCalledWith('/operator/scope'));
+		await vi.waitFor(() => expect(replace).toHaveBeenCalledWith('/operator/tenants'));
 	});
 
 	it('scope exit is one DELETE through the API client', async () => {

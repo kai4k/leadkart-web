@@ -42,24 +42,25 @@ const qc = () =>
 /** A BroadcastChannel registry: a message reaches the OTHER objects of the same name, never the sender. */
 class FakeChannel {
 	static all: FakeChannel[] = [];
-	listeners = new Set<() => void>();
+	listeners = new Set<(e: { data: unknown }) => void>();
 	constructor(public name: string) {
 		FakeChannel.all.push(this);
 	}
-	postMessage() {
+	postMessage(data: unknown) {
 		for (const c of FakeChannel.all) {
-			if (c !== this && c.name === this.name) c.listeners.forEach((l) => l());
+			if (c !== this && c.name === this.name) c.listeners.forEach((l) => l({ data }));
 		}
 	}
-	addEventListener(_t: string, l: () => void) {
+	addEventListener(_t: string, l: (e: { data: unknown }) => void) {
 		this.listeners.add(l);
 	}
-	removeEventListener(_t: string, l: () => void) {
+	removeEventListener(_t: string, l: (e: { data: unknown }) => void) {
 		this.listeners.delete(l);
 	}
 }
 
-const reload = vi.fn(() => void calls.push('reload'));
+/** A hard reset replaces the entry with its own URL (never `reload()`, which re-POSTs a result page). */
+const reload = vi.fn((url: string) => void calls.push(`reload:${url}`));
 
 /** A fresh copy of the modules (its own channel, its own flags): a tab. */
 async function tab(): Promise<{
@@ -78,7 +79,9 @@ beforeEach(() => {
 	calls.length = 0;
 	FakeChannel.all = [];
 	vi.stubGlobal('BroadcastChannel', FakeChannel);
-	vi.stubGlobal('location', { reload, pathname: '/leads' });
+	vi.stubGlobal('location', { replace: reload, pathname: '/leads', search: '?page=2' });
+	vi.stubGlobal('navigator', { onLine: true });
+	sessionStorage.clear();
 	nav.invalidate.mockImplementation(() => {
 		calls.push('invalidate');
 		return Promise.resolve();
@@ -154,7 +157,7 @@ describe('the other tabs of the browser', () => {
 		// Only the changing tab re-ran its layout.
 		expect(nav.invalidate).toHaveBeenCalledTimes(1);
 		expect(theirs.resetQueries).not.toHaveBeenCalled();
-		expect(calls.indexOf('clear')).toBeLessThan(calls.indexOf('reload'));
+		expect(calls.indexOf('clear')).toBeLessThan(calls.findIndex((c) => c.startsWith('reload:')));
 		stop();
 	});
 
@@ -212,6 +215,48 @@ describe('a refusal this tab did not cause', () => {
 		expect(nav.invalidate).not.toHaveBeenCalled();
 	});
 
+	it('replaces the entry with its own URL (a native-POST result page is never re-POSTed) and leaves the reason behind first', async () => {
+		const { scope } = await tab();
+		const written: Array<string | null> = [];
+		reload.mockImplementationOnce(
+			() => void written.push(sessionStorage.getItem('lk_reload_reason'))
+		);
+		scope.scopeChangedElsewhere(qc() as never, 'refusal');
+		expect(reload).toHaveBeenCalledWith('/leads?page=2');
+		expect(JSON.parse(written[0] ?? 'null')).toMatchObject({ reason: 'context' });
+	});
+
+	it('a sign-in or sign-out elsewhere leaves the "session" reason', async () => {
+		const mineTab = await tab();
+		const otherTab = await tab();
+		otherTab.scope.listenForScopeChanges(qc() as never);
+		mineTab.scope.announceContextChange('session');
+		expect(JSON.parse(sessionStorage.getItem('lk_reload_reason') ?? 'null')).toMatchObject({
+			reason: 'session'
+		});
+	});
+
+	it('a reset that is cancelled does not swallow later refusals for ever', async () => {
+		vi.useFakeTimers();
+		try {
+			const { scope } = await tab();
+			expect(scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(true);
+			expect(scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(false);
+			vi.advanceTimersByTime(6_000);
+			expect(sessionStorage.getItem('lk_reload_reason')).toBeNull();
+			expect(scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(true);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('pageshow (back-forward restore after a cancelled reset) releases it too', async () => {
+		const { scope } = await tab();
+		expect(scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(true);
+		window.dispatchEvent(new Event('pageshow'));
+		expect(scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(true);
+	});
+
 	it("is ignored while this tab's own change is in flight: a refetch between the POST and the commit is not 'another tab'", async () => {
 		const { scope } = await tab();
 		const client = qc();
@@ -244,5 +289,112 @@ describe('a refusal this tab did not cause', () => {
 		del.mockRejectedValue(new Error('offline'));
 		await expect(scope.leaveTenantContext(qc() as never)).rejects.toThrow();
 		expect(scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(true);
+	});
+});
+
+describe('a hard reset that must not happen', () => {
+	it('offline: no reload (it would land on the offline page); a block banner stands in, and the next refusal still tries', async () => {
+		vi.stubGlobal('navigator', { onLine: false });
+		const { scope } = await tab();
+		const block = await import('#lib/api/reset-block.svelte.ts');
+		expect(scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(false);
+		expect(reload).not.toHaveBeenCalled();
+		expect(block.resetBlock.kind).toBe('offline');
+		expect(sessionStorage.getItem('lk_reload_reason')).toBeNull();
+		vi.stubGlobal('navigator', { onLine: true });
+		expect(scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(true);
+	});
+
+	it('a page that is itself the result of a reset (reason under 10 s old) does not reset again: error state, no reload', async () => {
+		sessionStorage.setItem(
+			'lk_reload_reason',
+			JSON.stringify({ reason: 'context', at: Date.now() - 2_000 })
+		);
+		const { scope } = await tab();
+		const block = await import('#lib/api/reset-block.svelte.ts');
+		const hard = await import('#lib/api/hard-reset.ts');
+		// The (app) layout takes the reason on arrival (the toast), which removes the flag...
+		expect(hard.takeReloadReason()).toBe('context');
+		expect(sessionStorage.getItem('lk_reload_reason')).toBeNull();
+		// ... and the loop stop still knows this document came from a reset.
+		expect(scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(false);
+		expect(reload).not.toHaveBeenCalled();
+		expect(block.resetBlock.kind).toBe('loop');
+	});
+
+	it('a reason older than the window is not a loop', async () => {
+		sessionStorage.setItem(
+			'lk_reload_reason',
+			JSON.stringify({ reason: 'context', at: Date.now() - 30_000 })
+		);
+		const { scope } = await tab();
+		const hard = await import('#lib/api/hard-reset.ts');
+		hard.takeReloadReason();
+		expect(scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(true);
+	});
+
+	it('unavailable storage: the reset still happens, with nothing to show', async () => {
+		const { scope } = await tab();
+		const boom = () => {
+			throw new Error('storage disabled');
+		};
+		vi.spyOn(Storage.prototype, 'setItem').mockImplementation(boom);
+		vi.spyOn(Storage.prototype, 'getItem').mockImplementation(boom);
+		try {
+			expect(scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(true);
+			expect(reload).toHaveBeenCalledTimes(1);
+		} finally {
+			vi.restoreAllMocks();
+		}
+	});
+
+	it('takeReloadReason hands the reason out once and ignores garbage', async () => {
+		await tab();
+		const hard = await import('#lib/api/hard-reset.ts');
+		sessionStorage.setItem('lk_reload_reason', 'not json');
+		expect(hard.takeReloadReason()).toBeNull();
+		sessionStorage.setItem(
+			'lk_reload_reason',
+			JSON.stringify({ reason: 'session', at: Date.now() })
+		);
+		expect(hard.takeReloadReason()).toBe('session');
+		expect(hard.takeReloadReason()).toBeNull();
+	});
+});
+
+describe('the layout commits a context (item: a page never keeps its state when its context moves)', () => {
+	it('the first commit is remembered; the same fingerprint again is nothing', async () => {
+		const { scope } = await tab();
+		const watch = scope.createCommittedContext(qc() as never);
+		expect(watch.observe('fp-a')).toBe(false);
+		expect(watch.observe('fp-a')).toBe(false);
+		expect(reload).not.toHaveBeenCalled();
+	});
+
+	it('a different fingerprint with no own change in flight (a capabilities refresh, any layout run) hard-resets: no in-place follow', async () => {
+		const { scope } = await tab();
+		const client = qc();
+		const watch = scope.createCommittedContext(client as never);
+		watch.observe('fp-a');
+		expect(watch.observe('fp-b')).toBe(true);
+		expect(client.clear).toHaveBeenCalledTimes(1);
+		expect(reload).toHaveBeenCalledWith('/leads?page=2');
+		expect(nav.invalidate).not.toHaveBeenCalled();
+	});
+
+	it('an own enter / exit commits a different fingerprint in place, as before: remembered, no reset', async () => {
+		const { scope } = await tab();
+		del.mockResolvedValue(undefined);
+		const watch = scope.createCommittedContext(qc() as never);
+		watch.observe('fp-a');
+		nav.invalidate.mockImplementation(() => {
+			expect(watch.observe('fp-b')).toBe(false); // the layout commits while the change is in flight
+			return Promise.resolve();
+		});
+		await scope.leaveTenantContext(qc() as never);
+		expect(reload).not.toHaveBeenCalled();
+		// ... and the new fingerprint is now the baseline.
+		expect(watch.observe('fp-b')).toBe(false);
+		expect(watch.observe('fp-c')).toBe(true);
 	});
 });

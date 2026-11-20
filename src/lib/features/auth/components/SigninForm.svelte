@@ -79,7 +79,7 @@
 			loading = true;
 			return async ({ result, update }) => {
 				// A sign-in changes the person the browser holds: the other tabs reload instead of collecting 409s.
-				if (result.type === 'redirect') announceContextChange();
+				if (result.type === 'redirect') announceContextChange('session');
 				await update();
 				loading = false;
 			};

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { SCOPE_CHANGED_MESSAGE, SCOPE_EXPIRED_MESSAGE } from '#lib/api/scope-header.ts';
+import { SCOPE_CHANGED_MESSAGE } from '#lib/api/scope-header.ts';
 import { createSessionGuard } from '#lib/api/session-guard.ts';
 import {
 	ApiError,
@@ -20,7 +20,8 @@ function setup(location = { pathname: '/leads', search: '?page=2' }) {
 		clearCache: vi.fn(),
 		notify: vi.fn(),
 		exitScope: vi.fn(() => Promise.resolve()),
-		foreignChange: vi.fn(() => true),
+		leaveScope: vi.fn(),
+		foreignChange: vi.fn(),
 		location: () => location
 	};
 	return { deps, guard: createSessionGuard(deps) };
@@ -94,27 +95,27 @@ describe('session guard — scope codes', () => {
 	])('%s (%i) still exits the scope', async (code, status) => {
 		const { deps, guard } = setup({ pathname: '/operator/scope/members', search: '' });
 		expect(guard.handle(ApiError.fromResponse(res(status), { error: code }))).toBe(true);
-		await vi.waitFor(() => expect(deps.goto).toHaveBeenCalledWith('/operator/tenants'));
+		await vi.waitFor(() => expect(deps.leaveScope).toHaveBeenCalledTimes(1));
 		expect(deps.exitScope).toHaveBeenCalledTimes(1);
+		expect(deps.goto).not.toHaveBeenCalled(); // never an in-place follow
 	});
 });
 
 describe('session guard — scope_invalid', () => {
 	const scopeError = () => new ScopeInvalidError('expired');
 
-	it('exits scope (cookie, cache and layout in the right order, inside exitScope), toasts, then goes to /operator/tenants — once', async () => {
+	it('deletes the cookie, then leaves by a full navigation (leaveScope) — once, never an in-place follow', async () => {
 		const { deps, guard } = setup({ pathname: '/operator/scope/members', search: '' });
 		expect(guard.handle(scopeError())).toBe(true);
 		expect(guard.handle(scopeError())).toBe(true);
-		await vi.waitFor(() => expect(deps.goto).toHaveBeenCalledTimes(1));
+		await vi.waitFor(() => expect(deps.leaveScope).toHaveBeenCalledTimes(1));
 		expect(deps.exitScope).toHaveBeenCalledTimes(1);
-		expect(deps.clearCache).not.toHaveBeenCalled();
-		expect(deps.notify).toHaveBeenCalledTimes(1);
-		expect(deps.notify).toHaveBeenCalledWith(SCOPE_EXPIRED_MESSAGE);
-		expect(deps.goto).toHaveBeenCalledWith('/operator/tenants');
-		// The exit (which follows the change and resets the cache) finishes before the navigation.
+		// No in-place navigation, no toast posted into a document that is about to be replaced
+		// (the reason is shown after the load), and the cache is cleared by the navigation itself.
+		expect(deps.goto).not.toHaveBeenCalled();
+		expect(deps.notify).not.toHaveBeenCalled();
 		expect(deps.exitScope.mock.invocationCallOrder[0]).toBeLessThan(
-			deps.goto.mock.invocationCallOrder[0]
+			deps.leaveScope.mock.invocationCallOrder[0]
 		);
 	});
 
@@ -138,14 +139,15 @@ describe('session guard — scope_invalid', () => {
 		expect(deps.notify).toHaveBeenCalledTimes(1);
 	});
 
-	it('can fire again after the redirect settled', async () => {
+	it('a straggling 409 after the page started leaving does not start a second exit', async () => {
 		const { deps, guard } = setup({ pathname: '/operator/scope/profile', search: '' });
 		guard.handle(scopeError());
-		await vi.waitFor(() => expect(deps.goto).toHaveBeenCalledTimes(1));
-		await Promise.resolve();
+		await vi.waitFor(() => expect(deps.leaveScope).toHaveBeenCalledTimes(1));
 		await Promise.resolve();
 		guard.handle(scopeError());
-		await vi.waitFor(() => expect(deps.goto).toHaveBeenCalledTimes(2));
+		await Promise.resolve();
+		expect(deps.exitScope).toHaveBeenCalledTimes(1);
+		expect(deps.leaveScope).toHaveBeenCalledTimes(1);
 	});
 });
 
@@ -156,7 +158,8 @@ describe('session guard: scope errors regardless of HTTP status', () => {
 			clearCache: vi.fn(),
 			notify: vi.fn(),
 			exitScope: vi.fn(() => Promise.resolve()),
-			foreignChange: vi.fn(() => true),
+			leaveScope: vi.fn(),
+			foreignChange: vi.fn(),
 			location: () => ({ pathname: '/operator/scope/members', search: '' })
 		};
 		const guard = createSessionGuard(deps);
@@ -164,7 +167,7 @@ describe('session guard: scope errors regardless of HTTP status', () => {
 			error: 'tenant_scope_not_found'
 		});
 		expect(guard.handle(err)).toBe(true);
-		await vi.waitFor(() => expect(deps.goto).toHaveBeenCalledWith('/operator/tenants'));
+		await vi.waitFor(() => expect(deps.leaveScope).toHaveBeenCalledTimes(1));
 		expect(deps.exitScope).toHaveBeenCalledTimes(1);
 	});
 });
@@ -172,24 +175,15 @@ describe('session guard: scope errors regardless of HTTP status', () => {
 describe('session guard — scope_changed (another tab changed the context)', () => {
 	const changed = () => new ScopeChangedError('x');
 
-	it('tells the user and hands the change to the one foreign-change path, once; nothing navigates here', () => {
+	it('hands the change to the one foreign-change path (which tells the user after the load); nothing navigates here', () => {
 		const { deps, guard } = setup({ pathname: '/settings/users', search: '' });
-		deps.foreignChange.mockReturnValueOnce(true).mockReturnValue(false); // the first call starts the reload
 		expect(guard.handle(changed())).toBe(true);
 		expect(guard.handle(changed())).toBe(true); // a second in-flight call failing the same way
 		expect(deps.foreignChange).toHaveBeenCalledTimes(2);
-		expect(deps.notify).toHaveBeenCalledTimes(1);
-		expect(deps.notify).toHaveBeenCalledWith(SCOPE_CHANGED_MESSAGE);
+		expect(deps.notify).not.toHaveBeenCalled(); // a toast posted before the reset dies with the document
 		expect(deps.exitScope).not.toHaveBeenCalled();
 		expect(deps.goto).not.toHaveBeenCalled();
 		expect(deps.clearCache).not.toHaveBeenCalled();
-	});
-
-	it('says nothing when the change was this tab own (the foreign path declined)', () => {
-		const { deps, guard } = setup({ pathname: '/settings/users', search: '' });
-		deps.foreignChange.mockReturnValue(false);
-		expect(guard.handle(changed())).toBe(true);
-		expect(deps.notify).not.toHaveBeenCalled();
 	});
 
 	it('an exit answered 409 scope_changed is a foreign change (reload), not a failure to leave: no sign-out', async () => {

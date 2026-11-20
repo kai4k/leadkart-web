@@ -22,6 +22,7 @@ describe('session.logout', () => {
 	it('announces to the other tabs after the sign-out succeeded', async () => {
 		await session.logout();
 		expect(announce).toHaveBeenCalledTimes(1);
+		expect(announce).toHaveBeenCalledWith('session');
 		expect(logoutRequest.mock.invocationCallOrder[0]).toBeLessThan(
 			announce.mock.invocationCallOrder[0]!
 		);

@@ -58,13 +58,14 @@ describe('ScopeContextField', () => {
 		state.page.form = { formErrorKey: 'auth.errors.scopeChanged' };
 		await render(ScopeContextField);
 		await vi.waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
-		expect(refresh).toHaveBeenCalledWith(undefined, 'refusal');
+		expect(refresh).toHaveBeenCalledWith(undefined, 'refusal', 'context');
 	});
 
 	it('does the same when the action said the scope cookie is dead', async () => {
 		state.page.form = { formErrorKey: 'errors.code.scope_invalid' };
 		await render(ScopeContextField);
 		await vi.waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
+		expect(refresh).toHaveBeenCalledWith(undefined, 'refusal', 'scope');
 	});
 
 	it('does nothing for any other failure or no failure', async () => {

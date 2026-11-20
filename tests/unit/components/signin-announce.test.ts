@@ -50,6 +50,7 @@ describe('SigninForm announces a sign-in', () => {
 	it('after a successful sign-in (the action redirects)', async () => {
 		await finish('redirect');
 		expect(announce).toHaveBeenCalledTimes(1);
+		expect(announce).toHaveBeenCalledWith('session');
 	});
 
 	it('not after a refused one', async () => {
