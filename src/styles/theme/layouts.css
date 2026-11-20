@@ -1,0 +1,246 @@
+/* ─────────────────────────────────────────────────────────────────────
+ * SHELL GEOMETRY — the one source of every dimension of the app shell.
+ *
+ * `<html data-layout data-sidebar data-content-width data-nav-type>` are written at SSR from the
+ * `lk_ui` cookie (no flash, no runtime style injection, CSP unchanged); this file turns them into
+ * the `--shell-*` variables the shell reads (AppShell, Sidebar, Topbar, Footer, PageContainer).
+ * Selectors on the sidebar size are always `:root[data-sidebar='…']`: the shadcn sidebar elements
+ * carry their own `data-sidebar` attributes, and a bare `[data-sidebar=…]` would match them.
+ *
+ * Values are Domiex's (plugins/layouts/*.js, css/components/theme.css): topbar 4.6875rem, footer
+ * 3.5rem, sidebar large 15rem / medium 10rem / small 4.6875rem, page padding 1.25rem (7rem at xl),
+ * semibox gap 0.75rem with 0.375rem radius, boxed margin 2rem. Never flip a token with a nested
+ * `color-scheme` here: only geometry lives in this file.
+ *
+ * Below `lg` (64rem) the sidebar is a sheet: nothing sits beside the page and the sidebar, nav-type
+ * and boxed geometry are ignored (semibox keeps its gap, as before).
+ * ───────────────────────────────────────────────────────────────────── */
+
+:root {
+	/* sidebar */
+	--sidebar-width: 15rem;
+	--sidebar-width-icon: 4.6875rem;
+	--sidebar-width-mobile: 18rem;
+	/* the width the sidebar occupies now (large, medium or icon-only) */
+	--shell-sidebar-w: var(--sidebar-width);
+
+	/* bars */
+	--shell-topbar-height: 4.6875rem;
+	--shell-footer-height: 3.5rem;
+	--shell-hnav-height: calc(var(--shell-topbar-height) * 0.9);
+
+	/* panes */
+	--shell-gap: 0rem;
+	--shell-radius: 0rem;
+	--shell-boxed-margin: 0rem;
+	--shell-boxed-canvas: transparent;
+
+	/* sidebar / topbar placement (below lg: no sidebar beside the page) */
+	/* below the topbar, and below its inset (nav type `boxed`) on both sides */
+	--shell-sidebar-top: calc(
+		var(--shell-topbar-top) + var(--shell-topbar-height) + 2 * var(--shell-topbar-inset)
+	);
+	--shell-sidebar-bottom: 0rem;
+	--shell-sidebar-start: 0rem;
+	--shell-topbar-top: var(--shell-gap);
+	--shell-topbar-start: var(--shell-gap);
+	--shell-topbar-end: var(--shell-gap);
+	--shell-topbar-inset: 0rem;
+	--shell-content-start: 0rem;
+	--shell-content-end: 0rem;
+
+	/* page */
+	--shell-page-pad-top: calc(var(--shell-topbar-height) * 1.2);
+	--shell-page-pad-x: var(--spacing-5);
+	--shell-content-max: none;
+}
+
+:root[data-sidebar='medium'] {
+	--sidebar-width: 10rem;
+}
+:root[data-sidebar='small'] {
+	--shell-sidebar-w: var(--sidebar-width-icon);
+}
+
+/* ── content width ───────────────────────────────────────────────────────────── */
+:root[data-content-width='default'] {
+	--shell-content-max: var(--page-width-2xl);
+}
+
+/* ── semibox: floating bordered panes with a gap, at every width ─────────────── */
+:root[data-layout='semibox'] {
+	--shell-gap: 0.75rem;
+	--shell-radius: 0.375rem;
+	--shell-sidebar-top: var(--shell-gap);
+	--shell-sidebar-bottom: var(--shell-gap);
+	--shell-sidebar-start: var(--shell-gap);
+	--shell-page-pad-top: calc(var(--shell-topbar-height) * 1.3);
+}
+:root[data-layout='semibox'][data-content-width='fluid'] {
+	--shell-page-pad-x: var(--spacing-3);
+}
+
+@media (min-width: 64rem) {
+	:root {
+		--shell-content-start: var(--shell-sidebar-w);
+		--shell-topbar-start: 0rem;
+		--shell-topbar-end: 0rem;
+		--shell-topbar-top: 0rem;
+	}
+
+	/* modern: the sidebar runs the full height; the topbar starts beside it */
+	:root[data-layout='modern'] {
+		--shell-sidebar-top: 0rem;
+		--shell-topbar-start: var(--shell-sidebar-w);
+	}
+
+	/* semibox */
+	:root[data-layout='semibox'] {
+		--shell-topbar-top: var(--shell-gap);
+		--shell-topbar-end: var(--shell-gap);
+		--shell-topbar-start: calc(var(--shell-sidebar-w) + 2 * var(--shell-gap));
+		--shell-content-start: calc(var(--shell-sidebar-w) + var(--shell-gap));
+	}
+	:root[data-layout='semibox'][data-content-width='fluid'] {
+		--shell-page-pad-x: var(--spacing-3);
+	}
+
+	/* boxed: the app sits inside a margin on a primary canvas */
+	:root[data-layout='boxed'] {
+		--shell-boxed-margin: var(--spacing-8);
+		--shell-boxed-canvas: var(--primary);
+		--shell-radius: 0.375rem;
+		--shell-sidebar-start: var(--shell-boxed-margin);
+		--shell-topbar-top: var(--shell-boxed-margin);
+		--shell-topbar-start: var(--shell-boxed-margin);
+		--shell-topbar-end: var(--shell-boxed-margin);
+		--shell-content-start: calc(var(--shell-boxed-margin) + var(--shell-sidebar-w));
+		--shell-content-end: var(--shell-boxed-margin);
+	}
+
+	/* horizontal: a nav bar under the topbar instead of a sidebar */
+	:root[data-layout='horizontal'] {
+		--shell-content-start: 0rem;
+		--shell-page-pad-top: calc(var(--shell-topbar-height) * 1.9);
+	}
+
+	/* nav types (not in horizontal, where the nav bar is the second row) */
+	:root[data-nav-type='boxed']:not([data-layout='horizontal']) {
+		--shell-topbar-inset: var(--spacing-3);
+		--shell-page-pad-top: calc(var(--shell-topbar-height) * 1.3);
+	}
+}
+
+/* page padding widens at xl unless the content is fluid (Domiex: px-5 xl:px-28) */
+@media (min-width: 80rem) {
+	:root[data-content-width='default'] {
+		--shell-page-pad-x: 7rem;
+	}
+	:root[data-layout='semibox'][data-content-width='default'] {
+		--shell-page-pad-x: 7rem;
+	}
+}
+
+/* the page canvas of the boxed layout (lg and up) */
+@media (min-width: 64rem) {
+	:root[data-layout='boxed'] body {
+		background: var(--shell-boxed-canvas);
+	}
+}
+
+/* ── the shell's parts ───────────────────────────────────────────────────────── */
+
+/* the topbar is placed here and nowhere else (its look is its own) */
+[data-shell='topbar'] {
+	position: fixed;
+	inset-block-start: max(
+		calc(var(--shell-topbar-top) + var(--shell-topbar-inset)),
+		var(--safe-top)
+	);
+	inset-inline-start: max(
+		calc(var(--shell-topbar-start) + var(--shell-topbar-inset)),
+		var(--safe-left)
+	);
+	inset-inline-end: max(
+		calc(var(--shell-topbar-end) + var(--shell-topbar-inset)),
+		var(--safe-right)
+	);
+	block-size: var(--shell-topbar-height);
+	z-index: var(--z-sticky);
+	border-radius: var(--shell-radius);
+}
+:root[data-layout='semibox'] [data-shell='topbar'],
+:root[data-nav-type='boxed']:not([data-layout='horizontal']) [data-shell='topbar'] {
+	border: var(--border-thin) solid var(--border);
+	border-radius: var(--shell-radius);
+}
+:root[data-nav-type='boxed']:not([data-layout='horizontal']) {
+	--shell-radius: 0.375rem;
+}
+:root[data-nav-type='floating']:not([data-layout='horizontal']) [data-shell='topbar'] {
+	position: absolute;
+}
+
+/* the page: offset by the sidebar, on its own panel in the boxed layout */
+[data-shell='content'] {
+	position: relative;
+	z-index: 1;
+	display: flex;
+	flex-direction: column;
+	min-block-size: 100dvh;
+}
+@media (min-width: 64rem) {
+	[data-shell='content'] {
+		margin-inline-start: var(--shell-content-start);
+		margin-inline-end: var(--shell-content-end);
+	}
+	:root[data-layout='boxed'] [data-shell='content'] {
+		margin-block-start: var(--shell-boxed-margin);
+		min-block-size: calc(100dvh - var(--shell-boxed-margin));
+		background: var(--background);
+		border-start-end-radius: var(--shell-radius);
+	}
+}
+
+/* the horizontal nav bar sits under the topbar (lg and up) */
+[data-shell='hnav'] {
+	position: fixed;
+	inset-block-start: calc(var(--shell-topbar-height) + var(--shell-topbar-top));
+	inset-inline: 0;
+	block-size: var(--shell-hnav-height);
+	z-index: var(--z-sticky);
+}
+
+/* pattern nav type: a primary band with a dot overlay behind the topbar, the topbar transparent and its
+   text in the primary's foreground. The topbar's colours are re-declared on the topbar only (its
+   semantic tokens and, until the Topbar is rebuilt on them, the legacy aliases it still reads), so
+   every token stays opaque and the page below keeps its own surface. */
+:root[data-nav-type='pattern']:not([data-layout='horizontal']) [data-shell='root']::before {
+	content: '';
+	position: absolute;
+	inset-block-start: 0;
+	inset-inline: 0;
+	block-size: calc(var(--shell-topbar-height) + var(--shell-topbar-top));
+	z-index: 0;
+	background-color: var(--primary);
+	background-image: radial-gradient(
+		color-mix(in oklch, var(--primary-foreground) 25%, transparent) 1px,
+		transparent 1px
+	);
+	background-size: 1rem 1rem;
+}
+:root[data-nav-type='pattern']:not([data-layout='horizontal']) [data-shell='topbar'] {
+	--foreground: var(--primary-foreground);
+	--muted-foreground: var(--primary-foreground);
+	--color-fg: var(--primary-foreground);
+	--color-fg-muted: var(--primary-foreground);
+	--color-fg-subtle: var(--primary-foreground);
+	--color-primary-hover: var(--primary-foreground);
+	--color-primary-active: var(--primary-foreground);
+	--color-bg-muted: color-mix(in oklch, var(--primary-foreground) 15%, transparent);
+	--lk-muted-tint: color-mix(in oklch, var(--primary-foreground) 15%, transparent);
+	--glass-border-subtle: 1px solid transparent;
+	background: transparent;
+	border-color: transparent;
+	color: var(--primary-foreground);
+}

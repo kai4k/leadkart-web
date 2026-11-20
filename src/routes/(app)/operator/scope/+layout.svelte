@@ -5,7 +5,7 @@
 	import { Building2, Icon, Shield, LogOut } from '$icons';
 	import { exitScopeMutation } from '$features/operator/scope';
 	import { session } from '$features/auth';
-	import { visibleNav } from '#lib/config/nav.ts';
+	import { isNavActive, visibleNav } from '#lib/config/nav.ts';
 	import { NAV_ICONS } from '#lib/config/nav-icons.ts';
 	import type { LayoutData } from './$types';
 
@@ -22,10 +22,6 @@
 	const tabs = $derived(
 		visibleNav(session.capabilities, true).find((s) => s.id === 'tenantContext')?.items ?? []
 	);
-
-	function isActive(href: string): boolean {
-		return page.url.pathname === href || page.url.pathname.startsWith(`${href}/`);
-	}
 
 	// The one exit flow: cookie, cache, layout reload, navigate (shared with the session guard's BFF half).
 	const exit = exitScopeMutation();
@@ -54,7 +50,7 @@
 	<nav aria-label="Tenant sections">
 		<ul class="cluster cluster-tight" style="list-style:none;margin:0;padding:0;">
 			{#each tabs as tab (tab.href)}
-				{@const active = isActive(tab.href)}
+				{@const active = isNavActive(page.url.pathname, tab.href)}
 				{@const TabIcon = NAV_ICONS[tab.key]}
 				<li>
 					<a

@@ -24,7 +24,7 @@
 
 <div
 	class="pointer-events-none fixed start-1/2 -translate-x-1/2 z-[var(--z-banner)] flex flex-col items-center gap-2 px-4"
-	style="inset-block-start: max(var(--lk-shell-gap), var(--safe-top, 0px));"
+	style="inset-block-start: max(var(--shell-topbar-top), var(--safe-top, 0px));"
 	aria-live="polite"
 >
 	{#if pwa.updateReady}

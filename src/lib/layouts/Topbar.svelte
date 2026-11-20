@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { _ } from 'svelte-i18n';
+	import { resolve } from '$app/paths';
 	import { Bell, Command, PanelLeft, Search, Settings, Icon, ChevronRight } from '$icons';
+	import { Sidebar } from '$ui';
 	import { routeContext } from '#lib/utils/routeTitle.ts';
 	import UserMenu from './UserMenu.svelte';
 	import { CommandPalette } from '$features/search';
@@ -16,13 +19,12 @@
 	 * layout's own header — no separate topbar chip needed.
 	 */
 
-	let {
-		onToggleSidebar,
-		onOpenSettings
-	}: {
-		onToggleSidebar?: () => void;
-		onOpenSettings?: () => void;
-	} = $props();
+	let { onOpenSettings }: { onOpenSettings?: () => void } = $props();
+
+	// Below lg this opens the navigation sheet, from lg up it switches the sidebar between large and
+	// small (the `sidebar` preference). The shell's Sidebar.Provider is the parent of this component.
+	const sidebar = Sidebar.useSidebar();
+	const sidebarExpanded = $derived(sidebar.isMobile ? sidebar.openMobile : sidebar.open);
 
 	const route = $derived(routeContext(page.url.pathname));
 
@@ -44,6 +46,7 @@
 <svelte:window onkeydown={onKeydown} />
 
 <header
+	data-shell="topbar"
 	class="lk-topbar bg-bg-elevated border border-border rounded-xl shadow-card"
 	aria-label="Application bar"
 >
@@ -52,11 +55,16 @@
 	     the current location a visual anchor (Apple Music / Notion
 	     pattern: icon + name as a single readable unit). -->
 	<div class="lk-topbar-left">
+		<!-- The brand: here for vertical, boxed and horizontal; modern and semibox show it in the sidebar. -->
+		<a class="lk-topbar-brand" href={resolve('dashboard')} aria-label={$_('shell.brandHome')}>
+			<img src="/images/favicon/favicon_128x128.png" alt="" class="lk-topbar-brand-img" />
+		</a>
 		<button
 			type="button"
-			class="lk-topbar-iconbtn"
-			aria-label="Toggle sidebar"
-			onclick={() => onToggleSidebar?.()}
+			class="lk-topbar-iconbtn lk-topbar-toggle"
+			aria-label={$_('shell.toggleSidebar')}
+			aria-expanded={sidebarExpanded}
+			onclick={() => sidebar.toggle()}
 		>
 			<Icon icon={PanelLeft} size="md" />
 		</button>
@@ -124,34 +132,38 @@
 	   default from .bg-bg-elevated border border-border rounded-xl shadow-card would round the viewport-top corners
 	   which makes no sense on a flush chrome bar). Semibox layout
 	   restores the radius for floating-pane mode. */
+	/* Placement (position, insets, height, z-index, the semibox / boxed border and radius) is
+	   `styles/theme/layouts.css` (`[data-shell='topbar']`); this block is the look. */
 	.lk-topbar {
-		position: fixed;
-		inset-block-start: max(var(--lk-shell-gap), var(--safe-top));
-		inset-inline-start: max(var(--lk-topbar-inline-start), var(--safe-left));
-		inset-inline-end: max(var(--lk-shell-gap), var(--safe-right));
-		z-index: var(--z-sticky);
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
 		align-items: center;
-		block-size: var(--lk-topbar-height);
 		padding-inline: clamp(0.75rem, 1.5vw, 1.25rem);
 		/* Override .bg-bg-elevated border border-border rounded-xl shadow-card defaults for edge-anchored chrome */
 		border: 0;
 		border-block-end: var(--glass-border-subtle);
 		border-radius: 0;
 		contain: layout style;
-		transition:
-			inset-block-start 0.18s ease-out,
-			inset-inline-start 0.18s ease-out,
-			inset-inline-end 0.18s ease-out,
-			border-radius 0.18s ease-out;
 	}
 
-	/* Semibox — topbar floats with the .bg-bg-elevated border border-border rounded-xl shadow-card defaults restored
-	   (full ring + 1.5rem radius). */
-	:global(:root[data-layout='semibox']) .lk-topbar {
-		border: var(--glass-border);
-		border-radius: var(--lk-shell-radius);
+	/* The brand shows beside the sidebar's own only where the sidebar has none (see layouts.css). */
+	.lk-topbar-brand {
+		display: inline-flex;
+		align-items: center;
+		flex-shrink: 0;
+	}
+	.lk-topbar-brand-img {
+		inline-size: 2rem;
+		block-size: 2rem;
+		border-radius: 0.5rem;
+		object-fit: contain;
+	}
+	@media (min-width: 64rem) {
+		:global(:root[data-layout='modern']) .lk-topbar-brand,
+		:global(:root[data-layout='semibox']) .lk-topbar-brand,
+		:global(:root[data-layout='horizontal']) .lk-topbar-toggle {
+			display: none;
+		}
 	}
 
 	/* ─── Left cluster (toggle + breadcrumb) ─────────────────────── */

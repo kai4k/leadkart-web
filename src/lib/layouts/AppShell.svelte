@@ -1,44 +1,35 @@
 <script lang="ts">
+	/**
+	 * AppShell: one shell for every layout. The preferences are `<html data-*>` attributes written at
+	 * SSR; `styles/theme/layouts.css` turns them into geometry, so a change never re-renders a
+	 * component. The one structural branch is `layout=horizontal`, which swaps the sidebar for the
+	 * horizontal nav (below `lg` the sidebar's sheet is the navigation in every layout).
+	 *
+	 *   Sidebar.Provider    the shadcn sidebar block's state, controlled by the `sidebar` preference
+	 *     Sidebar | HorizontalNav
+	 *     Topbar            placed by layouts.css
+	 *     content column    offset by `--shell-content-start`
+	 *       main#main-content > PageContainer > page
+	 *       Footer          at the end of the column, not fixed
+	 */
 	import type { Component } from 'svelte';
 	import Topbar from './Topbar.svelte';
 	import Sidebar from './Sidebar.svelte';
+	import HorizontalNav from './HorizontalNav.svelte';
+	import PageContainer from './PageContainer.svelte';
 	import Footer from './Footer.svelte';
-	import { _ } from 'svelte-i18n';
-	import { Sheet } from '$ui';
+	import { Sidebar as SidebarBlock } from '$ui';
 	import { getPreferences } from '$features/preferences';
-
-	/**
-	 * AppShell — Linear/Vercel-style canonical layout:
-	 *   Topbar    — position: fixed, top, full-width, h-topbar
-	 *   Sidebar   — position: fixed, top-offset by topbar height,
-	 *               full-height column; width animates between
-	 *               16rem (expanded) and 4.5rem (collapsed) via the
-	 *               --lk-sidebar-width var driven by [data-sidebar]
-	 *               on <html>.
-	 *   main      — padding-top: topbar-height; padding-inline-start:
-	 *               sidebar-width on lg+, 0 on mobile.
-	 *
-	 * Hamburger (in Topbar):
-	 *   ≥ lg : toggles prefs.sidebar (large ⇄ small, icon-only)
-	 *   < lg : opens the mobile drawer (bits-ui Dialog primitive)
-	 *
-	 * The viewport check uses window.matchMedia at click time so a user
-	 * resizing across the breakpoint gets the right action.
-	 *
-	 * Mobile drawer composes `<Drawer.Root>` (bits-ui Dialog) with a
-	 * class override flipping the panel to the left edge. The Drawer
-	 * primitive ships right-side only; a `position` prop is the
-	 * obvious follow-up enhancement.
-	 */
+	import { createIsMobile } from '#lib/hooks/is-mobile.svelte.ts';
 
 	let { children } = $props();
 	const prefs = getPreferences();
-	let sidebarOpen = $state(false);
+	const isMobile = createIsMobile();
+	const horizontal = $derived(prefs.layout === 'horizontal');
 	let settingsOpen = $state(false);
 
-	// FAANG canon: theme/layout settings drawer is opened on demand (avg session
-	// hits it ~0 times). Defer the SettingsModal compound + its bits-ui Dialog
-	// dependency to first click — saves ~10 KB gz on initial paint.
+	// Theme/layout settings are opened on demand (the average session hits them ~0 times). Defer the
+	// SettingsModal compound and its Dialog dependency to the first click.
 	let SettingsModalCmp = $state<Component<{
 		open: boolean;
 		onOpenChange: (open: boolean) => void;
@@ -54,115 +45,31 @@
 		}
 		settingsOpen = true;
 	}
-
-	function isDesktop(): boolean {
-		return typeof window !== 'undefined' && window.matchMedia('(min-width: 64rem)').matches;
-	}
-
-	function onHamburger() {
-		if (isDesktop()) prefs.set({ sidebar: prefs.sidebar === 'small' ? 'large' : 'small' });
-		else sidebarOpen = true;
-	}
-
-	function closeDrawer() {
-		sidebarOpen = false;
-	}
-
-	// The mobile sheet's panel is `lg:hidden`, its scrim and scroll lock are not: resizing across the
-	// breakpoint with it open would leave a dimmed, locked page behind a hidden panel. Close it.
-	$effect(() => {
-		const query = window.matchMedia('(min-width: 64rem)');
-		const onChange = (event: MediaQueryListEvent) => {
-			if (event.matches) sidebarOpen = false;
-		};
-		query.addEventListener('change', onChange);
-		return () => query.removeEventListener('change', onChange);
-	});
 </script>
 
-<div class="lk-app">
-	<Topbar onToggleSidebar={onHamburger} onOpenSettings={() => void openSettings()} />
+<SidebarBlock.Provider
+	open={prefs.sidebar !== 'small'}
+	onOpenChange={(open) => prefs.set({ sidebar: open ? 'large' : 'small' })}
+	class="block min-h-dvh"
+>
+	<div data-shell="root" class="relative min-h-dvh">
+		{#if horizontal}<HorizontalNav />{/if}
+		<!-- Horizontal on a phone: the same sheet as every other layout. -->
+		{#if !horizontal || isMobile.current}<Sidebar />{/if}
 
-	<!-- Desktop fixed sidebar -->
-	<aside class="lk-sidebar-mount hidden lg:block" aria-label="Primary navigation">
-		<Sidebar onNavigate={closeDrawer} />
-	</aside>
+		<Topbar onOpenSettings={() => void openSettings()} />
 
-	<!-- Mobile navigation — a left-side Sheet. -->
-	<Sheet.Root bind:open={sidebarOpen} onOpenChange={(o) => (sidebarOpen = o)}>
-		<Sheet.Content side="left" showCloseButton={false} class="lk-mobile-drawer lg:hidden">
-			<Sheet.Title class="sr-only">{$_('common.navigation')}</Sheet.Title>
-			<Sidebar onNavigate={closeDrawer} />
-		</Sheet.Content>
-	</Sheet.Root>
-
-	<main id="main-content" class="lk-page-wrapper" tabindex="-1">
-		<div class="lk-page-inner">
-			{@render children()}
+		<div data-shell="content">
+			<main id="main-content" class="flex-1 pt-(--shell-page-pad-top) outline-none" tabindex="-1">
+				<PageContainer>
+					{@render children()}
+				</PageContainer>
+			</main>
+			<Footer />
 		</div>
-	</main>
 
-	<Footer />
-
-	{#if SettingsModalCmp}
-		<SettingsModalCmp bind:open={settingsOpen} onOpenChange={(o) => (settingsOpen = o)} />
-	{/if}
-</div>
-
-<style>
-	.lk-app {
-		min-height: 100dvh;
-		background: var(--color-bg);
-	}
-
-	/* ─── Page wrapper ────────────────────────────────────────────
-	   Offsets the fixed Topbar (top) + Sidebar (inline-start). Safe-
-	   area-inset baked into every edge via max() so content never
-	   underlaps the home indicator / curved edges. `contain: layout`
-	   isolates wrapper reflow from the surrounding shell — common
-	   FAANG pattern for app shells so child-page repaints don't
-	   bubble to Topbar/Sidebar. */
-	.lk-page-wrapper {
-		min-height: 100dvh;
-		padding-block-start: var(--lk-page-pad-top);
-		padding-block-end: calc(
-			var(--lk-footer-height) + max(var(--lk-shell-gap), var(--safe-bottom)) + var(--lk-shell-gap)
-		);
-		padding-inline-start: max(var(--lk-shell-gap), var(--safe-left));
-		padding-inline-end: max(var(--lk-shell-gap), var(--safe-right));
-		display: flex;
-		flex-direction: column;
-		contain: layout;
-		transition:
-			padding-block-start 0.18s ease-out,
-			padding-block-end 0.18s ease-out,
-			padding-inline-start 0.18s ease-out,
-			padding-inline-end 0.18s ease-out;
-	}
-	@media (min-width: 64rem) {
-		.lk-page-wrapper {
-			padding-inline-start: calc(var(--lk-sidebar-width) + var(--lk-shell-gap));
-		}
-	}
-
-	.lk-page-inner {
-		flex: 1;
-		width: 100%;
-		max-inline-size: var(--lk-content-max-width);
-		margin-inline: auto;
-		padding-block: clamp(1rem, 2.5vw, 1.75rem);
-		padding-inline: clamp(0.75rem, 3vw, 1.75rem);
-	}
-
-	/* ─── Mobile drawer geometry ──────────────────────────────────
-	   Width clamps responsively so it's not cramped on tiny phones
-	   nor wastefully wide on tablets. Safe-area-left so the drawer
-	   doesn't sit under a curved edge in landscape. The Drawer
-	   primitive provides positioning (inset-y-0) and the glass
-	   material; this rule only narrows the width to sidebar-scale. */
-	:global(.lk-mobile-drawer) {
-		inline-size: clamp(17rem, 78vw, 22rem);
-		max-inline-size: clamp(17rem, 78vw, 22rem);
-		padding-inline-start: var(--safe-left);
-	}
-</style>
+		{#if SettingsModalCmp}
+			<SettingsModalCmp bind:open={settingsOpen} onOpenChange={(o) => (settingsOpen = o)} />
+		{/if}
+	</div>
+</SidebarBlock.Provider>

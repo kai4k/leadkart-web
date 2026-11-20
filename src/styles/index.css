@@ -3,7 +3,8 @@
  *
  * Order matters per CSS cascade + Tailwind 4 layers:
  *   0. theme/palettes + theme/semantic — primitive ramps, then the semantic
- *                       tokens (light-dark(), one declaration for both modes)
+ *                       tokens (light-dark(), one declaration for both modes);
+ *                       theme/layouts — shell geometry per <html data-layout …>
  *   1. tokens         — @theme block declares design tokens
  *   2. base           — element defaults, dark theme override, focus,
  *                        reduced-motion, font features
@@ -16,6 +17,7 @@
  * ───────────────────────────────────────────────────────────────────── */
 @import './theme/palettes.css';
 @import './theme/semantic.css';
+@import './theme/layouts.css';
 @import './tokens.css';
 @import './base.css';
 @import './typography.css';

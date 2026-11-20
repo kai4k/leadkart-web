@@ -1,59 +1,21 @@
 <script lang="ts">
+	/**
+	 * Footer: Domiex markup (a bordered row of fixed height, muted text). It is not fixed: it sits at
+	 * the end of the shell's content column (`margin-top: auto` pushes it down on a short page), so it
+	 * never overlaps a long one. The row is as wide as the page (`--shell-page-pad-x` / `--shell-content-max`).
+	 */
+	import { _ } from 'svelte-i18n';
+
 	const year = new Date().getFullYear();
 </script>
 
-<!--
-  Fixed glass status bar pinned to the viewport bottom — mirrors the
-  topbar's positioning so the shell reads as two parallel chrome
-  surfaces (top + bottom) framing the scrollable content between them.
-
-  Position math:
-    inset-block-end : max(--lk-shell-gap, --safe-bottom)    — gap + home
-                                                               indicator
-    inset-inline-start : --lk-topbar-inline-start           — matches
-                                                               topbar
-                                                               (after sidebar)
-    inset-inline-end : max(--lk-shell-gap, --safe-right)    — gap + curve
-    block-size      : --lk-footer-height                    — 2.5rem
-                                                               status bar
-  Glass material composes from .bg-bg-elevated border-t border-border (utilities.css) — one
-  recipe shared with topbar/popover/dialog. No per-component duplication.
--->
-<footer
-	class="lk-footer bg-bg-elevated border border-border rounded-xl shadow-card label-small"
-	aria-label="Application footer"
+<div
+	class="mx-auto mt-auto w-full max-w-(--shell-content-max) px-(--shell-page-pad-x) print:hidden"
 >
-	© {year} LeadKart · Pharma SaaS
-</footer>
-
-<style>
-	/* Composes .bg-bg-elevated border border-border rounded-xl shadow-card material; this block handles footer-specific
-	   geometry: edge-anchored bottom strip with top-edge border only,
-	   zero radius (overrides .bg-bg-elevated border border-border rounded-xl shadow-card default of 1.5rem since the
-	   footer is flush to viewport bottom). */
-	.lk-footer {
-		position: fixed;
-		inset-block-end: max(var(--lk-shell-gap), var(--safe-bottom));
-		inset-inline-start: max(var(--lk-topbar-inline-start), var(--safe-left));
-		inset-inline-end: max(var(--lk-shell-gap), var(--safe-right));
-		z-index: var(--z-sticky);
-		display: flex;
-		align-items: center;
-		block-size: var(--lk-footer-height);
-		padding-inline: clamp(0.75rem, 1.5vw, 1.25rem);
-		color: var(--color-fg-muted);
-		/* Override .bg-bg-elevated border border-border rounded-xl shadow-card defaults for edge-anchored chrome */
-		border: 0;
-		border-block-start: var(--glass-border-subtle);
-		border-radius: 0;
-		transition:
-			inset-inline-start 0.18s ease-out,
-			inset-inline-end 0.18s ease-out,
-			border-radius 0.18s ease-out;
-	}
-	/* Semibox — footer floats; restore .bg-bg-elevated border border-border rounded-xl shadow-card full ring + radius. */
-	:global(:root[data-layout='semibox']) .lk-footer {
-		border: var(--glass-border);
-		border-radius: var(--lk-shell-radius);
-	}
-</style>
+	<footer
+		class="flex h-(--shell-footer-height) items-center border-t border-border text-sm text-muted-foreground"
+		aria-label={$_('shell.footer.label')}
+	>
+		{$_('shell.footer.copyright', { values: { year } })}
+	</footer>
+</div>

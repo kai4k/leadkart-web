@@ -171,6 +171,34 @@ Other: opaque hover `bg-accent`. Contrast pairs the cells rely on are in `check-
 `primary-foreground` on `primary` (selected, range ends), `accent-foreground` on `accent` (today),
 `muted-foreground` on `popover` and `accent` (weekday heads, outside days).
 
+## sidebar (Task 10)
+
+Regenerated from the same CLI run (`add sidebar`; it also brings `hooks/is-mobile`, whose registry
+dependencies tooltip, skeleton, separator, button, input and sheet are ours already and were not
+copied). `tailwind-variants` in `sidebar-menu-button` became `cva` (normaliser), icons go through
+`#lib/icons`. Hand edits on top of the normaliser output:
+
+- `context.svelte.ts`: `class SidebarState` is the factory `createSidebarState(props)` (getters over
+  local `$state` / `$derived`; `check-no-class-stores`). It also closes the mobile sheet when the
+  viewport grows past `lg` (the effect the old AppShell had), so the sheet does not reopen on the way back.
+- `hooks/is-mobile.svelte.ts`: `class IsMobile` is `createIsMobile(breakpoint = 1024)`, `lg` not `md`.
+- `constants.ts`: the widths and the `sidebar_state` cookie constants are gone (widths are
+  `styles/theme/layouts.css`; the open state is the `sidebar` preference in `lk_ui`).
+- `sidebar-provider.svelte`: no `document.cookie` write, no inline `--sidebar-width*` style;
+  `open` / `onOpenChange` are controlled by AppShell (`open = prefs.sidebar !== 'small'`).
+- `sidebar.svelte`: every `md:` is `lg:`; no in-flow gap element (the page is offset by
+  `--shell-content-start`); the fixed container is `top-(--shell-sidebar-top)
+bottom-(--shell-sidebar-bottom) start-(--shell-sidebar-start)` at `z-(--z-sticky)`; the border (and
+  the semibox radius) sit on the inner pane; the mobile Sheet is named (`common.navigation`, hidden
+  title), has no close button (Escape and the scrim close it) and `--sidebar-width-mobile` width.
+- `sidebar-menu-button.svelte`: the tooltip exists only while the sidebar is icon-only and not in the
+  sheet. A tooltip that stays open on a focused expanded item is a dismissible layer and took the first
+  Escape away from the sheet.
+- `sidebar-trigger.svelte`: `aria-expanded`, localised name (`shell.toggleSidebar`, prop `label`),
+  icon from `#lib/icons`.
+- `sidebar-rail.svelte` deleted (the toggle is the one control; a drag rail has no preference to write).
+- Everything else is unchanged. Call sites override the item look through `class` (NavItem).
+
 ## bits-ui boundary
 
 bits-ui is imported only under `src/lib/components/ui/**` (gate `check-bits-ui-boundary`); form

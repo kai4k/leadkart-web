@@ -234,7 +234,7 @@ export function canSee(caps: Caps, route: NavRoute, inTenantContext = false): bo
 	return contextMatches(route, inTenantContext) && meetsAccess(caps, route, inTenantContext);
 }
 
-interface VisibleNavItem {
+export interface VisibleNavItem {
 	key: NavRouteKey;
 	href: ResolvedPathname;
 	label: string;
@@ -255,6 +255,15 @@ export function visibleNav(caps: Caps, inTenantContext = false): VisibleNavSecti
 			.filter(([, r]) => r.section === s.id && !r.hidden && canSee(caps, r, inTenantContext))
 			.map(([key, r]) => ({ key, href: r.href, label: r.label }))
 	})).filter((s) => s.items.length > 0);
+}
+
+/**
+ * Is `href` the current page or an ancestor of it? An exact match or a `${href}/` prefix, so `/leads`
+ * is active for `/leads/1` but not for `/leads-archive` (the one matcher the sidebar, the horizontal
+ * nav and the operator scope tabs share).
+ */
+export function isNavActive(pathname: string, href: string): boolean {
+	return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 /** The nav route guarding `pathname` (longest href prefix), or null. */

@@ -50,7 +50,7 @@
 {#if resetBlock.kind}
 	<div
 		class="pointer-events-none fixed inset-x-0 z-[var(--z-banner)] flex justify-center px-4"
-		style="inset-block-start: max(var(--lk-shell-gap), var(--safe-top, 0px));"
+		style="inset-block-start: max(var(--shell-topbar-top), var(--safe-top, 0px));"
 	>
 		<Alert
 			variant="warning"

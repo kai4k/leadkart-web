@@ -180,6 +180,15 @@
 			"action": "फिर से लोड करें"
 		}
 	},
+	"shell": {
+		"toggleSidebar": "साइडबार खोलें या बंद करें",
+		"mainNavigation": "मुख्य नेविगेशन",
+		"brandHome": "LeadKart होम",
+		"footer": {
+			"label": "ऐप का फ़ुटर",
+			"copyright": "© {year} LeadKart · फ़ार्मा SaaS"
+		}
+	},
 	"orders": {
 		"quotation": {
 			"revisionLineSummary": "{lineCount, plural, one {# पंक्ति} other {# पंक्तियाँ}} · उप-योग {subtotal} · GST {gstTotal}"

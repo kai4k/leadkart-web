@@ -42,6 +42,7 @@ export { default as AuthCard } from './AuthCard.svelte';
 export * as Dialog from './dialog';
 export * as Drawer from './drawer';
 export * as Sheet from './sheet';
+export * as Sidebar from './sidebar';
 export * as AlertDialog from './alert-dialog';
 export * as Command from './command';
 export * as Dropdown from './dropdown-menu';

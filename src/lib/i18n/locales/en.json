@@ -180,6 +180,15 @@
 			"action": "Reload"
 		}
 	},
+	"shell": {
+		"toggleSidebar": "Toggle sidebar",
+		"mainNavigation": "Main navigation",
+		"brandHome": "LeadKart home",
+		"footer": {
+			"label": "Application footer",
+			"copyright": "© {year} LeadKart · Pharma SaaS"
+		}
+	},
 	"orders": {
 		"quotation": {
 			"revisionLineSummary": "{lineCount, plural, one {# line} other {# lines}} · subtotal {subtotal} · GST {gstTotal}"
