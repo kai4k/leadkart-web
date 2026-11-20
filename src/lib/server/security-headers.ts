@@ -11,21 +11,21 @@ export function securityHeaders(prod: boolean): Record<string, string> {
 
 /**
  * SSR HTML carries a per-request CSP nonce and authenticated content: it must
- * never be stored by a shared cache. SvelteKit's `__data.json` (the same load data, as JSON)
- * carries the same content and gets the same header. An explicit cache-control is kept.
+ * never be stored by a shared cache. An explicit cache-control is kept. (`__data.json` needs no
+ * rule here: SvelteKit strips the suffix before the hooks run, and sets `private, no-store` on
+ * data responses itself — see runtime/server/data/index.js.)
  */
-export function withHtmlNoStore(headers: Headers, pathname = ''): Headers {
+export function withHtmlNoStore(headers: Headers): Headers {
 	const isPage = headers.get('content-type')?.startsWith('text/html') === true;
-	const isRouteData = pathname.endsWith('/__data.json');
-	if ((isPage || isRouteData) && !headers.has('cache-control')) {
+	if (isPage && !headers.has('cache-control')) {
 		headers.set('cache-control', 'private, no-store');
 	}
 	return headers;
 }
 
-function stamp(headers: Headers, prod: boolean, pathname: string): void {
+function stamp(headers: Headers, prod: boolean): void {
 	for (const [name, value] of Object.entries(securityHeaders(prod))) headers.set(name, value);
-	withHtmlNoStore(headers, pathname);
+	withHtmlNoStore(headers);
 }
 
 /**
@@ -33,9 +33,9 @@ function stamp(headers: Headers, prod: boolean, pathname: string): void {
  * or `fetch()` have immutable headers (set throws TypeError); rebuild a mutable
  * copy in that case.
  */
-export function applySecurityHeaders(response: Response, prod: boolean, pathname = ''): Response {
+export function applySecurityHeaders(response: Response, prod: boolean): Response {
 	try {
-		stamp(response.headers, prod, pathname);
+		stamp(response.headers, prod);
 		return response;
 	} catch (err) {
 		if (!(err instanceof TypeError)) throw err;
@@ -44,7 +44,7 @@ export function applySecurityHeaders(response: Response, prod: boolean, pathname
 			statusText: response.statusText,
 			headers: new Headers(response.headers)
 		});
-		stamp(rebuilt.headers, prod, pathname);
+		stamp(rebuilt.headers, prod);
 		return rebuilt;
 	}
 }

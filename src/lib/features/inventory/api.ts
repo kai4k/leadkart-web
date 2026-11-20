@@ -9,9 +9,7 @@
  * paths or bodies. Multipart uploads bypass the JSON client and hit
  * `/api/...` directly (BFF still injects cookies + CSRF transparently).
  */
-import { apiLegacy, parseResponse } from '#lib/api/client.ts';
-import { getCsrfToken } from '$api/csrf';
-import { ApiError } from '$api/errors';
+import { api, apiLegacy, parseResponse } from '#lib/api/client.ts';
 import {
 	batchDtoSchema,
 	bulkActionResultSchema,
@@ -214,49 +212,10 @@ export async function bulkProductAction(body: BulkProductActionRequest): Promise
 	return parseResponse(bulkActionResultSchema, raw);
 }
 
-/**
- * Multipart upload bypasses the JSON client helpers — raw `fetch` to
- * the BFF proxy. BFF echoes the upstream Content-Type so a boundary'd
- * multipart/form-data round-trips. CSRF token is still required.
- */
-async function postMultipart<T>(path: string, form: FormData): Promise<T> {
-	const headers = new Headers();
-	const csrf = getCsrfToken();
-	if (csrf) headers.set('X-CSRF-Token', csrf);
-	headers.set('Accept', 'application/json');
-
-	let resp: Response;
-	try {
-		resp = await fetch(`/api${path.startsWith('/') ? path : `/${path}`}`, {
-			method: 'POST',
-			credentials: 'same-origin',
-			headers,
-			body: form
-		});
-	} catch (cause) {
-		throw ApiError.transport(cause);
-	}
-	const text = await resp.text();
-	const parsed: unknown = text ? safeJsonParse(text) : null;
-	if (!resp.ok) {
-		throw ApiError.fromResponse(resp, parsed as Parameters<typeof ApiError.fromResponse>[1]);
-	}
-	return parsed as T;
-}
-
-function safeJsonParse(text: string): unknown {
-	try {
-		return JSON.parse(text);
-	} catch {
-		return null;
-	}
-}
-
 export async function bulkUploadPreview(file: File): Promise<BulkUploadPreview> {
 	const form = new FormData();
 	form.append('file', file);
-	const raw = await postMultipart<unknown>('/v1/inventory/products/bulk-upload/preview', form);
-	return parseResponse(bulkUploadPreviewSchema, raw);
+	return api.postForm('/v1/inventory/products/bulk-upload/preview', form, bulkUploadPreviewSchema);
 }
 
 export async function bulkUploadCommit(
@@ -266,22 +225,14 @@ export async function bulkUploadCommit(
 	const form = new FormData();
 	form.append('file', file);
 	form.append('upsert_by', opts.upsert_by ?? 'product_key');
-	const raw = await postMultipart<unknown>('/v1/inventory/products/bulk-upload/commit', form);
-	return parseResponse(bulkUploadResultSchema, raw);
+	return api.postForm('/v1/inventory/products/bulk-upload/commit', form, bulkUploadResultSchema);
 }
 
-/** CSV export — caller pipes the blob into a download anchor. */
-export async function exportProducts(params?: ListProductsParams): Promise<Blob> {
+/** CSV export — a Blob for the caller to hand to a download anchor (an object URL). */
+export function exportProducts(params?: ListProductsParams): Promise<Blob> {
 	const path = buildProductListQuery(params).replace(
 		'/v1/inventory/products',
 		'/v1/inventory/products/export'
 	);
-	let resp: Response;
-	try {
-		resp = await fetch(`/api${path}`, { credentials: 'same-origin' });
-	} catch (cause) {
-		throw ApiError.transport(cause);
-	}
-	if (!resp.ok) throw ApiError.fromResponse(resp, null);
-	return resp.blob();
+	return api.getBlob(path);
 }

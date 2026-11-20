@@ -12,7 +12,6 @@ vi.mock('$app/paths', () => ({ resolve: (p: string) => `/${p}` }));
 const gw = vi.hoisted(() => ({ enterScope: vi.fn(), exitScope: vi.fn() }));
 vi.mock('#lib/features/operator/scope/api.ts', () => gw);
 vi.mock('#lib/features/operator/scope/api', () => gw);
-vi.mock('#lib/utils/private-caches.ts', () => ({ clearPrivateCaches: vi.fn() }));
 const del = vi.hoisted(() => vi.fn());
 vi.mock('#lib/api/client.ts', () => ({ api: { delete: del } }));
 vi.mock('#lib/api/client', () => ({ api: { delete: del } }));

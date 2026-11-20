@@ -11,7 +11,7 @@
 	// start): the previous user's cached queries, offline pages and data must go,
 	// including when the session was ended by a server redirect.
 	onMount(() => {
-		void clearUserBrowserState();
+		clearUserBrowserState();
 	});
 </script>
 

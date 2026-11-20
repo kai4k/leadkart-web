@@ -10,9 +10,7 @@
  * scope cookie. Multipart uploads bypass the JSON helper because the
  * body must be `FormData`; the proxy still forwards both untouched.
  */
-import { apiLegacy, parseResponse } from '#lib/api/client.ts';
-import { getCsrfToken } from '$api/csrf';
-import { ApiError } from '$api/errors';
+import { api, apiLegacy, parseResponse } from '#lib/api/client.ts';
 import {
 	crmLeadDtoSchema,
 	listLeadsResponseSchema,
@@ -155,43 +153,10 @@ export async function bulkLeadAction(req: BulkLeadActionRequest): Promise<BulkAc
 
 // ── Multipart bulk upload ───────────────────────────────────────────
 
-async function multipartPost<T>(path: string, formData: FormData): Promise<T> {
-	const csrf = getCsrfToken();
-	const headers = new Headers();
-	if (csrf) headers.set('X-CSRF-Token', csrf);
-	headers.set('Accept', 'application/json');
-
-	let resp: Response;
-	try {
-		resp = await fetch(`/api${path}`, {
-			method: 'POST',
-			headers,
-			credentials: 'same-origin',
-			body: formData
-		});
-	} catch (cause) {
-		throw ApiError.transport(cause);
-	}
-
-	const text = await resp.text();
-	const parsed: unknown = text.length > 0 ? safeJsonParse(text) : null;
-	if (!resp.ok) throw ApiError.fromResponse(resp, parsed as never);
-	return parsed as T;
-}
-
-function safeJsonParse(text: string): unknown {
-	try {
-		return JSON.parse(text);
-	} catch {
-		return null;
-	}
-}
-
 export async function bulkUploadPreview(file: File): Promise<BulkUploadPreview> {
 	const fd = new FormData();
 	fd.append('file', file);
-	const raw = await multipartPost<unknown>('/v1/crm/leads/bulk-upload/preview', fd);
-	return parseResponse(bulkUploadPreviewSchema, raw);
+	return api.postForm('/v1/crm/leads/bulk-upload/preview', fd, bulkUploadPreviewSchema);
 }
 
 export async function bulkUploadCommit(
@@ -201,21 +166,21 @@ export async function bulkUploadCommit(
 	const fd = new FormData();
 	fd.append('file', file);
 	fd.append('upsert_by', upsertBy);
-	const raw = await multipartPost<unknown>('/v1/crm/leads/bulk-upload/commit', fd);
-	return parseResponse(bulkUploadResultSchema, raw);
+	return api.postForm('/v1/crm/leads/bulk-upload/commit', fd, bulkUploadResultSchema);
 }
 
 /**
- * CSV export — returns the BFF URL the browser navigates to so the
- * browser handles the download stream natively. Same filter set as
- * `listLeads`.
+ * CSV export with the same filter set as `listLeads`: a Blob for the caller to hand to a download
+ * anchor (an object URL). Not a link: a plain navigation cannot carry the context header the BFF
+ * requires on every call.
  */
-export function leadsExportUrl(params: ListLeadsParams = {}): string {
-	const qs = new URLSearchParams();
-	if (params.q) qs.set('q', params.q);
-	for (const s of params.stage ?? []) qs.append('stage', s);
-	for (const t of params.temperature ?? []) qs.append('temperature', t);
-	if (params.owner_membership_id) qs.set('owner_membership_id', params.owner_membership_id);
-	const q = qs.toString();
-	return q ? `/api/v1/crm/leads/export?${q}` : '/api/v1/crm/leads/export';
+export function exportLeads(params: ListLeadsParams = {}): Promise<Blob> {
+	return api.getBlob('/v1/crm/leads/export', {
+		query: {
+			q: params.q,
+			stage: params.stage,
+			temperature: params.temperature,
+			owner_membership_id: params.owner_membership_id
+		}
+	});
 }

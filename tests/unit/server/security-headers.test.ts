@@ -51,28 +51,3 @@ describe('withHtmlNoStore', () => {
 		expect(withHtmlNoStore(h).get('cache-control')).toBe('max-age=60');
 	});
 });
-
-describe('__data.json (a signed-in route load as JSON) is no-store like the page', () => {
-	const data = () =>
-		new Response('{"type":"data"}', { headers: { 'content-type': 'application/json' } });
-
-	it('is marked private, no-store', () => {
-		const res = applySecurityHeaders(data(), false, '/settings/users/__data.json');
-		expect(res.headers.get('cache-control')).toBe('private, no-store');
-	});
-
-	it('the root route data too', () => {
-		const res = applySecurityHeaders(data(), false, '/__data.json');
-		expect(res.headers.get('cache-control')).toBe('private, no-store');
-	});
-
-	it('keeps an explicit cache-control and leaves other JSON alone', () => {
-		const kept = new Response('{}', { headers: { 'cache-control': 'max-age=60' } });
-		expect(applySecurityHeaders(kept, false, '/x/__data.json').headers.get('cache-control')).toBe(
-			'max-age=60'
-		);
-		expect(applySecurityHeaders(data(), false, '/api/v1/users').headers.has('cache-control')).toBe(
-			false
-		);
-	});
-});

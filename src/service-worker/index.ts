@@ -10,27 +10,32 @@
  *
  * 2. **Runtime caching** (this is everything it ever writes):
  *    - Build chunks / static assets → CacheFirst (immutable hashes).
- *    - Static images → StaleWhileRevalidate.
+ *    - Static images → StaleWhileRevalidate (public files).
  *    - NOT stored, ever: HTML navigations and `__data.json` of signed-in routes (capabilities,
  *      tenant data, the CSRF value: the Cache API ignores `no-store`, so the only safe copy is
  *      none). A navigation is network-only; offline it shows the precached static
  *      `/offline.html`.
- *    - API GETs (/api/v1/*) → NetworkFirst with 10s timeout, then
- *      cache fallback so the user sees stale-but-readable data when
- *      offline.
- *    - API mutations (POST/PUT/PATCH/DELETE) → NetworkOnly. Auth
- *      correctness > offline draft saves; queued mutations would
- *      reorder events and break the audit log.
- *    - BFF auth (/auth/*) → NetworkOnly. Sessions must reach the
- *      origin server; cached login responses are a security hole.
+ *    - `/api/*` is NOT intercepted at all. API JSON is the tenant's data (users, roles, leads,
+ *      orders, inventory, audit...); the Cache API is keyed by URL only (no user, no tenant), sits on
+ *      disk, and would have to be cleared on every way a session or a context can end. Offline
+ *      reading of it is not worth that, and answering from a cache when the network takes over 10 s
+ *      is wrong for a proxied call that may legitimately take ~30 s (call, refresh, replay): an
+ *      aborted refreshing call could lose the rotated cookies and end the session.
+ *    - BFF auth (/auth/*) → not intercepted. Sessions must reach the origin server.
+ *    Everything the worker stores is public build output or static images, so there is nothing
+ *      private to clear on sign-out or a tenant-context change.
  *
  * 3. **Lifecycle**:
- *    - `install` → precache app shell, skipWaiting so the new SW takes
- *      over immediately on next reload.
- *    - `activate` → claim clients + delete old caches.
- *    - `message` → SKIP_WAITING from the update-prompt UI (force-apply a
- *      pending update); CLEAR_PRIVATE_CACHES on logout / session end /
- *      operator scope change (drops the runtime + API caches).
+ *    - `install` → precache the shell, then `skipWaiting`: the new worker takes control at once
+ *      instead of waiting for every tab to close. This generation (v3) needs that: the worker it
+ *      replaces stored signed-in HTML and API JSON, and it must stop answering from those and
+ *      purge them now, not after the user accepts an update prompt. Trade-off: an open tab can have
+ *      its precached build chunks replaced under it, so a lazily imported chunk of the OLD build may
+ *      miss (SvelteKit then reloads the page on a failed chunk import); acceptable for this one
+ *      bump, and a worker that stores nothing private no longer needs it.
+ *    - `activate` → delete every cache this worker does not own (older generations included: that
+ *      is what purges `lk-api-v2-*` and the v2 runtime cache) and claim the open tabs.
+ *    - `message` → SKIP_WAITING from the update-prompt UI.
  *
  * Industry refs: Workbox recipes, Stripe Dashboard SW, GitHub PWA SW,
  * SvelteKit "Service workers" docs.
@@ -39,18 +44,16 @@ import { self } from '$app/service-worker';
 import { version } from '$app/env';
 import { assets, immutable } from '$app/manifest';
 import { asset, resolve } from '$app/paths';
-import {
-	API_CACHE_PREFIX,
-	CACHE_GENERATION,
-	CLEAR_PRIVATE_CACHES_MESSAGE,
-	isCacheableApiResponse,
-	RUNTIME_CACHE_PREFIX
-} from '#lib/utils/private-caches.ts';
 
+/**
+ * Part of every cache name the worker owns. Bump it whenever what the worker may store gets
+ * narrower: the activating worker deletes every `lk*` cache that is not its own, so caches written
+ * under the old rules (v1 stored signed-in HTML pages, v2 API JSON) are purged on upgrade.
+ */
+const CACHE_GENERATION = 'v3';
 const CACHE_PREFIX = 'lk';
 const APP_SHELL_CACHE = `${CACHE_PREFIX}-shell-${CACHE_GENERATION}-${version}`;
-const RUNTIME_CACHE = `${RUNTIME_CACHE_PREFIX}${CACHE_GENERATION}-${version}`;
-const API_CACHE = `${API_CACHE_PREFIX}${CACHE_GENERATION}-${version}`;
+const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime-${CACHE_GENERATION}-${version}`;
 /** The static page an offline navigation shows (a file in `static/`, so it is in the precached shell). */
 const OFFLINE_PAGE = asset('offline.html');
 
@@ -68,20 +71,12 @@ const APP_SHELL: string[] = [
 	...assets.map(({ path }) => asset(path))
 ];
 
-const API_TIMEOUT_MS = 10_000;
-
-/**
- * Bumped on every private-cache clear. A handler remembers the epoch it started
- * in and writes only if it is unchanged, so a response that was in flight when
- * the user signed out cannot repopulate the cache afterwards.
- */
-let epoch = 0;
-
 self.addEventListener('install', (event) => {
 	event.waitUntil(
 		(async () => {
 			const cache = await caches.open(APP_SHELL_CACHE);
 			await cache.addAll(APP_SHELL);
+			await self.skipWaiting();
 		})()
 	);
 });
@@ -89,7 +84,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
 	event.waitUntil(
 		(async () => {
-			const expected = new Set([APP_SHELL_CACHE, RUNTIME_CACHE, API_CACHE]);
+			const expected = new Set([APP_SHELL_CACHE, RUNTIME_CACHE]);
 			const names = await caches.keys();
 			await Promise.all(
 				names
@@ -105,11 +100,6 @@ self.addEventListener('message', (event) => {
 	if (event.data?.type === 'SKIP_WAITING') {
 		void self.skipWaiting();
 	}
-	if (event.data?.type === CLEAR_PRIVATE_CACHES_MESSAGE) {
-		// Authenticated API JSON must not outlive the identity/tenant that fetched it.
-		epoch++;
-		event.waitUntil(Promise.all([caches.delete(RUNTIME_CACHE), caches.delete(API_CACHE)]));
-	}
 });
 
 self.addEventListener('fetch', (event) => {
@@ -120,10 +110,7 @@ self.addEventListener('fetch', (event) => {
 	if (url.pathname.startsWith('/auth/')) return; // auth flows must reach origin
 	if (url.pathname.endsWith('/__data.json')) return; // a signed-in route's data: never stored
 
-	if (url.pathname.startsWith('/api/')) {
-		event.respondWith(networkFirstApi(event.request));
-		return;
-	}
+	if (url.pathname === '/api' || url.pathname.startsWith('/api/')) return; // the tenant's data: never intercepted, never stored
 
 	if (APP_SHELL.includes(url.pathname)) {
 		event.respondWith(cacheFirst(event.request, APP_SHELL_CACHE));
@@ -141,46 +128,25 @@ self.addEventListener('fetch', (event) => {
 });
 
 async function cacheFirst(req: Request, cacheName: string): Promise<Response> {
-	const startedAt = epoch;
 	const cache = await caches.open(cacheName);
 	const cached = await cache.match(req);
 	if (cached) return cached;
 	const fresh = await fetch(req);
-	if (fresh.ok && startedAt === epoch) void cache.put(req, fresh.clone());
+	if (fresh.ok) void cache.put(req, fresh.clone());
 	return fresh;
 }
 
 async function staleWhileRevalidate(req: Request, cacheName: string): Promise<Response> {
-	const startedAt = epoch;
 	const cache = await caches.open(cacheName);
 	const cached = await cache.match(req);
 	const networkPromise = fetch(req)
 		.then((res) => {
-			if (res.ok && startedAt === epoch) void cache.put(req, res.clone());
+			if (res.ok) void cache.put(req, res.clone());
 			return res;
 		})
 		.catch(() => cached ?? Response.error());
 	if (cached) return cached;
 	return networkPromise;
-}
-
-async function networkFirstApi(req: Request): Promise<Response> {
-	const startedAt = epoch;
-	const cache = await caches.open(API_CACHE);
-	const controller = new AbortController();
-	const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
-	try {
-		const fresh = await fetch(req, { signal: controller.signal });
-		clearTimeout(timeout);
-		if (fresh.ok && startedAt === epoch && isCacheableApiResponse(new URL(req.url), fresh)) {
-			void cache.put(req, fresh.clone());
-		}
-		return fresh;
-	} catch {
-		clearTimeout(timeout);
-		const cached = await cache.match(req);
-		return cached ?? Response.error();
-	}
 }
 
 /**

@@ -1,23 +1,32 @@
 /**
  * What the service worker stores. The real worker module runs against a fake worker scope, a fake
  * Cache Storage and a fake network. Authenticated pages (HTML navigations, `__data.json`) carry the
- * capabilities, tenant data and the CSRF value; the Cache API ignores `no-store`, so the worker
- * must never write them. What it still keeps: the build output and static files (public, precached),
- * static images (public), and allowlisted /api GET JSON (cleared on sign-out, session end and a
- * tenant-context change).
+ * capabilities, tenant data and the CSRF value, and `/api` JSON carries the tenant's data (users,
+ * roles, leads, orders...): the Cache API ignores `no-store` and is keyed by URL only (no user, no
+ * tenant), so the worker never writes any of it and does not intercept `/api` at all. What it keeps:
+ * the build output and static files (public, precached) and static images (public).
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 type Handler = (event: unknown) => void;
 const sw = vi.hoisted(() => ({
-	handlers: {} as Record<string, Handler>
+	handlers: {} as Record<string, Handler>,
+	lifecycle: [] as string[]
 }));
 vi.mock('$app/service-worker', () => ({
 	self: {
 		location: { origin: 'https://app.test' },
 		addEventListener: (type: string, h: Handler) => void (sw.handlers[type] = h),
-		skipWaiting: () => Promise.resolve(),
-		clients: { claim: () => Promise.resolve() }
+		skipWaiting: () => {
+			sw.lifecycle.push('skipWaiting');
+			return Promise.resolve();
+		},
+		clients: {
+			claim: () => {
+				sw.lifecycle.push('claim');
+				return Promise.resolve();
+			}
+		}
 	}
 }));
 vi.mock('$app/env', () => ({ version: 'build-7' }));
@@ -93,6 +102,7 @@ const install = () =>
 beforeEach(async () => {
 	vi.resetModules();
 	sw.handlers = {};
+	sw.lifecycle = [];
 	cachesFake = new FakeCaches();
 	vi.stubGlobal('caches', cachesFake);
 	network = () => Promise.resolve(new Response('', { status: 200 }));
@@ -149,6 +159,11 @@ describe('signed-in pages are never stored', () => {
 	});
 });
 
+const activate = () =>
+	new Promise<void>((resolve) =>
+		sw.handlers.activate!({ waitUntil: (p: Promise<void>) => void p.then(resolve) })
+	);
+
 describe('what it still caches', () => {
 	it('precaches the build output and the static files (public, no session in them)', async () => {
 		await install();
@@ -158,23 +173,72 @@ describe('what it still caches', () => {
 		);
 	});
 
-	it('keeps allowlisted /api JSON for offline reading, never auth responses or downloads', async () => {
-		network = () =>
-			Promise.resolve(
-				new Response('{"a":1}', { status: 200, headers: { 'content-type': 'application/json' } })
-			);
-		await dispatchFetch('https://app.test/api/v1/crm/leads');
-		await dispatchFetch('https://app.test/api/v1/auth/me/capabilities');
+	it('keeps public images (stale-while-revalidate)', async () => {
+		network = () => Promise.resolve(new Response('png', { status: 200 }));
+		await dispatchFetch('https://app.test/images/logo.png');
 		await Promise.resolve();
 		await Promise.resolve();
-		expect(cachesFake.puts.map((p) => p.url)).toEqual(['/api/v1/crm/leads']);
+		expect(cachesFake.puts.map((p) => p.url)).toEqual(['/images/logo.png']);
 	});
 
 	it('cache names carry the cache generation, so a bump purges the previous one', async () => {
 		await install();
-		await dispatchFetch('https://app.test/api/v1/crm/leads');
 		const names = [...cachesFake.stores.keys()];
-		expect(names).toContain('lk-shell-v2-build-7');
-		expect(names).toContain('lk-api-v2-build-7');
+		expect(names).toContain('lk-shell-v3-build-7');
+	});
+});
+
+describe('/api is not the worker business', () => {
+	it.each([
+		'/api/v1/crm/leads',
+		'/api/v1/users',
+		'/api/v1/auth/me/capabilities',
+		'/api/v1/crm/leads/export',
+		'/api/operator/scope'
+	])('a GET to %s is not intercepted and nothing is stored', async (path) => {
+		network = () =>
+			Promise.resolve(
+				new Response('{"a":1}', { status: 200, headers: { 'content-type': 'application/json' } })
+			);
+		const responded = dispatchFetch(`https://app.test${path}`);
+		expect(responded).toBeUndefined();
+		await Promise.resolve();
+		expect(cachesFake.puts).toEqual([]);
+	});
+
+	it('never substitutes cached data when the network is slow or down (it never answers /api)', () => {
+		cachesFake.stores.set('lk-api-v2-build-7', new Map([['/api/v1/users', new Response('old')]]));
+		network = () => Promise.reject(new TypeError('offline'));
+		expect(dispatchFetch('https://app.test/api/v1/users')).toBeUndefined();
+	});
+
+	it('a page an OLD worker kept API JSON in loses it on activate (lk-api-v2-* is purged)', async () => {
+		cachesFake.stores.set('lk-api-v2-build-6', new Map([['/api/v1/users', new Response('old')]]));
+		cachesFake.stores.set('lk-runtime-v2-build-6', new Map());
+		await install();
+		await activate();
+		const names = await cachesFake.keys();
+		expect(names.filter((n) => n.startsWith('lk-api-'))).toEqual([]);
+		expect(names).not.toContain('lk-runtime-v2-build-6');
+		expect(names).toContain('lk-shell-v3-build-7');
+	});
+});
+
+describe('lifecycle: the new worker takes control at once', () => {
+	it('install calls skipWaiting after the precache, so the OLD worker stops answering immediately', async () => {
+		await install();
+		expect(sw.lifecycle).toEqual(['skipWaiting']);
+		expect([...cachesFake.stores.keys()]).toContain('lk-shell-v3-build-7');
+	});
+
+	it('activate claims the open pages', async () => {
+		await install();
+		await activate();
+		expect(sw.lifecycle).toEqual(['skipWaiting', 'claim']);
+	});
+
+	it('the update prompt message still skips waiting', () => {
+		sw.handlers.message!({ data: { type: 'SKIP_WAITING' }, waitUntil: () => {} });
+		expect(sw.lifecycle).toEqual(['skipWaiting']);
 	});
 });

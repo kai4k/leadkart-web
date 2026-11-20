@@ -85,7 +85,7 @@ function createSession(): Session {
 		} finally {
 			// Even when the request fails (offline) the user leaves and everything
 			// user-specific in the browser (query cache, offline caches) is dropped.
-			await clearUserBrowserState();
+			clearUserBrowserState();
 
 			// Full page reload — ensures SvelteKit re-runs +layout.server.ts
 			// which will find no access cookie and redirect to /signin. Using

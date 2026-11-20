@@ -10,10 +10,6 @@ const gotoMock = vi.hoisted(() => vi.fn((_url: string) => Promise.resolve()));
 const invalidateMock = vi.hoisted(() => vi.fn((_key: string) => Promise.resolve()));
 vi.mock('$ui', () => ({ toast: toastMock }));
 vi.mock('$app/navigation', () => ({ goto: gotoMock, invalidate: invalidateMock }));
-vi.mock('#lib/utils/private-caches.ts', () => ({
-	clearPrivateCaches: vi.fn(),
-	IMPERSONATION_SESSION_KEY: 'leadkart-impersonation-session'
-}));
 vi.mock('#lib/api/client.ts', () => ({ api: { delete: vi.fn() } }));
 import { createQueryClient } from '#lib/api/query-client.ts';
 import { ApiError } from '#lib/api/errors.ts';

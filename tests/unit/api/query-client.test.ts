@@ -6,10 +6,6 @@ const apiDelete = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 
 vi.mock('$app/navigation', () => ({ goto, invalidate: vi.fn(() => Promise.resolve()) }));
 vi.mock('$ui', () => ({ toast: { error: vi.fn() } }));
-vi.mock('#lib/utils/private-caches.ts', () => ({
-	clearPrivateCaches: vi.fn(),
-	IMPERSONATION_SESSION_KEY: 'leadkart-impersonation-session'
-}));
 vi.mock('#lib/api/client.ts', () => ({ api: { delete: apiDelete } }));
 
 import { NetworkError, ScopeInvalidError, TimeoutError } from '#lib/api/errors.ts';

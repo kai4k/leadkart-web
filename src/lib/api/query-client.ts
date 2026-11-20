@@ -41,7 +41,7 @@ import { toast } from '$ui';
 import { describeError, NetworkError, ServerError, AuthError, TimeoutError } from './errors';
 import { followScopeChange, leaveTenantContext } from './operator-scope';
 import { createSessionGuard } from './session-guard';
-import { clearPrivateCaches, IMPERSONATION_SESSION_KEY } from '#lib/utils/private-caches.ts';
+import { IMPERSONATION_SESSION_KEY } from '#lib/utils/impersonation-session-key.ts';
 
 /** A client with the app's defaults and the session guard wired to it. */
 export function createQueryClient(): QueryClient {
@@ -49,7 +49,7 @@ export function createQueryClient(): QueryClient {
 		// Targets are internal constants plus an encoded `next`; resolve() takes route ids, not query strings.
 		// eslint-disable-next-line svelte/no-navigation-without-resolve
 		goto: (url) => goto(url),
-		clearCache: () => void clearUserBrowserState(),
+		clearCache: () => clearUserBrowserState(),
 		notify: (message) => toast.error(message),
 		exitScope: () => leaveTenantContext(client),
 		// Announced to no one: the tab that changed the context already told the others.
@@ -128,17 +128,16 @@ export function renderQueryClient(): QueryClient {
 }
 
 /**
- * Clear everything user-specific the browser holds: the query cache, the
- * service-worker private caches and the impersonation-session marker. The ONE
+ * Clear everything user-specific the browser holds: the query cache and the
+ * impersonation-session marker (the service worker stores nothing private). The ONE
  * implementation behind logout, the session guard and arrival on an auth page
  * (a session ended by a server redirect never ran the client guard).
  */
-export async function clearUserBrowserState(): Promise<void> {
+export function clearUserBrowserState(): void {
 	browserClient?.clear();
 	try {
 		window.localStorage.removeItem(IMPERSONATION_SESSION_KEY);
 	} catch {
 		// Storage can be unavailable (privacy mode); clearing is best-effort.
 	}
-	await clearPrivateCaches();
 }

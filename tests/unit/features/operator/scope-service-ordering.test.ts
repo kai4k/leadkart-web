@@ -11,7 +11,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const nav = vi.hoisted(() => ({ goto: vi.fn(), invalidate: vi.fn() }));
 vi.mock('$app/navigation', () => nav);
 vi.mock('$app/paths', () => ({ resolve: (p: string) => `/${p}` }));
-vi.mock('#lib/utils/private-caches.ts', () => ({ clearPrivateCaches: vi.fn() }));
 const gw = vi.hoisted(() => ({ enterScope: vi.fn(), exitScope: vi.fn() }));
 vi.mock('#lib/features/operator/scope/api.ts', () => gw);
 vi.mock('#lib/features/operator/scope/api', () => gw);

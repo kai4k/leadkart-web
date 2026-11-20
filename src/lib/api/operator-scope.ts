@@ -19,7 +19,6 @@
  */
 import type { QueryClient } from '@tanstack/svelte-query';
 import { invalidate } from '$app/navigation';
-import { clearPrivateCaches } from '#lib/utils/private-caches.ts';
 import { api } from './client';
 import { SCOPE_CHANGE_CHANNEL, SCOPE_DEPENDENCY } from './scope-header.ts';
 
@@ -28,11 +27,9 @@ export function refreshTenantContext(): Promise<void> {
 	return invalidate(SCOPE_DEPENDENCY);
 }
 
-/** DELETE the scope cookie and drop this context's offline copies. Follow it with `followScopeChange`. */
+/** DELETE the scope cookie. Follow it with `followScopeChange`. */
 export async function exitOperatorScope(): Promise<void> {
 	await api.delete('/operator/scope');
-	// Another tenant's context starts next: drop offline copies of this one.
-	await clearPrivateCaches();
 }
 
 type ContextCache = Pick<QueryClient, 'removeQueries' | 'resetQueries'>;

@@ -1,6 +1,6 @@
 import { startImpersonation, endImpersonation, listImpersonationSessions } from '../api';
 import { describeError } from '$api/errors';
-import { IMPERSONATION_SESSION_KEY as ACTIVE_SESSION_KEY } from '#lib/utils/private-caches.ts';
+import { IMPERSONATION_SESSION_KEY as ACTIVE_SESSION_KEY } from '#lib/utils/impersonation-session-key.ts';
 import type { ImpersonationSessionDto, CreateImpersonationSessionRequest } from '../types';
 
 type ImpersonationStatus = 'idle' | 'loading' | 'active' | 'mutating' | 'error';

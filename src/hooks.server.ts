@@ -54,7 +54,7 @@ const sessionRefresh: Handle = async ({ event, resolve }) => {
 
 /** Baseline security headers on every response (CSP itself is Kit config in vite.config.ts). */
 const securityHeadersHandle: Handle = async ({ event, resolve }) =>
-	applySecurityHeaders(await resolve(event), isProd(), event.url.pathname);
+	applySecurityHeaders(await resolve(event), isProd());
 
 // Headers handle first so it wraps (and stamps) every response, including redirects.
 export const handle: Handle = sequence(securityHeadersHandle, sessionRefresh);
