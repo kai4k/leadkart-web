@@ -1,6 +1,7 @@
-import { expect, test, type Page } from './helpers/test';
+import { expect, test } from './helpers/test';
 import { signInAsTier } from './helpers/sign-in';
 import { listMockCalls, registerMocks, resetMock } from './helpers/mock';
+import { currentFingerprint } from './helpers/scope-fingerprint';
 import { fakeTenantDto, TEST_TENANT_ID, TEST_TENANT_SLUG } from './helpers/fake-jwt';
 
 /**
@@ -40,16 +41,14 @@ test.beforeEach(async ({ page }) => {
 	]);
 });
 
-const fingerprintOf = (page: Page) =>
-	page.locator('[data-scope-context]').first().getAttribute('data-scope-context');
-
 test('a tab that shows the own tenant cannot write once another tab entered a tenant', async ({
 	page,
 	context
 }) => {
 	await page.goto('/operator/tenants');
 	await expect(page.getByText('Acme Pharma').first()).toBeVisible();
-	expect(await fingerprintOf(page)).toBe('none');
+	// What this tab shows: the cookie's context now, before another tab changes it.
+	const shownByTab1 = await currentFingerprint(context);
 
 	// Tab 2 enters Acme: the shared cookie now names it.
 	const second = await context.newPage();
@@ -61,7 +60,7 @@ test('a tab that shows the own tenant cannot write once another tab entered a te
 	const csrf = (await context.cookies()).find((c) => c.name === 'lk_csrf')?.value ?? '';
 	const out = await page.evaluate(
 		async ({ csrf, fp }) => {
-			const r = await fetch('/api/v1/users', {
+			const r = await window.specFetch('/api/v1/users', {
 				method: 'POST',
 				headers: {
 					'content-type': 'application/json',
@@ -72,7 +71,7 @@ test('a tab that shows the own tenant cannot write once another tab entered a te
 			});
 			return { status: r.status, body: (await r.json()) as { error: string } };
 		},
-		{ csrf, fp: 'none' }
+		{ csrf, fp: shownByTab1 }
 	);
 	expect(out).toMatchObject({ status: 409, body: { error: 'scope_changed' } });
 	expect(
@@ -81,14 +80,26 @@ test('a tab that shows the own tenant cannot write once another tab entered a te
 });
 
 test('the other tab is told at once and catches up without a click', async ({ page, context }) => {
+	// The fingerprint each of tab 1's own tenant-list calls carries (the page's committed data).
+	const sent: string[] = [];
+	page.on('request', (r) => {
+		if (r.url().includes('/api/v1/platform/tenants')) {
+			sent.push(r.headers()['x-lk-scope-context'] ?? '');
+		}
+	});
 	await page.goto('/operator/tenants');
-	expect(await fingerprintOf(page)).toBe('none');
+	await expect.poll(() => sent.length).toBeGreaterThan(0);
+	const before = await currentFingerprint(context);
+	expect(sent.at(-1)).toBe(before);
+
 	const second = await context.newPage();
 	await second.goto('/operator/tenants');
 	await second.getByText('Acme Pharma').first().click();
 	await second.waitForURL(/\/operator\/scope\/profile$/);
+	const after = await currentFingerprint(context);
+	expect(after).not.toBe(before);
 
-	await expect.poll(() => fingerprintOf(page)).not.toBe('none');
-	// And now the tab's own (real) calls run in the context it shows.
-	expect(await fingerprintOf(page)).toBe(await fingerprintOf(second));
+	// The broadcast re-runs tab 1's layout and resets its queries: its next own call carries the new
+	// context's fingerprint, with no click and no reload.
+	await expect.poll(() => sent.at(-1)).toBe(after);
 });

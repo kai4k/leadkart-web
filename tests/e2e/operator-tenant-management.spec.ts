@@ -289,7 +289,7 @@ test.describe('Operator scope flow', () => {
 
 		const spoofed = '99999999-9999-4999-8999-999999999999';
 		const status = await page.evaluate(async (id) => {
-			const r = await fetch('/api/v1/users', { headers: { 'X-Tenant-Id': id } });
+			const r = await window.specFetch('/api/v1/users', { headers: { 'X-Tenant-Id': id } });
 			return r.status;
 		}, spoofed);
 		expect(status).toBe(200);
@@ -317,13 +317,18 @@ test.describe('Operator scope flow', () => {
 		await registerMocks([
 			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [], has_more: false } }
 		]);
+		// The list's own first query runs just after hydration: let it finish BEFORE the cookie is
+		// tampered with, or that query is the one that meets the bad cookie and the app leaves the
+		// context itself (clearing it), which is a different test.
+		const listed = page.waitForResponse((r) => r.url().includes('/api/v1/platform/tenants'));
 		await page.goto('/operator/tenants');
+		await listed;
 		await context.addCookies([
 			{ name: 'lk_op_tenant', value: 'e30.tampered', url: 'http://localhost:4173' }
 		]);
 		for (let i = 0; i < 2; i++) {
 			const out = await page.evaluate(async () => {
-				const r = await fetch('/api/v1/users');
+				const r = await window.specFetch('/api/v1/users');
 				return { status: r.status, body: (await r.json()) as { error: string } };
 			});
 			expect(out.status).toBe(409);
@@ -345,14 +350,18 @@ test.describe('Operator scope flow', () => {
 		]);
 		await page.goto('/operator/tenants');
 		const scope = { id: ACME.id, slug: ACME.slug, display_name: ACME.display_name };
-		const probe = () => page.evaluate(async () => (await fetch('/api/v1/users')).status);
+		const probe = () => page.evaluate(async () => (await window.specFetch('/api/v1/users')).status);
 
 		// Positive control: the helper really mints a cookie the app accepts.
 		await context.addCookies([
 			{ name: 'lk_op_tenant', value: mintScopeCookie(scope, 600), url: 'http://localhost:4173' }
 		]);
 		// The page must show the context the cookie names (its fingerprint is in the page data).
+		// Let the reloaded page's own first list query finish too: it fires just after hydration and
+		// would otherwise reach Go between the call-count snapshot below and its check.
+		const listed = page.waitForResponse((r) => r.url().includes('/api/v1/platform/tenants'));
 		await page.reload();
+		await listed;
 		expect(await probe()).toBe(200);
 		expect((await listMockCalls()).at(-1)?.['x-tenant-id']).toBe(ACME.id);
 
@@ -386,7 +395,7 @@ test.describe('Operator scope flow', () => {
 
 		// Proxy rule: a page that shows a tenant context never reaches Go once the cookie is gone.
 		const out = await page.evaluate(async () => {
-			const r = await fetch('/api/v1/users');
+			const r = await window.specFetch('/api/v1/users');
 			return { status: r.status, body: (await r.json()) as { error: string } };
 		});
 		expect(out.status).toBe(409);
@@ -456,7 +465,7 @@ test.describe('CSRF protection', () => {
 		await setupOperator(page);
 		await page.goto('/operator/tenants');
 		const status = await page.evaluate(async () => {
-			const resp = await fetch('/api/operator/scope', {
+			const resp = await window.specFetch('/api/operator/scope', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ slug: 'acme-pharma' })
@@ -470,7 +479,7 @@ test.describe('CSRF protection', () => {
 		await setupOperator(page);
 		await page.goto('/operator/tenants');
 		const status = await page.evaluate(async () => {
-			const resp = await fetch('/api/operator/scope', {
+			const resp = await window.specFetch('/api/operator/scope', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json', 'x-csrf-token': 'wrong-token' },
 				body: JSON.stringify({ slug: 'acme-pharma' })

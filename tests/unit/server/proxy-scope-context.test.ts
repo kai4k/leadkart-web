@@ -40,7 +40,10 @@ function newJar(person = PERSON) {
 	};
 }
 
-const fpOf = (scope: OperatorScope) => scopeFingerprint({ state: 'valid', scope });
+const fpOf = (scope: OperatorScope, person = PERSON) =>
+	scopeFingerprint({ state: 'valid', scope }, newJar(person).api as never);
+const fpNone = (person = PERSON) =>
+	scopeFingerprint({ state: 'none' }, newJar(person).api as never);
 
 let upstream: ReturnType<typeof vi.fn>;
 beforeEach(() => {
@@ -101,7 +104,7 @@ describe('proxy context fingerprint', () => {
 	it('a tab showing the operator\'s own tenant ("none") is refused once a context was entered', async () => {
 		const jar = newJar();
 		setOperatorScope(jar.api as never, TENANT_B);
-		const res = await call(POST, jar, { method: 'POST', context: 'none' });
+		const res = await call(POST, jar, { method: 'POST', context: fpNone() });
 		expect(res.status).toBe(409);
 		expect(await res.json()).toMatchObject({ error: 'scope_changed' });
 		expect(upstream).not.toHaveBeenCalled();
@@ -117,7 +120,7 @@ describe('proxy context fingerprint', () => {
 
 	it('own tenant on both sides ("none" and no cookie) goes through with no tenant header', async () => {
 		const jar = newJar();
-		const res = await call(POST, jar, { method: 'POST', context: 'none' });
+		const res = await call(POST, jar, { method: 'POST', context: fpNone() });
 		expect(res.status).toBe(200);
 		expect(sentTenantHeader()).toBeNull();
 	});
@@ -136,6 +139,14 @@ describe('proxy context fingerprint', () => {
 			}
 		}
 	);
+
+	it('a fingerprint minted for another person is refused (the tab outlived a sign-in as someone else)', async () => {
+		const jar = newJar('person-bbbb'); // tab 2 signed in as B; tab 1 still shows A's context
+		const res = await call(POST, jar, { method: 'POST', context: fpNone('person-aaaa') });
+		expect(res.status).toBe(409);
+		expect(await res.json()).toMatchObject({ error: 'scope_changed' });
+		expect(upstream).not.toHaveBeenCalled();
+	});
 
 	it('an invalid cookie keeps its own answer (scope_invalid) whatever the page says', async () => {
 		const jar = newJar();
@@ -169,9 +180,45 @@ describe('proxy context fingerprint', () => {
 
 	it('does not forward the fingerprint to Go', async () => {
 		const jar = newJar();
-		await call(GET, jar, { context: 'none' });
+		await call(GET, jar, { context: fpNone() });
 		const sent = (upstream.mock.calls[0]![1] as RequestInit).headers as Headers;
 		expect(sent.has(SCOPE_CONTEXT_HEADER)).toBe(false);
+	});
+});
+
+describe('the session is decided before the scope', () => {
+	it.each([
+		['no scope cookie, no fingerprint', undefined],
+		['a dead scope cookie', 'garbage.sig']
+	])(
+		'no access cookie and no refresh cookie: 401 session_expired (%s), Go not called',
+		async (_n, scopeCookie) => {
+			const jar = newJar();
+			jar.store.delete('lk_access');
+			if (scopeCookie) jar.store.set('lk_op_tenant', scopeCookie);
+			const res = await call(GET, jar, { context: 'invalid' });
+			expect(res.status).toBe(401);
+			expect(await res.json()).toMatchObject({ error: 'session_expired' });
+			expect(upstream).not.toHaveBeenCalled();
+		}
+	);
+
+	it('no access cookie but a refresh cookie (the hook could not reach Go): 503 refresh_unavailable, never scope_invalid', async () => {
+		const jar = newJar();
+		jar.store.delete('lk_access');
+		jar.store.set('lk_refresh', 'r1');
+		jar.store.set('lk_op_tenant', 'garbage.sig');
+		const res = await call(POST, jar, { method: 'POST' });
+		expect(res.status).toBe(503);
+		expect(await res.json()).toMatchObject({ error: 'refresh_unavailable' });
+		expect(upstream).not.toHaveBeenCalled();
+	});
+
+	it('a signed-in caller with a dead scope cookie still gets scope_invalid', async () => {
+		const jar = newJar();
+		jar.store.set('lk_op_tenant', 'garbage.sig');
+		const res = await call(GET, jar, { context: 'invalid' });
+		expect(await res.json()).toMatchObject({ error: 'scope_invalid' });
 	});
 });
 
@@ -193,13 +240,13 @@ describe('session renewal signal', () => {
 			.mockReturnValueOnce(Promise.resolve(stale()))
 			.mockReturnValueOnce(Promise.resolve(tokens())) // POST /v1/auth/refresh
 			.mockReturnValueOnce(Promise.resolve(Response.json({ ok: true })));
-		const res = await call(GET, jar, { context: 'none' });
+		const res = await call(GET, jar, { context: fpNone() });
 		expect(res.status).toBe(200);
 		expect(res.headers.get('x-lk-session-renewed')).toBe('1');
 	});
 
 	it('a call that needed no renewal carries no signal', async () => {
-		const res = await call(GET, newJar(), { context: 'none' });
+		const res = await call(GET, newJar(), { context: fpNone() });
 		expect(res.headers.has('x-lk-session-renewed')).toBe(false);
 	});
 
@@ -207,7 +254,7 @@ describe('session renewal signal', () => {
 		const jar = newJar();
 		const res = await (GET as (e: never) => Promise<Response>)({
 			request: new Request('http://app/api/v1/users', {
-				headers: { [SCOPE_CONTEXT_HEADER]: 'none' }
+				headers: { [SCOPE_CONTEXT_HEADER]: fpNone() }
 			}),
 			params: { path: 'v1/users' },
 			cookies: jar.api,

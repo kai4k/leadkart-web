@@ -30,9 +30,9 @@
 
 import type { RequestEvent } from './$types';
 import { config } from '#lib/server/config.ts';
-import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
+import { ACCESS_COOKIE, sessionRenewalPending } from '#lib/server/cookies.ts';
 import { isAuthExpired, refreshSession } from '#lib/server/auth-refresh.ts';
-import { SESSION_EXPIRED_CODE } from '#lib/api/errors.ts';
+import { SESSION_EXPIRED_CODE, SESSION_RENEWAL_FAILED_MESSAGE } from '#lib/api/errors.ts';
 import {
 	SCOPE_CHANGED_CODE,
 	SCOPE_CHANGED_MESSAGE,
@@ -96,9 +96,19 @@ async function proxy(
 	const upstreamUrl = buildUpstreamUrl(config.GO_API_URL, path, new URL(request.url).search);
 	if (!upstreamUrl) return jsonError(400, 'invalid_path', 'Invalid API path');
 
-	const upstreamHeaders = new Headers({ accept: 'application/json' });
+	// The SESSION is decided first: without an access cookie there is no caller to bind a context
+	// to, so a scope answer would be a wrong one (and would throw the operator out of a context over
+	// a Go blip). The hook already tried to renew an expired token: a refresh cookie that is still
+	// here means Go could not be reached (a rejected refresh clears it) -> 503, keep the session;
+	// otherwise the session is over.
 	const access = cookies.get(ACCESS_COOKIE());
-	if (access) upstreamHeaders.set('authorization', `Bearer ${access}`);
+	if (!access) {
+		if (sessionRenewalPending(cookies))
+			return jsonError(503, 'refresh_unavailable', SESSION_RENEWAL_FAILED_MESSAGE);
+		return jsonError(401, SESSION_EXPIRED_CODE, 'Your session has expired');
+	}
+	const upstreamHeaders = new Headers({ accept: 'application/json' });
+	upstreamHeaders.set('authorization', `Bearer ${access}`);
 	const contentType = request.headers.get('content-type');
 	if (contentType) upstreamHeaders.set('content-type', contentType);
 
@@ -113,7 +123,7 @@ async function proxy(
 	// data under the wrong label is as wrong as a write.
 	const scope = readOperatorScope(cookies);
 	if (scope.state === 'invalid') return jsonError(409, 'scope_invalid', SCOPE_EXPIRED_MESSAGE);
-	if (!pageShowsCurrentContext(request.headers, scope)) {
+	if (!pageShowsCurrentContext(request.headers, scope, cookies)) {
 		return jsonError(409, SCOPE_CHANGED_CODE, SCOPE_CHANGED_MESSAGE);
 	}
 	if (scope.state === 'valid') upstreamHeaders.set('x-tenant-id', scope.scope.id);
@@ -156,7 +166,7 @@ async function proxy(
 				// Go is down or slow, not the session: keep the cookies and let the
 				// client retry instead of signing the user out.
 				await upstream.body?.cancel();
-				return jsonError(503, 'refresh_unavailable', 'Session could not be renewed — try again');
+				return jsonError(503, 'refresh_unavailable', SESSION_RENEWAL_FAILED_MESSAGE);
 			}
 		}
 		// Refresh rejected, no refresh cookie, or the renewed token was refused too:

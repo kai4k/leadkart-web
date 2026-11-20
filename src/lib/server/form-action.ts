@@ -10,7 +10,7 @@
 import { fail, isHttpError, redirect, type RequestEvent } from '@sveltejs/kit';
 import { contextMatches, routeForPath } from '../config/nav.ts';
 import { canAny } from '../features/auth/capabilities.ts';
-import { sessionRenewalPending } from './cookies.ts';
+import { ACCESS_COOKIE, sessionRenewalPending } from './cookies.ts';
 import { goCodeKey } from '../api/code-copy.ts';
 import { SCOPE_CONTEXT_FIELD } from '../api/scope-header.ts';
 import { loadCapabilities } from './capabilities.ts';
@@ -53,6 +53,7 @@ export async function callGoForAction(call: () => Promise<Response>): Promise<Go
  * and no layout guard stands in front of it), so it checks the specific permission its Go route
  * requires BEFORE any call that writes. `null` = go ahead; otherwise a `fail()` to return as is.
  *
+ *   0. the session: renewal pending -> 503 kept form; no access cookie -> sign-in;
  *   1. the form must carry the context fingerprint of the page it was rendered in
  *      (`ScopeContextField`) and it must be the scope cookie's current one: the cookie is shared
  *      by every tab, so a form on a page that is behind it never writes (409, kept form);
@@ -70,14 +71,17 @@ export async function authoriseAction<V extends object>(
 	values: V
 ) {
 	const { cookies, route } = event;
-	const scope = readOperatorScope(cookies);
-	const claimed = form.get(SCOPE_CONTEXT_FIELD);
-	if (typeof claimed !== 'string' || !pageShowsContext(claimed, scope)) {
-		return failForm(409, { values, formErrorKey: SCOPE_CHANGED_KEY });
-	}
+	// The session first: a form posted during an outage keeps its values (503), and a session that is
+	// over goes to sign-in; neither is a "context changed" problem.
 	// The hook's refresh could not reach Go: the capabilities would answer 401 and read as a sign-out.
 	if (sessionRenewalPending(cookies)) {
 		return failForm(503, { values, formErrorKey: UPSTREAM_UNAVAILABLE_KEY });
+	}
+	if (!cookies.get(ACCESS_COOKIE())) redirect(303, '/signin');
+	const scope = readOperatorScope(cookies);
+	const claimed = form.get(SCOPE_CONTEXT_FIELD);
+	if (typeof claimed !== 'string' || !pageShowsContext(claimed, scope, cookies)) {
+		return failForm(409, { values, formErrorKey: SCOPE_CHANGED_KEY });
 	}
 	let caps;
 	try {

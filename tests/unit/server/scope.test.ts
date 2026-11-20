@@ -20,9 +20,13 @@ function accessFor(person: string | null): string | undefined {
 	return `${seg({ alg: 'none' })}.${seg({ sub: person, tenant_id: 't1', membership_id: 'm1', exp: 4_000_000_000 })}.sig`;
 }
 
-function signed(payload: unknown, secret: string = config.SCOPE_COOKIE_SECRET): string {
+function signed(
+	payload: unknown,
+	secret: string = config.SCOPE_COOKIE_SECRET,
+	label = 'scope-cookie:'
+): string {
 	const p = Buffer.from(JSON.stringify(payload)).toString('base64url');
-	return `${p}.${createHmac('sha256', secret).update(p).digest('base64url')}`;
+	return `${p}.${createHmac('sha256', secret).update(`${label}${p}`).digest('base64url')}`;
 }
 
 /** A cookie jar with the scope cookie (`initial`) and the caller's access cookie (`person`). */
@@ -177,34 +181,65 @@ describe('operator scope cookie', () => {
 
 describe('scope fingerprint (what a page sends to prove which context it shows)', () => {
 	const other = { ...scope, id: '9d9c7a52-0c7b-4e8d-8a3e-0e5d3e0b9f11' };
+	const as = (person: string | null) => jar(undefined, person).api;
+	const fp = (r: Parameters<typeof scopeFingerprint>[0], person: string | null = PERSON) =>
+		scopeFingerprint(r, as(person));
 
-	it('is "none" without a cookie and "invalid" for an unusable one', () => {
-		expect(scopeFingerprint({ state: 'none' })).toBe('none');
-		expect(scopeFingerprint({ state: 'invalid' })).toBe('invalid');
+	it('is "invalid" for an unusable cookie and for a caller nobody can name', () => {
+		expect(fp({ state: 'invalid' })).toBe('invalid');
+		expect(fp({ state: 'none' }, null)).toBe('invalid');
+		expect(fp({ state: 'valid', scope }, null)).toBe('invalid');
 	});
 
 	it('is stable per tenant and differs between tenants', () => {
-		const a = scopeFingerprint({ state: 'valid', scope });
-		expect(a).toBe(scopeFingerprint({ state: 'valid', scope: { ...scope, slug: 'renamed' } }));
-		expect(a).not.toBe(scopeFingerprint({ state: 'valid', scope: other }));
-		expect(a).not.toBe('none');
+		const a = fp({ state: 'valid', scope });
+		expect(a).toBe(fp({ state: 'valid', scope: { ...scope, slug: 'renamed' } }));
+		expect(a).not.toBe(fp({ state: 'valid', scope: other }));
+		expect(a).not.toBe(fp({ state: 'none' }));
+	});
+
+	it('is bound to the person: "none" and a tenant differ between two people', () => {
+		expect(fp({ state: 'none' })).not.toBe(fp({ state: 'none' }, OTHER_PERSON));
+		expect(fp({ state: 'valid', scope })).not.toBe(fp({ state: 'valid', scope }, OTHER_PERSON));
+		expect(fp({ state: 'none' })).not.toBe('none');
 	});
 
 	it('never reveals the tenant id, slug or name', () => {
-		const fp = scopeFingerprint({ state: 'valid', scope });
-		expect(fp).toMatch(/^[A-Za-z0-9_-]{22,}$/);
+		const v = fp({ state: 'valid', scope });
+		expect(v).toMatch(/^[A-Za-z0-9_-]{22,}$/);
 		for (const secret of [scope.id, scope.id.replaceAll('-', ''), scope.slug, scope.display_name]) {
-			expect(fp).not.toContain(secret);
+			expect(v).not.toContain(secret);
 		}
 	});
 
-	it('is keyed with the server secret: it is not the plain hash of the id', () => {
-		const fp = scopeFingerprint({ state: 'valid', scope });
-		expect(fp).not.toBe(
-			createHash('sha256').update(scope.id).digest('base64url').slice(0, fp.length)
+	it('is keyed and domain-separated: the input is "scope-context:<person>:<tenant|none>"', () => {
+		const mac = (m: string) =>
+			createHmac('sha256', config.SCOPE_COOKIE_SECRET).update(m).digest('base64url');
+		expect(fp({ state: 'valid', scope })).toBe(mac(`scope-context:${PERSON}:${scope.id}`));
+		expect(fp({ state: 'none' })).toBe(mac(`scope-context:${PERSON}:none`));
+		expect(fp({ state: 'valid', scope })).not.toBe(
+			createHash('sha256').update(scope.id).digest('base64url').slice(0, 43)
 		);
-		expect(fp).not.toBe(
-			createHash('sha256').update(`fp:${scope.id}`).digest('base64url').slice(0, fp.length)
+	});
+});
+
+describe('scope cookie signature is domain-separated from the fingerprint', () => {
+	it('a cookie signed without the "scope-cookie:" label (every cookie written before) fails closed', () => {
+		const exp = Math.floor(Date.now() / 1000) + 3600;
+		const legacy = signed({ ...scope, pid: PERSON, exp }, config.SCOPE_COOKIE_SECRET, '');
+		expect(readOperatorScope(jar(legacy).api)).toEqual({ state: 'invalid' });
+	});
+
+	it('a fingerprint (visible to page scripts) is not a valid signature for any cookie', () => {
+		const exp = Math.floor(Date.now() / 1000) + 3600;
+		const payload = Buffer.from(JSON.stringify({ ...scope, pid: PERSON, exp })).toString(
+			'base64url'
 		);
+		// The attacker can ask the server for fingerprint(payload as the "tenant"): not reachable
+		// through a payload that parses, but the MAC input must differ by label regardless.
+		const forged = `${payload}.${createHmac('sha256', config.SCOPE_COOKIE_SECRET)
+			.update(`scope-context:${PERSON}:${payload}`)
+			.digest('base64url')}`;
+		expect(readOperatorScope(jar(forged).api)).toEqual({ state: 'invalid' });
 	});
 });

@@ -1,12 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('#lib/api/jwt.ts', () => ({ decodeJwtPrincipal: () => ({ membershipId: 'm1' }) }));
-vi.mock('#lib/api/jwt', () => ({ decodeJwtPrincipal: () => ({ membershipId: 'm1' }) }));
+vi.mock('#lib/api/jwt.ts', () => ({
+	decodeJwtPrincipal: () => ({ membershipId: 'm1', personId: 'p1' })
+}));
+vi.mock('#lib/api/jwt', () => ({
+	decodeJwtPrincipal: () => ({ membershipId: 'm1', personId: 'p1' })
+}));
 const capabilities = vi.hoisted(() => ({ loadCapabilities: vi.fn() }));
 vi.mock('#lib/server/capabilities.ts', () => capabilities);
 
 import { failFromGo } from '#lib/server/form-action.ts';
 import { readGoFailure } from '#lib/server/go.ts';
+import { scopeFingerprint } from '#lib/server/scope.ts';
 import { actions as profileActions } from '../../../src/routes/(app)/settings/account/profile/+page.server.ts';
 import { actions as newRoleActions } from '../../../src/routes/(app)/settings/roles/new/+page.server.ts';
 
@@ -149,7 +154,11 @@ describe('actions that used to print Go detail raw', () => {
 		const r = (await (newRoleActions.default as (e: never) => Promise<unknown>)({
 			request: new Request('http://x/', {
 				method: 'POST',
-				body: new URLSearchParams({ name: 'Auditor', hierarchy_level: '5', scope_context: 'none' })
+				body: new URLSearchParams({
+					name: 'Auditor',
+					hierarchy_level: '5',
+					scope_context: scopeFingerprint({ state: 'none' }, cookies({ lk_access: 'tok' }))
+				})
 			}),
 			cookies: cookies({ lk_access: 'tok' }),
 			route: { id: '/(app)/settings/roles/new' }
@@ -172,7 +181,11 @@ describe('actions that used to print Go detail raw', () => {
 		const r = (await (newRoleActions.default as (e: never) => Promise<unknown>)({
 			request: new Request('http://x/', {
 				method: 'POST',
-				body: new URLSearchParams({ name: 'Auditor', hierarchy_level: '5', scope_context: 'none' })
+				body: new URLSearchParams({
+					name: 'Auditor',
+					hierarchy_level: '5',
+					scope_context: scopeFingerprint({ state: 'none' }, cookies({ lk_access: 'tok' }))
+				})
 			}),
 			cookies: cookies({ lk_access: 'tok' }),
 			route: { id: '/(app)/settings/roles/new' }
@@ -206,7 +219,11 @@ describe('form actions keep the form on an outage and share one 429 line', () =>
 		return (newRoleActions.default as (e: never) => Promise<unknown>)({
 			request: new Request('http://x/', {
 				method: 'POST',
-				body: new URLSearchParams({ name: 'Auditor', hierarchy_level: '5', scope_context: 'none' })
+				body: new URLSearchParams({
+					name: 'Auditor',
+					hierarchy_level: '5',
+					scope_context: scopeFingerprint({ state: 'none' }, cookies)
+				})
 			}),
 			cookies,
 			route: { id: '/(app)/settings/roles/new' }

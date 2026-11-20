@@ -22,6 +22,8 @@ const event = () =>
 			delete: vi.fn()
 		},
 		url: new URL('http://x/dashboard'),
+		route: { id: '/(app)/dashboard' },
+		untrack: <T>(fn: () => T): T => fn(),
 		locals: {},
 		depends
 	}) as never;
@@ -92,22 +94,59 @@ describe('(app) layout: sign-in only for a real auth failure', () => {
 	});
 });
 
-describe('(app) layout: its result reaches the client whenever it is recomputed', () => {
-	it('depends on the route (url.pathname is read on every run), so a re-run triggered by a guard is not skipped', async () => {
+describe('(app) layout: re-runs when the ROUTE changes, not when only the search changes', () => {
+	/**
+	 * A stand-in for SvelteKit's dependency tracking: anything read outside `untrack` is a
+	 * dependency (a change of it re-runs the load). `route.id` is the route; the URL covers
+	 * pathname AND search (a `?q=` change), so a tracked URL read would re-run the guards and call
+	 * Go for capabilities on every filter keystroke.
+	 */
+	async function trackedReads(path: string) {
+		const tracked = { route: 0, url: 0 };
+		let untracked = false;
+		const url = new URL(`http://x${path}`);
+		const watch = (u: URL): URL =>
+			new Proxy(u, {
+				get(target, prop) {
+					if (!untracked) tracked.url += 1;
+					const v = Reflect.get(target, prop, target) as unknown;
+					return typeof v === 'function' ? (v as () => unknown).bind(target) : v;
+				}
+			});
 		loadCapabilities.mockResolvedValue({ person_id: 'p', effective_permissions: [] });
-		let reads = 0;
-		const url = {
-			get pathname() {
-				reads += 1;
-				return '/dashboard';
-			},
-			search: ''
-		};
 		await (load as unknown as (e: never) => Promise<unknown>)({
-			...(event() as object),
-			url
+			cookies: {
+				get: (n: string) => (n === 'lk_access' ? 'tok' : undefined),
+				set: vi.fn(),
+				delete: vi.fn()
+			},
+			url: watch(url),
+			route: {
+				get id() {
+					tracked.route += 1;
+					return '/(app)/leads';
+				}
+			},
+			untrack: <T>(fn: () => T): T => {
+				untracked = true;
+				try {
+					return fn();
+				} finally {
+					untracked = false;
+				}
+			},
+			locals: {},
+			depends
 		} as never);
-		expect(reads).toBeGreaterThan(0);
+		return tracked;
+	}
+
+	it('depends on the route (a route change re-runs it, so every guard sees fresh capabilities)', async () => {
+		expect((await trackedReads('/leads')).route).toBeGreaterThan(0);
+	});
+
+	it('does not depend on the URL: a search-only change (?q=) does not re-run it', async () => {
+		expect((await trackedReads('/leads?q=abc')).url).toBe(0);
 	});
 });
 
@@ -134,5 +173,34 @@ describe('(app) layout: an operator who lost the scope permission is not stuck i
 		readOperatorScope.mockReturnValueOnce(VALID);
 		await expect(run()).resolves.toMatchObject({ inTenantContext: true, scopeContext: 'fp-valid' });
 		expect(clearOperatorScope).not.toHaveBeenCalled();
+	});
+});
+
+describe('(app) layout: a dead scope cookie is cleared everywhere except in the scope tree', () => {
+	const runAt = (path: string) =>
+		(load as unknown as (e: never) => Promise<unknown>)({
+			cookies: {
+				get: (n: string) => (n === 'lk_access' ? 'tok' : undefined),
+				set: vi.fn(),
+				delete: vi.fn()
+			},
+			url: new URL(`http://x${path}`),
+			route: { id: '/(app)/x' },
+			untrack: <T>(fn: () => T): T => fn(),
+			locals: {},
+			depends
+		} as never);
+
+	it.each([
+		['/operator/scope', false],
+		['/operator/scope/members', false],
+		['/operator/scopes', true],
+		['/operator/scope-x/y', true]
+	])('on %s the dead cookie is cleared: %s', async (path, cleared) => {
+		clearOperatorScope.mockClear();
+		loadCapabilities.mockResolvedValue({ person_id: 'p', effective_permissions: [] });
+		readOperatorScope.mockReturnValueOnce({ state: 'invalid' });
+		await runAt(path);
+		expect(clearOperatorScope).toHaveBeenCalledTimes(cleared ? 1 : 0);
 	});
 });

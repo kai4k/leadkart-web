@@ -154,6 +154,30 @@ describe('authoriseAction', () => {
 			});
 			expect(loadCapabilities).not.toHaveBeenCalled();
 		});
+		it('the outage is reported before the context check: a stale fingerprint does not read as "changed in another tab"', async () => {
+			const where = {
+				...at(undefined, 'stale-fingerprint'),
+				event: {
+					cookies: jar({ lk_refresh: 'r' }),
+					route: { id: '/(app)/settings/tenant/profile' }
+				} as never
+			};
+			expect(await authorise(P.identityTenantsUpdate, { a: 1 }, where)).toMatchObject({
+				status: 503,
+				data: { formErrorKey: 'auth.errors.upstreamUnavailable' }
+			});
+		});
+		it('a session that is over redirects to sign-in before any context check', async () => {
+			const where = {
+				...at(undefined, 'stale-fingerprint'),
+				event: { cookies: jar({}), route: { id: '/(app)/settings/tenant/profile' } } as never
+			};
+			await expect(authorise(P.identityTenantsUpdate, {}, where)).rejects.toMatchObject({
+				status: 303,
+				location: '/signin'
+			});
+			expect(loadCapabilities).not.toHaveBeenCalled();
+		});
 		it('neither cookie is a real sign-out', async () => {
 			const where = {
 				...at(),

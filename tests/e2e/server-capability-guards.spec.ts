@@ -82,7 +82,7 @@ test.describe('Operator scope is platform-only at the BFF', () => {
 		).length;
 		const result = await page.evaluate(async (slug) => {
 			const csrf = document.cookie.match(/(?:^|; )lk_csrf=([^;]+)/)?.[1] ?? '';
-			const resp = await fetch('/api/operator/scope', {
+			const resp = await window.specFetch('/api/operator/scope', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json', 'x-csrf-token': decodeURIComponent(csrf) },
 				body: JSON.stringify({ slug })

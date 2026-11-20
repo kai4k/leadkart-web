@@ -105,7 +105,7 @@ test.describe('session refresh', () => {
 
 		const result = await page.evaluate(async () => {
 			const csrf = document.cookie.match(/(?:^|; )lk_csrf=([^;]+)/)?.[1] ?? '';
-			const resp = await fetch('/api/v1/roles', {
+			const resp = await window.specFetch('/api/v1/roles', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json', 'x-csrf-token': csrf },
 				body: JSON.stringify({ name: 'replayed' })
@@ -280,7 +280,7 @@ test.describe('session refresh', () => {
 
 		const result = await page.evaluate(async () => {
 			const csrf = document.cookie.match(/(?:^|; )lk_csrf=([^;]+)/)?.[1] ?? '';
-			const resp = await fetch('/api/v1/roles', {
+			const resp = await window.specFetch('/api/v1/roles', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json', 'x-csrf-token': csrf },
 				body: JSON.stringify({ name: 'after-expiry' })
@@ -315,7 +315,7 @@ test.describe('session refresh', () => {
 		await dropAccessCookie(context);
 
 		const result = await page.evaluate(async () => {
-			const resp = await fetch('/api/v1/users');
+			const resp = await window.specFetch('/api/v1/users');
 			return { status: resp.status, body: (await resp.json()) as Record<string, unknown> };
 		});
 
@@ -345,7 +345,7 @@ test.describe('session refresh', () => {
 		await dropAccessCookie(context);
 
 		const result = await page.evaluate(async () => {
-			const resp = await fetch('/api/v1/users');
+			const resp = await window.specFetch('/api/v1/users');
 			return { status: resp.status, body: (await resp.json()) as Record<string, unknown> };
 		});
 

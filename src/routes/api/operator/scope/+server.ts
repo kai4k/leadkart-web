@@ -4,7 +4,8 @@
  *   POST   /api/operator/scope  { slug }   → resolve slug→UUID server-side,
  *                                            store {id, slug, display_name}
  *                                            in httpOnly cookie. Returns 204.
- *   DELETE /api/operator/scope             → clear cookie. Returns 204.
+ *   DELETE /api/operator/scope             → clear cookie. Returns 204. Needs the page's context
+ *                                            fingerprint like every proxied call (409 scope_changed).
  *
  * No tenant identifier ever appears in the URL. Subsequent API calls
  * under /api/* automatically receive X-Tenant-Id from the cookie via
@@ -21,10 +22,12 @@
 
 import { isHttpError, type RequestEvent } from '@sveltejs/kit';
 import { z } from 'zod';
-import { SESSION_EXPIRED_CODE } from '#lib/api/errors.ts';
-import { setOperatorScope, clearOperatorScope } from '#lib/server/scope.ts';
+import { SESSION_EXPIRED_CODE, SESSION_RENEWAL_FAILED_MESSAGE } from '#lib/api/errors.ts';
+import { SCOPE_CHANGED_CODE, SCOPE_CHANGED_MESSAGE } from '#lib/api/scope-header.ts';
+import { setOperatorScope, clearOperatorScope, readOperatorScope } from '#lib/server/scope.ts';
+import { pageShowsCurrentContext } from '#lib/server/scope-context.ts';
 import { assertCsrf } from '#lib/server/csrf.ts';
-import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
+import { ACCESS_COOKIE, sessionRenewalPending } from '#lib/server/cookies.ts';
 import { loadCapabilities } from '#lib/server/capabilities.ts';
 import { goFetch } from '#lib/server/go.ts';
 import { meetsAccess, NAV_ROUTES } from '#lib/config/nav.ts';
@@ -128,6 +131,20 @@ export async function POST(event: RequestEvent): Promise<Response> {
 export async function DELETE(event: RequestEvent): Promise<Response> {
 	const csrfFail = assertCsrf(event);
 	if (csrfFail) return csrfFail;
-	clearOperatorScope(event.cookies);
+	const { cookies, request } = event;
+	// Session first (as in the proxy): without a caller there is no context to compare.
+	if (!cookies.get(ACCESS_COOKIE())) {
+		return sessionRenewalPending(cookies)
+			? jsonError(503, 'refresh_unavailable', SESSION_RENEWAL_FAILED_MESSAGE)
+			: sessionExpired();
+	}
+	// The exit must come from a tab that shows the context the cookie names now, like every other
+	// call: a tab that is behind cannot end a context another tab just entered. A dead cookie is
+	// the exception: clearing it is the way out, and there is no context to protect.
+	const reading = readOperatorScope(cookies);
+	if (reading.state !== 'invalid' && !pageShowsCurrentContext(request.headers, reading, cookies)) {
+		return jsonError(409, SCOPE_CHANGED_CODE, SCOPE_CHANGED_MESSAGE);
+	}
+	clearOperatorScope(cookies);
 	return new Response(null, { status: 204 });
 }

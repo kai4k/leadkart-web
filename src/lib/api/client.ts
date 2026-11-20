@@ -15,7 +15,7 @@ import { ApiError, isApiError, SchemaError, TimeoutError, type ApiErrorBody } fr
 import { requestSignal } from './abort.ts';
 import { DEFAULT_READ_TIMEOUT_MS } from './timeouts.ts';
 import { getCsrfToken } from './csrf.ts';
-import { pageScopeContext } from './scope-context.ts';
+import { page } from '$app/state';
 import { refreshCapabilities } from './capabilities-refresh.ts';
 import { SCOPE_CONTEXT_HEADER, SESSION_RENEWED_HEADER } from './scope-header.ts';
 
@@ -77,16 +77,21 @@ async function send(
 	path: string,
 	body: unknown,
 	opts: RequestOptions = {},
-	expectJson = false
+	expectJson = false,
+	asBlob = false
 ): Promise<unknown> {
 	const headers = new Headers(opts.headers);
-	headers.set('Accept', 'application/json');
-	if (body !== undefined) headers.set('Content-Type', 'application/json');
+	headers.set('Accept', asBlob ? '*/*' : 'application/json');
+	// A form goes out untouched: the browser writes the multipart content type with its boundary.
+	const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
+	if (body !== undefined && !isForm) headers.set('Content-Type', 'application/json');
 	// The context this page shows. The BFF compares it with the scope cookie (shared by every tab)
 	// and answers 409 scope_changed instead of running the call in another tenant.
 	headers.delete(SCOPE_CONTEXT_HEADER);
-	const context = pageScopeContext.get();
-	if (context !== undefined) headers.set(SCOPE_CONTEXT_HEADER, context);
+	// Read from the data the page has COMMITTED, at send time: a load (a preload runs it without any
+	// navigation following) never moves it, only a committed navigation or invalidation does.
+	const context = (page.data as { scopeContext?: unknown } | undefined)?.scopeContext;
+	if (typeof context === 'string') headers.set(SCOPE_CONTEXT_HEADER, context);
 	// CSRF double-submit: echo the lk_csrf cookie on mutations.
 	if (method !== 'GET') {
 		const csrf = getCsrfToken();
@@ -97,7 +102,8 @@ async function send(
 		opts.timeoutMs ?? (method === 'GET' ? DEFAULT_TIMEOUT_MS : undefined)
 	);
 	let response: Response;
-	let text: string;
+	let text = '';
+	let blob: Blob | undefined;
 	try {
 		response = await fetch(
 			`/api${path.startsWith('/') ? path : `/${path}`}${buildQueryString(opts.query)}`,
@@ -105,11 +111,12 @@ async function send(
 				method,
 				headers,
 				credentials: 'same-origin',
-				body: body === undefined ? undefined : JSON.stringify(body),
+				body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
 				signal
 			}
 		);
-		text = await response.text();
+		if (asBlob && response.ok) blob = await response.blob();
+		else text = await response.text();
 	} catch (cause) {
 		if (opts.signal?.aborted) throw opts.signal.reason ?? cause;
 		// The deadline's own signal decides, not the rejection reason (a stalled body read may reject with anything).
@@ -120,6 +127,7 @@ async function send(
 	}
 	// The BFF renewed the session for this call: the caller's permissions may be new.
 	if (response.headers.has(SESSION_RENEWED_HEADER)) void refreshCapabilities();
+	if (blob !== undefined) return blob;
 	const data = text.length > 0 ? safeJsonParse(text) : undefined;
 	if (!response.ok) throw ApiError.fromResponse(response, (data ?? null) as ApiErrorBody | null);
 	if (expectJson && data === undefined)
@@ -164,6 +172,17 @@ export const api = {
 		opts?: RequestOptions
 	): Promise<z.output<S>> =>
 		parseWith(schema, await send('GET', path, undefined, opts, true), `GET ${path}`),
+	/** Multipart upload (a `FormData`) through the same transport: CSRF, context fingerprint, error mapping. */
+	postForm: async <S extends z.ZodType>(
+		path: string,
+		form: FormData,
+		schema: S,
+		opts?: RequestOptions
+	): Promise<z.output<S>> =>
+		parseWith(schema, await send('POST', path, form, opts, true), `POST ${path}`),
+	/** A download as a `Blob` (CSV export): a plain link cannot carry the context header, this can. */
+	getBlob: async (path: string, opts?: RequestOptions): Promise<Blob> =>
+		(await send('GET', path, undefined, opts, false, true)) as Blob,
 	post: voidCall('POST'),
 	put: voidCall('PUT'),
 	patch: voidCall('PATCH'),

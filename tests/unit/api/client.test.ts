@@ -1,8 +1,12 @@
+import { existsSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+const pageData = vi.hoisted(() => ({ data: {} as Record<string, unknown> }));
+vi.mock('$app/state', () => ({ page: pageData }));
+
 import { z } from 'zod';
 import { api, apiLegacy, buildQueryString, parseResponse } from '#lib/api/client.ts';
-import { ConflictError, SchemaError, TimeoutError } from '#lib/api/errors.ts';
-import { pageScopeContext } from '#lib/api/scope-context.ts';
+import { ConflictError, ScopeChangedError, SchemaError, TimeoutError } from '#lib/api/errors.ts';
 
 const fetchMock = vi.fn();
 vi.stubGlobal('fetch', fetchMock);
@@ -70,7 +74,7 @@ describe('api client v2', () => {
 		expect(sentHeaders().get('X-CSRF-Token')).toBeNull();
 	});
 	it('sends the context the page shows on every call, reads and writes alike', async () => {
-		pageScopeContext.set('fp-tenant-a');
+		pageData.data = { scopeContext: 'fp-tenant-a' };
 		fetchMock.mockImplementation(() => Promise.resolve(json(200, {})));
 		await api.get('/v1/x', z.unknown());
 		expect(sentHeaders().get('x-lk-scope-context')).toBe('fp-tenant-a');
@@ -78,17 +82,82 @@ describe('api client v2', () => {
 		await api.post('/v1/x', {});
 		expect(sentHeaders().get('x-lk-scope-context')).toBe('fp-tenant-a');
 	});
+	it('reads the fingerprint of the COMMITTED page data at send time: a new commit is followed, nothing else moves it', async () => {
+		fetchMock.mockImplementation(() => Promise.resolve(json(200, {})));
+		pageData.data = { scopeContext: 'fp-committed-1' };
+		await api.get('/v1/x', z.unknown());
+		expect(sentHeaders().get('x-lk-scope-context')).toBe('fp-committed-1');
+		// A preload runs the layout load and holds ITS data elsewhere: the page's data is untouched.
+		fetchMock.mockClear();
+		await api.get('/v1/x', z.unknown());
+		expect(sentHeaders().get('x-lk-scope-context')).toBe('fp-committed-1');
+		pageData.data = { scopeContext: 'fp-committed-2' }; // a navigation committed
+		fetchMock.mockClear();
+		await api.get('/v1/x', z.unknown());
+		expect(sentHeaders().get('x-lk-scope-context')).toBe('fp-committed-2');
+	});
+	it('no load sets the fingerprint: the (app) layout has no universal load and no holder exists', () => {
+		expect(existsSync('src/routes/(app)/+layout.ts')).toBe(false);
+		expect(existsSync('src/lib/api/scope-context.ts')).toBe(false);
+	});
 	it('sends none of its own when the page has no context yet (the proxy then refuses)', async () => {
-		pageScopeContext.set(undefined);
+		pageData.data = {};
 		fetchMock.mockResolvedValue(json(200, {}));
 		await api.get('/v1/x', z.unknown());
 		expect(sentHeaders().has('x-lk-scope-context')).toBe(false);
 	});
 	it('a browser-set X-Tenant-Id or context header is replaced, never trusted', async () => {
-		pageScopeContext.set('fp-real');
+		pageData.data = { scopeContext: 'fp-real' };
 		fetchMock.mockResolvedValue(json(200, {}));
 		await api.get('/v1/x', z.unknown(), { headers: { 'x-lk-scope-context': 'forged' } });
 		expect(sentHeaders().get('x-lk-scope-context')).toBe('fp-real');
+	});
+});
+
+describe('multipart and downloads go through the same transport', () => {
+	it('postForm sends the form untouched (no JSON content type), with CSRF and the page context, and parses the answer', async () => {
+		vi.stubGlobal('document', { cookie: 'lk_csrf=tok9' });
+		pageData.data = { scopeContext: 'fp-form' };
+		fetchMock.mockResolvedValue(json(200, { rows: 3 }));
+		const form = new FormData();
+		form.append('file', new Blob(['a,b']), 'x.csv');
+		const out = await api.postForm(
+			'/v1/crm/leads/bulk-upload/preview',
+			form,
+			z.object({ rows: z.number() })
+		);
+		expect(out).toEqual({ rows: 3 });
+		const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+		expect(url).toBe('/api/v1/crm/leads/bulk-upload/preview');
+		expect(init.method).toBe('POST');
+		expect(init.body).toBe(form);
+		const h = init.headers as Headers;
+		expect(h.has('Content-Type')).toBe(false); // the browser adds the multipart boundary
+		expect(h.get('X-CSRF-Token')).toBe('tok9');
+		expect(h.get('x-lk-scope-context')).toBe('fp-form');
+	});
+	it('postForm maps an error answer to the typed error, like every other call', async () => {
+		fetchMock.mockResolvedValue(json(409, { error: 'conflict' }));
+		await expect(api.postForm('/v1/x', new FormData(), z.unknown())).rejects.toBeInstanceOf(
+			ConflictError
+		);
+	});
+	it('getBlob returns the body as a Blob and carries the page context', async () => {
+		pageData.data = { scopeContext: 'fp-dl' };
+		fetchMock.mockResolvedValue(
+			new Response('a,b\n1,2', { status: 200, headers: { 'content-type': 'text/csv' } })
+		);
+		const blob = await api.getBlob('/v1/crm/leads/export', { query: { q: 'x' } });
+		expect(blob).toBeInstanceOf(Blob);
+		expect(await blob.text()).toBe('a,b\n1,2');
+		expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/crm/leads/export?q=x');
+		expect((fetchMock.mock.calls[0][1] as RequestInit).headers as Headers).toSatisfy(
+			(h: Headers) => h.get('x-lk-scope-context') === 'fp-dl' && h.get('X-CSRF-Token') === null
+		);
+	});
+	it('getBlob maps a failed download to the typed error (a 409 scope_changed included)', async () => {
+		fetchMock.mockResolvedValue(json(409, { error: 'scope_changed', message: 'x' }));
+		await expect(api.getBlob('/v1/crm/leads/export')).rejects.toBeInstanceOf(ScopeChangedError);
 	});
 });
 

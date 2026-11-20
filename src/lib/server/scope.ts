@@ -58,8 +58,17 @@ export type ScopeReading =
 	| { state: 'valid'; scope: OperatorScope }
 	| { state: 'invalid' };
 
+/**
+ * Two uses of the one secret, each with its own label so a value minted for one is never valid for
+ * the other: the cookie's signature covers `scope-cookie:<payload>`, the fingerprint (which page
+ * scripts can read) is the MAC of `scope-context:<person>:<tenant|none>`.
+ */
+function mac(labelled: string): string {
+	return createHmac('sha256', config.SCOPE_COOKIE_SECRET).update(labelled).digest('base64url');
+}
+
 function sign(payload: string): string {
-	return createHmac('sha256', config.SCOPE_COOKIE_SECRET).update(payload).digest('base64url');
+	return mac(`scope-cookie:${payload}`);
 }
 
 /**
@@ -71,7 +80,7 @@ function callerPersonId(cookies: Cookies): string | null {
 	const access = cookies.get(ACCESS_COOKIE());
 	if (!access) return null;
 	try {
-		return decodeJwtPrincipal(access).personId;
+		return decodeJwtPrincipal(access).personId || null;
 	} catch {
 		return null;
 	}
@@ -127,16 +136,17 @@ export function readOperatorScope(cookies: Cookies): ScopeReading {
 
 /**
  * What a page sends with every API call to say which context it is showing: an opaque keyed hash
- * of the scope cookie's tenant id (HMAC with the server secret, domain-separated from the cookie
- * signature), or `none` / `invalid`. It reveals nothing to scripts or logs: the tenant id cannot be
- * recovered without the secret. The proxy and the form actions compare it with the cookie's own
+ * of the caller's person id and the scope cookie's tenant id (or `none`), HMAC with the server
+ * secret, domain-separated from the cookie signature; or `invalid` (never accepted). Bound to the
+ * person, so a tab left open by one user cannot write as the next user who signs in in the browser.
+ * It reveals nothing to scripts or logs: the tenant id cannot be recovered without the secret. The proxy and the form actions compare it with the cookie's own
  * fingerprint, so a tab never writes into a tenant it is not showing.
  */
-export function scopeFingerprint(reading: ScopeReading): string {
-	if (reading.state !== 'valid') return reading.state;
-	return createHmac('sha256', config.SCOPE_COOKIE_SECRET)
-		.update(`scope-context:${reading.scope.id}`)
-		.digest('base64url');
+export function scopeFingerprint(reading: ScopeReading, cookies: Cookies): string {
+	if (reading.state === 'invalid') return 'invalid';
+	const person = callerPersonId(cookies);
+	if (person === null) return 'invalid';
+	return mac(`scope-context:${person}:${reading.state === 'valid' ? reading.scope.id : 'none'}`);
 }
 
 /** Scope when valid, otherwise null — use `readOperatorScope` where invalid must fail closed. */

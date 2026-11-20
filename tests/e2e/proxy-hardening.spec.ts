@@ -1,3 +1,4 @@
+import { currentFingerprint } from './helpers/scope-fingerprint';
 import { expect, test } from './helpers/test';
 import { listMockCalls, registerMock, registerMocks, resetMock } from './helpers/mock';
 import { mintScopeCookie } from './helpers/scope-cookie';
@@ -30,7 +31,7 @@ test.describe('proxy redirects', () => {
 
 		const resp = await page.request.get(THING, {
 			maxRedirects: 0,
-			headers: { 'x-lk-scope-context': 'none' }
+			headers: { 'x-lk-scope-context': await currentFingerprint(page.context()) }
 		});
 
 		expect(resp.status()).toBe(302);
@@ -50,7 +51,7 @@ test.describe('proxy redirects', () => {
 
 		const resp = await page.request.get(THING, {
 			maxRedirects: 0,
-			headers: { 'x-lk-scope-context': 'none' }
+			headers: { 'x-lk-scope-context': await currentFingerprint(page.context()) }
 		});
 
 		expect(resp.status()).toBe(502);
@@ -85,7 +86,10 @@ test.describe('proxy redirects on writes', () => {
 
 			const resp = await page.request.post('/api/v1/roles', {
 				data: {},
-				headers: { 'x-csrf-token': csrf, 'x-lk-scope-context': 'none' },
+				headers: {
+					'x-csrf-token': csrf,
+					'x-lk-scope-context': await currentFingerprint(page.context())
+				},
 				maxRedirects: 0
 			});
 

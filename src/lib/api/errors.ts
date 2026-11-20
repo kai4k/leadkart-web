@@ -25,6 +25,8 @@ export interface ApiErrorBody {
 
 export const CORRELATION_ID_HEADER = 'x-correlation-id';
 export const SESSION_EXPIRED_CODE = 'session_expired';
+/** The one line for "the session could not be renewed right now" (a 503 the caller may retry; never a sign-out). */
+export const SESSION_RENEWAL_FAILED_MESSAGE = 'Session could not be renewed — try again';
 export const SCOPE_INVALID_CODE = 'scope_invalid';
 export const SCHEMA_MISMATCH_CODE = 'schema_mismatch';
 export const CSRF_MISMATCH_CODE = 'csrf_mismatch';

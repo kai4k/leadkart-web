@@ -23,21 +23,24 @@ import { loadCapabilities } from '#lib/server/capabilities.ts';
 import { clearOperatorScope, readOperatorScope, scopeFingerprint } from '#lib/server/scope.ts';
 import { meetsAccess, NAV_ROUTES } from '#lib/config/nav.ts';
 import { CAPABILITIES_DEPENDENCY } from '#lib/api/capabilities-refresh.ts';
-import { SCOPE_DEPENDENCY } from '#lib/api/scope-header.ts';
+import { isOperatorScopePath, SCOPE_DEPENDENCY } from '#lib/api/scope-header.ts';
 import type { LayoutServerLoad } from './$types';
 
-export const load: LayoutServerLoad = async ({ cookies, url, locals, depends }) => {
+export const load: LayoutServerLoad = async ({ cookies, url, locals, depends, route, untrack }) => {
 	// Entering / leaving a tenant context changes the scope cookie without any navigation this
 	// load would notice: those flows invalidate this key (see api/operator-scope.ts).
 	depends(SCOPE_DEPENDENCY, CAPABILITIES_DEPENDENCY);
 
-	// Depend on the route. Every section guard awaits `parent()`, which re-runs this load on the
-	// server on each route change (a fresh capabilities call to Go); without a dependency of its
-	// own SvelteKit answers "skip" to the client for it and the fresh result was thrown away, so the
-	// browser kept the capabilities of the first render while the server guarded with newer ones.
-	// Reading the pathname makes this load part of every navigation: the data it already computes
-	// reaches the client, no extra Go call.
-	const pathname = url.pathname;
+	// Depend on the ROUTE, not the URL. Every section guard awaits `parent()`, which re-runs this load
+	// on the server on each route change (a fresh capabilities call to Go); without a dependency of
+	// its own SvelteKit answers "skip" to the client for it and the fresh result was thrown away, so
+	// the browser kept the capabilities of the first render while the server guarded with newer ones.
+	// `route.id` is what must re-run the guards. The URL (pathname AND search) is read inside
+	// `untrack`, only to build a redirect target or compare a path: tracking it would re-run this load
+	// (a capabilities call to Go, plus every child load awaiting `parent()`) on each search change.
+	void route.id;
+	const pathname = untrack(() => url.pathname);
+	const search = untrack(() => url.search);
 
 	// hooks.server.ts already tried to refresh an expired access cookie. Still
 	// missing: Go down → 503; otherwise the session is really gone.
@@ -45,23 +48,22 @@ export const load: LayoutServerLoad = async ({ cookies, url, locals, depends }) 
 
 	if (!access) {
 		assertRefreshReachable(locals);
-		const next = encodeURIComponent(pathname + url.search);
+		const next = encodeURIComponent(pathname + search);
 		throw redirect(303, `/signin?next=${next}`);
 	}
 
 	// lk_mcp is a UX gate only (page redirects). /api/* calls are not blocked
 	// by it; the Go API must enforce forced password change itself.
 	if (mustChangePassword(cookies) && pathname !== '/must-change-password') {
-		throw redirect(303, `/must-change-password?next=${encodeURIComponent(pathname + url.search)}`);
+		throw redirect(303, `/must-change-password?next=${encodeURIComponent(pathname + search)}`);
 	}
 
 	// An expired/tampered scope cookie makes every scoped /api call answer 409. A
 	// navigation is a safe place to drop it, so a failed client-side scope exit
 	// cannot loop 409 → DELETE → /signin. /operator/scope clears it itself (and
-	// redirects). The state is checked first so `url` is only read (and tracked
-	// as a load dependency) when there is something to clear.
+	// redirects).
 	let scope = readOperatorScope(cookies);
-	if (scope.state === 'invalid' && !pathname.startsWith('/operator/scope')) {
+	if (scope.state === 'invalid' && !isOperatorScopePath(pathname)) {
 		clearOperatorScope(cookies);
 		scope = { state: 'none' };
 	}
@@ -74,7 +76,7 @@ export const load: LayoutServerLoad = async ({ cookies, url, locals, depends }) 
 	// the same body, so no signin bounce.
 	const capabilities = await loadCapabilities(cookies);
 	if (!capabilities) {
-		const next = encodeURIComponent(pathname + url.search);
+		const next = encodeURIComponent(pathname + search);
 		throw redirect(303, `/signin?next=${next}`);
 	}
 
@@ -96,6 +98,6 @@ export const load: LayoutServerLoad = async ({ cookies, url, locals, depends }) 
 	return {
 		capabilities,
 		inTenantContext: scope.state === 'valid',
-		scopeContext: scopeFingerprint(scope)
+		scopeContext: scopeFingerprint(scope, cookies)
 	};
 };

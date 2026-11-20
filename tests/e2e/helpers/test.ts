@@ -9,8 +9,9 @@
  * A spec that deliberately lets calls go unanswered opts out for the whole file or a describe block:
  *   test.use({ allowUnregistered: true });   // say why next to it
  */
-import { expect, test as base, type BrowserContext } from '@playwright/test';
+import { expect, test as base, type BrowserContext, type Page } from '@playwright/test';
 import { listMockCalls, listUnregisteredCalls } from './mock.ts';
+import { currentFingerprint } from './scope-fingerprint.ts';
 
 export async function assertNoUnregisteredCalls(testTitle?: string): Promise<void> {
 	const calls = await listUnregisteredCalls();
@@ -54,44 +55,73 @@ const DISABLE_HOVER_PRELOAD = () => {
 };
 
 /**
- * Every call the APP makes to /api carries the tenant-context fingerprint of its page
- * (`x-lk-scope-context`, see api/scope-context.ts) and the BFF refuses a call without it. A spec that
- * speaks to the proxy itself (`page.evaluate(() => fetch('/api/v1/...'))`) is not the app, so by
- * default it speaks the way the page does: the fingerprint in the DOM (or `none` before any page).
- * A spec that tests the proxy's treatment of the header sets `test.use({ rawProxyCalls: true })`.
+ * The app's own calls carry the tenant-context fingerprint of their page (`x-lk-scope-context`, read
+ * from the page data by the one API client) and the BFF refuses a call without it. Nothing here
+ * patches the app's fetches: they are the thing under test. A spec that speaks to the proxy itself
+ * calls `window.specFetch(...)` inside `page.evaluate` (declared below): a plain `fetch` that adds
+ * the fingerprint THE PAGE SHOWS (what its own calls last carried) unless the spec set the header itself. `page.request` calls set
+ * the header from `currentFingerprint(context)`.
  */
-const PAGE_CONTEXT_FETCH = () => {
-	const original = window.fetch.bind(window);
-	window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
-		const url =
-			typeof input === 'string' ? input : input instanceof URL ? input.pathname : input.url;
-		let sent = init;
-		if (url.startsWith('/api/v1/')) {
-			const headers = new Headers(init?.headers);
-			if (!headers.has('x-lk-scope-context')) {
-				const fp =
-					document.querySelector('[data-scope-context]')?.getAttribute('data-scope-context') ??
-					'none';
-				headers.set('x-lk-scope-context', fp);
-				sent = { ...init, headers };
-			}
+declare global {
+	interface Window {
+		specFetch: typeof fetch;
+		__e2eContextFingerprint: () => Promise<string>;
+	}
+}
+
+const SPEC_FETCH = () => {
+	window.specFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+		const headers = new Headers(init?.headers);
+		headers.set('x-e2e-spec-call', '1'); // so the harness does not mistake it for the page's own call
+		if (!headers.has('x-lk-scope-context')) {
+			headers.set('x-lk-scope-context', await window.__e2eContextFingerprint());
 		}
-		return original(input, sent);
+		return window.fetch(input, { ...init, headers });
 	};
 };
 
 export const test = base.extend<{
 	allowUnregistered: boolean;
-	rawProxyCalls: boolean;
-	pageContextFetch: void;
+	specFetch: void;
 	noUnregisteredCalls: void;
 	noHoverPreload: void;
 }>({
 	allowUnregistered: [false, { option: true }],
-	rawProxyCalls: [false, { option: true }],
-	pageContextFetch: [
-		async ({ context, rawProxyCalls }, use) => {
-			if (!rawProxyCalls) await context.addInitScript(PAGE_CONTEXT_FETCH);
+	specFetch: [
+		async ({ context }, use) => {
+			// What each page shows = the fingerprint its own (app) calls last carried (the app reads it from
+			// its committed page data); at a document load or client-side navigation, the cookies' context then; failing both, the cookies' now.
+			const shown = new WeakMap<Page, string>();
+			context.on('request', (req) => {
+				const fp = req.headers()['x-lk-scope-context'];
+				if (!fp || req.headers()['x-e2e-spec-call'] || !req.url().includes('/api/')) return;
+				try {
+					shown.set(req.frame().page(), fp);
+				} catch {
+					// a request with no page (service worker, prefetch): nothing to remember
+				}
+			});
+			// A document load or a client-side navigation shows the context its server data was rendered from:
+			// the cookies' at that moment.
+			const remember = (p: Page) => {
+				void currentFingerprint(context).then((fp) => {
+					// No session yet (the sign-in page) shows no context: keep what was known.
+					if (fp !== 'invalid') shown.set(p, fp);
+				});
+			};
+			const onLoad = (p: Page) => {
+				p.on('load', () => remember(p));
+				p.on('framenavigated', (frame) => {
+					if (frame === p.mainFrame()) remember(p);
+				});
+			};
+			context.pages().forEach(onLoad);
+			context.on('page', onLoad);
+			await context.exposeBinding(
+				'__e2eContextFingerprint',
+				({ page }) => (page && shown.get(page)) || currentFingerprint(context)
+			);
+			await context.addInitScript(SPEC_FETCH);
 			await use();
 		},
 		{ auto: true }

@@ -14,10 +14,14 @@
  * Per CLAUDE.md rule 6 + the BFF cookie-auth ADR.
  */
 import { error, redirect, type Cookies } from '@sveltejs/kit';
-import { flattenFieldErrors, type ApiErrorBody } from '../api/errors.ts';
+import {
+	flattenFieldErrors,
+	SESSION_RENEWAL_FAILED_MESSAGE,
+	type ApiErrorBody
+} from '../api/errors.ts';
 import { isAuthExpired, refreshSession } from './auth-refresh.ts';
 import { config } from './config.ts';
-import { ACCESS_COOKIE, REFRESH_COOKIE } from './cookies.ts';
+import { ACCESS_COOKIE, REFRESH_COOKIE, sessionRenewalPending } from './cookies.ts';
 import { upstreamTimeout } from './proxy.ts';
 import { clearOperatorScope, readOperatorScope } from './scope.ts';
 
@@ -51,7 +55,7 @@ export async function goFetch(
 		// The hook refreshes an expired access cookie before any action runs. A refresh cookie that is
 		// STILL here means that refresh could not reach Go (a rejected one clears it), so the session
 		// is not over: 503 keeps the user's form, /signin would throw it away.
-		if (cookies.get(REFRESH_COOKIE)) throw error(503, 'Session could not be renewed — try again');
+		if (sessionRenewalPending(cookies)) throw error(503, SESSION_RENEWAL_FAILED_MESSAGE);
 		throw redirect(303, '/signin');
 	}
 
@@ -106,7 +110,7 @@ export async function goFetch(
 	if (renewed.reason === 'unavailable') {
 		// The session is fine, Go is not: callers must not read this 401 as "signed out".
 		await resp.body?.cancel();
-		throw error(503, 'Session could not be renewed — try again');
+		throw error(503, SESSION_RENEWAL_FAILED_MESSAGE);
 	}
 	// Refresh token rejected (cookies cleared): the session is over.
 	if (!cookies.get(REFRESH_COOKIE) && init.requireAuth !== false) {

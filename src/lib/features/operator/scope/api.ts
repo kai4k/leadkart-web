@@ -14,37 +14,20 @@
  * 9/10 (slug-only URLs, scope via cookie). Spec reference:
  * `docs/superpowers/specs/2026-05-20-bff-cookie-auth-adr.md`.
  *
- * The BFF endpoint lives at `/api/operator/scope` (NOT `/api/v1/...`),
- * so this gateway speaks to the SvelteKit Node server directly rather
- * than going through the `api.*` JSON helper which targets the Go API.
- * The `fetch` call here is canon-legal — gateways MAY use `fetch`
- * because they ARE the gateway layer (see CLAUDE.md "Banned" section).
+ * The BFF endpoint lives at `/api/operator/scope` (NOT `/api/v1/...`) but it is
+ * still reached through the one API client (CSRF, the context fingerprint, error
+ * mapping): the entering POST is exempt from the fingerprint check on the server,
+ * the exiting DELETE is not.
  */
-import { ApiError, type ApiErrorBody } from '$api/errors';
-import { getCsrfToken } from '$api/csrf';
+import { api } from '$api/client';
 import { exitOperatorScope } from '$api/operator-scope';
-import { clearPrivateCaches } from '#lib/utils/private-caches.ts';
 
 export interface EnterScopeRequest {
 	slug: string;
 }
 
-/** Response is best-effort — the BFF may return 204 No Content. */
-export interface EnterScopeResponse {
-	tenant_id?: string;
-	tenant_slug?: string;
-}
-
-const SCOPE_PATH = '/api/operator/scope';
-
-async function readErrorBody(resp: Response): Promise<ApiErrorBody | null> {
-	try {
-		const text = await resp.text();
-		return text.length > 0 ? (JSON.parse(text) as ApiErrorBody) : null;
-	} catch {
-		return null;
-	}
-}
+/** The BFF answers 204: the resolved tenant lives in the cookie, not in a body. */
+export type EnterScopeResponse = Record<string, never>;
 
 /**
  * Enter tenant scope. The BFF resolves `slug` → tenant UUID, sets the
@@ -55,40 +38,8 @@ async function readErrorBody(resp: Response): Promise<ApiErrorBody | null> {
  * (`NetworkError`, `AuthError`, `NotFoundError`, etc.).
  */
 export async function enterScope(req: EnterScopeRequest): Promise<EnterScopeResponse> {
-	let resp: Response;
-	try {
-		resp = await fetch(SCOPE_PATH, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				Accept: 'application/json',
-				'X-CSRF-Token': getCsrfToken()
-			},
-			credentials: 'same-origin',
-			body: JSON.stringify(req)
-		});
-	} catch (cause) {
-		throw ApiError.transport(cause);
-	}
-
-	if (!resp.ok) {
-		const body = await readErrorBody(resp);
-		throw ApiError.fromResponse(resp, body);
-	}
-
-	// Another tenant's context starts here: drop offline copies of the previous one.
-	await clearPrivateCaches();
-
-	// 204 No Content or empty body → return {} (the resolved tenant lives
-	// in the cookie, not the body — callers don't need it).
-	if (resp.status === 204) return {};
-	const text = await resp.text();
-	if (text.length === 0) return {};
-	try {
-		return JSON.parse(text) as EnterScopeResponse;
-	} catch {
-		return {};
-	}
+	await api.post('/operator/scope', req);
+	return {};
 }
 
 /**
