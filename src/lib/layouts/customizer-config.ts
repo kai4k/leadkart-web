@@ -10,7 +10,7 @@ import { PREFERENCE_VALUES, type PreferenceKey, type Preferences } from '$featur
 /** `wireframe`: a miniature of the layout; `swatch`: a colour dot. */
 export type TileKind = 'wireframe' | 'swatch';
 
-export interface CustomizerOption<K extends PreferenceKey = PreferenceKey> {
+interface CustomizerOption<K extends PreferenceKey = PreferenceKey> {
 	value: Preferences[K];
 	labelKey: string;
 	/** hidden below this breakpoint (the layout needs room to be chosen) */
