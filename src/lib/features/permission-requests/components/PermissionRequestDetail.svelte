@@ -96,18 +96,22 @@
 		<Icon icon={ChevronLeft} size="xs" /> Back to requests
 	</a>
 
+	<!-- outside the query branch: the loading and error states have their h1 too -->
+	<PageHeader title={$_('pages.permissionRequest.title')}>
+		{#snippet meta()}
+			{#if query.data}
+				{@const badge = permissionRequestState(query.data.state)}
+				<Badge variant={badge.variant} size="sm">{badge.label}</Badge>
+			{/if}
+		{/snippet}
+	</PageHeader>
+
 	<QueryState
 		{query}
 		noun="permission request"
 		notFound="This request doesn't exist or you don't have access."
 	>
 		{#snippet children(req)}
-			{@const badge = permissionRequestState(req.state)}
-			<PageHeader title={$_('pages.permissionRequest.title')}>
-				{#snippet meta()}
-					<Badge variant={badge.variant} size="sm">{badge.label}</Badge>
-				{/snippet}
-			</PageHeader>
 			<header class="stack stack-tight">
 				<div class="cluster cluster-tight">
 					<code class="caption text-subtle-foreground">{req.id}</code>

@@ -65,326 +65,415 @@ async function expectClean(page: Page, scope?: string): Promise<void> {
 	expect(blocking, JSON.stringify(blocking, null, 2)).toEqual([]);
 }
 
-test.describe('@a11y unauthenticated routes', () => {
-	test.beforeEach(async () => {
-		await resetMock();
-	});
+// Plan Task 17: every route is scanned in light and in dark, and once with a non-default primary.
+// The `lk_ui` cookie makes the SERVER write the preferences onto <html>, as for a returning visitor.
+const b64url = (s: string) =>
+	Buffer.from(s, 'utf8')
+		.toString('base64')
+		.replaceAll('+', '-')
+		.replaceAll('/', '_')
+		.replace(/=+$/, '');
+const uiCookie = (mode: string, colors: string) =>
+	b64url(
+		JSON.stringify({
+			v: 1,
+			layout: 'vertical',
+			navType: 'default',
+			contentWidth: 'default',
+			sidebar: 'large',
+			mode,
+			colors,
+			sidebarColors: 'light',
+			darkPalette: 'default'
+		})
+	);
+const SCHEMES = [
+	{ name: 'light', mode: 'light', colors: 'leadkart' },
+	{ name: 'dark', mode: 'dark', colors: 'leadkart' },
+	{ name: 'green primary', mode: 'light', colors: 'green' }
+] as const;
 
-	test('signin', async ({ page }) => {
-		await page.goto('/signin');
-		await expectClean(page);
-	});
-
-	test('forgot-password', async ({ page }) => {
-		await page.goto('/forgot-password');
-		await expectClean(page);
-	});
-
-	test('reset-password — with token', async ({ page }) => {
-		await page.goto('/reset-password?token=mock');
-		await expectClean(page);
-	});
-
-	test('reset-password — missing token', async ({ page }) => {
-		await page.goto('/reset-password');
-		await expectClean(page);
-	});
-
-	test('verify-email — with token', async ({ page }) => {
-		await page.goto('/verify-email?token=mock');
-		await expectClean(page);
-	});
-
-	test('404 unknown route', async ({ page }) => {
-		await page.goto('/this-route-does-not-exist');
-		await expectClean(page);
-	});
-});
-
-test.describe('@a11y dashboard variants', () => {
-	test.beforeEach(async () => {
-		await resetMock();
-	});
-
-	test('platform-super dashboard', async ({ page }) => {
-		await signInAsTier(page, {
-			tier: 'platform-super',
-			is_super_user: true,
-			permissions: ['platform.stats.view']
-		});
-		await registerMocks([
-			{
-				method: 'GET',
-				path: '/api/v1/platform/stats',
-				status: 200,
-				body: {
-					tenants_total: 12,
-					tenants_active: 9,
-					tenants_suspended: 3,
-					persons_total: 156,
-					memberships_active: 132
+for (const scheme of SCHEMES) {
+	test.describe(`${scheme.name}`, () => {
+		test.beforeEach(async ({ context }) => {
+			await context.addCookies([
+				{
+					name: 'lk_ui',
+					value: uiCookie(scheme.mode, scheme.colors),
+					url: 'http://localhost:4173'
 				}
-			}
-		]);
-		await page.goto('/dashboard');
-		await page.waitForLoadState('networkidle');
-		await expectClean(page, 'main');
-	});
-
-	test('tenant-admin dashboard', async ({ page }) => {
-		await signInAsTier(page, {
-			tier: 'tenant-admin',
-			permissions: ['tenant.admin']
+			]);
 		});
-		await page.goto('/dashboard');
-		await expectClean(page, 'main');
-	});
 
-	test('tenant-user dashboard', async ({ page }) => {
-		await signInAsTier(page, {
-			tier: 'tenant-user',
-			permissions: ['crm.leads.view']
+		defineRoutes();
+	});
+}
+
+function defineRoutes() {
+	test.describe('@a11y unauthenticated routes', () => {
+		test.beforeEach(async () => {
+			await resetMock();
 		});
-		await page.goto('/dashboard');
-		await expectClean(page, 'main');
-	});
-});
 
-const TENANT_ADMIN: SignInOpts = {
-	tier: 'tenant-admin',
-	permissions: [
-		'tenant.admin',
-		'tenant.profile.update',
-		'identity.users.view',
-		'identity.roles.view'
-	]
-};
+		test('signin', async ({ page }) => {
+			await page.goto('/signin');
+			await expectClean(page);
+		});
 
-test.describe('@a11y settings routes', () => {
-	test.beforeEach(async () => {
-		await resetMock();
-	});
+		test('forgot-password', async ({ page }) => {
+			await page.goto('/forgot-password');
+			await expectClean(page);
+		});
 
-	test('account/profile', async ({ page }) => {
-		await signInAsTier(page, TENANT_ADMIN);
-		await page.goto('/settings/account/profile');
-		await expectClean(page, 'main');
-	});
+		test('reset-password — with token', async ({ page }) => {
+			await page.goto('/reset-password?token=mock');
+			await expectClean(page);
+		});
 
-	test('account/security', async ({ page }) => {
-		await signInAsTier(page, TENANT_ADMIN);
-		await page.goto('/settings/account/security');
-		await expectClean(page, 'main');
-	});
+		test('reset-password — missing token', async ({ page }) => {
+			await page.goto('/reset-password');
+			await expectClean(page);
+		});
 
-	test('account/sessions', async ({ page }) => {
-		await signInAsTier(page, TENANT_ADMIN);
-		await page.goto('/settings/account/sessions');
-		await expectClean(page, 'main');
+		test('verify-email — with token', async ({ page }) => {
+			await page.goto('/verify-email?token=mock');
+			await expectClean(page);
+		});
+
+		test('404 unknown route', async ({ page }) => {
+			await page.goto('/this-route-does-not-exist');
+			await expectClean(page);
+		});
 	});
 
-	test('tenant/profile', async ({ page }) => {
-		await signInAsTier(page, TENANT_ADMIN);
-		await registerMocks([
-			{
-				method: 'GET',
-				path: `/api/v1/tenants/${TEST_TENANT_ID}`,
-				status: 200,
-				body: fakeTenantDto()
-			}
-		]);
-		await page.goto('/settings/tenant/profile');
-		await page.waitForLoadState('networkidle');
-		await expectClean(page, 'main');
-	});
+	test.describe('@a11y dashboard variants', () => {
+		test.beforeEach(async () => {
+			await resetMock();
+		});
 
-	test('tenant/statutory', async ({ page }) => {
-		await signInAsTier(page, TENANT_ADMIN);
-		await registerMocks([
-			{
-				method: 'GET',
-				path: `/api/v1/tenants/${TEST_TENANT_ID}`,
-				status: 200,
-				body: fakeTenantDto()
-			}
-		]);
-		await page.goto('/settings/tenant/statutory');
-		await page.waitForLoadState('networkidle');
-		await expectClean(page, 'main');
-	});
-
-	test('tenant/contact', async ({ page }) => {
-		await signInAsTier(page, TENANT_ADMIN);
-		await registerMocks([
-			{
-				method: 'GET',
-				path: `/api/v1/tenants/${TEST_TENANT_ID}`,
-				status: 200,
-				body: fakeTenantDto()
-			}
-		]);
-		await page.goto('/settings/tenant/contact');
-		await page.waitForLoadState('networkidle');
-		await expectClean(page, 'main');
-	});
-
-	test('tenant/preferences', async ({ page }) => {
-		await signInAsTier(page, TENANT_ADMIN);
-		await registerMocks([
-			{
-				method: 'GET',
-				path: `/api/v1/tenants/${TEST_TENANT_ID}`,
-				status: 200,
-				body: fakeTenantDto()
-			}
-		]);
-		await page.goto('/settings/tenant/preferences');
-		await page.waitForLoadState('networkidle');
-		await expectClean(page, 'main');
-	});
-
-	test('users — populated', async ({ page }) => {
-		await signInAsTier(page, TENANT_ADMIN);
-		await registerMocks([
-			{
-				method: 'GET',
-				path: '/api/v1/users',
-				status: 200,
-				body: {
-					users: [
-						fakeUserDto({
-							first_name: 'Alice',
-							last_name: 'Anderson',
-							email: 'alice@acme.test',
-							designation: 'Sales Lead'
-						})
-					],
-					has_more: false
+		test('platform-super dashboard', async ({ page }) => {
+			await signInAsTier(page, {
+				tier: 'platform-super',
+				is_super_user: true,
+				permissions: ['platform.stats.view']
+			});
+			await registerMocks([
+				{
+					method: 'GET',
+					path: '/api/v1/platform/stats',
+					status: 200,
+					body: {
+						tenants_total: 12,
+						tenants_active: 9,
+						tenants_suspended: 3,
+						persons_total: 156,
+						memberships_active: 132
+					}
 				}
-			},
-			{ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [] } }
-		]);
-		await page.goto('/settings/users');
-		await page.waitForLoadState('networkidle');
-		await expectClean(page, 'main');
-	});
-
-	test('roles — empty', async ({ page }) => {
-		await signInAsTier(page, TENANT_ADMIN);
-		await registerMocks([
-			{ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [] } }
-		]);
-		await page.goto('/settings/roles');
-		await page.waitForLoadState('networkidle');
-		await expectClean(page, 'main');
-	});
-});
-
-test.describe('@a11y operator routes', () => {
-	test.beforeEach(async () => {
-		await resetMock();
-	});
-
-	test('tenants list', async ({ page }) => {
-		await signInAsTier(page, {
-			tier: 'platform-super',
-			is_super_user: true,
-			permissions: ['platform.tenants.view']
+			]);
+			await page.goto('/dashboard');
+			await page.waitForLoadState('networkidle');
+			await expectClean(page, 'main');
 		});
-		await registerMocks([
-			{
-				method: 'GET',
-				path: '/api/v1/tenants',
-				status: 200,
-				body: {
-					tenants: [
-						fakeTenantDto({ slug: 'platform', display_name: 'LeadKart Platform' }),
-						fakeTenantDto({
-							id: '00000000-0000-4000-8000-000000000020',
-							slug: 'acme-pharma',
-							display_name: 'Acme Pharma'
-						})
-					]
-				}
-			}
-		]);
-		await page.goto('/operator/tenants');
-		await page.waitForLoadState('networkidle');
-		await expectClean(page, 'main');
-	});
 
-	test('persons directory', async ({ page }) => {
-		await signInAsTier(page, {
-			tier: 'platform-super',
-			is_super_user: true,
-			permissions: ['platform.users.view']
+		test('tenant-admin dashboard', async ({ page }) => {
+			await signInAsTier(page, {
+				tier: 'tenant-admin',
+				permissions: ['tenant.admin']
+			});
+			await page.goto('/dashboard');
+			await expectClean(page, 'main');
 		});
-		await registerMocks([
-			{
-				method: 'GET',
-				path: '/api/v1/platform/persons',
-				status: 200,
-				body: { persons: [], next_cursor: null }
-			}
-		]);
-		await page.goto('/operator/persons');
-		await page.waitForLoadState('networkidle');
-		await expectClean(page, 'main');
-	});
-});
 
-test.describe('@a11y CRM list routes', () => {
-	test.beforeEach(async () => {
-		await resetMock();
+		test('tenant-user dashboard', async ({ page }) => {
+			await signInAsTier(page, {
+				tier: 'tenant-user',
+				permissions: ['crm.leads.view']
+			});
+			await page.goto('/dashboard');
+			await expectClean(page, 'main');
+		});
 	});
 
-	const TENANT_CRM: SignInOpts = {
+	const TENANT_ADMIN: SignInOpts = {
 		tier: 'tenant-admin',
-		permissions: ['tenant.admin', 'crm.leads.view', 'crm.orders.view', 'inventory.products.view']
+		permissions: [
+			'tenant.admin',
+			'tenant.profile.update',
+			'identity.users.view',
+			'identity.roles.view'
+		]
 	};
 
-	test('leads — empty', async ({ page }) => {
-		await signInAsTier(page, TENANT_CRM);
-		await registerMocks([
-			{
-				method: 'GET',
-				path: '/api/v1/crm/leads', // unvalidated until Tasks 16-19
-				status: 200,
-				body: { leads: [], next_cursor: null }
-			}
-		]);
-		await page.goto('/leads');
-		await page.waitForLoadState('networkidle');
-		await expectClean(page, 'main');
+	test.describe('@a11y settings routes', () => {
+		test.beforeEach(async () => {
+			await resetMock();
+		});
+
+		test('account/profile', async ({ page }) => {
+			await signInAsTier(page, TENANT_ADMIN);
+			await page.goto('/settings/account/profile');
+			await expectClean(page, 'main');
+		});
+
+		test('account/security', async ({ page }) => {
+			await signInAsTier(page, TENANT_ADMIN);
+			await page.goto('/settings/account/security');
+			await expectClean(page, 'main');
+		});
+
+		test('account/sessions', async ({ page }) => {
+			await signInAsTier(page, TENANT_ADMIN);
+			await page.goto('/settings/account/sessions');
+			await expectClean(page, 'main');
+		});
+
+		test('tenant/profile', async ({ page }) => {
+			await signInAsTier(page, TENANT_ADMIN);
+			await registerMocks([
+				{
+					method: 'GET',
+					path: `/api/v1/tenants/${TEST_TENANT_ID}`,
+					status: 200,
+					body: fakeTenantDto()
+				}
+			]);
+			await page.goto('/settings/tenant/profile');
+			await page.waitForLoadState('networkidle');
+			await expectClean(page, 'main');
+		});
+
+		test('tenant/statutory', async ({ page }) => {
+			await signInAsTier(page, TENANT_ADMIN);
+			await registerMocks([
+				{
+					method: 'GET',
+					path: `/api/v1/tenants/${TEST_TENANT_ID}`,
+					status: 200,
+					body: fakeTenantDto()
+				}
+			]);
+			await page.goto('/settings/tenant/statutory');
+			await page.waitForLoadState('networkidle');
+			await expectClean(page, 'main');
+		});
+
+		test('tenant/contact', async ({ page }) => {
+			await signInAsTier(page, TENANT_ADMIN);
+			await registerMocks([
+				{
+					method: 'GET',
+					path: `/api/v1/tenants/${TEST_TENANT_ID}`,
+					status: 200,
+					body: fakeTenantDto()
+				}
+			]);
+			await page.goto('/settings/tenant/contact');
+			await page.waitForLoadState('networkidle');
+			await expectClean(page, 'main');
+		});
+
+		test('tenant/preferences', async ({ page }) => {
+			await signInAsTier(page, TENANT_ADMIN);
+			await registerMocks([
+				{
+					method: 'GET',
+					path: `/api/v1/tenants/${TEST_TENANT_ID}`,
+					status: 200,
+					body: fakeTenantDto()
+				}
+			]);
+			await page.goto('/settings/tenant/preferences');
+			await page.waitForLoadState('networkidle');
+			await expectClean(page, 'main');
+		});
+
+		test('users — populated', async ({ page }) => {
+			await signInAsTier(page, TENANT_ADMIN);
+			await registerMocks([
+				{
+					method: 'GET',
+					path: '/api/v1/users',
+					status: 200,
+					body: {
+						users: [
+							fakeUserDto({
+								first_name: 'Alice',
+								last_name: 'Anderson',
+								email: 'alice@acme.test',
+								designation: 'Sales Lead'
+							})
+						],
+						has_more: false
+					}
+				},
+				{ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [] } }
+			]);
+			await page.goto('/settings/users');
+			await page.waitForLoadState('networkidle');
+			await expectClean(page, 'main');
+		});
+
+		test('roles — empty', async ({ page }) => {
+			await signInAsTier(page, TENANT_ADMIN);
+			await registerMocks([
+				{ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [] } }
+			]);
+			await page.goto('/settings/roles');
+			await page.waitForLoadState('networkidle');
+			await expectClean(page, 'main');
+		});
 	});
 
-	test('orders — empty', async ({ page }) => {
-		await signInAsTier(page, TENANT_CRM);
-		await registerMocks([
-			{
-				method: 'GET',
-				path: '/api/v1/orders',
-				status: 200,
-				body: { orders: [], next_cursor: null }
-			}
-		]);
-		await page.goto('/orders');
-		await page.waitForLoadState('networkidle');
-		await expectClean(page, 'main');
+	test.describe('@a11y operator routes', () => {
+		test.beforeEach(async () => {
+			await resetMock();
+		});
+
+		test('tenants list', async ({ page }) => {
+			await signInAsTier(page, {
+				tier: 'platform-super',
+				is_super_user: true,
+				permissions: ['platform.tenants.view']
+			});
+			await registerMocks([
+				{
+					method: 'GET',
+					path: '/api/v1/tenants',
+					status: 200,
+					body: {
+						tenants: [
+							fakeTenantDto({ slug: 'platform', display_name: 'LeadKart Platform' }),
+							fakeTenantDto({
+								id: '00000000-0000-4000-8000-000000000020',
+								slug: 'acme-pharma',
+								display_name: 'Acme Pharma'
+							})
+						]
+					}
+				}
+			]);
+			await page.goto('/operator/tenants');
+			await page.waitForLoadState('networkidle');
+			await expectClean(page, 'main');
+		});
+
+		test('persons directory', async ({ page }) => {
+			await signInAsTier(page, {
+				tier: 'platform-super',
+				is_super_user: true,
+				permissions: ['platform.users.view']
+			});
+			await registerMocks([
+				{
+					method: 'GET',
+					path: '/api/v1/platform/persons',
+					status: 200,
+					body: { persons: [], next_cursor: null }
+				}
+			]);
+			await page.goto('/operator/persons');
+			await page.waitForLoadState('networkidle');
+			await expectClean(page, 'main');
+		});
 	});
 
-	test('inventory — empty', async ({ page }) => {
-		await signInAsTier(page, TENANT_CRM);
-		await registerMocks([
-			{
-				method: 'GET',
-				path: '/api/v1/inventory/products', // unvalidated until Tasks 24-26
-				status: 200,
-				body: { products: [], next_cursor: null }
-			}
-		]);
-		await page.goto('/inventory');
-		await page.waitForLoadState('networkidle');
-		await expectClean(page, 'main');
+	test.describe('@a11y CRM list routes', () => {
+		test.beforeEach(async () => {
+			await resetMock();
+		});
+
+		const TENANT_CRM: SignInOpts = {
+			tier: 'tenant-admin',
+			permissions: ['tenant.admin', 'crm.leads.view', 'crm.orders.view', 'inventory.products.view']
+		};
+
+		test('leads — empty', async ({ page }) => {
+			await signInAsTier(page, TENANT_CRM);
+			await registerMocks([
+				{
+					method: 'GET',
+					path: '/api/v1/crm/leads', // unvalidated until Tasks 16-19
+					status: 200,
+					body: { leads: [], next_cursor: null }
+				}
+			]);
+			await page.goto('/leads');
+			await page.waitForLoadState('networkidle');
+			await expectClean(page, 'main');
+		});
+
+		test('orders — empty', async ({ page }) => {
+			await signInAsTier(page, TENANT_CRM);
+			await registerMocks([
+				{
+					method: 'GET',
+					path: '/api/v1/orders',
+					status: 200,
+					body: { orders: [], next_cursor: null }
+				}
+			]);
+			await page.goto('/orders');
+			await page.waitForLoadState('networkidle');
+			await expectClean(page, 'main');
+		});
+
+		test('inventory — empty', async ({ page }) => {
+			await signInAsTier(page, TENANT_CRM);
+			await registerMocks([
+				{
+					method: 'GET',
+					path: '/api/v1/inventory/products', // unvalidated until Tasks 24-26
+					status: 200,
+					body: { products: [], next_cursor: null }
+				}
+			]);
+			await page.goto('/inventory');
+			await page.waitForLoadState('networkidle');
+			await expectClean(page, 'main');
+		});
 	});
-});
+
+	// A detail page whose record cannot be loaded still has exactly one <h1> (expectClean counts them).
+	test.describe('@a11y detail pages that fail to load', () => {
+		test.beforeEach(async () => {
+			await resetMock();
+		});
+
+		const ID = '00000000-0000-4000-8000-0000000000aa';
+		const TENANT_CRM: SignInOpts = {
+			tier: 'tenant-admin',
+			permissions: ['tenant.admin', 'crm.leads.view', 'identity.permission_requests.view']
+		};
+
+		test('lead detail — not found', async ({ page }) => {
+			await signInAsTier(page, TENANT_CRM);
+			await registerMocks([
+				{
+					method: 'GET',
+					path: `/api/v1/crm/leads/${ID}`,
+					status: 404,
+					body: { error: 'not_found', message: 'Not found' }
+				}
+			]);
+			await page.goto(`/leads/${ID}`);
+			await page.waitForLoadState('networkidle');
+			await expectClean(page, 'main');
+		});
+
+		test('permission request detail — not found', async ({ page }) => {
+			await signInAsTier(page, TENANT_CRM);
+			await registerMocks([
+				{
+					method: 'GET',
+					path: `/api/v1/permission-requests/${ID}`,
+					status: 404,
+					body: { error: 'not_found', message: 'Not found' }
+				}
+			]);
+			await page.goto(`/permission-requests/${ID}`);
+			await page.waitForLoadState('networkidle');
+			await expectClean(page, 'main');
+		});
+	});
+}

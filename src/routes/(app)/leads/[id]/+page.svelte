@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
+	import PageHeader from '$layouts/PageHeader.svelte';
 	import { ACTION, session } from '$features/auth';
 	/**
 	 * Lead detail page — header strip + tabs (Profile / Activity /
@@ -69,11 +71,13 @@
 
 <div class="stack stack-relaxed">
 	{#if detail.isPending}
+		<PageHeader title={$_('pages.lead.fallbackTitle')} />
 		<div class="stack stack-tight">
 			<Skeleton class="h-8 w-1/3 rounded" />
 			<Skeleton class="h-4 w-1/4 rounded" />
 		</div>
 	{:else if detail.isError}
+		<PageHeader title={$_('pages.lead.fallbackTitle')} />
 		<div
 			class="bg-destructive-soft text-destructive border-destructive-indicator rounded-md border-s-4 p-4"
 		>

@@ -428,6 +428,9 @@
 		"role": {
 			"fallbackTitle": "Role"
 		},
+		"lead": {
+			"fallbackTitle": "Lead"
+		},
 		"member": {
 			"fallbackTitle": "Member"
 		},

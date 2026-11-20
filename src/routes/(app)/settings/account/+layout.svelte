@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
 	import PageHeader from '$layouts/PageHeader.svelte';
+	import NestedPageHeaders from '$layouts/NestedPageHeaders.svelte';
 	import SectionNav from '$layouts/SectionNav.svelte';
 	import { page } from '$app/state';
 	import { Skeleton } from '$ui';
@@ -55,6 +56,8 @@
 			<Skeleton class="h-4 w-1/3" />
 			<Skeleton class="h-32 w-full rounded-md" />
 		{/snippet}
-		{@render children()}
+		<NestedPageHeaders>
+			{@render children()}
+		</NestedPageHeaders>
 	</QueryState>
 </div>

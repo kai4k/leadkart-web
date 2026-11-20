@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
 	import PageHeader from '$layouts/PageHeader.svelte';
+	import NestedPageHeaders from '$layouts/NestedPageHeaders.svelte';
 	import SectionNav from '$layouts/SectionNav.svelte';
 	import { page } from '$app/state';
 	import { Badge } from '$ui';
@@ -57,5 +58,7 @@
 	</PageHeader>
 	<SectionNav {tabs} label={$_('pages.tenant.sections')} />
 
-	{@render children()}
+	<NestedPageHeaders>
+		{@render children()}
+	</NestedPageHeaders>
 </div>
