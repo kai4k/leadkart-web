@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { Alert, AuthCard, Button, Logo } from '$ui';
+	import { Alert, AuthCard, Button } from '$ui';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import type { ConfirmPhase } from '../../../../routes/(auth)/confirm-email-change/+page';
@@ -16,7 +16,6 @@
 
 <AuthCard>
 	<div class="flex flex-col items-center gap-6">
-		<Logo size="2xl" />
 		<div class="stack stack-tight text-center">
 			<h1 class="h1 text-primary">{$_('auth.changeEmail.confirm.title')}</h1>
 			<p class="body-sm text-muted-foreground">{$_('auth.changeEmail.confirm.subtitle')}</p>

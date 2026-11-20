@@ -13,6 +13,7 @@
 	import { page } from '$app/state';
 	import { ChevronRight, Icon } from '$icons';
 	import { routeContext } from '#lib/utils/routeTitle.ts';
+	import { inNestedPageHeaders } from './nested-page-header.ts';
 
 	type Crumb = { label: string; href?: string };
 	type Props = {
@@ -26,7 +27,11 @@
 	};
 	let { title, description, crumbs, actions, meta, titleTestId }: Props = $props();
 
+	// Below a layout that already shows the page header: a section title (h2), no second trail.
+	const nested = inNestedPageHeaders();
+
 	const trail = $derived.by<Crumb[]>(() => {
+		if (nested) return [];
 		if (crumbs) return crumbs;
 		const route = routeContext(page.url.pathname).crumbs;
 		return route.map((c, i) =>
@@ -43,12 +48,13 @@
 <div class="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2" data-page-heading>
 	<div class="min-w-0">
 		<div class="flex flex-wrap items-center gap-2">
-			<h1
+			<svelte:element
+				this={nested ? 'h2' : 'h1'}
 				class="text-foreground min-w-0 text-lg font-semibold break-words"
 				data-testid={titleTestId}
 			>
 				{title}
-			</h1>
+			</svelte:element>
 			{@render meta?.()}
 		</div>
 		{#if description}

@@ -4,7 +4,7 @@
 	import { enhance } from '$app/forms';
 	import { withFocusOnFailure } from '#lib/utils/focus-first-invalid.ts';
 	import { Icon, Lock } from '#lib/icons/index.ts';
-	import { Alert, AuthCard, Button, Logo } from '#lib/components/ui/index.ts';
+	import { Alert, AuthCard, Button } from '#lib/components/ui/index.ts';
 	import { TextField } from '#lib/components/form/index.ts';
 	import { resolve } from '$app/paths';
 	import type { ActionData } from '../../../../routes/(auth)/forgot-password/$types';
@@ -31,7 +31,6 @@
 
 <AuthCard>
 	<div class="flex flex-col items-center gap-6">
-		<Logo size="2xl" />
 		<div class="stack stack-tight text-center">
 			<h1 class="h1 text-primary">{$_('auth.forgotPassword.title')}</h1>
 			<p class="body-sm text-muted-foreground">{$_('auth.forgotPassword.subtitle')}</p>

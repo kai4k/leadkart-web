@@ -6,7 +6,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { Icon, Lock } from '#lib/icons/index.ts';
-	import { Alert, AuthCard, Button, Logo } from '#lib/components/ui/index.ts';
+	import { Alert, AuthCard, Button } from '#lib/components/ui/index.ts';
 	import { PasswordField } from '#lib/components/form/index.ts';
 	import { resolve } from '$app/paths';
 	import type { ActionData } from '../../../../routes/(auth)/reset-password/$types';
@@ -40,7 +40,6 @@
 
 <AuthCard>
 	<div class="flex flex-col items-center gap-6">
-		<Logo size="2xl" />
 		<div class="stack stack-tight text-center">
 			<h1 class="h1 text-primary">{$_('auth.resetPassword.title')}</h1>
 			<p class="body-sm text-muted-foreground">{$_('auth.resetPassword.subtitle')}</p>

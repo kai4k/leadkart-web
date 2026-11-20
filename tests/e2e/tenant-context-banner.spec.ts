@@ -70,6 +70,8 @@ const region = (page: Page) => page.getByRole('region', { name: 'Tenant context'
 
 /** The banner is in view, named, and neither under the topbar nor beside-and-under the sidebar. */
 async function expectPlaced(page: Page) {
+	// the page keeps exactly one <h1> under the layout's header (the Team list is an h2 here)
+	await expect(page.locator('h1')).toHaveCount(1);
 	const banner = region(page);
 	await expect(banner).toBeVisible();
 	await expect(banner).toContainText('Acme Pharma');

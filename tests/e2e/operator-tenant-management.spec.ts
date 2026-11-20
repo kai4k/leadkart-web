@@ -272,7 +272,7 @@ test.describe('Operator scope flow', () => {
 		await page.waitForURL(/\/operator\/scope\/profile$/);
 		await page.getByRole('link', { name: 'Members' }).click();
 		await page.waitForURL(/\/operator\/scope\/members$/);
-		await expect(page.getByRole('heading', { level: 1, name: 'Team' })).toBeVisible();
+		await expect(page.getByRole('heading', { level: 2, name: 'Team' })).toBeVisible();
 
 		const calls = await listMockCalls();
 		const usersCall = calls.find((c) => c.path === '/api/v1/users' && c.method === 'GET');
@@ -393,7 +393,7 @@ test.describe('Operator scope flow', () => {
 		await page.waitForURL(/\/operator\/scope\/profile$/);
 		await page.getByRole('link', { name: 'Members' }).click();
 		await page.waitForURL(/\/operator\/scope\/members$/);
-		await expect(page.getByRole('heading', { level: 1, name: 'Team' })).toBeVisible();
+		await expect(page.getByRole('heading', { level: 2, name: 'Team' })).toBeVisible();
 
 		await context.clearCookies({ name: 'lk_op_tenant' });
 		const before = (await listMockCalls()).length;

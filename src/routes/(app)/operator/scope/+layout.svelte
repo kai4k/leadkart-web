@@ -2,6 +2,7 @@
 	import { _ } from 'svelte-i18n';
 	import PageHeader from '$layouts/PageHeader.svelte';
 	import SectionNav from '$layouts/SectionNav.svelte';
+	import NestedPageHeaders from '$layouts/NestedPageHeaders.svelte';
 	import type { Snippet } from 'svelte';
 	import { Badge } from '$ui';
 	import { session } from '$features/auth';
@@ -37,5 +38,7 @@
 
 	<SectionNav {tabs} label={$_('pages.scope.sections')} />
 
-	{@render children()}
+	<NestedPageHeaders>
+		{@render children()}
+	</NestedPageHeaders>
 </div>

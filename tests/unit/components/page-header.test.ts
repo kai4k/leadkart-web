@@ -98,3 +98,18 @@ describe('PageHeader', () => {
 		expect(document.querySelector('h1 img')).toBeNull();
 	});
 });
+
+describe('PageHeader below a layout that already shows one', () => {
+	it('is a section title (h2) with no second trail: the page keeps exactly one h1', async () => {
+		const { default: Host } = await import('../stubs/NestedHeaderHost.svelte');
+		if (component) unmount(component);
+		component = mount(Host, { target });
+		flushSync();
+		expect(document.querySelectorAll('h1')).toHaveLength(1);
+		expect(document.querySelector('h1')!.textContent?.trim()).toBe('Acme');
+		const h2 = document.querySelectorAll('h2');
+		expect(h2).toHaveLength(1);
+		expect(h2[0]!.textContent?.trim()).toBe('Team');
+		expect(document.querySelectorAll('nav[aria-label="Breadcrumb"]')).toHaveLength(1);
+	});
+});
