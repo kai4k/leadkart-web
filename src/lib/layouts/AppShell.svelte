@@ -30,24 +30,24 @@
 	const isMobile = createIsMobile();
 	const sizing = createSidebarSizing(prefs);
 	const horizontal = $derived(prefs.layout === 'horizontal');
-	let settingsOpen = $state(false);
+	let customizerOpen = $state(false);
 
-	// Theme/layout settings are opened on demand (the average session hits them ~0 times). Defer the
-	// SettingsModal compound and its Dialog dependency to the first click.
-	let SettingsModalCmp = $state<Component<{
+	// The customizer is opened on demand (the average session hits it ~0 times). Its sheet and the
+	// tiles' CSS load on the first click; focus returns to the Topbar button when it closes.
+	let CustomizerCmp = $state<Component<{
 		open: boolean;
 		onOpenChange: (open: boolean) => void;
 	}> | null>(null);
 
-	async function openSettings(): Promise<void> {
-		if (!SettingsModalCmp) {
-			const mod = await import('./SettingsModal.svelte');
-			SettingsModalCmp = mod.default as unknown as Component<{
+	async function openCustomizer(): Promise<void> {
+		if (!CustomizerCmp) {
+			const mod = await import('./ThemeCustomizer.svelte');
+			CustomizerCmp = mod.default as unknown as Component<{
 				open: boolean;
 				onOpenChange: (open: boolean) => void;
 			}>;
 		}
-		settingsOpen = true;
+		customizerOpen = true;
 	}
 </script>
 
@@ -62,7 +62,7 @@
 		<!-- Horizontal on a phone: the same sheet as every other layout. -->
 		{#if !horizontal || isMobile.current}<Sidebar />{/if}
 
-		<Topbar onOpenCustomizer={() => void openSettings()} />
+		<Topbar onOpenCustomizer={() => void openCustomizer()} />
 
 		<div data-shell="content">
 			<!-- The context banners (acting in a tenant, impersonating): under the topbar, not scrolled
@@ -79,8 +79,8 @@
 			<Footer />
 		</div>
 
-		{#if SettingsModalCmp}
-			<SettingsModalCmp bind:open={settingsOpen} onOpenChange={(o) => (settingsOpen = o)} />
+		{#if CustomizerCmp}
+			<CustomizerCmp bind:open={customizerOpen} onOpenChange={(o) => (customizerOpen = o)} />
 		{/if}
 	</div>
 </SidebarBlock.Provider>

@@ -95,8 +95,9 @@ describe('check-token-contrast: the real tokens', () => {
 	it('passes every pair in every combination', () => {
 		const { problems, combinations, checked, pairs } = check();
 		expect(problems).toEqual([]);
+		// light and dark cross every dark palette; black-white is a light mode, so one palette
 		expect(combinations).toBe(
-			AXES.colors.length * AXES.mode.length * AXES.darkPalette.length * AXES.sidebarColors.length
+			AXES.colors.length * AXES.sidebarColors.length * (2 * AXES.darkPalette.length + 1)
 		);
 		expect(checked).toBe(pairs * combinations);
 	});
@@ -139,5 +140,25 @@ describe('check-token-contrast: fix round B tokens', () => {
 			PAIRS.find((p: { label: string }) => p.label === l) as { min: number };
 		expect(get('info-indicator on card [dot, bar or icon mark]').min).toBe(3);
 		expect(get('subtle-foreground on card [tertiary text]').min).toBe(4.5);
+	});
+});
+
+describe('check-token-contrast: black-white mode (the customizer offers it)', () => {
+	const css = ':root { --fg: oklch(0.452 0.313 264.05); --bg: oklch(0 0 0); }';
+	it('is a gated mode axis value', () => {
+		expect([...AXES.mode]).toEqual(['light', 'dark', 'black-white']);
+	});
+	it('measures the grayscale the filter paints, not the colours underneath', () => {
+		const p = pair({ min: 3, over: 'bg' });
+		const colour = ratioOf(css, p, 'light');
+		const gray = ratioOf(css, p, 'black-white');
+		// a saturated blue keeps its WCAG luminance ratio in colour but loses it in grayscale
+		expect(gray).not.toBeCloseTo(colour, 1);
+	});
+	it('runs one dark palette for it (it is a light mode) and every sidebar colour', () => {
+		const { combinations } = check();
+		expect(combinations).toBe(
+			AXES.colors.length * AXES.sidebarColors.length * (2 * AXES.darkPalette.length + 1)
+		);
 	});
 });

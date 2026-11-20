@@ -2,7 +2,8 @@
  * PALETTES — primitive colour ramps only. No semantic meaning here.
  *
  * Semantic tokens (theme/semantic.css) pick from these. Components never
- * reference a --palette-* or --neutral-* variable directly.
+ * reference a --palette-* or --neutral-* variable directly (the one exception: the customizer's
+ * tiles, which paint what each OPTION looks like, whatever is selected).
  *
  *   --palette-{leadkart,green,violet,orange,teal,fuchsia,lime,amber}-N   primary choices
  *   --palette-{success,warning,danger,info}-N                           status
@@ -254,4 +255,13 @@
 	--neutral-gray-850: oklch(25.89% 0.0374 268.25);
 	--neutral-gray-900: oklch(0.21 0.034 264.665);
 	--neutral-gray-950: oklch(0.13 0.028 261.692);
+}
+
+/* What each SIDEBAR colour looks like, independent of the selected one: the customizer's swatches
+   and semantic.css's dark / purple / sky sidebar blocks read these (one value, two uses). */
+:root {
+	--swatch-sidebar-light: oklch(1 0 0);
+	--swatch-sidebar-dark: oklch(0.278 0.033 256.848);
+	--swatch-sidebar-purple: oklch(0.291 0.149 302.717);
+	--swatch-sidebar-sky: oklch(0.391 0.09 240.876);
 }

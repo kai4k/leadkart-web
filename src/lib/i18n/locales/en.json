@@ -442,5 +442,72 @@
 		"scope": {
 			"sections": "Tenant sections"
 		}
+	},
+	"customizer": {
+		"title": "Customize",
+		"description": "Colours and layout. Changes apply at once and are remembered on this device.",
+		"reset": "Reset to defaults",
+		"layout": {
+			"title": "Layout",
+			"vertical": "Vertical",
+			"horizontal": "Horizontal",
+			"modern": "Modern",
+			"boxed": "Boxed",
+			"semibox": "Semibox"
+		},
+		"navType": {
+			"title": "Navigation style",
+			"default": "Default",
+			"floating": "Floating",
+			"boxed": "Boxed",
+			"pattern": "Pattern"
+		},
+		"contentWidth": {
+			"title": "Content width",
+			"default": "Boxed",
+			"fluid": "Fluid"
+		},
+		"sidebar": {
+			"title": "Sidebar size",
+			"hint": "Ctrl or Cmd + B collapses and expands the sidebar. It does not apply in the horizontal layout.",
+			"large": "Large",
+			"medium": "Medium",
+			"small": "Small (icons)"
+		},
+		"mode": {
+			"title": "Mode",
+			"light": "Light",
+			"dark": "Dark",
+			"auto": "Auto (follows your device)",
+			"black-white": "Black and white"
+		},
+		"darkPalette": {
+			"title": "Dark surfaces",
+			"hint": "Used in dark and auto mode.",
+			"default": "Default",
+			"zinc": "Zinc",
+			"stone": "Stone",
+			"neutral": "Neutral",
+			"gray": "Gray"
+		},
+		"sidebarColors": {
+			"title": "Sidebar colour",
+			"light": "Light",
+			"dark": "Dark",
+			"brand": "Brand",
+			"purple": "Purple",
+			"sky": "Sky"
+		},
+		"colors": {
+			"title": "Primary colour",
+			"leadkart": "LeadKart",
+			"green": "Green",
+			"violet": "Violet",
+			"orange": "Orange",
+			"teal": "Teal",
+			"fuchsia": "Fuchsia",
+			"lime": "Lime",
+			"amber": "Amber"
+		}
 	}
 }

@@ -155,29 +155,3 @@
 	}
 }
 
-/* Customiser colour swatches: the colour comes from the palette token, never an inline style
-   (CSP and token canon). `--palette-*` is defined in theme/palettes.css. */
-.lk-swatch[data-swatch='leadkart'] {
-	background: var(--palette-leadkart-500);
-}
-.lk-swatch[data-swatch='green'] {
-	background: var(--palette-green-500);
-}
-.lk-swatch[data-swatch='violet'] {
-	background: var(--palette-violet-500);
-}
-.lk-swatch[data-swatch='orange'] {
-	background: var(--palette-orange-500);
-}
-.lk-swatch[data-swatch='teal'] {
-	background: var(--palette-teal-500);
-}
-.lk-swatch[data-swatch='fuchsia'] {
-	background: var(--palette-fuchsia-500);
-}
-.lk-swatch[data-swatch='lime'] {
-	background: var(--palette-lime-500);
-}
-.lk-swatch[data-swatch='amber'] {
-	background: var(--palette-amber-500);
-}

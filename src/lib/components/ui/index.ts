@@ -52,7 +52,6 @@ export type { DescriptionItem } from './DescriptionList.svelte';
 export { default as EmptyState } from './EmptyState.svelte';
 export * as Kanban from './kanban';
 export type { KanbanColumnDescriptor, KanbanColumnAccent, KanbanMove } from './kanban';
-export { default as Logo } from './Logo.svelte';
 export { default as BrandMark } from './BrandMark.svelte';
 export { default as StatCard } from './StatCard.svelte';
 export type { StatCardAccent } from './StatCard.svelte';

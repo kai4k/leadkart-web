@@ -184,11 +184,6 @@
 					class:ring-2={prefs.colors === id}
 					aria-pressed={prefs.colors === id}
 				>
-					<span
-						aria-hidden="true"
-						class="lk-swatch border-border h-4 w-4 rounded-full border"
-						data-swatch={id}
-					></span>
 					{id}
 				</button>
 			{/each}

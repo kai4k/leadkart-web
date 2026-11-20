@@ -11,7 +11,7 @@
 	 *     Screen which lives outside our control).
 	 *
 	 * Mounted once from AppShell so the bars are always available on
-	 * authenticated pages. Each bar uses the same .bg-bg-elevated border border-border rounded-xl shadow-card material
+	 * authenticated pages. Each bar uses the same card material (bg-card, border, shadow-md)
 	 * as toasts so the visual language is consistent.
 	 */
 	import { createPwa } from '#lib/hooks/index.ts';
@@ -29,13 +29,13 @@
 >
 	{#if pwa.updateReady}
 		<div
-			class="bg-bg-elevated border border-border rounded-xl shadow-card border-primary pointer-events-auto flex max-w-3xl items-center gap-3 border-s-4 px-4 py-3 shadow-md"
+			class="bg-card border-border border-s-primary pointer-events-auto rounded-xl border flex max-w-3xl items-center gap-3 border-s-4 px-4 py-3 shadow-md"
 			role="status"
 		>
 			<Icon icon={RefreshCw} size="sm" class="text-primary" />
 			<div class="stack stack-tight flex-1">
-				<p class="label text-fg font-semibold">Update available</p>
-				<p class="caption text-fg-muted">A newer version of LeadKart is ready.</p>
+				<p class="label text-foreground font-semibold">Update available</p>
+				<p class="caption text-muted-foreground">A newer version of LeadKart is ready.</p>
 			</div>
 			<Button size="sm" onclick={() => pwa.applyUpdate()}>Reload</Button>
 		</div>
@@ -43,13 +43,13 @@
 
 	{#if !pwa.isOnline}
 		<div
-			class="bg-bg-elevated border border-border rounded-xl shadow-card border-warning-500 pointer-events-auto flex max-w-3xl items-center gap-3 border-s-4 px-4 py-3 shadow-md"
+			class="bg-card border-border border-s-warning-indicator pointer-events-auto rounded-xl border flex max-w-3xl items-center gap-3 border-s-4 px-4 py-3 shadow-md"
 			role="status"
 		>
-			<Icon icon={CloudOff} size="sm" class="text-warning-700" />
+			<Icon icon={CloudOff} size="sm" class="text-warning" />
 			<div class="stack stack-tight flex-1">
-				<p class="label text-fg font-semibold">You're offline</p>
-				<p class="caption text-fg-muted">
+				<p class="label text-foreground font-semibold">You're offline</p>
+				<p class="caption text-muted-foreground">
 					Changes will fail until you reconnect — read-only browsing still works.
 				</p>
 			</div>
@@ -58,13 +58,13 @@
 
 	{#if pwa.isInstallable && pwa.isOnline && !pwa.updateReady}
 		<div
-			class="bg-bg-elevated border border-border rounded-xl shadow-card pointer-events-auto flex max-w-3xl items-center gap-3 px-4 py-3 shadow-md"
+			class="bg-card border-border pointer-events-auto rounded-xl border flex max-w-3xl items-center gap-3 px-4 py-3 shadow-md"
 			role="status"
 		>
-			<Icon icon={Download} size="sm" class="text-fg-muted" />
+			<Icon icon={Download} size="sm" class="text-muted-foreground" />
 			<div class="stack stack-tight flex-1">
-				<p class="label text-fg font-semibold">Install LeadKart</p>
-				<p class="caption text-fg-muted">Use it like a native app, offline-capable.</p>
+				<p class="label text-foreground font-semibold">Install LeadKart</p>
+				<p class="caption text-muted-foreground">Use it like a native app, offline-capable.</p>
 			</div>
 			<Button size="sm" variant="tonal" onclick={() => pwa.install()}>Install</Button>
 		</div>

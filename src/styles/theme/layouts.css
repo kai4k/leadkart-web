@@ -62,6 +62,9 @@
 	--shell-banner-stick: var(--shell-banner-flow);
 	--shell-page-pad-x: var(--spacing-5);
 	--shell-content-max: none;
+
+	/* the customizer sheet (Domiex modal-xl) */
+	--customizer-width: 52rem;
 }
 
 :root[data-sidebar='medium'] {

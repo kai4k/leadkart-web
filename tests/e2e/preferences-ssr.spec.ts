@@ -81,7 +81,10 @@ test.describe('preferences at SSR', () => {
 		await signInAsTier(page, { tier: 'tenant-admin', permissions: ['tenant.admin'] });
 		await page.locator('html[data-hydrated="true"]').waitFor({ state: 'attached' });
 		await page.getByRole('button', { name: 'Open theme settings' }).click();
-		await page.getByRole('button', { name: 'Fluid' }).click();
+		await page
+			.getByRole('radiogroup', { name: 'Content width' })
+			.getByRole('radio', { name: 'Fluid' })
+			.click();
 		const body = await (await page.request.get('/dashboard')).text();
 		expect(htmlTag(body)).toContain('data-content-width="fluid"');
 	});

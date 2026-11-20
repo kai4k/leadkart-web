@@ -219,3 +219,11 @@ components, features, layouts and routes compose these files. The form Combobox 
 - `alert/alert.svelte`: a `role="alert"` banner has `tabindex="-1"` and a focus-visible ring so a failed
   submit that marked no field invalid (409, 429, expired session, 5xx) can move focus to it
   (`focusFirstInvalid`) instead of dropping it on `<body>`. It is not a tab stop.
+
+## radio-group tile (Task 15)
+
+`radio-group/radio-group-tile.svelte` is a LeadKart addition: the same bits-ui `RadioGroup.Item` (roving
+focus, `aria-checked`, Space/Enter) rendered as a whole tile (a preview plus its label) instead of a
+circle. It carries only the layout and the focus ring; the checked look is the caller's
+(`group-aria-checked/tile:`), because the tile's content decides it. Used by the ThemeCustomizer
+(`layouts/CustomizerTile.svelte`); the regenerated circle `Item` is unchanged.

@@ -3,7 +3,9 @@
  * Token contrast gate.
  *
  * Resolves the semantic tokens in src/styles/theme/{palettes,semantic}.css for EVERY combination
- * of colours (8) x mode (light, dark) x dark palette (5) x sidebar colours (5) = 400, and checks
+ * of colours (8) x mode (light, dark) x dark palette (5) x sidebar colours (5) = 400, plus
+ * black-white (a light mode through a grayscale filter; one dark palette, it does not use them)
+ * x colours x sidebar colours = 40, and checks
  * WCAG 2.2 AA contrast on the pairs the UI promises: 4.5:1 for text, 3:1 for UI boundaries and
  * focus rings.
  *
@@ -32,7 +34,9 @@ const FILES = ['src/styles/theme/palettes.css', 'src/styles/theme/semantic.css']
 
 export const AXES = {
 	colors: ['leadkart', 'green', 'violet', 'orange', 'teal', 'fuchsia', 'lime', 'amber'],
-	mode: ['light', 'dark'],
+	// `auto` is light or dark by the OS, so it is covered by those two; `black-white` is a light
+	// mode painted through `filter: grayscale(1)` on <html>, measured on the grayscale (pairRatio)
+	mode: ['light', 'dark', 'black-white'],
 	darkPalette: ['default', 'zinc', 'stone', 'neutral', 'gray'],
 	sidebarColors: ['light', 'dark', 'brand', 'purple', 'sky']
 };
@@ -325,6 +329,13 @@ function ratio(a, b) {
 }
 
 /** The contrast of one pair for one combination's properties. */
+/** What `filter: grayscale(1)` paints for a colour (Filter Effects: the luma matrix on sRGB values). */
+export function grayscale(color) {
+	const c = toRgb(color);
+	const y = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+	return { mode: 'rgb', r: y, g: y, b: y };
+}
+
 export function pairRatio(pair, props, mode) {
 	const over = resolveColor(pair.over ?? 'card', props, mode);
 	let fg = resolveColor(pair.fg, props, mode, over);
@@ -333,6 +344,8 @@ export function pairRatio(pair, props, mode) {
 		if (pair.alphaOn === 'bg') bg = composite(bg, pair.alpha, over);
 		else fg = composite(fg, pair.alpha, bg);
 	}
+	if (mode === 'black-white')
+		return ratio(grayscale(clampRgb(toRgb(fg))), grayscale(clampRgb(toRgb(bg))));
 	return ratio(fg, bg);
 }
 
@@ -356,7 +369,10 @@ export function checkCss(files, { pairs = PAIRS, axes = AXES } = {}) {
 	let checked = 0;
 	for (const colors of axes.colors)
 		for (const mode of axes.mode)
-			for (const darkPalette of axes.darkPalette)
+			// black-white resolves as light: the dark palette cannot change it, so run it once
+			for (const darkPalette of mode === 'black-white'
+				? axes.darkPalette.slice(0, 1)
+				: axes.darkPalette)
 				for (const sidebarColors of axes.sidebarColors) {
 					combinations++;
 					const combo = { colors, mode, darkPalette, sidebarColors };
