@@ -6,7 +6,8 @@
 		revokeSessionMutation,
 		revokeOtherSessionsMutation
 	} from '$features/auth/queries';
-	import { isCurrentSession, lastSeenLabel } from '$features/auth/view-models';
+	import { isCurrentSession } from '$features/auth/view-models';
+	import { relativeTime } from '#lib/utils/format.ts';
 	import { describeError } from '$api/errors';
 
 	/**
@@ -90,8 +91,8 @@
 									{/if}
 								</div>
 								<p class="caption text-fg-muted">
-									Last active {lastSeenLabel(sess.last_used_at)} · Started
-									{lastSeenLabel(sess.created_at)}
+									Last active {relativeTime(sess.last_used_at)} · Started
+									{relativeTime(sess.created_at)}
 								</p>
 							</div>
 							{#if !current}

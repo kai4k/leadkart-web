@@ -13,12 +13,6 @@ export {
 	tenantDtoSchema,
 	listAllTenantsResponseSchema
 } from './schemas.ts';
-export {
-	tenantLifecycleBadge,
-	canSuspend,
-	canActivate,
-	canMarkForDeletion,
-	canRestore
-} from './view-models.ts';
+export { canSuspend, canActivate, canMarkForDeletion, canRestore } from './view-models.ts';
 export { tenantsListQuery } from './queries.ts';
 export type { TenantDto } from './types.ts';

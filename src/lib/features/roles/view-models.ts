@@ -1,17 +1,23 @@
+import { defineStatusMap } from '#lib/utils/status.ts';
 import type { RoleDto } from './types';
 
 export function isProtectedRole(role: RoleDto): boolean {
 	return role.is_super_admin || role.is_system_default;
 }
 
-export function roleBadgeVariant(role: RoleDto): {
-	label: string;
-	variant: 'brand' | 'info' | 'warning' | 'neutral';
-} {
-	if (role.is_super_admin) return { label: 'SuperAdmin', variant: 'warning' };
-	if (role.is_system_default) return { label: 'System', variant: 'info' };
-	return { label: 'Custom', variant: 'neutral' };
+export type RoleKind = 'super_admin' | 'system' | 'custom';
+
+export function roleKindKey(role: RoleDto): RoleKind {
+	if (role.is_super_admin) return 'super_admin';
+	if (role.is_system_default) return 'system';
+	return 'custom';
 }
+
+export const roleKind = defineStatusMap<RoleKind>({
+	super_admin: { label: 'SuperAdmin', variant: 'warning' },
+	system: { label: 'System', variant: 'info' },
+	custom: { label: 'Custom', variant: 'neutral' }
+});
 
 /**
  * Returns the set of permissions held by `role` from the given

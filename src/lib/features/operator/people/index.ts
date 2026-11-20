@@ -12,7 +12,8 @@ export {
 } from './schemas.ts';
 export {
 	personDisplayName,
-	personLifecycleBadge,
+	personLifecycleKey,
+	personLifecycle,
 	canGloballySuspend,
 	canLiftSuspension,
 	canAnonymise

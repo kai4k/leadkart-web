@@ -27,13 +27,8 @@
 		Icon
 	} from '$icons';
 	import { activateTenantMutation, restoreTenantMutation, tenantsListQuery } from '../queries';
-	import {
-		canActivate,
-		canMarkForDeletion,
-		canRestore,
-		canSuspend,
-		tenantLifecycleBadge
-	} from '../view-models';
+	import { canActivate, canMarkForDeletion, canRestore, canSuspend } from '../view-models';
+	import { tenantStatus } from '$features/tenant';
 	import { P, session } from '$features/auth';
 	import { NetworkError } from '$api/errors';
 	import { getListErrorMessage } from '$api/error-messages';
@@ -205,7 +200,7 @@
 {/snippet}
 
 {#snippet statusCell(tenant: TenantDto)}
-	{@const badge = tenantLifecycleBadge(tenant)}
+	{@const badge = tenantStatus(tenant.status)}
 	<Badge variant={badge.variant} appearance="soft" size="sm">{badge.label}</Badge>
 {/snippet}
 

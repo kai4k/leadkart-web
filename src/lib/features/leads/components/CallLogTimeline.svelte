@@ -9,7 +9,8 @@
 	import { Timeline, Skeleton, EmptyState } from '$ui';
 	import { Icon, Inbox, Phone } from '$icons';
 	import type { CallLogDto } from '../schemas';
-	import { CALL_OUTCOME_ACCENT, CALL_OUTCOME_LABEL, relativeTime } from '../view-models';
+	import { CALL_OUTCOME_ACCENT, CALL_OUTCOME_LABEL } from '../view-models';
+	import { relativeTime } from '#lib/utils/format.ts';
 
 	type Props = {
 		items: CallLogDto[];

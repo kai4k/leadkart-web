@@ -15,7 +15,8 @@
  * + future Tenant List rows stays consistent without duplication.
  */
 
-import type { AdminAddress, Tenant } from './types';
+import { defineStatusMap } from '#lib/utils/status.ts';
+import type { AdminAddress, Tenant, TenantStatus } from './types';
 
 /**
  * Page-header / topbar title for a tenant. Prefers the friendly
@@ -28,37 +29,18 @@ export function tenantDisplayName(tenant: Tenant): string {
 	return display && display.length > 0 ? display : tenant.legal_name;
 }
 
-export type TenantStatusVariant = 'success' | 'warning' | 'danger' | 'info';
-
-export interface TenantStatusBadge {
-	/** Raw English label — components may translate via i18n key. */
-	label: string;
-	/** Badge / Alert variant the component will pass to its primitive. */
-	variant: TenantStatusVariant;
-}
-
 /**
- * Maps a tenant status string to its display label + Badge variant.
- * Status values mirror the leadkart-go domain enum
- * (`internal/identity/domain/tenant/status.go`); unknown values fall
- * through to a neutral 'info' variant rather than throwing — the UI
- * stays renderable while the unknown label surfaces the upstream
- * vocabulary drift to whoever's looking.
+ * The one tenant-status map (label + Badge variant), keyed by Go's generated enum
+ * (`pending | active | suspended | pending_deletion | deleted`). Used by the tenant settings
+ * header, the operator tenants list and the operator scope profile.
  */
-export function tenantStatusBadge(status: string): TenantStatusBadge {
-	switch (status) {
-		case 'active':
-			return { label: 'Active', variant: 'success' };
-		case 'pending':
-			return { label: 'Pending', variant: 'info' };
-		case 'suspended':
-			return { label: 'Suspended', variant: 'warning' };
-		case 'pending_deletion':
-			return { label: 'Scheduled for deletion', variant: 'danger' };
-		default:
-			return { label: status, variant: 'info' };
-	}
-}
+export const tenantStatus = defineStatusMap<TenantStatus>({
+	pending: { label: 'Pending', variant: 'info' },
+	active: { label: 'Active', variant: 'success' },
+	suspended: { label: 'Suspended', variant: 'warning' },
+	pending_deletion: { label: 'Pending deletion', variant: 'danger' },
+	deleted: { label: 'Deleted', variant: 'neutral' }
+});
 
 /**
  * Formats an Indian phone number as `+91 99999 00000` for read-only

@@ -32,8 +32,8 @@
 		bulkUserStatusMutation
 	} from '$features/users/queries';
 	import { rolesListQuery } from '$features/roles';
-	import { userStatusBadge, userRoleBadges, canDeactivate } from '$features/users/view-models';
-	import { displayName, initials } from '$features/auth';
+	import { userRoleBadges, canDeactivate } from '$features/users/view-models';
+	import { displayName, initials, userStatus } from '$features/auth';
 	import type { UserDto } from '$features/users/types';
 	import { getListErrorMessage } from '$api/error-messages';
 	import { createBulkSelection, createListPagination } from '#lib/hooks/index.ts';
@@ -266,7 +266,7 @@
 {/snippet}
 
 {#snippet statusCell(user: UserDto)}
-	{@const status = userStatusBadge(user.status)}
+	{@const status = userStatus(user.status)}
 	<Badge variant={status.variant} appearance="soft" size="sm">{status.label}</Badge>
 {/snippet}
 

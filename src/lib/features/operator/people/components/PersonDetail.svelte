@@ -12,7 +12,8 @@
 	} from '../queries';
 	import {
 		personDisplayName,
-		personLifecycleBadge,
+		personLifecycle,
+		personLifecycleKey,
 		canGloballySuspend,
 		canLiftSuspension,
 		canAnonymise
@@ -24,6 +25,7 @@
 	import { personActivityQuery, ActivityTimeline } from '$features/audit';
 	import { describeError } from '$api/errors';
 	import { initials } from '#lib/utils/person-name.ts';
+	import { formatDate } from '#lib/utils/format.ts';
 
 	type Props = { personId: string };
 	let { personId }: Props = $props();
@@ -94,7 +96,7 @@
 		>No person with that ID, or you don't have access.</Alert
 	>
 {:else}
-	{@const badge = personLifecycleBadge(p)}
+	{@const badge = personLifecycle(personLifecycleKey(p))}
 	{@const displayName = personDisplayName(p)}
 
 	<div class="stack stack-relaxed">
@@ -178,7 +180,7 @@
 										<td class="text-fg py-2 pe-4">{m.designation || '—'}</td>
 										<td class="text-fg py-2 pe-4">{m.department || '—'}</td>
 										<td class="text-fg-muted py-2 pe-4 tabular-nums">
-											{m.joined_at ? new Date(m.joined_at).toLocaleDateString() : '—'}
+											{formatDate(m.joined_at)}
 										</td>
 										<td class="py-2 pe-4">
 											<Badge

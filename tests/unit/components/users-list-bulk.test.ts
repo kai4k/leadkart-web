@@ -40,11 +40,13 @@ vi.mock('$ui', async (importOriginal) => ({
 vi.mock('$features/auth', async () => {
 	const { displayName, initials } = await import('#lib/utils/person-name.ts');
 	const { ACTION } = await import('#lib/features/auth/permissions.ts');
+	const { userStatus } = await import('#lib/features/auth/view-models.ts');
 	// The caller holds the bulk routes' permissions (the list shows only what Go would allow).
 	const held: string[] = [...ACTION.userDeactivate, ...ACTION.userReactivate];
 	return {
 		displayName,
 		initials,
+		userStatus,
 		ACTION,
 		session: { canAny: (...perms: string[]) => perms.some((p) => held.includes(p)) }
 	};

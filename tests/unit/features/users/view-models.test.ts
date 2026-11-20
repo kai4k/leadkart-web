@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-	userStatusBadge,
 	userRoleBadges,
 	managerLabel,
 	canDeactivate,
@@ -34,15 +33,6 @@ const role: RoleDto = {
 	permissions: [],
 	created_at: '2026-01-01T00:00:00Z'
 };
-
-describe('userStatusBadge', () => {
-	it('active → success', () => {
-		expect(userStatusBadge('active').variant).toBe('success');
-	});
-	it('inactive → neutral', () => {
-		expect(userStatusBadge('inactive').variant).toBe('neutral');
-	});
-});
 
 describe('userRoleBadges', () => {
 	it('maps role_ids to role names', () => {

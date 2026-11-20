@@ -11,7 +11,12 @@
 	import { Plus, Shield, MoreVertical, Trash2, Edit, Icon } from '$icons';
 	import { rolesListQuery } from '$features/roles/queries';
 	import type { RoleDto } from '$features/roles/types';
-	import { roleBadgeVariant, isProtectedRole, roleMemberCount } from '$features/roles/view-models';
+	import {
+		roleKind,
+		roleKindKey,
+		isProtectedRole,
+		roleMemberCount
+	} from '$features/roles/view-models';
 	import { getListErrorMessage } from '$api/error-messages';
 	import { createListPagination } from '#lib/hooks/index.ts';
 	import { resolve } from '$app/paths';
@@ -90,7 +95,7 @@
 {/snippet}
 
 {#snippet typeCell(role: RoleDto)}
-	{@const badge = roleBadgeVariant(role)}
+	{@const badge = roleKind(roleKindKey(role))}
 	<Badge variant={badge.variant} appearance="soft" size="sm">{badge.label}</Badge>
 {/snippet}
 

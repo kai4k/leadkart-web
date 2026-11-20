@@ -10,7 +10,7 @@ import {
 	formattedPhone,
 	formattedPincode,
 	tenantDisplayName,
-	tenantStatusBadge
+	tenantStatus
 } from '#lib/features/tenant/view-models.ts';
 import type { Tenant } from '#lib/features/tenant/types.ts';
 
@@ -47,19 +47,22 @@ describe('tenantDisplayName', () => {
 	});
 });
 
-describe('tenantStatusBadge', () => {
-	it('maps known statuses to label + variant', () => {
-		expect(tenantStatusBadge('active')).toEqual({ label: 'Active', variant: 'success' });
-		expect(tenantStatusBadge('pending')).toEqual({ label: 'Pending', variant: 'info' });
-		expect(tenantStatusBadge('suspended')).toEqual({ label: 'Suspended', variant: 'warning' });
-		expect(tenantStatusBadge('pending_deletion')).toEqual({
-			label: 'Scheduled for deletion',
-			variant: 'danger'
-		});
+describe('tenantStatus (the one tenant-status map, keyed by the Go enum)', () => {
+	it.each([
+		['pending', 'Pending', 'info'],
+		['active', 'Active', 'success'],
+		['suspended', 'Suspended', 'warning'],
+		['pending_deletion', 'Pending deletion', 'danger'],
+		['deleted', 'Deleted', 'neutral']
+	] as const)('%s -> %s (%s)', (status, label, variant) => {
+		expect(tenantStatus(status)).toEqual({ label, variant });
 	});
 
-	it('falls through unknown statuses with neutral info variant + raw label', () => {
-		expect(tenantStatusBadge('quarantined')).toEqual({ label: 'quarantined', variant: 'info' });
+	it('an unknown value renders raw in a neutral badge', () => {
+		expect(tenantStatus('quarantined' as never)).toEqual({
+			label: 'quarantined',
+			variant: 'neutral'
+		});
 	});
 });
 

@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { Avatar, Badge } from '$ui';
-	import { displayName, initials } from '$features/auth';
+	import { displayName, initials, userStatus } from '$features/auth';
 	import { resolve } from '$app/paths';
-	import { userStatusBadge } from '../view-models';
 	import type { OrgNode } from '../view-models-hierarchy';
 	import OrgTreeNode from './OrgTreeNode.svelte';
 
@@ -16,7 +15,7 @@
 	type Props = { node: OrgNode };
 
 	let { node }: Props = $props();
-	const status = $derived(userStatusBadge(node.user.status));
+	const status = $derived(userStatus(node.user.status));
 </script>
 
 <li class="relative">

@@ -17,7 +17,8 @@
 		replaceRolePermissionsMutation,
 		setRoleParentMutation,
 		PermissionTree,
-		roleBadgeVariant,
+		roleKind,
+		roleKindKey,
 		isProtectedRole,
 		createRolePermissions,
 		ROLE_LEVEL_MAX,
@@ -179,7 +180,7 @@
 			>This role doesn't exist or you don't have access.</Alert
 		>
 	{:else}
-		{@const badge = roleBadgeVariant(role)}
+		{@const badge = roleKind(roleKindKey(role))}
 		<header class="cluster cluster-spread">
 			<div class="stack stack-tight">
 				<div class="cluster cluster-tight">

@@ -178,28 +178,6 @@ export function isStale(lead: CrmLeadDto, now: Date = new Date()): boolean {
 	return diffDays >= STALE_DAYS;
 }
 
-/**
- * Relative-time formatter — "2 days ago" / "in 3 hours" / "just now".
- * Pure UI helper; falls back to a localised date for >30 days out.
- */
-export function relativeTime(iso: string | null | undefined, now: Date = new Date()): string {
-	if (!iso) return '—';
-	const d = new Date(iso);
-	if (Number.isNaN(d.getTime())) return iso;
-	const diffMs = d.getTime() - now.getTime();
-	const sign = diffMs >= 0 ? 1 : -1;
-	const absSec = Math.abs(diffMs) / 1000;
-	const minutes = absSec / 60;
-	const hours = minutes / 60;
-	const days = hours / 24;
-	if (absSec < 45) return 'just now';
-	const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
-	if (minutes < 60) return rtf.format(sign * Math.round(minutes), 'minute');
-	if (hours < 24) return rtf.format(sign * Math.round(hours), 'hour');
-	if (days < 30) return rtf.format(sign * Math.round(days), 'day');
-	return d.toLocaleDateString();
-}
-
 // ── Kanban column shape (stage groups) ──────────────────────────────
 
 export interface KanbanColumn {

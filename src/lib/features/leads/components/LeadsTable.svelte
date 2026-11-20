@@ -22,9 +22,9 @@
 		STAGE_OPTIONS,
 		TEMPERATURE_OPTIONS,
 		isStale,
-		locationLabel,
-		relativeTime
+		locationLabel
 	} from '../view-models';
+	import { relativeTime } from '#lib/utils/format.ts';
 	import { changeStageMutation, changeTemperatureMutation } from '../queries';
 
 	type Props = {

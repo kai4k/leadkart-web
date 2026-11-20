@@ -8,13 +8,14 @@
 		cancelPermissionRequestMutation
 	} from '$features/permission-requests/queries';
 	import {
-		stateBadge,
+		permissionRequestState,
 		canCancel,
 		canDecide,
 		daysOrIndefinite
 	} from '$features/permission-requests/view-models';
 	import { ACTION, session } from '$features/auth';
 	import { resolve } from '$app/paths';
+	import { formatDateTime } from '#lib/utils/format.ts';
 
 	type Props = { id: string };
 	let { id }: Props = $props();
@@ -72,7 +73,7 @@
 			This request doesn't exist or you don't have access.
 		</Alert>
 	{:else}
-		{@const badge = stateBadge(req.state)}
+		{@const badge = permissionRequestState(req.state)}
 		<header class="stack stack-tight">
 			<div class="cluster cluster-tight">
 				<h1 class="h1">Permission request</h1>
@@ -104,12 +105,12 @@
 					</div>
 					<div>
 						<dt class="caption text-fg-muted">Submitted</dt>
-						<dd class="body-base">{new Date(req.created_at).toLocaleString()}</dd>
+						<dd class="body-base">{formatDateTime(req.created_at)}</dd>
 					</div>
 					{#if req.decided_at}
 						<div>
 							<dt class="caption text-fg-muted">Decided</dt>
-							<dd class="body-base">{new Date(req.decided_at).toLocaleString()}</dd>
+							<dd class="body-base">{formatDateTime(req.decided_at)}</dd>
 						</div>
 					{/if}
 					{#if req.decision_reason}
@@ -121,7 +122,7 @@
 					{#if req.expires_at}
 						<div>
 							<dt class="caption text-fg-muted">Grant expires</dt>
-							<dd class="body-base">{new Date(req.expires_at).toLocaleString()}</dd>
+							<dd class="body-base">{formatDateTime(req.expires_at)}</dd>
 						</div>
 					{/if}
 				</dl>

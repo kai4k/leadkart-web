@@ -8,7 +8,7 @@
 	import { Timeline, Skeleton, EmptyState } from '$ui';
 	import { Icon, UserCheck } from '$icons';
 	import type { AssignmentHistoryDto } from '../schemas';
-	import { relativeTime } from '../view-models';
+	import { relativeTime } from '#lib/utils/format.ts';
 
 	type Props = {
 		items: AssignmentHistoryDto[];

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import type { ResolvedPathname } from '$app/types';
-	import { Breadcrumbs, type BreadcrumbItem } from '$ui';
-	import { tenantDisplayName, tenantStatusBadge } from '$features/tenant/view-models';
+	import { Badge, Breadcrumbs, type BreadcrumbItem } from '$ui';
+	import { tenantDisplayName, tenantStatus } from '$features/tenant/view-models';
 	import { cn } from '#lib/utils/cn.ts';
 	import type { LayoutData } from './$types';
 
@@ -22,7 +22,7 @@
 	let { children, data }: { children: import('svelte').Snippet; data: LayoutData } = $props();
 
 	const tenantData = $derived(data.tenant);
-	const badge = $derived(tenantStatusBadge(tenantData.status));
+	const badge = $derived(tenantStatus(tenantData.status));
 
 	const tabs: ReadonlyArray<{ href: ResolvedPathname; label: string }> = [
 		{ href: '/settings/tenant/profile', label: 'Profile' },
@@ -54,17 +54,7 @@
 	<header class="stack stack-tight">
 		<div class="cluster">
 			<h1 class="h1">{tenantDisplayName(tenantData)}</h1>
-			<span
-				class={cn(
-					'label-small inline-flex items-center rounded-full px-2 py-0.5',
-					badge.variant === 'success' && 'bg-success-50 text-success-900',
-					badge.variant === 'warning' && 'bg-warning-50 text-warning-900',
-					badge.variant === 'danger' && 'bg-danger-50 text-danger-900',
-					badge.variant === 'info' && 'bg-info-50 text-info-900'
-				)}
-			>
-				{badge.label}
-			</span>
+			<Badge variant={badge.variant} appearance="soft">{badge.label}</Badge>
 		</div>
 		<p class="body-sm text-fg-muted">
 			Manage your organisation's profile, statutory IDs, contact details, and platform preferences.

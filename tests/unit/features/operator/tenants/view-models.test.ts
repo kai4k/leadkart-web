@@ -6,7 +6,6 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
-	tenantLifecycleBadge,
 	canSuspend,
 	canActivate,
 	canMarkForDeletion,
@@ -38,42 +37,6 @@ function makeTenant(status: TenantDto['status']): TenantDto {
 		}
 	};
 }
-
-// ---------------------------------------------------------------------------
-// tenantLifecycleBadge
-// ---------------------------------------------------------------------------
-
-describe('tenantLifecycleBadge', () => {
-	it('active → success variant + "Active" label', () => {
-		const badge = tenantLifecycleBadge(makeTenant('active'));
-		expect(badge.variant).toBe('success');
-		expect(badge.label).toBe('Active');
-	});
-
-	it('suspended → warning variant + "Suspended" label', () => {
-		const badge = tenantLifecycleBadge(makeTenant('suspended'));
-		expect(badge.variant).toBe('warning');
-		expect(badge.label).toBe('Suspended');
-	});
-
-	it('pending_deletion → danger variant + "Pending deletion" label', () => {
-		const badge = tenantLifecycleBadge(makeTenant('pending_deletion'));
-		expect(badge.variant).toBe('danger');
-		expect(badge.label).toBe('Pending deletion');
-	});
-
-	it('pending → info variant + "Pending" label', () => {
-		const badge = tenantLifecycleBadge(makeTenant('pending'));
-		expect(badge.variant).toBe('info');
-		expect(badge.label).toBe('Pending');
-	});
-
-	it('unknown status → neutral variant + raw status as label', () => {
-		const badge = tenantLifecycleBadge(makeTenant('archived' as never));
-		expect(badge.variant).toBe('neutral');
-		expect(badge.label).toBe('archived');
-	});
-});
 
 // ---------------------------------------------------------------------------
 // canSuspend

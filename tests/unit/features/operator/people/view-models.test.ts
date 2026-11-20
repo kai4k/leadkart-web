@@ -7,12 +7,15 @@
 import { describe, expect, it } from 'vitest';
 import {
 	personDisplayName,
-	personLifecycleBadge,
+	personLifecycle,
+	personLifecycleKey,
 	canGloballySuspend,
 	canLiftSuspension,
 	canAnonymise
 } from '#lib/features/operator/people/view-models.ts';
 import type { PersonDto } from '#lib/features/operator/people/types.ts';
+
+const lifecycleBadge = (p: PersonDto) => personLifecycle(personLifecycleKey(p));
 
 // ---------------------------------------------------------------------------
 // Fixture factory — only fields consumed by view-models needed
@@ -66,30 +69,30 @@ describe('personDisplayName', () => {
 });
 
 // ---------------------------------------------------------------------------
-// personLifecycleBadge
+// personLifecycle (key + badge)
 // ---------------------------------------------------------------------------
 
-describe('personLifecycleBadge', () => {
+describe('personLifecycle', () => {
 	it('active person → success + "Active"', () => {
-		const badge = personLifecycleBadge(makePerson({ is_active: true }));
+		const badge = lifecycleBadge(makePerson({ is_active: true }));
 		expect(badge.variant).toBe('success');
 		expect(badge.label).toBe('Active');
 	});
 
 	it('inactive (not anonymised, not suspended) → warning + "Inactive"', () => {
-		const badge = personLifecycleBadge(makePerson({ is_active: false }));
+		const badge = lifecycleBadge(makePerson({ is_active: false }));
 		expect(badge.variant).toBe('warning');
 		expect(badge.label).toBe('Inactive');
 	});
 
 	it('globally suspended → danger + "Globally suspended"', () => {
-		const badge = personLifecycleBadge(makePerson({ is_globally_suspended: true }));
+		const badge = lifecycleBadge(makePerson({ is_globally_suspended: true }));
 		expect(badge.variant).toBe('danger');
 		expect(badge.label).toBe('Globally suspended');
 	});
 
 	it('anonymised → neutral + "Anonymised" (highest priority)', () => {
-		const badge = personLifecycleBadge(
+		const badge = lifecycleBadge(
 			makePerson({ is_anonymised: true, is_globally_suspended: true, is_active: false })
 		);
 		expect(badge.variant).toBe('neutral');
@@ -97,9 +100,7 @@ describe('personLifecycleBadge', () => {
 	});
 
 	it('anonymised takes priority over suspended', () => {
-		const badge = personLifecycleBadge(
-			makePerson({ is_anonymised: true, is_globally_suspended: true })
-		);
+		const badge = lifecycleBadge(makePerson({ is_anonymised: true, is_globally_suspended: true }));
 		expect(badge.label).toBe('Anonymised');
 	});
 });

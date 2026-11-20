@@ -8,7 +8,11 @@
 	import { Icon, Inbox, Plus } from '$icons';
 	import { InfiniteListFooter } from '#lib/components/data/index.ts';
 	import { permissionRequestsInfiniteQuery } from '$features/permission-requests/queries';
-	import { stateBadge, daysOrIndefinite } from '$features/permission-requests/view-models';
+	import { formatDate } from '#lib/utils/format.ts';
+	import {
+		permissionRequestState,
+		daysOrIndefinite
+	} from '$features/permission-requests/view-models';
 	import type { PermissionRequestDto } from '$features/permission-requests/schemas';
 	import type { ListRole } from '$features/permission-requests/api';
 	import { getListErrorMessage } from '$api/error-messages';
@@ -92,12 +96,12 @@
 {/snippet}
 
 {#snippet stateCell(req: PermissionRequestDto)}
-	{@const b = stateBadge(req.state)}
+	{@const b = permissionRequestState(req.state)}
 	<Badge variant={b.variant} appearance="soft" size="sm">{b.label}</Badge>
 {/snippet}
 
 {#snippet dateCell(req: PermissionRequestDto)}
-	<span class="caption text-fg-muted">{new Date(req.created_at).toLocaleDateString()}</span>
+	<span class="caption text-fg-muted">{formatDate(req.created_at)}</span>
 {/snippet}
 
 <div class="stack stack-relaxed">

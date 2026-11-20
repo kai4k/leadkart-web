@@ -3,11 +3,12 @@
 	import { Edit, Icon, Lock, Shield, UserPlus, Users } from '$icons';
 	import type { UserDto } from '$features/users/types';
 	import type { RoleDto } from '$features/roles/types';
-	import { managerLabel, userRoleBadges, userStatusBadge } from '../view-models';
-	import { displayName, initials } from '$features/auth';
+	import { managerLabel, userRoleBadges } from '../view-models';
+	import { displayName, initials, userStatus } from '$features/auth';
 	import { removeManagerMutation } from '../queries';
 	import { personActivityQuery, ActivityTimeline } from '$features/audit';
 	import { describeError } from '$api/errors';
+	import { formatDate } from '#lib/utils/format.ts';
 	import { resolve } from '$app/paths';
 	import { createMemberPermissions } from '../member-permissions.svelte.ts';
 
@@ -39,7 +40,7 @@
 		onManagePerms
 	}: Props = $props();
 
-	const status = $derived(userStatusBadge(user.status));
+	const status = $derived(userStatus(user.status));
 	const userRoles = $derived(userRoleBadges(user, roles));
 	const manager = $derived(managerLabel(user, roster));
 	const directReports = $derived(roster.filter((u) => u.reports_to === user.membership_id));
@@ -87,13 +88,13 @@
 						<div class="flex justify-between gap-4">
 							<dt class="text-fg-muted">Joined</dt>
 							<dd class="text-fg tabular-nums">
-								{user.joined_at ? new Date(user.joined_at).toLocaleDateString() : '—'}
+								{formatDate(user.joined_at)}
 							</dd>
 						</div>
 						{#if user.left_at}
 							<div class="flex justify-between gap-4">
 								<dt class="text-fg-muted">Left</dt>
-								<dd class="text-fg tabular-nums">{new Date(user.left_at).toLocaleDateString()}</dd>
+								<dd class="text-fg tabular-nums">{formatDate(user.left_at)}</dd>
 							</div>
 						{/if}
 						{#if user.status_message}
@@ -239,7 +240,7 @@
 				{:else}
 					<ul class="stack stack-tight">
 						{#each directReports as report (report.membership_id)}
-							{@const rs = userStatusBadge(report.status)}
+							{@const rs = userStatus(report.status)}
 							<li>
 								<a
 									href={resolve('/(app)/settings/users/[id]', { id: report.membership_id })}

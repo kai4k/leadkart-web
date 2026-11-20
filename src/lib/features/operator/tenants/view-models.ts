@@ -1,25 +1,5 @@
 import type { TenantDto } from './types';
 
-export type LifecycleVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
-
-export function tenantLifecycleBadge(tenant: TenantDto): {
-	label: string;
-	variant: LifecycleVariant;
-} {
-	switch (tenant.status) {
-		case 'active':
-			return { label: 'Active', variant: 'success' };
-		case 'suspended':
-			return { label: 'Suspended', variant: 'warning' };
-		case 'pending_deletion':
-			return { label: 'Pending deletion', variant: 'danger' };
-		case 'pending':
-			return { label: 'Pending', variant: 'info' };
-		default:
-			return { label: tenant.status, variant: 'neutral' };
-	}
-}
-
 export function canSuspend(tenant: TenantDto): boolean {
 	return tenant.status === 'active';
 }

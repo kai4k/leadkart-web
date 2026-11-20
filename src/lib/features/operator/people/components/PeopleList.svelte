@@ -6,7 +6,8 @@
 	import { Avatar, Badge, DataTable, EmptyState, type DataTableColumn } from '$ui';
 	import { Users, Search, Icon } from '$icons';
 	import { personsListQuery } from '../queries';
-	import { personDisplayName, personLifecycleBadge } from '../view-models';
+	import { formatDate } from '#lib/utils/format.ts';
+	import { personDisplayName, personLifecycle, personLifecycleKey } from '../view-models';
 	import type { PersonDto } from '../types';
 	import { describeError } from '$api/errors';
 	import { resolve } from '$app/paths';
@@ -80,12 +81,12 @@
 {/snippet}
 
 {#snippet statusCell(p: PersonDto)}
-	{@const badge = personLifecycleBadge(p)}
+	{@const badge = personLifecycle(personLifecycleKey(p))}
 	<Badge variant={badge.variant} appearance="soft" size="sm">{badge.label}</Badge>
 {/snippet}
 
 {#snippet dateCell(p: PersonDto)}
-	<span class="caption text-fg-muted">{new Date(p.created_at).toLocaleDateString()}</span>
+	<span class="caption text-fg-muted">{formatDate(p.created_at)}</span>
 {/snippet}
 
 <div class="stack stack-relaxed">

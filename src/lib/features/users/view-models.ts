@@ -5,20 +5,6 @@
 import type { UserDto, RoleDto, BulkStatusAction, BulkStatusResult } from './types';
 import { displayName } from '#lib/utils/person-name.ts';
 
-export type StatusVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
-
-export function userStatusBadge(status: UserDto['status']): {
-	label: string;
-	variant: StatusVariant;
-} {
-	switch (status) {
-		case 'active':
-			return { label: 'Active', variant: 'success' };
-		case 'inactive':
-			return { label: 'Inactive', variant: 'neutral' };
-	}
-}
-
 export function userRoleBadges(
 	user: UserDto,
 	catalogue: ReadonlyArray<RoleDto>

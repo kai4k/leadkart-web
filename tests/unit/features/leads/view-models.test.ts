@@ -18,7 +18,6 @@ import {
 	REMINDER_STATUS_LABEL,
 	locationLabel,
 	isStale,
-	relativeTime,
 	groupByStage
 } from '#lib/features/leads/view-models.ts';
 import type { CrmLeadDto } from '#lib/features/leads/schemas.ts';
@@ -172,24 +171,6 @@ describe('isStale', () => {
 			last_contacted_at: '2026-05-31T00:00:00Z'
 		});
 		expect(isStale(lead, NOW)).toBe(false);
-	});
-});
-
-describe('relativeTime', () => {
-	const NOW = new Date('2026-06-01T00:00:00Z');
-
-	it('returns em-dash for null/undefined', () => {
-		expect(relativeTime(null, NOW)).toBe('—');
-		expect(relativeTime(undefined, NOW)).toBe('—');
-	});
-
-	it('returns "just now" for sub-45s diffs', () => {
-		expect(relativeTime('2026-06-01T00:00:30Z', NOW)).toBe('just now');
-	});
-
-	it('returns relative days for >= 1 day diffs', () => {
-		const out = relativeTime('2026-05-30T00:00:00Z', NOW);
-		expect(out).toMatch(/day|days/i);
 	});
 });
 

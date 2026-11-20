@@ -3,25 +3,16 @@
  * to render-ready shapes. No async, no side effects, no DOM access.
  * Per CLAUDE.md gateway → service → VM → component layering.
  */
-import type { SessionDto } from './types';
+import { defineStatusMap } from '#lib/utils/status.ts';
+import type { SessionDto, UserDto } from './types';
 
 export { displayName, initials } from '#lib/utils/person-name.ts';
 
-/**
- * Relative time label: "just now" / "N minutes ago" / "N hours ago"
- * within the first day, absolute date afterwards. Used by SessionsList.
- */
-export function lastSeenLabel(iso: string): string {
-	const then = new Date(iso).getTime();
-	if (Number.isNaN(then)) return iso;
-	const diffMs = Date.now() - then;
-	const diffMin = Math.floor(diffMs / 60_000);
-	if (diffMin < 1) return 'just now';
-	if (diffMin < 60) return `${diffMin} minute${diffMin === 1 ? '' : 's'} ago`;
-	const diffHr = Math.floor(diffMin / 60);
-	if (diffHr < 24) return `${diffHr} hour${diffHr === 1 ? '' : 's'} ago`;
-	return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
+/** Membership status (Go: `active | inactive`) as a badge: the profile, the team list and the org tree. */
+export const userStatus = defineStatusMap<UserDto['status']>({
+	active: { label: 'Active', variant: 'success' },
+	inactive: { label: 'Inactive', variant: 'neutral' }
+});
 
 /**
  * Does this session represent the caller's CURRENT login? The session

@@ -1,30 +1,31 @@
 import type { PersonDto } from './types';
 import { displayName } from '#lib/utils/person-name.ts';
-
-export type LifecycleVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+import { defineStatusMap } from '#lib/utils/status.ts';
 
 /** Display name for a Person; falls back to the full email when both names are blank. */
 export function personDisplayName(p: PersonDto): string {
 	return displayName(p, { emailFallback: 'full' });
 }
 
-/** Returns the lifecycle badge label + variant for a Person.
- *
- *  Priority (most-severe state wins):
- *  1. anonymised  → neutral  (data is gone; no further action possible)
- *  2. globally suspended → danger
- *  3. inactive    → warning
- *  4. active      → success
+export type PersonLifecycle = 'anonymised' | 'suspended' | 'inactive' | 'active';
+
+/**
+ * A Person's lifecycle state. Priority (most severe wins): anonymised (data is gone; no further
+ * action possible), globally suspended, inactive, active.
  */
-export function personLifecycleBadge(p: PersonDto): {
-	label: string;
-	variant: LifecycleVariant;
-} {
-	if (p.is_anonymised) return { label: 'Anonymised', variant: 'neutral' };
-	if (p.is_globally_suspended) return { label: 'Globally suspended', variant: 'danger' };
-	if (!p.is_active) return { label: 'Inactive', variant: 'warning' };
-	return { label: 'Active', variant: 'success' };
+export function personLifecycleKey(p: PersonDto): PersonLifecycle {
+	if (p.is_anonymised) return 'anonymised';
+	if (p.is_globally_suspended) return 'suspended';
+	if (!p.is_active) return 'inactive';
+	return 'active';
 }
+
+export const personLifecycle = defineStatusMap<PersonLifecycle>({
+	anonymised: { label: 'Anonymised', variant: 'neutral' },
+	suspended: { label: 'Globally suspended', variant: 'danger' },
+	inactive: { label: 'Inactive', variant: 'warning' },
+	active: { label: 'Active', variant: 'success' }
+});
 
 /** True when the operator can globally suspend this Person.
  *  Not allowed when already suspended or already anonymised. */

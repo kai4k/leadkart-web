@@ -3,6 +3,7 @@
 	import { Eye, LogOut, Icon } from '$icons';
 	import { impersonation } from '../stores/impersonation.svelte';
 	import { session } from '$features/auth';
+	import { formatDateTime } from '#lib/utils/format.ts';
 
 	// Reconcile impersonation state once the session's capabilities are there.
 	// Must live here (inside <QueryClientProvider>) not in (app)/+layout.svelte
@@ -38,7 +39,7 @@
 					>{impersonation.active.target_tenant_id}</code
 				>
 				· {impersonation.active.reason}
-				· Expires {new Date(impersonation.active.expires_at).toLocaleTimeString()}
+				· Expires {formatDateTime(impersonation.active.expires_at)}
 			</span>
 		</div>
 		<Button

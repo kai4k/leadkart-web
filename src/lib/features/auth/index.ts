@@ -25,7 +25,7 @@ export {
 	revokeOtherSessionsMutation
 } from './queries';
 
-export { displayName, initials } from './view-models';
+export { displayName, initials, userStatus } from './view-models';
 export { can, canAny, dashboardVariant, type DashboardVariant, type Tier } from './capabilities';
 export { ACTION, P, type Permission } from './permissions';
 

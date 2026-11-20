@@ -7,8 +7,7 @@
 	import { Icon, Lock, MoreVertical, Shield, UserMinus, UserPlus, Users } from '$icons';
 	import { userDetailQuery, usersListQuery, reactivateUserMutation } from '$features/users/queries';
 	import { rolesListQuery } from '$features/roles';
-	import { userStatusBadge } from '$features/users/view-models';
-	import { displayName, initials } from '$features/auth/view-models';
+	import { displayName, initials, userStatus } from '$features/auth/view-models';
 	import {
 		DeactivateUserDialog,
 		RoleAssignmentDrawer,
@@ -29,7 +28,7 @@
 	const userList = $derived(usersListQ.data ?? []);
 	const roleList = $derived(rolesQuery.data?.roles ?? []);
 
-	const status = $derived(user ? userStatusBadge(user.status) : null);
+	const status = $derived(user ? userStatus(user.status) : null);
 
 	const breadcrumbs = $derived<BreadcrumbItem[]>([
 		{ label: 'Settings' },

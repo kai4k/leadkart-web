@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { displayName, lastSeenLabel, isCurrentSession } from '#lib/features/auth/view-models.ts';
+import { displayName, isCurrentSession, userStatus } from '#lib/features/auth/view-models.ts';
 import type { UserDto, SessionDto } from '#lib/features/auth/types.ts';
 
 const baseUser: UserDto = {
@@ -29,22 +29,12 @@ describe('displayName', () => {
 	});
 });
 
-describe('lastSeenLabel', () => {
-	it('returns "just now" for timestamps under a minute', () => {
-		const ts = new Date(Date.now() - 30_000).toISOString();
-		expect(lastSeenLabel(ts)).toBe('just now');
+describe('userStatus', () => {
+	it('active → success', () => {
+		expect(userStatus('active')).toEqual({ label: 'Active', variant: 'success' });
 	});
-	it('returns "N minutes ago" for under an hour', () => {
-		const ts = new Date(Date.now() - 5 * 60_000).toISOString();
-		expect(lastSeenLabel(ts)).toBe('5 minutes ago');
-	});
-	it('returns "N hours ago" for under a day', () => {
-		const ts = new Date(Date.now() - 3 * 60 * 60_000).toISOString();
-		expect(lastSeenLabel(ts)).toBe('3 hours ago');
-	});
-	it('returns absolute date for older timestamps', () => {
-		const ts = new Date('2025-12-01T10:00:00Z').toISOString();
-		expect(lastSeenLabel(ts)).toMatch(/Dec/);
+	it('inactive → neutral', () => {
+		expect(userStatus('inactive')).toEqual({ label: 'Inactive', variant: 'neutral' });
 	});
 });
 

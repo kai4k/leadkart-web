@@ -1,23 +1,15 @@
 /**
  * Pure view-model helpers for permission requests.
  */
+import { defineStatusMap } from '#lib/utils/status.ts';
 import type { PermissionRequestDto, PermissionRequestState } from './schemas';
 
-export interface StateBadge {
-	label: string;
-	variant: 'success' | 'danger' | 'warning' | 'neutral' | 'info';
-}
-
-const STATE_BADGES: Record<PermissionRequestState, StateBadge> = {
+export const permissionRequestState = defineStatusMap<PermissionRequestState>({
 	pending: { label: 'Pending', variant: 'warning' },
 	approved: { label: 'Approved', variant: 'success' },
 	denied: { label: 'Denied', variant: 'danger' },
 	cancelled: { label: 'Cancelled', variant: 'neutral' }
-};
-
-export function stateBadge(state: PermissionRequestState): StateBadge {
-	return STATE_BADGES[state] ?? { label: state, variant: 'info' };
-}
+});
 
 /** Caller can cancel only their own pending requests. */
 export function canCancel(req: PermissionRequestDto, callerMembershipId: string): boolean {

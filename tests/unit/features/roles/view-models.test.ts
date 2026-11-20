@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
 	isProtectedRole,
-	roleBadgeVariant,
+	roleKind,
+	roleKindKey,
 	rolePermissionSet,
 	roleMemberCount
 } from '#lib/features/roles/view-models.ts';
@@ -48,21 +49,23 @@ describe('isProtectedRole', () => {
 	});
 });
 
-describe('roleBadgeVariant', () => {
+const kindBadge = (role: Parameters<typeof roleKindKey>[0]) => roleKind(roleKindKey(role));
+
+describe('roleKind', () => {
 	it('custom role → neutral variant with "Custom" label', () => {
-		const result = roleBadgeVariant(base);
+		const result = kindBadge(base);
 		expect(result.variant).toBe('neutral');
 		expect(result.label).toBe('Custom');
 	});
 
 	it('system-default role → info variant with "System" label', () => {
-		const result = roleBadgeVariant(systemRole);
+		const result = kindBadge(systemRole);
 		expect(result.variant).toBe('info');
 		expect(result.label).toBe('System');
 	});
 
 	it('super-admin role → warning variant with "SuperAdmin" label', () => {
-		const result = roleBadgeVariant(superAdminRole);
+		const result = kindBadge(superAdminRole);
 		expect(result.variant).toBe('warning');
 		expect(result.label).toBe('SuperAdmin');
 	});

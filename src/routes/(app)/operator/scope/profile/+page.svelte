@@ -2,7 +2,7 @@
 	import { Badge, Button, Card, CopyButton } from '$ui';
 	import { Eye, Icon } from '$icons';
 	import { ImpersonateModal } from '$features/operator/impersonation';
-	import { tenantLifecycleBadge } from '$features/operator/tenants';
+	import { tenantStatus } from '$features/tenant';
 	import { P, session } from '$features/auth';
 	import type { LayoutData } from '../$types';
 
@@ -12,7 +12,7 @@
 
 	const tenant = $derived(data.tenant);
 	const canImpersonate = $derived(session.can(P.platformImpersonationManage));
-	const badge = $derived(tenantLifecycleBadge(tenant));
+	const badge = $derived(tenantStatus(tenant.status));
 </script>
 
 <svelte:head><title>Profile · {tenant.display_name} · LeadKart</title></svelte:head>
