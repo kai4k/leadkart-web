@@ -41,6 +41,19 @@ const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best
 const BLOCKING_IMPACTS = new Set(['critical', 'serious', 'moderate']);
 
 async function expectClean(page: Page, scope?: string): Promise<void> {
+	// The (auth) pages render in the browser (ssr = false) and the app is interactive only once hydrated:
+	// a scan that starts at the load event can see a document with no landmark yet.
+	await page.locator('html[data-hydrated="true"]').waitFor({ state: 'attached' });
+	// ...and axe reads colours as painted: a card still fading in is measured half transparent. Settle
+	// every finite animation (reduced motion removes them) before the scan.
+	await page.emulateMedia({ reducedMotion: 'reduce' });
+	await page.waitForFunction(() =>
+		document
+			.getAnimations()
+			.every(
+				(a) => a.playState !== 'running' || a.effect?.getComputedTiming().iterations === Infinity
+			)
+	);
 	let builder = new AxeBuilder({ page }).withTags(WCAG_TAGS);
 	if (scope) builder = builder.include(scope);
 	const results = await builder.analyze();

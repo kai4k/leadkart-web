@@ -114,7 +114,9 @@
 		>
 
 		<p class="caption text-muted-foreground text-center">
-			<a href={resolve('forgot-password')} class="text-primary hover:underline"
+			<a
+				href={resolve('forgot-password')}
+				class="text-primary underline underline-offset-2 hover:no-underline"
 				>{$_('auth.signin.forgotPassword')}</a
 			>
 		</p>

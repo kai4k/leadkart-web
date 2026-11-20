@@ -4,6 +4,16 @@
 		"tagline": "Pharma SaaS — leads, orders, dispatch."
 	},
 	"auth": {
+		"brand": {
+			"headline": "Pharma lead management, simplified.",
+			"tagline": "End-to-end CRM, orders, inventory and dispatch, built for India's PCD pharma market.",
+			"mobileTag": "Pharma SaaS",
+			"features": {
+				"security": "Enterprise-grade security",
+				"tracking": "Real-time lead tracking",
+				"dispatch": "Order-to-dispatch pipeline"
+			}
+		},
 		"signin": {
 			"title": "Sign in",
 			"subtitle": "Welcome back. Enter your credentials to continue.",
@@ -112,6 +122,8 @@
 		"navigation": "Navigation",
 		"close": "Close",
 		"brandName": "LeadKart",
+		"skipToContent": "Skip to main content",
+		"loadingNextPage": "Loading next page",
 		"pagination": {
 			"label": "Pagination",
 			"previous": "Previous",

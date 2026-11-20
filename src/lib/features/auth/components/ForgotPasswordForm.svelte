@@ -43,7 +43,9 @@
 			<p>{$_('auth.forgotPassword.successCopy')}</p>
 		</Alert>
 		<p class="caption text-muted-foreground text-center">
-			<a href={resolve('signin')} class="text-primary hover:underline"
+			<a
+				href={resolve('signin')}
+				class="text-primary underline underline-offset-2 hover:no-underline"
 				>{$_('auth.forgotPassword.backToSignin')}</a
 			>
 		</p>
@@ -85,7 +87,9 @@
 			<span class="caption">
 				{$_('auth.forgotPassword.knowIt')}
 
-				<a href={resolve('signin')} class="text-primary hover:underline"
+				<a
+					href={resolve('signin')}
+					class="text-primary underline underline-offset-2 hover:no-underline"
 					>{$_('auth.signin.title')}</a
 				>
 			</span>

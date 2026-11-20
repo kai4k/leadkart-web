@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { navigating } from '$app/state';
 
 	/**
@@ -12,7 +13,8 @@
 	 * 200ms delay before the bar appears so quick navigations (cached, no
 	 * server load) don't flash. The opacity transition smooths the entrance.
 	 *
-	 * Two-phase progression: a fast 0→70% sweep over the first ~300ms, then
+	 * Exposed to assistive technology only while it is showing (a hidden bar outside a landmark is
+	 * an axe `region` finding and says nothing). Two-phase progression: a fast 0→70% sweep over the first ~300ms, then
 	 * idle until the navigation completes. Stripe's NProgress is the canonical
 	 * implementation; this is a Svelte 5 native take.
 	 */
@@ -57,11 +59,15 @@
 <div
 	class="lk-nav-progress"
 	class:lk-nav-progress--visible={visible}
-	role="progressbar"
-	aria-label="Loading next page"
-	aria-valuemin="0"
-	aria-valuemax="100"
-	aria-valuenow={progress}
+	{...visible
+		? {
+				role: 'progressbar',
+				'aria-label': $_('common.loadingNextPage'),
+				'aria-valuemin': 0,
+				'aria-valuemax': 100,
+				'aria-valuenow': progress
+			}
+		: { 'aria-hidden': 'true' }}
 >
 	<div class="lk-nav-progress-bar" style="transform: scaleX({progress / 100});"></div>
 </div>
@@ -83,11 +89,11 @@
 	.lk-nav-progress-bar {
 		block-size: 100%;
 		inline-size: 100%;
-		background: var(--color-primary);
+		background: var(--primary);
 		transform-origin: left;
 		transform: scaleX(0);
 		transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-		box-shadow: 0 0 8px var(--color-primary);
+		box-shadow: 0 0 8px var(--primary);
 	}
 	@media (prefers-reduced-motion: reduce) {
 		.lk-nav-progress {

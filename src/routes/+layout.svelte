@@ -2,7 +2,7 @@
 	import '../app.css';
 	import { onMount } from 'svelte';
 	import { browser } from '$app/env';
-	import { locale } from 'svelte-i18n';
+	import { _, locale } from 'svelte-i18n';
 	import { Toaster, Tooltip } from '$ui';
 	import {
 		createPreferences,
@@ -40,7 +40,7 @@
 	onMount(removeLegacyThemeKeys);
 </script>
 
-<a href="#main-content" class="skip-link">Skip to main content</a>
+<a href="#main-content" class="skip-link">{$_('common.skipToContent')}</a>
 
 <Tooltip.Provider delayDuration={200}>
 	{@render children()}

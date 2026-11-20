@@ -52,7 +52,9 @@
 			<p>{$_('auth.resetPassword.errors.missingToken')}</p>
 		</Alert>
 		<p class="caption text-muted-foreground text-center">
-			<a href={resolve('forgot-password')} class="text-primary hover:underline"
+			<a
+				href={resolve('forgot-password')}
+				class="text-primary underline underline-offset-2 hover:no-underline"
 				>{$_('auth.resetPassword.requestNew')}</a
 			>
 		</p>
@@ -104,7 +106,9 @@
 			<span class="caption">
 				{$_('auth.resetPassword.backToSignin')}
 
-				<a href={resolve('signin')} class="text-primary hover:underline"
+				<a
+					href={resolve('signin')}
+					class="text-primary underline underline-offset-2 hover:no-underline"
 					>{$_('auth.signin.title')}</a
 				>
 			</span>
