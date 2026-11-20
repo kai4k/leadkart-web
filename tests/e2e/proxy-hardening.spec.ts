@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './helpers/test';
 import { listMockCalls, registerMock, registerMocks, resetMock } from './helpers/mock';
 import { mintScopeCookie } from './helpers/scope-cookie';
 import { fakeTenantDto } from './helpers/fake-jwt';

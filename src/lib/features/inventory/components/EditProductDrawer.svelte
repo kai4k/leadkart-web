@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	import { Drawer, Button, Alert } from '$ui';
 	import { TextField, NumberInput, Combobox, RadioGroup, RadioItem } from '$form';
 	import { useForm } from '#lib/hooks/use-form.svelte.ts';
@@ -24,6 +25,8 @@
 	let { open = $bindable(false), product, onOpenChange }: Props = $props();
 
 	const mutation = updateProductMutation();
+	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
+	useResetOnChange(() => open, mutation);
 
 	type EditValues = {
 		brand_name: string;
@@ -122,18 +125,8 @@
 				const v = cleaned[key];
 				if (typeof v === 'string' && v === '') cleaned[key] = undefined;
 			}
-			await new Promise<void>((resolve, reject) => {
-				mutation.mutate(
-					{ id: product.id, body: cleaned },
-					{
-						onSuccess: () => {
-							onOpenChange(false);
-							resolve();
-						},
-						onError: (err) => reject(err)
-					}
-				);
-			});
+			await mutation.mutateAsync({ id: product.id, body: cleaned });
+			onOpenChange(false);
 		});
 	}
 </script>

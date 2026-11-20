@@ -113,7 +113,24 @@ export async function signInAsTier(page: Page, opts: SignInOpts): Promise<void> 
 		// Slug lookup is now the canonical filter form `GET /v1/tenants?slug=…`
 		// (ADR 0052) returning ListTenantsResponse. The mock-server matches on
 		// pathname only — both the bare GET and the slug-filter GET land here.
-		{ method: 'GET', path: '/api/v1/tenants', status: 200, body: { tenants: [tenant] } }
+		{ method: 'GET', path: '/api/v1/tenants', status: 200, body: { tenants: [tenant] } },
+		// The operator dashboard (/dashboard for a platform caller) asks for these on first paint.
+		...(isPlatform
+			? [
+					{
+						method: 'GET' as const,
+						path: '/api/v1/platform/stats',
+						status: 200,
+						body: {
+							tenants_total: 2,
+							tenants_active: 1,
+							tenants_suspended: 1,
+							persons_total: 3,
+							memberships_active: 3
+						}
+					}
+				]
+			: [])
 	]);
 
 	await page.goto('/signin');

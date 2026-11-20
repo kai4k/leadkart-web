@@ -4,6 +4,7 @@
 	endpoint creates a consignment in the Dispatch service via outbox.
 -->
 <script lang="ts">
+	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	import { Alert, Button, Dialog } from '$ui';
 	import { TextField } from '$form';
 	import { useForm } from '#lib/hooks/index.ts';
@@ -18,6 +19,8 @@
 	let { orderId, open = $bindable(false), onOpenChange }: Props = $props();
 
 	const dispatchM = dispatchOrderMutation();
+	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
+	useResetOnChange(() => open, dispatchM);
 	const form = useForm(dispatchRequestSchema, {
 		carrier: '',
 		tracking_number: '',
@@ -26,19 +29,9 @@
 
 	async function handleSubmit(e: SubmitEvent) {
 		await form.submit(e, async (values) => {
-			await new Promise<void>((resolve, reject) => {
-				dispatchM.mutate(
-					{ id: orderId, ...values },
-					{
-						onSuccess: () => {
-							onOpenChange(false);
-							form.reset();
-							resolve();
-						},
-						onError: (err) => reject(err)
-					}
-				);
-			});
+			await dispatchM.mutateAsync({ id: orderId, ...values });
+			onOpenChange(false);
+			form.reset();
 		});
 	}
 </script>

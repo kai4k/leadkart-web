@@ -99,37 +99,23 @@
 
 	async function onSubmit(e: SubmitEvent) {
 		await form.submit(e, async (values: ReviseQuotationRequest) => {
-			await new Promise<void>((resolve, reject) => {
-				reviseM.mutate(
-					{ id: order.id, ...values },
-					{
-						onSuccess: () => {
-							onOpenChange(false);
-							resolve();
-						},
-						onError: (err) => {
-							// ValidationError → form.errors (handled by useForm).
-							// Map every other typed subclass to a human banner.
-							if (err instanceof ValidationError) {
-								reject(err);
-							} else {
-								reject(
-									new Error(
-										describeError(err, {
-											fallback: 'Failed to revise. Please try again.',
-											status: {
-												403: "You don't have permission to revise quotations.",
-												404: 'This order was deleted or moved.',
-												409: 'This order was revised by someone else — reload and try again.'
-											}
-										})
-									)
-								);
-							}
-						}
+			try {
+				await reviseM.mutateAsync({ id: order.id, ...values });
+			} catch (err) {
+				// ValidationError → form.errors (handled by useForm).
+				// Map every other typed subclass to a human banner.
+				if (err instanceof ValidationError) throw err;
+				form.bannerError = describeError(err, {
+					fallback: 'Failed to revise. Please try again.',
+					status: {
+						403: "You don't have permission to revise quotations.",
+						404: 'This order was deleted or moved.',
+						409: 'This order was revised by someone else — reload and try again.'
 					}
-				);
-			});
+				});
+				return;
+			}
+			onOpenChange(false);
 		});
 	}
 </script>

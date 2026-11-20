@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	/**
 	 * LogCallDialog — record a call outcome against a lead.
 	 *
@@ -23,6 +24,8 @@
 	let { leadId, open = $bindable(false), onOpenChange }: Props = $props();
 
 	const mutation = logCallMutation();
+	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
+	useResetOnChange(() => open, mutation);
 	const form = useForm(
 		logCallSchema,
 		{
@@ -46,19 +49,9 @@
 	async function onSubmit(e: SubmitEvent) {
 		form.values.callback_window_minutes = callbackWindow ?? undefined;
 		await form.submit(e, async (values) => {
-			await new Promise<void>((resolve, reject) => {
-				mutation.mutate(
-					{ id: leadId, req: values },
-					{
-						onSuccess: () => {
-							form.reset();
-							onOpenChange(false);
-							resolve();
-						},
-						onError: (err) => reject(err)
-					}
-				);
-			});
+			await mutation.mutateAsync({ id: leadId, req: values });
+			form.reset();
+			onOpenChange(false);
 		});
 	}
 </script>

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './helpers/test';
 import { signInAsTier } from './helpers/sign-in';
 import { resetMock, registerMocks, registerMock } from './helpers/mock';
 import { fakeTenantDto } from './helpers/fake-jwt';

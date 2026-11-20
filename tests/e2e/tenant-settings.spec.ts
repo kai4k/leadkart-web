@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './helpers/test';
 import { signInAsTier } from './helpers/sign-in';
 import { resetMock, registerMocks, registerMock } from './helpers/mock';
 import { fakeTenantDto, TEST_TENANT_ID } from './helpers/fake-jwt';
@@ -26,8 +26,7 @@ const TENANT = fakeTenantDto({
 	gst_number: '27AAAPL1234C1Z1',
 	pan_number: 'AAAPL1234C',
 	drug_licence_number: 'MH-DL-0123/24',
-	admin_phone: '+919999900000',
-	admin_email: 'admin@acme.test'
+	admin_phone: '+919999900000'
 });
 
 async function signInAsTenantAdmin(page: Page) {

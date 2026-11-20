@@ -55,19 +55,9 @@
 			for (const key of ['supplier_name', 'supplier_invoice_no'] as const) {
 				if (cleaned[key] === '') cleaned[key] = undefined;
 			}
-			await new Promise<void>((resolve, reject) => {
-				mutation.mutate(
-					{ productId, body: cleaned },
-					{
-						onSuccess: () => {
-							form.reset();
-							onOpenChange(false);
-							resolve();
-						},
-						onError: (err) => reject(err)
-					}
-				);
-			});
+			await mutation.mutateAsync({ productId, body: cleaned });
+			form.reset();
+			onOpenChange(false);
 		});
 	}
 </script>

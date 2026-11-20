@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './helpers/test';
 import { signInAsTier } from './helpers/sign-in';
 import { resetMock, registerMock, listMockCalls } from './helpers/mock';
 import { fakeUserDto, TEST_MEMBERSHIP_ID } from './helpers/fake-jwt';

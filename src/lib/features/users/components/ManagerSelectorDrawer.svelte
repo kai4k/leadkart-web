@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	import { Drawer, Button, Alert } from '$ui';
 	import { Select } from '#lib/components/form/index.ts';
 	import { assignManagerMutation, removeManagerMutation } from '$features/users/queries';
@@ -31,6 +32,8 @@
 
 	const assignMutation = assignManagerMutation();
 	const removeMutation = removeManagerMutation({ inlineErrors: true });
+	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
+	useResetOnChange(() => open, assignMutation, removeMutation);
 
 	const isPending = $derived(assignMutation.isPending || removeMutation.isPending);
 

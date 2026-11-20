@@ -2,6 +2,7 @@
 	MarkPackedDialog — captures box count for the packed transition.
 -->
 <script lang="ts">
+	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	import { Alert, Button, Dialog } from '$ui';
 	import { NumberInput } from '$form';
 	import { useForm } from '#lib/hooks/index.ts';
@@ -16,23 +17,15 @@
 	let { orderId, open = $bindable(false), onOpenChange }: Props = $props();
 
 	const packM = markPackedMutation();
+	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
+	useResetOnChange(() => open, packM);
 	const form = useForm(markPackedRequestSchema, { box_count: 1 });
 
 	async function handleSubmit(e: SubmitEvent) {
 		await form.submit(e, async (values) => {
-			await new Promise<void>((resolve, reject) => {
-				packM.mutate(
-					{ id: orderId, ...values },
-					{
-						onSuccess: () => {
-							onOpenChange(false);
-							form.reset();
-							resolve();
-						},
-						onError: (err) => reject(err)
-					}
-				);
-			});
+			await packM.mutateAsync({ id: orderId, ...values });
+			onOpenChange(false);
+			form.reset();
 		});
 	}
 </script>

@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
-import { resetMock } from './helpers/mock';
+import { expect, test } from './helpers/test';
+import { registerMock, resetMock } from './helpers/mock';
 import { signInAsTier } from './helpers/sign-in';
 
 /**
@@ -33,6 +33,12 @@ test.describe('Cmd+K search palette — visibility gate', () => {
 		await signInAsTier(page, {
 			tier: 'tenant-user',
 			permissions: ['crm.leads.read', 'identity.meta.request_permission_elevation']
+		});
+		await registerMock({
+			method: 'GET',
+			path: '/api/v1/permission-requests',
+			status: 200,
+			body: { requests: [], has_more: false }
 		});
 		await page.goto('/dashboard');
 		await page.locator('button[aria-label="Search (Cmd+K)"]').click();

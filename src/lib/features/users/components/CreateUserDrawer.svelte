@@ -1,5 +1,6 @@
 <!-- src/lib/features/users/components/CreateUserDrawer.svelte -->
 <script lang="ts">
+	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	import { Drawer, Button, Alert } from '$ui';
 	import { TextField, PasswordField } from '#lib/components/form/index.ts';
 	import { createUserMutation } from '$features/users/queries';
@@ -16,6 +17,8 @@
 	let success = $state<{ membershipId: string; personExisted: boolean } | null>(null);
 
 	const mutation = createUserMutation();
+	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
+	useResetOnChange(() => open, mutation);
 	const form = useForm(
 		createUserRequestSchema,
 		{
@@ -34,15 +37,8 @@
 
 	async function onSubmit(e: SubmitEvent) {
 		await form.submit(e, async (values) => {
-			await new Promise<void>((resolve, reject) => {
-				mutation.mutate(values, {
-					onSuccess: (resp) => {
-						success = { membershipId: resp.membership_id, personExisted: resp.person_existed };
-						resolve();
-					},
-					onError: (err) => reject(err)
-				});
-			});
+			const resp = await mutation.mutateAsync(values);
+			success = { membershipId: resp.membership_id, personExisted: resp.person_existed };
 		});
 	}
 

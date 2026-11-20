@@ -15,6 +15,19 @@ const KNOWN_DEBT: ReadonlyArray<{ pattern: RegExp; task: string }> = [
 		pattern: /^\/api\/v1\/identity\/memberships$/,
 		task: 'Task 19 (membership search has no Go route)'
 	},
+	// Surfaced when a web `${id}` stopped matching Go's literal segments (round 6): Go's orders routes are
+	// /orders/orders/{orderId}[/...] and /orders/quotations/{quotationId}[/...], so none of these exist.
+	{ pattern: /^\/api\/v1\/orders\/\{\}\/revisions$/, task: 'Tasks 20-23 (orders: revisions)' },
+	{ pattern: /^\/api\/v1\/orders\/\{\}\/payments$/, task: 'Tasks 20-23 (orders: payments)' },
+	{ pattern: /^\/api\/v1\/orders\/\{\}\/invoice$/, task: 'Tasks 20-23 (orders: invoice)' },
+	{
+		pattern: /^\/api\/v1\/orders\/\{\}\/credit-notes$/,
+		task: 'Tasks 20-23 (orders: credit notes)'
+	},
+	{
+		pattern: /^\/api\/v1\/orders\/\{\}\/credit-notes\/\{\}$/,
+		task: 'Tasks 20-23 (orders: credit note detail)'
+	},
 	{ pattern: /^\/api\/v1\/orders(\/|$)/, task: 'Tasks 20-23 (orders)' },
 	{ pattern: /^\/api\/v1\/inventory\//, task: 'Tasks 24-26 (inventory)' },
 	{ pattern: /^\/api\/v1\/tenants\/\{\}\/activity$/, task: 'Task 27 (activity)' },
@@ -79,6 +92,8 @@ const calls: Call[] = [];
 for (const file of routeFiles) {
 	const src = stripComments(readFileSync(file, 'utf8'));
 	for (const m of src.matchAll(PATH_LITERAL)) {
+		// A template-literal TYPE (`path: `/v1/${string}``) is a signature, not a call.
+		if (m[2].includes('${string}')) continue;
 		const method = methodAt(src, m.index!);
 		const base = { file: file.replaceAll('\\', '/'), line: lineOf(src, m.index!), method };
 		// `${pathSuffix}` is a typed parameter whose literals live in the callers.

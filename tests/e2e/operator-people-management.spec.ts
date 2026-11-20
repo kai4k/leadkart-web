@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './helpers/test';
 import { signInAsTier } from './helpers/sign-in';
 import { resetMock, registerMocks, registerMock } from './helpers/mock';
 
@@ -74,6 +74,14 @@ test.describe('People list — positive', () => {
 				path: `/api/v1/platform/persons/${PERSON_AAA.id}/memberships`,
 				status: 200,
 				body: { memberships: [] }
+			},
+			{ method: 'GET', path: '/api/v1/platform/tenants', status: 200, body: { tenants: [] } },
+			// Activity feed: its area is still pre-Go (Task 27), so the fixture is unvalidated.
+			{
+				method: 'GET',
+				path: `/api/v1/platform/persons/${PERSON_AAA.id}/activity`,
+				status: 200,
+				body: {}
 			}
 		]);
 		await page.goto(`/operator/persons/${PERSON_AAA.id}`);
@@ -101,12 +109,15 @@ test.describe('People list — negative', () => {
 
 	test('person detail 404: not-found alert', async ({ page }) => {
 		await signInAsOperator(page);
-		await registerMock({
-			method: 'GET',
-			path: '/api/v1/platform/persons/nonexistent-id',
-			status: 404,
-			body: { error: 'not_found', message: 'person not found' }
-		});
+		await registerMocks([
+			{
+				method: 'GET',
+				path: '/api/v1/platform/persons/nonexistent-id',
+				status: 404,
+				body: { error: 'not_found', message: 'person not found' }
+			},
+			{ method: 'GET', path: '/api/v1/platform/tenants', status: 200, body: { tenants: [] } }
+		]);
 		await page.goto('/operator/persons/nonexistent-id');
 		await expect(page.locator('[role="alert"]').first()).toBeVisible({ timeout: 5000 });
 	});

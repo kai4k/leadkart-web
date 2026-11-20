@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	import { Dialog, Button, Alert } from '$ui';
 	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 	import { writeOffBatchMutation } from '$features/inventory/queries';
@@ -13,6 +14,8 @@
 	let { open = $bindable(false), productId, batch, onOpenChange }: Props = $props();
 
 	const mutation = writeOffBatchMutation();
+	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
+	useResetOnChange(() => open, mutation);
 	const form = useForm(writeOffBatchRequestSchema, { reason: '' }, { validateOn: 'blur' });
 
 	$effect(() => {
@@ -22,19 +25,9 @@
 	async function onSubmit(e: SubmitEvent) {
 		if (!batch) return;
 		await form.submit(e, async (values) => {
-			await new Promise<void>((resolve, reject) => {
-				mutation.mutate(
-					{ productId, batchId: batch.id, body: values },
-					{
-						onSuccess: () => {
-							form.reset();
-							onOpenChange(false);
-							resolve();
-						},
-						onError: (err) => reject(err)
-					}
-				);
-			});
+			await mutation.mutateAsync({ productId, batchId: batch.id, body: values });
+			form.reset();
+			onOpenChange(false);
 		});
 	}
 </script>

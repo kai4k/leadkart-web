@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	import { ConfirmDialog } from '$ui';
 	import { quarantineBatchMutation } from '$features/inventory/queries';
 	import type { BatchDto } from '$features/inventory/schemas';
@@ -12,6 +13,8 @@
 	let { open = $bindable(false), productId, batch, onOpenChange }: Props = $props();
 
 	const mutation = quarantineBatchMutation();
+	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
+	useResetOnChange(() => open, mutation);
 
 	function doQuarantine() {
 		if (!batch) return;

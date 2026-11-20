@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './helpers/test';
 import { resetMock, registerMock, registerMocks } from './helpers/mock';
 import { signInAsTier } from './helpers/sign-in';
 import { TEST_MEMBERSHIP_ID, TEST_TENANT_ID } from './helpers/fake-jwt';
@@ -193,6 +193,14 @@ test.describe('CRM Leads — table view', () => {
 			status: 200,
 			body: lead
 		});
+		for (const tab of ['calls', 'reminders', 'history']) {
+			await registerMock({
+				method: 'GET',
+				path: `/api/v1/crm/leads/${lead.id}/${tab}`,
+				status: 200,
+				body: { items: [], has_more: false }
+			});
+		}
 		await page.goto('/leads?view=table');
 		await page.getByTestId('leads-table').getByText('Mahesh Pharma').click();
 		await page.waitForURL(new RegExp(`/leads/${lead.id}$`));

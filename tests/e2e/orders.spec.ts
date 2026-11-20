@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './helpers/test';
 import { listMockCalls, resetMock, registerMock, registerMocks } from './helpers/mock';
 import { signInAsTier } from './helpers/sign-in';
 import { TEST_TENANT_ID, TEST_MEMBERSHIP_ID } from './helpers/fake-jwt';

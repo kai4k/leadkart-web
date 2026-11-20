@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './helpers/test';
 import { signInAsTier } from './helpers/sign-in';
 import { resetMock, registerMocks, registerMock } from './helpers/mock';
 
@@ -105,6 +105,13 @@ test.describe('Roles list — positive', () => {
 				path: '/api/v1/roles',
 				status: 201,
 				body: { role_id: '00000000-0000-4000-8000-00000000010c' }
+			},
+			// The form action redirects to the new role's page.
+			{
+				method: 'GET',
+				path: '/api/v1/roles/00000000-0000-4000-8000-00000000010c',
+				status: 200,
+				body: { ...CUSTOM_ROLE, id: '00000000-0000-4000-8000-00000000010c', name: 'Dispatch Lead' }
 			}
 		]);
 		await page.goto('/settings/roles');

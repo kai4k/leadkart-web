@@ -10,6 +10,7 @@
  * Also the one place that knows how to look an endpoint up: the gateway route
  * scan (tests/unit/contract/gateway-routes.test.ts) uses `findEndpoint` too.
  */
+import { readFileSync } from 'node:fs';
 import { z } from 'zod';
 import {
 	endpoints,
@@ -61,13 +62,58 @@ export const UNVALIDATED_PATHS: readonly RegExp[] = [
 	/^\/api\/v1\/platform\/persons$/ // operator people email lookup: Task 28
 ];
 
+/**
+ * `a` is the web path, `b` Go's template. A parameter on the web side (a template expression) matches
+ * ONLY a parameter on Go's side: `${id}` is not Go's literal `me`. A concrete segment matches a Go
+ * parameter or the same literal; an empty segment matches nothing.
+ */
 function segmentsMatch(a: string[], b: string[], prefix = false): boolean {
 	if (prefix ? a.length > b.length : a.length !== b.length) return false;
 	return a.every((s, i) => {
-		if (b[i] === PARAM || s === PARAM) return s !== '';
+		if (s === PARAM) return b[i] === PARAM;
+		if (b[i] === PARAM) return s !== '';
 		return prefix && i === a.length - 1 ? b[i].startsWith(s) : s === b[i];
 	});
 }
+
+/**
+ * The 2xx statuses Go documents per operation, read from the generated types
+ * (`'/api/...': { post: { responses: { 201: ... } } }`; the generated zod map keeps no status).
+ */
+const SUCCESS_STATUSES: ReadonlyMap<string, readonly number[]> = (() => {
+	const src = readFileSync(
+		new URL('../../../src/lib/api/generated/openapi-types.ts', import.meta.url),
+		'utf8'
+	);
+	const out = new Map<string, number[]>();
+	let path = '';
+	let method = '';
+	let inResponses = false;
+	for (const line of src.split(/\r?\n/)) {
+		const p = /^\t'(\/api[^']*)': \{$/.exec(line);
+		if (p) {
+			path = normalizePath(p[1]);
+			continue;
+		}
+		const m = /^\t\t(get|post|put|patch|delete): \{$/.exec(line);
+		if (m) {
+			method = m[1];
+			inResponses = false;
+			continue;
+		}
+		if (/^\t\t\tresponses: \{$/.test(line)) inResponses = true;
+		else if (/^\t\t\t\S/.test(line)) inResponses = false;
+		const code = inResponses ? /^\t\t\t\t(2\d\d): \{$/.exec(line) : null;
+		if (code && path && method) {
+			const key = `${method} ${path}`;
+			out.set(key, [...(out.get(key) ?? []), Number(code[1])]);
+		}
+	}
+	return out;
+})();
+
+const documentedSuccess = (e: GeneratedEndpoint): readonly number[] =>
+	SUCCESS_STATUSES.get(`${e.method} ${normalizePath(e.path)}`) ?? [];
 
 /** Endpoints whose method and path template match a concrete (or `{}`-templated) path. */
 function matching(method: string, path: string, prefix = false): GeneratedEndpoint[] {
@@ -93,7 +139,18 @@ function responseFor(e: GeneratedEndpoint): z.ZodType {
 	);
 }
 
-function successError(schema: z.ZodType, f: MockFixture): string | null {
+function successError(e: GeneratedEndpoint, f: MockFixture): string | null {
+	const schema = responseFor(e);
+	const shape = bodyError(schema, f);
+	if (shape) return shape;
+	// The status itself, where the generated types document it (e.g. POST /roles answers 201, not 200).
+	const documented = documentedSuccess(e);
+	return documented.length > 0 && !documented.includes(f.status)
+		? `the Go route documents ${documented.join(' / ')} but the fixture is ${f.status}`
+		: null;
+}
+
+function bodyError(schema: z.ZodType, f: MockFixture): string | null {
 	if (isBodyless(schema)) {
 		if (f.status !== 204)
 			return `the Go route answers 204 (no body) but the fixture is ${f.status}`;
@@ -111,20 +168,26 @@ function successError(schema: z.ZodType, f: MockFixture): string | null {
 export function validateFixture(f: MockFixture, opts: { strict?: boolean } = {}): string | null {
 	const wildcard = f.path.endsWith('*');
 	const path = wildcard ? f.path.slice(0, -1) : f.path;
-	if (!opts.strict && UNVALIDATED_PATHS.some((re) => re.test(path))) return null;
+	// A wildcard may reach any route under its prefix, so only a prefix exemption (one that still
+	// matches with a segment appended) covers it; an exact-path exemption does not.
+	const exempt = (re: RegExp) => re.test(wildcard ? `${path.replace(/\/$/, '')}/x` : path);
+	if (!opts.strict && UNVALIDATED_PATHS.some(exempt)) return null;
 	const candidates = matching(f.method, path, wildcard);
 	if (candidates.length === 0)
 		return `${f.method} ${f.path} is not a route in api/openapi.yaml (the web must not call it)`;
 	if (f.status >= 200 && f.status < 300) {
-		const errors = candidates.map((e) => successError(responseFor(e), f));
+		const errors = candidates.map((e) => successError(e, f));
 		return errors.includes(null) ? null : errors[0];
 	}
 	// A 3xx is not an answer Go gives (infrastructure in front of it can): the route must exist, the body is not Go's.
 	if (f.status >= 300 && f.status < 400) return null;
 	const r = ErrorResponse.safeParse(f.body);
-	return r.success
+	if (!r.success)
+		return `error fixture must be Go's ErrorResponse { error, message? }: ${z.prettifyError(r.error)}`;
+	const code = (f.body as { error?: unknown }).error;
+	return typeof code === 'string' && code.length > 0
 		? null
-		: `error fixture must be Go's ErrorResponse { error, message? }: ${z.prettifyError(r.error)}`;
+		: "error fixture's `error` must be a non-empty string (Go always sends a code)";
 }
 
 export function assertFixtures(fixtures: readonly MockFixture[]): void {

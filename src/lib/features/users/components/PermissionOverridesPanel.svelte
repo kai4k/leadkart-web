@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	import { Drawer, Button, Badge, Alert } from '$ui';
 	import { replacePermissionOverridesMutation } from '$features/users/queries';
 	import type { UserDto } from '$features/users/types';
@@ -31,6 +32,8 @@
 	let newRevoke = $state('');
 
 	const mutation = replacePermissionOverridesMutation();
+	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
+	useResetOnChange(() => open, mutation);
 	const isPending = $derived(mutation.isPending);
 
 	function addGrant() {

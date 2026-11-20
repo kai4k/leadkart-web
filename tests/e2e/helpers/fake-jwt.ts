@@ -179,31 +179,49 @@ export interface UserDto {
 	first_name: string;
 	last_name: string;
 	status: 'active' | 'inactive';
-	designation: string;
-	department: string;
-	status_message: string;
+	designation?: string;
+	department?: string;
+	status_message?: string;
 	joined_at: string;
 	left_at?: string;
 	reports_to?: string;
 	role_ids: string[];
 }
 
+/**
+ * What Go does for an `omitzero` string: an empty value is ABSENT from the JSON, never `''`.
+ * Applied to every builder's output (overrides included), so a fixture cannot send what Go never sends.
+ */
+function omitEmptyStrings<T extends object>(dto: T, keys: ReadonlyArray<keyof T>): T {
+	const out = { ...dto };
+	for (const key of keys) if ((out[key] as unknown) === '') delete out[key];
+	return out;
+}
+
+const USER_OMITZERO = [
+	'designation',
+	'department',
+	'status_message',
+	'left_at',
+	'reports_to'
+] as const;
+
 export function fakeUserDto(overrides?: Partial<UserDto>): UserDto {
-	return {
-		membership_id: TEST_MEMBERSHIP_ID,
-		person_id: TEST_PERSON_ID,
-		tenant_id: TEST_TENANT_ID,
-		email: 'test@example.com',
-		first_name: 'Test',
-		last_name: 'User',
-		status: 'active',
-		designation: '',
-		department: '',
-		status_message: '',
-		joined_at: '2026-01-01T00:00:00Z',
-		role_ids: [],
-		...overrides
-	};
+	return omitEmptyStrings(
+		{
+			membership_id: TEST_MEMBERSHIP_ID,
+			person_id: TEST_PERSON_ID,
+			tenant_id: TEST_TENANT_ID,
+			email: 'test@example.com',
+			first_name: 'Test',
+			last_name: 'User',
+			status: 'active',
+			joined_at: '2026-01-01T00:00:00Z',
+			role_ids: [],
+			...overrides
+		},
+		USER_OMITZERO
+	);
 }
 
 /**
@@ -260,40 +278,48 @@ export interface TenantDto {
 	pan_number?: string;
 	drug_licence_number?: string;
 	admin_phone?: string;
-	admin_email?: string;
 	locale?: string;
 	time_zone?: string;
 	date_format?: string;
 	currency?: string;
 }
 
+const TENANT_OMITZERO = [
+	'gst_number',
+	'pan_number',
+	'drug_licence_number',
+	'admin_phone',
+	'locale',
+	'time_zone',
+	'date_format',
+	'currency'
+] as const;
+
 export function fakeTenantDto(overrides?: Partial<TenantDto>): TenantDto {
-	return {
-		id: TEST_TENANT_ID,
-		slug: TEST_TENANT_SLUG,
-		legal_name: 'Test Tenant Pvt Ltd',
-		display_name: 'Test Tenant',
-		status: 'active',
-		created_at: '2026-01-01T00:00:00Z',
-		admin_address: {},
-		password_policy: {
-			min_length: 8,
-			require_uppercase: false,
-			require_lowercase: false,
-			require_digit: false,
-			require_symbol: false,
-			max_failed_attempts: 5,
-			lockout_minutes: 15
+	return omitEmptyStrings(
+		{
+			id: TEST_TENANT_ID,
+			slug: TEST_TENANT_SLUG,
+			legal_name: 'Test Tenant Pvt Ltd',
+			display_name: 'Test Tenant',
+			status: 'active',
+			created_at: '2026-01-01T00:00:00Z',
+			admin_address: {},
+			password_policy: {
+				min_length: 8,
+				require_uppercase: false,
+				require_lowercase: false,
+				require_digit: false,
+				require_symbol: false,
+				max_failed_attempts: 5,
+				lockout_minutes: 15
+			},
+			locale: 'en-IN',
+			time_zone: 'Asia/Kolkata',
+			date_format: 'DD/MM/YYYY',
+			currency: 'INR',
+			...overrides
 		},
-		gst_number: '',
-		pan_number: '',
-		drug_licence_number: '',
-		admin_phone: '',
-		admin_email: '',
-		locale: 'en-IN',
-		time_zone: 'Asia/Kolkata',
-		date_format: 'DD/MM/YYYY',
-		currency: 'INR',
-		...overrides
-	};
+		TENANT_OMITZERO
+	);
 }

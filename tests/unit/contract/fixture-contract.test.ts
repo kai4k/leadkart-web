@@ -3,6 +3,7 @@ import {
 	SPEC_OVERRIDES,
 	UNVALIDATED_PATHS,
 	assertFixtures,
+	findEndpoint,
 	validateFixture
 } from '../../e2e/helpers/contract.ts';
 import {
@@ -171,6 +172,56 @@ describe('validateFixture', () => {
 	});
 });
 
+describe('findEndpoint: a parameter matches only a parameter', () => {
+	it('a template expression in a web path does not match a literal Go segment', () => {
+		// Go has GET /api/v1/auth/me/capabilities; `${x}` there is a web variable, not Go's literal `me`.
+		expect(findEndpoint('GET', '/api/v1/auth/${x}/capabilities')).toBeUndefined();
+		expect(findEndpoint('GET', '/api/v1/auth/me/capabilities')).toBeDefined();
+	});
+
+	it('a template expression matches a Go parameter, and a literal id too', () => {
+		expect(findEndpoint('GET', '/api/v1/users/${id}')).toBeDefined();
+		expect(findEndpoint('GET', `/api/v1/users/${TEST_MEMBERSHIP_ID}`)).toBeDefined();
+	});
+
+	it('an empty segment matches nothing', () => {
+		expect(findEndpoint('GET', '/api/v1/users/')).toBeUndefined();
+	});
+});
+
+describe('fixture guard gaps', () => {
+	it('a success status must be one Go documents for the operation (POST /roles is 201)', () => {
+		const body = { role_id: TEST_MEMBERSHIP_ID };
+		expect(
+			validateFixture(fx({ method: 'POST', path: '/api/v1/roles', status: 200, body }))
+		).toContain('201');
+		expect(
+			validateFixture(fx({ method: 'POST', path: '/api/v1/roles', status: 201, body }))
+		).toBeNull();
+	});
+
+	it('an error fixture needs a non-empty string error code', () => {
+		const path = '/api/v1/auth/login';
+		for (const body of [{ error: '' }, { error: 7 }, {}]) {
+			expect(
+				validateFixture(fx({ method: 'POST', path, status: 401, body })),
+				JSON.stringify(body)
+			).not.toBeNull();
+		}
+	});
+
+	it('a wildcard fixture does not inherit an exact-path exemption', () => {
+		// `^/api/v1/platform/persons$` is exempt as an exact path only; a wildcard reaches other routes.
+		const f = fx({ method: 'GET', path: '/api/v1/platform/persons*', status: 200, body: {} });
+		expect(validateFixture(f)).not.toBeNull();
+		const exact = fx({ method: 'GET', path: '/api/v1/platform/persons', status: 200, body: {} });
+		expect(validateFixture(exact)).toBeNull();
+		// A prefix exemption still covers a wildcard under it.
+		const orders = fx({ method: 'GET', path: '/api/v1/orders*', status: 200, body: {} });
+		expect(validateFixture(orders)).toBeNull();
+	});
+});
+
 describe('fake builders are Go-valid', () => {
 	it.each([
 		['fakeTenantDto', TenantDto, fakeTenantDto()],
@@ -181,6 +232,29 @@ describe('fake builders are Go-valid', () => {
 	])('%s parses with the generated Go schema', (_n, schema, body) => {
 		const r = schema.safeParse(body);
 		expect(r.success, r.success ? '' : r.error.message).toBe(true);
+	});
+});
+
+describe('fake builders send what Go sends', () => {
+	it('fakeUserDto omits empty optionals (Go: omitzero) even when an override is empty', () => {
+		const u = fakeUserDto({ designation: '', department: 'Sales' });
+		expect(u).not.toHaveProperty('designation');
+		expect(u).not.toHaveProperty('status_message');
+		expect(u.department).toBe('Sales');
+		expect(fakeUserDto()).not.toHaveProperty('left_at');
+	});
+
+	it('fakeTenantDto omits empty optionals and has no admin_email (removed from Go TenantDto)', () => {
+		const t = fakeTenantDto({ gst_number: '' }) as unknown as Record<string, unknown>;
+		for (const k of [
+			'gst_number',
+			'pan_number',
+			'drug_licence_number',
+			'admin_phone',
+			'admin_email'
+		])
+			expect(t, k).not.toHaveProperty(k);
+		expect(fakeTenantDto({ gst_number: '27AAAPL1234C1Z1' }).gst_number).toBe('27AAAPL1234C1Z1');
 	});
 });
 

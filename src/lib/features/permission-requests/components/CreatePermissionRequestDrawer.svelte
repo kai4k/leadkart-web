@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	import { Drawer, Button, Alert } from '$ui';
 	import { TextField } from '#lib/components/form/index.ts';
 	import { createPermissionRequestMutation } from '$features/permission-requests/queries';
@@ -12,6 +13,8 @@
 	let { open = $bindable(false), onOpenChange }: Props = $props();
 
 	const mutation = createPermissionRequestMutation();
+	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
+	useResetOnChange(() => open, mutation);
 	const form = useForm(
 		createPermissionRequestSchema,
 		{ permission: '', duration_days: 30, reason: '' },
@@ -20,16 +23,9 @@
 
 	async function onSubmit(e: SubmitEvent) {
 		await form.submit(e, async (values) => {
-			await new Promise<void>((resolve, reject) => {
-				mutation.mutate(values, {
-					onSuccess: () => {
-						form.reset();
-						onOpenChange(false);
-						resolve();
-					},
-					onError: (err) => reject(err)
-				});
-			});
+			await mutation.mutateAsync(values);
+			form.reset();
+			onOpenChange(false);
 		});
 	}
 </script>

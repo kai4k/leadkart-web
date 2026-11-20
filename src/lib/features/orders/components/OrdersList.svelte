@@ -94,6 +94,11 @@
 
 	// ── Bulk actions ─────────────────────────────────────────────────
 	const bulkM = bulkOrderActionMutation();
+	/** One bulk call; a failure is toasted by the mutation layer, so the selection clears either way. */
+	async function runBulk(vars: Parameters<typeof bulkM.mutateAsync>[0]) {
+		await bulkM.mutateAsync(vars).catch(() => undefined);
+		selection.clear();
+	}
 
 	const bulkActions: BulkAction[] = [
 		{
@@ -107,13 +112,7 @@
 				confirmLabel: 'Delete drafts'
 			},
 			onClick: async () => {
-				await new Promise<void>((resolve) =>
-					bulkM.mutate(
-						{ ids: Array.from(selection.selected), action: 'delete_drafts' },
-						{ onSettled: () => resolve() }
-					)
-				);
-				selection.clear();
+				await runBulk({ ids: Array.from(selection.selected), action: 'delete_drafts' });
 			}
 		},
 		{
@@ -127,13 +126,11 @@
 				confirmLabel: 'Cancel orders'
 			},
 			onClick: async () => {
-				await new Promise<void>((resolve) =>
-					bulkM.mutate(
-						{ ids: Array.from(selection.selected), action: 'cancel', reason: 'Bulk cancel' },
-						{ onSettled: () => resolve() }
-					)
-				);
-				selection.clear();
+				await runBulk({
+					ids: Array.from(selection.selected),
+					action: 'cancel',
+					reason: 'Bulk cancel'
+				});
 			}
 		}
 	];

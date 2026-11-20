@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	import { Drawer, Button, Alert, Card } from '$ui';
 	import { TextField, PasswordField } from '#lib/components/form/index.ts';
 	import { Copy, Icon } from '$icons';
@@ -6,7 +7,6 @@
 	import { registerTenantRequestSchema } from '../schemas';
 	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 	import { resolve } from '$app/paths';
-	import type { RegisterTenantResponse } from '../types';
 
 	type Props = { open: boolean; onOpenChange: (open: boolean) => void };
 	let { open = $bindable(false), onOpenChange }: Props = $props();
@@ -21,6 +21,8 @@
 
 	// TanStack Query v6 (Svelte 5): result is Svelte 5 reactive state, accessed directly.
 	const registerMutation = registerTenantMutation();
+	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
+	useResetOnChange(() => open, registerMutation);
 	const form = useForm(
 		registerTenantRequestSchema,
 		{
@@ -42,21 +44,14 @@
 
 	async function onSubmit(e: SubmitEvent) {
 		await form.submit(e, async (values) => {
-			await new Promise<void>((resolve, reject) => {
-				registerMutation.mutate(values, {
-					onSuccess: (resp: RegisterTenantResponse) => {
-						credentials = {
-							email: values.admin_email,
-							password: values.admin_password,
-							tenantId: resp.tenant_id,
-							slug: values.slug,
-							displayName: values.display_name
-						};
-						resolve();
-					},
-					onError: (err: unknown) => reject(err)
-				});
-			});
+			const resp = await registerMutation.mutateAsync(values);
+			credentials = {
+				email: values.admin_email,
+				password: values.admin_password,
+				tenantId: resp.tenant_id,
+				slug: values.slug,
+				displayName: values.display_name
+			};
 		});
 	}
 

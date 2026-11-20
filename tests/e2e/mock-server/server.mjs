@@ -11,6 +11,7 @@
  *   POST /_mock/registerMany  [...]                            batch register
  *   POST /_mock/reset                                          clear all
  *   GET  /_mock/calls                                          inspect received
+ *   GET  /_mock/unregistered                                   calls no fixture answered (404 mock_not_registered)
  *
  * Path matching: exact, then longest-prefix-with-trailing-* wildcard.
  * Per-test isolation: every test calls /_mock/reset in beforeEach.
@@ -23,6 +24,8 @@ import { URL } from 'node:url';
 const fixtures = [];
 /** @type {Array<{method:string,path:string,query:string,body:string,authorization:string|null,'x-tenant-id':string|null,at:number}>} */
 const calls = [];
+/** @type {Array<{method:string,path:string}>} Calls no fixture answered: a test that triggers one fails (helpers/test.ts). */
+const unregistered = [];
 
 function findFixture(method, pathname) {
 	// Last-match-wins: tests can override the sign-in helper's defaults
@@ -70,6 +73,7 @@ const server = http.createServer(async (req, res) => {
 		if (pathname === '/_mock/reset' && method === 'POST') {
 			fixtures.length = 0;
 			calls.length = 0;
+			unregistered.length = 0;
 			res.writeHead(204).end();
 			return;
 		}
@@ -81,6 +85,11 @@ const server = http.createServer(async (req, res) => {
 		if (pathname === '/_mock/registerMany' && method === 'POST') {
 			fixtures.push(...JSON.parse(body));
 			res.writeHead(204).end();
+			return;
+		}
+		if (pathname === '/_mock/unregistered' && method === 'GET') {
+			res.writeHead(200, { 'content-type': 'application/json' });
+			res.end(JSON.stringify(unregistered));
 			return;
 		}
 		if (pathname === '/_mock/calls' && method === 'GET') {
@@ -105,6 +114,7 @@ const server = http.createServer(async (req, res) => {
 
 	const fixture = findFixture(method, pathname);
 	if (!fixture) {
+		unregistered.push({ method, path: pathname });
 		res.writeHead(404, { 'content-type': 'application/json' });
 		res.end(JSON.stringify({ error: 'mock_not_registered', path: pathname, method }));
 		return;

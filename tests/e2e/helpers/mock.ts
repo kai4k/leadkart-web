@@ -63,3 +63,9 @@ export async function listMockCalls(): Promise<
 	const resp = await fetch(`${MOCK_BASE}/_mock/calls`);
 	return resp.json();
 }
+
+/** Calls the mock could not answer (no fixture registered): the BFF asked Go for something the test never described. */
+export async function listUnregisteredCalls(): Promise<Array<{ method: string; path: string }>> {
+	const resp = await fetch(`${MOCK_BASE}/_mock/unregistered`);
+	return resp.json();
+}

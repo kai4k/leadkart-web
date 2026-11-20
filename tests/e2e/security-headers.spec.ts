@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './helpers/test';
 import { registerMock, registerMocks, resetMock } from './helpers/mock';
 import { signInAsTier } from './helpers/sign-in';
 import {
@@ -210,6 +210,14 @@ test.describe('security headers + CSP', () => {
 			},
 			{ method: 'GET', path: '/api/v1/orders', status: 200, body: EMPTY_PAGE },
 			{ method: 'GET', path: '/api/v1/inventory/products', status: 200, body: EMPTY_PAGE },
+			{ method: 'GET', path: '/api/v1/inventory/categories', status: 200, body: { items: [] } },
+			{ method: 'GET', path: '/api/v1/inventory/types', status: 200, body: { items: [] } },
+			{
+				method: 'GET',
+				path: '/api/v1/inventory/gst-defaults',
+				status: 200,
+				body: { defaults: {} }
+			},
 			{ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [ROLE] } },
 			{ method: 'GET', path: `/api/v1/roles/${ROLE.id}`, status: 200, body: ROLE },
 			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [], has_more: false } }

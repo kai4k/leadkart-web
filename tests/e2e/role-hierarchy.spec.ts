@@ -1,4 +1,4 @@
-import { expect, test, type Route } from '@playwright/test';
+import { expect, test, type Route } from './helpers/test';
 import { resetMock, registerMocks } from './helpers/mock';
 import { signInAsTier } from './helpers/sign-in';
 import { clientNavigate } from './helpers/navigation';
@@ -181,14 +181,17 @@ test.describe('Role hierarchy editor', () => {
 
 		await clientNavigate(page, `/settings/roles/${PARENT_ROLE.id}`);
 		await expect(heading(PARENT_ROLE.name)).toBeVisible();
-		// Leaving the role detached the mutation (the page stays mounted): the parent role's
-		// button is idle and the child's save reports through the global toast, not a banner here.
-		await expect(saveParent).not.toHaveAttribute('aria-busy', 'true');
+		// Leaving the role detached the mutation (the page stays mounted): nothing here may claim it
+		// saved, and the child's late save reports through the global toast, once.
+		const toasts = page
+			.locator('[data-sonner-toast]')
+			.filter({ hasText: /parent role (set|cleared)/i });
+		await expect(toasts).toHaveCount(0);
 		const settled = page.waitForResponse(`**/api/v1/roles/${CHILD_ROLE.id}/parent`);
 		await release?.();
 		await settled;
-		// Settled, and the parent role's page shows no banner.
-		await expect(saveParent).not.toHaveAttribute('aria-busy', 'true');
+		await expect(toasts).toHaveCount(1);
+		// What the user sees on the parent role's page: no "Saved." banner for the other role's save.
 		await expect(saved).toHaveCount(0);
 	});
 });

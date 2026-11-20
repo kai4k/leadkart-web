@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	/**
 	 * ReassignDialog — confirm-style dialog for moving a lead's ownership.
 	 *
@@ -29,6 +30,8 @@
 	let { leadId, open = $bindable(false), onOpenChange }: Props = $props();
 
 	const mutation = reassignLeadMutation();
+	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
+	useResetOnChange(() => open, mutation);
 	const form = useForm(
 		reassignLeadSchema,
 		{ to_membership_id: '', reason: '' },
@@ -48,20 +51,10 @@
 
 	async function onSubmit(e: SubmitEvent) {
 		await form.submit(e, async (values) => {
-			await new Promise<void>((resolve, reject) => {
-				mutation.mutate(
-					{ id: leadId, req: values },
-					{
-						onSuccess: () => {
-							form.reset();
-							memberQuery = '';
-							onOpenChange(false);
-							resolve();
-						},
-						onError: (err) => reject(err)
-					}
-				);
-			});
+			await mutation.mutateAsync({ id: leadId, req: values });
+			form.reset();
+			memberQuery = '';
+			onOpenChange(false);
 		});
 	}
 </script>

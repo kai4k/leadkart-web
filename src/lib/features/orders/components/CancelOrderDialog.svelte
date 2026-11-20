@@ -3,6 +3,7 @@
 	mutation; the parent owns `open` so the action button can open it.
 -->
 <script lang="ts">
+	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	import { Alert, Button, Dialog } from '$ui';
 	import { TextField } from '$form';
 	import { useForm } from '#lib/hooks/index.ts';
@@ -18,6 +19,8 @@
 	let { orderId, open = $bindable(false), onOpenChange, onCancelled }: Props = $props();
 
 	const cancelM = cancelOrderMutation();
+	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
+	useResetOnChange(() => open, cancelM);
 	const form = useForm(cancelOrderRequestSchema, { reason: '' });
 
 	async function handleSubmit(e: SubmitEvent) {
@@ -27,20 +30,10 @@
 	async function runSubmit(e?: SubmitEvent) {
 		const synthetic = e ?? (new Event('submit') as unknown as SubmitEvent);
 		await form.submit(synthetic, async (values) => {
-			await new Promise<void>((resolve, reject) => {
-				cancelM.mutate(
-					{ id: orderId, ...values },
-					{
-						onSuccess: () => {
-							onOpenChange(false);
-							form.reset();
-							onCancelled?.();
-							resolve();
-						},
-						onError: (err) => reject(err)
-					}
-				);
-			});
+			await cancelM.mutateAsync({ id: orderId, ...values });
+			onOpenChange(false);
+			form.reset();
+			onCancelled?.();
 		});
 	}
 </script>

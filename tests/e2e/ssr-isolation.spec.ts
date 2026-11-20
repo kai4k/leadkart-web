@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './helpers/test';
 import { signInAsTier } from './helpers/sign-in';
 import { resetMock } from './helpers/mock';
 

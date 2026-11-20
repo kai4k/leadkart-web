@@ -1,4 +1,4 @@
-import { expect, test, type BrowserContext } from '@playwright/test';
+import { expect, test, type BrowserContext } from './helpers/test';
 import {
 	fakeAccessToken,
 	fakeLoginResponse,
@@ -89,7 +89,7 @@ test.describe('session refresh', () => {
 		await registerMock({
 			method: 'POST',
 			path: '/api/v1/roles',
-			status: 200,
+			status: 201,
 			body: { role_id: ROLE_ID }
 		});
 		// Go rejects the first attempt, accepts the replay.
@@ -113,7 +113,7 @@ test.describe('session refresh', () => {
 			return { status: resp.status, body: await resp.json() };
 		});
 
-		expect(result).toEqual({ status: 200, body: { role_id: ROLE_ID } });
+		expect(result).toEqual({ status: 201, body: { role_id: ROLE_ID } });
 		const calls = await listMockCalls();
 		const widgetCalls = calls.filter((c) => c.method === 'POST' && c.path === '/api/v1/roles');
 		expect(widgetCalls).toHaveLength(2);
@@ -273,7 +273,7 @@ test.describe('session refresh', () => {
 		await registerMock({
 			method: 'POST',
 			path: '/api/v1/roles',
-			status: 200,
+			status: 201,
 			body: { role_id: ROLE_ID }
 		});
 		await dropAccessCookie(context);
@@ -288,7 +288,7 @@ test.describe('session refresh', () => {
 			return { status: resp.status, body: await resp.json() };
 		});
 
-		expect(result).toEqual({ status: 200, body: { role_id: ROLE_ID } });
+		expect(result).toEqual({ status: 201, body: { role_id: ROLE_ID } });
 		expect(await refreshCallsOf()).toHaveLength(1);
 		const widgets = (await listMockCalls()).filter((c) => c.path === '/api/v1/roles');
 		expect(widgets).toHaveLength(1);

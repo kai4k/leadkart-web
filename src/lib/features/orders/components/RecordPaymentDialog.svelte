@@ -4,6 +4,7 @@
 	order's current status; the parent can override.
 -->
 <script lang="ts">
+	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	import { untrack } from 'svelte';
 	import { Alert, Button, Dialog } from '$ui';
 	import { NumberInput, RadioGroup, RadioItem, Select, TextField } from '$form';
@@ -25,6 +26,8 @@
 	let { order, open = $bindable(false), onOpenChange, defaultKind }: Props = $props();
 
 	const recordM = recordPaymentMutation();
+	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
+	useResetOnChange(() => open, recordM);
 
 	const initialKind: PaymentKind = $derived(
 		defaultKind ?? (order.status === 'quotation_approved' ? 'token' : 'full')
@@ -57,19 +60,9 @@
 
 	async function handleSubmit(e: SubmitEvent) {
 		await form.submit(e, async (values) => {
-			await new Promise<void>((resolve, reject) => {
-				recordM.mutate(
-					{ id: order.id, ...values },
-					{
-						onSuccess: () => {
-							onOpenChange(false);
-							form.reset();
-							resolve();
-						},
-						onError: (err) => reject(err)
-					}
-				);
-			});
+			await recordM.mutateAsync({ id: order.id, ...values });
+			onOpenChange(false);
+			form.reset();
 		});
 	}
 </script>

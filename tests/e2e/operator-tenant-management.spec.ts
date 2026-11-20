@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './helpers/test';
 import AxeBuilder from '@axe-core/playwright';
 import { signInAsTier } from './helpers/sign-in';
 import { resetMock, registerMocks, registerMock, listMockCalls } from './helpers/mock';
@@ -192,6 +192,15 @@ test.describe('Loading + feedback canon', () => {
 		// /settings/tenant/* is now SSR-loaded (no client pending state).
 		// Exercise the skeleton canon on a TanStack-backed detail route and
 		// hold the browser's query open so the pending branch is observable.
+		await registerMocks([
+			{ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [] } },
+			{
+				method: 'GET',
+				path: '/api/v1/roles/role-x',
+				status: 404,
+				body: { error: 'role_not_found' }
+			}
+		]);
 		await page.route('**/api/v1/roles/role-x', async (route) => {
 			await new Promise((r) => setTimeout(r, 2000));
 			await route.continue();
@@ -246,6 +255,7 @@ test.describe('Operator scope flow', () => {
 		await setupOperator(page);
 		await registerMocks([
 			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [], has_more: false } },
+			{ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [] } },
 			{ method: 'GET', path: `/api/v1/tenants/${ACME.id}/activity`, status: 200, body: {} }
 		]);
 		await page.goto('/operator/tenants');
@@ -355,6 +365,7 @@ test.describe('Operator scope flow', () => {
 		await setupOperator(page);
 		await registerMocks([
 			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [], has_more: false } },
+			{ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [] } },
 			{ method: 'GET', path: `/api/v1/tenants/${ACME.id}/activity`, status: 200, body: {} }
 		]);
 		await page.goto('/operator/tenants');

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	/**
 	 * EditLeadDrawer — edit the BRD-§5 editable subset of a CrmLead.
 	 *
@@ -36,6 +37,8 @@
 	let { lead, open = $bindable(false), onOpenChange }: Props = $props();
 
 	const mutation = updateLeadMutation();
+	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
+	useResetOnChange(() => open, mutation);
 	const form = useForm(
 		updateLeadSchema,
 		{
@@ -106,18 +109,8 @@
 		form.values.product_ranges = productRanges;
 		form.values.dosage_forms = dosageForms;
 		await form.submit(e, async (values) => {
-			await new Promise<void>((resolve, reject) => {
-				mutation.mutate(
-					{ id: leadId, req: values },
-					{
-						onSuccess: () => {
-							onOpenChange(false);
-							resolve();
-						},
-						onError: (err) => reject(err)
-					}
-				);
-			});
+			await mutation.mutateAsync({ id: leadId, req: values });
+			onOpenChange(false);
 		});
 	}
 </script>

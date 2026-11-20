@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	import { Dialog, Button, Alert } from '$ui';
 	import { NumberInput, RadioGroup, RadioItem } from '$form';
 	import { useForm } from '#lib/hooks/use-form.svelte.ts';
@@ -40,6 +41,8 @@
 	let { open = $bindable(false), productId, batch, onOpenChange }: Props = $props();
 
 	const mutation = adjustStockMutation();
+	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
+	useResetOnChange(() => open, mutation);
 
 	const initial: CreateMovementRequest = {
 		batch_id: undefined,
@@ -66,18 +69,8 @@
 		await form.submit(e, async (values) => {
 			const cleaned: CreateMovementRequest = { ...values, batch_id: batch.id };
 			if (cleaned.note === '') cleaned.note = undefined;
-			await new Promise<void>((resolve, reject) => {
-				mutation.mutate(
-					{ productId, body: cleaned },
-					{
-						onSuccess: () => {
-							onOpenChange(false);
-							resolve();
-						},
-						onError: (err) => reject(err)
-					}
-				);
-			});
+			await mutation.mutateAsync({ productId, body: cleaned });
+			onOpenChange(false);
 		});
 	}
 </script>
