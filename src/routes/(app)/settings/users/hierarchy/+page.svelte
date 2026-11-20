@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Alert, Breadcrumbs, Card, EmptyState, Skeleton, type BreadcrumbItem } from '$ui';
+	import { Breadcrumbs, Card, EmptyState, Skeleton, type BreadcrumbItem } from '$ui';
+	import { QueryState } from '#lib/components/feedback/index.ts';
 	import { Users } from '$icons';
 	import { usersListQuery } from '$features/users/queries';
 	import { buildOrgTree } from '$features/users/view-models-hierarchy';
@@ -42,24 +43,20 @@
 
 	<UsersTruncatedAlert count={users.length} />
 
-	{#if listQuery.isPending}
-		<div class="stack stack-relaxed" aria-busy="true" aria-label="Loading hierarchy">
+	<QueryState query={listQuery} noun="members" isEmpty={(members) => members.length === 0}>
+		{#snippet skeleton()}
 			<Skeleton class="h-10 w-1/3" />
 			<Skeleton class="h-32 w-full rounded-md" />
-		</div>
-	{:else if listQuery.isError}
-		<Alert variant="danger" title="Could not load members">
-			Refresh the page or try again in a moment.
-		</Alert>
-	{:else if users.length === 0}
-		<Card.Root padding="md" elevation="sm">
-			<EmptyState
-				icon={Users}
-				title="No members yet"
-				description="Invite your first member to start building the reporting hierarchy."
-			/>
-		</Card.Root>
-	{:else}
+		{/snippet}
+		{#snippet empty()}
+			<Card.Root padding="md" elevation="sm">
+				<EmptyState
+					icon={Users}
+					title="No members yet"
+					description="Invite your first member to start building the reporting hierarchy."
+				/>
+			</Card.Root>
+		{/snippet}
 		<Card.Root padding="md" elevation="sm">
 			<Card.Header>
 				<Card.Title>{tree.totalMembers} members</Card.Title>
@@ -93,5 +90,5 @@
 				{/if}
 			</Card.Content>
 		</Card.Root>
-	{/if}
+	</QueryState>
 </div>

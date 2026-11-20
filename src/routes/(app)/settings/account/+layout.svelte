@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import type { ResolvedPathname } from '$app/types';
-	import { Alert, Breadcrumbs, Skeleton, type BreadcrumbItem } from '$ui';
+	import { Breadcrumbs, Skeleton, type BreadcrumbItem } from '$ui';
+	import { QueryState } from '#lib/components/feedback/index.ts';
 	import { myProfileQuery } from '$features/auth/queries';
 	import { session } from '$features/auth';
 	import { displayName } from '$features/auth/view-models';
@@ -81,17 +82,12 @@
 		</ul>
 	</nav>
 
-	{#if profileQuery.isPending}
-		<div class="stack stack-relaxed" aria-busy="true" aria-label="Loading account">
+	<QueryState query={profileQuery} noun="account settings">
+		{#snippet skeleton()}
 			<Skeleton class="h-6 w-1/2" />
 			<Skeleton class="h-4 w-1/3" />
 			<Skeleton class="h-32 w-full rounded-md" />
-		</div>
-	{:else if profileQuery.isError}
-		<Alert variant="danger" title="Could not load account settings">
-			Refresh the page or try again in a moment. If the problem persists, contact support.
-		</Alert>
-	{:else if profileData}
+		{/snippet}
 		{@render children()}
-	{/if}
+	</QueryState>
 </div>

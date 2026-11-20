@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Avatar, Badge, Button, Card, EmptyState, Tabs } from '$ui';
+	import { Avatar, Badge, Button, Card, DescriptionList, EmptyState, Tabs } from '$ui';
 	import { Edit, Icon, Lock, Shield, UserPlus, Users } from '$icons';
 	import type { UserDto } from '$features/users/types';
 	import type { RoleDto } from '$features/roles/types';
@@ -51,6 +51,10 @@
 	const activityQuery = $derived(personActivityQuery(user.person_id));
 </script>
 
+{#snippet statusBadge()}
+	<Badge variant={status.variant} appearance="soft" size="sm">{status.label}</Badge>
+{/snippet}
+
 <Tabs.Root value={tab} onValueChange={onTabChange}>
 	<Tabs.List>
 		<Tabs.Trigger value="overview">Overview</Tabs.Trigger>
@@ -66,44 +70,19 @@
 					<Card.Title>Identity</Card.Title>
 				</Card.Header>
 				<Card.Content>
-					<dl class="stack stack-tight body-sm">
-						<div class="flex justify-between gap-4">
-							<dt class="text-fg-muted">Email</dt>
-							<dd class="text-fg truncate">{user.email}</dd>
-						</div>
-						<div class="flex justify-between gap-4">
-							<dt class="text-fg-muted">Designation</dt>
-							<dd class="text-fg">{user.designation || '—'}</dd>
-						</div>
-						<div class="flex justify-between gap-4">
-							<dt class="text-fg-muted">Department</dt>
-							<dd class="text-fg">{user.department || '—'}</dd>
-						</div>
-						<div class="flex justify-between gap-4">
-							<dt class="text-fg-muted">Status</dt>
-							<dd>
-								<Badge variant={status.variant} appearance="soft" size="sm">{status.label}</Badge>
-							</dd>
-						</div>
-						<div class="flex justify-between gap-4">
-							<dt class="text-fg-muted">Joined</dt>
-							<dd class="text-fg tabular-nums">
-								{formatDate(user.joined_at)}
-							</dd>
-						</div>
-						{#if user.left_at}
-							<div class="flex justify-between gap-4">
-								<dt class="text-fg-muted">Left</dt>
-								<dd class="text-fg tabular-nums">{formatDate(user.left_at)}</dd>
-							</div>
-						{/if}
-						{#if user.status_message}
-							<div class="flex justify-between gap-4">
-								<dt class="text-fg-muted">Status message</dt>
-								<dd class="text-fg">{user.status_message}</dd>
-							</div>
-						{/if}
-					</dl>
+					<DescriptionList
+						items={[
+							{ label: 'Email', value: user.email, span: 2 },
+							{ label: 'Designation', value: user.designation },
+							{ label: 'Department', value: user.department },
+							{ label: 'Status', render: statusBadge },
+							{ label: 'Joined', value: formatDate(user.joined_at) },
+							...(user.left_at ? [{ label: 'Left', value: formatDate(user.left_at) }] : []),
+							...(user.status_message
+								? [{ label: 'Status message', value: user.status_message, span: 2 as const }]
+								: [])
+						]}
+					/>
 				</Card.Content>
 			</Card.Root>
 

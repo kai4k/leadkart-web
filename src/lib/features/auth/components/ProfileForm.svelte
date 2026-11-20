@@ -3,8 +3,8 @@
 	import { _ } from 'svelte-i18n';
 	import { fieldText, readFailure } from '#lib/utils/form-failure.ts';
 	import { TextField } from '#lib/components/form/index.ts';
-	import { Alert, Button } from '$ui';
-	import { displayName } from '$features/auth/view-models';
+	import { Alert, Button, DescriptionList } from '$ui';
+	import { displayName, userStatus } from '$features/auth/view-models';
 	import type { UserDto } from '$features/auth/types';
 
 	/**
@@ -57,16 +57,12 @@
 	<!-- Read-only identity block -->
 	<section class="stack stack-tight">
 		<h2 class="h5">{displayName(profile)}</h2>
-		<dl class="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
-			<div>
-				<dt class="caption text-fg-muted">Email</dt>
-				<dd class="body-base text-fg">{profile.email}</dd>
-			</div>
-			<div>
-				<dt class="caption text-fg-muted">Status</dt>
-				<dd class="body-base text-fg capitalize">{profile.status}</dd>
-			</div>
-		</dl>
+		<DescriptionList
+			items={[
+				{ label: 'Email', value: profile.email },
+				{ label: 'Status', value: userStatus(profile.status).label }
+			]}
+		/>
 		<p class="caption text-fg-muted">
 			Name + email are managed by your tenant administrator. To change them, ask your admin.
 		</p>

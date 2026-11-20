@@ -48,6 +48,8 @@ export * as Dialog from './dialog';
 export * as Drawer from './drawer';
 export * as Dropdown from './dropdown-menu';
 export * as DropdownMenu from './dropdown-menu';
+export { default as DescriptionList } from './DescriptionList.svelte';
+export type { DescriptionItem } from './DescriptionList.svelte';
 export { default as EmptyState } from './EmptyState.svelte';
 export { default as InlineEdit } from './InlineEdit.svelte';
 export * as Kanban from './kanban';

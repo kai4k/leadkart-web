@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Alert, Badge, Button, Card } from '$ui';
+	import { Badge, Button, Card } from '$ui';
 	import { Trash2, LogOut, Icon } from '$icons';
 	import {
 		mySessionsQuery,
@@ -8,12 +8,12 @@
 	} from '$features/auth/queries';
 	import { isCurrentSession } from '$features/auth/view-models';
 	import { relativeTime } from '#lib/utils/format.ts';
-	import { describeError } from '$api/errors';
 
 	/**
 	 * SessionsList — one Card row per session family.
 	 * Current session is badged + cannot be revoked from this list.
-	 * TanStack Query drives fetch + optimistic updates.
+	 * TanStack Query drives fetch + optimistic updates; the page wraps this in QueryState, which owns
+	 * the loading and error states.
 	 */
 
 	// BFF model: refresh token is httpOnly — the browser can no longer decode
@@ -59,12 +59,6 @@
 			<Icon icon={LogOut} size="sm" /> Sign out other devices
 		</Button>
 	</header>
-
-	{#if sessionsQuery.isError}
-		<Alert variant="danger"
-			>{describeError(sessionsQuery.error, { fallback: 'Failed to load sessions' })}</Alert
-		>
-	{/if}
 
 	{#if sessionList.length === 0 && !sessionsQuery.isPending}
 		<Card.Root>

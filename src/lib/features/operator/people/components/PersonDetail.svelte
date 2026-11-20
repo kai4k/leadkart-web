@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { SvelteMap } from 'svelte/reactivity';
 	import { Alert, Avatar, Badge, Button, Card, CopyButton, Skeleton } from '$ui';
+	import { QueryState } from '#lib/components/feedback/index.ts';
 	import { ArrowRight, Pause, Play, UserMinus, Icon } from '$icons';
 	import { tenantsListQuery } from '../../tenants';
 	import {
@@ -18,7 +19,7 @@
 		canLiftSuspension,
 		canAnonymise
 	} from '../view-models';
-	import { P, session } from '$features/auth';
+	import { P, session, userStatus } from '$features/auth';
 	import type { PersonDto } from '../types';
 	import GlobalSuspendDialog from './GlobalSuspendDialog.svelte';
 	import AnonymiseDialog from './AnonymiseDialog.svelte';
@@ -48,11 +49,7 @@
 		return map;
 	});
 
-	const p = $derived(query.data ?? null);
 	const memberships = $derived(membershipsQuery.data?.memberships ?? []);
-	const isLoading = $derived(query.isPending);
-	const isError = $derived(query.isError);
-	const errorMsg = $derived(describeError(query.error, { fallback: 'Failed to load person' }));
 	const isPending = $derived(liftMutation.isPending);
 
 	const canManage = $derived(session.can(P.platformUsersManage));
@@ -69,8 +66,8 @@
 	}
 </script>
 
-{#if isLoading}
-	<div class="stack stack-relaxed" aria-busy="true" aria-label="Loading person">
+<QueryState {query} noun="person" notFound="No person with that ID, or you don't have access.">
+	{#snippet skeleton()}
 		<Card.Root>
 			<Card.Content>
 				<div class="flex flex-col gap-4 sm:flex-row sm:items-start">
@@ -88,196 +85,188 @@
 				<Skeleton class="h-24 w-full rounded-md" />
 			</Card.Content>
 		</Card.Root>
-	</div>
-{:else if isError}
-	<Alert variant="danger" title="Load failed">{errorMsg}</Alert>
-{:else if !p}
-	<Alert variant="warning" title="Person not found"
-		>No person with that ID, or you don't have access.</Alert
-	>
-{:else}
-	{@const badge = personLifecycle(personLifecycleKey(p))}
-	{@const displayName = personDisplayName(p)}
+	{/snippet}
+	{#snippet children(p)}
+		{@const badge = personLifecycle(personLifecycleKey(p))}
+		{@const displayName = personDisplayName(p)}
 
-	<div class="stack stack-relaxed">
-		<!-- Identity card -->
-		<Card.Root>
-			<Card.Header>
-				<Card.Title>Identity</Card.Title>
-			</Card.Header>
-			<Card.Content>
-				<div class="flex flex-col gap-4 sm:flex-row sm:items-start">
-					<Avatar initials={initials(displayName)} size="lg" />
-					<div class="stack stack-tight min-w-0">
-						<div class="flex flex-wrap items-center gap-2">
-							<span class="h2">{displayName}</span>
-							<Badge variant={badge.variant} appearance="soft" size="sm">{badge.label}</Badge>
-						</div>
-						<div class="cluster cluster-tight flex-wrap">
-							<p class="body-base text-fg-muted break-all">{p.email}</p>
-							<CopyButton value={p.email} label="Copy email" />
-						</div>
-						<div class="cluster cluster-tight flex-wrap">
-							<p class="caption text-fg-subtle">
-								ID <code class="break-all">{p.id}</code>
-							</p>
-							<CopyButton value={p.id} label="Copy person ID" />
+		<div class="stack stack-relaxed">
+			<!-- Identity card -->
+			<Card.Root>
+				<Card.Header>
+					<Card.Title>Identity</Card.Title>
+				</Card.Header>
+				<Card.Content>
+					<div class="flex flex-col gap-4 sm:flex-row sm:items-start">
+						<Avatar initials={initials(displayName)} size="lg" />
+						<div class="stack stack-tight min-w-0">
+							<div class="flex flex-wrap items-center gap-2">
+								<span class="h2">{displayName}</span>
+								<Badge variant={badge.variant} appearance="soft" size="sm">{badge.label}</Badge>
+							</div>
+							<div class="cluster cluster-tight flex-wrap">
+								<p class="body-base text-fg-muted break-all">{p.email}</p>
+								<CopyButton value={p.email} label="Copy email" />
+							</div>
+							<div class="cluster cluster-tight flex-wrap">
+								<p class="caption text-fg-subtle">
+									ID <code class="break-all">{p.id}</code>
+								</p>
+								<CopyButton value={p.id} label="Copy person ID" />
+							</div>
 						</div>
 					</div>
-				</div>
 
-				{#if p.is_globally_suspended && p.global_suspension_reason}
-					<Alert variant="danger" class="mt-4">
-						<strong>Suspension reason:</strong>
-						{p.global_suspension_reason}
-					</Alert>
-				{/if}
-			</Card.Content>
-		</Card.Root>
+					{#if p.is_globally_suspended && p.global_suspension_reason}
+						<Alert variant="danger" class="mt-4">
+							<strong>Suspension reason:</strong>
+							{p.global_suspension_reason}
+						</Alert>
+					{/if}
+				</Card.Content>
+			</Card.Root>
 
-		<!-- Memberships card -->
-		<Card.Root>
-			<Card.Header>
-				<Card.Title>Memberships</Card.Title>
-				<Card.Description>Cross-tenant membership records for this person.</Card.Description>
-			</Card.Header>
-			<Card.Content>
-				{#if membershipsQuery.isPending}
-					<div class="stack stack-tight" aria-busy="true">
-						{#each [0, 1, 2] as i (i)}
-							<Skeleton class="h-8 w-full rounded-md" />
-						{/each}
-					</div>
-				{:else if memberships.length === 0}
-					<p class="body-base text-fg-muted">No memberships found.</p>
-				{:else}
-					<div class="overflow-x-auto">
-						<table class="w-full text-sm">
-							<thead>
-								<tr class="border-border border-b">
-									<th class="caption text-fg-muted py-2 pe-4 text-start">Tenant</th>
-									<th class="caption text-fg-muted py-2 pe-4 text-start">Designation</th>
-									<th class="caption text-fg-muted py-2 pe-4 text-start">Department</th>
-									<th class="caption text-fg-muted py-2 pe-4 text-start">Joined</th>
-									<th class="caption text-fg-muted py-2 pe-4 text-start">Status</th>
-									<th class="caption text-fg-muted py-2 text-end"></th>
-								</tr>
-							</thead>
-							<tbody>
-								{#each memberships as m (m.membership_id)}
-									{@const t = tenantsById.get(m.tenant_id)}
-									<tr class="border-border border-b align-middle last:border-0">
-										<td class="py-2 pe-4">
-											{#if t}
-												<div class="stack stack-tight">
-													<span class="text-fg font-medium">{t.display_name}</span>
-													<code class="caption text-fg-muted">{t.slug}</code>
-												</div>
-											{:else}
-												<code class="caption text-fg-muted">{m.tenant_id}</code>
-											{/if}
-										</td>
-										<td class="text-fg py-2 pe-4">{m.designation || '—'}</td>
-										<td class="text-fg py-2 pe-4">{m.department || '—'}</td>
-										<td class="text-fg-muted py-2 pe-4 tabular-nums">
-											{formatDate(m.joined_at)}
-										</td>
-										<td class="py-2 pe-4">
-											<Badge
-												variant={m.status === 'active'
-													? 'success'
-													: m.status === 'inactive'
-														? 'neutral'
-														: 'warning'}
-												appearance="soft"
-												size="sm"
-											>
-												{m.status}
-											</Badge>
-										</td>
-										<td class="py-2 text-end">
-											{#if t}
-												<Button
-													variant="ghost"
-													size="sm"
-													onclick={() => openTenant(t.slug)}
-													aria-label={`Find tenant ${t.display_name}`}
-												>
-													<Icon icon={ArrowRight} size="sm" />
-												</Button>
-											{/if}
-										</td>
+			<!-- Memberships card -->
+			<Card.Root>
+				<Card.Header>
+					<Card.Title>Memberships</Card.Title>
+					<Card.Description>Cross-tenant membership records for this person.</Card.Description>
+				</Card.Header>
+				<Card.Content>
+					<QueryState
+						query={membershipsQuery}
+						noun="memberships"
+						isEmpty={(d) => d.memberships.length === 0}
+					>
+						{#snippet skeleton()}
+							{#each [0, 1, 2] as i (i)}
+								<Skeleton class="h-8 w-full rounded-md" />
+							{/each}
+						{/snippet}
+						{#snippet empty()}
+							<p class="body-base text-fg-muted">No memberships found.</p>
+						{/snippet}
+						<div class="overflow-x-auto">
+							<table class="w-full text-sm">
+								<thead>
+									<tr class="border-border border-b">
+										<th class="caption text-fg-muted py-2 pe-4 text-start">Tenant</th>
+										<th class="caption text-fg-muted py-2 pe-4 text-start">Designation</th>
+										<th class="caption text-fg-muted py-2 pe-4 text-start">Department</th>
+										<th class="caption text-fg-muted py-2 pe-4 text-start">Joined</th>
+										<th class="caption text-fg-muted py-2 pe-4 text-start">Status</th>
+										<th class="caption text-fg-muted py-2 text-end"></th>
 									</tr>
-								{/each}
-							</tbody>
-						</table>
-					</div>
-				{/if}
-			</Card.Content>
-		</Card.Root>
+								</thead>
+								<tbody>
+									{#each memberships as m (m.membership_id)}
+										{@const t = tenantsById.get(m.tenant_id)}
+										{@const membership = userStatus(m.status)}
+										<tr class="border-border border-b align-middle last:border-0">
+											<td class="py-2 pe-4">
+												{#if t}
+													<div class="stack stack-tight">
+														<span class="text-fg font-medium">{t.display_name}</span>
+														<code class="caption text-fg-muted">{t.slug}</code>
+													</div>
+												{:else}
+													<code class="caption text-fg-muted">{m.tenant_id}</code>
+												{/if}
+											</td>
+											<td class="text-fg py-2 pe-4">{m.designation || '—'}</td>
+											<td class="text-fg py-2 pe-4">{m.department || '—'}</td>
+											<td class="text-fg-muted py-2 pe-4 tabular-nums">
+												{formatDate(m.joined_at)}
+											</td>
+											<td class="py-2 pe-4">
+												<Badge variant={membership.variant} appearance="soft" size="sm">
+													{membership.label}
+												</Badge>
+											</td>
+											<td class="py-2 text-end">
+												{#if t}
+													<Button
+														variant="ghost"
+														size="sm"
+														onclick={() => openTenant(t.slug)}
+														aria-label={`Find tenant ${t.display_name}`}
+													>
+														<Icon icon={ArrowRight} size="sm" />
+													</Button>
+												{/if}
+											</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					</QueryState>
+				</Card.Content>
+			</Card.Root>
 
-		<!-- Activity timeline -->
-		<Card.Root>
-			<Card.Header>
-				<Card.Title>Activity</Card.Title>
-				<Card.Description>Audit log for this person.</Card.Description>
-			</Card.Header>
-			<Card.Content>
-				<ActivityTimeline
-					data={activityQuery?.data ?? null}
-					isPending={activityQuery?.isPending ?? true}
-					isError={activityQuery?.isError ?? false}
-					errorMessage={describeError(activityQuery?.error, {
-						fallback: 'Failed to load activity'
-					})}
-				/>
-			</Card.Content>
-		</Card.Root>
+			<!-- Activity timeline -->
+			<Card.Root>
+				<Card.Header>
+					<Card.Title>Activity</Card.Title>
+					<Card.Description>Audit log for this person.</Card.Description>
+				</Card.Header>
+				<Card.Content>
+					<ActivityTimeline
+						data={activityQuery?.data ?? null}
+						isPending={activityQuery?.isPending ?? true}
+						isError={activityQuery?.isError ?? false}
+						errorMessage={describeError(activityQuery?.error, {
+							fallback: 'Failed to load activity'
+						})}
+					/>
+				</Card.Content>
+			</Card.Root>
 
-		<!-- Action panel -->
-		<Card.Root>
-			<Card.Header>
-				<Card.Title>Lifecycle</Card.Title>
-				<Card.Description
-					>{canManage
-						? 'Operator-tier mutations on this person.'
-						: 'Read-only — you lack platform.users.manage.'}</Card.Description
-				>
-			</Card.Header>
-			<Card.Content class="cluster">
-				{#if canManage && canGloballySuspend(p)}
-					<Button
-						variant="ghost"
-						onclick={() => {
-							target = p;
-							suspendOpen = true;
-						}}
-						disabled={isPending}
+			<!-- Action panel -->
+			<Card.Root>
+				<Card.Header>
+					<Card.Title>Lifecycle</Card.Title>
+					<Card.Description
+						>{canManage
+							? 'Operator-tier mutations on this person.'
+							: 'Read-only — you lack platform.users.manage.'}</Card.Description
 					>
-						<Icon icon={Pause} size="sm" /> Globally suspend
-					</Button>
-				{/if}
-				{#if canManage && canLiftSuspension(p)}
-					<Button variant="ghost" onclick={() => liftSuspension(p.id)} loading={isPending}>
-						<Icon icon={Play} size="sm" /> Lift suspension
-					</Button>
-				{/if}
-				{#if canAnonymiseOp && canAnonymise(p)}
-					<Button
-						variant="danger"
-						onclick={() => {
-							target = p;
-							anonymiseOpen = true;
-						}}
-						disabled={isPending}
-					>
-						<Icon icon={UserMinus} size="sm" /> Anonymise
-					</Button>
-				{/if}
-			</Card.Content>
-		</Card.Root>
-	</div>
-{/if}
+				</Card.Header>
+				<Card.Content class="cluster">
+					{#if canManage && canGloballySuspend(p)}
+						<Button
+							variant="ghost"
+							onclick={() => {
+								target = p;
+								suspendOpen = true;
+							}}
+							disabled={isPending}
+						>
+							<Icon icon={Pause} size="sm" /> Globally suspend
+						</Button>
+					{/if}
+					{#if canManage && canLiftSuspension(p)}
+						<Button variant="ghost" onclick={() => liftSuspension(p.id)} loading={isPending}>
+							<Icon icon={Play} size="sm" /> Lift suspension
+						</Button>
+					{/if}
+					{#if canAnonymiseOp && canAnonymise(p)}
+						<Button
+							variant="danger"
+							onclick={() => {
+								target = p;
+								anonymiseOpen = true;
+							}}
+							disabled={isPending}
+						>
+							<Icon icon={UserMinus} size="sm" /> Anonymise
+						</Button>
+					{/if}
+				</Card.Content>
+			</Card.Root>
+		</div>
+	{/snippet}
+</QueryState>
 
 <GlobalSuspendDialog
 	bind:open={suspendOpen}
