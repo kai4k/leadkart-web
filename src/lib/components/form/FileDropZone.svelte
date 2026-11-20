@@ -12,6 +12,7 @@
 </script>
 
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { Icon, UploadCloud, X } from '#lib/icons/index.ts';
 	import { Button } from '#lib/components/ui/button/index.ts';
 	import * as Field from '#lib/components/ui/field/index.ts';
@@ -39,7 +40,7 @@
 		multiple = false,
 		maxSize,
 		disabled = false,
-		placeholder = 'Drop file here or click to browse',
+		placeholder,
 		hint,
 		label,
 		srLabel = false,
@@ -60,7 +61,7 @@
 
 	const localErrorId = $derived(`${fieldId}-localerror`);
 	const describedBy = $derived(
-		[hint ? hintId : null, error ? errorId : null, localError ? localErrorId : null]
+		[error ? errorId : null, localError ? localErrorId : null, hint ? hintId : null]
 			.filter(Boolean)
 			.join(' ') || undefined
 	);
@@ -101,11 +102,13 @@
 		const accepted: File[] = [];
 		for (const f of Array.from(fileList)) {
 			if (!matchesAccept(f)) {
-				setError(`"${f.name}" does not match the accepted file types`);
+				setError($_('form.file.badType', { values: { name: f.name } }));
 				return;
 			}
 			if (maxSize !== undefined && f.size > maxSize) {
-				setError(`"${f.name}" exceeds maximum size of ${formatBytes(maxSize)}`);
+				setError(
+					$_('form.file.tooLarge', { values: { name: f.name, size: formatBytes(maxSize) } })
+				);
 				return;
 			}
 			accepted.push(f);
@@ -181,13 +184,13 @@
 			</div>
 			<div class="flex gap-1">
 				<Button variant="ghost" size="sm" onclick={() => inputEl?.click()} {disabled}>
-					Replace
+					{$_('form.file.replace')}
 				</Button>
 				<Button
 					variant="ghost"
 					size="icon-sm"
 					class="text-muted-foreground"
-					aria-label="Remove file"
+					aria-label={$_('form.file.remove')}
 					onclick={clearFiles}
 					{disabled}
 				>
@@ -220,7 +223,7 @@
 				size="xl"
 				class={cn(isDragOver ? 'text-primary' : 'text-muted-foreground')}
 			/>
-			<p class="text-sm font-medium text-foreground">{placeholder}</p>
+			<p class="text-sm font-medium text-foreground">{placeholder ?? $_('form.file.drop')}</p>
 			{#if hint}
 				<p class="text-sm text-muted-foreground">{hint}</p>
 			{/if}

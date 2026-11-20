@@ -2,6 +2,7 @@
 	import { _ } from 'svelte-i18n';
 	import { bannerText, fieldText, readFailure } from '#lib/utils/form-failure.ts';
 	import { enhance } from '$app/forms';
+	import { withFocusOnFailure } from '#lib/utils/focus-first-invalid.ts';
 	import { Alert, Button } from '$ui';
 	import { PasswordField, ScopeContextField } from '$form';
 
@@ -43,13 +44,13 @@
 	method="POST"
 	action="?/changePassword"
 	novalidate
-	use:enhance={() => {
+	use:enhance={withFocusOnFailure(() => {
 		loading = true;
 		return async ({ update }) => {
 			await update();
 			loading = false;
 		};
-	}}
+	})}
 >
 	<ScopeContextField />
 
@@ -80,9 +81,13 @@
 
 	{#if formError}
 		<Alert variant="destructive">{formError}</Alert>
-	{:else if success}
-		<Alert variant="success">{$_('account.security.changePassword.success')}</Alert>
 	{/if}
+	<!-- The live region is in the page before its content, so the confirmation is announced (a region inserted together with its text often is not). -->
+	<div role="status">
+		{#if !formError && success}
+			<Alert variant="success" role="none">{$_('account.security.changePassword.success')}</Alert>
+		{/if}
+	</div>
 
 	<div class="form-footer">
 		<Button type="submit" {loading}>

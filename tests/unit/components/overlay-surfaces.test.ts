@@ -81,7 +81,7 @@ describe.each([
 		expect(field()).toBeNull();
 	});
 
-	it('reopens empty: the typed value of the last open is gone', async () => {
+	it('the content unmounts on close, so an uncontrolled field starts empty on reopen (a bound field is reset on open by the form layer, Task 18)', async () => {
 		props.busy = false;
 		flushSync();
 		field()!.value = 'typed before leaving';

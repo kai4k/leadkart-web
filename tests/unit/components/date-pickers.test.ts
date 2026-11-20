@@ -76,7 +76,7 @@ describe('DatePicker', () => {
 	it('error sets aria-invalid, an alert and describedby with the hint', () => {
 		const trigger = render(DatePicker, { error: 'Pick a date', hint: 'Expiry' });
 		expect(trigger.getAttribute('aria-invalid')).toBe('true');
-		const alert = target.querySelector('[role="alert"]')!;
+		const alert = target.querySelector('[data-slot="field-error"]')!;
 		const described = (trigger.getAttribute('aria-describedby') ?? '').split(' ');
 		expect(described).toContain(alert.id);
 		expect(described).toHaveLength(2);

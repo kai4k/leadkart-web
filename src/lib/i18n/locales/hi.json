@@ -124,6 +124,41 @@
 		"commandPalette": {
 			"title": "कमांड पैलेट",
 			"description": "चलाने के लिए कमांड खोजें…"
+		},
+		"dismiss": "हटाएँ",
+		"search": "खोजें",
+		"noResults": "कोई परिणाम नहीं",
+		"breadcrumb": "ब्रेडक्रंब",
+		"savedViews": "सेव किए गए व्यू",
+		"saveNotConfirmed": "हम पुष्टि नहीं कर सके कि यह सेव हुआ। जाँचने के लिए पेज रीफ़्रेश करें।",
+		"members": {
+			"label": "सदस्य",
+			"more": "+{count} और",
+			"moreTitle": "+{count} और सदस्य"
+		},
+		"list": {
+			"loadingMore": "और लोड हो रहा है…",
+			"end": "सूची समाप्त",
+			"truncated": "और परिणाम लोड नहीं हो सके।"
+		},
+		"query": {
+			"notFound": "नहीं मिला",
+			"noAccess": "अनुमति नहीं",
+			"couldntLoad": "{noun} लोड नहीं हो सका",
+			"loadingNoun": "{noun} लोड हो रहा है",
+			"noneYet": "अभी कोई {noun} नहीं",
+			"tryAgain": "फिर कोशिश करें",
+			"couldntRefresh": "{noun} रीफ़्रेश नहीं हो सका"
+		},
+		"filter": {
+			"any": "कोई भी",
+			"from": "{label} से",
+			"to": "{label} तक",
+			"remove": "{label} फ़िल्टर हटाएँ: {value}"
+		},
+		"statusPill": "स्थिति: {status}। बदलने के लिए क्लिक करें।",
+		"upload": {
+			"removeFile": "फ़ाइल हटाएँ"
 		}
 	},
 	"reload": {
@@ -200,7 +235,9 @@
 			"year": "वर्ष"
 		},
 		"number": {
-			"invalid": "मान्य संख्या दर्ज करें।"
+			"invalid": "मान्य संख्या दर्ज करें।",
+			"increment": "बढ़ाएँ",
+			"decrement": "घटाएँ"
 		},
 		"combobox": {
 			"clear": "चयन हटाएँ",
@@ -215,6 +252,26 @@
 		},
 		"dateRangePicker": {
 			"placeholder": "तारीख़ों की सीमा चुनें"
+		},
+		"password": {
+			"show": "पासवर्ड दिखाएँ",
+			"hide": "पासवर्ड छिपाएँ"
+		},
+		"tags": {
+			"remove": "{tag} हटाएँ",
+			"max": "अधिकतम {max} टैग"
+		},
+		"file": {
+			"drop": "फ़ाइल यहाँ छोड़ें या चुनने के लिए क्लिक करें",
+			"replace": "बदलें",
+			"remove": "फ़ाइल हटाएँ",
+			"badType": "\"{name}\" स्वीकृत फ़ाइल प्रकारों से मेल नहीं खाती",
+			"tooLarge": "\"{name}\" अधिकतम आकार {size} से बड़ी है"
+		},
+		"counter": {
+			"words": "{max} में से {n} वर्ण",
+			"near": "{remaining} वर्ण शेष",
+			"limit": "वर्ण सीमा पूरी हो गई"
 		}
 	}
 }

@@ -19,6 +19,7 @@
 </script>
 
 <script lang="ts" generics="TFilters extends import('#lib/hooks/index.ts').UrlFiltersBase">
+	import { _ } from 'svelte-i18n';
 	import type { UrlFilters } from '#lib/hooks/index.ts';
 	import { Select, TextField } from '$form';
 	import { Icon, ChevronDown, ChevronUp } from '$icons';
@@ -104,7 +105,7 @@
 					<Select
 						label={field.label}
 						value={valueOf(field.key)}
-						placeholder="Any"
+						placeholder={$_('common.filter.any')}
 						options={field.options}
 						onchange={(e) => setScalar(field.key, (e.currentTarget as HTMLSelectElement).value)}
 					/>
@@ -136,7 +137,7 @@
 						<div class="cluster cluster-tight">
 							<input
 								type="date"
-								aria-label="{field.label} from"
+								aria-label={$_('common.filter.from', { values: { label: field.label } })}
 								class="bg-bg-elevated border border-border rounded-md body-sm text-fg flex-1 rounded-md px-3 py-2"
 								value={dateValueOf(field.key, 'from')}
 								onchange={(e) =>
@@ -145,7 +146,7 @@
 							<span class="caption text-fg-muted" aria-hidden="true">—</span>
 							<input
 								type="date"
-								aria-label="{field.label} to"
+								aria-label={$_('common.filter.to', { values: { label: field.label } })}
 								class="bg-bg-elevated border border-border rounded-md body-sm text-fg flex-1 rounded-md px-3 py-2"
 								value={dateValueOf(field.key, 'to')}
 								onchange={(e) =>

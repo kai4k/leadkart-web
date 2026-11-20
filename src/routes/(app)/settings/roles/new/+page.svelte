@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { withFocusOnFailure } from '#lib/utils/focus-first-invalid.ts';
 	import { untrack } from 'svelte';
 	import { _ } from 'svelte-i18n';
 	import { goto } from '$app/navigation';
@@ -63,13 +64,13 @@
 				class="stack stack-relaxed"
 				method="POST"
 				novalidate
-				use:enhance={() => {
+				use:enhance={withFocusOnFailure(() => {
 					loading = true;
 					return async ({ update }) => {
 						await update();
 						loading = false;
 					};
-				}}
+				})}
 			>
 				<ScopeContextField />
 				<TextField

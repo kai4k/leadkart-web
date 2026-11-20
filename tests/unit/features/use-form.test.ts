@@ -341,3 +341,47 @@ describe('Form.submit — one submit in flight at a time', () => {
 		await old;
 	});
 });
+
+describe('Form.submit: focus moves to the first invalid field', () => {
+	function formElement() {
+		const el = document.createElement('form');
+		el.innerHTML =
+			'<input name="ok" /><input name="email" aria-invalid="true" /><input name="name" aria-invalid="true" />';
+		document.body.append(el);
+		return el;
+	}
+	const eventFor = (el: HTMLElement) =>
+		({ preventDefault: vi.fn(), currentTarget: el }) as unknown as SubmitEvent;
+
+	it('a client validation failure focuses the first aria-invalid control, in document order', async () => {
+		const el = formElement();
+		const form = formInRoot(testSchema, { email: 'nope', name: 'x' }).form;
+		await form.submit(eventFor(el), vi.fn());
+		await vi.waitFor(() =>
+			expect(document.activeElement).toBe(el.querySelector('input[name="email"]'))
+		);
+		el.remove();
+	});
+
+	it('a server ValidationError with field errors focuses it too', async () => {
+		const el = formElement();
+		const form = formInRoot(testSchema, { email: 'a@b.com', name: 'Alice' }).form;
+		await form.submit(eventFor(el), () => {
+			throw new ValidationError({ name: 'Taken' }, 422);
+		});
+		await vi.waitFor(() =>
+			expect(document.activeElement).toBe(el.querySelector('input[name="email"]'))
+		);
+		el.remove();
+	});
+
+	it('a success moves no focus', async () => {
+		const el = formElement();
+		(document.activeElement as HTMLElement | null)?.blur();
+		const form = formInRoot(testSchema, { email: 'a@b.com', name: 'Alice' }).form;
+		await form.submit(eventFor(el), () => Promise.resolve());
+		await new Promise((r) => setTimeout(r, 20));
+		expect(el.contains(document.activeElement)).toBe(false);
+		el.remove();
+	});
+});

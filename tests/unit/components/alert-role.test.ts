@@ -30,6 +30,10 @@ describe('Alert role', () => {
 		render({ variant });
 		expect(root().getAttribute('role')).toBe(expected);
 	});
+	it('a caller that renders its own live region first can drop the Alert role (role="none")', () => {
+		render({ variant: 'success', role: 'none' });
+		expect(root().getAttribute('role')).toBe('none');
+	});
 	it('a title renders and the dismiss button calls back', () => {
 		let dismissed = 0;
 		render({ variant: 'info', title: 'Heads up', dismissible: true, onDismiss: () => dismissed++ });

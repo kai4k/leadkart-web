@@ -149,7 +149,7 @@
 		<Button
 			variant="outline"
 			size="icon"
-			aria-label="Decrement"
+			aria-label={$_('form.number.decrement')}
 			disabled={disabled || isAtMin}
 			onclick={() => nudge(-step)}
 			tabindex={-1}
@@ -204,7 +204,7 @@
 		<Button
 			variant="outline"
 			size="icon"
-			aria-label="Increment"
+			aria-label={$_('form.number.increment')}
 			disabled={disabled || isAtMax}
 			onclick={() => nudge(step)}
 			tabindex={-1}

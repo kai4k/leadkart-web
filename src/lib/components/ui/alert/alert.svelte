@@ -35,6 +35,7 @@
 </script>
 
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	let {
 		ref = $bindable(null),
 		variant = 'info',
@@ -75,7 +76,7 @@
 			<button
 				type="button"
 				class="hover:bg-muted focus-visible:ring-ring rounded-sm p-0.5 focus-visible:ring-2 focus-visible:outline-none"
-				aria-label="Dismiss"
+				aria-label={$_('common.dismiss')}
 				onclick={() => onDismiss?.()}
 			>
 				<Icon icon={XCircle} size="sm" />

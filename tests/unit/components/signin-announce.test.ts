@@ -6,10 +6,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, tick, unmount } from 'svelte';
 
-type Submit = () => (opts: {
-	result: { type: string };
-	update: () => Promise<void>;
-}) => Promise<void> | void;
+type Submit = (input: {
+	formElement: HTMLFormElement;
+}) => (opts: { result: { type: string }; update: () => Promise<void> }) => Promise<void> | void;
 const captured = vi.hoisted(() => ({ submit: undefined as unknown }));
 vi.mock('$app/forms', () => ({
 	enhance: (_node: unknown, submit: unknown) => {
@@ -41,7 +40,7 @@ afterEach(() => {
 });
 
 const finish = async (type: string) => {
-	const after = (captured.submit as Submit)();
+	const after = (captured.submit as Submit)({ formElement: document.createElement('form') });
 	await after({ result: { type }, update: () => Promise.resolve() });
 	await tick();
 };

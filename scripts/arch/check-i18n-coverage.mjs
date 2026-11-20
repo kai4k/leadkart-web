@@ -4,7 +4,11 @@
  *
  * Two checks in one script:
  *
- *   (a) HARDCODED STRINGS — flag user-facing text in *.svelte files
+ *   (a) HARDCODED LABELS — implemented narrowly (scripts/arch/lib/hardcoded-labels.mjs): a literal
+ *       `aria-label` / `placeholder` / `title` / `alt` value or a literal sr-only span under
+ *       `src/lib/components/{ui,form,data,feedback}/**` fails. The wider heuristic below stays deferred.
+ *
+ *   (a, wide) HARDCODED STRINGS — flag user-facing text in *.svelte files
  *       that isn't wrapped in $_(...). Heuristics:
  *         - String literals inside JSX text nodes (between tags)
  *         - String literals as values of common UI attrs (placeholder,
@@ -27,6 +31,7 @@
 import { readFileSync, globSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { findHardcodedLabels } from './lib/hardcoded-labels.mjs';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 
@@ -48,6 +53,10 @@ for (const rel of files) {
 	const norm = rel.replaceAll('\\', '/');
 	if (SKIP_PATHS.some((p) => norm.startsWith(p))) continue;
 	const src = readFileSync(join(ROOT, rel), 'utf8');
+
+	// (a, narrow) a literal label in the shared component layers (ui, form, data, feedback)
+	for (const f of findHardcodedLabels(norm, src))
+		i18nViolations.push(`${norm}:${f.line}  "${f.text}"`);
 
 	// (b) ICU pluralization heuristic
 	for (const m of src.matchAll(pluralPattern)) {

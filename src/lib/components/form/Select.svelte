@@ -53,7 +53,7 @@
 	const errorId = $derived(`${fieldId}-error`);
 
 	const describedBy = $derived(
-		[hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined
+		[error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined
 	);
 </script>
 

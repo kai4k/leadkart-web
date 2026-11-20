@@ -24,6 +24,7 @@
 </script>
 
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { cn, type WithElementRef } from '#lib/utils/cn.ts';
 	import { initials } from '#lib/utils/person-name.ts';
@@ -52,7 +53,7 @@
 	data-slot="avatar-group"
 	class={cn('inline-flex items-center', className)}
 	role="group"
-	aria-label="Members"
+	aria-label={$_('common.members.label')}
 	{...rest}
 >
 	{#each visible as member, i (`${member.name}-${i}`)}
@@ -79,8 +80,8 @@
 				'bg-bg-muted text-fg-muted -ml-[40%] bg-none',
 				'tabular-nums'
 			)}
-			aria-label={`+${overflow} more`}
-			title={`+${overflow} more members`}
+			aria-label={$_('common.members.more', { values: { count: overflow } })}
+			title={$_('common.members.moreTitle', { values: { count: overflow } })}
 		>
 			+{overflow}
 		</span>

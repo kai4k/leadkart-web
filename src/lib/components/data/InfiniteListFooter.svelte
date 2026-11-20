@@ -10,6 +10,7 @@
 	 * tabbing to it brings the sentinel into view and starts the load itself. When the last page
 	 * lands and the button goes away, focus moves to the status region instead of dropping to `<body>`.
 	 */
+	import { _ } from 'svelte-i18n';
 	import { tick } from 'svelte';
 	import { Button } from '#lib/components/ui/index.ts';
 	import type { InfiniteList } from '#lib/hooks/index.ts';
@@ -22,11 +23,11 @@
 
 	const status = $derived(
 		list.isFetchingNextPage
-			? 'Loading more…'
+			? $_('common.list.loadingMore')
 			: list.truncated
-				? "Couldn't load more results."
+				? $_('common.list.truncated')
 				: !list.hasNextPage && list.items.length > 0
-					? 'End of list'
+					? $_('common.list.end')
 					: ''
 	);
 

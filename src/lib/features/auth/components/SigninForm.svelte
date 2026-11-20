@@ -2,6 +2,7 @@
 	import { _ } from 'svelte-i18n';
 	import { bannerText, fieldText, readFailure } from '#lib/utils/form-failure.ts';
 	import { enhance } from '$app/forms';
+	import { withFocusOnFailure } from '#lib/utils/focus-first-invalid.ts';
 	import { announceContextChange } from '#lib/api/operator-scope.ts';
 	import { page } from '$app/state';
 	import { Icon, Lock } from '#lib/icons/index.ts';
@@ -75,7 +76,7 @@
 		class="stack"
 		method="POST"
 		novalidate
-		use:enhance={() => {
+		use:enhance={withFocusOnFailure(() => {
 			loading = true;
 			return async ({ result, update }) => {
 				// A sign-in changes the person the browser holds: the other tabs reload instead of collecting 409s.
@@ -83,7 +84,7 @@
 				await update();
 				loading = false;
 			};
-		}}
+		})}
 	>
 		<TextField
 			label={$_('auth.signin.email')}

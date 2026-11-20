@@ -15,7 +15,7 @@
 
 {#snippet Fallback()}
 	<ChevronLeftIcon class={cn('rtl:rotate-180 size-4', className)} />
-	<span>Previous</span>
+	<span>{$_('common.pagination.previous')}</span>
 {/snippet}
 
 <PaginationPrimitive.PrevButton

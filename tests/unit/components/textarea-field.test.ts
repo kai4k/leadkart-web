@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
+import en from '../../../src/lib/i18n/locales/en.json';
 import TextareaField from '#lib/components/form/TextareaField.svelte';
 
 let target: HTMLElement;
@@ -28,12 +29,39 @@ const described = (el: Element) =>
 	(el.getAttribute('aria-describedby') ?? '').split(' ').filter(Boolean);
 
 describe('TextareaField', () => {
-	it('shows a counter once maxlength is set, and the textarea is described by it', () => {
+	it('shows a counter once maxlength is set, in words, and the textarea is described by it', () => {
 		const ta = render({ label: 'Reason', name: 'reason', value: '', maxlength: 10 });
 		type(ta, 'abc');
-		const counter = target.querySelector('[aria-live="polite"]')!;
-		expect(counter.textContent?.trim()).toBe('3/10');
+		const counter = target.querySelector(`#${ta.id}-counter`)!;
+		expect(counter.textContent).toContain('3/10');
+		expect(counter.textContent).toContain(
+			en.form.counter.words.replace('{n}', '3').replace('{max}', '10')
+		);
 		expect(described(ta)).toContain(counter.id);
+	});
+
+	it('the counter is not a live region: typing announces nothing until 90% of the limit', () => {
+		const ta = render({ label: 'Reason', name: 'reason', value: '', maxlength: 10 });
+		expect(target.querySelector('[aria-live]')).toBeNull();
+		const status = () => target.querySelector('[role="status"]')!.textContent?.trim();
+		for (const text of ['a', 'ab', 'abc', 'abcd', 'abcde', 'abcdef', 'abcdefg', 'abcdefgh']) {
+			type(ta, text);
+			expect(status()).toBe('');
+		}
+	});
+
+	it('announces once at 90% and once at the limit, and clears below', () => {
+		const ta = render({ label: 'Reason', name: 'reason', value: '', maxlength: 10 });
+		const status = () => target.querySelector('[role="status"]')!.textContent?.trim();
+		type(ta, 'abcdefghi');
+		expect(status()).toBe('1 character left');
+		// still in the same zone: the text does not change per keystroke
+		type(ta, 'abcdefghi');
+		expect(status()).toBe('1 character left');
+		type(ta, 'abcdefghij');
+		expect(status()).toBe(en.form.counter.limit);
+		type(ta, 'abc');
+		expect(status()).toBe('');
 	});
 
 	it('has no counter without maxlength', () => {
@@ -41,7 +69,7 @@ describe('TextareaField', () => {
 		expect(target.querySelector('[aria-live="polite"]')).toBeNull();
 	});
 
-	it('error sets aria-invalid and is an alert, described together with the hint', () => {
+	it('error sets aria-invalid, is not an alert, and is described before the hint', () => {
 		const ta = render({
 			label: 'Reason',
 			name: 'reason',
@@ -50,9 +78,11 @@ describe('TextareaField', () => {
 			error: 'Required'
 		});
 		expect(ta.getAttribute('aria-invalid')).toBe('true');
-		const alert = target.querySelector('[role="alert"]')!;
+		const alert = target.querySelector('[data-slot="field-error"]')!;
 		expect(alert.textContent?.trim()).toBe('Required');
-		expect(described(ta)).toContain(alert.id);
+		// not a live region of its own, and read before the hint
+		expect(alert.getAttribute('role')).toBeNull();
+		expect(described(ta)[0]).toBe(alert.id);
 		expect(described(ta)).toHaveLength(2);
 	});
 

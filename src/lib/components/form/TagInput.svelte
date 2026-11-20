@@ -13,6 +13,7 @@
 </script>
 
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { Icon, X } from '#lib/icons/index.ts';
 	import { Badge } from '#lib/components/ui/badge/index.ts';
 	import * as Field from '#lib/components/ui/field/index.ts';
@@ -63,7 +64,7 @@
 	let inputEl: HTMLInputElement | null = $state(null);
 
 	const describedBy = $derived(
-		[hint ? hintId : null, error ? errorId : null, localError ? localErrorId : null]
+		[error ? errorId : null, localError ? localErrorId : null, hint ? hintId : null]
 			.filter(Boolean)
 			.join(' ') || undefined
 	);
@@ -86,7 +87,7 @@
 			return;
 		}
 		if (atMax) {
-			localError = `Maximum ${maxTags} tags`;
+			localError = $_('form.tags.max', { values: { max: maxTags } });
 			return;
 		}
 		if (validateTag) {
@@ -158,7 +159,7 @@
 					<button
 						type="button"
 						class="inline-flex size-4 items-center justify-center rounded-full hover:bg-primary hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-						aria-label={`Remove ${tag}`}
+						aria-label={$_('form.tags.remove', { values: { tag } })}
 						onclick={(e) => {
 							e.stopPropagation();
 							removeTag(i);

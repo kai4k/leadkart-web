@@ -11,10 +11,10 @@
  *
  * A save that ends restarts the clock. Call during component initialisation (it owns an effect).
  */
+import { get } from 'svelte/store';
+import { _ } from 'svelte-i18n';
 import { DEFAULT_READ_TIMEOUT_MS } from '#lib/api/timeouts.ts';
 import { toast } from '#lib/components/ui/sonner/index.ts';
-
-const SAVE_NOT_CONFIRMED_MESSAGE = "We couldn't confirm this was saved. Refresh to check.";
 
 export interface BusyVeto {
 	/** True while dismissal must be refused: busy, and not yet busy for the full bound. */
@@ -40,7 +40,7 @@ export function createBusyVeto(isBusy: () => boolean, boundMs = DEFAULT_READ_TIM
 			return isBusy() && !expired;
 		},
 		dismiss() {
-			if (isBusy() && expired) toast(SAVE_NOT_CONFIRMED_MESSAGE);
+			if (isBusy() && expired) toast(get(_)('common.saveNotConfirmed'));
 		}
 	};
 }

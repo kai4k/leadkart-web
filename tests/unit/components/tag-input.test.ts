@@ -81,7 +81,7 @@ describe('TagInput', () => {
 		const input = render({ validate: true });
 		typeText(input, 'bad tag');
 		key(input, 'Enter');
-		const alert = target.querySelector('[role="alert"]')!;
+		const alert = target.querySelector('[data-slot="field-error"]')!;
 		expect(alert.textContent?.trim()).toBe('No spaces');
 		expect(input.getAttribute('aria-invalid')).toBe('true');
 		expect(input.getAttribute('aria-describedby')).toContain(alert.id);

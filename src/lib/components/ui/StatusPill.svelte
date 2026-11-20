@@ -68,6 +68,7 @@
 </script>
 
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { Check, ChevronDown, Icon } from '#lib/icons/index.ts';
 	import { cn } from '#lib/utils/cn.ts';
 	import * as Dropdown from './dropdown-menu';
@@ -98,7 +99,7 @@
 				'disabled:cursor-not-allowed disabled:opacity-60',
 				className
 			)}
-			aria-label={`Status: ${currentLabel}. Click to change.`}
+			aria-label={$_('common.statusPill', { values: { status: currentLabel } })}
 		>
 			<Badge variant={currentVariant}>
 				<span class="inline-flex items-center gap-1">

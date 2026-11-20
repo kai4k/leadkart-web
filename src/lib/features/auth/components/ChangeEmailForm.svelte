@@ -2,6 +2,7 @@
 	import { _ } from 'svelte-i18n';
 	import { bannerText, fieldText, readFailure } from '#lib/utils/form-failure.ts';
 	import { enhance } from '$app/forms';
+	import { withFocusOnFailure } from '#lib/utils/focus-first-invalid.ts';
 	import { Alert, Button } from '$ui';
 	import { ScopeContextField, TextField } from '#lib/components/form/index.ts';
 
@@ -41,13 +42,13 @@
 		method="POST"
 		action="?/changeEmail"
 		novalidate
-		use:enhance={() => {
+		use:enhance={withFocusOnFailure(() => {
 			loading = true;
 			return async ({ update }) => {
 				await update();
 				loading = false;
 			};
-		}}
+		})}
 	>
 		<ScopeContextField />
 

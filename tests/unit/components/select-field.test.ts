@@ -42,7 +42,7 @@ describe('Select (native)', () => {
 	it('error sets aria-invalid, an alert, and describedby with the hint', () => {
 		const sel = render({ error: 'Pick one', hint: 'Any letter' });
 		expect(sel.getAttribute('aria-invalid')).toBe('true');
-		const alert = target.querySelector('[role="alert"]')!;
+		const alert = target.querySelector('[data-slot="field-error"]')!;
 		expect(alert.textContent?.trim()).toBe('Pick one');
 		const described = (sel.getAttribute('aria-describedby') ?? '').split(' ');
 		expect(described).toContain(alert.id);

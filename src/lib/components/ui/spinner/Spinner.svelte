@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { cn } from '#lib/utils/cn.ts';
 
@@ -10,7 +11,7 @@
 
 <span
 	role="status"
-	aria-label="Loading"
+	aria-label={$_('common.loading')}
 	style="width: {size}px; height: {size}px;"
 	class={cn(
 		'inline-block animate-spin rounded-full border-2 border-current border-t-transparent',

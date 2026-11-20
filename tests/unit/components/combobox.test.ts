@@ -113,7 +113,7 @@ describe('Combobox', () => {
 	it('error sets aria-invalid, an alert, and describedby with the hint', () => {
 		const trigger = render({ error: 'Pick one', hint: 'Any letter' });
 		expect(trigger.getAttribute('aria-invalid')).toBe('true');
-		const message = target.querySelector('[role="alert"]')!;
+		const message = target.querySelector('[data-slot="field-error"]')!;
 		expect(message.textContent?.trim()).toBe('Pick one');
 		const described = (trigger.getAttribute('aria-describedby') ?? '').split(' ');
 		expect(described).toHaveLength(2);

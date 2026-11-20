@@ -37,7 +37,7 @@ describe('TextField anatomy', () => {
 
 	it('marks the error role=alert and the input aria-invalid', () => {
 		render(TextField, { label: 'Email', error: 'Required' });
-		expect(target.querySelector('[role="alert"]')?.textContent?.trim()).toBe('Required');
+		expect(target.querySelector('[data-slot="field-error"]')?.textContent?.trim()).toBe('Required');
 		expect(target.querySelector('input')!.getAttribute('aria-invalid')).toBe('true');
 	});
 
@@ -115,7 +115,7 @@ describe('NumberInput', () => {
 		expect(input.getAttribute('aria-invalid')).toBe('true');
 		expect(ids(input)).toHaveLength(2);
 		expect(input.labels?.[0]?.textContent?.trim()).toBe('Quantity');
-		expect(target.querySelector('[role="alert"]')?.textContent?.trim()).toBe('Too many');
+		expect(target.querySelector('[data-slot="field-error"]')?.textContent?.trim()).toBe('Too many');
 	});
 
 	it('steps with ArrowUp and the plus button', () => {
@@ -187,7 +187,7 @@ describe('RadioGroup', () => {
 		expect(name?.textContent?.trim()).toBe('Plan');
 		expect(group.getAttribute('aria-invalid')).toBe('true');
 		expect(ids(group)).toHaveLength(2);
-		expect(target.querySelector('[role="alert"]')?.textContent?.trim()).toBe('Required');
+		expect(target.querySelector('[data-slot="field-error"]')?.textContent?.trim()).toBe('Required');
 	});
 
 	it('names each radio by its label and moves selection with the arrow keys', () => {

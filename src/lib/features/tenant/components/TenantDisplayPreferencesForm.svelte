@@ -1,6 +1,7 @@
 <script lang="ts">
 	import TenantSaveFooter from './TenantSaveFooter.svelte';
 	import { enhance } from '$app/forms';
+	import { withFocusOnFailure } from '#lib/utils/focus-first-invalid.ts';
 	import { Select, type SelectOption } from '$form';
 	import type { Tenant } from '../types';
 
@@ -62,13 +63,13 @@
 	class="stack"
 	method="POST"
 	novalidate
-	use:enhance={() => {
+	use:enhance={withFocusOnFailure(() => {
 		loading = true;
 		return async ({ update }) => {
 			await update();
 			loading = false;
 		};
-	}}
+	})}
 >
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 		<Select label="Locale" name="locale" options={localeOptions} value={values.locale} />

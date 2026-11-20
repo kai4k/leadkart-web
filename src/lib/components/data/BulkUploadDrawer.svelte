@@ -30,6 +30,7 @@
 	lang="ts"
 	generics="TPreview extends BulkUploadPreviewShape, TResult extends BulkUploadResultShape"
 >
+	import { _ } from 'svelte-i18n';
 	import { Drawer, Button, Alert, Badge, Stepper, type StepperState } from '$ui';
 	import { Icon, Upload, CheckCircle2, X, Trash2 } from '$icons';
 	import { describeError } from '$api/errors';
@@ -198,7 +199,7 @@
 						{...props}
 						type="button"
 						class="hover:bg-bg-muted rounded-md p-1.5"
-						aria-label="Close"
+						aria-label={$_('common.close')}
 					>
 						<Icon icon={X} size="sm" />
 					</button>
@@ -266,7 +267,7 @@
 							<button
 								type="button"
 								class="hover:bg-bg-muted rounded-md p-1.5"
-								aria-label="Remove file"
+								aria-label={$_('common.upload.removeFile')}
 								onclick={() => {
 									file = null;
 									if (fileInput) fileInput.value = '';

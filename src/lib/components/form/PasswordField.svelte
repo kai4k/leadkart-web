@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import type { HTMLInputAttributes } from 'svelte/elements';
 	import { Eye, EyeOff, Icon } from '#lib/icons/index.ts';
 	import { Button } from '#lib/components/ui/button/index.ts';
@@ -51,7 +52,7 @@
 			variant="ghost"
 			size="icon-sm"
 			class="text-muted-foreground"
-			aria-label={visible ? 'Hide password' : 'Show password'}
+			aria-label={visible ? $_('form.password.hide') : $_('form.password.show')}
 			aria-pressed={visible}
 			onclick={() => (visible = !visible)}
 		>

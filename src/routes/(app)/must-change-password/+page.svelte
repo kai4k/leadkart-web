@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
 	import { enhance } from '$app/forms';
+	import { withFocusOnFailure } from '#lib/utils/focus-first-invalid.ts';
 	import { Alert, Button, Card } from '$ui';
 	import { PasswordField, ScopeContextField } from '#lib/components/form/index.ts';
 	import { bannerText, fieldText, readFailure } from '#lib/utils/form-failure.ts';
@@ -41,13 +42,13 @@
 				class="stack"
 				method="POST"
 				novalidate
-				use:enhance={() => {
+				use:enhance={withFocusOnFailure(() => {
 					loading = true;
 					return async ({ update }) => {
 						await update();
 						loading = false;
 					};
-				}}
+				})}
 			>
 				<ScopeContextField />
 				<PasswordField

@@ -5,6 +5,9 @@
  * the submit lifecycle: client-side Zod parse → mutation call →
  * ValidationError.fields mapping → toast on success.
  *
+ * A failed submit (client validation or a server `ValidationError`) moves focus to the first invalid
+ * field (`focusFirstInvalid`); a form-level failure stays a `role="alert"` banner.
+ *
  * Svelte canon: a factory closing over `$state` and returning an
  * object whose `values` / `errors` / `bannerError` / `isSubmitting`
  * fields are reactive (proxied `$state`), and whose `submit` /
@@ -18,6 +21,7 @@
  *   // On submit:   form.submit(e, async (values) => mutation.mutate(values))
  */
 import { describeError, ValidationError } from '$api/errors';
+import { focusFirstInvalid } from '#lib/utils/focus-first-invalid.ts';
 import type { z } from 'zod';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- z.ZodObject's generic args are intentionally any-typed at the call-site of useForm
@@ -133,6 +137,8 @@ export function useForm<TSchema extends AnyObjectSchema>(
 		submitFn: (values: z.output<TSchema>, current: SubmitIsCurrent) => Promise<void>
 	): Promise<void> {
 		e.preventDefault();
+		// Captured now: `currentTarget` is null once the handler has awaited.
+		const formEl = e.currentTarget instanceof HTMLElement ? e.currentTarget : null;
 		if (busyGeneration === generation) return;
 		const mine = generation;
 		const myTurn = ++latestSubmit;
@@ -149,6 +155,9 @@ export function useForm<TSchema extends AnyObjectSchema>(
 				if (msg) mapped[key] = msg;
 			}
 			errors = mapped;
+			// A failed submit lands on the first invalid field (its error is read with it), instead of
+			// every field error being its own assertive announcement.
+			void focusFirstInvalid(formEl);
 			return;
 		}
 
@@ -160,6 +169,7 @@ export function useForm<TSchema extends AnyObjectSchema>(
 			if (!current()) return;
 			if (err instanceof ValidationError && err.hasFieldErrors) {
 				errors = err.fields as FieldErrors;
+				void focusFirstInvalid(formEl);
 			} else {
 				bannerError = describeError(err, { fallback: 'An unexpected error occurred' });
 			}

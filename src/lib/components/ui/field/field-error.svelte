@@ -33,10 +33,15 @@
 	const singleErrorMessage = $derived(errors && errors.length === 1 && errors[0]?.message);
 </script>
 
+<!--
+	No live role: with six invalid fields that was six assertive announcements. A failed submit moves
+	focus to the first invalid control (`focusFirstInvalid`), and `aria-describedby` on each control
+	lists this error first, so a screen reader reads the field with its error when it is reached.
+	A form-level (non-field) error is an `Alert`, which keeps `role="alert"`.
+-->
 {#if hasContent}
 	<div
 		bind:this={ref}
-		role="alert"
 		data-slot="field-error"
 		class={cn('text-destructive text-sm font-normal', className)}
 		{...restProps}

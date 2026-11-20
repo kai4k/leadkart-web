@@ -5,6 +5,7 @@
 </script>
 
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import type { Attachment } from 'svelte/attachments';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { ChevronRight, Icon } from '$icons';
@@ -24,7 +25,7 @@
 <nav
 	{@attach forwardRef}
 	data-slot="breadcrumb"
-	aria-label="Breadcrumb"
+	aria-label={$_('common.breadcrumb')}
 	class={cn('flex items-center', className)}
 	{...rest}
 >

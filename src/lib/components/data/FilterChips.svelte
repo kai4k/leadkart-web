@@ -1,5 +1,6 @@
 <!-- src/lib/components/data/FilterChips.svelte -->
 <script lang="ts" generics="TFilters extends import('#lib/hooks/index.ts').UrlFiltersBase">
+	import { _ } from 'svelte-i18n';
 	import type { UrlFilters } from '#lib/hooks/index.ts';
 	import { Icon, X } from '$icons';
 	import { cn } from '#lib/utils/cn.ts';
@@ -33,7 +34,9 @@
 				<button
 					type="button"
 					class="text-fg-muted hover:text-fg focus-visible:ring-focus-ring -me-1 inline-flex h-4 w-4 items-center justify-center rounded focus-visible:ring-2 focus-visible:outline-none"
-					aria-label="Remove {chip.label} filter: {chip.value}"
+					aria-label={$_('common.filter.remove', {
+						values: { label: chip.label, value: chip.value }
+					})}
 					onclick={() => urlFilters.clearValue(chip.key as keyof TFilters & string, chip.value)}
 				>
 					<Icon icon={X} size="xs" />

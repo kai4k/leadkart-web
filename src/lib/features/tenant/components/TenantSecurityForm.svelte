@@ -1,6 +1,7 @@
 <script lang="ts">
 	import TenantSaveFooter from './TenantSaveFooter.svelte';
 	import { enhance } from '$app/forms';
+	import { withFocusOnFailure } from '#lib/utils/focus-first-invalid.ts';
 	import { untrack } from 'svelte';
 	import { Card } from '$ui';
 	import { NumberInput, Switch } from '$form';
@@ -48,13 +49,13 @@
 	class="stack stack-relaxed"
 	method="POST"
 	novalidate
-	use:enhance={() => {
+	use:enhance={withFocusOnFailure(() => {
 		loading = true;
 		return async ({ update }) => {
 			await update();
 			loading = false;
 		};
-	}}
+	})}
 >
 	<Card.Root padding="md" elevation="sm">
 		<Card.Header>

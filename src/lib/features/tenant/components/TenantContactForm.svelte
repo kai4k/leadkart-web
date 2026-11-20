@@ -3,6 +3,7 @@
 	import { fieldText, readFailure } from '#lib/utils/form-failure.ts';
 	import TenantSaveFooter from './TenantSaveFooter.svelte';
 	import { enhance } from '$app/forms';
+	import { withFocusOnFailure } from '#lib/utils/focus-first-invalid.ts';
 	import { TextField } from '$form';
 	import type { Tenant } from '../types';
 
@@ -55,13 +56,13 @@
 	class="stack"
 	method="POST"
 	novalidate
-	use:enhance={() => {
+	use:enhance={withFocusOnFailure(() => {
 		loading = true;
 		return async ({ update }) => {
 			await update();
 			loading = false;
 		};
-	}}
+	})}
 >
 	<TextField
 		label="Admin phone"

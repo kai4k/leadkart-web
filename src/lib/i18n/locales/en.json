@@ -124,6 +124,41 @@
 		"commandPalette": {
 			"title": "Command Palette",
 			"description": "Search for a command to run…"
+		},
+		"dismiss": "Dismiss",
+		"search": "Search",
+		"noResults": "No results",
+		"breadcrumb": "Breadcrumb",
+		"savedViews": "Saved views",
+		"saveNotConfirmed": "We couldn't confirm this was saved. Refresh to check.",
+		"members": {
+			"label": "Members",
+			"more": "+{count} more",
+			"moreTitle": "+{count} more members"
+		},
+		"list": {
+			"loadingMore": "Loading more…",
+			"end": "End of list",
+			"truncated": "Couldn't load more results."
+		},
+		"query": {
+			"notFound": "Not found",
+			"noAccess": "No access",
+			"couldntLoad": "Couldn't load {noun}",
+			"loadingNoun": "Loading {noun}",
+			"noneYet": "No {noun} yet",
+			"tryAgain": "Try again",
+			"couldntRefresh": "Couldn't refresh {noun}"
+		},
+		"filter": {
+			"any": "Any",
+			"from": "{label} from",
+			"to": "{label} to",
+			"remove": "Remove {label} filter: {value}"
+		},
+		"statusPill": "Status: {status}. Click to change.",
+		"upload": {
+			"removeFile": "Remove file"
 		}
 	},
 	"reload": {
@@ -200,7 +235,9 @@
 			"year": "Year"
 		},
 		"number": {
-			"invalid": "Enter a valid number."
+			"invalid": "Enter a valid number.",
+			"increment": "Increment",
+			"decrement": "Decrement"
 		},
 		"combobox": {
 			"clear": "Clear selection",
@@ -215,6 +252,26 @@
 		},
 		"dateRangePicker": {
 			"placeholder": "Pick a date range"
+		},
+		"password": {
+			"show": "Show password",
+			"hide": "Hide password"
+		},
+		"tags": {
+			"remove": "Remove {tag}",
+			"max": "Maximum {max} tags"
+		},
+		"file": {
+			"drop": "Drop file here or click to browse",
+			"replace": "Replace",
+			"remove": "Remove file",
+			"badType": "\"{name}\" does not match the accepted file types",
+			"tooLarge": "\"{name}\" exceeds maximum size of {size}"
+		},
+		"counter": {
+			"words": "{n} of {max} characters",
+			"near": "{remaining, plural, one {# character left} other {# characters left}}",
+			"limit": "Character limit reached"
 		}
 	}
 }

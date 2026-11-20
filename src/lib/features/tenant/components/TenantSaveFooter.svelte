@@ -28,9 +28,13 @@
 
 {#if form?.formErrorKey}
 	<Alert variant="destructive">{$_(form.formErrorKey)}</Alert>
-{:else if form?.success}
-	<Alert variant="success">{successMessage}</Alert>
 {/if}
+<!-- The live region is in the page before its content, so the confirmation is announced (a region inserted together with its text often is not). -->
+<div role="status">
+	{#if !form?.formErrorKey && form?.success}
+		<Alert variant="success" role="none">{successMessage}</Alert>
+	{/if}
+</div>
 
 <div class="form-footer">
 	{#if allowed}

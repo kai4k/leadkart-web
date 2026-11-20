@@ -14,7 +14,7 @@
 </script>
 
 {#snippet Fallback()}
-	<span>Next</span>
+	<span>{$_('common.pagination.next')}</span>
 	<ChevronRightIcon class={cn('rtl:rotate-180 size-4', className)} />
 {/snippet}
 

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { withFocusOnFailure } from '#lib/utils/focus-first-invalid.ts';
 	import { _ } from 'svelte-i18n';
 	import { fieldText, readFailure } from '#lib/utils/form-failure.ts';
 	import { ScopeContextField, TextField } from '#lib/components/form/index.ts';
@@ -46,13 +47,13 @@
 	class="stack stack-relaxed"
 	method="POST"
 	novalidate
-	use:enhance={() => {
+	use:enhance={withFocusOnFailure(() => {
 		loading = true;
 		return async ({ update }) => {
 			await update();
 			loading = false;
 		};
-	}}
+	})}
 >
 	<ScopeContextField />
 
@@ -101,9 +102,13 @@
 
 	{#if form?.formErrorKey}
 		<Alert variant="destructive">{$_(form.formErrorKey)}</Alert>
-	{:else if form?.success}
-		<Alert variant="success">Profile saved.</Alert>
 	{/if}
+	<!-- The live region is in the page before its content, so the confirmation is announced (a region inserted together with its text often is not). -->
+	<div role="status">
+		{#if !form?.formErrorKey && form?.success}
+			<Alert variant="success" role="none">Profile saved.</Alert>
+		{/if}
+	</div>
 
 	<div class="form-footer">
 		<Button type="submit" {loading}>Save changes</Button>

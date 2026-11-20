@@ -10,6 +10,7 @@
 </script>
 
 <script lang="ts" generics="T">
+	import { _ } from 'svelte-i18n';
 	import type { Snippet } from 'svelte';
 	import { Alert, Button, EmptyState, Skeleton } from '#lib/components/ui/index.ts';
 	import { Inbox } from '#lib/icons/index.ts';
@@ -35,7 +36,13 @@
 	// 404 and 403 are answers, not failures: nothing to retry.
 	const missing = $derived(query.error instanceof NotFoundError);
 	const forbidden = $derived(query.error instanceof AuthError && query.error.status === 403);
-	const title = $derived(missing ? 'Not found' : forbidden ? 'No access' : `Couldn't load ${noun}`);
+	const title = $derived(
+		missing
+			? $_('common.query.notFound')
+			: forbidden
+				? $_('common.query.noAccess')
+				: $_('common.query.couldntLoad', { values: { noun } })
+	);
 	const message = $derived(getListErrorMessage(query.error, noun, notFound));
 	// A failed refetch keeps the data on screen only when the failure may pass (network, timeout, 5xx,
 	// 429). A 403 / 404 / other answer means the record may be gone or the access lost: not the old data.
@@ -49,7 +56,9 @@
 			<p>{message}</p>
 			{#if canRetry}
 				<div>
-					<Button variant="ghost" size="sm" onclick={() => query.refetch?.()}>Try again</Button>
+					<Button variant="ghost" size="sm" onclick={() => query.refetch?.()}
+						>{$_('common.query.tryAgain')}</Button
+					>
 				</div>
 			{/if}
 		</div>
@@ -60,7 +69,7 @@
 	<!-- A div with aria-label and no role is ignored by screen readers: a status region with real text. -->
 	<!-- No aria-busy: on a live region it lets assistive technology hold back the very announcement this is for. -->
 	<div class="stack stack-relaxed" role="status">
-		<span class="sr-only">Loading {noun}</span>
+		<span class="sr-only">{$_('common.query.loadingNoun', { values: { noun } })}</span>
 		{#if skeleton}
 			{@render skeleton()}
 		{:else}
@@ -77,13 +86,13 @@
 {:else}
 	<!-- A failed refetch that may pass keeps the data on screen (still the last good answer) with a notice. -->
 	{#if query.isError}
-		{@render failure(`Couldn't refresh ${noun}`)}
+		{@render failure($_('common.query.couldntRefresh', { values: { noun } }))}
 	{/if}
 	{#if isEmpty?.(query.data)}
 		{#if empty}
 			{@render empty()}
 		{:else}
-			<EmptyState icon={Inbox} title="No {noun} yet" />
+			<EmptyState icon={Inbox} title={$_('common.query.noneYet', { values: { noun } })} />
 		{/if}
 	{:else}
 		{@render children(query.data)}

@@ -196,10 +196,11 @@ test.describe('Tenant user management — negative', () => {
 		await page.getByLabel(/initial password/i).fill('short');
 		await page.getByRole('button', { name: /create user/i }).click();
 
-		// Zod schema rejects on submit; either inline field error or banner.
-		// At least one error indicator must surface (no Create call happens).
-		const errorRegion = page.locator('[role="alert"], .text-danger').first();
-		await expect(errorRegion).toBeVisible({ timeout: 3000 });
+		// Zod schema rejects on submit: the password field is invalid and focus moves to it, so a
+		// screen reader reads the field with its error (no Create call happens).
+		const password = page.getByLabel(/initial password/i);
+		await expect(password).toHaveAttribute('aria-invalid', 'true', { timeout: 3000 });
+		await expect(password).toBeFocused();
 	});
 
 	test('duplicate email: server 409 surfaces in form banner', async ({ page }) => {

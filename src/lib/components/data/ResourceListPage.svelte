@@ -16,6 +16,7 @@
 	lang="ts"
 	generics="TFilters extends import('#lib/hooks/index.ts').UrlFiltersBase, TItem extends import('#lib/hooks/index.ts').SelectableItem"
 >
+	import { _ } from 'svelte-i18n';
 	import type { UrlFilters, BulkSelection, SavedViews } from '#lib/hooks/index.ts';
 	import { Button } from '$ui';
 	import { Icon } from '$icons';
@@ -102,7 +103,7 @@
 
 {#snippet tabsSlot()}
 	{#if savedViews}
-		<nav aria-label="Saved views">
+		<nav aria-label={$_('common.savedViews')}>
 			<ul class="cluster list-none gap-0">
 				{#each savedViews.views as v (v.id)}
 					{@const active = savedViews.isActive(v.id)}

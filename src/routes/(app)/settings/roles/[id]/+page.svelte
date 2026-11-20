@@ -198,7 +198,10 @@
 				>
 			{/if}
 			{#if error}<Alert variant="destructive">{error}</Alert>{/if}
-			{#if saved}<Alert variant="success">Saved.</Alert>{/if}
+			<!-- The live region is in the page before its content, so the confirmation is announced (a region inserted together with its text often is not). -->
+			<div role="status">
+				{#if saved}<Alert variant="success" role="none">Saved.</Alert>{/if}
+			</div>
 
 			<Card.Root>
 				<Card.Header>
