@@ -148,7 +148,7 @@ test.describe('server-side Go calls never follow redirects', () => {
 
 		await page.goto('/operator/scope/profile');
 
-		await expect(page.getByText('The route loader threw')).toBeVisible();
+		await expect(page.getByRole('alert')).toContainText('Could not load tenant settings');
 		const calls = await listMockCalls();
 		expect(calls.map((c) => c.path)).not.toContain(`/api/v1/tenants/${OTHER_TENANT}`);
 		const tenantCalls = calls.filter((c) => c.path === `/api/v1/tenants/${tenant.id}`);
