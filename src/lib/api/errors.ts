@@ -61,6 +61,18 @@ const CODE_COPY: ReadonlyMap<string, string> = new Map([
 	['tenant_not_active', 'This tenant is not active. Changes are disabled.'],
 	['forbidden', "You don't have permission to do this."],
 	['insufficient_rank', 'You can only make this change for people below your level.'],
+	[
+		'ownership_authority_required',
+		'Only a platform administrator with ownership authority can change who owns a company.'
+	],
+	[
+		'role_level_breaks_reporting',
+		'That level would put someone at or above their manager. Pick a different level.'
+	],
+	[
+		'person_memberships_changing',
+		"This person's memberships are changing right now. Try again in a moment."
+	],
 	['impersonation_not_allowed', 'Not available during an impersonation session.'],
 	['tenant_has_dependents', "This tenant still has members or data, so it can't be deleted yet."],
 	['permission_not_requestable', "This permission can't be requested."],

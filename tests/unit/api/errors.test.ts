@@ -470,7 +470,22 @@ describe('code to copy map (Go codes with fixed user copy)', () => {
 		[422, 'manager_not_eligible', "This person can't be set as the manager."],
 		[422, 'role_parent_not_eligible', 'The parent role must be more senior.'],
 		[403, 'impersonation_not_allowed', 'Not available during an impersonation session.'],
-		[401, 'incorrect_current_password', 'Your current password is incorrect.']
+		[401, 'incorrect_current_password', 'Your current password is incorrect.'],
+		[
+			403,
+			'ownership_authority_required',
+			'Only a platform administrator with ownership authority can change who owns a company.'
+		],
+		[
+			422,
+			'role_level_breaks_reporting',
+			'That level would put someone at or above their manager. Pick a different level.'
+		],
+		[
+			409,
+			'person_memberships_changing',
+			"This person's memberships are changing right now. Try again in a moment."
+		]
 	])('%i %s shows fixed copy whatever Go says', (status, code, copy) => {
 		const err = ApiError.fromResponse(res(status), { error: code, message: 'raw Go text' });
 		expect(err.message).toBe(copy);

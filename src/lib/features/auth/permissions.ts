@@ -18,6 +18,7 @@ export const P = {
 	platformTenantsView: 'platform.tenants.view',
 	platformTenantsCreate: 'platform.tenants.create',
 	platformTenantsManage: 'platform.tenants.manage',
+	platformTenantsOwnership: 'platform.tenants.ownership',
 	platformUsersView: 'platform.users.view',
 	platformUsersCreate: 'platform.users.create',
 	platformUsersManage: 'platform.users.manage',

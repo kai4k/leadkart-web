@@ -37,6 +37,11 @@ export const PERMISSION_CATALOGUE: ReadonlyArray<PermissionCatalogueEntry> = [
 		description: 'Edit any tenant (profile, statutory, settings)',
 		group: 'platform'
 	},
+	{
+		name: 'platform.tenants.ownership',
+		description: 'Change who owns a tenant (owner role, tenant.admin, owner deactivation)',
+		group: 'platform'
+	},
 	{ name: 'platform.users.view', description: 'Read any Person record', group: 'platform' },
 	{ name: 'platform.users.create', description: 'Create platform users', group: 'platform' },
 	{

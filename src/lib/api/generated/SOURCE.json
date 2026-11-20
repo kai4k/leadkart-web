@@ -1,6 +1,6 @@
 {
 	"repo": "leadkart-go",
-	"commit": "8ea4c03158290e0893b3378a9a8e295b018cbfb3",
+	"commit": "fa6ae44107845df21a4d588fde0bbc1995fcdae0",
 	"branch": "fix/identity-authz-and-bff-security",
 	"spec": "api/openapi.yaml"
 }

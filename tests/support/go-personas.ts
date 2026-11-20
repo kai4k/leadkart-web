@@ -39,7 +39,7 @@ export const PLATFORM_RESERVED: ReadonlySet<string> = new Set([
 	P.platformRolesView,
 	P.platformRolesManage,
 	P.platformImpersonationManage,
-	'platform.tenants.ownership',
+	P.platformTenantsOwnership,
 	'platform.unverified_contacts.manage',
 	'platform.lead_credits.topup',
 	P.identityTenantsSuspend,

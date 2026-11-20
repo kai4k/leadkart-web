@@ -414,7 +414,8 @@ export const PermissionRequestDto = z
 		decision_reason: z.string().optional(),
 		expires_at: z.string().datetime({ offset: true }).optional(),
 		created_at: z.string().datetime({ offset: true }),
-		updated_at: z.string().datetime({ offset: true })
+		updated_at: z.string().datetime({ offset: true }),
+		can_approve: z.boolean().optional()
 	})
 	.passthrough();
 export const ListPermissionRequestsResponse = z
@@ -4845,6 +4846,11 @@ for authority reasons. One call examines a bounded window of the tenant&#x27;s p
 (at most &#x60;page_size&#x60;, capped at 100); a page may therefore hold fewer items than &#x60;page_size&#x60;
 while &#x60;has_more&#x60; is true, and &#x60;next_cursor&#x60; continues after the last request examined.
 Keyset-paginated per ADR 0038.
+Every item of the approver queue carries &#x60;can_approve&#x60;: whether APPROVING it as asked would
+pass for the caller (the stored permission is requestable and within their authority, decided on
+the same stored facts approve uses). Deny is allowed for every listed item. A caller who can decide
+nothing (below the Admin tier and without &#x60;identity.roles.approve&#x60;) gets an empty page; a manager
+below the Admin tier sees only the requests of members who report to them.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -4933,12 +4939,19 @@ requester for the stored duration (single transaction under the tenant authority
 Decided by the authority policy (ADR 0069), never by the body: the requester&#x27;s manager who
 holds &#x60;identity.roles.approve&#x60; AND the permission; or anyone of Administrator rank or above who
 strictly outranks the requester (an Administrator may approve any requestable permission
-without holding it, except user/role management, tenant settings, marketplace purchase and
-payment recording, which the Administrator must hold); or a super user / exempt operator
+without holding it, except user/role management, tenant settings, marketplace purchase, payment and
+invoice access, tenant-wide visibility (read-all, users, roles, tenants, lead credits) and the right to
+request elevation, which the Administrator must hold); or a super user / exempt operator
 acting in ANOTHER tenant (in the platform tenant an operator follows rank like anyone else).
-Never an impersonation session and never the requester.
+Never an impersonation session and never the requester. The approved grant ends no later than the
+approver&#x27;s own when the approver holds the permission only through a time-bound override. A caller who
+is not the requester and may not even deny the request (not its manager with &#x60;identity.roles.approve&#x60;,
+not senior enough) is answered 404, like a request that does not exist. When the requested permission is on the
+requester&#x27;s REVOKED list the approval is an un-revoke and additionally needs the authority to change
+their overrides (act on the member and hold the permission itself): otherwise 403
+&#x60;grant_exceeds_authority&#x60;, the request stays pending.
 
-Check order: unknown request (404) → authority (403, whatever the request&#x27;s state) → state
+Check order: unknown request, or a caller who may not decide it (404) → authority over this permission (403, whatever the request&#x27;s state) → state
 (409 &#x60;permission_request_not_pending&#x60;) → requestability (422 &#x60;permission_not_requestable&#x60;: a
 stored request whose permission is not requestable, for example one submitted before that rule
 existed, stays pending; the approver can deny it and the requester can cancel it) → requester
@@ -4975,10 +4988,11 @@ still active (409 &#x60;permission_request_requester_inactive&#x60;; the request
 		errors: [
 			{
 				status: 403,
-				description: `&#x60;not_approver&#x60; (not the requester&#x27;s manager, or lacks &#x60;identity.roles.approve&#x60;),
-&#x60;insufficient_rank&#x60;, &#x60;grant_exceeds_authority&#x60; (the approver does not hold the permission, or an
-Administrator lacks a must-hold one), &#x60;self_modification_forbidden&#x60; (own request),
-&#x60;impersonation_not_allowed&#x60;, &#x60;forbidden&#x60;, or &#x60;tenant_scope_not_supported&#x60; (&#x60;X-Tenant-Id&#x60; selected a foreign tenant)
+				description: `&#x60;grant_exceeds_authority&#x60; (the approver does not hold the permission, an Administrator lacks a
+must-hold one, or the approval would lift a revoke without the Admin tier), &#x60;self_modification_forbidden&#x60;
+(own request), &#x60;impersonation_not_allowed&#x60;, &#x60;forbidden&#x60; (no valid or no longer active acting member), or
+&#x60;tenant_scope_not_supported&#x60; (&#x60;X-Tenant-Id&#x60; selected a foreign tenant). Callers who may not decide the
+request at all get 404, not &#x60;not_approver&#x60; / &#x60;insufficient_rank&#x60;.
 `,
 				schema: ErrorResponse
 			},
@@ -5082,8 +5096,9 @@ denier need not hold the requested permission (nor &#x60;identity.roles.approve&
 		errors: [
 			{
 				status: 403,
-				description: `&#x60;not_approver&#x60;, &#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;, &#x60;impersonation_not_allowed&#x60;,
-&#x60;forbidden&#x60;, or &#x60;tenant_scope_not_supported&#x60; (&#x60;X-Tenant-Id&#x60; selected a foreign tenant)
+				description: `&#x60;self_modification_forbidden&#x60; (own request), &#x60;impersonation_not_allowed&#x60;, &#x60;forbidden&#x60;, or
+&#x60;tenant_scope_not_supported&#x60; (&#x60;X-Tenant-Id&#x60; selected a foreign tenant). Callers who may not decide the
+request get 404.
 `,
 				schema: ErrorResponse
 			},
@@ -5524,7 +5539,13 @@ the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x6
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
+assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
+deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
+Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
+member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
+tier or above (&#x60;grant_exceeds_authority&#x60;).
 `,
 				schema: ErrorResponse
 			},
@@ -5535,7 +5556,7 @@ caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
 			},
 			{
 				status: 409,
-				description: `&#x60;last_owner_protected&#x60; — the person is the only active owner of a tenant; nothing was changed`,
+				description: `&#x60;last_owner_protected&#x60; — the person is the only active owner of a tenant; nothing was changed. &#x60;person_memberships_changing&#x60; — the person&#x27;s memberships kept changing while the change was checked (a reactivation raced it); nothing was changed, retry`,
 				schema: ErrorResponse
 			},
 			{
@@ -5581,7 +5602,13 @@ the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x6
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
+assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
+deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
+Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
+member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
+tier or above (&#x60;grant_exceeds_authority&#x60;).
 `,
 				schema: ErrorResponse
 			},
@@ -5592,7 +5619,7 @@ caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
 			},
 			{
 				status: 409,
-				description: `&#x60;last_owner_protected&#x60; — the person is the only active owner of a tenant; nothing was changed`,
+				description: `&#x60;last_owner_protected&#x60; — the person is the only active owner of a tenant; nothing was changed. &#x60;person_memberships_changing&#x60; — the person&#x27;s memberships kept changing while the change was checked (a reactivation raced it); nothing was changed, retry`,
 				schema: ErrorResponse
 			},
 			{
@@ -6119,7 +6146,13 @@ the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x6
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
+assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
+deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
+Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
+member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
+tier or above (&#x60;grant_exceeds_authority&#x60;).
 `,
 				schema: ErrorResponse
 			},
@@ -6181,6 +6214,13 @@ be used to probe which tenants exist.
 		description: `Both fields optional. Empty &#x60;name&#x60; skips rename. Omitting
 &#x60;hierarchy_level&#x60; (or sending &#x60;null&#x60;) skips re-level — using a
 pointer field instead of a -1 sentinel keeps the wire shape clean.
+Changing what a role confers, re-levelling it or deleting it is acting on every ACTIVE member who holds it: the
+caller must strictly outrank each active holder (owners may act on owners) and must not hold the role
+themself (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); a rename acts on nobody. Every active holder&#x27;s
+session ends the way an authority change on the member does: their old token answers 401 &#x60;stale_token&#x60;, the
+refresh succeeds with the new permissions and rank.
+A re-level is refused with 422 &#x60;role_level_breaks_reporting&#x60; when it would leave an active holder not strictly
+junior to their manager, or a direct report of a holder not strictly junior to the holder.
 Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
 `,
 		requestFormat: 'json',
@@ -6215,7 +6255,13 @@ the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x6
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
+assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
+deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
+Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
+member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
+tier or above (&#x60;grant_exceeds_authority&#x60;).
 `,
 				schema: ErrorResponse
 			},
@@ -6233,7 +6279,9 @@ renamed or re-levelled by anyone, super users included).
 			},
 			{
 				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				description: `&#x60;validation_failed&#x60; / &#x60;role_invalid&#x60;, or &#x60;role_level_breaks_reporting&#x60; (the new level would leave an active
+holder not strictly junior to their manager, or a direct report of a holder not strictly junior to the holder).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -6243,7 +6291,8 @@ renamed or re-levelled by anyone, super users included).
 		path: '/api/v1/roles/:roleId',
 		alias: 'deleteApiv1rolesRoleId',
 		description: `Requires &#x60;identity.roles.delete&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
-The caller must hold every permission the role carries (deleting removes them from every holder).
+The caller must hold every permission the role carries (deleting removes them from every holder) and must
+be allowed to act on every active holder (answered before &#x60;role_in_use&#x60;).
 A role still held by an ACTIVE member is refused with 409 &#x60;role_in_use&#x60; (&#x60;errors.active_holders&#x60; is the
 count); a role held only by inactive members is deleted and their assignments are removed in the same
 transaction.
@@ -6270,7 +6319,13 @@ the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x6
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
+assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
+deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
+Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
+member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
+tier or above (&#x60;grant_exceeds_authority&#x60;).
 `,
 				schema: ErrorResponse
 			},
@@ -6348,7 +6403,13 @@ the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x6
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
+assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
+deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
+Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
+member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
+tier or above (&#x60;grant_exceeds_authority&#x60;).
 `,
 				schema: ErrorResponse
 			},
@@ -6386,6 +6447,11 @@ Permission names MUST match the closed
 &#x60;permission.IdentityPermissions&#x60; catalogue; unknown names surface
 as 422 (&#x60;permission_unknown&#x60;).
 Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Conferring a permission the caller does not hold is rejected with &#x60;grant_exceeds_authority&#x60;.
+Changing what a role confers, re-levelling it or deleting it is acting on every ACTIVE member who holds it: the
+caller must strictly outrank each active holder (owners may act on owners) and must not hold the role
+themself (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); a rename acts on nobody. Every active holder&#x27;s
+session ends the way an authority change on the member does: their old token answers 401 &#x60;stale_token&#x60;, the
+refresh succeeds with the new permissions and rank.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -6424,7 +6490,13 @@ the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x6
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
+assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
+deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
+Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
+member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
+tier or above (&#x60;grant_exceeds_authority&#x60;).
 `,
 				schema: ErrorResponse
 			},
@@ -6450,6 +6522,11 @@ caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
 		path: '/api/v1/roles/:roleId/permissions/grant',
 		alias: 'postApiv1rolesRoleIdpermissionsgrant',
 		description: `Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Conferring a permission the caller does not hold is rejected with &#x60;grant_exceeds_authority&#x60;.
+Changing what a role confers, re-levelling it or deleting it is acting on every ACTIVE member who holds it: the
+caller must strictly outrank each active holder (owners may act on owners) and must not hold the role
+themself (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); a rename acts on nobody. Every active holder&#x27;s
+session ends the way an authority change on the member does: their old token answers 401 &#x60;stale_token&#x60;, the
+refresh succeeds with the new permissions and rank.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -6483,7 +6560,13 @@ the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x6
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
+assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
+deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
+Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
+member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
+tier or above (&#x60;grant_exceeds_authority&#x60;).
 `,
 				schema: ErrorResponse
 			},
@@ -6509,6 +6592,11 @@ caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
 		path: '/api/v1/roles/:roleId/permissions/revoke',
 		alias: 'postApiv1rolesRoleIdpermissionsrevoke',
 		description: `Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+Changing what a role confers, re-levelling it or deleting it is acting on every ACTIVE member who holds it: the
+caller must strictly outrank each active holder (owners may act on owners) and must not hold the role
+themself (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); a rename acts on nobody. Every active holder&#x27;s
+session ends the way an authority change on the member does: their old token answers 401 &#x60;stale_token&#x60;, the
+refresh succeeds with the new permissions and rank.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -6542,7 +6630,13 @@ the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x6
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
+assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
+deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
+Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
+member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
+tier or above (&#x60;grant_exceeds_authority&#x60;).
 `,
 				schema: ErrorResponse
 			},
@@ -8041,7 +8135,13 @@ the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x6
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
+assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
+deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
+Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
+member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
+tier or above (&#x60;grant_exceeds_authority&#x60;).
 `,
 				schema: ErrorResponse
 			},
@@ -8052,7 +8152,7 @@ caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
 			},
 			{
 				status: 409,
-				description: `&#x60;last_owner_protected&#x60; — the person is the only active owner of a tenant; nothing was changed`,
+				description: `&#x60;last_owner_protected&#x60; — the person is the only active owner of a tenant; nothing was changed. &#x60;person_memberships_changing&#x60; — the person&#x27;s memberships kept changing while the change was checked (a reactivation raced it); nothing was changed, retry`,
 				schema: ErrorResponse
 			},
 			{
@@ -8100,7 +8200,13 @@ the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x6
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
+assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
+deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
+Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
+member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
+tier or above (&#x60;grant_exceeds_authority&#x60;).
 `,
 				schema: ErrorResponse
 			},
@@ -8156,7 +8262,13 @@ the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x6
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
+assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
+deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
+Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
+member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
+tier or above (&#x60;grant_exceeds_authority&#x60;).
 `,
 				schema: ErrorResponse
 			},
@@ -8205,7 +8317,13 @@ the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x6
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
+assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
+deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
+Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
+member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
+tier or above (&#x60;grant_exceeds_authority&#x60;).
 `,
 				schema: ErrorResponse
 			},
@@ -8267,7 +8385,13 @@ the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x6
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
+assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
+deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
+Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
+member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
+tier or above (&#x60;grant_exceeds_authority&#x60;).
 `,
 				schema: ErrorResponse
 			},
@@ -8292,7 +8416,7 @@ caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
 		method: 'patch',
 		path: '/api/v1/users/:userId/profile',
 		alias: 'patchApiv1usersUserIdprofile',
-		description: `Requires &#x60;identity.users.update&#x60; or self (path id equals the caller&#x27;s membership) (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+		description: `Requires &#x60;identity.users.update&#x60; or self (path id equals the caller&#x27;s membership) (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).  Editing ANOTHER member&#x27;s profile is also an authority decision: the caller must strictly outrank the member (&#x60;insufficient_rank&#x60;; owners may act on owners; super users and exempt platform operators are exempt), decided under the tenant&#x27;s authority lock (ADR 0069); editing one&#x27;s own profile is unchanged.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -8326,15 +8450,18 @@ caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
 			},
 			{
 				status: 403,
-				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
-effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
-and the caller is neither a super user nor a platform operator holding
-&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
-the lifecycle routes) a header equal to the path tenant is not a scope request, so
-&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
-decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
-lookup and is identical for existing, unknown and suspended tenants, so it cannot
-be used to probe which tenants exist.
+				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
+the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
+TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
+&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
+ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
+assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
+deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
+Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
+member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
+tier or above (&#x60;grant_exceeds_authority&#x60;).
 `,
 				schema: ErrorResponse
 			},
@@ -8349,7 +8476,7 @@ be used to probe which tenants exist.
 		method: 'post',
 		path: '/api/v1/users/:userId/reactivate',
 		alias: 'postApiv1usersUserIdreactivate',
-		description: `Requires &#x60;identity.users.reactivate&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;). The caller must strictly outrank the target member (&#x60;insufficient_rank&#x60;; owners may act on owners; super users and exempt platform operators are exempt), decided inside the transaction that holds the tenant&#x27;s authority lock (ADR 0069).
+		description: `Requires &#x60;identity.users.reactivate&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;). The caller must strictly outrank the target member (&#x60;insufficient_rank&#x60;; owners may act on owners; super users and exempt platform operators are exempt), decided inside the transaction that holds the tenant&#x27;s authority lock (ADR 0069). Reactivating an OWNER from outside the tenant (a platform operator under &#x60;X-Tenant-Id&#x60;) needs &#x60;platform.tenants.ownership&#x60; (&#x60;ownership_authority_required&#x60;), like deactivating one.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -8378,7 +8505,13 @@ the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x6
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
+assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
+deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
+Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
+member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
+tier or above (&#x60;grant_exceeds_authority&#x60;).
 `,
 				schema: ErrorResponse
 			},
@@ -8437,7 +8570,13 @@ the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x6
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
+assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
+deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
+Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
+member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
+tier or above (&#x60;grant_exceeds_authority&#x60;).
 `,
 				schema: ErrorResponse
 			},
@@ -8486,7 +8625,13 @@ the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x6
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
+assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
+deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
+Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
+member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
+tier or above (&#x60;grant_exceeds_authority&#x60;).
 `,
 				schema: ErrorResponse
 			},

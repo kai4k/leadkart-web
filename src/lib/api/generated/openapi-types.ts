@@ -2215,7 +2215,7 @@ export interface paths {
 		head?: never;
 		/**
 		 * Update user designation + department + status message
-		 * @description Requires `identity.users.update` or self (path id equals the caller's membership) (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 * @description Requires `identity.users.update` or self (path id equals the caller's membership) (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).  Editing ANOTHER member's profile is also an authority decision: the caller must strictly outrank the member (`insufficient_rank`; owners may act on owners; super users and exempt platform operators are exempt), decided under the tenant's authority lock (ADR 0069); editing one's own profile is unchanged.
 		 */
 		patch: {
 			parameters: {
@@ -2300,7 +2300,7 @@ export interface paths {
 					content?: never;
 				};
 				400: components['responses']['BadRequest'];
-				403: components['responses']['TenantScopeForbidden'];
+				403: components['responses']['AuthorityForbidden'];
 				422: components['responses']['Unprocessable'];
 			};
 		};
@@ -2431,7 +2431,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Reactivate a deactivated user
-		 * @description Requires `identity.users.reactivate` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`). The caller must strictly outrank the target member (`insufficient_rank`; owners may act on owners; super users and exempt platform operators are exempt), decided inside the transaction that holds the tenant's authority lock (ADR 0069).
+		 * @description Requires `identity.users.reactivate` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`). The caller must strictly outrank the target member (`insufficient_rank`; owners may act on owners; super users and exempt platform operators are exempt), decided inside the transaction that holds the tenant's authority lock (ADR 0069). Reactivating an OWNER from outside the tenant (a platform operator under `X-Tenant-Id`) needs `platform.tenants.ownership` (`ownership_authority_required`), like deactivating one.
 		 */
 		post: {
 			parameters: {
@@ -3190,7 +3190,7 @@ export interface paths {
 				};
 				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
-				/** @description `last_owner_protected` — the person is the only active owner of a tenant; nothing was changed */
+				/** @description `last_owner_protected` — the person is the only active owner of a tenant; nothing was changed. `person_memberships_changing` — the person's memberships kept changing while the change was checked (a reactivation raced it); nothing was changed, retry */
 				409: {
 					headers: {
 						[name: string]: unknown;
@@ -3499,7 +3499,8 @@ export interface paths {
 		/**
 		 * Soft-delete a role
 		 * @description Requires `identity.roles.delete` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
-		 *     The caller must hold every permission the role carries (deleting removes them from every holder).
+		 *     The caller must hold every permission the role carries (deleting removes them from every holder) and must
+		 *     be allowed to act on every active holder (answered before `role_in_use`).
 		 *     A role still held by an ACTIVE member is refused with 409 `role_in_use` (`errors.active_holders` is the
 		 *     count); a role held only by inactive members is deleted and their assignments are removed in the same
 		 *     transaction.
@@ -3593,6 +3594,13 @@ export interface paths {
 		 * @description Both fields optional. Empty `name` skips rename. Omitting
 		 *     `hierarchy_level` (or sending `null`) skips re-level — using a
 		 *     pointer field instead of a -1 sentinel keeps the wire shape clean.
+		 *     Changing what a role confers, re-levelling it or deleting it is acting on every ACTIVE member who holds it: the
+		 *     caller must strictly outrank each active holder (owners may act on owners) and must not hold the role
+		 *     themself (`insufficient_rank`, `self_modification_forbidden`); a rename acts on nobody. Every active holder's
+		 *     session ends the way an authority change on the member does: their old token answers 401 `stale_token`, the
+		 *     refresh succeeds with the new permissions and rank.
+		 *     A re-level is refused with 422 `role_level_breaks_reporting` when it would leave an active holder not strictly
+		 *     junior to their manager, or a direct report of a holder not strictly junior to the holder.
 		 *     Requires `identity.roles.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
 		 */
 		patch: {
@@ -3691,7 +3699,18 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
-				422: components['responses']['Unprocessable'];
+				/**
+				 * @description `validation_failed` / `role_invalid`, or `role_level_breaks_reporting` (the new level would leave an active
+				 *     holder not strictly junior to their manager, or a direct report of a holder not strictly junior to the holder).
+				 */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 			};
 		};
 		trace?: never;
@@ -3864,6 +3883,11 @@ export interface paths {
 		 *     `permission.IdentityPermissions` catalogue; unknown names surface
 		 *     as 422 (`permission_unknown`).
 		 *     Requires `identity.roles.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Conferring a permission the caller does not hold is rejected with `grant_exceeds_authority`.
+		 *     Changing what a role confers, re-levelling it or deleting it is acting on every ACTIVE member who holds it: the
+		 *     caller must strictly outrank each active holder (owners may act on owners) and must not hold the role
+		 *     themself (`insufficient_rank`, `self_modification_forbidden`); a rename acts on nobody. Every active holder's
+		 *     session ends the way an authority change on the member does: their old token answers 401 `stale_token`, the
+		 *     refresh succeeds with the new permissions and rank.
 		 */
 		put: {
 			parameters: {
@@ -3981,6 +4005,11 @@ export interface paths {
 		/**
 		 * Grant a single permission to the role
 		 * @description Requires `identity.roles.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Conferring a permission the caller does not hold is rejected with `grant_exceeds_authority`.
+		 *     Changing what a role confers, re-levelling it or deleting it is acting on every ACTIVE member who holds it: the
+		 *     caller must strictly outrank each active holder (owners may act on owners) and must not hold the role
+		 *     themself (`insufficient_rank`, `self_modification_forbidden`); a rename acts on nobody. Every active holder's
+		 *     session ends the way an authority change on the member does: their old token answers 401 `stale_token`, the
+		 *     refresh succeeds with the new permissions and rank.
 		 */
 		post: {
 			parameters: {
@@ -4096,6 +4125,11 @@ export interface paths {
 		/**
 		 * Revoke a single permission from the role
 		 * @description Requires `identity.roles.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 *     Changing what a role confers, re-levelling it or deleting it is acting on every ACTIVE member who holds it: the
+		 *     caller must strictly outrank each active holder (owners may act on owners) and must not hold the role
+		 *     themself (`insufficient_rank`, `self_modification_forbidden`); a rename acts on nobody. Every active holder's
+		 *     session ends the way an authority change on the member does: their old token answers 401 `stale_token`, the
+		 *     refresh succeeds with the new permissions and rank.
 		 */
 		post: {
 			parameters: {
@@ -4552,7 +4586,7 @@ export interface paths {
 				};
 				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
-				/** @description `last_owner_protected` — the person is the only active owner of a tenant; nothing was changed */
+				/** @description `last_owner_protected` — the person is the only active owner of a tenant; nothing was changed. `person_memberships_changing` — the person's memberships kept changing while the change was checked (a reactivation raced it); nothing was changed, retry */
 				409: {
 					headers: {
 						[name: string]: unknown;
@@ -4667,7 +4701,7 @@ export interface paths {
 				};
 				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
-				/** @description `last_owner_protected` — the person is the only active owner of a tenant; nothing was changed */
+				/** @description `last_owner_protected` — the person is the only active owner of a tenant; nothing was changed. `person_memberships_changing` — the person's memberships kept changing while the change was checked (a reactivation raced it); nothing was changed, retry */
 				409: {
 					headers: {
 						[name: string]: unknown;
@@ -4999,6 +5033,11 @@ export interface paths {
 		 *     (at most `page_size`, capped at 100); a page may therefore hold fewer items than `page_size`
 		 *     while `has_more` is true, and `next_cursor` continues after the last request examined.
 		 *     Keyset-paginated per ADR 0038.
+		 *     Every item of the approver queue carries `can_approve`: whether APPROVING it as asked would
+		 *     pass for the caller (the stored permission is requestable and within their authority, decided on
+		 *     the same stored facts approve uses). Deny is allowed for every listed item. A caller who can decide
+		 *     nothing (below the Admin tier and without `identity.roles.approve`) gets an empty page; a manager
+		 *     below the Admin tier sees only the requests of members who report to them.
 		 */
 		get: {
 			parameters: {
@@ -5317,12 +5356,19 @@ export interface paths {
 		 *     Decided by the authority policy (ADR 0069), never by the body: the requester's manager who
 		 *     holds `identity.roles.approve` AND the permission; or anyone of Administrator rank or above who
 		 *     strictly outranks the requester (an Administrator may approve any requestable permission
-		 *     without holding it, except user/role management, tenant settings, marketplace purchase and
-		 *     payment recording, which the Administrator must hold); or a super user / exempt operator
+		 *     without holding it, except user/role management, tenant settings, marketplace purchase, payment and
+		 *     invoice access, tenant-wide visibility (read-all, users, roles, tenants, lead credits) and the right to
+		 *     request elevation, which the Administrator must hold); or a super user / exempt operator
 		 *     acting in ANOTHER tenant (in the platform tenant an operator follows rank like anyone else).
-		 *     Never an impersonation session and never the requester.
+		 *     Never an impersonation session and never the requester. The approved grant ends no later than the
+		 *     approver's own when the approver holds the permission only through a time-bound override. A caller who
+		 *     is not the requester and may not even deny the request (not its manager with `identity.roles.approve`,
+		 *     not senior enough) is answered 404, like a request that does not exist. When the requested permission is on the
+		 *     requester's REVOKED list the approval is an un-revoke and additionally needs the authority to change
+		 *     their overrides (act on the member and hold the permission itself): otherwise 403
+		 *     `grant_exceeds_authority`, the request stays pending.
 		 *
-		 *     Check order: unknown request (404) → authority (403, whatever the request's state) → state
+		 *     Check order: unknown request, or a caller who may not decide it (404) → authority over this permission (403, whatever the request's state) → state
 		 *     (409 `permission_request_not_pending`) → requestability (422 `permission_not_requestable`: a
 		 *     stored request whose permission is not requestable, for example one submitted before that rule
 		 *     existed, stays pending; the approver can deny it and the requester can cancel it) → requester
@@ -5411,10 +5457,11 @@ export interface paths {
 					content?: never;
 				};
 				/**
-				 * @description `not_approver` (not the requester's manager, or lacks `identity.roles.approve`),
-				 *     `insufficient_rank`, `grant_exceeds_authority` (the approver does not hold the permission, or an
-				 *     Administrator lacks a must-hold one), `self_modification_forbidden` (own request),
-				 *     `impersonation_not_allowed`, `forbidden`, or `tenant_scope_not_supported` (`X-Tenant-Id` selected a foreign tenant)
+				 * @description `grant_exceeds_authority` (the approver does not hold the permission, an Administrator lacks a
+				 *     must-hold one, or the approval would lift a revoke without the Admin tier), `self_modification_forbidden`
+				 *     (own request), `impersonation_not_allowed`, `forbidden` (no valid or no longer active acting member), or
+				 *     `tenant_scope_not_supported` (`X-Tenant-Id` selected a foreign tenant). Callers who may not decide the
+				 *     request at all get 404, not `not_approver` / `insufficient_rank`.
 				 */
 				403: {
 					headers: {
@@ -5541,8 +5588,9 @@ export interface paths {
 					content?: never;
 				};
 				/**
-				 * @description `not_approver`, `insufficient_rank`, `self_modification_forbidden`, `impersonation_not_allowed`,
-				 *     `forbidden`, or `tenant_scope_not_supported` (`X-Tenant-Id` selected a foreign tenant)
+				 * @description `self_modification_forbidden` (own request), `impersonation_not_allowed`, `forbidden`, or
+				 *     `tenant_scope_not_supported` (`X-Tenant-Id` selected a foreign tenant). Callers who may not decide the
+				 *     request get 404.
 				 */
 				403: {
 					headers: {
@@ -12938,6 +12986,8 @@ export interface components {
 			created_at: string;
 			/** Format: date-time */
 			updated_at: string;
+			/** @description Present only on the approver queue (`role=approver`): whether approving this request as asked would pass for the caller. Approve succeeds iff true (barring a change since the list was read). */
+			can_approve?: boolean;
 		};
 		ListPermissionRequestsResponse: {
 			requests: components['schemas']['PermissionRequestDto'][];
@@ -13812,7 +13862,13 @@ export interface components {
 		 *     TenantScopeForbidden), `self_modification_forbidden` (the caller targeted themself),
 		 *     `insufficient_rank` (the caller does not strictly outrank the target member or role,
 		 *     ADR 0069), `grant_exceeds_authority` (the change confers or removes a permission the
-		 *     caller does not hold, or `tenant.admin` as a non-owner).
+		 *     caller does not hold, or `tenant.admin` as a non-owner), `ownership_authority_required`
+		 *     (a platform operator acting under `X-Tenant-Id` tried to change who OWNS the tenant:
+		 *     assign or revoke Company Owner, confer or remove `tenant.admin` by role or override, or
+		 *     deactivate or reactivate an owner, without `platform.tenants.ownership`; super users are unaffected).
+		 *     Editing a role acts on its active holders (`insufficient_rank`, `self_modification_forbidden`); lifting a
+		 *     member's explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
+		 *     tier or above (`grant_exceeds_authority`).
 		 */
 		AuthorityForbidden: {
 			headers: {
