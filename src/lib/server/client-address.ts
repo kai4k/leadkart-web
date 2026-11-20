@@ -9,7 +9,7 @@
  *   - the value is `event.getClientAddress()` and nothing else: exactly one address, validated as
  *     an IP with `node:net` (no pattern). A header the browser sent (`x-forwarded-for`,
  *     `forwarded`, `x-real-ip`, ...) is never copied: every Go request starts from headers built
- *     here, and `stripForwarding` removes what a caller put into the ones it passed;
+ *     here, and `goFetch` forwards only an allowlist of the caller's headers;
  *   - when the address cannot be read or is not one IP (a zone id such as `fe80::1%eth0` counts: Go
  *     then ignores the whole header), NO header is sent (Go falls back to the peer) and that is
  *     logged at warn level at most once per five minutes with a count of the rest; an IPv4-mapped
@@ -21,20 +21,6 @@ import { isIP } from 'node:net';
 import { getRequestEvent } from '$app/server';
 
 export const FORWARDED_FOR_HEADER = 'x-forwarded-for';
-
-/** Headers that say where a request came from, or which command it is: only the BFF writes them. */
-const CALLER_CONTROLLED = new Set([
-	'x-forwarded-for',
-	'x-forwarded-host',
-	'x-forwarded-proto',
-	'x-forwarded-port',
-	'forwarded',
-	'x-real-ip',
-	'x-client-ip',
-	'true-client-ip',
-	'cf-connecting-ip',
-	'x-command-id'
-]);
 
 /**
  * One warning per kind at most every five minutes, with a count of what was suppressed since: a
@@ -125,13 +111,6 @@ export function validClientAddress(read: () => string): string | undefined {
 		return undefined;
 	}
 	return unmapIPv4(value);
-}
-
-/** Remove every caller-supplied forwarding / command header (any casing) from a plain header record. */
-export function stripForwarding(headers: Record<string, string>): void {
-	for (const name of Object.keys(headers)) {
-		if (CALLER_CONTROLLED.has(name.toLowerCase())) delete headers[name];
-	}
 }
 
 /** Set the one `x-forwarded-for` (never append) from the request's address; nothing when it is unusable. */

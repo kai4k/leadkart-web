@@ -157,12 +157,12 @@ module.exports = {
 			name: 'layouts-no-feature-import',
 			severity: 'error',
 			comment:
-				'lib/layouts/* must not import from lib/features/* except the auth (session shell) and search (command palette) barrels.',
+				'lib/layouts/* must not import from lib/features/* except the auth (session shell), search (command palette) and preferences (the shell renders and edits them) barrels.',
 			from: { path: '^src/lib/layouts/' },
 			to: {
 				path: '^src/lib/features/',
-				// Shell-level features: auth + search, barrel only.
-				pathNot: '^src/lib/features/(auth|search)/index\\.ts$'
+				// Shell-level features: auth + search + preferences, barrel only.
+				pathNot: '^src/lib/features/(auth|search|preferences)/index\\.ts$'
 			}
 		}
 	],

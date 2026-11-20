@@ -13,7 +13,7 @@
  */
 import { register, init } from 'svelte-i18n';
 
-export const SUPPORTED_LOCALES = ['en', 'hi'] as const;
+const SUPPORTED_LOCALES = ['en', 'hi'] as const;
 export type AppLocale = (typeof SUPPORTED_LOCALES)[number];
 
 const FALLBACK_LOCALE: AppLocale = 'en';

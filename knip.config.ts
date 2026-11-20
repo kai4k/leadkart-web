@@ -45,7 +45,11 @@ const config: KnipConfig = {
 		'src/lib/**/*.stories.@(ts|svelte)!'
 	],
 	project: ['src/**/*.{ts,svelte,svelte.ts}', 'scripts/**/*.{ts,js,mjs,cjs}'],
-	ignore: ['src/lib/api/generated/**'],
+	ignore: [
+		'src/lib/api/generated/**',
+		// Empty by design: check-feature-structure requires an api.ts in every feature folder.
+		'src/lib/features/preferences/api.ts'
+	],
 	// Kit 3 virtual modules ($app/*) have no file on disk. ($service-worker is removed in Kit 3 and banned by eslint.)
 	ignoreUnresolved: [/^\$app\//],
 	ignoreDependencies: [

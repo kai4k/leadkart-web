@@ -4,10 +4,10 @@
  * page that just loaded was itself the result of a reset (reloading again would loop). While a
  * block is showing the page is stale: the BFF keeps refusing its calls, and the banner says so.
  */
-export type ResetBlockKind = 'offline' | 'loop';
+type ResetBlockKind = 'offline' | 'loop';
 
 /** What the declined reset was for, so a retry (back online) is the SAME reset. */
-export interface ResetRetry {
+interface ResetRetry {
 	reason: 'context' | 'session' | 'scope';
 	source: 'announcement' | 'refusal';
 }
@@ -21,7 +21,7 @@ export interface ResetBlock {
 
 const DEFAULT_RETRY: ResetRetry = { reason: 'context', source: 'refusal' };
 
-export function createResetBlock(): ResetBlock {
+function createResetBlock(): ResetBlock {
 	let kind = $state<ResetBlockKind | null>(null);
 	let retry: ResetRetry = DEFAULT_RETRY;
 	return {
