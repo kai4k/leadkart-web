@@ -541,6 +541,13 @@ test.describe('CRM Leads — detail page tabs', () => {
 			.getByRole('option')
 			.filter({ hasText: /Asha Verma/ })
 			.click();
+		// The chosen member keeps its name on the trigger after reopening and pressing Escape,
+		// even though the server query was emptied and the options are gone.
+		const ownerTrigger = page.getByRole('combobox', { name: 'New owner' });
+		await expect(ownerTrigger).toContainText('Asha Verma');
+		await ownerTrigger.click();
+		await page.keyboard.press('Escape');
+		await expect(ownerTrigger).toContainText('Asha Verma');
 		await page.locator('button[type="submit"][form="reassign-lead-form"]').click();
 		await expect(page.getByText(/lead reassigned/i)).toBeVisible({ timeout: 5000 });
 	});

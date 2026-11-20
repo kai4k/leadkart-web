@@ -192,7 +192,19 @@
 		}
 	},
 	"form": {
+		"required": "यह फ़ील्ड आवश्यक है।",
+		"calendar": {
+			"previousMonth": "पिछला महीना",
+			"nextMonth": "अगला महीना",
+			"month": "महीना",
+			"year": "वर्ष"
+		},
+		"number": {
+			"invalid": "मान्य संख्या दर्ज करें।"
+		},
 		"combobox": {
+			"clear": "चयन हटाएँ",
+			"selected": "चयनित",
 			"filter": "विकल्प फ़िल्टर करें",
 			"search": "खोजें…",
 			"select": "चुनें…",

@@ -192,7 +192,19 @@
 		}
 	},
 	"form": {
+		"required": "This field is required.",
+		"calendar": {
+			"previousMonth": "Previous month",
+			"nextMonth": "Next month",
+			"month": "Month",
+			"year": "Year"
+		},
+		"number": {
+			"invalid": "Enter a valid number."
+		},
 		"combobox": {
+			"clear": "Clear selection",
+			"selected": "Selected",
 			"filter": "Filter options",
 			"search": "Search…",
 			"select": "Select…",

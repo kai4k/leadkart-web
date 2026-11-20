@@ -2,6 +2,7 @@
 	import { RangeCalendar as RangeCalendarPrimitive } from 'bits-ui';
 	import { ChevronRight as ChevronRightIcon } from '#lib/icons/index.ts';
 	import { buttonVariants, type ButtonVariant } from '#lib/components/ui/button/index.ts';
+	import { _ } from 'svelte-i18n';
 	import { cn } from '#lib/utils/cn.ts';
 
 	let {
@@ -9,6 +10,7 @@
 		class: className,
 		children,
 		variant = 'ghost',
+		'aria-label': ariaLabel,
 		...restProps
 	}: RangeCalendarPrimitive.NextButtonProps & {
 		variant?: ButtonVariant;
@@ -29,9 +31,13 @@
 	)}
 	{...restProps}
 >
-	{#if children}
-		{@render children?.()}
-	{:else}
-		{@render Fallback()}
-	{/if}
+	{#snippet child({ props })}
+		<button {...props} aria-label={ariaLabel ?? $_('form.calendar.nextMonth')}>
+			{#if children}
+				{@render children?.()}
+			{:else}
+				{@render Fallback()}
+			{/if}
+		</button>
+	{/snippet}
 </RangeCalendarPrimitive.NextButton>

@@ -15,8 +15,8 @@
 		'flex size-(--cell-size) flex-col items-center justify-center gap-1 rounded-(--cell-radius) p-0 leading-none font-normal whitespace-nowrap select-none',
 		'[&:last-child[data-selected=true]_button]:rounded-e-(--cell-radius)',
 		'not-data-selected:hover:bg-accent not-data-selected:hover:text-accent-foreground',
-		'[&[data-today]:not([data-selected])]:bg-accent [&[data-today]:not([data-selected])]:text-accent-foreground [&[data-today][data-disabled]]:text-muted-foreground',
-		'data-[selected]:bg-primary data-[selected]:text-primary-foreground data-[selected]:hover:text-foreground',
+		'[&[data-today]:not([data-selected])]:ring-1 [&[data-today]:not([data-selected])]:ring-inset [&[data-today]:not([data-selected])]:ring-ring [&[data-today][data-disabled]]:text-muted-foreground',
+		'data-[selected]:bg-primary data-[selected]:text-primary-foreground',
 		// Outside months
 		'[&[data-outside-month]:not([data-selected])]:text-muted-foreground [&[data-outside-month]:not([data-selected])]:hover:text-accent-foreground',
 		// Disabled
@@ -24,7 +24,7 @@
 		// Unavailable
 		'data-[unavailable]:text-muted-foreground data-[unavailable]:line-through',
 		// focus
-		'focus:relative focus:border-ring focus:ring-ring',
+		'focus-visible:relative focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-popover',
 		// inner spans
 		'[&>span]:text-xs [&>span]:opacity-70',
 		className

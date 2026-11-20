@@ -212,6 +212,7 @@
 					<PasswordField
 						label="Initial password"
 						name="admin_password"
+						autocomplete="new-password"
 						bind:value={form.values.admin_password}
 						required
 						minlength={8}

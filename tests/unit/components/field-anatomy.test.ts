@@ -130,6 +130,42 @@ describe('NumberInput', () => {
 	});
 });
 
+describe('NumberInput parsing', () => {
+	function blurWith(text: string, props: Record<string, unknown> = {}) {
+		render(NumberInput, { label: 'Amount', value: 5, locale: 'en-IN', ...props });
+		const input = target.querySelector<HTMLInputElement>('input')!;
+		input.focus();
+		input.value = text;
+		input.dispatchEvent(new Event('input', { bubbles: true }));
+		input.blur();
+		flushSync();
+		return input;
+	}
+
+	it('reads 1,00,000 as 100000 in en-IN', () => {
+		const input = blurWith('1,00,000');
+		expect(input.value).toBe('100000');
+		expect(input.getAttribute('aria-invalid')).toBeNull();
+	});
+
+	it('reads a decimal and keeps min / max clamping', () => {
+		expect(blurWith('1.5', { precision: 1 }).value).toBe('1.5');
+		expect(blurWith('1,00,000', { max: 500 }).value).toBe('500');
+	});
+
+	it('garbage keeps the previous value, restores it and marks the field invalid', () => {
+		const input = blurWith('abc');
+		expect(input.value).toBe('5');
+		expect(input.getAttribute('aria-invalid')).toBe('true');
+		expect(target.querySelector('[id$="-error"]')?.textContent).toContain('valid number');
+		// Typing again clears the complaint.
+		input.value = '7';
+		input.dispatchEvent(new Event('input', { bubbles: true }));
+		flushSync();
+		expect(input.getAttribute('aria-invalid')).toBeNull();
+	});
+});
+
 describe('Switch', () => {
 	it('is a labelled switch described by its hint, toggled by click', () => {
 		render(Switch, { label: 'Email alerts', hint: 'Daily digest' });

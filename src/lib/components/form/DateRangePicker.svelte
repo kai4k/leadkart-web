@@ -2,10 +2,12 @@
 <!--
 	DateRangePicker — date-range picker on `ui/popover` + `ui/range-calendar`.
 
-	The field is a button (named by the visible label) showing "start – end" or a placeholder; it
-	opens a popover with the range month grid. bits-ui's range calendar handles the semantics and the
-	keyboard: arrow keys move between days, PageUp/PageDown change month, Enter or Space picks the
-	start, then the end; Escape closes. The popover closes once both ends are chosen.
+	The field is a button named by the visible label AND the chosen range (`aria-labelledby`); it
+	opens a popover with the range month grid. The caption has month and year dropdowns (default 1900
+	to ten years ahead; `minYear` / `maxYear`, or `minValue` / `maxValue`). bits-ui's range calendar
+	handles the semantics and the keyboard: arrow keys move between days, Enter or Space picks the
+	start, then the end; Escape closes. PageUp/PageDown are NOT implemented by bits-ui. The popover
+	closes once both ends are chosen.
 
 	The value is `{ start, end }` (bits-ui's DateRange contract). With `startName` / `endName`,
 	hidden inputs carry the ISO dates for native form submission.
@@ -43,6 +45,9 @@
 		readonly?: boolean;
 		locale?: string;
 		weekStartsOn?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+		/** First and last year offered by the year dropdown. Default: `minValue` / 1900 to `maxValue` / current year + 10. */
+		minYear?: number;
+		maxYear?: number;
 		startName?: string;
 		endName?: string;
 		id?: string;
@@ -64,6 +69,8 @@
 		readonly = false,
 		locale = 'en',
 		weekStartsOn = 0,
+		minYear,
+		maxYear,
 		startName,
 		endName,
 		id,
@@ -72,6 +79,8 @@
 
 	const uid = $props.id();
 	const fieldId = $derived(id ?? `daterange-${uid}`);
+	const labelId = $derived(`${fieldId}-label`);
+	const valueId = $derived(`${fieldId}-value`);
 	const hintId = $derived(`${fieldId}-hint`);
 	const errorId = $derived(`${fieldId}-error`);
 
@@ -80,6 +89,12 @@
 	);
 
 	let open = $state(false);
+
+	const years = $derived.by(() => {
+		const from = minYear ?? minValue?.year ?? 1900;
+		const to = maxYear ?? maxValue?.year ?? new Date().getFullYear() + 10;
+		return Array.from({ length: Math.max(to - from + 1, 1) }, (_, i) => from + i);
+	});
 
 	const formatter = $derived(new DateFormatter(locale, { dateStyle: 'medium' }));
 	const fmt = (d: DateValue | undefined) =>
@@ -95,18 +110,21 @@
 </script>
 
 <Field.Field class={className}>
-	<Field.Label for={fieldId} class={srLabel ? 'sr-only' : undefined}>{label}</Field.Label>
+	<Field.Label id={labelId} for={fieldId} class={srLabel ? 'sr-only' : undefined}
+		>{label}</Field.Label
+	>
 
 	<Popover.Root bind:open>
 		<Popover.Trigger
 			id={fieldId}
 			disabled={disabled || readonly}
+			aria-labelledby="{labelId} {valueId}"
 			aria-required={required ? 'true' : undefined}
 			aria-invalid={error ? 'true' : undefined}
 			aria-describedby={describedBy}
 			class={cn(fieldControlClass, 'justify-between gap-2 text-start')}
 		>
-			<span class={cn('truncate', !text && 'text-muted-foreground')}>
+			<span id={valueId} class={cn('truncate', !text && 'text-muted-foreground')}>
 				{text || $_('form.dateRangePicker.placeholder')}
 			</span>
 			<Icon icon={CalendarIcon} size="sm" class="shrink-0 text-muted-foreground" />
@@ -121,6 +139,8 @@
 				{maxValue}
 				{locale}
 				{weekStartsOn}
+				captionLayout="dropdown"
+				{years}
 				{disabled}
 				{readonly}
 				aria-label={label}

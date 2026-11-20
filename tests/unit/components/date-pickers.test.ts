@@ -1,6 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import { CalendarDate } from '@internationalized/date';
+import en from '../../../src/lib/i18n/locales/en.json';
 import DatePicker from '#lib/components/form/DatePicker.svelte';
 import DateRangePicker from '#lib/components/form/DateRangePicker.svelte';
 
@@ -117,5 +118,70 @@ describe('DateRangePicker', () => {
 		ten.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
 		flushSync();
 		await vi.waitFor(() => expect(document.activeElement).toBe(day(17)));
+	});
+});
+
+describe('date picker: year dropdown and announced value', () => {
+	const yearSelect = () =>
+		document.querySelector<HTMLSelectElement>(`select[aria-label="${en.form.calendar.year}"]`);
+
+	it('offers a year dropdown and choosing a year changes the visible month', async () => {
+		const trigger = render(DatePicker, {
+			value: START,
+			placeholder: START,
+			minYear: 1990,
+			maxYear: 2030
+		});
+		await open(trigger);
+		const select = yearSelect()!;
+		expect(select).not.toBeNull();
+		const years = [...select.options].map((o) => o.value);
+		expect(years[0]).toBe('1990');
+		expect(years.at(-1)).toBe('2030');
+		select.value = '1999';
+		select.dispatchEvent(new Event('change', { bubbles: true }));
+		flushSync();
+		await vi.waitFor(() =>
+			expect(document.querySelector('[data-bits-calendar-heading],[role="grid"]')).not.toBeNull()
+		);
+		await vi.waitFor(() => expect(yearSelect()!.value).toBe('1999'));
+	});
+
+	it('the default year range runs from 1900 to ten years ahead', async () => {
+		await open(render(DatePicker, { placeholder: START }));
+		const years = [...yearSelect()!.options].map((o) => Number(o.value));
+		expect(years[0]).toBe(1900);
+		expect(years.at(-1)).toBe(new Date().getFullYear() + 10);
+	});
+
+	it('names the previous / next month buttons', async () => {
+		await open(render(DatePicker, { placeholder: START }));
+		expect(
+			document.querySelector(`button[aria-label="${en.form.calendar.previousMonth}"]`)
+		).not.toBeNull();
+		expect(
+			document.querySelector(`button[aria-label="${en.form.calendar.nextMonth}"]`)
+		).not.toBeNull();
+	});
+
+	it('the trigger is named by the label and the chosen value', () => {
+		const trigger = render(DatePicker, { value: START });
+		const ids = (trigger.getAttribute('aria-labelledby') ?? '').split(' ');
+		expect(ids).toHaveLength(2);
+		const name = ids.map((id) => document.getElementById(id)?.textContent?.trim()).join(' ');
+		expect(name).toContain('When');
+		expect(name).toContain('2026');
+	});
+
+	it('a range picker trigger is named by the label and the chosen range', () => {
+		const trigger = render(DateRangePicker, {
+			value: { start: START, end: new CalendarDate(2026, 5, 12) }
+		});
+		const name = (trigger.getAttribute('aria-labelledby') ?? '')
+			.split(' ')
+			.map((id) => document.getElementById(id)?.textContent?.trim())
+			.join(' ');
+		expect(name).toContain('When');
+		expect(name).toContain('–');
 	});
 });

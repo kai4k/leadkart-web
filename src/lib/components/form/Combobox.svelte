@@ -16,7 +16,7 @@
 -->
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { ChevronDown, Icon } from '#lib/icons/index.ts';
+	import { ChevronDown, Icon, X } from '#lib/icons/index.ts';
 	import * as Command from '#lib/components/ui/command/index.ts';
 	import * as Field from '#lib/components/ui/field/index.ts';
 	import * as Popover from '#lib/components/ui/popover/index.ts';
@@ -39,6 +39,10 @@
 		value?: string | null;
 		onValueChange?: (value: string) => void;
 		onInput?: (query: string) => void;
+		/** Label for a `value` that arrives pre-selected and is not (yet) in `options`. */
+		selectedLabel?: string;
+		/** Shows a clear control while a value is set. */
+		clearable?: boolean;
 		placeholder?: string;
 		loading?: boolean;
 		emptyState?: string;
@@ -58,6 +62,8 @@
 		value = $bindable(null),
 		onValueChange,
 		onInput,
+		selectedLabel,
+		clearable = false,
 		placeholder,
 		loading = false,
 		emptyState,
@@ -74,11 +80,20 @@
 	const errorId = $derived(`${fieldId}-error`);
 	const listId = $derived(`${fieldId}-list`);
 
+	// The trigger is a button, so the browser cannot validate `required`. A required field that was
+	// opened and closed with nothing chosen reports the same error a failed submit would.
+	let touched = $state(false);
+	const hasValue = $derived(value !== null && value !== undefined && value !== '');
+	const effectiveError = $derived(
+		error || (required && touched && !hasValue ? $_('form.required') : null)
+	);
+
 	const describedBy = $derived(
-		[hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined
+		[effectiveError ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined
 	);
 
 	let open = $state(false);
+	const showClear = $derived(clearable && hasValue && !disabled);
 	let query = $state('');
 	let filterInput = $state<HTMLElement | null>(null);
 	// The list mounts two frames after the popover opens. Command scrolls its highlighted item into
@@ -101,20 +116,53 @@
 		if (placed) filterInput?.focus({ preventScroll: true });
 	});
 
-	const selectedLabel = $derived(options.find((o) => o.value === value)?.label ?? '');
+	// The label of what was chosen outlives `options`: a server-backed list replaces its options on
+	// every query, and the chosen item is usually not among them any more.
+	let chosen = $state<{ value: string; label: string } | null>(null);
+	const triggerLabel = $derived.by(() => {
+		if (!hasValue) return '';
+		const fromOptions = options.find((o) => o.value === value)?.label;
+		if (fromOptions) return fromOptions;
+		if (chosen?.value === value) return chosen.label;
+		return selectedLabel ?? '';
+	});
 
 	function select(opt: ComboboxOption) {
+		chosen = { value: opt.value, label: opt.label };
 		value = opt.value;
 		onValueChange?.(opt.value);
 		open = false;
 	}
 
+	function clear() {
+		chosen = null;
+		value = '';
+		onValueChange?.('');
+		query = '';
+		onInput?.('');
+	}
+
 	function handleOpenChange(next: boolean) {
 		open = next;
-		// A closed list starts empty next time, so a half-typed query never lingers.
-		if (!next) {
-			query = '';
-			onInput?.('');
+		if (next) return;
+		touched = true;
+		// A local list starts unfiltered next time. A server-backed list keeps the caller's query:
+		// clearing it would empty `options` under the chosen value.
+		if (!onInput) query = '';
+	}
+
+	// Closed trigger: ArrowDown/ArrowUp open the list; a printable character opens it and starts the
+	// filter with that character (the native select / combobox convention).
+	function onTriggerKeydown(event: KeyboardEvent) {
+		if (open || disabled || event.ctrlKey || event.metaKey || event.altKey) return;
+		if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+			event.preventDefault();
+			open = true;
+		} else if (event.key.length === 1 && event.key !== ' ') {
+			event.preventDefault();
+			query = event.key;
+			onInput?.(event.key);
+			open = true;
 		}
 	}
 </script>
@@ -123,23 +171,36 @@
 	<Field.Label for={fieldId} class={srLabel ? 'sr-only' : undefined}>{label}</Field.Label>
 
 	<Popover.Root {open} onOpenChange={handleOpenChange}>
-		<Popover.Trigger
-			id={fieldId}
-			role="combobox"
-			aria-expanded={open}
-			aria-haspopup="listbox"
-			aria-controls={listId}
-			aria-required={required ? 'true' : undefined}
-			aria-invalid={error ? 'true' : undefined}
-			aria-describedby={describedBy}
-			{disabled}
-			class={cn(fieldControlClass, 'justify-between gap-2 text-start')}
-		>
-			<span class={cn('truncate', !selectedLabel && 'text-muted-foreground')}>
-				{selectedLabel || (placeholder ?? $_('form.combobox.select'))}
-			</span>
-			<Icon icon={ChevronDown} size="sm" class="shrink-0 text-muted-foreground" />
-		</Popover.Trigger>
+		<div class="relative">
+			<Popover.Trigger
+				id={fieldId}
+				role="combobox"
+				aria-expanded={open}
+				aria-haspopup="listbox"
+				aria-controls={listId}
+				aria-required={required ? 'true' : undefined}
+				aria-invalid={effectiveError ? 'true' : undefined}
+				aria-describedby={describedBy}
+				{disabled}
+				onkeydown={onTriggerKeydown}
+				class={cn(fieldControlClass, 'justify-between gap-2 text-start')}
+			>
+				<span class={cn('truncate', !triggerLabel && 'text-muted-foreground', showClear && 'me-7')}>
+					{triggerLabel || (placeholder ?? $_('form.combobox.select'))}
+				</span>
+				<Icon icon={ChevronDown} size="sm" class="shrink-0 text-muted-foreground" />
+			</Popover.Trigger>
+			{#if showClear}
+				<button
+					type="button"
+					class="absolute inset-y-0 end-9 my-auto flex size-6 items-center justify-center rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring"
+					aria-label={$_('form.combobox.clear')}
+					onclick={clear}
+				>
+					<Icon icon={X} size="sm" />
+				</button>
+			{/if}
+		</div>
 
 		<Popover.Content
 			align="start"
@@ -171,6 +232,10 @@
 								>
 									<span class="flex min-w-0 flex-1 flex-col">
 										<span>{opt.label}</span>
+										<!-- bits-ui uses aria-selected for the highlighted row, so the chosen row says so in text. -->
+										{#if opt.value === value}
+											<span class="sr-only">{$_('form.combobox.selected')}</span>
+										{/if}
 										{#if opt.description}
 											<span class="text-xs text-muted-foreground">{opt.description}</span>
 										{/if}
@@ -192,7 +257,7 @@
 		<Field.Description id={hintId}>{hint}</Field.Description>
 	{/if}
 
-	{#if error}
-		<Field.Error id={errorId}>{error}</Field.Error>
+	{#if effectiveError}
+		<Field.Error id={errorId}>{effectiveError}</Field.Error>
 	{/if}
 </Field.Field>

@@ -107,6 +107,7 @@
 					<PasswordField
 						label="Initial password"
 						name="password"
+						autocomplete="new-password"
 						bind:value={form.values.password}
 						required
 						error={form.errors.password}

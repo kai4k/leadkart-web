@@ -153,6 +153,7 @@
 		id={fieldId}
 		type="file"
 		class="sr-only"
+		tabindex="-1"
 		{accept}
 		{multiple}
 		{disabled}

@@ -113,8 +113,20 @@ rounded-lg px-2.5 py-1`, both branches.
 
 Regenerated: `calendar`, `range-calendar` (same CLI run; `@internationalized/date` is already a
 direct dependency, a peer of bits-ui). The `locale` default is `en-US`: the form pickers pass theirs.
-No hand edits beyond the normaliser output (opaque hover `bg-accent`, `bg-transparent` for the dark
-range-middle hover). Contrast pairs the cells rely on are in `check-token-contrast`:
+Hand edits on top of the normaliser output (fix round A; regeneration must re-apply them):
+
+- `calendar-day` / `range-calendar-day`: a selected day (and range start / end) keeps
+  `text-primary-foreground` on hover (the generated `hover:text-foreground` turned it dark on the
+  primary fill); "today" is an inset `ring-ring` marker, not `bg-accent` (that was also the hover
+  fill); the range middle shows a hover ring (its cell is `bg-accent`, the same as a hover fill);
+  focus is `focus-visible:` with a 2px `ring-ring` and a `ring-offset-popover` offset (the generated
+  `focus:ring-ring` had no ring width).
+- `calendar-prev|next-button`, `range-calendar-*`: render through bits' `child` snippet so the
+  `aria-label` is localised (`form.calendar.previousMonth|nextMonth`); bits sets its own English
+  "Previous" / "Next" after the caller's props. `*-month-select`, `*-year-select` pass a localised
+  `aria-label` (`form.calendar.month|year`) through bits' own prop (the default is English).
+
+Other: opaque hover `bg-accent`. Contrast pairs the cells rely on are in `check-token-contrast`:
 `primary-foreground` on `primary` (selected, range ends), `accent-foreground` on `accent` (today),
 `muted-foreground` on `popover` and `accent` (weekday heads, outside days).
 

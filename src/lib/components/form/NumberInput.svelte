@@ -8,13 +8,17 @@
 	 * Behaviour:
 	 *   - +/− buttons step by `step`; disabled at min/max.
 	 *   - ArrowUp / ArrowDown step by `step`; Shift+Arrow steps by step×10.
-	 *   - Blur clamps to [min, max] + rounds to `precision` decimals.
+	 *   - Blur parses the text in the active locale ("1,00,000" in en-IN is 100000), clamps to
+	 *     [min, max] and rounds to `precision` decimals. Text that is not a number keeps the previous
+	 *     value, restores it in the field and marks the field invalid; it is never silently cleared.
 	 *   - Empty string preserved as null in `value`.
 	 *   - prefix / suffix render inside the field at the inline edges.
 	 */
 </script>
 
 <script lang="ts">
+	import { _, locale as i18nLocale } from 'svelte-i18n';
+	import { parseLocaleNumber } from '#lib/utils/parse-number.ts';
 	import { Icon, Minus, Plus } from '#lib/icons/index.ts';
 	import * as Field from '#lib/components/ui/field/index.ts';
 	import { Button } from '#lib/components/ui/button/index.ts';
@@ -38,6 +42,8 @@
 		hint?: string;
 		error?: string | null;
 		'aria-label'?: string;
+		/** BCP 47 tag the typed text is read in. Default: the active interface locale. */
+		locale?: string;
 		class?: string;
 	};
 
@@ -58,6 +64,7 @@
 		hint,
 		error,
 		'aria-label': ariaLabel,
+		locale,
 		class: className = ''
 	}: Props = $props();
 
@@ -65,8 +72,12 @@
 	const fieldId = $derived(id ?? `number-${uid}`);
 	const hintId = $derived(`${fieldId}-hint`);
 	const errorId = $derived(`${fieldId}-error`);
+	const activeLocale = $derived(locale ?? $i18nLocale ?? 'en');
+	// Set when the last commit could not read the text as a number; cleared on the next keystroke.
+	let unreadable = $state(false);
+	const shownError = $derived(error || (unreadable ? $_('form.number.invalid') : null));
 	const describedBy = $derived(
-		[hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined
+		[shownError ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined
 	);
 
 	let displayValue = $state(value === null || Number.isNaN(value) ? '' : String(value));
@@ -93,16 +104,19 @@
 
 	function commit(raw: string) {
 		if (raw.trim() === '') {
+			unreadable = false;
 			value = null;
 			displayValue = '';
 			return;
 		}
-		const parsed = Number(raw);
-		if (Number.isNaN(parsed)) {
-			value = null;
-			displayValue = '';
+		const parsed = parseLocaleNumber(raw, activeLocale);
+		if (parsed === null) {
+			// Keep what was there; show it again so the field and the value agree.
+			unreadable = true;
+			displayValue = value === null || Number.isNaN(value) ? '' : String(value);
 			return;
 		}
+		unreadable = false;
 		const next = round(clamp(parsed));
 		value = next;
 		displayValue = String(next);
@@ -162,13 +176,16 @@
 				aria-valuemin={min}
 				aria-valuemax={max}
 				aria-label={srLabel ? (ariaLabel ?? label) : undefined}
-				aria-invalid={error ? 'true' : undefined}
+				aria-invalid={shownError ? 'true' : undefined}
 				aria-describedby={describedBy}
 				{name}
 				{placeholder}
 				{disabled}
 				value={displayValue}
-				oninput={(e) => (displayValue = e.currentTarget.value)}
+				oninput={(e) => {
+					displayValue = e.currentTarget.value;
+					unreadable = false;
+				}}
 				onblur={() => commit(displayValue)}
 				onkeydown={onKeyDown}
 				class={cn('text-center tabular-nums', prefix && 'ps-7', suffix && 'pe-7')}
@@ -200,7 +217,7 @@
 		<Field.Description id={hintId}>{hint}</Field.Description>
 	{/if}
 
-	{#if error}
-		<Field.Error id={errorId}>{error}</Field.Error>
+	{#if shownError}
+		<Field.Error id={errorId}>{shownError}</Field.Error>
 	{/if}
 </Field.Field>

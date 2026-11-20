@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Calendar as CalendarPrimitive } from 'bits-ui';
+	import { _ } from 'svelte-i18n';
 	import { ChevronDown as ChevronDownIcon } from '#lib/icons/index.ts';
 	import { cn, type WithoutChildrenOrChild } from '#lib/utils/cn.ts';
 
@@ -7,6 +8,7 @@
 		ref = $bindable(null),
 		class: className,
 		value,
+		'aria-label': ariaLabel,
 		...restProps
 	}: WithoutChildrenOrChild<CalendarPrimitive.YearSelectProps> = $props();
 </script>
@@ -20,6 +22,7 @@
 	<CalendarPrimitive.YearSelect
 		bind:ref
 		class="absolute inset-0 opacity-0 dark:bg-popover dark:text-popover-foreground"
+		aria-label={ariaLabel ?? $_('form.calendar.year')}
 		{...restProps}
 	>
 		{#snippet child({ props, yearItems, selectedYearItem })}
