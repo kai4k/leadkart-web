@@ -12,7 +12,7 @@
 	 */
 	import type { Snippet } from 'svelte';
 	import { Icon } from '$icons';
-	import { resetPending } from '#lib/api/hard-reset.ts';
+	import { createResetPendingReader } from './reset-pending.svelte.ts';
 	import { resetBlock } from '#lib/api/reset-block.svelte.ts';
 	import { cn } from '#lib/utils/cn.ts';
 
@@ -32,8 +32,9 @@
 
 	// The banner stays (it still says where the page was rendered) but its control must not act on a
 	// context the page no longer has: while a reset is under way or its banner is up, `stale`.
-	// `resetBlock.kind` is the reactive part; `resetPending()` also covers a reset in flight.
-	const stale = $derived(resetBlock.kind !== null || resetPending());
+	// `resetBlock.kind` and the reader are both reactive: a reset in flight flips it at once.
+	const reset = createResetPendingReader();
+	const stale = $derived(resetBlock.kind !== null || reset.pending);
 </script>
 
 <div

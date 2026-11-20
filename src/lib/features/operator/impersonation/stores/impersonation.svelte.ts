@@ -44,13 +44,15 @@ function createImpersonation(): Impersonation {
 	let active = $state<ImpersonationSessionDto | null>(null);
 	let status = $state<ImpersonationStatus>('idle');
 	let error = $state<string | null>(null);
-	let targetName = $state<string | null>(null);
+	// The name belongs to ONE session id: it is shown only while that session is the active one.
+	let named = $state<{ sessionId: string; name: string } | null>(null);
 
 	async function reconcile(): Promise<void> {
 		if (typeof window === 'undefined') return;
 		const persistedId = window.localStorage.getItem(ACTIVE_SESSION_KEY);
 		if (!persistedId) {
 			active = null;
+			named = null;
 			return;
 		}
 		status = 'loading';
@@ -58,11 +60,13 @@ function createImpersonation(): Impersonation {
 			const { sessions } = await listImpersonationSessions();
 			const match = sessions.find((s) => s.session_id === persistedId);
 			if (match) {
+				if (named && named.sessionId !== match.session_id) named = null;
 				active = match;
 				status = 'active';
 			} else {
 				window.localStorage.removeItem(ACTIVE_SESSION_KEY);
 				active = null;
+				named = null;
 				status = 'idle';
 			}
 		} catch (e) {
@@ -77,7 +81,7 @@ function createImpersonation(): Impersonation {
 		try {
 			const { session_id } = await startImpersonation(req);
 			window.localStorage.setItem(ACTIVE_SESSION_KEY, session_id);
-			targetName = name ?? null;
+			named = name ? { sessionId: session_id, name } : null;
 			// Server doesn't return the full DTO on POST; refetch to populate.
 			await reconcile();
 		} catch (e) {
@@ -94,7 +98,7 @@ function createImpersonation(): Impersonation {
 			await endImpersonation(active.session_id);
 			window.localStorage.removeItem(ACTIVE_SESSION_KEY);
 			active = null;
-			targetName = null;
+			named = null;
 			status = 'idle';
 		} catch (e) {
 			status = 'error';
@@ -114,7 +118,7 @@ function createImpersonation(): Impersonation {
 			return error;
 		},
 		get targetName() {
-			return targetName;
+			return named && active && named.sessionId === active.session_id ? named.name : null;
 		},
 		reconcile,
 		start,

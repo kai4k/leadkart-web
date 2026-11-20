@@ -6,6 +6,8 @@
 	import { impersonation } from '../stores/impersonation.svelte';
 	import { session } from '$features/auth';
 	import { formatDateTime } from '#lib/utils/format.ts';
+	import { resetPending } from '#lib/api/hard-reset.ts';
+	import EntityName from '$layouts/EntityName.svelte';
 
 	// Reconcile impersonation state once the session's capabilities are there.
 	// Must live here (inside <QueryClientProvider>) not in (app)/+layout.svelte
@@ -18,7 +20,9 @@
 
 	const ending = $derived(impersonation.status === 'mutating');
 
+	// a reset can start between the last render and this click: re-check, like Exit does
 	async function endNow() {
+		if (resetPending()) return;
 		try {
 			await impersonation.end();
 		} catch {
@@ -30,9 +34,14 @@
 {#if impersonation.active}
 	<ContextBanner tone="destructive" icon={Eye} label={$_('shell.impersonation.region')}>
 		<span class="font-medium">
-			{impersonation.targetName
-				? $_('shell.impersonation.impersonating', { values: { tenant: impersonation.targetName } })
-				: $_('shell.impersonation.impersonatingCompany')}
+			{#if impersonation.targetName}
+				<EntityName
+					messageKey="shell.impersonation.impersonating"
+					name={impersonation.targetName}
+				/>
+			{:else}
+				{$_('shell.impersonation.impersonatingCompany')}
+			{/if}
 		</span>
 		<span class="ms-2">
 			{$_('shell.impersonation.details', {

@@ -144,6 +144,7 @@ function armRelease(reason: ResetReason, source: ResetSource): void {
 	}, STALL_AFTER_MS);
 	const release = () => {
 		reloading = false;
+		notifyPendingChange();
 		window.removeEventListener('pageshow', release);
 		clearTimeout(timer);
 	};
@@ -156,6 +157,20 @@ function armRelease(reason: ResetReason, source: ResetSource): void {
  */
 export function resetPending(): boolean {
 	return reloading || resetBlock.kind !== null;
+}
+
+const pendingListeners = new Set<() => void>();
+
+/** Additive, read-only hook: `listener` runs after `reloading` changed. It cannot change the latch. */
+export function onResetPendingChange(listener: () => void): () => void {
+	pendingListeners.add(listener);
+	return () => {
+		pendingListeners.delete(listener);
+	};
+}
+
+function notifyPendingChange(): void {
+	for (const listener of pendingListeners) listener();
 }
 
 /**
@@ -179,6 +194,7 @@ export function navigateHard(
 		return false;
 	}
 	reloading = true;
+	notifyPendingChange();
 	qc?.clear();
 	// Nothing actionable from the old context stays on screen (a toast's Undo would send from it).
 	toast.dismiss();

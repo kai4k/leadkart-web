@@ -101,7 +101,8 @@ async function tabToExit(page: Page) {
 		const hit = await page.evaluate(
 			() =>
 				document.activeElement?.tagName === 'BUTTON' &&
-				document.activeElement.closest('[data-shell="banner"]') !== null
+				document.activeElement.closest('[data-shell="banner"]') !== null &&
+				(document.activeElement.textContent ?? '').trim() === 'Exit context'
 		);
 		if (hit) return;
 	}

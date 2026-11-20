@@ -12,6 +12,7 @@
 	import { BrandMark, Button, Sidebar } from '$ui';
 	import { getPreferences } from '$features/preferences';
 	import UserMenu from './UserMenu.svelte';
+	import { quickModeTarget } from './mode-toggle.ts';
 	import { CommandPalette } from '$features/search';
 	import { session } from '$features/auth';
 
@@ -33,12 +34,11 @@
 		}
 	}
 
-	// light <-> dark; from `auto` it goes to the opposite of what the OS shows now.
+	// light <-> dark; in `auto` / `black-white` the choice is not overwritten: open the customizer.
 	function toggleMode() {
-		const resolvedDark =
-			prefs.mode === 'dark' ||
-			(prefs.mode === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
-		prefs.set({ mode: resolvedDark ? 'light' : 'dark' });
+		const next = quickModeTarget(prefs.mode);
+		if (next) prefs.set({ mode: next });
+		else onOpenCustomizer?.();
 	}
 
 	const iconButton = 'size-9 pointer-coarse:size-11';

@@ -12,6 +12,7 @@
 	import { exitScopeMutation } from '$features/operator/scope';
 	import { resetPending } from '#lib/api/hard-reset.ts';
 	import ContextBanner from './ContextBanner.svelte';
+	import EntityName from './EntityName.svelte';
 
 	const context = $derived(
 		(page.data as { tenantContext?: { displayName: string; isPlatform: boolean } | null })
@@ -27,7 +28,7 @@
 {#if context}
 	<ContextBanner tone="warning" icon={Building2} label={$_('shell.tenantContext.region')}>
 		<span class="font-medium">
-			{$_('shell.tenantContext.actingIn', { values: { tenant: context.displayName } })}
+			<EntityName messageKey="shell.tenantContext.actingIn" name={context.displayName} />
 		</span>
 		{#if context.isPlatform}
 			<Badge variant="brand" size="sm" class="ms-2">{$_('shell.tenantContext.platform')}</Badge>
