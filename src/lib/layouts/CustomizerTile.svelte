@@ -8,7 +8,6 @@
 	 * (`--palette-*`, `--neutral-*`, `--swatch-*`; the one place components read those).
 	 */
 	import * as RadioGroup from '#lib/components/ui/radio-group/index.ts';
-	import { cn } from '#lib/utils/cn.ts';
 	import type { PreferenceKey } from '$features/preferences';
 	import type { TileKind } from './customizer-config.ts';
 
@@ -17,20 +16,20 @@
 		value,
 		label,
 		kind,
-		hideBelow
+		disabled = false
 	}: {
 		group: PreferenceKey;
 		value: string;
 		label: string;
 		kind: TileKind;
-		/** the tile is not rendered below this breakpoint, unless it is the checked one (the group keeps a checked radio) */
-		hideBelow?: 'lg';
+		/** not available at this width: skipped by the roving focus, shown dimmed */
+		disabled?: boolean;
 	} = $props();
 
 	const id = $derived(`${group}-${value}`);
 </script>
 
-<RadioGroup.Tile {value} class={cn(hideBelow === 'lg' && 'max-lg:aria-[checked=false]:hidden')}>
+<RadioGroup.Tile {value} {disabled}>
 	{#if kind === 'wireframe'}
 		<span
 			class="cz-preview border-border group-aria-checked/tile:border-primary group-aria-checked/tile:ring-primary group-aria-checked/tile:ring-offset-popover block h-28 w-full overflow-hidden rounded-lg border group-aria-checked/tile:ring-2 group-aria-checked/tile:ring-offset-2"

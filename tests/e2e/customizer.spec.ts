@@ -163,7 +163,7 @@ test.describe('theme customizer', () => {
 
 test.describe('theme customizer on a phone', () => {
 	test.use({ viewport: { width: 390, height: 844 } });
-	test('opens full width, hides the layouts that need room, and scrolls to the primary colours', async ({
+	test('opens full width, disables the layouts that need room, keeps the group keyboard-reachable, and scrolls to the primary colours', async ({
 		page
 	}) => {
 		await open(page);
@@ -171,9 +171,22 @@ test.describe('theme customizer on a phone', () => {
 		const box = await dialog.boundingBox();
 		expect(box!.width).toBeGreaterThanOrEqual(389);
 		const layout = page.getByRole('radiogroup', { name: 'Layout' });
-		await expect(layout.getByRole('radio', { name: 'Semibox' })).toBeHidden();
-		await expect(layout.getByRole('radio', { name: 'Modern' })).toBeHidden();
+		await expect(layout.getByRole('radio', { name: 'Semibox' })).toBeDisabled();
+		await expect(layout.getByRole('radio', { name: 'Modern' })).toBeDisabled();
 		await expect(layout.getByRole('radio', { name: 'Horizontal' })).toBeVisible();
+		await expect(layout.getByRole('radio', { name: 'Vertical' })).toBeChecked();
+		// arrow keys skip the unavailable tiles; the group keeps one reachable tab stop
+		await layout.getByRole('radio', { name: 'Horizontal' }).focus();
+		await page.keyboard.press('ArrowRight');
+		await expect(layout.getByRole('radio', { name: 'Boxed' })).toBeFocused();
+		const stops = await layout
+			.getByRole('radio')
+			.evaluateAll(
+				(els) =>
+					els.filter((e) => (e as HTMLElement).tabIndex === 0 && !(e as HTMLButtonElement).disabled)
+						.length
+			);
+		expect(stops).toBe(1);
 		await pick(page, 'Primary colour', 'Amber');
 		expect(await attr(page, 'data-colors')).toBe('amber');
 		// no horizontal scroll inside the sheet

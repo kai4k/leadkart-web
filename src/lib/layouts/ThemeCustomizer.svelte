@@ -15,7 +15,7 @@
 	import { cn } from '#lib/utils/cn.ts';
 	import { getPreferences, type PreferenceKey } from '$features/preferences';
 	import CustomizerTile from './CustomizerTile.svelte';
-	import { visibleGroups } from './customizer-config.ts';
+	import { effectiveValue, visibleGroups } from './customizer-config.ts';
 
 	let {
 		open = $bindable(false),
@@ -24,6 +24,18 @@
 
 	const prefs = getPreferences();
 	const groups = $derived(visibleGroups(prefs.all));
+
+	// Below `lg` the layouts that need room cannot be chosen: their tiles stay in the group but
+	// disabled (the roving focus skips them), and the tile for what is rendered there is checked.
+	let narrow = $state(false);
+	$effect(() => {
+		const query = window.matchMedia?.('(max-width: 63.999rem)');
+		if (!query) return;
+		narrow = query.matches;
+		const onChange = (e: MediaQueryListEvent) => (narrow = e.matches);
+		query.addEventListener('change', onChange);
+		return () => query.removeEventListener('change', onChange);
+	});
 
 	function choose(key: PreferenceKey, value: string): void {
 		// the store checks the value against the schema's enum
@@ -47,18 +59,23 @@
 				{#each groups as group (group.key)}
 					{@const titleId = `customizer-${group.key}-title`}
 					{@const hintId = `customizer-${group.key}-hint`}
+					{@const hasNarrowHint = narrow && group.options.some((o) => o.hideBelow)}
 					<fieldset class="m-0 min-w-0 border-0 p-0">
 						<legend id={titleId} class="text-foreground mb-1 text-sm font-semibold">
 							{$_(group.titleKey)}
 						</legend>
 						{#if group.hintKey}
 							<p id={hintId} class="text-muted-foreground mb-3 text-sm">{$_(group.hintKey)}</p>
+						{:else if hasNarrowHint}
+							<p id={hintId} class="text-muted-foreground mb-3 text-sm">
+								{$_('customizer.narrowHint')}
+							</p>
 						{/if}
 						<RadioGroup.Root
-							value={prefs[group.key]}
+							value={effectiveValue(group.key, prefs[group.key], narrow)}
 							onValueChange={(v) => choose(group.key, v)}
 							aria-labelledby={titleId}
-							aria-describedby={group.hintKey ? hintId : undefined}
+							aria-describedby={group.hintKey || hasNarrowHint ? hintId : undefined}
 							class={cn(
 								'mt-3 grid',
 								group.kind === 'swatch'
@@ -75,7 +92,7 @@
 									value={option.value}
 									label={$_(option.labelKey)}
 									kind={group.kind}
-									hideBelow={option.hideBelow}
+									disabled={narrow && Boolean(option.hideBelow)}
 								/>
 							{/each}
 						</RadioGroup.Root>

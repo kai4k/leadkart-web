@@ -459,6 +459,7 @@
 		"title": "Customize",
 		"description": "Colours and layout. Changes apply at once and are remembered on this device.",
 		"reset": "Reset to defaults",
+		"narrowHint": "Modern and Semibox are available on larger screens.",
 		"layout": {
 			"title": "Layout",
 			"vertical": "Vertical",

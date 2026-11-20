@@ -216,22 +216,77 @@ describe('accessibility and tokens', () => {
 		expect(dialog().querySelector('[data-preview="layout-semibox"]')).not.toBeNull();
 	});
 
-	it('the layouts that need room are hidden below lg by class unless checked, the others never', async () => {
-		await render();
-		const hideUnchecked = 'max-lg:aria-[checked=false]:hidden';
-		expect(radio('Layout', 'Semibox').className).toContain(hideUnchecked);
-		expect(radio('Layout', 'Modern').className).toContain(hideUnchecked);
-		expect(radio('Layout', 'Vertical').className).not.toContain('max-lg:');
-	});
+	describe('below lg (matchMedia stub)', () => {
+		const original = window.matchMedia;
+		const stub = (narrow: boolean) =>
+			(window.matchMedia = ((query: string) => ({
+				matches: narrow && query.includes('max-width'),
+				media: query,
+				addEventListener: () => {},
+				removeEventListener: () => {},
+				addListener: () => {},
+				removeListener: () => {},
+				onchange: null,
+				dispatchEvent: () => false
+			})) as never);
+		afterEach(() => (window.matchMedia = original));
+		const layoutRadios = () => [...group('Layout').querySelectorAll<HTMLElement>('[role="radio"]')];
+		const isDisabled = (r: HTMLElement) =>
+			r.hasAttribute('data-disabled') || (r as HTMLButtonElement).disabled;
+		const key = (el: HTMLElement, k: string) => {
+			el.focus();
+			el.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+			flushSync();
+		};
 
-	it('a saved semibox layout keeps a checked tile in the group (it is never hidden while checked)', async () => {
-		await render({ layout: 'semibox' });
-		const checked = [...group('Layout').querySelectorAll('[role="radio"]')].filter(
-			(r) => r.getAttribute('aria-checked') === 'true'
-		);
-		expect(checked).toHaveLength(1);
-		expect(checked[0]).toBe(radio('Layout', 'Semibox'));
-		expect(checked[0]!.className).not.toMatch(/(^|\s)max-lg:hidden/);
+		it('the layouts that need room are disabled (not hidden: no hidden roving stop) with a hint', async () => {
+			stub(true);
+			await render();
+			for (const name of ['Modern', 'Semibox']) {
+				expect(isDisabled(radio('Layout', name))).toBe(true);
+				expect(radio('Layout', name).className).not.toMatch(/max-lg:[^ ]*hidden/);
+			}
+			for (const name of ['Vertical', 'Horizontal', 'Boxed'])
+				expect(isDisabled(radio('Layout', name))).toBe(false);
+			expect(dialog().textContent).toContain('larger screens');
+		});
+
+		it('wide: nothing is disabled and no hint is shown', async () => {
+			stub(false);
+			await render();
+			expect(layoutRadios().filter(isDisabled)).toHaveLength(0);
+			expect(dialog().textContent).not.toContain('larger screens');
+		});
+
+		it('arrow keys cycle only the available tiles, and the group keeps exactly one tab stop', async () => {
+			stub(true);
+			await render();
+			expect(layoutRadios().filter((r) => r.tabIndex === 0)).toHaveLength(1);
+			key(radio('Layout', 'Horizontal'), 'ArrowRight');
+			expect(document.activeElement).toBe(radio('Layout', 'Boxed'));
+			key(radio('Layout', 'Boxed'), 'ArrowLeft');
+			expect(document.activeElement).toBe(radio('Layout', 'Horizontal'));
+			const stops = layoutRadios().filter((r) => r.tabIndex === 0);
+			expect(stops).toHaveLength(1);
+			expect(isDisabled(stops[0]!)).toBe(false);
+		});
+
+		it('a saved semibox layout shows the tile that is rendered at this width as checked and focusable; the preference is untouched', async () => {
+			stub(true);
+			await render({ layout: 'semibox' });
+			const checked = layoutRadios().filter((r) => r.getAttribute('aria-checked') === 'true');
+			expect(checked).toEqual([radio('Layout', 'Vertical')]);
+			expect(checked[0]!.tabIndex).toBe(0);
+			expect(layoutRadios().filter((r) => r.tabIndex === 0)).toHaveLength(1);
+			expect(prefs.layout).toBe('semibox');
+			expect(writes).toHaveLength(0);
+		});
+
+		it('a saved semibox layout on a wide screen is the checked one', async () => {
+			stub(false);
+			await render({ layout: 'semibox' });
+			expect(radio('Layout', 'Semibox').getAttribute('aria-checked')).toBe('true');
+		});
 	});
 
 	it('arrow keys move through a group (roving focus: one tab stop per group)', async () => {

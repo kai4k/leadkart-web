@@ -69,6 +69,15 @@ const HIDE_BELOW: Partial<Record<PreferenceKey, readonly string[]>> = {
 	layout: ['modern', 'semibox']
 };
 
+/**
+ * The option the page actually renders for a saved value below `lg`: the layouts that need room
+ * (modern, semibox) fall back to the vertical shell there. The saved preference is not touched.
+ */
+export function effectiveValue(key: PreferenceKey, saved: string, narrow: boolean): string {
+	if (narrow && HIDE_BELOW[key]?.includes(saved)) return 'vertical';
+	return saved;
+}
+
 function groupFor(key: PreferenceKey): CustomizerGroup {
 	const hidden = HIDE_BELOW[key] ?? [];
 	const values: readonly string[] = PREFERENCE_VALUES[key];
