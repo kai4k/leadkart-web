@@ -3,8 +3,8 @@
  *
  * Industry canon: every design decision (colour, spacing, typography,
  * motion, radius, shadow, z-index) declared as CSS custom properties
- * here. Components consume via Tailwind utilities (`bg-brand-500`,
- * `text-fg-muted`) or `var(--token)` directly. NEVER inline hex.
+ * here. Components consume via Tailwind utilities (`bg-primary`,
+ * `text-muted-foreground`) or `var(--token)` directly. NEVER inline hex.
  *
  * References:
  *   - Tailwind 4 `@theme` directive (tailwindcss.com/docs/theme)
@@ -34,150 +34,9 @@
 @import '@fontsource-variable/jetbrains-mono';
 
 @theme {
-	/* ═══ COLOUR — semantic tokens live in theme/semantic.css (`--background`,
-	 * `--card`, `--primary`, …) and are bridged to Tailwind utilities by the
-	 * `@theme inline` block at the bottom of this file. The names below are
-	 * LEGACY ALIASES onto that layer so call sites not yet swept to the semantic
-	 * utilities keep rendering, and follow dark mode and the chosen primary.
-	 * Task 16 of the Phase 2 plan deletes them once nothing references them. */
-
-	/* brand ramp → the SELECTED primary ramp (<html data-colors>) */
-	--color-brand-50: var(--primary-50);
-	--color-brand-100: var(--primary-100);
-	--color-brand-200: var(--primary-200);
-	--color-brand-300: var(--primary-300);
-	--color-brand-400: var(--primary-400);
-	--color-brand-500: var(--primary-500);
-	--color-brand-600: var(--brand-600);
-	--color-brand-700: var(--primary-700);
-	--color-brand-800: var(--primary-800);
-	--color-brand-900: var(--primary-900);
-	--color-brand-950: var(--primary-950);
-	--color-brand: var(--color-brand-600);
-
-	--color-primary-active: color-mix(in srgb, var(--primary) 80%, var(--foreground));
-	--color-primary-fg: var(--primary-foreground);
-	--color-focus-ring: var(--ring);
-
-	/* Logo palette — LITERAL asset hex per the brand spec (corrected
-	 * 2026-05-16). The previous values (`#a05dce`, `#3146a5`, etc.)
-	 * were wrong guesses; these six are the actual popping colours
-	 * pulled from the logo asset:                                    */
-	--color-logo-purple: #953fc9; /* vibrant highlight purple */
-	--color-logo-purple-deep: #1e1043; /* deepest shadow purple */
-	--color-logo-purple-mid: #502d81; /* wordmark base — = --color-brand-600 */
-	--color-logo-blue: #0b3e8c; /* navy supporting accent */
-	--color-logo-blue-deep: #070e5c; /* deepest blue shadow */
-	--color-logo-green: #18f217; /* vibrant neon (chemist bag) */
-	/* `-on-light` derivative — neon #18f217 fails WCAG AA on white
-	 * (contrast ~1.4:1); this dimmed variant passes AA (~4.7:1) for
-	 * use as text/icon strokes on light surfaces. */
-	--color-logo-green-on-light: oklch(0.55 0.21 142);
-	--color-medical-red: oklch(0.58 0.22 27);
-
-	/* ═══ SECONDARY — vibrant neon green from the LeadKart chemist bag.
-	 * Anchored to the LITERAL logo hex #18f217 (was wrongly documented
-	 * as #39C12C — much more muted than the actual asset). The bag
-	 * green pops aggressively; secondary-500 captures that. Scale
-	 * derived in OKLCH at hue 142 around the anchor stop.
-	 *
-	 * Distinct from --color-success-* (iOS #34C759) — secondary is for
-	 * BRAND uses (growth charts, buy-lead CTAs), success is for
-	 * FEEDBACK (toasts, validation, status badges). Secondary chroma
-	 * is higher than success to read as "logo neon", not "checkmark".
-	 * ──────────────────────────────────────────────────────────── */
-	--color-secondary-50: oklch(0.97 0.04 142);
-	--color-secondary-100: oklch(0.93 0.1 142);
-	--color-secondary-200: oklch(0.86 0.16 142);
-	--color-secondary-300: oklch(0.78 0.2 142);
-	--color-secondary-400: oklch(0.78 0.24 142);
-	--color-secondary-500: #18f217; /* LITERAL logo neon green */
-	--color-secondary-600: oklch(0.7 0.25 142);
-	--color-secondary-700: oklch(0.58 0.21 142); /* AA on white ≈ 4.7:1 */
-	--color-secondary-800: oklch(0.46 0.17 142);
-	--color-secondary-900: oklch(0.32 0.12 142);
-	--color-secondary-950: oklch(0.2 0.08 142);
-
-	/* status + neutral ramps → palettes */
-	--color-success-50: var(--palette-success-50);
-	--color-success-100: var(--palette-success-100);
-	--color-success-200: var(--palette-success-200);
-	--color-success-300: var(--palette-success-300);
-	--color-success-400: var(--palette-success-400);
-	--color-success-500: var(--palette-success-500);
-	--color-success-600: var(--palette-success-600);
-	--color-success-700: var(--palette-success-700);
-	--color-success-800: var(--palette-success-800);
-	--color-success-900: var(--palette-success-900);
-	--color-success-950: var(--palette-success-950);
-
-	--color-warning-50: var(--palette-warning-50);
-	--color-warning-100: var(--palette-warning-100);
-	--color-warning-200: var(--palette-warning-200);
-	--color-warning-300: var(--palette-warning-300);
-	--color-warning-400: var(--palette-warning-400);
-	--color-warning-500: var(--palette-warning-500);
-	--color-warning-600: var(--palette-warning-600);
-	--color-warning-700: var(--palette-warning-700);
-	--color-warning-800: var(--palette-warning-800);
-	--color-warning-900: var(--palette-warning-900);
-	--color-warning-950: var(--palette-warning-950);
-
-	--color-danger-50: var(--palette-danger-50);
-	--color-danger-100: var(--palette-danger-100);
-	--color-danger-200: var(--palette-danger-200);
-	--color-danger-300: var(--palette-danger-300);
-	--color-danger-400: var(--palette-danger-400);
-	--color-danger-500: var(--palette-danger-500);
-	--color-danger-600: var(--palette-danger-600);
-	--color-danger-700: var(--palette-danger-700);
-	--color-danger-800: var(--palette-danger-800);
-	--color-danger-900: var(--palette-danger-900);
-	--color-danger-950: var(--palette-danger-950);
-
-	--color-info-50: var(--palette-info-50);
-	--color-info-100: var(--palette-info-100);
-	--color-info-200: var(--palette-info-200);
-	--color-info-300: var(--palette-info-300);
-	--color-info-400: var(--palette-info-400);
-	--color-info-500: var(--palette-info-500);
-	--color-info-600: var(--palette-info-600);
-	--color-info-700: var(--palette-info-700);
-	--color-info-800: var(--palette-info-800);
-	--color-info-900: var(--palette-info-900);
-	--color-info-950: var(--palette-info-950);
-
-	--color-gray-50: var(--palette-gray-50);
-	--color-gray-100: var(--palette-gray-100);
-	--color-gray-200: var(--palette-gray-200);
-	--color-gray-300: var(--palette-gray-300);
-	--color-gray-400: var(--palette-gray-400);
-	--color-gray-500: var(--palette-gray-500);
-	--color-gray-600: var(--palette-gray-600);
-	--color-gray-700: var(--palette-gray-700);
-	--color-gray-800: var(--palette-gray-800);
-	--color-gray-900: var(--palette-gray-900);
-	--color-gray-950: var(--palette-gray-950);
-
-	/* surfaces + text: same rendered values as before in light; dark follows --dark-* */
-	--color-bg: var(--background);
-	--color-bg-subtle: light-dark(oklch(0.93 0.008 268), var(--dark-850));
-	--color-bg-muted: var(--muted);
-	--color-bg-elevated: var(--card);
-
-	--color-fg: var(--foreground);
-	--color-fg-muted: var(--muted-foreground);
-	--color-fg-subtle: light-dark(oklch(0.49 0.02 250), var(--dark-400));
-	--color-fg-on-brand: var(--primary-foreground);
-
-	--color-border-strong: var(--input);
-
-	--color-brand-heading: var(--primary);
-	--color-brand-link: var(--primary);
-	--color-brand-link-hover: var(--color-primary-hover);
-
-	--color-overlay: oklch(0.18 0.02 250 / 0.5);
-	--color-overlay-strong: oklch(0.18 0.02 250 / 0.7);
+	/* ═══ COLOUR — there are none here. The semantic tokens live in theme/semantic.css and are
+	 * bridged to Tailwind utilities by the `@theme inline` block at the bottom of this file. The
+	 * pre-Phase-2 colour names were deleted in Task 16 and `check-tokens` refuses them. */
 
 	/* ═══ TYPOGRAPHY — Poppins (LeadKart legacy from Blazor side)
 	 * + JetBrains Mono Variable for code/data.
@@ -314,82 +173,21 @@
 		0 20px 25px -5px oklch(0.2 0.02 256 / 0.1), 0 8px 10px -6px oklch(0.2 0.02 256 / 0.1);
 	--shadow-xl: 0 25px 50px -12px oklch(0.2 0.02 256 / 0.25);
 	--shadow-inner: inset 0 2px 4px 0 oklch(0.2 0.02 256 / 0.05);
-	--shadow-focus: 0 0 0 3px var(--color-brand-200);
+	--shadow-focus: 0 0 0 3px var(--ring);
 
-	/* ═══ COLOURED SHADOWS — brand/semantic-tinted halos for CTAs.
-	 *
-	 * Industry refs: Stripe Dashboard primary CTAs, Linear Cmd-K palette,
-	 * Refactoring UI ch.7 (coloured shadows for tactile feedback).
-	 *
-	 * These tokens centralise the OKLCH triplets that previously lived
-	 * inline in utilities.css/animations.css/Button.svelte arbitrary-value
-	 * classes. Drift-free: changing the brand hue at the top of the file
-	 * propagates to halo + glow + button shadow without grep-and-replace.
-	 *
-	 * The opacity-bearing oklch literals duplicate the brand-600/500 etc.
-	 * values intentionally — CSS can't var() inside oklch() arithmetic,
-	 * so the literal IS the canonical token here. Keep the comment chain
-	 * (`-600 lightness/chroma/hue` etc.) so future edits stay in sync.
-	 * ─────────────────────────────────────────────────────────────── */
+	/* ═══ COLOURED SHADOWS — primary-tinted halos for CTAs (they follow the chosen primary). */
 	--shadow-brand:
-		0 4px 14px -4px color-mix(in srgb, var(--color-brand-600) 35%, transparent),
-		0 2px 4px -2px color-mix(in srgb, var(--color-brand-600) 18%, transparent);
+		0 4px 14px -4px color-mix(in srgb, var(--primary) 35%, transparent),
+		0 2px 4px -2px color-mix(in srgb, var(--primary) 18%, transparent);
 	--shadow-brand-hover:
-		0 8px 22px -4px color-mix(in srgb, var(--color-brand-500) 45%, transparent),
-		0 4px 8px -2px color-mix(in srgb, var(--color-brand-500) 25%, transparent);
+		0 8px 22px -4px color-mix(in srgb, var(--primary) 45%, transparent),
+		0 4px 8px -2px color-mix(in srgb, var(--primary) 25%, transparent);
 
-	/* Secondary green CTA — uses secondary-700 shade for AA-safe halo
-	 * (the visible button text contrast is the tighter constraint; the
-	 * shadow just needs to read as "green-tinted" against the page bg). */
-	--shadow-secondary: 0 4px 14px -4px oklch(0.48 0.17 140 / 0.4); /* secondary-700 */
-
-	/* Danger red CTA — same shape as brand/secondary. */
-	--shadow-danger: 0 4px 14px -4px oklch(0.66 0.23 25 / 0.4); /* danger-500 */
-
-	/* Brand glow — pulsed halo for primary "next-step" CTAs. References
-	 * --color-brand-500 via color-mix so the glow auto-tracks the
-	 * primary hue if the brand scale is retuned (no stale literals). */
-	--brand-glow-rest: color-mix(in srgb, var(--color-brand-500) 40%, transparent);
-	--brand-glow-rest-shadow: color-mix(in srgb, var(--color-brand-500) 25%, transparent);
-	--brand-glow-peak-shadow: color-mix(in srgb, var(--color-brand-500) 35%, transparent);
-	--brand-glow-fade: color-mix(in srgb, var(--color-brand-500) 0%, transparent);
-
-	/* ═══ LIQUID GLASS — translucent surface system per Blazor canon
-	 * (LeadKart.Web/wwwroot/css/leadkart.css "iOS-inspired design system
-	 * with liquid glass surfaces"). The combo of `backdrop-filter: blur()
-	 * saturate()` + a translucent background + a subtle inner top-border
-	 * highlight creates the Apple-flavoured frosted-glass feel.
-	 *
-	 * Surfaces use these in PAIRS — blur + saturate + opacity tuned per
-	 * elevation level. Cards stay SOLID (no glass) to preserve content
-	 * legibility — glass is for navigation chrome / overlays / popovers.
-	 *
-	 * Accessibility: prefers-reduced-transparency falls back to solid
-	 * surfaces (handled in utilities.css). ─────────────────────── */
-	--glass-blur-sm: 16px; /* tooltip */
-	--glass-blur-md: 20px; /* appbar / drawer / toast */
-	--glass-blur-lg: 24px; /* popover / dropdown */
-	--glass-blur-xl: 32px; /* customiser drawer */
-	--glass-blur-2xl: 40px; /* dialog */
-
-	--glass-saturate-sm: 1.3;
-	--glass-saturate-md: 1.4;
-	--glass-saturate-lg: 1.5;
-	--glass-saturate-xl: 1.6;
-	--glass-saturate-2xl: 1.8;
-
-	/* Background opacity — applied via color-mix(elevated, transparent).
-	 * Lower opacity = MORE blur shows through. */
-	--glass-opacity-strong: 88%; /* drawer */
-	--glass-opacity-base: 85%; /* appbar / customiser */
-	--glass-opacity-light: 82%; /* popover */
-	--glass-opacity-translucent: 72%; /* dialog */
-
-	/* Inner highlight — tiny white inset top-border simulates the
-	 * Apple "edge of glass" sheen. Stays subtle in light theme,
-	 * stronger in dark. */
-	--glass-highlight: rgb(255 255 255 / 0.15);
-	--glass-highlight-subtle: rgb(255 255 255 / 0.08);
+	/* Brand glow — pulsed halo for primary "next-step" CTAs. */
+	--brand-glow-rest: color-mix(in srgb, var(--primary) 40%, transparent);
+	--brand-glow-rest-shadow: color-mix(in srgb, var(--primary) 25%, transparent);
+	--brand-glow-peak-shadow: color-mix(in srgb, var(--primary) 35%, transparent);
+	--brand-glow-fade: color-mix(in srgb, var(--primary) 0%, transparent);
 
 	/* ═══ MOTION — duration + easing tokens
 	 *
@@ -458,100 +256,6 @@
 	--page-width-lg: 64rem;
 	--page-width-xl: 80rem;
 	--page-width-2xl: 96rem;
-
-	/* ═══ LIQUID GLASS ═══════════════════════════════════════════
-	 * Apple WWDC25 design language adapted for the web. A frosted
-	 * translucent surface composed of:
-	 *
-	 *   1. semi-transparent fill (`--glass-bg-*`) — tints the surface
-	 *   2. backdrop-filter blur + saturate           — refracts content
-	 *      beneath so the surface picks up the canvas colour + a
-	 *      hint of shape
-	 *   3. top-edge specular highlight (inset shadow) — suggests a
-	 *      light catching the top edge of the glass
-	 *   4. soft outer drop-shadow                    — floats the
-	 *      surface above the canvas
-	 *
-	 * Two surface variants:
-	 *   --glass-bg            : white-tinted (default / light sidebar)
-	 *   --glass-bg-dark       : dark-tinted (sidebar when user picks
-	 *                            'dark' sidebar theme)
-	 *
-	 * Accessibility: components MUST gate the backdrop-filter behind
-	 * a `@supports` check (older Safari + Firefox without backdrop-
-	 * filter fall back to a solid colour) AND respect the
-	 * `prefers-reduced-transparency: reduce` media query (iOS / macOS
-	 * accessibility setting that disables material translucency).
-	 *
-	 * Refs: Apple HIG "Materials" 2025 update, WWDC25 "Meet Liquid
-	 * Glass", Apple Developer Documentation §"Designing for Liquid
-	 * Glass" — adapted for browser environments without UIKit's
-	 * native UIVisualEffectView. */
-	/* Material thickness tiers — Apple iOS 26 Liquid Glass model.
-	   THIN material: navigation chrome (topbar, sidebar, footer) —
-	     most translucent so content underneath remains visible
-	   REGULAR material: popovers, dropdowns, drawers — balance of
-	     translucency + legibility
-	   THICK material: content cards, dialogs — opaque enough for
-	     paragraph text legibility while still refracting underneath
-	   Each tier inherits the same brightness/saturate/blur recipe —
-	   only the FILL opacity changes. */
-	--glass-bg-thin: color-mix(in srgb, var(--color-bg-elevated) 45%, transparent);
-	--glass-bg: color-mix(in srgb, var(--color-bg-elevated) 60%, transparent);
-	--glass-bg-elevated: color-mix(in srgb, var(--color-bg-elevated) 75%, transparent);
-	--glass-bg-thick: color-mix(in srgb, var(--color-bg-elevated) 85%, transparent);
-	--glass-bg-dark: color-mix(in srgb, oklch(0.22 0.015 256) 65%, transparent);
-
-	/* Inner gradient overlay — applied via ::before pseudo-element on
-	   every glass surface. Top is slightly lighter, bottom slightly
-	   darker, simulating the dimensional curvature of a real piece of
-	   glass catching light from above. Apple iOS 26 ships this on
-	   every Liquid Glass surface — without it, glass reads as a
-	   flat-tinted sheet rather than a curved physical material. */
-	--glass-inner-gradient: linear-gradient(
-		to bottom,
-		color-mix(in srgb, oklch(1 0 0) 22%, transparent),
-		transparent 40%,
-		color-mix(in srgb, var(--color-fg) 5%, transparent)
-	);
-	/* Blur radius — 32px gives Liquid-Glass-grade refraction on the
-	   canvas wash. iOS 26 Liquid Glass uses 30-40px on chrome. */
-	--glass-blur: 32px;
-	--glass-blur-strong: 44px;
-	/* Saturate boosts colour variation through the blur — without it
-	   glass over near-white reads as flat tinted paint. */
-	--glass-saturate: 220%;
-	/* Brightness boost — Apple's Liquid Glass uses a subtle brightness
-	   bump (≈1.05-1.08) so the surface reads as "lit from above"
-	   regardless of what's beneath. Combined with the specular this
-	   gives the surface its dimensional "lift". */
-	--glass-brightness: 1.06;
-	--glass-border: 1px solid color-mix(in srgb, var(--color-bg-elevated) 80%, transparent);
-	--glass-border-subtle: 1px solid color-mix(in srgb, var(--color-fg) 8%, transparent);
-	--glass-shadow:
-		0 12px 32px color-mix(in srgb, var(--color-fg) 12%, transparent),
-		0 4px 10px color-mix(in srgb, var(--color-fg) 8%, transparent),
-		0 1px 2px color-mix(in srgb, var(--color-fg) 4%, transparent);
-	--glass-shadow-sm:
-		0 4px 14px color-mix(in srgb, var(--color-fg) 8%, transparent),
-		0 1px 3px color-mix(in srgb, var(--color-fg) 5%, transparent);
-	/* Double-edge specular — bright top edge + faint dark bottom edge.
-	   Two inset shadows on opposite edges create the dimensional
-	   "looking at a piece of glass" effect rather than just "tinted
-	   paint with a top highlight". Apple iOS 26 canon. */
-	--glass-specular:
-		inset 0 1px 0 0 oklch(1 0 0 / 0.95),
-		inset 0 -1px 0 0 color-mix(in srgb, var(--color-fg) 4%, transparent);
-	--glass-specular-dark: inset 0 1px 0 0 oklch(1 0 0 / 0.22), inset 0 -1px 0 0 oklch(0 0 0 / 0.16);
-	/* Pill highlight — interactive-state background. SUBTLE DARKEN
-	   against the white-tinted chrome (iOS Mail / Music / Finder
-	   sidebar hover canon). White-on-white doesn't contrast on a
-	   light Liquid-Glass chrome; the hover needs a direction shift —
-	   slight tint toward --color-fg — to register as a lift. The
-	   parent glass + this darken combine to read as "selected
-	   refraction" without competing with the active state's brand
-	   tint. */
-	--lk-muted-tint: color-mix(in srgb, var(--color-fg) 5%, transparent);
 }
 
 /* ═══════════════════════════════════════════════════════════════════

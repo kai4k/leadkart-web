@@ -117,6 +117,119 @@ export function findColorScheme(rel, src) {
 	return found;
 }
 
+// ── rule: no legacy colour names (Task 16) ──
+//
+// The pre-Phase-2 names (`--color-bg*`, `--color-fg*`, `--color-brand*`, the logo / secondary / gray /
+// status NUMBERED ramps, the glass layer, `--lk-*`) were aliases onto the semantic tokens until Task 16
+// deleted them. Nothing may declare or reference one again. `--color-primary-hover` is NOT legacy: it is
+// the Phase 2 bridge of the opaque `--primary-hover` token (utility `bg-primary-hover`).
+export const LEGACY_PALETTE_FILE = 'src/styles/theme/palettes.css';
+const LEGACY_NAME = new RegExp(
+	[
+		'--color-(?:bg|fg|brand)(?![\\w])[\\w-]*',
+		'--color-border-strong',
+		'--color-focus-ring',
+		'--color-primary-(?:fg|active)(?![\\w-])',
+		'--color-(?:gray|secondary|logo|danger|success|warning|info)-\\d[\\w-]*',
+		'--color-(?:logo|medical)-[\\w-]*',
+		'--color-overlay[\\w-]*',
+		'--brand-600',
+		'--bg-bg[\\w-]*',
+		'--lk-[\\w-]+',
+		'(?<![\\w-])--glass-[\\w-]+',
+		'(?<![\\w-])glass-[a-z][\\w-]*'
+	].join('|'),
+	'g'
+);
+
+/** @returns {Array<{ line: number, name: string }>} */
+export function findLegacyTokens(rel, src) {
+	const norm = rel.replaceAll('\\', '/');
+	if (norm === LEGACY_PALETTE_FILE || !norm.startsWith('src/')) return [];
+	const found = [];
+	for (const m of src.matchAll(LEGACY_NAME))
+		found.push({ line: src.slice(0, m.index).split('\n').length, name: m[0] });
+	return found;
+}
+
+// ── rule: no raw palette colour utility outside the token layer (Task 16) ──
+//
+// `text-gray-500`, `bg-red-50`, `border-brand-200`, `text-white`, `bg-black/50`: a colour that does
+// not follow the theme. The semantic utilities (`text-muted-foreground`, `bg-destructive-soft`,
+// `text-primary-foreground`, `bg-foreground/10`) replace them. Exempt, exactly:
+//   - src/styles/**                  the token layer itself
+//   - GENERATED_UI_DIRS              CLI output that keeps shadcn's own `text-white` / `bg-black/50`
+//                                    overlay classes so a quarterly `--overwrite` diff stays clean
+// The LeadKart composites in ui/ (AuthCard, ConfirmDialog, kanban/, stepper/, timeline/, spinner/,
+// data-table/, ...) are NOT exempt.
+export const GENERATED_UI_DIRS = [
+	'accordion',
+	'alert',
+	'alert-dialog',
+	'avatar',
+	'badge',
+	'breadcrumb',
+	'button',
+	'calendar',
+	'card',
+	'checkbox',
+	'collapsible',
+	'command',
+	'dialog',
+	'drawer',
+	'dropdown-menu',
+	'field',
+	'input',
+	'label',
+	'pagination',
+	'popover',
+	'progress',
+	'radio-group',
+	'range-calendar',
+	'scroll-area',
+	'select',
+	'separator',
+	'sheet',
+	'sidebar',
+	'skeleton',
+	'slider',
+	'sonner',
+	'switch',
+	'table',
+	'tabs',
+	'textarea',
+	'toggle',
+	'toggle-group',
+	'tooltip'
+].map((d) => `src/lib/components/ui/${d}/`);
+
+const PALETTE_UTILITY = new RegExp(
+	'(?<![\\w-])((?:[\\w[\\]&>*=.()/_-]+:)*)' +
+		'((?:bg|text|border|border-[xytblrse]|ring|outline|fill|stroke|from|via|to|divide|placeholder|decoration|shadow|caret|accent)-' +
+		'(?:' +
+		// a palette name, with or without a step
+		'(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)(?:-\\d{2,3})?' +
+		// legacy ramps (a bare `bg-success` / `bg-secondary` / `text-info` is a SEMANTIC token: needs a step)
+		'|(?:danger|success|warning|info|secondary)-\\d{2,3}' +
+		'|(?:brand|logo)(?:-[a-z0-9-]+)?' +
+		'|black|white' +
+		')' +
+		'(?:\\/(?:\\d{1,3}|\\[[^\\]\\s]+\\]))?)(?![\\w-])',
+	'g'
+);
+
+/** @returns {Array<{ line: number, utility: string }>} */
+export function findPaletteUtilities(rel, src) {
+	const norm = rel.replaceAll('\\', '/');
+	if (!/\.(svelte|ts)$/.test(norm) || !norm.startsWith('src/')) return [];
+	if (norm.startsWith('src/styles/') || GENERATED_UI_DIRS.some((d) => norm.startsWith(d)))
+		return [];
+	const found = [];
+	for (const m of src.matchAll(PALETTE_UTILITY))
+		found.push({ line: src.slice(0, m.index).split('\n').length, utility: m[1] + m[2] });
+	return found;
+}
+
 function main() {
 	// 1. Collect global tokens from src/styles/*.css and src/styles/theme/*.css.
 	const globalTokens = new Set();
@@ -221,19 +334,30 @@ function main() {
 	const names = colourNames(readFileSync(join(ROOT, 'src/styles/tokens.css'), 'utf8'));
 	const alphaRefs = [];
 	const schemeRefs = [];
-	for (const pattern of ['src/**/*.svelte', 'src/**/*.ts', 'src/**/*.css']) {
+	const legacyRefs = [];
+	const paletteRefs = [];
+	for (const pattern of ['src/**/*.svelte', 'src/**/*.ts', 'src/**/*.css', 'src/**/*.html']) {
 		for (const rel of globSync(pattern, { cwd: ROOT, exclude: ['src/lib/api/generated/**'] })) {
 			const norm = rel.replaceAll('\\', '/');
 			const src = readFileSync(join(ROOT, rel), 'utf8');
 			if (!pattern.endsWith('.css'))
 				for (const f of findAlphaModifiers(norm, src, names)) alphaRefs.push({ file: norm, ...f });
 			for (const f of findColorScheme(norm, src)) schemeRefs.push({ file: norm, ...f });
+			for (const f of findLegacyTokens(norm, src)) legacyRefs.push({ file: norm, ...f });
+			for (const f of findPaletteUtilities(norm, src)) paletteRefs.push({ file: norm, ...f });
 		}
 	}
 
-	if (undefinedRefs.length + alphaRefs.length + schemeRefs.length === 0) {
+	if (
+		undefinedRefs.length +
+			alphaRefs.length +
+			schemeRefs.length +
+			legacyRefs.length +
+			paletteRefs.length ===
+		0
+	) {
 		console.log(
-			`✓ check-tokens: ${globalTokens.size} global token(s) defined, every var(--*) reference resolves; no alpha modifier on a contrast colour in ui/; color-scheme only in theme/semantic.css.`
+			`✓ check-tokens: ${globalTokens.size} global token(s) defined, every var(--*) reference resolves; no alpha modifier on a contrast colour in ui/; color-scheme only in theme/semantic.css; no legacy colour name; no raw palette utility.`
 		);
 		process.exit(0);
 	}
@@ -261,6 +385,18 @@ function main() {
 		for (const r of schemeRefs) console.error(`  ${r.file}:${r.line}`);
 		console.error(
 			'\nFix: a nested color-scheme flips light-dark() tokens in dev but not in the production build. Override the tokens on :root[data-...] or on a scoped selector that re-declares them.'
+		);
+	}
+	if (legacyRefs.length) {
+		console.error(`✗ check-tokens: ${legacyRefs.length} legacy colour name(s):\n`);
+		for (const r of legacyRefs) console.error(`  ${r.file}:${r.line}  ${r.name}`);
+		console.error('\nFix: use the semantic token (see plan L7); never re-add a legacy alias.');
+	}
+	if (paletteRefs.length) {
+		console.error(`✗ check-tokens: ${paletteRefs.length} raw palette colour utility(ies):\n`);
+		for (const r of paletteRefs) console.error(`  ${r.file}:${r.line}  ${r.utility}`);
+		console.error(
+			'\nFix: text-muted-foreground, bg-destructive-soft, text-primary-foreground, bg-foreground/10, ... (plan L7). Exempt: src/styles/** and the CLI-generated ui/ folders.'
 		);
 	}
 	process.exit(1);

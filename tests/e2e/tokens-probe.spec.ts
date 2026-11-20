@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { expect, test } from './helpers/test';
 
 /**
- * The computed value of every semantic token and every legacy `--color-*` alias, light mode,
+ * The computed value of every semantic token (and, until Task 16, every legacy `--color-*` alias), light mode,
  * default (LeadKart) colour, read from ONE probe element, against a recorded table
  * (`fixtures/tokens-light-leadkart.json`). A later change to `--muted-foreground`, `--input`,
  * `--ring`, a status colour or a legacy alias fails here and has to be made on purpose: re-record
@@ -80,7 +80,8 @@ test('every semantic token and legacy alias keeps its recorded light/LeadKart va
 	// every semantic token is in the table (a new one has to be recorded), and equal
 	expect(Object.keys(semantic).sort()).toEqual(Object.keys(recorded.semantic).sort());
 	expect(semantic).toEqual(recorded.semantic);
-	// every recorded legacy alias is still emitted with the same value
-	for (const [name, value] of Object.entries(recorded.legacy))
-		expect(legacy[name], name).toBe(value);
+	// Task 16 deleted the legacy `--color-*` aliases: tokens.css declares none and none is emitted
+	// (the `legacy` table in the fixture is history; re-recording drops it)
+	expect(legacyNames).toEqual([]);
+	expect(legacyEmitted).toEqual({});
 });

@@ -120,52 +120,17 @@
 	}
 }
 
-/* ═══ LIQUID-GLASS MOTION — Apple-flavoured "lively" surfaces
- * Pair with .glass-* utilities. These keyframes replace the static-glass
- * feel with subtle motion that signals "this surface is alive":
- *
- *   -      : a diagonal highlight sweeps left→right, evoking
- *                       the gloss reflection on real glass when the
- *                       device tilts. Triggered on hover.
- *   - glass-breathe   : barely-perceptible scale pulse (1 → 1.005 → 1),
- *                       used on hero glass cards to feel "warm" not dead.
+/* ═══ SURFACE MOTION
  *   - pop-in          : Apple-spring scale + opacity entrance, replaces
  *                       linear zoom-in for dialogs/popovers.
  *   - press-bounce    : tiny scale-down then settle, fired on click feedback
  *                       for primary CTAs.
- *   - brand-glow      : pulsing halo around primary brand surface, used
+ *   - brand-glow      : pulsing halo around the primary surface, used
  *                       sparingly on auth-shell "next-step" CTAs.
  *
  * prefers-reduced-motion handled globally — these animations stop instantly
  * for users who request reduced motion (base.css §reduce-motion).
  * ───────────────────────────────────────────────────────────────────── */
-
-@keyframes {
-	0% {
-		transform: translateX(-150%) skewX(-20deg);
-		opacity: 0;
-	}
-	30% {
-		opacity: 0.5;
-	}
-	70% {
-		opacity: 0.5;
-	}
-	100% {
-		transform: translateX(250%) skewX(-20deg);
-		opacity: 0;
-	}
-}
-
-@keyframes glass-breathe {
-	0%,
-	100% {
-		transform: scale(1);
-	}
-	50% {
-		transform: scale(1.005);
-	}
-}
 
 @keyframes pop-in {
 	0% {
@@ -205,22 +170,6 @@
 		box-shadow:
 			0 0 0 8px var(--brand-glow-fade),
 			0 8px 20px -2px var(--brand-glow-peak-shadow);
-	}
-}
-
-/* Glass border-glow — subtle 4s pulse cycling border-color toward
- * --primary-400 at 45% mix. Originally on AuthCard only as a
- * focal-CTA highlight; promoted here for use across any glass surface
- * that should "breathe" attention (login modal, chrome surfaces).
- * Applied via the . utility class (defined below in
- * the components @layer). */
-@keyframes {
-	0%,
-	100% {
-		border-color: color-mix(in srgb, var(--foreground) 8%, transparent);
-	}
-	50% {
-		border-color: color-mix(in srgb, var(--primary-400) 45%, transparent);
 	}
 }
 
@@ -291,54 +240,7 @@
 		animation: press-bounce var(--duration-base) var(--ease-spring-snap);
 	}
 
-	.animate-breathe {
-		animation: glass-breathe 5s var(--ease-in-out) infinite;
-	}
-
 	.animate-brand-glow {
 		animation: brand-glow 2.4s var(--ease-in-out) infinite;
-	}
-
-	/* Border-glow — slow 4s pulse cycling border-color toward
-	 * brand-400 and back. Use on glass surfaces that should subtly
-	 * "breathe" to draw the eye (focal call-to-action modals, chrome
-	 * surfaces with one-edge borders). Plays well with .bg-card border border-border rounded-xl shadow-card
-	 * since it animates only border-color, not other border longhands. */
-	. {
-		animation: 4s ease-in-out 1s infinite;
-	}
-
-	/* Hover-sheen overlay — composable on any glass surface or .interactive
-	 * primitive. Renders a diagonal highlight that sweeps across on hover.
-	 *
-	 * Usage: add `.` to a positioned container (relative/absolute);
-	 * the ::after pseudo paints the gloss + clips to bounds via overflow.
-	 * The animation is hover-gated, NOT infinite — it fires once per
-	 * pointer entry. Industry parallel: Apple iOS app icons under the
-	 * "tilt to reveal" motion; Stripe Dashboard CTAs.
-	 *
-	 * Falls back to no-op under prefers-reduced-motion (handled globally
-	 * in base.css). */
-	. {
-		position: relative;
-		overflow: hidden;
-	}
-	.::after {
-		content: '';
-		position: absolute;
-		inset: 0;
-		background: linear-gradient(
-			110deg,
-			transparent 30%,
-			rgb(255 255 255 / 0.18) 50%,
-			transparent 70%
-		);
-		transform: translateX(-150%) skewX(-20deg);
-		pointer-events: none;
-		opacity: 0;
-		transition: opacity var(--duration-fast) var(--ease-out);
-	}
-	.:hover::after {
-		animation: var(--duration-slower) var(--ease-out) forwards;
 	}
 }

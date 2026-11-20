@@ -191,8 +191,8 @@
 	</section>
 
 	<!-- ═══ GLASS SURFACES ═══════════════════════════════════════════════ -->
-	<section aria-labelledby="glass-heading" class="stack stack-loose">
-		<h2 id="glass-heading" class="h2">Glass surfaces</h2>
+	<section aria-labelledby="frosted-heading" class="stack stack-loose">
+		<h2 id="frosted-heading" class="h2">Glass surfaces</h2>
 		<div
 			class="relative h-64 overflow-hidden rounded-lg"
 			style="background: linear-gradient(135deg, var(--primary-500), var(--success));"

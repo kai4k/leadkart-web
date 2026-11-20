@@ -39,11 +39,6 @@
 	--bp-lg: 64rem;
 	--bp-xl: 80rem;
 
-	/* Minimum touch-target dimension on coarse pointers (touch screens).
-	   2.75rem = 44px — Apple HIG / WCAG 2.5.5 AAA. Components apply
-	   this conditionally via @media (pointer: coarse). */
-	--lk-touch-target-min: 2.75rem;
-
 	/* Safe-area-inset shorthand vars — populated by the browser on
 	   notched / home-indicator iOS + Android devices. Components
 	   consume `max(value, var(--safe-*))` for fixed-position edge
@@ -129,29 +124,4 @@
 			scroll-behavior: auto !important;
 		}
 	}
-
-	/* Reduced-transparency respect — iOS / macOS Accessibility setting
-	 * (and Windows "Transparency effects: Off"). When the user has
-	 * disabled material translucency, fall back to the solid surface
-	 * tokens (--card) and skip the
-	 * backdrop-filter cost. Liquid Glass surfaces consult the
-	 * `--glass-bg*` vars normally; the override below substitutes
-	 * opaque values so the visual remains legible. */
-	@media (prefers-reduced-transparency: reduce) {
-		:root {
-			--glass-bg-thin: var(--card);
-			--glass-bg: var(--card);
-			--glass-bg-elevated: var(--card);
-			--glass-bg-thick: var(--card);
-			--glass-bg-dark: oklch(0.22 0.015 256);
-			--lk-muted-tint: var(--muted);
-			--lk-muted-tint-dark: oklch(0.32 0.04 260);
-			--glass-blur: 0px;
-			--glass-blur-strong: 0px;
-			--glass-saturate: 100%;
-			--glass-brightness: 1;
-			--glass-inner-gradient: none;
-		}
-	}
 }
-
