@@ -36,12 +36,17 @@ module.exports = {
 			customSyntax: 'postcss'
 		},
 		{
-			// tokens.css is the source of truth — raw oklch/hex/rgb allowed here.
-			files: ['src/styles/tokens.css'],
+			// tokens.css and theme/*.css are the source of truth — raw oklch/hex/rgb allowed here.
+			files: ['src/styles/tokens.css', 'src/styles/theme/*.css'],
 			rules: {
 				'color-no-hex': null,
 				'scale-unlimited/declaration-strict-value': null
 			}
+		},
+		{
+			// The `dark` custom variant (Tailwind 4 `@custom-variant` with `@slot`) nests `&` by design.
+			files: ['src/app.css'],
+			rules: { 'nesting-selector-no-missing-scoping-root': null }
 		},
 		{
 			// src/styles/*.css — global utility + base layer. !important is

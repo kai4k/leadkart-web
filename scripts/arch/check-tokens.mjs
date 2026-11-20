@@ -19,9 +19,9 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 
-// 1. Collect global tokens from src/styles/*.css.
+// 1. Collect global tokens from src/styles/*.css and src/styles/theme/*.css.
 const globalTokens = new Set();
-for (const rel of globSync('src/styles/*.css', { cwd: ROOT })) {
+for (const rel of globSync('src/styles/{,theme/}*.css', { cwd: ROOT })) {
 	const src = readFileSync(join(ROOT, rel), 'utf8');
 	for (const m of src.matchAll(/--([\w-]+)\s*:/g)) globalTokens.add(m[1]);
 }
@@ -91,7 +91,7 @@ const undefinedRefs = [];
 for (const pattern of SCAN_GLOB) {
 	const files = globSync(pattern, {
 		cwd: ROOT,
-		exclude: ['src/lib/api/generated/**', 'src/styles/tokens.css']
+		exclude: ['src/lib/api/generated/**', 'src/styles/tokens.css', 'src/styles/theme/**']
 	});
 	for (const rel of files) {
 		const abs = join(ROOT, rel);

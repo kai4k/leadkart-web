@@ -1,0 +1,257 @@
+/* ─────────────────────────────────────────────────────────────────────
+ * PALETTES — primitive colour ramps only. No semantic meaning here.
+ *
+ * Semantic tokens (theme/semantic.css) pick from these. Components never
+ * reference a --palette-* or --neutral-* variable directly.
+ *
+ *   --palette-{leadkart,green,violet,orange,teal,fuchsia,lime,amber}-N   primary choices
+ *   --palette-{success,warning,danger,info}-N                           status
+ *   --palette-gray-N                                                    neutral gray
+ *   --neutral-{default,zinc,stone,neutral,gray}-N (+ -850)              dark surfaces
+ *
+ * leadkart: anchored to the logo asset (#953fc9 at 500, #502d81 at 600,
+ * #1e1043 at 900 are contracts with the SVG fill). The other primaries are
+ * copied from the Domiex theme (themes-color/primary-color.css). The
+ * neutrals are Domiex dark-color.css; "default" is Tailwind v4 slate plus
+ * Domiex's 850.
+ * ───────────────────────────────────────────────────────────────────── */
+:root {
+	/* leadkart (logo) */
+	--palette-leadkart-50: oklch(0.97 0.025 296);
+	--palette-leadkart-100: oklch(0.93 0.06 296);
+	--palette-leadkart-200: oklch(0.86 0.1 296);
+	--palette-leadkart-300: oklch(0.76 0.14 296);
+	--palette-leadkart-400: oklch(0.62 0.17 296);
+	--palette-leadkart-500: #953fc9;
+	--palette-leadkart-600: #502d81;
+	--palette-leadkart-700: oklch(0.3 0.14 296);
+	--palette-leadkart-800: oklch(0.24 0.12 296);
+	--palette-leadkart-900: #1e1043;
+	--palette-leadkart-950: oklch(0.08 0.06 296);
+
+	/* green (Domiex) */
+	--palette-green-50: oklch(98.4% 0.0182 166.4);
+	--palette-green-100: oklch(96.73% 0.0421 168.38);
+	--palette-green-200: oklch(93.31% 0.077 165.84);
+	--palette-green-300: oklch(88.6% 0.1269 164.02);
+	--palette-green-400: oklch(82.25% 0.1654 160.37);
+	--palette-green-500: oklch(74.88% 0.1723 157.44);
+	--palette-green-600: oklch(64.79% 0.1512 157.06);
+	--palette-green-700: oklch(54.51% 0.1228 158.21);
+	--palette-green-800: oklch(46.24% 0.0982 159.81);
+	--palette-green-900: oklch(40.38% 0.0818 161.07);
+	--palette-green-950: oklch(27.46% 0.057 162.48);
+
+	/* violet (Domiex) */
+	--palette-violet-50: oklch(0.969 0.016 293.756);
+	--palette-violet-100: oklch(0.943 0.029 294.588);
+	--palette-violet-200: oklch(0.894 0.057 293.283);
+	--palette-violet-300: oklch(0.811 0.111 293.571);
+	--palette-violet-400: oklch(0.702 0.183 293.541);
+	--palette-violet-500: oklch(0.606 0.25 292.717);
+	--palette-violet-600: oklch(0.541 0.281 293.009);
+	--palette-violet-700: oklch(0.491 0.27 292.581);
+	--palette-violet-800: oklch(0.432 0.232 292.759);
+	--palette-violet-900: oklch(0.38 0.189 293.745);
+	--palette-violet-950: oklch(0.283 0.141 291.089);
+
+	/* orange (Domiex) */
+	--palette-orange-50: oklch(97.33% 0.0134 53.35);
+	--palette-orange-100: oklch(93.76% 0.0324 52.33);
+	--palette-orange-200: oklch(86.91% 0.0692 47.91);
+	--palette-orange-300: oklch(78.54% 0.1178 44.51);
+	--palette-orange-400: oklch(70.79% 0.1638 38.6);
+	--palette-orange-500: oklch(64.19% 0.2084 34.96);
+	--palette-orange-600: oklch(59.32% 0.2139 31.82);
+	--palette-orange-700: oklch(51.23% 0.1897 30.2);
+	--palette-orange-800: oklch(43.72% 0.1565 28.53);
+	--palette-orange-900: oklch(37.95% 0.1283 28.1);
+	--palette-orange-950: oklch(24.88% 0.084 26.62);
+
+	/* teal (Domiex) */
+	--palette-teal-50: oklch(0.984 0.014 180.72);
+	--palette-teal-100: oklch(0.953 0.051 180.801);
+	--palette-teal-200: oklch(0.91 0.096 180.426);
+	--palette-teal-300: oklch(0.855 0.138 181.071);
+	--palette-teal-400: oklch(0.777 0.152 181.912);
+	--palette-teal-500: oklch(0.704 0.14 182.503);
+	--palette-teal-600: oklch(0.6 0.118 184.704);
+	--palette-teal-700: oklch(0.511 0.096 186.391);
+	--palette-teal-800: oklch(0.437 0.078 188.216);
+	--palette-teal-900: oklch(0.386 0.063 188.416);
+	--palette-teal-950: oklch(0.277 0.046 192.524);
+
+	/* fuchsia (Domiex) */
+	--palette-fuchsia-50: oklch(0.977 0.017 320.058);
+	--palette-fuchsia-100: oklch(0.952 0.037 318.852);
+	--palette-fuchsia-200: oklch(0.903 0.076 319.62);
+	--palette-fuchsia-300: oklch(0.833 0.145 321.434);
+	--palette-fuchsia-400: oklch(0.74 0.238 322.16);
+	--palette-fuchsia-500: oklch(0.667 0.295 322.15);
+	--palette-fuchsia-600: oklch(0.591 0.293 322.896);
+	--palette-fuchsia-700: oklch(0.518 0.253 323.949);
+	--palette-fuchsia-800: oklch(0.452 0.211 324.591);
+	--palette-fuchsia-900: oklch(0.401 0.17 325.612);
+	--palette-fuchsia-950: oklch(0.293 0.136 325.661);
+
+	/* lime (Domiex) */
+	--palette-lime-50: oklch(0.986 0.031 120.757);
+	--palette-lime-100: oklch(0.967 0.067 122.328);
+	--palette-lime-200: oklch(0.938 0.127 124.321);
+	--palette-lime-300: oklch(0.897 0.196 126.665);
+	--palette-lime-400: oklch(0.841 0.238 128.85);
+	--palette-lime-500: oklch(0.768 0.233 130.85);
+	--palette-lime-600: oklch(0.648 0.2 131.684);
+	--palette-lime-700: oklch(0.532 0.157 131.589);
+	--palette-lime-800: oklch(0.453 0.124 130.933);
+	--palette-lime-900: oklch(0.405 0.101 131.063);
+	--palette-lime-950: oklch(0.274 0.072 132.109);
+
+	/* amber (Domiex) */
+	--palette-amber-50: oklch(0.987 0.022 95.277);
+	--palette-amber-100: oklch(0.962 0.059 95.617);
+	--palette-amber-200: oklch(0.924 0.12 95.746);
+	--palette-amber-300: oklch(0.879 0.169 91.605);
+	--palette-amber-400: oklch(0.828 0.189 84.429);
+	--palette-amber-500: oklch(0.769 0.188 70.08);
+	--palette-amber-600: oklch(0.666 0.179 58.318);
+	--palette-amber-700: oklch(0.555 0.163 48.998);
+	--palette-amber-800: oklch(0.473 0.137 46.201);
+	--palette-amber-900: oklch(0.414 0.112 45.904);
+	--palette-amber-950: oklch(0.279 0.077 45.635);
+
+	/* success (status) */
+	--palette-success-50: oklch(0.97 0.03 145);
+	--palette-success-100: oklch(0.93 0.07 145);
+	--palette-success-200: oklch(0.87 0.11 145);
+	--palette-success-300: oklch(0.81 0.16 145);
+	--palette-success-400: oklch(0.78 0.17 145);
+	--palette-success-500: oklch(0.74 0.18 145);
+	--palette-success-600: oklch(0.62 0.17 145);
+	--palette-success-700: oklch(0.5 0.15 145);
+	--palette-success-800: oklch(0.4 0.12 145);
+	--palette-success-900: oklch(0.3 0.08 145);
+	--palette-success-950: oklch(0.2 0.05 145);
+
+	/* warning (status) */
+	--palette-warning-50: oklch(0.97 0.04 60);
+	--palette-warning-100: oklch(0.93 0.1 60);
+	--palette-warning-200: oklch(0.88 0.14 60);
+	--palette-warning-300: oklch(0.83 0.16 60);
+	--palette-warning-400: oklch(0.8 0.17 60);
+	--palette-warning-500: oklch(0.78 0.18 60);
+	--palette-warning-600: oklch(0.66 0.17 60);
+	--palette-warning-700: oklch(0.55 0.15 55);
+	--palette-warning-800: oklch(0.45 0.13 55);
+	--palette-warning-900: oklch(0.35 0.1 55);
+	--palette-warning-950: oklch(0.24 0.07 55);
+
+	/* danger (status) */
+	--palette-danger-50: oklch(0.97 0.02 25);
+	--palette-danger-100: oklch(0.93 0.07 25);
+	--palette-danger-200: oklch(0.87 0.13 25);
+	--palette-danger-300: oklch(0.79 0.18 25);
+	--palette-danger-400: oklch(0.72 0.21 25);
+	--palette-danger-500: oklch(0.66 0.23 25);
+	--palette-danger-600: oklch(0.56 0.21 25);
+	--palette-danger-700: oklch(0.47 0.18 25);
+	--palette-danger-800: oklch(0.39 0.15 25);
+	--palette-danger-900: oklch(0.31 0.11 25);
+	--palette-danger-950: oklch(0.22 0.08 25);
+
+	/* info (status) */
+	--palette-info-50: oklch(0.97 0.02 245);
+	--palette-info-100: oklch(0.92 0.04 245);
+	--palette-info-200: oklch(0.86 0.06 245);
+	--palette-info-300: oklch(0.79 0.07 245);
+	--palette-info-400: oklch(0.76 0.07 245);
+	--palette-info-500: oklch(0.74 0.07 245);
+	--palette-info-600: oklch(0.62 0.08 245);
+	--palette-info-700: oklch(0.5 0.08 245);
+	--palette-info-800: oklch(0.4 0.07 245);
+	--palette-info-900: oklch(0.3 0.06 245);
+	--palette-info-950: oklch(0.2 0.04 245);
+
+	/* gray */
+	--palette-gray-50: oklch(0.985 0 256);
+	--palette-gray-100: oklch(0.97 0 256);
+	--palette-gray-200: oklch(0.92 0.005 256);
+	--palette-gray-300: oklch(0.86 0.01 256);
+	--palette-gray-400: oklch(0.7 0.015 256);
+	--palette-gray-500: oklch(0.55 0.015 256);
+	--palette-gray-600: oklch(0.42 0.015 256);
+	--palette-gray-700: oklch(0.32 0.015 256);
+	--palette-gray-800: oklch(0.24 0.01 256);
+	--palette-gray-900: oklch(0.18 0.01 256);
+	--palette-gray-950: oklch(0.12 0.01 256);
+
+	/* dark surfaces: default = Tailwind slate + Domiex 850 */
+	--neutral-default-50: oklch(98.4% 0.003 247.858);
+	--neutral-default-100: oklch(96.8% 0.007 247.896);
+	--neutral-default-200: oklch(92.9% 0.013 255.508);
+	--neutral-default-300: oklch(86.9% 0.022 252.894);
+	--neutral-default-400: oklch(70.4% 0.04 256.788);
+	--neutral-default-500: oklch(55.4% 0.046 257.417);
+	--neutral-default-600: oklch(44.6% 0.043 257.281);
+	--neutral-default-700: oklch(37.2% 0.044 257.287);
+	--neutral-default-800: oklch(27.9% 0.041 260.031);
+	--neutral-default-850: oklch(23.13% 0.0399 270.37);
+	--neutral-default-900: oklch(20.8% 0.042 265.755);
+	--neutral-default-950: oklch(12.9% 0.042 264.695);
+
+	/* dark surfaces: zinc (Domiex) */
+	--neutral-zinc-50: oklch(0.985 0 0);
+	--neutral-zinc-100: oklch(0.967 0.001 286.375);
+	--neutral-zinc-200: oklch(0.92 0.004 286.32);
+	--neutral-zinc-300: oklch(0.871 0.006 286.286);
+	--neutral-zinc-400: oklch(0.705 0.015 286.067);
+	--neutral-zinc-500: oklch(0.552 0.016 285.938);
+	--neutral-zinc-600: oklch(0.442 0.017 285.786);
+	--neutral-zinc-700: oklch(0.37 0.013 285.805);
+	--neutral-zinc-800: oklch(0.274 0.006 286.033);
+	--neutral-zinc-850: oklch(30.12% 0 0);
+	--neutral-zinc-900: oklch(0.21 0.006 285.885);
+	--neutral-zinc-950: oklch(0.141 0.005 285.823);
+
+	/* dark surfaces: stone (Domiex) */
+	--neutral-stone-50: oklch(0.985 0.001 106.423);
+	--neutral-stone-100: oklch(0.97 0.001 106.424);
+	--neutral-stone-200: oklch(0.923 0.003 48.717);
+	--neutral-stone-300: oklch(0.869 0.005 56.366);
+	--neutral-stone-400: oklch(0.709 0.01 56.259);
+	--neutral-stone-500: oklch(0.553 0.013 58.071);
+	--neutral-stone-600: oklch(0.444 0.011 73.639);
+	--neutral-stone-700: oklch(0.374 0.01 67.558);
+	--neutral-stone-800: oklch(0.268 0.007 34.298);
+	--neutral-stone-850: oklch(25.53% 0.0082 59.29);
+	--neutral-stone-900: oklch(0.216 0.006 56.043);
+	--neutral-stone-950: oklch(0.147 0.004 49.25);
+
+	/* dark surfaces: neutral (Domiex) */
+	--neutral-neutral-50: oklch(0.985 0 0);
+	--neutral-neutral-100: oklch(0.97 0 0);
+	--neutral-neutral-200: oklch(0.922 0 0);
+	--neutral-neutral-300: oklch(0.87 0 0);
+	--neutral-neutral-400: oklch(0.708 0 0);
+	--neutral-neutral-500: oklch(0.556 0 0);
+	--neutral-neutral-600: oklch(0.439 0 0);
+	--neutral-neutral-700: oklch(0.371 0 0);
+	--neutral-neutral-800: oklch(0.269 0 0);
+	--neutral-neutral-850: oklch(23.5% 0 0);
+	--neutral-neutral-900: oklch(0.205 0 0);
+	--neutral-neutral-950: oklch(0.145 0 0);
+
+	/* dark surfaces: gray (Domiex) */
+	--neutral-gray-50: oklch(0.985 0.002 247.839);
+	--neutral-gray-100: oklch(0.967 0.003 264.542);
+	--neutral-gray-200: oklch(0.928 0.006 264.531);
+	--neutral-gray-300: oklch(0.872 0.01 258.338);
+	--neutral-gray-400: oklch(0.707 0.022 261.325);
+	--neutral-gray-500: oklch(0.551 0.027 264.364);
+	--neutral-gray-600: oklch(0.446 0.03 256.802);
+	--neutral-gray-700: oklch(0.373 0.034 259.733);
+	--neutral-gray-800: oklch(0.278 0.033 256.848);
+	--neutral-gray-850: oklch(25.89% 0.0374 268.25);
+	--neutral-gray-900: oklch(0.21 0.034 264.665);
+	--neutral-gray-950: oklch(0.13 0.028 261.692);
+}

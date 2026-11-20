@@ -1,16 +1,24 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
-/* Dark mode variant — applied only when an ancestor has `.dark` class.
- * Light-only today (nothing sets the class yet); a future dark-mode toggle
- * must add the class before first paint to avoid a flash. */
-@custom-variant dark (&:is(.dark *));
+/* Dark mode variant: driven by <html data-mode>, written at SSR from the lk_ui cookie.
+ * "dark" is explicit; "auto" follows the OS through prefers-color-scheme. No JavaScript. */
+@custom-variant dark {
+	&:where([data-mode='dark'], [data-mode='dark'] *) {
+		@slot;
+	}
+	@media (prefers-color-scheme: dark) {
+		&:where([data-mode='auto'], [data-mode='auto'] *) {
+			@slot;
+		}
+	}
+}
 
 @import './styles/index.css';
 
 @layer base {
 	body {
-		@apply bg-bg text-fg;
+		@apply bg-background text-foreground;
 	}
 	*,
 	::after,

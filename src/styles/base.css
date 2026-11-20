@@ -55,72 +55,6 @@
 	--safe-left: env(safe-area-inset-left, 0px);
 }
 
-/* ═══ PRIMARY COLOUR PICKER — multi-hue theme switching
- * Activated by `<html data-colors="X">` written at SSR from the lk_ui
- * cookie (lib/features/preferences). Replaced wholesale by theme/semantic.css (Task 2). Each variant overrides the brand 11-stop
- * to a different OKLCH hue while keeping the lightness + chroma curves
- * consistent. Components consuming `var(--color-brand-{N})` re-skin
- * automatically — no per-component changes.
- *
- * Default (data-colors="leadkart") = purple-violet logo brand from
- * tokens.css (#502d81 wordmark base, hue ≈ 296). Picker alternatives:
- *   blue    #265A8E   (hue ≈ 245)  — legacy corporate blue
- *   green   #34C759   (hue ≈ 145)  — iOS pure green
- *   indigo  #5856D6   (hue ≈ 285)
- *   orange  #FF9500   (hue ≈ 60)
- *   teal    #5AC8FA   (hue ≈ 220)
- *   purple  #AF52DE   (hue ≈ 310)
- *   pink    #FF2D55   (hue ≈ 0)
- *   red     #FF3B30   (hue ≈ 25)
- *   mint    #00C7BE   (hue ≈ 180)
- *   cyan    #32ADE6   (hue ≈ 230)
- *
- * Note: --color-secondary-* (logo green) is NEVER overridden by this
- * picker — it stays brand-coherent regardless of primary choice.
- * ───────────────────────────────────────────────────────────── */
-
-:root[data-colors='green'] {
-	--color-brand-50: oklch(0.97 0.03 145);
-	--color-brand-100: oklch(0.93 0.07 145);
-	--color-brand-200: oklch(0.87 0.11 145);
-	--color-brand-300: oklch(0.81 0.16 145);
-	--color-brand-400: oklch(0.78 0.17 145);
-	--color-brand-500: oklch(0.74 0.18 145);
-	--color-brand-600: oklch(0.62 0.17 145);
-	--color-brand-700: oklch(0.5 0.15 145);
-	--color-brand-800: oklch(0.4 0.12 145);
-	--color-brand-900: oklch(0.3 0.08 145);
-	--color-brand-950: oklch(0.2 0.05 145);
-}
-
-:root[data-colors='orange'] {
-	--color-brand-50: oklch(0.97 0.04 60);
-	--color-brand-100: oklch(0.93 0.1 60);
-	--color-brand-200: oklch(0.88 0.14 60);
-	--color-brand-300: oklch(0.83 0.16 60);
-	--color-brand-400: oklch(0.8 0.17 60);
-	--color-brand-500: oklch(0.78 0.18 60);
-	--color-brand-600: oklch(0.66 0.17 60);
-	--color-brand-700: oklch(0.55 0.15 55);
-	--color-brand-800: oklch(0.45 0.13 55);
-	--color-brand-900: oklch(0.35 0.1 55);
-	--color-brand-950: oklch(0.24 0.07 55);
-}
-
-:root[data-colors='teal'] {
-	--color-brand-50: oklch(0.97 0.02 220);
-	--color-brand-100: oklch(0.93 0.06 220);
-	--color-brand-200: oklch(0.86 0.1 220);
-	--color-brand-300: oklch(0.78 0.13 220);
-	--color-brand-400: oklch(0.78 0.13 220);
-	--color-brand-500: oklch(0.78 0.13 220);
-	--color-brand-600: oklch(0.66 0.13 220);
-	--color-brand-700: oklch(0.55 0.12 220);
-	--color-brand-800: oklch(0.44 0.1 220);
-	--color-brand-900: oklch(0.34 0.07 220);
-	--color-brand-950: oklch(0.22 0.05 220);
-}
-
 /* ═══ LAYOUT CUSTOMISER — Linear/Vercel pattern
  * One shell, sidebar collapses via hamburger. The customiser exposes
  * three legitimate axes:
@@ -357,28 +291,28 @@
 }
 
 /* Customiser colour swatches: the colour comes from the palette token, never an inline style
-   (CSP and token canon). `--palette-*` arrives with theme/palettes.css; until then the brand ramp. */
+   (CSP and token canon). `--palette-*` is defined in theme/palettes.css. */
 .lk-swatch[data-swatch='leadkart'] {
-	background: var(--palette-leadkart-500, var(--color-brand-500));
+	background: var(--palette-leadkart-500);
 }
 .lk-swatch[data-swatch='green'] {
-	background: var(--palette-green-500, var(--color-brand-500));
+	background: var(--palette-green-500);
 }
 .lk-swatch[data-swatch='violet'] {
-	background: var(--palette-violet-500, var(--color-brand-500));
+	background: var(--palette-violet-500);
 }
 .lk-swatch[data-swatch='orange'] {
-	background: var(--palette-orange-500, var(--color-brand-500));
+	background: var(--palette-orange-500);
 }
 .lk-swatch[data-swatch='teal'] {
-	background: var(--palette-teal-500, var(--color-brand-500));
+	background: var(--palette-teal-500);
 }
 .lk-swatch[data-swatch='fuchsia'] {
-	background: var(--palette-fuchsia-500, var(--color-brand-500));
+	background: var(--palette-fuchsia-500);
 }
 .lk-swatch[data-swatch='lime'] {
-	background: var(--palette-lime-500, var(--color-brand-500));
+	background: var(--palette-lime-500);
 }
 .lk-swatch[data-swatch='amber'] {
-	background: var(--palette-amber-500, var(--color-brand-500));
+	background: var(--palette-amber-500);
 }

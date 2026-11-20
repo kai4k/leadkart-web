@@ -34,59 +34,31 @@
 @import '@fontsource-variable/jetbrains-mono';
 
 @theme {
-	/* ═══ BRAND — PURPLE-VIOLET, anchored to the LeadKart logo asset.
-	 * Corrected 2026-05-16: the brand is purple at hue ~296, NOT blue
-	 * at hue 269 as previously declared. Earlier comments referenced
-	 * "navy-violet" / "#2D2F7E" / "#3146a5" — those were all wrong.
-	 * The actual logo pops six colours per the asset spec:
-	 *   #502d81  wordmark base (medium purple-violet)   ← PRIMARY anchor
-	 *   #953fc9  highlight purple (vibrant lighter)      ← brand-500
-	 *   #1e1043  deep shadow (near-black purple)         ← brand-900
-	 *   #0b3e8c  navy accent (supporting blue)          → --color-logo-blue
-	 *   #070e5c  deepest blue shadow                    → --color-logo-blue-deep
-	 *   #18f217  vibrant neon green (chemist bag)       → --color-secondary-500
-	 *
-	 * Three brand stops anchored to LITERAL logo hex (must match the
-	 * asset pixel-for-pixel — these are CONTRACTS with the SVG fill).
-	 * Other stops interpolated in OKLCH at hue 296 — perceptually
-	 * uniform lightness ladder around the anchors. */
-	--color-brand-50: oklch(0.97 0.025 296);
-	--color-brand-100: oklch(0.93 0.06 296);
-	--color-brand-200: oklch(0.86 0.1 296);
-	--color-brand-300: oklch(0.76 0.14 296);
-	--color-brand-400: oklch(0.62 0.17 296);
-	--color-brand-500: #953fc9; /* LITERAL logo highlight purple */
-	--color-brand-600: #502d81; /* LITERAL logo wordmark base — PRIMARY */
-	--color-brand-700: oklch(0.3 0.14 296); /* derived hover-darker stop */
-	--color-brand-800: oklch(0.24 0.12 296);
-	--color-brand-900: #1e1043; /* LITERAL logo deep shadow purple */
-	--color-brand-950: oklch(0.08 0.06 296);
+	/* ═══ COLOUR — semantic tokens live in theme/semantic.css (`--background`,
+	 * `--card`, `--primary`, …) and are bridged to Tailwind utilities by the
+	 * `@theme inline` block at the bottom of this file. The names below are
+	 * LEGACY ALIASES onto that layer so call sites not yet swept to the semantic
+	 * utilities keep rendering, and follow dark mode and the chosen primary.
+	 * Task 16 of the Phase 2 plan deletes them once nothing references them. */
+
+	/* brand ramp → the SELECTED primary ramp (<html data-colors>) */
+	--color-brand-50: var(--primary-50);
+	--color-brand-100: var(--primary-100);
+	--color-brand-200: var(--primary-200);
+	--color-brand-300: var(--primary-300);
+	--color-brand-400: var(--primary-400);
+	--color-brand-500: var(--primary-500);
+	--color-brand-600: var(--primary-600);
+	--color-brand-700: var(--primary-700);
+	--color-brand-800: var(--primary-800);
+	--color-brand-900: var(--primary-900);
+	--color-brand-950: var(--primary-950);
 	--color-brand: var(--color-brand-600);
 
-	/* ─── PRIMARY semantic alias + state layers ────────────────────
-	 * Material 3 / Apple HIG canon: ONE primary colour token; state
-	 * variants computed from it via color-mix overlays rather than
-	 * declared as separate brand-scale stops. Changing --color-primary
-	 * here auto-rebuilds rest + hover + press without anyone having
-	 * to verify a second brand stop still looks right.
-	 *
-	 * Hover  = primary darkened ~10% toward --color-fg  (state layer)
-	 * Active = primary darkened ~20% toward --color-fg  (deeper press)
-	 *
-	 * For TEXT colours this reads as "ink gets darker on hover".
-	 * For FILLED button backgrounds this reads as "surface darkens on
-	 * press-ready" — both directions correct because the mix is
-	 * toward the foreground (near-black) in both cases. */
-	--color-primary: var(--color-brand-600);
-	--color-primary-hover: color-mix(in srgb, var(--color-primary) 90%, var(--color-fg));
-	--color-primary-active: color-mix(in srgb, var(--color-primary) 80%, var(--color-fg));
-	--color-primary-soft: var(--color-brand-50);
-	--color-primary-fg: oklch(1 0 0); /* on solid primary surfaces */
-	/* Focus indicator — a brighter, saturated stop (NOT a darker
-	 * state-layer of primary). Apple/Material both treat the focus
-	 * ring as a separate visual concern from rest/hover/press because
-	 * a focus indicator needs to ATTRACT attention, not blend in. */
-	--color-focus-ring: var(--color-brand-500);
+	--color-primary-hover: color-mix(in srgb, var(--primary) 90%, var(--foreground));
+	--color-primary-active: color-mix(in srgb, var(--primary) 80%, var(--foreground));
+	--color-primary-fg: var(--primary-foreground);
+	--color-focus-ring: var(--ring);
 
 	/* Logo palette — LITERAL asset hex per the brand spec (corrected
 	 * 2026-05-16). The previous values (`#a05dce`, `#3146a5`, etc.)
@@ -126,126 +98,83 @@
 	--color-secondary-800: oklch(0.46 0.17 142);
 	--color-secondary-900: oklch(0.32 0.12 142);
 	--color-secondary-950: oklch(0.2 0.08 142);
-	--color-secondary: var(--color-secondary-500);
 
-	/* ═══ SEMANTIC — iOS-canon values per Blazor ThemeBuilder.cs:
-	 *   Success = "#34C759"  iOS green
-	 *   Warning = "#FF9500"  iOS orange
-	 *   Error   = "#FF3B30"  iOS red (named "danger" here for consistency)
-	 *   Info    = "#76B1D3"  logo glass-highlight blue (overlaps brand-300
-	 *                         intentionally — the logo IS the info color)
-	 * Full 11-stop scales derived around each iOS pivot.
-	 * ──────────────────────────────────────────────────────────── */
-	--color-success-50: oklch(0.97 0.03 145);
-	--color-success-100: oklch(0.93 0.07 145);
-	--color-success-200: oklch(0.87 0.11 145);
-	--color-success-300: oklch(0.81 0.16 145);
-	--color-success-400: oklch(0.78 0.17 145);
-	--color-success-500: oklch(0.74 0.18 145); /* ≈ #34C759 iOS green */
-	--color-success-600: oklch(0.62 0.17 145);
-	--color-success-700: oklch(0.5 0.15 145);
-	--color-success-800: oklch(0.4 0.12 145);
-	--color-success-900: oklch(0.3 0.08 145);
-	--color-success-950: oklch(0.2 0.05 145);
+	/* status + neutral ramps → palettes */
+	--color-success-50: var(--palette-success-50);
+	--color-success-100: var(--palette-success-100);
+	--color-success-200: var(--palette-success-200);
+	--color-success-300: var(--palette-success-300);
+	--color-success-400: var(--palette-success-400);
+	--color-success-500: var(--palette-success-500);
+	--color-success-600: var(--palette-success-600);
+	--color-success-700: var(--palette-success-700);
+	--color-success-800: var(--palette-success-800);
+	--color-success-900: var(--palette-success-900);
+	--color-success-950: var(--palette-success-950);
 
-	--color-warning-50: oklch(0.97 0.04 60);
-	--color-warning-100: oklch(0.93 0.1 60);
-	--color-warning-200: oklch(0.88 0.14 60);
-	--color-warning-300: oklch(0.83 0.16 60);
-	--color-warning-400: oklch(0.8 0.17 60);
-	--color-warning-500: oklch(0.78 0.18 60); /* ≈ #FF9500 iOS orange */
-	--color-warning-600: oklch(0.66 0.17 60);
-	--color-warning-700: oklch(0.55 0.15 55);
-	--color-warning-800: oklch(0.45 0.13 55);
-	--color-warning-900: oklch(0.35 0.1 55);
-	--color-warning-950: oklch(0.24 0.07 55);
+	--color-warning-50: var(--palette-warning-50);
+	--color-warning-100: var(--palette-warning-100);
+	--color-warning-200: var(--palette-warning-200);
+	--color-warning-300: var(--palette-warning-300);
+	--color-warning-400: var(--palette-warning-400);
+	--color-warning-500: var(--palette-warning-500);
+	--color-warning-600: var(--palette-warning-600);
+	--color-warning-700: var(--palette-warning-700);
+	--color-warning-800: var(--palette-warning-800);
+	--color-warning-900: var(--palette-warning-900);
+	--color-warning-950: var(--palette-warning-950);
 
-	--color-danger-50: oklch(0.97 0.02 25);
-	--color-danger-100: oklch(0.93 0.07 25);
-	--color-danger-200: oklch(0.87 0.13 25);
-	--color-danger-300: oklch(0.79 0.18 25);
-	--color-danger-400: oklch(0.72 0.21 25);
-	--color-danger-500: oklch(0.66 0.23 25); /* ≈ #FF3B30 iOS red */
-	--color-danger-600: oklch(0.56 0.21 25);
-	--color-danger-700: oklch(0.47 0.18 25);
-	--color-danger-800: oklch(0.39 0.15 25);
-	--color-danger-900: oklch(0.31 0.11 25);
-	--color-danger-950: oklch(0.22 0.08 25);
+	--color-danger-50: var(--palette-danger-50);
+	--color-danger-100: var(--palette-danger-100);
+	--color-danger-200: var(--palette-danger-200);
+	--color-danger-300: var(--palette-danger-300);
+	--color-danger-400: var(--palette-danger-400);
+	--color-danger-500: var(--palette-danger-500);
+	--color-danger-600: var(--palette-danger-600);
+	--color-danger-700: var(--palette-danger-700);
+	--color-danger-800: var(--palette-danger-800);
+	--color-danger-900: var(--palette-danger-900);
+	--color-danger-950: var(--palette-danger-950);
 
-	--color-info-50: oklch(0.97 0.02 245);
-	--color-info-100: oklch(0.92 0.04 245);
-	--color-info-200: oklch(0.86 0.06 245);
-	--color-info-300: oklch(0.79 0.07 245);
-	--color-info-400: oklch(0.76 0.07 245);
-	--color-info-500: oklch(0.74 0.07 245); /* ≈ #76B1D3 logo highlight */
-	--color-info-600: oklch(0.62 0.08 245);
-	--color-info-700: oklch(0.5 0.08 245);
-	--color-info-800: oklch(0.4 0.07 245);
-	--color-info-900: oklch(0.3 0.06 245);
-	--color-info-950: oklch(0.2 0.04 245);
+	--color-info-50: var(--palette-info-50);
+	--color-info-100: var(--palette-info-100);
+	--color-info-200: var(--palette-info-200);
+	--color-info-300: var(--palette-info-300);
+	--color-info-400: var(--palette-info-400);
+	--color-info-500: var(--palette-info-500);
+	--color-info-600: var(--palette-info-600);
+	--color-info-700: var(--palette-info-700);
+	--color-info-800: var(--palette-info-800);
+	--color-info-900: var(--palette-info-900);
+	--color-info-950: var(--palette-info-950);
 
-	/* ═══ NEUTRAL — project-controlled gray, full 11-stop ════════
-	 * Independent of Tailwind's default `slate`/`zinc`/`gray` scales.
-	 * Consumed via `gray-{N}` utility OR var(--color-gray-{N}).      */
-	--color-gray-50: oklch(0.985 0 256);
-	--color-gray-100: oklch(0.97 0 256);
-	--color-gray-200: oklch(0.92 0.005 256);
-	--color-gray-300: oklch(0.86 0.01 256);
-	--color-gray-400: oklch(0.7 0.015 256);
-	--color-gray-500: oklch(0.55 0.015 256);
-	--color-gray-600: oklch(0.42 0.015 256);
-	--color-gray-700: oklch(0.32 0.015 256);
-	--color-gray-800: oklch(0.24 0.01 256);
-	--color-gray-900: oklch(0.18 0.01 256);
-	--color-gray-950: oklch(0.12 0.01 256);
+	--color-gray-50: var(--palette-gray-50);
+	--color-gray-100: var(--palette-gray-100);
+	--color-gray-200: var(--palette-gray-200);
+	--color-gray-300: var(--palette-gray-300);
+	--color-gray-400: var(--palette-gray-400);
+	--color-gray-500: var(--palette-gray-500);
+	--color-gray-600: var(--palette-gray-600);
+	--color-gray-700: var(--palette-gray-700);
+	--color-gray-800: var(--palette-gray-800);
+	--color-gray-900: var(--palette-gray-900);
+	--color-gray-950: var(--palette-gray-950);
 
-	/* ═══ SURFACE / FOREGROUND — soft off-white with faint brand tint.
-	 * Industry canon for low-fatigue B2B surfaces uses 95-97% lightness,
-	 * never pure white:
-	 *   Stripe Dashboard   #f6f9fc  (96% L, cool blue tint)
-	 *   GitHub             #f6f8fa  (96% L, cool blue tint)
-	 *   iOS Tertiary Sys.  #f2f2f7  (95% L, cool gray)
-	 * LeadKart matches this with a faint brand-violet (hue 268) tint
-	 * that ties the canvas to the rest of the brand-coloured palette.
-	 *
-	 *   --color-bg          ≈ #f3f4f8 (96% L, brand-violet)  page canvas
-	 *   --color-bg-elevated  = #ffffff (100% L)              cards / modals
-	 * The canvas / elevated gap is what gives cards their lift-off-the-
-	 * page feel — modals + cards pop because they're brighter than the
-	 * surface they sit on.
-	 *
-	 * Light-only since 2026-05-12 (dark mode removed; pharma B2B canon).
-	 * Tokens not raw colors — components consume `bg-bg-elevated`,
-	 * `text-fg-muted`. */
-	--color-bg: oklch(0.96 0.008 268); /* soft off-white, brand-tinted */
-	--color-bg-subtle: oklch(0.93 0.008 268);
-	--color-bg-muted: oklch(0.9 0.008 268);
-	--color-bg-elevated: oklch(1 0 0); /* pure white — cards lift here */
+	/* surfaces + text: same rendered values as before in light; dark follows --dark-* */
+	--color-bg: var(--background);
+	--color-bg-subtle: light-dark(oklch(0.93 0.008 268), var(--dark-850));
+	--color-bg-muted: var(--muted);
+	--color-bg-elevated: var(--card);
 
-	--color-fg: oklch(0.18 0.02 250); /* ≈ #0F172A */
-	--color-fg-muted: oklch(0.42 0.02 250); /* ≈ #475569 */
-	/* ≈ #58626C — 6.25:1 vs white, 4.63:1 vs bg-muted (hover fills) */
-	--color-fg-subtle: oklch(0.49 0.02 250);
-	--color-fg-on-brand: oklch(1 0 0);
+	--color-fg: var(--foreground);
+	--color-fg-muted: var(--muted-foreground);
+	--color-fg-subtle: light-dark(oklch(0.49 0.02 250), var(--dark-400));
+	--color-fg-on-brand: var(--primary-foreground);
 
-	--color-border: oklch(0.9 0.01 245); /* ≈ #E2E8F0 */
-	/* border-strong is used for hover-state indicators on Kanban cards +
-	 * FileDropZone — these are user-interface components per WCAG 2.2
-	 * 1.4.11 (Non-text Contrast) and require ≥3:1 against the canvas
-	 * (--color-bg). Lightness 0.55 → ~3.1:1 contrast (verified by
-	 * scripts/arch/check-token-contrast.mjs). */
-	--color-border-strong: oklch(0.55 0.015 245);
+	--color-border-strong: var(--input);
 
-	/* ═══ SEMANTIC BRAND-TEXT — emphasis + link tokens.
-	 * Both `heading` and `link` point at --color-primary (logo mark blue)
-	 * so brand-emphasised text + primary actions render the SAME hue
-	 * across the product. Two equally-weighted brand colours on one
-	 * page is drift, not hierarchy (Material 3 / Apple HIG / Fluent
-	 * canon: one primary, accent reserved for sparing differentiation).
-	 * Hover stops at brand-700 (the darker wordmark stop) per the
-	 * Material state-layer convention: rest → primary, hover → darker. */
-	--color-brand-heading: var(--color-primary);
-	--color-brand-link: var(--color-primary);
+	--color-brand-heading: var(--primary);
+	--color-brand-link: var(--primary);
 	--color-brand-link-hover: var(--color-primary-hover);
 
 	--color-overlay: oklch(0.18 0.02 250 / 0.5);
@@ -369,18 +298,11 @@
 	--border-medium: 2px;
 	--border-thick: 4px;
 
-	/* ═══ RADIUS — iOS-flavoured rounding per Blazor Layout canon
-	 * (LayoutProperties.DefaultBorderRadius = "16px" in ThemeBuilder.cs).
-	 * The default radius bumped from 6px → 16px gives every primitive
-	 * the LeadKart "soft pill" feel matching the Blazor Web app users
-	 * already know. ────────────────────────────────────────────── */
+	/* ═══ RADIUS — sm/md/lg/xl are derived from --radius (0.75rem) in the
+	 * `@theme inline` bridge at the bottom of this file. Only the steps with
+	 * no derived twin live here. ────────────────────────────────────────── */
 	--radius-none: 0;
 	--radius-xs: 0.25rem; /* 4px — used sparingly for tight chips */
-	--radius-sm: 0.5rem; /* 8px */
-	--radius: 1rem; /* 16px — DEFAULT, matches Blazor */
-	--radius-md: 1rem; /* alias of default for clarity at call sites */
-	--radius-lg: 1.25rem; /* 20px */
-	--radius-xl: 1.5rem; /* 24px */
 	--radius-2xl: 2rem; /* 32px — hero cards */
 	--radius-full: 9999px;
 
@@ -632,45 +554,12 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════
- * SHADCN-CANON SEMANTIC TOKENS — Tailwind 4 two-block pattern.
- *
- * `:root` declares raw OKLCH values anchored to the LeadKart logo
- * palette (see `--color-logo-*` above). `@theme inline` wires them as
- * Tailwind color utilities (`bg-background`, `text-foreground`,
- * `ring-ring`, etc.) per shadcn-svelte 2025+ canon.
- *
- * Anchors (from logo asset):
- *   #502d81 wordmark purple   → --primary   (hue 296, L 0.34, C 0.14)
- *   #0b3e8c navy supporting   → --accent    (hue 250, L 0.42, C 0.13)
- *   #953fc9 highlight purple  → --ring      (hue 296, L 0.52, C 0.20)
- *   #FF3B30 iOS red → medical → --destructive (hue 27, L 0.58, C 0.22)
- *
- * Domiex-style `--color-bg-*`, `--color-fg-*`, `--color-brand-*` etc.
- * remain ABOVE this block during the migration. Phase 7 of the
- * shadcn-svelte rebuild sweeps all consumer call sites to the new
- * `text-foreground` / `bg-background` / `bg-primary` etc. names, then
- * deletes the legacy tokens.
+ * TAILWIND BRIDGE — the semantic tokens (theme/semantic.css) as utilities:
+ * `bg-background`, `text-foreground`, `bg-primary`, `ring-ring`, …
+ * `inline` makes each utility read the semantic variable directly, so the
+ * light-dark() value is resolved on the element that uses it.
  * ═══════════════════════════════════════════════════════════════════ */
 :root {
-	--background: oklch(0.99 0.005 296);
-	--foreground: oklch(0.18 0.02 296);
-	--card: oklch(1 0 0);
-	--card-foreground: var(--foreground);
-	--popover: var(--card);
-	--popover-foreground: var(--foreground);
-	--primary: oklch(0.34 0.14 296);
-	--primary-foreground: oklch(0.98 0.005 296);
-	--secondary: oklch(0.94 0.015 296);
-	--secondary-foreground: var(--foreground);
-	--muted: oklch(0.96 0.01 296);
-	--muted-foreground: oklch(0.5 0.02 296);
-	--accent: oklch(0.42 0.13 250);
-	--accent-foreground: oklch(0.98 0.005 296);
-	--destructive: oklch(0.58 0.22 27);
-	--destructive-foreground: oklch(0.98 0.005 296);
-	--border: oklch(0.92 0.01 296);
-	--input: oklch(0.94 0.005 296);
-	--ring: oklch(0.52 0.2 296);
 	--radius: 0.75rem;
 }
 
@@ -694,6 +583,30 @@
 	--color-border: var(--border);
 	--color-input: var(--input);
 	--color-ring: var(--ring);
+	--color-primary-soft: var(--primary-soft);
+	--color-destructive-soft: var(--destructive-soft);
+	--color-success: var(--success);
+	--color-success-foreground: var(--success-foreground);
+	--color-success-soft: var(--success-soft);
+	--color-warning: var(--warning);
+	--color-warning-foreground: var(--warning-foreground);
+	--color-warning-soft: var(--warning-soft);
+	--color-info: var(--info);
+	--color-info-foreground: var(--info-foreground);
+	--color-info-soft: var(--info-soft);
+	--color-chart-1: var(--chart-1);
+	--color-chart-2: var(--chart-2);
+	--color-chart-3: var(--chart-3);
+	--color-chart-4: var(--chart-4);
+	--color-chart-5: var(--chart-5);
+	--color-sidebar: var(--sidebar);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-ring: var(--sidebar-ring);
 	--radius-sm: calc(var(--radius) - 4px);
 	--radius-md: calc(var(--radius) - 2px);
 	--radius-lg: var(--radius);
