@@ -17,12 +17,12 @@
 		<h1 class="h1">We hit a snag</h1>
 	</div>
 
-	<Alert variant="danger" title="Could not complete your request">
+	<Alert variant="destructive" title="Could not complete your request">
 		{message}
 	</Alert>
 
 	<div class="cluster">
-		<Button variant="primary" onclick={() => page.url && location.reload()}>Try again</Button>
+		<Button variant="default" onclick={() => page.url && location.reload()}>Try again</Button>
 
 		<a href={resolve('signin')}><Button variant="ghost">Back to sign in</Button></a>
 	</div>

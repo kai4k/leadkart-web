@@ -93,7 +93,7 @@
 				/>
 
 				{#if bannerError}
-					<Alert variant="danger">{bannerError}</Alert>
+					<Alert variant="destructive">{bannerError}</Alert>
 				{/if}
 
 				<div class="form-footer">

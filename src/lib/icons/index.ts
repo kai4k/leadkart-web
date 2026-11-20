@@ -66,6 +66,7 @@ export {
 	Menu,
 	Minus,
 	Moon,
+	MoreHorizontal,
 	MoreVertical,
 	OctagonX,
 	Package,

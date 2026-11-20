@@ -51,7 +51,7 @@
 		<form id="cancel-order-form" onsubmit={handleSubmit}>
 			<Dialog.Body>
 				{#if form.bannerError}
-					<Alert variant="danger" title="Failed to cancel">{form.bannerError}</Alert>
+					<Alert variant="destructive" title="Failed to cancel">{form.bannerError}</Alert>
 				{/if}
 				<TextField
 					label="Reason"
@@ -67,7 +67,7 @@
 				</Dialog.Close>
 				<Button
 					type="button"
-					variant="danger"
+					variant="destructive"
 					loading={form.isSubmitting}
 					onclick={() => runSubmit()}
 					data-testid="cancel-order-submit"

@@ -81,7 +81,7 @@
 										{sess.device_label || 'Unknown device'}
 									</p>
 									{#if current}
-										<Badge variant="success" appearance="soft" size="sm">This device</Badge>
+										<Badge variant="success">This device</Badge>
 									{/if}
 								</div>
 								<p class="caption text-fg-muted">

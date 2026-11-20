@@ -22,15 +22,15 @@
 	const prefs = getPreferences();
 
 	const buttonVariants = [
-		'primary',
+		'default',
 		'secondary',
 		'tonal',
 		'ghost',
-		'danger',
-		'glass',
+		'destructive',
+		'outline',
 		'link'
 	] as const;
-	const buttonSizes = ['sm', 'md', 'lg'] as const;
+	const buttonSizes = ['sm', 'default', 'lg'] as const;
 	const brandShades = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
 	const semanticPalettes = ['brand', 'secondary', 'success', 'warning', 'danger', 'info', 'gray'];
 </script>
@@ -59,8 +59,8 @@
 				<Card.Header>
 					<Card.Title>variant="{variant}"</Card.Title>
 					<Card.Description>
-						Sizes sm (h-9, 36px), md (h-11, 44px — Apple HIG floor), lg (h-12, 48px — Material 3
-						floor). Default + disabled + loading states.
+						Sizes sm (h-8), default (h-10, the Domiex .btn), lg (h-12). Default + disabled + loading
+						states.
 					</Card.Description>
 				</Card.Header>
 				<Card.Content>
@@ -123,7 +123,7 @@
 			<Alert variant="info" title="Info">A neutral informational message.</Alert>
 			<Alert variant="success" title="Success">An action completed successfully.</Alert>
 			<Alert variant="warning" title="Warning">Heads-up — the user should know.</Alert>
-			<Alert variant="danger" title="Danger">Something failed and needs attention.</Alert>
+			<Alert variant="destructive" title="Danger">Something failed and needs attention.</Alert>
 		</div>
 	</section>
 

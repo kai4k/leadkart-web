@@ -27,7 +27,7 @@
 <ScopeContextField />
 
 {#if form?.formErrorKey}
-	<Alert variant="danger">{$_(form.formErrorKey)}</Alert>
+	<Alert variant="destructive">{$_(form.formErrorKey)}</Alert>
 {:else if form?.success}
 	<Alert variant="success">{successMessage}</Alert>
 {/if}

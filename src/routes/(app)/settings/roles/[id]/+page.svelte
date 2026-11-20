@@ -182,7 +182,7 @@
 				<div class="stack stack-tight">
 					<div class="cluster cluster-tight">
 						<h1 class="h1">{role.name}</h1>
-						<Badge variant={badge.variant} appearance="soft" size="sm">{badge.label}</Badge>
+						<Badge variant={badge.variant}>{badge.label}</Badge>
 					</div>
 					<p class="caption text-fg-muted">Hierarchy level {role.hierarchy_level}</p>
 					<div class="cluster cluster-tight">
@@ -197,7 +197,7 @@
 					>This role is protected by the system. Properties and permissions can't be edited.</Alert
 				>
 			{/if}
-			{#if error}<Alert variant="danger">{error}</Alert>{/if}
+			{#if error}<Alert variant="destructive">{error}</Alert>{/if}
 			{#if saved}<Alert variant="success">Saved.</Alert>{/if}
 
 			<Card.Root>

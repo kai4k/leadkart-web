@@ -221,7 +221,7 @@
 					></textarea>
 				</label>
 
-				{#if form.bannerError}<Alert variant="danger">{form.bannerError}</Alert>{/if}
+				{#if form.bannerError}<Alert variant="destructive">{form.bannerError}</Alert>{/if}
 			</form>
 		</Drawer.Body>
 

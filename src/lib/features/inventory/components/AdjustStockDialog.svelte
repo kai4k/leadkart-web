@@ -150,7 +150,7 @@
 				{/if}
 
 				{#if form.bannerError}
-					<Alert variant="danger" title="Couldn't adjust stock">{form.bannerError}</Alert>
+					<Alert variant="destructive" title="Couldn't adjust stock">{form.bannerError}</Alert>
 				{/if}
 			</form>
 		</Dialog.Body>

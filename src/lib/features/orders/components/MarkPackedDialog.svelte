@@ -39,7 +39,7 @@
 		<form id="mark-packed-form" onsubmit={handleSubmit}>
 			<Dialog.Body>
 				{#if form.bannerError}
-					<Alert variant="danger" title="Failed to mark packed">{form.bannerError}</Alert>
+					<Alert variant="destructive" title="Failed to mark packed">{form.bannerError}</Alert>
 				{/if}
 				<NumberInput
 					label="Box count"

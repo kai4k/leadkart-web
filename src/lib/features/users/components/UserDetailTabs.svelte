@@ -52,7 +52,7 @@
 </script>
 
 {#snippet statusBadge()}
-	<Badge variant={status.variant} appearance="soft" size="sm">{status.label}</Badge>
+	<Badge variant={status.variant}>{status.label}</Badge>
 {/snippet}
 
 <Tabs.Root value={tab} onValueChange={onTabChange}>
@@ -162,7 +162,7 @@
 						<ul class="cluster">
 							{#each userRoles as r (r.id)}
 								<li>
-									<Badge variant="brand" appearance="soft">
+									<Badge variant="brand">
 										<Icon icon={Shield} size="xs" />
 										{r.name}
 									</Badge>
@@ -232,7 +232,7 @@
 										</span>
 										<span class="caption text-fg-muted truncate">{report.email}</span>
 									</div>
-									<Badge variant={rs.variant} appearance="soft" size="sm">{rs.label}</Badge>
+									<Badge variant={rs.variant}>{rs.label}</Badge>
 								</a>
 							</li>
 						{/each}

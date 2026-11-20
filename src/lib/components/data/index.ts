@@ -24,6 +24,8 @@ export type {
 	BulkUploadResultShape,
 	BulkUploadOption
 } from './BulkUploadDrawer.svelte';
+export { default as Pagination } from './Pagination.svelte';
+export type { PaginationChange } from './Pagination.svelte';
 export { default as InfiniteListFooter } from './InfiniteListFooter.svelte';
 export { default as ResourceListPage } from './ResourceListPage.svelte';
 export type { ResourceListAction } from './ResourceListPage.svelte';

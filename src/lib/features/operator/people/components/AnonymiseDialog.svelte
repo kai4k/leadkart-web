@@ -59,7 +59,7 @@
 	{onConfirm}
 >
 	{#snippet body()}
-		<Alert variant="danger">
+		<Alert variant="destructive">
 			<strong>This cannot be undone.</strong> Type the email below to confirm.
 		</Alert>
 		<label class="stack stack-tight mt-4 w-full">
@@ -86,6 +86,6 @@
 			></textarea>
 			{#if reasonError}<span class="body-sm text-danger-700">{reasonError}</span>{/if}
 		</label>
-		{#if bannerError}<Alert class="mt-4" variant="danger">{bannerError}</Alert>{/if}
+		{#if bannerError}<Alert class="mt-4" variant="destructive">{bannerError}</Alert>{/if}
 	{/snippet}
 </ConfirmDialog>

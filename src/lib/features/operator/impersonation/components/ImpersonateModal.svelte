@@ -95,7 +95,7 @@
 					{/if}
 				</label>
 				{#if form.bannerError}
-					<Alert variant="danger">{form.bannerError}</Alert>
+					<Alert variant="destructive">{form.bannerError}</Alert>
 				{/if}
 			</form>
 		</Dialog.Body>

@@ -120,7 +120,7 @@
 					<ul class="cluster" aria-label="Granted permissions">
 						{#each granted as p (p)}
 							<li>
-								<Badge variant="success" appearance="soft" size="sm"
+								<Badge variant="success"
 									>{p}
 									<button
 										type="button"
@@ -150,7 +150,7 @@
 					<ul class="cluster" aria-label="Revoked permissions">
 						{#each revoked as p (p)}
 							<li>
-								<Badge variant="danger" appearance="soft" size="sm"
+								<Badge variant="danger"
 									>{p}
 									<button
 										type="button"
@@ -164,7 +164,7 @@
 					</ul>
 				{/if}
 			</section>
-			{#if bannerError}<Alert class="mt-4" variant="danger">{bannerError}</Alert>{/if}
+			{#if bannerError}<Alert class="mt-4" variant="destructive">{bannerError}</Alert>{/if}
 		</Drawer.Body>
 		<Drawer.Footer>
 			<Drawer.Close>

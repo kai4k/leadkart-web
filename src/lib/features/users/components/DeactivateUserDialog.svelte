@@ -74,6 +74,6 @@
 			></textarea>
 			{#if reasonError}<span class="body-sm text-danger-700">{reasonError}</span>{/if}
 		</label>
-		{#if bannerError}<Alert variant="danger">{bannerError}</Alert>{/if}
+		{#if bannerError}<Alert variant="destructive">{bannerError}</Alert>{/if}
 	{/snippet}
 </ConfirmDialog>

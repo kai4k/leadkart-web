@@ -44,7 +44,7 @@
 </script>
 
 {#snippet failure(heading: string)}
-	<Alert variant={missing || forbidden ? 'warning' : 'danger'} title={heading}>
+	<Alert variant={missing || forbidden ? 'warning' : 'destructive'} title={heading}>
 		<div class="stack stack-tight">
 			<p>{message}</p>
 			{#if canRetry}

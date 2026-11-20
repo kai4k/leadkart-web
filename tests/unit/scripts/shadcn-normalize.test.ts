@@ -44,6 +44,14 @@ describe('shadcn normaliser: imports', () => {
 	});
 });
 
+describe('shadcn normaliser: relative index.js', () => {
+	it('points a relative index.js at index.ts', () => {
+		expect(run("import { buttonVariants } from '../button/index.js';").out).toBe(
+			"import { buttonVariants } from '../button/index.ts';"
+		);
+	});
+});
+
 describe('shadcn normaliser: duplicate imports', () => {
 	it('merges value and type imports from one module', () => {
 		const src = `import { cn } from '#lib/utils/cn.ts';
@@ -133,6 +141,10 @@ describe('shadcn normaliser: opaque tokens (L37)', () => {
 		['ring-foreground/10', 'ring-border'],
 		['bg-muted/50', 'bg-muted'],
 		['bg-black/10', 'bg-black/50'],
+		['text-foreground/60', 'text-muted-foreground'],
+		['cn-rtl-flip', 'rtl:rotate-180'],
+		['aria-invalid:ring-destructive/20', ''],
+		['dark:aria-invalid:ring-destructive/40', ''],
 		[
 			'data-[variant=destructive]:focus:bg-destructive/10',
 			'data-[variant=destructive]:focus:bg-destructive-soft'
@@ -148,7 +160,7 @@ describe('shadcn normaliser: opaque tokens (L37)', () => {
 	it('fails on a remaining alpha on a text, ring, border-input or solid-fill colour', () => {
 		for (const bad of [
 			'bg-primary/50',
-			'text-foreground/60',
+			'text-foreground/55',
 			'ring-primary/30',
 			'border-input/70',
 			'bg-secondary/80'

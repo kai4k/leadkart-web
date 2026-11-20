@@ -134,7 +134,7 @@
 
 <div class="stack stack-relaxed" data-testid="order-items-editor">
 	{#if bannerError}
-		<Alert variant="danger" title="Couldn't save">{bannerError}</Alert>
+		<Alert variant="destructive" title="Couldn't save">{bannerError}</Alert>
 	{/if}
 
 	<div class="stack stack-relaxed">

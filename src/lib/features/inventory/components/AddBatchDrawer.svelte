@@ -160,7 +160,7 @@
 				</div>
 
 				{#if form.bannerError}
-					<Alert variant="danger" title="Couldn't add batch">{form.bannerError}</Alert>
+					<Alert variant="destructive" title="Couldn't add batch">{form.bannerError}</Alert>
 				{/if}
 			</form>
 		</Drawer.Body>

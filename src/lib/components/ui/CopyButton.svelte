@@ -8,7 +8,7 @@
 		/** Optional aria-label override; default 'Copy'. */
 		label?: string;
 		/** Size pass-through to Button. */
-		size?: 'sm' | 'md';
+		size?: 'sm' | 'default';
 	};
 
 	let { value, label = 'Copy', size = 'sm' }: Props = $props();

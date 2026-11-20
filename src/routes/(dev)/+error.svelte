@@ -17,12 +17,12 @@
 		<h1 class="h1">Dev page failed to load</h1>
 	</div>
 
-	<Alert variant="danger" title="Something went wrong">
+	<Alert variant="destructive" title="Something went wrong">
 		{message}
 	</Alert>
 
 	<div class="cluster">
-		<Button variant="primary" onclick={() => location.reload()}>Try again</Button>
+		<Button variant="default" onclick={() => location.reload()}>Try again</Button>
 
 		<a href={resolve('dashboard')}><Button variant="ghost">Back to dashboard</Button></a>
 	</div>

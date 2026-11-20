@@ -137,11 +137,11 @@
 		<form id="revise-quotation-form" onsubmit={onSubmit}>
 			<Drawer.Body>
 				{#if form.bannerError}
-					<Alert variant="danger" title="Failed to revise">{form.bannerError}</Alert>
+					<Alert variant="destructive" title="Failed to revise">{form.bannerError}</Alert>
 				{/if}
 
 				{#if itemsError}
-					<Alert variant="danger" title="Items invalid">{itemsError}</Alert>
+					<Alert variant="destructive" title="Items invalid">{itemsError}</Alert>
 				{/if}
 
 				<div class="stack stack-relaxed">

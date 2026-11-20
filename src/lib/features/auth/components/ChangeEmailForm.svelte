@@ -61,7 +61,7 @@
 			error={fieldError ?? undefined}
 		/>
 		{#if formError}
-			<Alert variant="danger">{formError}</Alert>
+			<Alert variant="destructive">{formError}</Alert>
 		{/if}
 		<div class="form-footer">
 			<Button type="submit" {loading}>

@@ -59,7 +59,7 @@
 				class="bg-bg-elevated border border-border rounded-md rounded-md px-3 py-2 text-sm"
 			/>
 		</label>
-		{#if bannerError}<Alert variant="danger">{bannerError}</Alert>{/if}
+		{#if bannerError}<Alert variant="destructive">{bannerError}</Alert>{/if}
 		{#if !canConfirm && confirmName.length > 0}
 			<p class="caption text-warning-900">Name doesn't match.</p>
 		{/if}

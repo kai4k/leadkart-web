@@ -54,7 +54,7 @@
 	<header class="stack stack-tight">
 		<div class="cluster">
 			<h1 class="h1">{tenantDisplayName(tenantData)}</h1>
-			<Badge variant={badge.variant} appearance="soft">{badge.label}</Badge>
+			<Badge variant={badge.variant}>{badge.label}</Badge>
 		</div>
 		<p class="body-sm text-fg-muted">
 			Manage your organisation's profile, statutory IDs, contact details, and platform preferences.

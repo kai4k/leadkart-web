@@ -70,7 +70,7 @@
 					{/if}
 				</label>
 				{#if form.bannerError}
-					<Alert variant="danger" title="Couldn't write off batch">{form.bannerError}</Alert>
+					<Alert variant="destructive" title="Couldn't write off batch">{form.bannerError}</Alert>
 				{/if}
 			</form>
 		</Dialog.Body>
@@ -78,7 +78,7 @@
 			<Dialog.Close>
 				<Button variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
 			</Dialog.Close>
-			<Button type="submit" form="write-off-form" variant="danger" loading={form.isSubmitting}>
+			<Button type="submit" form="write-off-form" variant="destructive" loading={form.isSubmitting}>
 				Write off
 			</Button>
 		</Dialog.Footer>

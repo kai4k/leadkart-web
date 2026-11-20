@@ -53,18 +53,18 @@ const REQUIRED = {
 	feedback: [
 		{ path: 'ui/alert/alert.svelte' },
 		{ path: 'ui/sonner/sonner.svelte' },
-		{ path: 'ui/tooltip/Tooltip.svelte' },
+		{ path: 'ui/tooltip/tooltip.svelte' },
 		{ path: 'ui/skeleton/skeleton.svelte' },
 		{ path: 'ui/spinner/Spinner.svelte' },
 		{ path: 'ui/progress/Progress.svelte' }
 	],
 	// Overlay primitives (arch test #184)
 	overlay: [
-		{ path: 'ui/dialog/Dialog.svelte' },
-		{ path: 'ui/drawer/Drawer.svelte' },
-		{ path: 'ui/popover/Popover.svelte' },
+		{ path: 'ui/dialog/dialog.svelte' },
+		{ path: 'ui/drawer/drawer.svelte' },
+		{ path: 'ui/popover/popover.svelte' },
 		{ path: 'ui/dropdown-menu/dropdown-menu.svelte' },
-		{ path: 'ui/accordion/Accordion.svelte' }
+		{ path: 'ui/accordion/accordion.svelte' }
 	],
 	// Data display (arch test #185)
 	data: [
@@ -74,14 +74,13 @@ const REQUIRED = {
 		{ path: 'ui/avatar/avatar.svelte' },
 		{ path: 'ui/avatar/avatar-group.svelte' },
 		{ path: 'ui/CopyButton.svelte' },
-		{ path: 'ui/InlineEdit.svelte' },
 		{ path: 'ui/StatCard.svelte' },
 		{ path: 'ui/StatusPill.svelte' }
 	],
 	// Navigation (arch test #186)
 	navigation: [
 		{ path: 'ui/breadcrumb/breadcrumb.svelte' },
-		{ path: 'ui/pagination/pagination.svelte' },
+		{ path: 'data/Pagination.svelte' },
 		{ path: 'ui/stepper/Stepper.svelte' }
 	],
 	// Interactive lists (arch test #187)
@@ -93,7 +92,7 @@ const REQUIRED = {
 const OPT_OUT = new Set([
 	// Composed-on-demand from existing primitives:
 	'ui/ScrollArea.svelte', // — use overflow-y-auto utility + ScrollArea bits-ui v2 component inline
-	'form/Textarea.svelte', // — TextField with `multiline` variant covers this
+	'form/Textarea.svelte', // — TextareaField (plan Task 6) is the field; no bare Textarea wrapper
 	'form/Checkbox.svelte', // — bits-ui Checkbox consumed directly in features (no LeadKart-shell wrapper needed yet)
 	'form/Slider.svelte', // — bits-ui Slider consumed directly (one usage in customiser drawer)
 	'form/RangeSlider.svelte', // — not needed for v0.1 (no slider-range features yet)
@@ -106,7 +105,7 @@ const OPT_OUT = new Set([
 	'ui/HoverCard.svelte', // — no consumer site; Tooltip + Popover cover the hover-reveal cases
 	'ui/ContextMenu.svelte', // — no right-click menus on the v0.x roadmap
 	'ui/CommandPalette.svelte', // — primitive lives at $features/search/components/CommandPalette.svelte (route-aware)
-	'ui/tabs/Tabs.svelte', // — Tabs implemented inline in pages via useUrlTab + button-styled nav; primitive deferred
+	'ui/tabs/Tabs.svelte', // — the primitive is ui/tabs/tabs.svelte (lowercase, regenerated)
 	'ui/ProgressBar.svelte', // — Progress.svelte covers this (bits-ui Progress)
 	'ui/ProgressCircle.svelte', // — Spinner covers indeterminate; ProgressCircle deferred
 	'ui/Tag.svelte', // — Badge covers the static-tag case; pill-with-x interactive Tag deferred

@@ -115,7 +115,7 @@
 					<p class="caption text-fg-subtle">
 						The user will be prompted to change this on first sign-in.
 					</p>
-					{#if form.bannerError}<Alert variant="danger">{form.bannerError}</Alert>{/if}
+					{#if form.bannerError}<Alert variant="destructive">{form.bannerError}</Alert>{/if}
 				</form>
 			{/if}
 		</Drawer.Body>

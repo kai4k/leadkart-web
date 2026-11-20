@@ -42,11 +42,11 @@
 					: 'auth.changeEmail.confirm.unreachable'
 			)}
 		</Alert>
-		<Button fullWidth onclick={() => invalidateAll()}>
+		<Button class="w-full" onclick={() => invalidateAll()}>
 			{$_('auth.changeEmail.confirm.retry')}
 		</Button>
 	{:else}
-		<Alert variant="danger">{$_('auth.changeEmail.confirm.invalidToken')}</Alert>
+		<Alert variant="destructive">{$_('auth.changeEmail.confirm.invalidToken')}</Alert>
 		<a
 			href={resolve('settings/account/security')}
 			class="text-fg-muted hover:bg-bg-muted focus-visible:ring-focus-ring inline-flex h-10 w-full items-center justify-center rounded-md px-4 text-sm font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"

@@ -86,7 +86,7 @@
 {#snippet actionsSlot()}
 	{#if secondaryActions}
 		{#each secondaryActions as a (a.label)}
-			<Button variant="tonal" size="md" disabled={a.disabled} onclick={a.onClick}>
+			<Button variant="tonal" disabled={a.disabled} onclick={a.onClick}>
 				{#if a.icon}<Icon icon={a.icon} size="sm" />{/if}
 				{a.label}
 			</Button>

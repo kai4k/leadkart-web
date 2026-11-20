@@ -100,7 +100,7 @@
 			)}
 			aria-label={`Status: ${currentLabel}. Click to change.`}
 		>
-			<Badge variant={currentVariant} appearance="soft">
+			<Badge variant={currentVariant}>
 				<span class="inline-flex items-center gap-1">
 					<span>{currentLabel}</span>
 					<Icon icon={ChevronDown} size="xs" />
@@ -111,7 +111,7 @@
 			{#each options as opt (opt.value)}
 				<Dropdown.Item onSelect={() => onChange?.(opt.value)}>
 					<span class="inline-flex flex-1 items-center gap-2">
-						<Badge variant={opt.variant} appearance="soft" size="sm">
+						<Badge variant={opt.variant}>
 							{opt.label}
 						</Badge>
 					</span>
@@ -124,6 +124,6 @@
 	</Dropdown.Root>
 {:else}
 	<span class={className}>
-		<Badge variant={currentVariant} appearance="soft">{currentLabel}</Badge>
+		<Badge variant={currentVariant}>{currentLabel}</Badge>
 	</span>
 {/if}

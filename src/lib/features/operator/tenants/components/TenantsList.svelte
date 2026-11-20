@@ -194,14 +194,14 @@
 		{/if}
 		<span class="text-fg font-medium">{tenant.display_name}</span>
 		{#if tenant.slug === 'platform'}
-			<Badge variant="brand" appearance="soft" size="sm">Platform</Badge>
+			<Badge variant="brand">Platform</Badge>
 		{/if}
 	</div>
 {/snippet}
 
 {#snippet statusCell(tenant: TenantDto)}
 	{@const badge = tenantStatus(tenant.status)}
-	<Badge variant={badge.variant} appearance="soft" size="sm">{badge.label}</Badge>
+	<Badge variant={badge.variant}>{badge.label}</Badge>
 {/snippet}
 
 {#snippet rowActions(tenant: TenantDto)}
@@ -336,7 +336,7 @@
 			{#if query.isError}
 				{@const err = query.error}
 				<Alert
-					variant={err instanceof NetworkError ? 'warning' : 'danger'}
+					variant={err instanceof NetworkError ? 'warning' : 'destructive'}
 					title="Failed to load tenants"
 				>
 					{listErrorCopy}

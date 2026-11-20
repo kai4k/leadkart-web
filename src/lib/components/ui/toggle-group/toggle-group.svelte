@@ -1,34 +1,75 @@
+<script lang="ts" module>
+	import { getContext, setContext } from 'svelte';
+	import { toggleVariants } from '#lib/components/ui/toggle/index.ts';
+	import type { VariantProps } from 'class-variance-authority';
+
+	type ToggleVariants = VariantProps<typeof toggleVariants>;
+
+	interface ToggleGroupContext extends ToggleVariants {
+		spacing?: number;
+		orientation?: 'horizontal' | 'vertical';
+	}
+
+	export function setToggleGroupCtx(props: ToggleGroupContext) {
+		setContext('toggleGroup', props);
+	}
+
+	export function getToggleGroupCtx() {
+		return getContext<Required<ToggleGroupContext>>('toggleGroup');
+	}
+</script>
+
 <script lang="ts">
 	import { ToggleGroup as ToggleGroupPrimitive } from 'bits-ui';
-	import { setContext } from 'svelte';
 	import { cn } from '#lib/utils/cn.ts';
-	import type { ToggleVariants } from '../toggle';
-	type SingleProps = Extract<ToggleGroupPrimitive.RootProps, { type?: 'single' }>;
+
 	let {
 		ref = $bindable(null),
-		class: className,
 		value = $bindable(),
-		variant = 'default',
+		class: className,
 		size = 'default',
-		type: _type,
-		...rest
-	}: SingleProps & ToggleVariants = $props();
+		spacing = 0,
+		orientation = 'horizontal',
+		variant = 'default',
+		...restProps
+	}: ToggleGroupPrimitive.RootProps &
+		ToggleVariants & {
+			spacing?: number;
+			orientation?: 'horizontal' | 'vertical';
+		} = $props();
 
-	setContext('toggle-group', {
+	setToggleGroupCtx({
 		get variant() {
 			return variant;
 		},
 		get size() {
 			return size;
+		},
+		get spacing() {
+			return spacing;
+		},
+		get orientation() {
+			return orientation;
 		}
 	});
 </script>
 
+<!--
+Discriminated Unions + Destructing (required for bindable) do not
+get along, so we shut typescript up by casting `value` to `never`.
+-->
 <ToggleGroupPrimitive.Root
+	bind:value={value as never}
 	bind:ref
-	bind:value
-	type="single"
+	{orientation}
 	data-slot="toggle-group"
-	class={cn('inline-flex items-center justify-center gap-1', className)}
-	{...rest}
+	data-variant={variant}
+	data-size={size}
+	data-spacing={spacing}
+	style={`--gap: ${spacing}`}
+	class={cn(
+		'rounded-lg data-[size=sm]:rounded-[min(var(--radius-md),10px)] group/toggle-group flex w-fit flex-row items-center gap-[--spacing(var(--gap))] data-vertical:flex-col data-vertical:items-stretch',
+		className
+	)}
+	{...restProps}
 />

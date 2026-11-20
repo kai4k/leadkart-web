@@ -132,7 +132,7 @@
 					<Dropdown.Root>
 						<Dropdown.Trigger
 							size="sm"
-							variant={action.variant === 'danger' ? 'danger' : 'secondary'}
+							variant={action.variant === 'danger' ? 'destructive' : 'secondary'}
 							loading={runningId === action.id}
 							disabled={action.disabled || runningId !== null}
 						>
@@ -153,7 +153,7 @@
 				{:else}
 					<Button
 						size="sm"
-						variant={action.variant === 'danger' ? 'danger' : 'secondary'}
+						variant={action.variant === 'danger' ? 'destructive' : 'secondary'}
 						loading={runningId === action.id}
 						disabled={action.disabled || runningId !== null}
 						onclick={() => runAction(action)}

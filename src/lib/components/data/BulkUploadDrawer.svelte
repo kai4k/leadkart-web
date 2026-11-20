@@ -285,16 +285,16 @@
 					{/if}
 
 					{#if previewError}
-						<Alert variant="danger">{previewError}</Alert>
+						<Alert variant="destructive">{previewError}</Alert>
 					{/if}
 				</div>
 			{:else if step === 'preview' && preview}
 				<div class="stack stack-relaxed">
 					<div class="cluster cluster-tight">
-						<Badge variant="info" appearance="soft">{preview.total_rows} total</Badge>
-						<Badge variant="success" appearance="soft">{previewValidCount} valid</Badge>
+						<Badge variant="info">{preview.total_rows} total</Badge>
+						<Badge variant="success">{previewValidCount} valid</Badge>
 						{#if preview.errors.length > 0}
-							<Badge variant="danger" appearance="soft">{preview.errors.length} errors</Badge>
+							<Badge variant="danger">{preview.errors.length} errors</Badge>
 						{/if}
 					</div>
 
@@ -337,7 +337,7 @@
 					{/if}
 
 					{#if commitError}
-						<Alert variant="danger">{commitError}</Alert>
+						<Alert variant="destructive">{commitError}</Alert>
 					{/if}
 				</div>
 			{:else if step === 'result' && result}
@@ -347,10 +347,10 @@
 					</div>
 					<h3 class="h5">Upload complete</h3>
 					<div class="cluster cluster-tight justify-center">
-						<Badge variant="success" appearance="soft">{result.inserted} inserted</Badge>
-						<Badge variant="info" appearance="soft">{result.updated} updated</Badge>
+						<Badge variant="success">{result.inserted} inserted</Badge>
+						<Badge variant="info">{result.updated} updated</Badge>
 						{#if result.failed > 0}
-							<Badge variant="danger" appearance="soft">{result.failed} failed</Badge>
+							<Badge variant="danger">{result.failed} failed</Badge>
 						{/if}
 					</div>
 					{#if result.errors.length > 0}

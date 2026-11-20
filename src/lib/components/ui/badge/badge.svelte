@@ -1,82 +1,53 @@
 <script lang="ts" module>
 	import { cva, type VariantProps } from 'class-variance-authority';
-	export const badgeVariants = cva(
-		'label-small inline-flex items-center rounded-full leading-tight',
-		{
-			variants: {
-				variant: {
-					neutral: '',
-					success: '',
-					warning: '',
-					danger: '',
-					info: '',
-					brand: '',
-					default: '',
-					secondary: '',
-					outline: 'border',
-					destructive: ''
-				},
-				appearance: { solid: '', soft: '', outline: 'border' },
-				size: {
-					sm: 'px-1.5 py-0.5 text-[var(--text-2xs)]',
-					md: 'px-2 py-0.5 text-xs'
-				}
-			},
-			compoundVariants: [
-				{ variant: 'neutral', appearance: 'solid', class: 'bg-fg text-bg-elevated' },
-				{ variant: 'neutral', appearance: 'soft', class: 'bg-bg-muted text-fg' },
-				{ variant: 'neutral', appearance: 'outline', class: 'border-border text-fg' },
-				{ variant: 'success', appearance: 'solid', class: 'bg-success-500 text-white' },
-				{ variant: 'success', appearance: 'soft', class: 'bg-success-50 text-success-900' },
-				{ variant: 'success', appearance: 'outline', class: 'border-success-500 text-success-900' },
-				{ variant: 'warning', appearance: 'solid', class: 'bg-warning-500 text-white' },
-				{ variant: 'warning', appearance: 'soft', class: 'bg-warning-50 text-warning-900' },
-				{ variant: 'warning', appearance: 'outline', class: 'border-warning-500 text-warning-900' },
-				{ variant: 'danger', appearance: 'solid', class: 'bg-danger-500 text-white' },
-				{ variant: 'danger', appearance: 'soft', class: 'bg-danger-50 text-danger-900' },
-				{ variant: 'danger', appearance: 'outline', class: 'border-danger-500 text-danger-900' },
-				{ variant: 'info', appearance: 'solid', class: 'bg-info-500 text-white' },
-				{ variant: 'info', appearance: 'soft', class: 'bg-info-50 text-info-900' },
-				{ variant: 'info', appearance: 'outline', class: 'border-info-500 text-info-900' },
-				{ variant: 'brand', appearance: 'solid', class: 'bg-primary text-white' },
-				{ variant: 'brand', appearance: 'soft', class: 'bg-primary-soft text-primary' },
-				{ variant: 'brand', appearance: 'outline', class: 'border-primary text-primary' },
-				{ variant: 'default', appearance: 'solid', class: 'bg-primary text-white' },
-				{ variant: 'default', appearance: 'soft', class: 'bg-primary-soft text-primary' },
-				{ variant: 'secondary', appearance: 'solid', class: 'bg-secondary-500 text-white' },
-				{ variant: 'secondary', appearance: 'soft', class: 'bg-secondary-50 text-secondary-900' },
-				{ variant: 'destructive', appearance: 'solid', class: 'bg-danger-500 text-white' },
-				{ variant: 'destructive', appearance: 'soft', class: 'bg-danger-50 text-danger-900' }
-			],
-			defaultVariants: { variant: 'neutral', appearance: 'soft', size: 'md' }
-		}
-	);
-	export type BadgeVariant = NonNullable<VariantProps<typeof badgeVariants>['variant']>;
-	export type BadgeAppearance = NonNullable<VariantProps<typeof badgeVariants>['appearance']>;
-	export type BadgeSize = NonNullable<VariantProps<typeof badgeVariants>['size']>;
-	export type BadgeVariants = VariantProps<typeof badgeVariants>;
-	export type BadgeStyle = BadgeAppearance;
-</script>
-
-<script lang="ts">
-	import type { Snippet } from 'svelte';
 	import type { HTMLAnchorAttributes, HTMLAttributes } from 'svelte/elements';
 	import { cn, type WithElementRef } from '#lib/utils/cn.ts';
 
-	type Props = WithElementRef<HTMLAttributes<HTMLSpanElement>> &
-		WithElementRef<HTMLAnchorAttributes> &
-		BadgeVariants & { href?: string; children: Snippet };
+	/**
+	 * shadcn-svelte `badge` (nova) with LeadKart edits: `cva`, no alpha, and the soft status
+	 * variants (`StatusVariant` in utils/status.ts): `neutral | info | success | warning | danger |
+	 * brand`. Each pair is checked by the token contrast gate.
+	 */
+	export const badgeVariants = cva(
+		[
+			'inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full border border-transparent px-2 py-0.5 text-xs leading-tight font-medium whitespace-nowrap',
+			'focus-visible:ring-2 focus-visible:ring-ring [&>svg]:pointer-events-none [&>svg]:size-3'
+		],
+		{
+			variants: {
+				variant: {
+					default: 'bg-primary text-primary-foreground [a&]:hover:bg-primary-hover',
+					secondary: 'bg-secondary text-secondary-foreground',
+					destructive: 'bg-destructive text-destructive-foreground [a&]:hover:bg-destructive-hover',
+					outline: 'border-border text-foreground [a&]:hover:bg-muted',
+					neutral: 'bg-muted text-muted-foreground',
+					info: 'bg-info-soft text-info',
+					success: 'bg-success-soft text-success',
+					warning: 'bg-warning-soft text-warning',
+					danger: 'bg-destructive-soft text-destructive',
+					brand: 'bg-primary-soft text-primary'
+				}
+			},
+			defaultVariants: { variant: 'neutral' }
+		}
+	);
 
+	export type BadgeVariants = VariantProps<typeof badgeVariants>;
+	export type BadgeVariant = NonNullable<BadgeVariants['variant']>;
+	export type BadgeProps = WithElementRef<HTMLAttributes<HTMLSpanElement>> &
+		WithElementRef<HTMLAnchorAttributes> &
+		BadgeVariants;
+</script>
+
+<script lang="ts">
 	let {
-		variant = 'neutral',
-		appearance = 'soft',
-		size = 'md',
-		href,
 		ref = $bindable(null),
-		class: className = '',
+		href,
+		class: className,
+		variant = 'neutral',
 		children,
-		...rest
-	}: Props = $props();
+		...restProps
+	}: BadgeProps = $props();
 </script>
 
 <svelte:element
@@ -84,8 +55,8 @@
 	bind:this={ref}
 	data-slot="badge"
 	{href}
-	class={cn(badgeVariants({ variant, appearance, size }), className)}
-	{...rest}
+	class={cn(badgeVariants({ variant }), className)}
+	{...restProps}
 >
-	{@render children()}
+	{@render children?.()}
 </svelte:element>

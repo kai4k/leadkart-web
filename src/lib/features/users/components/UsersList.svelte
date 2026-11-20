@@ -12,9 +12,9 @@
 		DataTable,
 		Dropdown,
 		EmptyState,
-		Pagination,
 		type DataTableColumn
 	} from '$ui';
+	import Pagination from '#lib/components/data/Pagination.svelte';
 	import {
 		MoreVertical,
 		Plus,
@@ -260,14 +260,14 @@
 {#snippet rolesCell(user: UserDto)}
 	<div class="cluster cluster-tight">
 		{#each userRoleBadges(user, roleList) as r (r.id)}
-			<Badge variant="brand" appearance="soft" size="sm">{r.name}</Badge>
+			<Badge variant="brand">{r.name}</Badge>
 		{/each}
 	</div>
 {/snippet}
 
 {#snippet statusCell(user: UserDto)}
 	{@const status = userStatus(user.status)}
-	<Badge variant={status.variant} appearance="soft" size="sm">{status.label}</Badge>
+	<Badge variant={status.variant}>{status.label}</Badge>
 {/snippet}
 
 {#snippet rowActions(user: UserDto)}

@@ -250,7 +250,7 @@
 				</section>
 
 				{#if form.bannerError}
-					<Alert variant="danger" title="Couldn't update product">{form.bannerError}</Alert>
+					<Alert variant="destructive" title="Couldn't update product">{form.bannerError}</Alert>
 				{/if}
 			</form>
 		</Drawer.Body>

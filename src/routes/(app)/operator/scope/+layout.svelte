@@ -43,7 +43,7 @@
 			{/if}
 			<h1 class="h2">{tenant.display_name}</h1>
 			{#if tenant.slug === 'platform'}
-				<Badge variant="brand" appearance="soft" size="sm">Platform</Badge>
+				<Badge variant="brand">Platform</Badge>
 			{/if}
 		</div>
 		<Button variant="ghost" size="sm" onclick={() => exit.mutate()} loading={exit.isPending}>

@@ -104,11 +104,11 @@
 
 		{#if formError}
 			<div bind:this={errorRegion} tabindex="-1">
-				<Alert variant="danger">{formError}</Alert>
+				<Alert variant="destructive">{formError}</Alert>
 			</div>
 		{/if}
 
-		<Button type="submit" {loading} fullWidth size="lg"
+		<Button class="w-full" type="submit" {loading} size="lg"
 			>{loading ? $_('common.loading') : $_('auth.signin.submit')}</Button
 		>
 

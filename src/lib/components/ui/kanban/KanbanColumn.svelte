@@ -107,7 +107,7 @@
 			<h3 class="body-sm text-fg font-semibold">{label}</h3>
 		</div>
 		{#if count !== undefined}
-			<Badge variant="neutral" appearance="soft" size="sm">{count}</Badge>
+			<Badge variant="neutral">{count}</Badge>
 		{/if}
 	</header>
 

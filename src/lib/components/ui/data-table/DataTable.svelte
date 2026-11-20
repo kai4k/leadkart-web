@@ -197,7 +197,7 @@
 		</table>
 	</div>
 {:else if state === 'error'}
-	<Alert variant="danger" title="Couldn't load">{error ?? 'Unknown error'}</Alert>
+	<Alert variant="destructive" title="Couldn't load">{error ?? 'Unknown error'}</Alert>
 {:else if state === 'empty' || rows.length === 0}
 	{#if emptyState}
 		{@render emptyState()}

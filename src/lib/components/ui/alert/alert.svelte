@@ -1,53 +1,58 @@
 <script lang="ts" module>
 	import { cva, type VariantProps } from 'class-variance-authority';
-	export const alertVariants = cva('body-sm rounded-md border p-4 backdrop-blur-md', {
-		variants: {
-			variant: {
-				info: 'bg-info-50/85 border-info-100 text-info-900',
-				success: 'bg-success-50/85 border-success-100 text-success-900',
-				warning: 'bg-warning-50/85 border-warning-100 text-warning-900',
-				danger: 'bg-danger-50/85 border-danger-100 text-danger-900',
-				default: 'bg-info-50/85 border-info-100 text-info-900',
-				destructive: 'bg-danger-50/85 border-danger-100 text-danger-900'
-			}
-		},
-		defaultVariants: { variant: 'info' }
-	});
-	export type AlertVariant = NonNullable<VariantProps<typeof alertVariants>['variant']>;
-	export type AlertVariants = VariantProps<typeof alertVariants>;
-</script>
-
-<script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { AlertCircle, CheckCircle2, Icon, Info, XCircle } from '#lib/icons/index.ts';
 	import { cn, type WithElementRef } from '#lib/utils/cn.ts';
 
-	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>> &
+	/**
+	 * shadcn-svelte `alert` with LeadKart edits (ui/CUSTOMIZATIONS.md): soft token fills (no alpha),
+	 * the status variants, a `title`, an icon per variant, `dismissible`, and a role that follows
+	 * the severity: `alert` (assertive) for destructive and warning, `status` (polite) otherwise.
+	 */
+	export const alertVariants = cva('body-sm relative w-full rounded-md border p-4', {
+		variants: {
+			variant: {
+				default: 'border-border bg-card text-card-foreground',
+				info: 'border-border bg-info-soft text-info',
+				success: 'border-border bg-success-soft text-success',
+				warning: 'border-border bg-warning-soft text-warning',
+				destructive: 'border-border bg-destructive-soft text-destructive'
+			}
+		},
+		defaultVariants: { variant: 'info' }
+	});
+	export type AlertVariants = VariantProps<typeof alertVariants>;
+	export type AlertVariant = NonNullable<AlertVariants['variant']>;
+
+	export type AlertProps = WithElementRef<HTMLAttributes<HTMLDivElement>> &
 		AlertVariants & {
 			title?: string;
 			dismissible?: boolean;
 			onDismiss?: () => void;
 			children?: Snippet;
 		};
+</script>
 
+<script lang="ts">
 	let {
 		ref = $bindable(null),
 		variant = 'info',
 		title,
 		dismissible = false,
 		onDismiss,
-		class: className = '',
+		class: className,
 		children,
 		...rest
-	}: Props = $props();
+	}: AlertProps = $props();
 
+	const role = $derived(variant === 'destructive' || variant === 'warning' ? 'alert' : 'status');
 	const variantIcon = $derived(
 		variant === 'success'
 			? CheckCircle2
 			: variant === 'warning'
 				? AlertCircle
-				: variant === 'danger' || variant === 'destructive'
+				: variant === 'destructive'
 					? XCircle
 					: Info
 	);
@@ -56,8 +61,7 @@
 <div
 	bind:this={ref}
 	data-slot="alert"
-	role="alert"
-	aria-live="polite"
+	{role}
 	class={cn(alertVariants({ variant }), className)}
 	{...rest}
 >
@@ -70,7 +74,7 @@
 		{#if dismissible}
 			<button
 				type="button"
-				class="hover:bg-bg-muted rounded-sm p-0.5"
+				class="hover:bg-muted focus-visible:ring-ring rounded-sm p-0.5 focus-visible:ring-2 focus-visible:outline-none"
 				aria-label="Dismiss"
 				onclick={() => onDismiss?.()}
 			>

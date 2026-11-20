@@ -76,7 +76,10 @@ function hasFullWidthAttr(tag) {
 	//   fullWidth         (shorthand boolean true)
 	//   fullWidth={true}
 	//   fullWidth="true"
-	return /\sfullWidth(?:\s|=|>|\/)/.test(tag);
+	// and, since the Button's `fullWidth` prop became a class (Task 5), `class="… w-full …"`.
+	return (
+		/\sfullWidth(?:\s|=|>|\/)/.test(tag) || /\sclass=(?:"[^"]*|'[^']*|\{[^}]*)\bw-full\b/.test(tag)
+	);
 }
 
 // Walk back up the source from the submit button's position, looking

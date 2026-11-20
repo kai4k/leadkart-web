@@ -5,9 +5,9 @@
 		DataTable,
 		Dropdown,
 		EmptyState,
-		Pagination,
 		type DataTableColumn
 	} from '$ui';
+	import Pagination from '#lib/components/data/Pagination.svelte';
 	import { Plus, Shield, MoreVertical, Trash2, Edit, Icon } from '$icons';
 	import { rolesListQuery } from '$features/roles/queries';
 	import type { RoleDto } from '$features/roles/types';
@@ -96,7 +96,7 @@
 
 {#snippet typeCell(role: RoleDto)}
 	{@const badge = roleKind(roleKindKey(role))}
-	<Badge variant={badge.variant} appearance="soft" size="sm">{badge.label}</Badge>
+	<Badge variant={badge.variant}>{badge.label}</Badge>
 {/snippet}
 
 {#snippet rowActions(role: RoleDto)}

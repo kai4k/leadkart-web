@@ -102,7 +102,7 @@
 						<div class="stack stack-tight min-w-0">
 							<div class="flex flex-wrap items-center gap-2">
 								<span class="h2">{displayName}</span>
-								<Badge variant={badge.variant} appearance="soft" size="sm">{badge.label}</Badge>
+								<Badge variant={badge.variant}>{badge.label}</Badge>
 							</div>
 							<div class="cluster cluster-tight flex-wrap">
 								<p class="body-base text-fg-muted break-all">{p.email}</p>
@@ -118,7 +118,7 @@
 					</div>
 
 					{#if p.is_globally_suspended && p.global_suspension_reason}
-						<Alert variant="danger" class="mt-4">
+						<Alert variant="destructive" class="mt-4">
 							<strong>Suspension reason:</strong>
 							{p.global_suspension_reason}
 						</Alert>
@@ -179,7 +179,7 @@
 												{formatDate(m.joined_at)}
 											</td>
 											<td class="py-2 pe-4">
-												<Badge variant={membership.variant} appearance="soft" size="sm">
+												<Badge variant={membership.variant}>
 													{membership.label}
 												</Badge>
 											</td>
@@ -252,7 +252,7 @@
 					{/if}
 					{#if canAnonymiseOp && canAnonymise(p)}
 						<Button
-							variant="danger"
+							variant="destructive"
 							onclick={() => {
 								target = p;
 								anonymiseOpen = true;

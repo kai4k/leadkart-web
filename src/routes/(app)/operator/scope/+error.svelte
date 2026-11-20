@@ -8,7 +8,7 @@
 </script>
 
 <div class="stack stack-relaxed">
-	<Alert variant={status >= 500 ? 'danger' : 'warning'} title="Couldn't load tenant scope">
+	<Alert variant={status >= 500 ? 'destructive' : 'warning'} title="Couldn't load tenant scope">
 		<p>{message}</p>
 		<div class="cluster cluster-tight mt-3">
 			<Button variant="ghost" size="sm" onclick={() => location.reload()}>Retry</Button>

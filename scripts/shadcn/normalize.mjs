@@ -69,8 +69,15 @@ const OPAQUE = [
 	[/^bg-muted\/50$/, 'bg-muted'],
 	[/^bg-destructive\/(?:10|20)$/, 'bg-destructive-soft'],
 	// the overlay scrim: the one pinned decorative alpha
-	[/^bg-black\/10$/, 'bg-black/50']
+	[/^bg-black\/10$/, 'bg-black/50'],
+	// secondary text: the muted token, not the foreground at 60%
+	[/^text-foreground\/60$/, 'text-muted-foreground'],
+	// nova style hook (no CSS behind it in this repo): flip the chevron in RTL
+	[/^cn-rtl-flip$/, 'rtl:rotate-180']
 ];
+
+/** Invalid-state ring/border alphas on a control: dropped (the control shows `aria-invalid` through its own border token). */
+const DROP = [{ variants: /aria-invalid/, utility: /^(?:ring|border)-destructive\/\d+$/ }];
 
 const PHYSICAL = [
 	[
@@ -106,6 +113,7 @@ function splitVariants(token) {
 
 function rewriteToken(token) {
 	const [variants, utility] = splitVariants(token);
+	if (DROP.some((d) => d.variants.test(variants) && d.utility.test(utility))) return '';
 	let next = utility;
 	for (const [re, to, when] of OPAQUE) {
 		if (re.test(next) && (!when || when.test(variants))) {
@@ -180,6 +188,8 @@ export function normalizeSource(src, { icons = iconExports() } = {}) {
 				? `'#lib/components/ui/${rest}/index.ts'`
 				: `'#lib/components/ui/${rest}'`
 		)
+		// relative `./x/index.js` -> `./x/index.ts`
+		.replace(/(from\s+['"]\.{1,2}\/[^'"]*?)\/index\.js(['"])/g, '$1/index.ts$2')
 		.replace(
 			/import\s+(\w+)\s+from\s+['"]@lucide\/svelte\/icons\/([\w-]+)['"];?/g,
 			(_m, local, slug) => {

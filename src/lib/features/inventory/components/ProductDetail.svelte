@@ -73,7 +73,7 @@
 		</div>
 	</div>
 {:else if query.isError}
-	<Alert variant="danger" title="Couldn't load product">
+	<Alert variant="destructive" title="Couldn't load product">
 		{errorCopy}
 	</Alert>
 {:else if product}

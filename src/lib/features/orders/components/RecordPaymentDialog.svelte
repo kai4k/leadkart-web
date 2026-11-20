@@ -80,7 +80,7 @@
 		<form id="record-payment-form" onsubmit={handleSubmit}>
 			<Dialog.Body>
 				{#if form.bannerError}
-					<Alert variant="danger" title="Failed to record payment">{form.bannerError}</Alert>
+					<Alert variant="destructive" title="Failed to record payment">{form.bannerError}</Alert>
 				{/if}
 
 				<div class="stack stack-relaxed">

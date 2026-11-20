@@ -25,11 +25,7 @@
 						FY {invoice.fy} · Generated {longDate(invoice.generated_at)}
 					</p>
 				</div>
-				<Badge
-					variant={invoice.status === 'active' ? 'success' : 'danger'}
-					appearance="soft"
-					size="sm"
-				>
+				<Badge variant={invoice.status === 'active' ? 'success' : 'danger'}>
 					{invoice.status === 'active' ? 'Active' : 'Cancelled'}
 				</Badge>
 			</div>

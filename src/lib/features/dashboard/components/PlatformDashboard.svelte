@@ -153,7 +153,7 @@
 	</header>
 
 	{#if canViewStats && statsError}
-		<Alert variant="danger" title="Stats unavailable">
+		<Alert variant="destructive" title="Stats unavailable">
 			<p>{statsError}</p>
 			<p class="caption text-fg-muted mt-2">
 				Check DevTools console for the raw error + Network tab for the

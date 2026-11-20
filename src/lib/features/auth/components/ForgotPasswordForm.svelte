@@ -69,10 +69,10 @@
 				error={fieldError ?? undefined}
 			/>
 			{#if formError}
-				<Alert variant="danger">{formError}</Alert>
+				<Alert variant="destructive">{formError}</Alert>
 			{/if}
 
-			<Button type="submit" {loading} fullWidth size="lg">
+			<Button class="w-full" type="submit" {loading} size="lg">
 				{loading ? $_('common.loading') : $_('auth.forgotPassword.submit')}
 			</Button>
 		</form>

@@ -218,7 +218,7 @@
 						error={form.errors.admin_password}
 						onblur={() => form.validateField('admin_password')}
 					/>
-					{#if form.bannerError}<Alert variant="danger">{form.bannerError}</Alert>{/if}
+					{#if form.bannerError}<Alert variant="destructive">{form.bannerError}</Alert>{/if}
 				</form>
 			{/if}
 		</Drawer.Body>

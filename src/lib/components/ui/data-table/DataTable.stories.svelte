@@ -149,11 +149,7 @@
 {/snippet}
 
 {#snippet tierCell(row: Tenant)}
-	<Badge
-		variant={row.tier === 'scale' ? 'primary' : row.tier === 'growth' ? 'info' : 'neutral'}
-		appearance="soft"
-		size="sm"
-	>
+	<Badge variant={row.tier === 'scale' ? 'primary' : row.tier === 'growth' ? 'info' : 'neutral'}>
 		{row.tier}
 	</Badge>
 {/snippet}

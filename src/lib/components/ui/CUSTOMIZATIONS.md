@@ -60,3 +60,29 @@ Generated `z-50` becomes the token scale (`--z-overlay` 1200 for scrims, `--z-mo
 dialog/sheet/alert-dialog panels, `--z-popover` 1400 for popover/dropdown, `--z-tooltip` 1600).
 The shell's topbar and footer sit at `--z-sticky` 1100, so a `z-50` sheet slid UNDER them and its
 header was clipped (the vaul drawer had the same bug).
+
+## Display family (Task 5)
+
+Regenerated: `button`, `badge`, `alert` (root only), `tabs`, `pagination` (parts), `table`,
+`accordion`, `collapsible`, `toggle`, `toggle-group`. Kept as LeadKart composites, with their
+alphas fixed: `card` (padding/elevation/surface props, 40+ call sites), `avatar` (initials +
+group), `skeleton` (shapes), `progress`, `slider`, `breadcrumb` (items array).
+
+- `button/button.svelte`: `cva` (not tailwind-variants); Domiex sizes (`h-10 px-6` default, `h-8 px-3
+text-xs` sm, `h-12 px-7` lg, `icon*` squares); `default` uses `hover:bg-primary-hover`,
+  `destructive` is a SOLID fill with `hover:bg-destructive-hover` (the stock one is a translucent
+  tint); `outline` keeps `dark:bg-input-fill`; extra `tonal` variant; `loading` (spinner,
+  `aria-busy`, disabled) and `focusableWhileLoading`; `href` renders an `<a>` (a disabled one has no
+  href). The `aria-invalid:` ring alphas are dropped. `fullWidth` is gone: `class="w-full"`.
+- `badge/badge.svelte`: shadcn variants + soft status variants `neutral|info|success|warning|danger|brand`
+  on the soft tokens (`bg-success-soft text-success`, ...). `appearance` and `size` are gone.
+- `alert/alert.svelte`: LeadKart root (title, icon, dismiss) on soft status tokens; role is `alert` for
+  destructive and warning, `status` otherwise. No compound parts (no user).
+- `tabs/tabs-trigger`: `text-foreground/60` -> `text-muted-foreground`. `tabs-list`, `toggle`,
+  `toggle-group`: tailwind-variants -> `cva`.
+- `pagination/*`: bits-ui parts as generated. The app's pager is `data/Pagination.svelte`
+  (`page / pageCount / onChange`, plus `label`).
+- Normaliser additions: `cn-rtl-flip` -> `rtl:rotate-180`, relative `index.js` -> `index.ts`,
+  `aria-invalid:(ring|border)-destructive/N` dropped.
+- Deleted (L16, no users): `aspect-ratio`, `button-group`, `combobox`, `context-menu`,
+  `date-picker`, `form`, `hover-card`, `kbd`, `menubar`, `navigation-menu`, `tree`, `InlineEdit`.

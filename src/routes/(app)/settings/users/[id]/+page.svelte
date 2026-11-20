@@ -75,7 +75,7 @@
 					<div class="stack stack-tight">
 						<div class="cluster cluster-tight">
 							<h1 class="h2">{displayName(user)}</h1>
-							<Badge variant={status.variant} appearance="soft">{status.label}</Badge>
+							<Badge variant={status.variant}>{status.label}</Badge>
 						</div>
 						<p class="body-sm text-fg-muted">{user.email}</p>
 						{#if user.designation || user.department}

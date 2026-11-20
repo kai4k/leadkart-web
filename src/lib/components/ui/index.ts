@@ -13,15 +13,7 @@ export {
 	avatarVariants,
 	avatarGroupItemVariants
 } from './avatar';
-export {
-	Badge,
-	type BadgeVariant,
-	type BadgeAppearance,
-	type BadgeSize,
-	type BadgeStyle,
-	type BadgeVariants,
-	badgeVariants
-} from './badge';
+export { Badge, type BadgeVariant, type BadgeVariants, badgeVariants } from './badge';
 export { Breadcrumb, Breadcrumbs, type BreadcrumbItem } from './breadcrumb';
 export {
 	Button,
@@ -31,13 +23,10 @@ export {
 	type ButtonVariants,
 	buttonVariants
 } from './button';
-export { ButtonGroup, type ButtonGroupOrientation, buttonGroupVariants } from './button-group';
 export * as Card from './card';
 export { default as ConfirmDialog } from './ConfirmDialog.svelte';
 export type { ConfirmDialogVariant } from './ConfirmDialog.svelte';
-export { Kbd } from './kbd';
 export { Label } from './label';
-export { Pagination, type PaginationChange } from './pagination';
 export { Skeleton, type SkeletonShape, type SkeletonVariants, skeletonVariants } from './skeleton';
 export { Spinner } from './spinner';
 export { Separator } from './separator';
@@ -54,7 +43,6 @@ export * as DropdownMenu from './dropdown-menu';
 export { default as DescriptionList } from './DescriptionList.svelte';
 export type { DescriptionItem } from './DescriptionList.svelte';
 export { default as EmptyState } from './EmptyState.svelte';
-export { default as InlineEdit } from './InlineEdit.svelte';
 export * as Kanban from './kanban';
 export type { KanbanColumnDescriptor, KanbanColumnAccent, KanbanMove } from './kanban';
 export { default as Logo } from './Logo.svelte';
@@ -68,7 +56,6 @@ export * as Timeline from './timeline';
 export type { TimelineItemAccent } from './timeline';
 export * as Tooltip from './tooltip';
 export { Toaster, toast } from './sonner';
-export * as Tree from './tree';
 export * as DataTable from './data-table';
 export type { DataTableColumn, DataTableProps } from './data-table';
 export * as Tabs from './tabs';

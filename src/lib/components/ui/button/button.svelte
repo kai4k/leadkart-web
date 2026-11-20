@@ -1,65 +1,58 @@
 <script lang="ts" module>
 	import { cva, type VariantProps } from 'class-variance-authority';
+
+	/**
+	 * shadcn-svelte `button` (nova) with LeadKart edits: `cva` instead of tailwind-variants, the
+	 * Domiex sizes (h-10 px-6 default, h-8 sm, h-12 lg), opaque hover tokens (L37: never `/90`),
+	 * a solid `destructive`, a `tonal` variant, and `loading`. See ui/CUSTOMIZATIONS.md.
+	 */
 	export const buttonVariants = cva(
 		[
-			'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium',
-			'interactive',
-			'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2',
-			'disabled:cursor-not-allowed disabled:opacity-60 disabled:!transform-none',
-			'aria-disabled:cursor-not-allowed aria-disabled:opacity-60 aria-disabled:!transform-none',
-			'motion-reduce:!transition-none motion-reduce:!transform-none motion-reduce:hover:!transform-none'
+			'group/button inline-flex shrink-0 items-center justify-center gap-2 rounded-md border border-transparent text-sm font-medium whitespace-nowrap',
+			'transition-colors outline-none select-none',
+			'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+			'active:not-aria-[haspopup]:translate-y-px',
+			'disabled:pointer-events-none disabled:opacity-60 aria-disabled:pointer-events-none aria-disabled:opacity-60',
+			'motion-reduce:transition-none motion-reduce:active:translate-y-0',
+			"[&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0"
 		],
 		{
 			variants: {
 				variant: {
-					primary:
-						'relative overflow-hidden bg-primary text-primary-fg hover:bg-primary-hover active:bg-primary-active  ',
+					default: 'bg-primary text-primary-foreground hover:bg-primary-hover',
+					destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive-hover',
+					outline:
+						'border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted dark:border-input dark:bg-input-fill',
 					secondary:
-						'bg-gradient-to-b from-secondary-700 to-secondary-900 text-white hover:from-secondary-600 hover:to-secondary-800 shadow-[var(--shadow-secondary)]',
-					tonal: 'bg-bg-muted text-fg hover:bg-bg-subtle border border-border',
-					ghost: 'text-fg hover:bg-bg-muted',
-					danger:
-						'bg-gradient-to-b from-danger-500 to-danger-700 text-fg-on-brand hover:from-danger-400 hover:to-danger-600 shadow-[var(--shadow-danger)]',
-					glass:
-						'relative overflow-hidden bg-bg-elevated border border-border rounded-md shadow-md  text-fg hover:text-primary-hover',
-					link: '!transform-none hover:!transform-none active:!transform-none text-primary underline-offset-4 hover:underline hover:text-primary-hover p-0 h-auto',
-					default:
-						'relative overflow-hidden bg-primary text-primary-fg hover:bg-primary-hover active:bg-primary-active  ',
-					outline: 'bg-bg-muted text-fg hover:bg-bg-subtle border border-border',
-					destructive:
-						'bg-gradient-to-b from-danger-500 to-danger-700 text-fg-on-brand hover:from-danger-400 hover:to-danger-600 shadow-[var(--shadow-danger)]'
+						'bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary',
+					ghost: 'hover:bg-muted hover:text-foreground aria-expanded:bg-muted',
+					link: 'text-primary underline-offset-4 hover:text-primary-hover hover:underline',
+					tonal: 'border-border bg-muted text-foreground hover:bg-secondary'
 				},
 				size: {
-					sm: 'h-9 px-3 body-sm',
-					md: 'h-11 px-4 body-sm',
-					lg: 'h-12 px-5 body-base',
-					icon: 'h-11 w-11 p-0',
-					default: 'h-11 px-4 body-sm',
-					xs: 'h-7 px-2 text-xs',
-					'icon-xs': 'h-7 w-7 p-0',
-					'icon-sm': 'h-9 w-9 p-0',
-					'icon-lg': 'h-12 w-12 p-0'
-				},
-				fullWidth: { true: 'w-full', false: '' }
+					default: 'h-10 px-6',
+					xs: 'h-6 gap-1 px-2 text-xs [&_svg:not([class*="size-"])]:size-3',
+					sm: 'h-8 px-3 text-xs',
+					lg: 'h-12 px-7',
+					icon: 'size-10',
+					'icon-xs': 'size-6 [&_svg:not([class*="size-"])]:size-3',
+					'icon-sm': 'size-8',
+					'icon-lg': 'size-12'
+				}
 			},
-			defaultVariants: { variant: 'primary', size: 'md', fullWidth: false }
+			compoundVariants: [{ variant: 'link', class: 'h-auto p-0' }],
+			defaultVariants: { variant: 'default', size: 'default' }
 		}
 	);
 
-	export type ButtonVariant = NonNullable<VariantProps<typeof buttonVariants>['variant']>;
-	export type ButtonSize = NonNullable<VariantProps<typeof buttonVariants>['size']>;
 	export type ButtonVariants = VariantProps<typeof buttonVariants>;
-</script>
-
-<script lang="ts">
-	import type { Attachment } from 'svelte/attachments';
-	import type { Snippet } from 'svelte';
-	import type { HTMLButtonAttributes } from 'svelte/elements';
-	import { cn, type WithElementRef } from '#lib/utils/cn.ts';
-	import Spinner from '../spinner/Spinner.svelte';
+	export type ButtonVariant = NonNullable<ButtonVariants['variant']>;
+	export type ButtonSize = NonNullable<ButtonVariants['size']>;
 
 	export type ButtonProps = WithElementRef<HTMLButtonAttributes> &
+		WithElementRef<HTMLAnchorAttributes> &
 		ButtonVariants & {
+			/** Shows a spinner, sets `aria-busy`, and disables the button (see `focusableWhileLoading`). */
 			loading?: boolean;
 			/**
 			 * While `loading`, stay in the tab order: `aria-disabled` + `aria-busy` instead of `disabled`,
@@ -67,45 +60,65 @@
 			 * "Load more"), where `disabled` would drop focus to `<body>`.
 			 */
 			focusableWhileLoading?: boolean;
-			children?: Snippet;
 		};
 
+	import type { HTMLAnchorAttributes, HTMLButtonAttributes } from 'svelte/elements';
+	import { cn, type WithElementRef } from '#lib/utils/cn.ts';
+</script>
+
+<script lang="ts">
+	import Spinner from '../spinner/Spinner.svelte';
+
 	let {
-		variant = 'primary',
-		size = 'md',
-		fullWidth = false,
+		class: className,
+		variant = 'default',
+		size = 'default',
 		loading = false,
 		focusableWhileLoading = false,
-		disabled = false,
-		type = 'button',
 		ref = $bindable(null),
-		class: className = '',
-		children,
+		href = undefined,
+		type = 'button',
+		disabled = false,
 		onclick,
-		...rest
+		children,
+		...restProps
 	}: ButtonProps = $props();
 
 	const inertWhileLoading = $derived(loading && focusableWhileLoading);
-
-	const forwardRef: Attachment = (node) => {
-		ref = node as HTMLButtonElement;
-		return () => {
-			ref = null;
-		};
-	};
+	const classes = $derived(cn(buttonVariants({ variant, size }), className));
 </script>
 
-<button
-	{@attach forwardRef}
-	data-slot="button"
-	{type}
-	disabled={disabled || (loading && !focusableWhileLoading)}
-	aria-disabled={inertWhileLoading ? 'true' : undefined}
-	aria-busy={loading || undefined}
-	class={cn(buttonVariants({ variant, size, fullWidth }), className)}
-	onclick={inertWhileLoading ? undefined : onclick}
-	{...rest}
->
-	{#if loading}<Spinner size={size === 'lg' ? 18 : 16} aria-hidden="true" />{/if}
-	{#if children}{@render children()}{/if}
-</button>
+<!-- eslint-disable svelte/no-navigation-without-resolve -- a generic link button: the caller passes a resolved href -->
+{#if href}
+	<a
+		bind:this={ref}
+		data-slot="button"
+		class={classes}
+		href={disabled ? undefined : href}
+		aria-disabled={disabled || undefined}
+		aria-busy={loading || undefined}
+		role={disabled ? 'link' : undefined}
+		tabindex={disabled ? -1 : undefined}
+		{onclick}
+		{...restProps as HTMLAnchorAttributes}
+	>
+		{#if loading}<Spinner size={size === 'lg' ? 18 : 16} aria-hidden="true" />{/if}
+		{@render children?.()}
+	</a>
+{:else}
+	<button
+		bind:this={ref}
+		data-slot="button"
+		class={classes}
+		{type}
+		disabled={disabled || (loading && !focusableWhileLoading)}
+		aria-disabled={inertWhileLoading ? 'true' : undefined}
+		aria-busy={loading || undefined}
+		onclick={inertWhileLoading ? undefined : onclick}
+		{...restProps as HTMLButtonAttributes}
+	>
+		{#if loading}<Spinner size={size === 'lg' ? 18 : 16} aria-hidden="true" />{/if}
+		{@render children?.()}
+	</button>
+{/if}
+<!-- eslint-enable svelte/no-navigation-without-resolve -->

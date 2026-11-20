@@ -28,14 +28,14 @@
 					Your session may have expired. Sign in again to pick up where you left off.
 				</Alert>
 			{:else}
-				<Alert variant="danger" title="The route loader threw">
+				<Alert variant="destructive" title="The route loader threw">
 					This is usually a transient network or backend issue. Try again — if it keeps happening,
 					open the dev console and check the network tab for the failing request.
 				</Alert>
 			{/if}
 		</Card.Content>
 		<Card.Footer>
-			<Button variant="primary" onclick={() => location.reload()}>Try again</Button>
+			<Button variant="default" onclick={() => location.reload()}>Try again</Button>
 			{#if isAuthError}
 				<a href={resolve('signin')}><Button variant="tonal">Sign in</Button></a>
 			{:else}

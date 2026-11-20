@@ -33,20 +33,11 @@
 	type Props = Omit<DropdownMenuPrimitive.TriggerProps, 'children' | 'child'> & {
 		variant?: ButtonVariant;
 		size?: ButtonSize;
-		fullWidth?: boolean;
 		loading?: boolean;
 		children?: Snippet;
 	};
 
-	let {
-		ref = $bindable(null),
-		variant,
-		size,
-		fullWidth,
-		loading,
-		children,
-		...rest
-	}: Props = $props();
+	let { ref = $bindable(null), variant, size, loading, children, ...rest }: Props = $props();
 
 	const renderAsButton = $derived(variant !== undefined);
 </script>
@@ -54,7 +45,7 @@
 {#if renderAsButton}
 	<DropdownMenuPrimitive.Trigger bind:ref data-slot="dropdown-menu-trigger" {...rest}>
 		{#snippet child({ props })}
-			<Button {...props} {variant} {size} {fullWidth} {loading}>
+			<Button {...props} {variant} {size} {loading}>
 				{@render children?.()}
 			</Button>
 		{/snippet}

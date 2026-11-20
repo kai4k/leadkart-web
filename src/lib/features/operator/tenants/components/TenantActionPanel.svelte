@@ -59,7 +59,7 @@
 				</Button>
 			{/if}
 			{#if mayDelete && canMarkForDeletion(tenant)}
-				<Button variant="danger" onclick={() => onAction('mark', tenant)} disabled={isPending}>
+				<Button variant="destructive" onclick={() => onAction('mark', tenant)} disabled={isPending}>
 					<Icon icon={Trash2} size="sm" /> Mark for deletion
 				</Button>
 			{/if}

@@ -52,7 +52,7 @@
 		<form id="dispatch-form" onsubmit={handleSubmit}>
 			<Dialog.Body>
 				{#if form.bannerError}
-					<Alert variant="danger" title="Failed to dispatch">{form.bannerError}</Alert>
+					<Alert variant="destructive" title="Failed to dispatch">{form.bannerError}</Alert>
 				{/if}
 				<div class="stack stack-relaxed">
 					<TextField

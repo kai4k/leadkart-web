@@ -79,7 +79,7 @@
 	/>
 
 	{#if formError}
-		<Alert variant="danger">{formError}</Alert>
+		<Alert variant="destructive">{formError}</Alert>
 	{:else if success}
 		<Alert variant="success">{$_('account.security.changePassword.success')}</Alert>
 	{/if}

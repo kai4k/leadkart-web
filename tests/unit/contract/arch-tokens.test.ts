@@ -53,9 +53,8 @@ describe('check-tokens: alpha modifiers in ui/', () => {
 		expect(flagged(cls, 'src/lib/components/form/X.svelte')).toEqual([]);
 		expect(flagged(cls, 'src\\lib\\components\\ui\\a\\a.svelte')).toEqual(['hover:bg-primary/90']);
 	});
-	it('exempts only the exact files pending regeneration', () => {
-		for (const f of PENDING_REGENERATION)
-			expect(flagged('<i class="bg-primary/90"></i>', f)).toEqual([]);
+	it('has no file exempt: every primitive is regenerated or fixed', () => {
+		expect([...PENDING_REGENERATION]).toEqual([]);
 	});
 });
 

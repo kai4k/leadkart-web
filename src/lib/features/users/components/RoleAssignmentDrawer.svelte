@@ -92,9 +92,7 @@
 							<li class="cluster cluster-spread border-border rounded-md border px-3 py-2">
 								<div class="stack stack-tight">
 									<span class="label">{role.name}</span>
-									{#if role.is_system_default}<Badge variant="info" appearance="soft" size="sm"
-											>System</Badge
-										>{/if}
+									{#if role.is_system_default}<Badge variant="info">System</Badge>{/if}
 								</div>
 								{#if !may.revokeRoles}
 									<!-- Go's identity.roles.revoke / platform.roles.manage is not held: nothing to offer. -->
@@ -103,7 +101,7 @@
 										<Icon icon={X} size="sm" /> Revoke
 									</Button>
 								{:else}
-									<Badge variant="warning" appearance="soft" size="sm">Protected</Badge>
+									<Badge variant="warning">Protected</Badge>
 								{/if}
 							</li>
 						{/each}
@@ -129,7 +127,7 @@
 					</ul>
 				{/if}
 			</section>
-			{#if bannerError}<Alert class="mt-4" variant="danger">{bannerError}</Alert>{/if}
+			{#if bannerError}<Alert class="mt-4" variant="destructive">{bannerError}</Alert>{/if}
 		</Drawer.Body>
 		<Drawer.Footer>
 			<Drawer.Close>

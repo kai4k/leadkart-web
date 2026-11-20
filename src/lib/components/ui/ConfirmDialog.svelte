@@ -76,7 +76,7 @@
 	// own; warning + info defer to `primary` (Material 3 treats info as
 	// neutral-emphasis, and a warning's emphasis lives in the icon + strip
 	// rather than a yellow CTA which fails contrast targets).
-	const buttonVariant = $derived(variant === 'danger' ? 'danger' : 'primary');
+	const buttonVariant = $derived(variant === 'danger' ? 'destructive' : 'default');
 </script>
 
 <Dialog.Root bind:open busy={loading} {onOpenChange}>

@@ -104,7 +104,7 @@
 					...eligibleManagers.map((m) => ({ value: m.membership_id, label: displayName(m) }))
 				]}
 			/>
-			{#if bannerError}<Alert class="mt-4" variant="danger">{bannerError}</Alert>{/if}
+			{#if bannerError}<Alert class="mt-4" variant="destructive">{bannerError}</Alert>{/if}
 		</Drawer.Body>
 		<Drawer.Footer>
 			<Drawer.Close>
