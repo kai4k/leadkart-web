@@ -50,6 +50,63 @@
 		"src/lib/features/roles/components/RolesList.svelte",
 		"src/lib/features/users/components/UsersList.svelte"
 	],
+	"counts": {
+		"rawElements": {
+			"src/lib/features/inventory/components/AddBatchDrawer.svelte": 2,
+			"src/lib/features/inventory/components/AdjustStockDialog.svelte": 2,
+			"src/lib/features/inventory/components/BatchesList.svelte": 1,
+			"src/lib/features/inventory/components/WriteOffBatchDialog.svelte": 1,
+			"src/lib/features/leads/components/EditLeadDrawer.svelte": 1,
+			"src/lib/features/leads/components/LeadsTable.svelte": 3,
+			"src/lib/features/leads/components/LogCallDialog.svelte": 2,
+			"src/lib/features/leads/components/ReassignDialog.svelte": 1,
+			"src/lib/features/operator/impersonation/components/ImpersonateModal.svelte": 2,
+			"src/lib/features/operator/people/components/AnonymiseDialog.svelte": 2,
+			"src/lib/features/operator/people/components/GlobalSuspendDialog.svelte": 1,
+			"src/lib/features/operator/people/components/PeopleList.svelte": 1,
+			"src/lib/features/operator/people/components/PersonDetail.svelte": 1,
+			"src/lib/features/operator/tenants/components/MarkForDeletionDialog.svelte": 1,
+			"src/lib/features/operator/tenants/components/SuspendDialog.svelte": 1,
+			"src/lib/features/operator/tenants/components/TenantsList.svelte": 1,
+			"src/lib/features/orders/components/CreditNotesList.svelte": 1,
+			"src/lib/features/orders/components/OrderItemsTable.svelte": 1,
+			"src/lib/features/orders/components/PaymentsList.svelte": 1,
+			"src/lib/features/permission-requests/components/CreatePermissionRequestDrawer.svelte": 2,
+			"src/lib/features/roles/components/DeleteRoleDialog.svelte": 1,
+			"src/lib/features/roles/components/PermissionTree.svelte": 2,
+			"src/lib/features/users/components/DeactivateUserDialog.svelte": 1,
+			"src/lib/features/users/components/PermissionOverridesPanel.svelte": 2,
+			"src/lib/features/users/components/UsersList.svelte": 1,
+			"src/routes/(app)/settings/roles/[id]/+page.svelte": 1
+		},
+		"drawer": {
+			"src/lib/components/data/BulkUploadDrawer.svelte": 1,
+			"src/lib/features/inventory/components/AddBatchDrawer.svelte": 1,
+			"src/lib/features/inventory/components/CreateProductDrawer.svelte": 1,
+			"src/lib/features/inventory/components/EditProductDrawer.svelte": 1,
+			"src/lib/features/leads/components/EditLeadDrawer.svelte": 1,
+			"src/lib/features/operator/tenants/components/CreateTenantDrawer.svelte": 1,
+			"src/lib/features/orders/components/ReviseQuotationDrawer.svelte": 1,
+			"src/lib/features/permission-requests/components/CreatePermissionRequestDrawer.svelte": 1,
+			"src/lib/features/users/components/CreateUserDrawer.svelte": 1,
+			"src/lib/features/users/components/ManagerSelectorDrawer.svelte": 1,
+			"src/lib/features/users/components/PermissionOverridesPanel.svelte": 1,
+			"src/lib/features/users/components/RoleAssignmentDrawer.svelte": 1
+		},
+		"legacyDataTable": {
+			"src/lib/features/inventory/components/ProductsList.svelte": 2,
+			"src/lib/features/operator/people/components/PeopleList.svelte": 2,
+			"src/lib/features/operator/tenants/components/TenantsList.svelte": 2,
+			"src/lib/features/orders/components/OrdersList.svelte": 2,
+			"src/lib/features/permission-requests/components/PermissionRequestsList.svelte": 2,
+			"src/lib/features/roles/components/RolesList.svelte": 2,
+			"src/lib/features/users/components/UsersList.svelte": 2
+		}
+	},
+	"ceiling": {
+		"entries": 45,
+		"total": 62
+	},
 	"notes": {
 		"src/lib/components/data/BulkUploadDrawer.svelte": "// removed by the leads/orders/inventory rebuild (plan section 9)",
 		"src/lib/features/inventory/components/AddBatchDrawer.svelte": "// removed by the leads/orders/inventory rebuild (plan section 9)",

@@ -7,6 +7,7 @@ export interface Pair {
 	alphaOn?: 'fg' | 'bg';
 	over?: string;
 	legacy?: boolean;
+	scope?: { selector: string; attrs: Record<string, string> };
 }
 export interface Axes {
 	colors: string[];
@@ -18,6 +19,7 @@ export interface Rule {
 	conditions: Record<string, string>;
 	decls: Array<[string, string]>;
 	order: number;
+	scope?: string;
 }
 export interface CheckResult {
 	problems: string[];
@@ -27,8 +29,16 @@ export interface CheckResult {
 }
 export const AXES: Axes;
 export const PAIRS: Pair[];
-export function parseRules(css: string, file: string): { rules: Rule[]; errors: string[] };
-export function propertiesFor(rules: Rule[], combo: Record<string, string>): Map<string, string>;
+export function parseRules(
+	css: string,
+	file: string,
+	options?: { lenient?: boolean }
+): { rules: Rule[]; errors: string[] };
+export function propertiesFor(
+	rules: Rule[],
+	combo: Record<string, string>,
+	scope?: { selector: string; attrs: Record<string, string> }
+): Map<string, string>;
 export function composite(
 	fg: object,
 	alpha: number,
@@ -40,3 +50,5 @@ export function checkCss(
 	options?: { pairs?: Pair[]; axes?: Axes }
 ): CheckResult;
 export function check(): CheckResult;
+export function themeFiles(root?: string): string[];
+export const PATTERN_TOPBAR: { selector: string; attrs: Record<string, string> };

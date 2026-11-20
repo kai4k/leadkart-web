@@ -36,7 +36,11 @@ function focusFormAlert(root: ParentNode): boolean {
 	const overlay =
 		root instanceof Element ? root.closest('[role="dialog"], [role="alertdialog"]') : null;
 	for (const scope of [root, overlay]) {
-		const alert = scope?.querySelector<HTMLElement>('[role="alert"]');
+		// the form's error banner (`data-form-error`, a destructive Alert) first: a warning that is
+		// also a `role="alert"` must not take focus from the error the submit just produced
+		const alert =
+			scope?.querySelector<HTMLElement>('[data-form-error]') ??
+			scope?.querySelector<HTMLElement>('[role="alert"]');
 		if (!alert) continue;
 		if (!alert.hasAttribute('tabindex')) alert.setAttribute('tabindex', '-1');
 		alert.focus();

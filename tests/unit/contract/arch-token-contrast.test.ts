@@ -7,7 +7,8 @@ import {
 	composite,
 	pairRatio,
 	parseRules,
-	propertiesFor
+	propertiesFor,
+	themeFiles
 } from '../../../scripts/arch/check-token-contrast.mjs';
 
 /** Self-test of the contrast gate: tiny fixtures, then the real token files. */
@@ -160,5 +161,73 @@ describe('check-token-contrast: black-white mode (the customizer offers it)', ()
 		expect(combinations).toBe(
 			AXES.colors.length * AXES.sidebarColors.length * (2 * AXES.darkPalette.length + 1)
 		);
+	});
+});
+
+describe('check-token-contrast: scoped re-declarations (layouts.css)', () => {
+	const BASE = ':root { --card: #fff; --fg: #000; --band: #bfdbfe; --on-band: #1e3a8a; }';
+	const SCOPED_OK = `${BASE}
+		:root[data-nav-type='pattern'] [data-shell='topbar'] { --fg: var(--on-band); }`;
+	const SCOPED_BAD = `${BASE}
+		:root[data-nav-type='pattern'] [data-shell='topbar'] { --fg: #93c5fd; }`;
+	const scope = { selector: "[data-shell='topbar']", attrs: { 'data-nav-type': 'pattern' } };
+	const scopedPair = pair({ fg: 'fg', bg: 'band', scope });
+
+	it('collects a scoped rule only when the selector is a descendant re-declaration', () => {
+		const { rules, errors } = parseRules(SCOPED_OK, 'layouts.css', { lenient: true });
+		expect(errors).toEqual([]);
+		expect(rules.filter((r: { scope?: string }) => r.scope)).toHaveLength(1);
+		// a strict file refuses it: only layouts.css may carry geometry selectors
+		expect(parseRules(`.a .b { --x: 1; }`, 'x.css').errors).toHaveLength(1);
+		expect(parseRules(`.a .b { --x: 1; }`, 'layouts.css', { lenient: true }).errors).toEqual([]);
+	});
+
+	it('the scope applies only inside its scope and only with its attribute', () => {
+		const { rules } = parseRules(SCOPED_OK, 'layouts.css', { lenient: true });
+		const combo = {
+			colors: 'leadkart',
+			mode: 'light',
+			darkPalette: 'default',
+			sidebarColors: 'light'
+		};
+		expect(propertiesFor(rules, combo).get('--fg')).toBe('#000');
+		expect(propertiesFor(rules, combo, scope).get('--fg')).toBe('var(--on-band)');
+		expect(
+			propertiesFor(rules, combo, { selector: "[data-shell='other']", attrs: scope.attrs }).get(
+				'--fg'
+			)
+		).toBe('#000');
+	});
+
+	it('passes when the scoped value keeps the pair legible', () => {
+		const r = checkCss([['layouts.css', SCOPED_OK]], { pairs: [scopedPair] as never, axes: ONE });
+		expect(r.problems).toEqual([]);
+		expect(r.checked).toBe(1);
+	});
+
+	it('a scoped re-declaration that breaks a pair fails (the root value alone would pass)', () => {
+		const r = checkCss([['layouts.css', SCOPED_BAD]], { pairs: [scopedPair] as never, axes: ONE });
+		expect(r.problems.join('\n')).toContain('< 4.5');
+		// the same pair without the scope reads the black root value and passes
+		const rootOnly = checkCss([['layouts.css', SCOPED_BAD]], {
+			pairs: [pair({ fg: 'fg', bg: 'band' })] as never,
+			axes: ONE
+		});
+		expect(rootOnly.problems).toEqual([]);
+	});
+
+	it('reads every theme file the barrel imports, layouts.css included', () => {
+		const files = themeFiles();
+		expect(files).toEqual(
+			expect.arrayContaining([
+				'src/styles/theme/palettes.css',
+				'src/styles/theme/semantic.css',
+				'src/styles/theme/layouts.css'
+			])
+		);
+	});
+
+	it('the real pattern-topbar pairs are in the gate', () => {
+		expect(PAIRS.filter((p: { scope?: unknown }) => p.scope).length).toBeGreaterThanOrEqual(6);
 	});
 });

@@ -1,7 +1,7 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
-	GENERATED_UI_DIRS,
+	GENERATED_UI_FILES,
 	findLegacyTokens,
 	findPaletteUtilities
 } from '../../../scripts/arch/check-tokens.mjs';
@@ -103,18 +103,24 @@ describe('check-tokens: raw palette utilities', () => {
 			'src/lib/layouts/L.svelte'
 		])
 			expect(findPaletteUtilities(p, cls), p).toHaveLength(1);
-		for (const dir of GENERATED_UI_DIRS)
-			expect(findPaletteUtilities(`${dir}x.svelte`, cls), dir).toEqual([]);
+		for (const file of GENERATED_UI_FILES)
+			expect(findPaletteUtilities(file, cls), file).toEqual([]);
 		expect(findPaletteUtilities('src/styles/x.css', cls)).toEqual([]);
-		expect(GENERATED_UI_DIRS).not.toContain('src/lib/components/ui/kanban/');
-		expect(GENERATED_UI_DIRS).not.toContain('src/lib/components/ui/data-table/');
+		// the folder is no longer exempt: another file in the same folder, and a LeadKart-edited one, are scanned
+		expect(
+			findPaletteUtilities('src/lib/components/ui/dialog/dialog-content.svelte', cls)
+		).toHaveLength(1);
+		expect(
+			findPaletteUtilities('src/lib/components/ui/radio-group/radio-group-tile.svelte', cls)
+		).toHaveLength(1);
 	});
 
-	it('names every generated folder that exists on disk exactly (no directory-wide exemption)', () => {
-		expect(
-			GENERATED_UI_DIRS.every((d: string) => d.endsWith('/') && d.split('/').length === 6)
-		).toBe(true);
-		expect(new Set(GENERATED_UI_DIRS).size).toBe(GENERATED_UI_DIRS.length);
+	it('pins exact files that exist on disk (no directory-wide exemption)', () => {
+		for (const f of GENERATED_UI_FILES) {
+			expect(f.endsWith('.svelte') && f.startsWith('src/lib/components/ui/'), f).toBe(true);
+			expect(existsSync(f), f).toBe(true);
+		}
+		expect(new Set(GENERATED_UI_FILES).size).toBe(GENERATED_UI_FILES.length);
 	});
 });
 
@@ -259,7 +265,14 @@ describe('the rebuild-pending allowlist', () => {
 	};
 
 	it('has the planned shape, sorted, with a note for every entry naming its task', () => {
-		expect(Object.keys(list).sort()).toEqual(['drawer', 'legacyDataTable', 'notes', 'rawElements']);
+		expect(Object.keys(list).sort()).toEqual([
+			'ceiling',
+			'counts',
+			'drawer',
+			'legacyDataTable',
+			'notes',
+			'rawElements'
+		]);
 		const all = new Set([...list.rawElements, ...list.drawer, ...list.legacyDataTable]);
 		expect(Object.keys(list.notes).sort()).toEqual([...all].sort());
 		for (const p of all) {
@@ -278,5 +291,70 @@ describe('the rebuild-pending allowlist', () => {
 				p === 'src/lib/components/data/BulkUploadDrawer.svelte';
 			expect(rebuild || stable.test(note), p).toBe(true);
 		}
+	});
+});
+
+describe('the rebuild-pending allowlist only shrinks', () => {
+	type Lists = 'rawElements' | 'drawer' | 'legacyDataTable';
+	const list = JSON.parse(
+		readFileSync('scripts/arch/allowlists/phase2-rebuild-pending.json', 'utf8')
+	) as Record<Lists, string[]> & {
+		counts: Record<Lists, Record<string, number>>;
+		ceiling: { entries: number; total: number };
+	};
+	const names: Lists[] = ['rawElements', 'drawer', 'legacyDataTable'];
+
+	it('every entry records the count it has today, and no count is orphaned', () => {
+		for (const n of names) {
+			expect(Object.keys(list.counts[n]).sort(), n).toEqual([...list[n]].sort());
+			for (const c of Object.values(list.counts[n])) expect(c).toBeGreaterThan(0);
+		}
+	});
+
+	it('the ceiling is exact: lower it when a task migrates a file (ratchet down)', () => {
+		const entries = names.reduce((a, n) => a + list[n].length, 0);
+		const total = names.reduce(
+			(a, n) => a + Object.values(list.counts[n]).reduce((x, y) => x + y, 0),
+			0
+		);
+		expect(
+			entries,
+			`${entries} entries, ceiling.entries is ${list.ceiling.entries}: ratchet ceiling.entries down to ${entries}`
+		).toBe(list.ceiling.entries);
+		expect(
+			total,
+			`${total} occurrences, ceiling.total is ${list.ceiling.total}: ratchet ceiling.total down to ${total}`
+		).toBe(list.ceiling.total);
+	});
+
+	it('a listed file that gains a raw element fails, one at its recorded count passes', () => {
+		const path = 'src/lib/features/x/A.svelte';
+		const allow = { rawElements: [path], counts: { rawElements: { [path]: 1 } } };
+		expect(checkRawElements(allow, new Map([[path, '<input /><p></p>']])).violations).toEqual([]);
+		const grown = checkRawElements(
+			allow,
+			new Map([[path, '<input /><textarea></textarea>']])
+		).violations;
+		expect(grown).toHaveLength(1);
+		expect(grown[0]).toContain('only shrinks');
+		const bare = { rawElements: [path], counts: { rawElements: {} } };
+		expect(checkRawElements(bare, new Map([[path, '<input />']])).violations[0]).toContain(
+			'without a count'
+		);
+	});
+
+	it('a listed file that gains a legacy import fails', () => {
+		const path = 'src/lib/features/x/B.svelte';
+		const one = "import { Drawer } from '$ui';";
+		const two = "import { Drawer } from '$ui';\nimport D from '$ui/drawer';";
+		const allow = {
+			drawer: [path],
+			legacyDataTable: [],
+			counts: { drawer: { [path]: 1 }, legacyDataTable: {} }
+		};
+		expect(checkLegacyImports(allow, new Map([[path, one]])).violations).toEqual([]);
+		expect(checkLegacyImports(allow, new Map([[path, two]])).violations[0]).toContain(
+			'only shrinks'
+		);
 	});
 });

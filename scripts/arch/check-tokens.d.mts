@@ -10,7 +10,7 @@ export function findAlphaModifiers(
 ): Array<{ line: number; utility: string }>;
 export function findColorScheme(rel: string, src: string): Array<{ line: number }>;
 export const LEGACY_PALETTE_FILE: string;
-export const GENERATED_UI_DIRS: string[];
+export const GENERATED_UI_FILES: string[];
 export function findLegacyTokens(rel: string, src: string): Array<{ line: number; name: string }>;
 export function findPaletteUtilities(
 	rel: string,

@@ -30,6 +30,8 @@
 			title?: string;
 			dismissible?: boolean;
 			onDismiss?: () => void;
+			/** `note` for a static warning that is not a change the user must be told about */
+			role?: HTMLAttributes<HTMLDivElement>['role'];
 			children?: Snippet;
 		};
 </script>
@@ -42,12 +44,15 @@
 		title,
 		dismissible = false,
 		onDismiss,
+		role: roleProp,
 		class: className,
 		children,
 		...rest
 	}: AlertProps = $props();
 
-	const role = $derived(variant === 'destructive' || variant === 'warning' ? 'alert' : 'status');
+	const role = $derived(
+		roleProp ?? (variant === 'destructive' || variant === 'warning' ? 'alert' : 'status')
+	);
 	const variantIcon = $derived(
 		variant === 'success'
 			? CheckCircle2
@@ -65,6 +70,7 @@
 	bind:this={ref}
 	data-slot="alert"
 	{role}
+	data-form-error={variant === 'destructive' ? '' : undefined}
 	tabindex={role === 'alert' ? -1 : undefined}
 	class={cn(
 		alertVariants({ variant }),

@@ -115,3 +115,20 @@ describe('a failure that is not a field (fix round B)', () => {
 		expect(document.activeElement?.id).toBe('b2');
 	});
 });
+
+describe('the form error banner wins over a static warning (fix round C)', () => {
+	it('focuses [data-form-error], not an earlier role=alert warning', async () => {
+		const form = html(
+			'<div role="alert" id="warn">This permanently writes off the batch</div>' +
+				'<div role="alert" data-form-error id="err">Could not write off</div>'
+		);
+		expect(await focusFirstInvalid(form)).toBe(true);
+		expect(document.activeElement?.id).toBe('err');
+	});
+
+	it('still falls back to a plain role=alert when no banner is marked', async () => {
+		const form = html('<div role="alert" id="only">Session expired</div>');
+		expect(await focusFirstInvalid(form)).toBe(true);
+		expect(document.activeElement?.id).toBe('only');
+	});
+});

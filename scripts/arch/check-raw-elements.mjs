@@ -65,7 +65,7 @@ export function findRawElements(rel, src) {
 }
 
 /**
- * @param {{ rawElements: string[] }} allowlist
+ * @param {{ rawElements: string[], counts?: { rawElements?: Record<string, number> } }} allowlist
  * @param {Map<string, string>} files path -> source (the scanned files)
  * @returns {{ violations: string[], stale: string[] }}
  */
@@ -76,8 +76,16 @@ export function checkRawElements(allowlist, files) {
 	for (const [path, src] of files) {
 		const hits = findRawElements(path, src);
 		if (hits.length === 0) continue;
-		if (allowed.has(path)) used.add(path);
-		else for (const h of hits) violations.push(`${path}:${h.line}  <${h.element}>`);
+		if (allowed.has(path)) {
+			used.add(path);
+			const cap = allowlist.counts?.rawElements?.[path];
+			if (allowlist.counts && cap === undefined)
+				violations.push(`${path}: listed in rawElements without a count (counts.rawElements)`);
+			else if (cap !== undefined && hits.length > cap)
+				violations.push(
+					`${path}: ${hits.length} raw element(s), the allowlist records ${cap}: an entry only shrinks`
+				);
+		} else for (const h of hits) violations.push(`${path}:${h.line}  <${h.element}>`);
 	}
 	const stale = [...allowed]
 		.filter((p) => !used.has(p))

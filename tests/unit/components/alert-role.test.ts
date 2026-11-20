@@ -47,3 +47,19 @@ describe('Alert role', () => {
 		expect(root().className).not.toMatch(/-[a-z]+\/\d/);
 	});
 });
+
+describe('Alert role override and the form-error marker (fix round C)', () => {
+	it('a static warning can be a note: not an alert, and not focus-targetable', () => {
+		render({ variant: 'warning', role: 'note' });
+		expect(root().getAttribute('role')).toBe('note');
+		expect(root().hasAttribute('tabindex')).toBe(false);
+	});
+	it('a destructive alert is the form error banner (data-form-error); a warning is not', () => {
+		render({ variant: 'destructive' });
+		expect(root().hasAttribute('data-form-error')).toBe(true);
+		unmount(component!);
+		target.remove();
+		render({ variant: 'warning' });
+		expect(root().hasAttribute('data-form-error')).toBe(false);
+	});
+});

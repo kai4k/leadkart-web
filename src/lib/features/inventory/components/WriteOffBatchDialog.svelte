@@ -51,7 +51,7 @@
 		</Dialog.Header>
 		<Dialog.Body>
 			<form id="write-off-form" class="stack stack-relaxed" onsubmit={onSubmit} novalidate>
-				<Alert variant="warning">
+				<Alert variant="warning" role="note">
 					This permanently writes off the batch. Stock movements are preserved.
 				</Alert>
 				<label class="stack stack-tight">

@@ -31,17 +31,19 @@
 	}
 </script>
 
-<PageHeader title={product.brand_name} />
+<PageHeader title={product.brand_name}>
+	{#snippet leading()}
+		<button
+			type="button"
+			class="caption text-muted-foreground hover:text-foreground cluster cluster-tight self-start"
+			onclick={back}
+		>
+			<Icon icon={ArrowLeft} size="xs" /> Back to inventory
+		</button>
+	{/snippet}
+</PageHeader>
 
 <header class="stack stack-tight">
-	<button
-		type="button"
-		class="caption text-muted-foreground hover:text-foreground cluster cluster-tight self-start"
-		onclick={back}
-	>
-		<Icon icon={ArrowLeft} size="xs" /> Back to inventory
-	</button>
-
 	<div class="cluster cluster-spread items-start">
 		<div class="stack stack-tight min-w-0">
 			{#if product.generic_name}

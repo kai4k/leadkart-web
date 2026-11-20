@@ -144,7 +144,7 @@
 				</div>
 
 				{#if willNegative}
-					<Alert variant="warning">
+					<Alert variant="warning" role="note">
 						This delta would drive the batch below zero. The server may reject it.
 					</Alert>
 				{/if}

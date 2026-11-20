@@ -30,7 +30,25 @@ import { fileURLToPath } from 'node:url';
 import { clampRgb, converter, interpolate, parse, wcagContrast } from 'culori';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
-const FILES = ['src/styles/theme/palettes.css', 'src/styles/theme/semantic.css'];
+const INDEX_CSS = 'src/styles/index.css';
+
+/**
+ * Every theme file, in the order the barrel imports them (source order is part of the cascade the
+ * resolver reproduces). Reading the barrel, not a fixed list, means a new `theme/*.css` file is
+ * covered by construction.
+ */
+export function themeFiles(root = ROOT) {
+	const barrel = readFileSync(join(root, INDEX_CSS), 'utf8');
+	return [...barrel.matchAll(/@import\s+'\.\/(theme\/[\w.-]+\.css)'/g)].map(
+		(m) => `src/styles/${m[1]}`
+	);
+}
+
+/** The pattern topbar re-declares tokens on the topbar (layouts.css); its pairs resolve inside that scope. */
+export const PATTERN_TOPBAR = {
+	selector: "[data-shell='topbar']",
+	attrs: { 'data-nav-type': 'pattern' }
+};
 
 export const AXES = {
 	colors: ['leadkart', 'green', 'violet', 'orange', 'teal', 'fuchsia', 'lime', 'amber'],
@@ -128,6 +146,14 @@ const RAW_PAIRS = [
 	['primary-foreground', 'primary', TEXT, { note: 'pattern topbar: text and icons on the band' }],
 	['primary-foreground', 'primary-hover', TEXT, { note: 'pattern topbar: search fill, hover' }],
 	['primary-foreground', 'primary', UI, { note: 'pattern topbar: focus ring on the band' }],
+	// the same topbar through its OWN scoped re-declarations (layouts.css): what the topbar's
+	// `text-foreground`, `text-muted-foreground`, `bg-muted`, `bg-accent` and `ring` resolve to there
+	['foreground', 'primary', TEXT, { scope: PATTERN_TOPBAR, note: 'band text' }],
+	['muted-foreground', 'primary', TEXT, { scope: PATTERN_TOPBAR, note: 'band muted text' }],
+	['foreground', 'muted', TEXT, { scope: PATTERN_TOPBAR, note: 'search fill' }],
+	['muted-foreground', 'muted', TEXT, { scope: PATTERN_TOPBAR, note: 'search placeholder' }],
+	['accent-foreground', 'accent', TEXT, { scope: PATTERN_TOPBAR, note: 'hover chip' }],
+	['ring', 'primary', UI, { scope: PATTERN_TOPBAR, note: 'focus ring' }],
 	// the auth frame, the page header and the section nav (Tasks 13-14): their text/surface pairs, on record
 	['foreground', 'background', TEXT, { note: 'auth frame, page title' }],
 	['primary', 'card', TEXT, { note: 'auth brand headline' }],
@@ -165,7 +191,7 @@ export const PAIRS = RAW_PAIRS.map(([fg, bg, min, opts = {}]) => ({
 	bg,
 	min,
 	...opts,
-	label: `${fg} on ${bg}${opts.over && opts.over !== 'card' ? ` (over ${opts.over})` : ''}${opts.alpha ? ` @${opts.alpha}` : ''}${opts.note ? ` [${opts.note}]` : ''}`
+	label: `${fg} on ${bg}${opts.scope ? ' (pattern topbar scope)' : ''}${opts.over && opts.over !== 'card' ? ` (over ${opts.over})` : ''}${opts.alpha ? ` @${opts.alpha}` : ''}${opts.note ? ` [${opts.note}]` : ''}`
 }));
 
 const toRgb = converter('rgb');
@@ -175,15 +201,25 @@ const toRgb = converter('rgb');
 const SELECTOR = /^:root((?:\[data-[a-z-]+=(?:'[^']*'|"[^"]*")\])*)$/;
 const CONDITION = /\[(data-[a-z-]+)=(?:'([^']*)'|"([^"]*)")\]/g;
 
-/** @returns {{ rules: Array<{ conditions: Record<string,string>, decls: Array<[string,string]>, order: number }>, errors: string[] }} */
-export function parseRules(css, file) {
+const SCOPED_SELECTOR =
+	/^:root((?:\[data-[a-z-]+=(?:'[^']*'|"[^"]*")\])*)(?::not\([^)]*\))*\s+(\[data-[a-z-]+=(?:'[^']*'|"[^"]*")\])$/;
+
+/**
+ * @param {{ lenient?: boolean }} [options] `lenient` (layouts.css): a selector that is neither flat nor
+ *   a scoped re-declaration (`:root[...] [data-shell='x']`) is skipped instead of failing the gate.
+ * @returns {{ rules: Array<{ conditions: Record<string,string>, decls: Array<[string,string]>, order: number, scope?: string }>, errors: string[] }}
+ */
+export function parseRules(css, file, { lenient = false } = {}) {
 	const errors = [];
 	const rules = [];
 	const stripped = css.replace(/\/\*[\s\S]*?\*\//g, '');
 	let order = 0;
 	for (const m of stripped.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
 		const selector = m[1].trim();
-		const sm = SELECTOR.exec(selector);
+		const flat = SELECTOR.exec(selector);
+		const scoped = flat ? null : SCOPED_SELECTOR.exec(selector);
+		const sm = flat ?? scoped;
+		if (!sm && lenient) continue;
 		if (!sm) {
 			errors.push(`${file}: selector "${selector}" is not :root or :root[data-x='y']`);
 			continue;
@@ -197,20 +233,30 @@ export function parseRules(css, file) {
 			const name = d.slice(0, i).trim();
 			if (name.startsWith('--')) decls.push([name, d.slice(i + 1).trim()]);
 		}
-		rules.push({ conditions, decls, order: order++ });
+		rules.push({
+			conditions,
+			decls,
+			order: order++,
+			...(scoped ? { scope: scoped[2].replaceAll('"', "'") } : {})
+		});
 	}
 	return { rules, errors };
 }
 
 /** The custom properties in force for one combination, as CSS specificity would order them. */
-export function propertiesFor(rules, combo) {
+export function propertiesFor(rules, combo, scope) {
 	const attrs = {};
 	for (const [axis, value] of Object.entries(combo)) attrs[ATTRIBUTE_FOR[axis]] = value;
+	if (scope) Object.assign(attrs, scope.attrs);
+	// A scoped rule re-declares tokens on a descendant, so inside its scope it beats every root rule.
 	const applicable = rules
+		.filter((r) => r.scope === undefined || (scope !== undefined && r.scope === scope.selector))
 		.filter((r) => Object.entries(r.conditions).every(([k, v]) => attrs[k] === v))
 		.sort(
 			(a, b) =>
-				Object.keys(a.conditions).length - Object.keys(b.conditions).length || a.order - b.order
+				Number(a.scope !== undefined) - Number(b.scope !== undefined) ||
+				Object.keys(a.conditions).length - Object.keys(b.conditions).length ||
+				a.order - b.order
 		);
 	const props = new Map();
 	for (const r of applicable) for (const [n, v] of r.decls) props.set(n, v);
@@ -359,7 +405,8 @@ export function checkCss(files, { pairs = PAIRS, axes = AXES } = {}) {
 	const problems = [];
 	let all = [];
 	for (const [file, css] of files) {
-		const { rules, errors } = parseRules(css, file);
+		// layouts.css is shell geometry plus a few scoped token re-declarations: its other selectors are not tokens
+		const { rules, errors } = parseRules(css, file, { lenient: file.endsWith('/layouts.css') });
 		problems.push(...errors);
 		all = all.concat(rules.map((r, i) => ({ ...r, order: all.length + i })));
 	}
@@ -380,7 +427,11 @@ export function checkCss(files, { pairs = PAIRS, axes = AXES } = {}) {
 					const label = `${colors}/${mode}/${darkPalette}/${sidebarColors}`;
 					for (const pair of pairs) {
 						try {
-							const r = pairRatio(pair, props, mode);
+							const r = pairRatio(
+								pair,
+								pair.scope ? propertiesFor(all, combo, pair.scope) : props,
+								mode
+							);
 							checked++;
 							if (r < pair.min)
 								problems.push(`${label} · ${pair.label} · ${r.toFixed(2)} < ${pair.min}`);
@@ -398,7 +449,7 @@ export function checkCss(files, { pairs = PAIRS, axes = AXES } = {}) {
 export function check() {
 	const files = [];
 	const problems = [];
-	for (const file of FILES) {
+	for (const file of themeFiles()) {
 		const path = join(ROOT, file);
 		if (!existsSync(path)) problems.push(`${file} not found`);
 		else files.push([file, readFileSync(path, 'utf8')]);

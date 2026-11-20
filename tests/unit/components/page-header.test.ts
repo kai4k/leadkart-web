@@ -130,3 +130,17 @@ describe('PageHeader below a layout that already shows one', () => {
 		expect(document.querySelectorAll('nav[aria-label="Breadcrumb"]')).toHaveLength(1);
 	});
 });
+
+describe('PageHeader leading slot (a back link above the title)', () => {
+	it('renders the leading content before the h1, inside the heading block', () => {
+		render({ title: 'Team', leading: snippet('<a id="back" href="/x">Back</a>') });
+		const back = document.querySelector('#back')!;
+		const h1 = document.querySelector('h1')!;
+		expect(back.compareDocumentPosition(h1) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(document.querySelector('[data-page-heading]')!.contains(back)).toBe(true);
+	});
+	it('renders nothing extra without it', () => {
+		render({ title: 'Team' });
+		expect(document.querySelector('[data-page-heading] .mb-1')).toBeNull();
+	});
+});

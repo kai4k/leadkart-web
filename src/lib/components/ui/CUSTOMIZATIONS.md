@@ -219,6 +219,10 @@ components, features, layouts and routes compose these files. The form Combobox 
 - `alert/alert.svelte`: a `role="alert"` banner has `tabindex="-1"` and a focus-visible ring so a failed
   submit that marked no field invalid (409, 429, expired session, 5xx) can move focus to it
   (`focusFirstInvalid`) instead of dropping it on `<body>`. It is not a tab stop.
+- `alert/alert.svelte` (fix round C): a `role` prop overrides the derived role (`note` for a static
+  warning inside a form: it is not a change the user must be told about, and it no longer takes
+  focus from the error), and a `destructive` Alert carries `data-form-error` so `focusFirstInvalid`
+  focuses the form's error banner first, then any other `role="alert"`.
 
 ## radio-group tile (Task 15)
 

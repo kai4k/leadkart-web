@@ -158,50 +158,15 @@ export function findLegacyTokens(rel, src) {
 // not follow the theme. The semantic utilities (`text-muted-foreground`, `bg-destructive-soft`,
 // `text-primary-foreground`, `bg-foreground/10`) replace them. Exempt, exactly:
 //   - src/styles/**                  the token layer itself
-//   - GENERATED_UI_DIRS              CLI output that keeps shadcn's own `text-white` / `bg-black/50`
-//                                    overlay classes so a quarterly `--overwrite` diff stays clean
-// The LeadKart composites in ui/ (AuthCard, ConfirmDialog, kanban/, stepper/, timeline/, spinner/,
-// data-table/, ...) are NOT exempt.
-export const GENERATED_UI_DIRS = [
-	'accordion',
-	'alert',
-	'alert-dialog',
-	'avatar',
-	'badge',
-	'breadcrumb',
-	'button',
-	'calendar',
-	'card',
-	'checkbox',
-	'collapsible',
-	'command',
-	'dialog',
-	'drawer',
-	'dropdown-menu',
-	'field',
-	'input',
-	'label',
-	'pagination',
-	'popover',
-	'progress',
-	'radio-group',
-	'range-calendar',
-	'scroll-area',
-	'select',
-	'separator',
-	'sheet',
-	'sidebar',
-	'skeleton',
-	'slider',
-	'sonner',
-	'switch',
-	'table',
-	'tabs',
-	'textarea',
-	'toggle',
-	'toggle-group',
-	'tooltip'
-].map((d) => `src/lib/components/ui/${d}/`);
+//   - GENERATED_UI_FILES             an exact list of files that are unedited CLI output and keep
+//                                    shadcn's own `bg-black/50` overlay class (plan G5 replaces them
+//                                    with `bg-scrim`; the list then empties)
+// Every other file under ui/ is scanned, including the files LeadKart edited inside generated folders.
+export const GENERATED_UI_FILES = [
+	'src/lib/components/ui/alert-dialog/alert-dialog-overlay.svelte',
+	'src/lib/components/ui/dialog/dialog-overlay.svelte',
+	'src/lib/components/ui/sheet/sheet-overlay.svelte'
+];
 
 const PALETTE_UTILITY = new RegExp(
 	'(?<![\\w-])((?:[\\w[\\]&>*=.()/_-]+:)*)' +
@@ -222,8 +187,7 @@ const PALETTE_UTILITY = new RegExp(
 export function findPaletteUtilities(rel, src) {
 	const norm = rel.replaceAll('\\', '/');
 	if (!/\.(svelte|ts)$/.test(norm) || !norm.startsWith('src/')) return [];
-	if (norm.startsWith('src/styles/') || GENERATED_UI_DIRS.some((d) => norm.startsWith(d)))
-		return [];
+	if (norm.startsWith('src/styles/') || GENERATED_UI_FILES.includes(norm)) return [];
 	const found = [];
 	for (const m of src.matchAll(PALETTE_UTILITY))
 		found.push({ line: src.slice(0, m.index).split('\n').length, utility: m[1] + m[2] });

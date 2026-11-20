@@ -22,10 +22,12 @@
 		crumbs?: Crumb[];
 		actions?: Snippet;
 		meta?: Snippet;
+		/** a back link above the title (Task 25's BackLink goes here) */
+		leading?: Snippet;
 		/** `data-testid` of the `<h1>` (a page whose e2e finds its title by it) */
 		titleTestId?: string;
 	};
-	let { title, description, crumbs, actions, meta, titleTestId }: Props = $props();
+	let { title, description, crumbs, actions, meta, leading, titleTestId }: Props = $props();
 
 	// Below a layout that already shows the page header: a section title (h2), no second trail.
 	const nested = inNestedPageHeaders();
@@ -53,6 +55,7 @@
 <!-- eslint-disable svelte/no-navigation-without-resolve -- hrefs are nav-config paths or resolved by the caller -->
 <div class="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2" data-page-heading>
 	<div class="min-w-0">
+		{#if leading}<div class="mb-1">{@render leading()}</div>{/if}
 		<div class="flex flex-wrap items-center gap-2">
 			<svelte:element
 				this={nested ? 'h2' : 'h1'}

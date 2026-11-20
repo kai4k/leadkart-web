@@ -69,18 +69,30 @@ export function findLegacyImports(rel, src) {
 }
 
 /**
- * @param {{ drawer: string[], legacyDataTable: string[], notes?: Record<string, string> }} allowlist
+ * @param {{ drawer: string[], legacyDataTable: string[], notes?: Record<string, string>, counts?: Record<string, Record<string, number>> }} allowlist
  * @param {Map<string, string>} files path -> source
  * @returns {{ violations: string[], stale: string[] }}
  */
 export function checkLegacyImports(allowlist, files) {
 	const violations = [];
 	const used = { drawer: new Set(), legacyDataTable: new Set() };
-	for (const [path, src] of files)
-		for (const hit of findLegacyImports(path, src)) {
+	for (const [path, src] of files) {
+		const hits = findLegacyImports(path, src);
+		for (const list of /** @type {const} */ (['drawer', 'legacyDataTable'])) {
+			const n = hits.filter((h) => h.list === list).length;
+			const cap = allowlist.counts?.[list]?.[path];
+			if (n > 0 && allowlist[list].includes(path) && cap !== undefined && n > cap)
+				violations.push(
+					`${path}: ${n} ${list} import(s), the allowlist records ${cap}: an entry only shrinks`
+				);
+			if (n > 0 && allowlist[list].includes(path) && allowlist.counts && cap === undefined)
+				violations.push(`${path}: listed in ${list} without a count (counts.${list})`);
+		}
+		for (const hit of hits) {
 			if (allowlist[hit.list].includes(path)) used[hit.list].add(path);
 			else violations.push(`${path}:${hit.line}  ${hit.what}  (${hit.list})`);
 		}
+	}
 	const stale = [];
 	for (const list of /** @type {const} */ (['drawer', 'legacyDataTable']))
 		for (const p of allowlist[list])
