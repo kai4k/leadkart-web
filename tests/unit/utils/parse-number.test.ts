@@ -46,7 +46,13 @@ describe('parseLocaleNumber: group separators sit only where the locale groups (
 		['1234,567', 'en-US', null],
 		['1,23,456', 'en-IN', 123456],
 		['12,34,567', 'en-IN', 1234567],
-		['1,234,567', 'en-IN', null],
+		// international 3/3 grouping is also read where the locale groups 3/2/2 (a pasted "100,000");
+		// "1,234" is the same number under both groupings
+		['1,234,567', 'en-IN', 1234567],
+		['100,000', 'en-IN', 100000],
+		['1,234', 'en-IN', 1234],
+		['12,34,567,890', 'en-IN', null],
+		['1,2345,678', 'en-IN', null],
 		['1,5', 'en-IN', null],
 		['1,23,45', 'en-IN', null],
 		['1,23,456', 'hi', 123456],

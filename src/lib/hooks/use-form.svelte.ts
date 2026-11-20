@@ -146,6 +146,13 @@ export function useForm<TSchema extends AnyObjectSchema>(
 		submitAttempted = true;
 		clearErrors();
 
+		// A number field holding text it could not read: its model still has the OLD value, which a
+		// submit must not send under a visible error. Focus goes to that field (aria-invalid).
+		if (formEl?.querySelector('[data-unreadable="true"]')) {
+			void focusFirstInvalid(formEl);
+			return;
+		}
+
 		const result = schema.safeParse(values);
 		if (!result.success) {
 			const flat = result.error.flatten().fieldErrors as Record<string, string[] | undefined>;

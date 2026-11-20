@@ -9,10 +9,12 @@
 	 *   - +/− buttons step by `step`; disabled at min/max.
 	 *   - ArrowUp / ArrowDown step by `step`; Shift+Arrow steps by step×10.
 	 *   - Blur and Enter parse the text in the active locale ("1,00,000" in en-IN is 100000; a group
-	 *     separator in the wrong place, "1,5", is refused), clamp to [min, max] and round to
-	 *     `precision` decimals. Text that is not a number keeps the previous value, restores it in the
-	 *     field and marks the field invalid; it is never silently cleared. Enter commits first, so the
-	 *     submit that follows reads what is shown, and an unreadable text does not submit.
+	 *     separator in the wrong place, "1,5", is refused; "100,000" is read too), clamp to [min, max]
+	 *     and round to `precision` decimals. The default locale is the business one (en-IN), not the
+	 *     interface language. Text that is not a number stays on screen as typed, marks the field
+	 *     invalid and blocks submission (custom validity for native forms, `data-unreadable` for
+	 *     `useForm`); the previous value is never restored under an error, nor silently cleared.
+	 *     Enter commits first, so the submit that follows reads what is shown.
 	 *   - What the field shows after a commit is the locale's plain form (decimal comma in de, no
 	 *     grouping), which the parser reads back to the same number.
 	 *   - Empty string preserved as null in `value`.
@@ -21,7 +23,8 @@
 </script>
 
 <script lang="ts">
-	import { _, locale as i18nLocale } from 'svelte-i18n';
+	import { _ } from 'svelte-i18n';
+	import { BUSINESS_LOCALE } from '#lib/utils/format.ts';
 	import { formatPlainNumber, parseLocaleNumber } from '#lib/utils/parse-number.ts';
 	import { Icon, Minus, Plus } from '#lib/icons/index.ts';
 	import * as Field from '#lib/components/ui/field/index.ts';
@@ -46,7 +49,7 @@
 		hint?: string;
 		error?: string | null;
 		'aria-label'?: string;
-		/** BCP 47 tag the typed text is read in. Default: the active interface locale. */
+		/** BCP 47 tag the typed text is read in. Default: the business locale (en-IN), the one amounts are shown in. */
 		locale?: string;
 		class?: string;
 	};
@@ -76,7 +79,7 @@
 	const fieldId = $derived(id ?? `number-${uid}`);
 	const hintId = $derived(`${fieldId}-hint`);
 	const errorId = $derived(`${fieldId}-error`);
-	const activeLocale = $derived(locale ?? $i18nLocale ?? 'en');
+	const activeLocale = $derived(locale ?? BUSINESS_LOCALE);
 	// Set when the last commit could not read the text as a number; cleared on the next keystroke.
 	let unreadable = $state(false);
 	const shownError = $derived(error || (unreadable ? $_('form.number.invalid') : null));
@@ -92,9 +95,16 @@
 	$effect(() => {
 		// Sync external value → display when caller mutates value directly
 		const next = show(value);
-		if (next !== displayValue && document.activeElement?.id !== fieldId) {
+		if (next !== displayValue && document.activeElement?.id !== fieldId && !unreadable) {
 			displayValue = next;
 		}
+	});
+
+	// A native form (and a use:enhance one) refuses to submit while the field holds unreadable text;
+	// useForm.submit refuses on `data-unreadable` for forms that submit through it.
+	let inputEl = $state<HTMLInputElement | null>(null);
+	$effect(() => {
+		inputEl?.setCustomValidity(unreadable ? $_('form.number.invalid') : '');
 	});
 
 	function clamp(n: number): number {
@@ -119,9 +129,9 @@
 		}
 		const parsed = parseLocaleNumber(raw, activeLocale);
 		if (parsed === null) {
-			// Keep what was there; show it again so the field and the value agree.
+			// Keep what the user typed on screen (never restore: a restored old value under an
+			// error looks valid and gets submitted); the field is invalid and blocks the submit.
 			unreadable = true;
-			displayValue = show(value);
 			return false;
 		}
 		unreadable = false;
@@ -151,8 +161,8 @@
 			// commit BEFORE the implicit submit reads the field (the DOM value is written now: the
 			// re-render that would show it comes after the submit)
 			const ok = commit(displayValue);
-			e.currentTarget.value = displayValue;
-			if (!ok) e.preventDefault();
+			if (ok) e.currentTarget.value = displayValue;
+			else e.preventDefault();
 		}
 	}
 </script>
@@ -183,6 +193,8 @@
 			{/if}
 
 			<Input
+				bind:ref={inputEl}
+				data-unreadable={unreadable ? 'true' : undefined}
 				id={fieldId}
 				type="text"
 				inputmode={precision > 0 ? 'decimal' : 'numeric'}

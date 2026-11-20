@@ -8,8 +8,12 @@
  * A missing or invalid value is an em dash, never "undefined", "NaN" or "Invalid Date".
  */
 
-/** India-first; the tenant locale preference is stored but not applied anywhere yet. */
-const LOCALE = 'en-IN';
+/**
+ * The business number and date locale: India-first (the tenant locale preference is stored but
+ * not applied anywhere yet). Amounts are shown AND read in it, whatever the interface language is.
+ */
+export const BUSINESS_LOCALE = 'en-IN';
+const LOCALE = BUSINESS_LOCALE;
 const EMPTY = '—';
 
 const grouped = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 0 });

@@ -61,6 +61,17 @@ function digitValue(c: string): number {
 
 const isMinus = (c: string) => c === '-' || c === '−';
 
+/** Do the digit groups the text wrote (two or more) sit as `primary` last and `secondary` before? */
+function groupingFits(groups: string[], primary: number, secondary: number): boolean {
+	if ((groups.at(-1) ?? '').length !== primary) return false;
+	for (let g = 1; g < groups.length - 1; g++)
+		if ((groups[g] ?? '').length !== secondary) return false;
+	const first = (groups[0] ?? '').length;
+	if (first < 1 || first > Math.max(primary, secondary)) return false;
+	if (secondary < primary && first > secondary) return false;
+	return true;
+}
+
 export function parseLocaleNumber(raw: string, locale: string): number | null {
 	const text = raw.trim();
 	if (text === '' || text.length > MAX_LENGTH) return null;
@@ -92,14 +103,11 @@ export function parseLocaleNumber(raw: string, locale: string): number | null {
 		}
 	}
 	if (!sawDigit) return null;
-	if (groups.length > 1) {
-		// the separators must sit where the locale puts them
-		const last = groups[groups.length - 1];
-		if (last.length !== primary) return null;
-		for (let g = 1; g < groups.length - 1; g++) if (groups[g].length !== secondary) return null;
-		const first = groups[0].length;
-		if (first < 1 || first > Math.max(primary, secondary)) return null;
-		if (secondary < primary && first > secondary) return null;
+	// the separators must sit where the locale puts them; where the locale groups unevenly
+	// (en-IN, hi: 3 then 2s) the plain international 3/3 grouping is read too, so a pasted
+	// "100,000" is not refused. "1,234" is the same number under both and reads identically.
+	if (groups.length > 1 && !groupingFits(groups, primary, secondary)) {
+		if (secondary === primary || !groupingFits(groups, primary, primary)) return null;
 	}
 	const n = Number(
 		`${negative ? '-' : ''}${groups.join('') || '0'}${fraction ? `.${fraction}` : ''}`

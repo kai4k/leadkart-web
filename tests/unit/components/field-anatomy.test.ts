@@ -153,16 +153,51 @@ describe('NumberInput parsing', () => {
 		expect(blurWith('1,00,000', { max: 500 }).value).toBe('500');
 	});
 
-	it('garbage keeps the previous value, restores it and marks the field invalid', () => {
+	it('garbage keeps the previous value, keeps the typed text on screen and marks the field invalid', () => {
 		const input = blurWith('abc');
-		expect(input.value).toBe('5');
+		expect(input.value).toBe('abc');
 		expect(input.getAttribute('aria-invalid')).toBe('true');
+		expect(input.validity.customError).toBe(true);
+		expect(input.getAttribute('data-unreadable')).toBe('true');
 		expect(target.querySelector('[id$="-error"]')?.textContent).toContain('valid number');
 		// Typing again clears the complaint.
 		input.value = '7';
 		input.dispatchEvent(new Event('input', { bubbles: true }));
 		flushSync();
 		expect(input.getAttribute('aria-invalid')).toBeNull();
+		expect(input.validity.customError).toBe(false);
+		expect(input.hasAttribute('data-unreadable')).toBe(false);
+	});
+
+	it('typing readable text after a refusal commits the new value on blur', () => {
+		const input = blurWith('abc');
+		input.focus();
+		input.value = '7';
+		input.dispatchEvent(new Event('input', { bubbles: true }));
+		input.blur();
+		flushSync();
+		expect(input.value).toBe('7');
+		expect(input.getAttribute('aria-invalid')).toBeNull();
+		expect(input.getAttribute('aria-valuenow')).toBe('7');
+	});
+
+	it('the default locale is the business one (en-IN), whatever the interface language', () => {
+		const read = (text: string) => {
+			render(NumberInput, { label: 'Amount', value: 5 });
+			const input = target.querySelector<HTMLInputElement>('input')!;
+			input.focus();
+			input.value = text;
+			input.dispatchEvent(new Event('input', { bubbles: true }));
+			input.blur();
+			flushSync();
+			const out = { value: input.value, invalid: input.getAttribute('aria-invalid') };
+			unmount(component!);
+			target.remove();
+			return out;
+		};
+		expect(read('1,00,000')).toEqual({ value: '100000', invalid: null });
+		expect(read('100,000')).toEqual({ value: '100000', invalid: null });
+		expect(read('1,5').invalid).toBe('true');
 	});
 });
 
@@ -190,12 +225,12 @@ describe('NumberInput commits on submit and reads strictly (fix round B)', () =>
 		expect(input.getAttribute('aria-valuenow')).toBe('100000');
 		expect(e.defaultPrevented).toBe(false);
 	});
-	it('Enter on unreadable text does not submit, restores the value and marks the field invalid', () => {
+	it('Enter on unreadable text does not submit, keeps the typed text and marks the field invalid', () => {
 		const input = typeInto('1,5');
 		const e = press(input, 'Enter');
 		flushSync();
 		expect(e.defaultPrevented).toBe(true);
-		expect(input.value).toBe('5');
+		expect(input.value).toBe('1,5');
 		expect(input.getAttribute('aria-invalid')).toBe('true');
 	});
 	it('a group separator in the wrong place is refused, not read as another number', () => {
@@ -204,10 +239,26 @@ describe('NumberInput commits on submit and reads strictly (fix round B)', () =>
 			input.blur();
 			flushSync();
 			expect(input.getAttribute('aria-invalid')).toBe('true');
-			expect(input.value).toBe('5');
+			expect(input.value).toBe(bad);
 			unmount(component!);
 			target.remove();
 		}
+	});
+	it('a click on submit with unreadable text is refused by the field itself (native validity), the old value is not sent', () => {
+		const input = typeInto('1,5');
+		input.blur();
+		flushSync();
+		const form = document.createElement('form');
+		target.append(form);
+		form.append(input.closest('[data-slot="field"]') ?? input);
+		expect(form.checkValidity()).toBe(false);
+		expect(input.validationMessage).toContain('valid number');
+		// fixing the text clears the block
+		input.focus();
+		input.value = '50';
+		input.dispatchEvent(new Event('input', { bubbles: true }));
+		flushSync();
+		expect(form.checkValidity()).toBe(true);
 	});
 	it('a decimal-comma locale re-reads its own output after a nudge', () => {
 		const input = typeInto('1.234,5', { locale: 'de', precision: 1 });

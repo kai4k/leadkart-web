@@ -375,6 +375,25 @@ describe('Form.submit: focus moves to the first invalid field', () => {
 		el.remove();
 	});
 
+	it('a control holding text it could not read (data-unreadable) blocks the submit and takes focus', async () => {
+		const el = document.createElement('form');
+		el.innerHTML =
+			'<input name="a" /><input name="amount" aria-invalid="true" data-unreadable="true" />';
+		document.body.append(el);
+		const form = formInRoot(testSchema, { email: 'a@b.com', name: 'Alice' }).form;
+		const submitFn = vi.fn().mockResolvedValue(undefined);
+		await form.submit(eventFor(el), submitFn);
+		expect(submitFn).not.toHaveBeenCalled();
+		await vi.waitFor(() =>
+			expect(document.activeElement).toBe(el.querySelector('input[name="amount"]'))
+		);
+		// fixing the text lifts the block
+		el.querySelector('input[name="amount"]')!.removeAttribute('data-unreadable');
+		await form.submit(eventFor(el), submitFn);
+		expect(submitFn).toHaveBeenCalledTimes(1);
+		el.remove();
+	});
+
 	it('a success moves no focus', async () => {
 		const el = formElement();
 		(document.activeElement as HTMLElement | null)?.blur();
