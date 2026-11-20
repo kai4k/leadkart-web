@@ -75,9 +75,11 @@ const EXPECTED: Record<string, Measured> = {
 	'/signin': {
 		body: { backgroundColor: 'oklch(0.96 0.008 268)', color: 'oklch(0.18 0.02 250)' },
 		button: {
+			// The first <button> on /signin. Phase 2 Tasks 4-7 regenerated Button (radius 10px) and
+			// moved its muted text to the AA-safe muted-foreground: a deliberate change, not drift.
 			backgroundColor: 'rgba(0, 0, 0, 0)',
-			color: 'oklch(0.49 0.02 250)',
-			borderRadius: '8px'
+			color: 'oklch(0.42 0.02 250)',
+			borderRadius: '10px'
 		},
 		card: {
 			backgroundColor: 'oklch(1 0 0)',
