@@ -1,7 +1,7 @@
 import { tick } from 'svelte';
 
 /** A modal surface rendered without an accessible name (a developer error, not an API one). */
-export class OverlayNameError extends Error {}
+class OverlayNameError extends Error {}
 
 /**
  * Dev-time guard: a modal surface (Dialog, Sheet, Drawer shim) must have an accessible name, either

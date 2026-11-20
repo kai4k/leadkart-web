@@ -12,7 +12,7 @@ type Separators = { group: string; decimal: string };
 
 const cache = new Map<string, Separators>();
 
-export function separatorsFor(locale: string): Separators {
+function separatorsFor(locale: string): Separators {
 	const hit = cache.get(locale);
 	if (hit) return hit;
 	let result: Separators = { group: ',', decimal: '.' };
