@@ -428,6 +428,11 @@ test.describe('Operator scope flow', () => {
 		context
 	}) => {
 		await setupOperator(page);
+		// Let the signed-in page finish its own requests first: a request of the OPEN page that
+		// meets the forged cookie is (rightly) answered by the scope guard with a hard navigation to
+		// /operator/tenants, which would abort the goto below.
+		await page.locator('html[data-hydrated="true"]').waitFor({ state: 'attached' });
+		await page.waitForLoadState('networkidle');
 		const forgedId = '99999999-9999-4999-8999-999999999999';
 		await context.addCookies([
 			{
