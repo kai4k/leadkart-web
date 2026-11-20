@@ -20,6 +20,24 @@ const LANG_PLACEHOLDER = '%lk.html.lang%';
  * reduced to one of the supported tags (see `negotiateLocale`); what is written into the page is
  * built from those enum members, never from the request.
  */
+/**
+ * Fills the placeholders inside the opening `<html …>` tag and nowhere else. The same text further
+ * down the chunk is page content (a title, a name someone typed) and stays as it is; a chunk with
+ * no `<html>` tag is returned untouched.
+ */
+function fillHtmlTag(html: string, attrs: string, locale: string): string {
+	const start = html.indexOf('<html');
+	if (start === -1) return html;
+	const end = html.indexOf('>', start);
+	if (end === -1) return html;
+	// Replacer functions: the text is inserted literally, no `$&` interpretation.
+	const tag = html
+		.slice(start, end + 1)
+		.replace(ATTRS_PLACEHOLDER, () => attrs)
+		.replace(LANG_PLACEHOLDER, () => locale);
+	return html.slice(0, start) + tag + html.slice(end + 1);
+}
+
 export const htmlShellHandle: Handle = ({ event, resolve }) => {
 	const preferences = decodePreferences(event.cookies.get(PREFERENCES_COOKIE));
 	const locale = negotiateLocale(event.request.headers.get('accept-language'));
@@ -27,8 +45,6 @@ export const htmlShellHandle: Handle = ({ event, resolve }) => {
 	event.locals.locale = locale;
 	const attrs = htmlAttributes(preferences);
 	return resolve(event, {
-		// Replacer functions: the text is inserted literally, no `$&` interpretation.
-		transformPageChunk: ({ html }) =>
-			html.replace(ATTRS_PLACEHOLDER, () => attrs).replace(LANG_PLACEHOLDER, () => locale)
+		transformPageChunk: ({ html }) => fillHtmlTag(html, attrs, locale)
 	});
 };

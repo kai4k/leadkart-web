@@ -55,6 +55,17 @@ describe('htmlShellHandle', () => {
 		const { html } = await run(undefined);
 		expect(await html('<html %lk.html.attrs%><body>$&</body>')).toContain('<body>$&</body>');
 	});
+	it('fills the placeholders only inside the opening <html> tag', async () => {
+		const { html } = await run(undefined);
+		const body = '<body>%lk.html.attrs% and %lk.html.lang%</body>';
+		// The tag is filled; the same text later in the chunk (a title, a name) is page content.
+		const out = (await html(`<!doctype html>\n${TEMPLATE}<head></head>${body}`)) ?? '';
+		expect(out).toContain('<html lang="en" data-layout="vertical"');
+		expect(out).toContain(body);
+		// A chunk with no <html> tag, or one whose tag carries no placeholder, is left alone.
+		expect(await html(body)).toBe(body);
+		expect(await html(`<html lang="en">${body}`)).toBe(`<html lang="en">${body}`);
+	});
 	it('works with no cookie at all', async () => {
 		const { event } = await run(undefined);
 		expect(event.locals.preferences).toEqual(DEFAULT_PREFERENCES);
