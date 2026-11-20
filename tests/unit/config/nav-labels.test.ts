@@ -4,7 +4,6 @@
  */
 import { describe, expect, it } from 'vitest';
 import en from '../../../src/lib/i18n/locales/en.json';
-import hi from '../../../src/lib/i18n/locales/hi.json';
 import { NAV_ROUTES, shellNav, visibleNav } from '#lib/config/nav.ts';
 import {
 	NEW_TENANT_ADMIN,
@@ -42,10 +41,9 @@ describe('nav labels are localised', () => {
 	const shown = Object.entries(NAV_ROUTES);
 
 	it.each(shown.map(([key]) => [key]))(
-		'item %s has a label key in every locale file (hi.json carries English for now)',
+		'item %s has an English label key (English only for now)',
 		(key) => {
 			expect(items(en)[key], `en nav.items.${key}`).toBeTruthy();
-			expect(items(hi as Dict)[key], `hi nav.items.${key}`).toBeTruthy();
 		}
 	);
 
@@ -56,7 +54,6 @@ describe('nav labels are localised', () => {
 	it('every titled section has both labels', () => {
 		for (const id of ['operator', 'tenantContext', 'administration', 'crm', 'account']) {
 			expect(sections(en)[id], `en nav.sections.${id}`).toBeTruthy();
-			expect(sections(hi as Dict)[id], `hi nav.sections.${id}`).toBeTruthy();
 		}
 	});
 });

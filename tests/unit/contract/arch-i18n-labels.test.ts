@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { findHardcodedLabels } from '../../../scripts/arch/lib/hardcoded-labels.mjs';
+import {
+	LABEL_ALLOWLIST,
+	LABEL_ALLOWLIST_ENTRIES,
+	LEGACY_DATA_TABLE_REBUILT,
+	checkLabelAllowlist,
+	findHardcodedLabels,
+	isFormatString
+} from '../../../scripts/arch/lib/hardcoded-labels.mjs';
 
 /** Self-test of the hard-coded label rule: fixtures, not the repository. */
 const UI = 'src/lib/components/ui/alert/alert.svelte';
@@ -46,5 +53,49 @@ describe('check-i18n-coverage: hard-coded labels in the shared layers', () => {
 		expect(found(src, 'src/lib/components/form/X.stories.svelte')).toEqual([]);
 		expect(found(src, 'src/lib/components/ui/data-table/DataTable.svelte')).toEqual([]);
 		expect(found(src, 'src\\lib\\components\\ui\\a\\a.svelte')).toEqual(['Members']);
+	});
+});
+
+describe('hard-coded labels: format strings and the allowlist expiry (fix round B)', () => {
+	it.each(['DD/MM/YYYY', 'dd-mm-yyyy', 'HH:mm', 'MM/DD/YY', 'YYYY-MM-DD HH:mm'])(
+		'a non-linguistic format placeholder %s is not a label',
+		(fmt) => {
+			expect(found(`<input placeholder="${fmt}" />`, 'src/lib/components/form/D.svelte')).toEqual(
+				[]
+			);
+			expect(isFormatString(fmt)).toBe(true);
+		}
+	);
+	it.each(['Date', 'Day', 'Dismiss', 'Search', 'mm hours', 'DD of the month'])(
+		'a word (%s) is still a label',
+		(text) => {
+			expect(isFormatString(text)).toBe(false);
+			expect(found(`<input placeholder="${text}" />`, 'src/lib/components/form/D.svelte')).toEqual([
+				text
+			]);
+		}
+	);
+
+	it('the legacy data-table entry carries its owner and an end', () => {
+		expect(LABEL_ALLOWLIST_ENTRIES).toEqual([
+			expect.objectContaining({
+				path: 'src/lib/components/ui/data-table/',
+				owner: 'Task 23'
+			})
+		]);
+		expect(LABEL_ALLOWLIST).toEqual(LABEL_ALLOWLIST_ENTRIES.map((e: { path: string }) => e.path));
+	});
+	it('passes while the directory exists and the marker says it is still needed', () => {
+		expect(checkLabelAllowlist(() => true, false)).toEqual([]);
+	});
+	it('FAILS once the directory is gone, so the entry cannot outlive its reason', () => {
+		const problems = checkLabelAllowlist(() => false, false);
+		expect(problems).toHaveLength(1);
+		expect(problems[0]).toContain('src/lib/components/ui/data-table/');
+		expect(problems[0]).toContain('Task 23');
+	});
+	it('FAILS once the marker constant is flipped, even if the directory is still there', () => {
+		expect(checkLabelAllowlist(() => true, true)).toHaveLength(1);
+		expect(LEGACY_DATA_TABLE_REBUILT).toBe(false);
 	});
 });

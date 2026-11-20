@@ -28,10 +28,10 @@
  * silenced by adding `// i18n-allow` on the line above the string, OR
  * by wrapping in $_(). False negatives still get caught at PR review.
  */
-import { readFileSync, globSync } from 'node:fs';
+import { existsSync, readFileSync, globSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { findHardcodedLabels } from './lib/hardcoded-labels.mjs';
+import { checkLabelAllowlist, findHardcodedLabels } from './lib/hardcoded-labels.mjs';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 
@@ -69,6 +69,9 @@ for (const rel of files) {
 		pluralViolations.push(`${norm}:${lineNo}  ${line.trim().slice(0, 80)}`);
 	}
 }
+
+// an allowlist entry must not outlive its reason (folder removed, or its owner task landed)
+for (const p of checkLabelAllowlist((path) => existsSync(join(ROOT, path)))) i18nViolations.push(p);
 
 const totalViolations = i18nViolations.length + pluralViolations.length;
 if (totalViolations === 0) {

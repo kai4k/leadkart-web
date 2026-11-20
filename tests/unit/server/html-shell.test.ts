@@ -72,10 +72,10 @@ describe('htmlShellHandle', () => {
 	});
 
 	describe('locale', () => {
-		it('negotiates Accept-Language into <html lang> and locals', async () => {
+		it('serves English to a Hindi browser while only English is enabled (L46)', async () => {
 			const { event, html } = await run(undefined, 'hi-IN,hi;q=0.9,en;q=0.8');
-			expect(event.locals.locale).toBe('hi');
-			expect(await html(TEMPLATE)).toContain('<html lang="hi" data-layout="vertical"');
+			expect(event.locals.locale).toBe('en');
+			expect(await html(TEMPLATE)).toContain('<html lang="en" data-layout="vertical"');
 		});
 		it('defaults to en with no header or an unsupported language', async () => {
 			for (const header of [undefined, 'fr-FR,de;q=0.8']) {
@@ -90,14 +90,13 @@ describe('htmlShellHandle', () => {
 			expect(out).toContain('lang="en"');
 			expect(out).not.toContain('<script');
 		});
-		it('keeps the locale of each concurrent request separate', async () => {
+		it('gives every concurrent request its own tag (all English while hi is disabled)', async () => {
 			const runs = await Promise.all(
 				Array.from({ length: 20 }, (_, i) => run(undefined, i % 2 ? 'hi' : 'en'))
 			);
-			for (const [i, r] of runs.entries()) {
-				const expected = i % 2 ? 'hi' : 'en';
-				expect(r.event.locals.locale).toBe(expected);
-				expect(await r.html(TEMPLATE)).toContain(`<html lang="${expected}" `);
+			for (const r of runs) {
+				expect(r.event.locals.locale).toBe('en');
+				expect(await r.html(TEMPLATE)).toContain('<html lang="en" ');
 			}
 		});
 	});

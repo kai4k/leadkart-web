@@ -109,7 +109,7 @@
 				<span id={counterId} class="ms-auto shrink-0 text-sm text-muted-foreground tabular-nums">
 					<span aria-hidden="true">{value.length}/{maxlength}</span>
 					<span class="sr-only">
-						{$_('form.counter.words', { values: { n: value.length, max: maxlength } })}
+						{$_('form.counter.characters', { values: { n: value.length, max: maxlength } })}
 					</span>
 				</span>
 				<span class="sr-only" role="status">{announcement}</span>

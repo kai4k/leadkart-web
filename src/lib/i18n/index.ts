@@ -13,8 +13,18 @@
  */
 import { register, init } from 'svelte-i18n';
 
-const SUPPORTED_LOCALES = ['en', 'hi'] as const;
-export type AppLocale = (typeof SUPPORTED_LOCALES)[number];
+/** Every locale the product has a dictionary for. */
+export const KNOWN_LOCALES = ['en', 'hi'] as const;
+export type AppLocale = (typeof KNOWN_LOCALES)[number];
+
+/**
+ * The locales a visitor can GET. English only for now (owner decision 2026-11-21, plan L46): every
+ * request renders English and `<html lang="en">` whatever `Accept-Language` says, the client never
+ * loads `hi`, and the locale-parity gate enforces key parity among these only. `hi.json` stays in
+ * the repo, frozen. To bring Hindi back, add 'hi' here (and translate the keys added since the
+ * freeze; the gate lists them).
+ */
+export const ENABLED_LOCALES: readonly AppLocale[] = ['en'];
 
 const FALLBACK_LOCALE: AppLocale = 'en';
 
@@ -22,9 +32,9 @@ const FALLBACK_LOCALE: AppLocale = 'en';
 const MAX_HEADER_LENGTH = 1024;
 const MAX_ENTRIES = 32;
 
-function supported(tag: string): AppLocale | undefined {
+function supported(tag: string, enabled: readonly AppLocale[]): AppLocale | undefined {
 	const primary = tag.trim().toLowerCase().split('-', 1)[0];
-	return SUPPORTED_LOCALES.find((l) => l === primary);
+	return enabled.find((l) => l === primary);
 }
 
 /** `q` of one entry: 1 when absent, undefined when present but not a number in [0, 1]. */
@@ -39,16 +49,20 @@ function qualityOf(params: string[]): number | undefined {
 }
 
 /**
- * The highest-`q` supported language of an `Accept-Language` header (primary subtag only), ties by
- * order of appearance, `en` when nothing supported (or q=0) matches. Never throws.
+ * The highest-`q` ENABLED language of an `Accept-Language` header (primary subtag only), ties by
+ * order of appearance, `en` when nothing enabled (or q=0) matches. Never throws. `enabled` is a
+ * parameter so a test can run the two-locale behaviour while the product ships English only.
  */
-export function negotiateLocale(acceptLanguage: string | null | undefined): AppLocale {
+export function negotiateLocale(
+	acceptLanguage: string | null | undefined,
+	enabled: readonly AppLocale[] = ENABLED_LOCALES
+): AppLocale {
 	if (!acceptLanguage) return FALLBACK_LOCALE;
 	let best: { locale: AppLocale; q: number } | undefined;
 	const entries = acceptLanguage.slice(0, MAX_HEADER_LENGTH).split(',', MAX_ENTRIES);
 	for (const entry of entries) {
 		const [tag, ...params] = entry.split(';');
-		const locale = supported(tag ?? '');
+		const locale = supported(tag ?? '', enabled);
 		const q = qualityOf(params);
 		if (!locale || q === undefined || q === 0) continue;
 		if (!best || q > best.q) best = { locale, q };
@@ -57,16 +71,17 @@ export function negotiateLocale(acceptLanguage: string | null | undefined): AppL
 }
 
 /** The locale the server rendered the document in (`<html lang>`), for the client to start from. */
-export function readDocumentLocale(): AppLocale {
+export function readDocumentLocale(enabled: readonly AppLocale[] = ENABLED_LOCALES): AppLocale {
 	if (typeof document === 'undefined') return FALLBACK_LOCALE;
-	return supported(document.documentElement.lang) ?? FALLBACK_LOCALE;
+	return supported(document.documentElement.lang, enabled) ?? FALLBACK_LOCALE;
 }
 
 export function initI18n(initialLocale: AppLocale = FALLBACK_LOCALE): void {
 	// The server has both dictionaries already (lib/server/i18n.ts); only the browser loads lazily.
 	if (typeof window !== 'undefined') {
-		register('en', () => import('./locales/en.json'));
-		register('hi', () => import('./locales/hi.json'));
+		// only enabled locales load: the client never fetches a disabled dictionary
+		if (ENABLED_LOCALES.includes('en')) register('en', () => import('./locales/en.json'));
+		if (ENABLED_LOCALES.includes('hi')) register('hi', () => import('./locales/hi.json'));
 	}
 
 	// svelte-i18n's `init()` returns a Promise (locale-load + dictionary ready). Components

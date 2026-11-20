@@ -4,9 +4,12 @@ import { resetMock } from './helpers/mock';
 import { signInAsTier } from './helpers/sign-in';
 
 /**
- * The server renders each request in that request's language: <html lang> matches, no English
- * frame before Hindi, and interleaved requests never borrow each other's language (svelte-i18n's
- * locale is one global store, set by the root layout right before a synchronous render).
+ * English only for now (owner decision 2026-11-21, plan L46): ENABLED_LOCALES is ['en'], so every
+ * request renders English and <html lang="en"> whatever Accept-Language says, and the client never
+ * loads hi. The per-request mechanism itself (negotiation, one tag per concurrent request) is
+ * covered in unit tests with the enabled list overridden (tests/unit/i18n/negotiate.test.ts,
+ * tests/unit/server/html-shell.test.ts): the server list is a build-time constant, so an e2e
+ * cannot flip it.
  */
 
 const dictionary = (lang: 'en' | 'hi') =>
@@ -34,19 +37,16 @@ test.describe('per-request SSR locale', () => {
 		await resetMock();
 	});
 
-	test('the two titles differ, so the assertions below prove something', () => {
-		expect(HI).not.toBe(EN);
-	});
-
-	test('Accept-Language: hi renders a Hindi page with <html lang="hi">', async ({ page }) => {
+	test('Accept-Language: hi renders the English page with <html lang="en">', async ({ page }) => {
 		await signInAsTier(page, { tier: 'tenant-user' });
 		const res = await page.request.get(PAGE, { headers: { 'accept-language': 'hi' } });
 		const body = await res.text();
-		expect(htmlTag(body)).toContain('lang="hi"');
-		expect(h1Texts(body)).toContain(HI);
+		expect(htmlTag(body)).toContain('lang="en"');
+		expect(h1Texts(body)).toContain(EN);
+		expect(h1Texts(body)).not.toContain(HI);
 	});
 
-	test('ten interleaved hi/en requests each get their own language', async ({ page }) => {
+	test('ten interleaved hi/en requests are all English, none borrows another', async ({ page }) => {
 		await signInAsTier(page, { tier: 'tenant-user' });
 		const langs = Array.from({ length: 10 }, (_, i) => (i % 2 === 0 ? 'hi' : 'en'));
 		const bodies = await Promise.all(
@@ -56,12 +56,8 @@ test.describe('per-request SSR locale', () => {
 		);
 		for (const [i, body] of bodies.entries()) {
 			const lang = langs[i];
-			expect(htmlTag(body), `request ${i} (${lang}) <html lang>`).toContain(`lang="${lang}"`);
-			const titles = h1Texts(body);
-			const expected = lang === 'hi' ? HI : EN;
-			const other = lang === 'hi' ? EN : HI;
-			expect(titles, `request ${i} (${lang}) title`).toContain(expected);
-			expect(titles, `request ${i} (${lang}) has no ${other} title`).not.toContain(other);
+			expect(htmlTag(body), `request ${i} (${lang}) <html lang>`).toContain('lang="en"');
+			expect(h1Texts(body), `request ${i} (${lang}) title`).toContain(EN);
 		}
 	});
 
@@ -75,7 +71,7 @@ test.describe('per-request SSR locale', () => {
 		expect(body).not.toContain('alert(1)');
 	});
 
-	test('a Hindi browser sees Hindi in the server HTML, with no script running', async ({
+	test('a Hindi browser sees English in the server HTML, with no script running', async ({
 		browser,
 		page
 	}) => {
@@ -89,27 +85,24 @@ test.describe('per-request SSR locale', () => {
 		try {
 			const noJs = await context.newPage();
 			await noJs.goto(PAGE, { waitUntil: 'domcontentloaded' });
-			await expect(noJs.locator('html')).toHaveAttribute('lang', 'hi');
-			await expect(noJs.locator('main h1', { hasText: HI })).toHaveCount(1);
+			await expect(noJs.locator('html')).toHaveAttribute('lang', 'en');
+			await expect(noJs.locator('main h1', { hasText: EN })).toHaveCount(1);
 		} finally {
 			await context.close();
 		}
 	});
 
-	test('hydration keeps the server language: no English frame, no flip', async ({
-		browser,
-		page
-	}) => {
+	test('hydration keeps English for a Hindi browser: no flip', async ({ browser, page }) => {
 		await signInAsTier(page, { tier: 'tenant-user' });
 		const state = await page.context().storageState();
 		const context = await browser.newContext({ storageState: state, locale: 'hi-IN' });
 		try {
 			const hydrating = await context.newPage();
 			await hydrating.goto(PAGE, { waitUntil: 'domcontentloaded' });
-			await expect(hydrating.locator('main h1', { hasText: HI })).toHaveCount(1);
+			await expect(hydrating.locator('main h1', { hasText: EN })).toHaveCount(1);
 			await hydrating.locator('html[data-hydrated="true"]').waitFor({ state: 'attached' });
-			await expect(hydrating.locator('main h1', { hasText: HI })).toHaveCount(1);
-			await expect(hydrating.locator('html')).toHaveAttribute('lang', 'hi');
+			await expect(hydrating.locator('main h1', { hasText: EN })).toHaveCount(1);
+			await expect(hydrating.locator('html')).toHaveAttribute('lang', 'en');
 		} finally {
 			await context.close();
 		}

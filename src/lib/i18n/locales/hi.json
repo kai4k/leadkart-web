@@ -4,16 +4,6 @@
 		"tagline": "फार्मा SaaS — लीड्स, ऑर्डर, डिस्पैच।"
 	},
 	"auth": {
-		"brand": {
-			"headline": "Pharma lead management, simplified.",
-			"tagline": "End-to-end CRM, orders, inventory and dispatch, built for India's PCD pharma market.",
-			"mobileTag": "Pharma SaaS",
-			"features": {
-				"security": "Enterprise-grade security",
-				"tracking": "Real-time lead tracking",
-				"dispatch": "Order-to-dispatch pipeline"
-			}
-		},
 		"signin": {
 			"title": "साइन इन करें",
 			"subtitle": "वापस आपका स्वागत है। जारी रखने के लिए अपनी क्रेडेंशियल्स दर्ज करें।",
@@ -121,9 +111,6 @@
 		"save": "सेव करें",
 		"navigation": "नेविगेशन",
 		"close": "बंद करें",
-		"brandName": "LeadKart",
-		"skipToContent": "Skip to main content",
-		"loadingNextPage": "Loading next page",
 		"pagination": {
 			"label": "पृष्ठ क्रम",
 			"previous": "पिछला",
@@ -197,29 +184,6 @@
 		"toggleSidebar": "साइडबार खोलें या बंद करें",
 		"mainNavigation": "मुख्य नेविगेशन",
 		"brandHome": "LeadKart होम",
-		"toggleMode": "Switch between light and dark mode",
-		"openCustomizer": "Open theme settings",
-		"searchPlaceholder": "Search…",
-		"userMenu": {
-			"label": "User menu",
-			"signedInAs": "Signed in as",
-			"account": "Account & Security",
-			"signOut": "Sign out"
-		},
-		"tenantContext": {
-			"region": "Tenant context",
-			"actingIn": "You are acting in {tenant}",
-			"platform": "Platform",
-			"exit": "Exit context"
-		},
-		"impersonation": {
-			"region": "Impersonation session",
-			"impersonating": "Impersonating {tenant}",
-			"impersonatingCompany": "Impersonating a company",
-			"details": "{reason} · Expires {expires}",
-			"end": "End impersonation",
-			"endLabel": "End impersonation session"
-		},
 		"footer": {
 			"label": "ऐप का फ़ुटर",
 			"copyright": "© {year} LeadKart · फ़ार्मा SaaS"
@@ -230,53 +194,7 @@
 			"revisionLineSummary": "{lineCount, plural, one {# पंक्ति} other {# पंक्तियाँ}} · उप-योग {subtotal} · GST {gstTotal}"
 		}
 	},
-	"nav": {
-		"sections": {
-			"operator": "Operator",
-			"tenantContext": "Tenant context",
-			"administration": "Administration",
-			"crm": "CRM",
-			"account": "Account"
-		},
-		"items": {
-			"dashboard": "Dashboard",
-			"tenants": "Tenants",
-			"persons": "People",
-			"scopeProfile": "Profile",
-			"scopeMembers": "Members",
-			"scopeRoles": "Roles",
-			"scopeActivity": "Activity",
-			"scopeSettings": "Settings",
-			"tenantSettings": "Tenant Settings",
-			"team": "Team",
-			"roles": "Roles",
-			"leads": "Leads",
-			"orders": "Orders",
-			"inventory": "Inventory",
-			"permissionRequests": "Permission requests",
-			"account": "Account",
-			"scope": "Tenant context",
-			"roleNew": "New role",
-			"quotations": "Quotations"
-		}
-	},
 	"errors": {
-		"route": {
-			"status": "Error {status}",
-			"notFound": "This page could not be found.",
-			"forbidden": "You do not have access to this page.",
-			"generic": "Something went wrong while loading this page.",
-			"signIn": "Sign in again",
-			"title": {
-				"notFound": "Page not found",
-				"forbidden": "Access denied",
-				"generic": "Something went wrong"
-			},
-			"backToDashboard": "Back to dashboard",
-			"backToTenants": "Back to tenants",
-			"backToSignIn": "Back to sign in",
-			"backToHome": "Back to home"
-		},
 		"code": {
 			"csrf_mismatch": "आपका सत्र टोकन पुराना हो गया है — पेज रीलोड करें और फिर कोशिश करें।",
 			"scope_changed": "आपका टेनेंट संदर्भ किसी अन्य टैब में बदल गया है। फिर से लोड हो रहा है।",
@@ -365,82 +283,9 @@
 			"tooLarge": "\"{name}\" अधिकतम आकार {size} से बड़ी है"
 		},
 		"counter": {
-			"words": "{max} में से {n} वर्ण",
+			"characters": "{max} में से {n} वर्ण",
 			"near": "{remaining} वर्ण शेष",
 			"limit": "वर्ण सीमा पूरी हो गई"
-		}
-	},
-	"dashboard": {
-		"title": {
-			"operator": "Operator Dashboard",
-			"tenantAdmin": "Tenant Dashboard",
-			"tenantUser": "My Dashboard"
-		}
-	},
-	"pages": {
-		"crumbs": {
-			"settings": "Settings"
-		},
-		"team": {
-			"title": "Team",
-			"count": "{count, plural, one {# member} other {# members}}"
-		},
-		"roles": {
-			"title": "Roles",
-			"count": "{count, plural, one {# role} other {# roles}}"
-		},
-		"permissionRequests": {
-			"title": "Permission requests",
-			"description": "Request time-bound elevated permissions; approve or deny requests waiting on you."
-		},
-		"permissionRequest": {
-			"title": "Permission request"
-		},
-		"tenants": {
-			"title": "Tenants",
-			"description": "Operator-side tenant management."
-		},
-		"platformUsers": {
-			"title": "Platform users",
-			"description": "Cross-tenant person identity management."
-		},
-		"hierarchy": {
-			"title": "Reporting hierarchy",
-			"crumb": "Hierarchy",
-			"description": "Who reports to whom. Each member can have at most one manager — the line of authority used for task visibility and management chains."
-		},
-		"roleNew": {
-			"title": "Create role",
-			"description": "Roles bundle permissions for assignment to members. After creating the role, you'll be redirected to its detail page where you can assign permissions and set its place in the reporting hierarchy."
-		},
-		"role": {
-			"fallbackTitle": "Role"
-		},
-		"member": {
-			"fallbackTitle": "Member"
-		},
-		"account": {
-			"title": "Account",
-			"sections": "Account settings sections",
-			"tabs": {
-				"profile": "Profile",
-				"security": "Security",
-				"sessions": "Sessions"
-			}
-		},
-		"tenant": {
-			"description": "Manage your organisation's profile, statutory IDs, contact details, and platform preferences.",
-			"sections": "Tenant settings sections",
-			"tabs": {
-				"profile": "Profile",
-				"statutory": "Statutory IDs",
-				"contact": "Contact",
-				"security": "Security",
-				"preferences": "Preferences"
-			}
-		},
-		"scope": {
-			"sections": "Tenant sections"
 		}
 	}
 }

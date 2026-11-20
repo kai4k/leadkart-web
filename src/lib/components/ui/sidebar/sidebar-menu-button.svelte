@@ -31,6 +31,7 @@
 	import { mergeProps } from 'bits-ui';
 	import * as Tooltip from '#lib/components/ui/tooltip/index.ts';
 	import { cn, type WithElementRef, type WithoutChildrenOrChild } from '#lib/utils/cn.ts';
+	import { inlineEndSide } from '#lib/utils/direction.ts';
 	import { useSidebar } from './context.svelte.ts';
 	import type { ComponentProps, Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
@@ -90,7 +91,7 @@
 				{@render Button({ props })}
 			{/snippet}
 		</Tooltip.Trigger>
-		<Tooltip.Content side="right" align="center" {...tooltipContentProps}>
+		<Tooltip.Content side={inlineEndSide()} align="center" {...tooltipContentProps}>
 			{#if typeof tooltipContent === 'string'}
 				{tooltipContent}
 			{:else if tooltipContent}

@@ -35,7 +35,7 @@ describe('TextareaField', () => {
 		const counter = target.querySelector(`#${ta.id}-counter`)!;
 		expect(counter.textContent).toContain('3/10');
 		expect(counter.textContent).toContain(
-			en.form.counter.words.replace('{n}', '3').replace('{max}', '10')
+			en.form.counter.characters.replace('{n}', '3').replace('{max}', '10')
 		);
 		expect(described(ta)).toContain(counter.id);
 	});

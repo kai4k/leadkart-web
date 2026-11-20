@@ -92,6 +92,7 @@
 		{#if empty}
 			{@render empty()}
 		{:else}
+			<!-- English only (L46): `noun` is an English word here. When a second locale is enabled it must become a locale key (callers pass a key, this resolves it), or the sentence cannot be built. -->
 			<EmptyState icon={Inbox} title={$_('common.query.noneYet', { values: { noun } })} />
 		{/if}
 	{:else}

@@ -42,14 +42,13 @@
 			data-mobile="true"
 			title={$_('common.navigation')}
 			titleHidden
-			showCloseButton={false}
 			class={cn(
 				'bg-sidebar p-0 text-sidebar-foreground data-[side=left]:w-(--sidebar-width-mobile) data-[side=right]:w-(--sidebar-width-mobile)',
 				className
 			)}
 			{side}
 		>
-			<div class="flex h-full w-full flex-col">
+			<div class="flex h-full w-full flex-col pt-(--safe-top)">
 				{@render children?.()}
 			</div>
 		</Sheet.Content>
@@ -70,7 +69,7 @@
 			data-slot="sidebar-container"
 			data-side={side}
 			class={cn(
-				'fixed top-(--shell-sidebar-top) bottom-(--shell-sidebar-bottom) z-(--z-sticky) hidden w-(--sidebar-width) transition-[inset,width] duration-200 ease-linear data-[side=left]:start-(--shell-sidebar-start) data-[side=right]:end-(--shell-sidebar-start) lg:flex',
+				'fixed top-[max(var(--shell-sidebar-top),var(--safe-top))] bottom-(--shell-sidebar-bottom) z-(--z-sticky) hidden w-(--sidebar-width) transition-[inset,width] duration-200 ease-linear data-[side=left]:start-(--shell-sidebar-start) data-[side=right]:end-(--shell-sidebar-start) lg:flex',
 				// Adjust the padding for floating and inset variants.
 				variant === 'floating' || variant === 'inset'
 					? 'p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+--spacing(4)+2px)]'

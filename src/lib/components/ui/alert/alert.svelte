@@ -59,6 +59,8 @@
 	);
 </script>
 
+<!-- a role=alert banner is focused by code after a failed submit (focusFirstInvalid): tabindex -1 only -->
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
 	bind:this={ref}
 	data-slot="alert"

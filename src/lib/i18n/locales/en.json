@@ -365,7 +365,7 @@
 			"tooLarge": "\"{name}\" exceeds maximum size of {size}"
 		},
 		"counter": {
-			"words": "{n} of {max} characters",
+			"characters": "{n} of {max} characters",
 			"near": "{remaining, plural, one {# character left} other {# characters left}}",
 			"limit": "Character limit reached"
 		}

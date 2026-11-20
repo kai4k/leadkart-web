@@ -6,7 +6,6 @@
  */
 import { describe, expect, it } from 'vitest';
 import en from '#lib/i18n/locales/en.json';
-import hi from '#lib/i18n/locales/hi.json';
 import { ApiError, describeError } from '#lib/api/errors.ts';
 import { codeCopy, GO_CODE_KEYS, goCodeKey } from '#lib/api/code-copy.ts';
 import { goFailureKey } from '#lib/server/form-action.ts';
@@ -17,13 +16,11 @@ const dig = (tree: unknown, key: string): unknown =>
 		.reduce<unknown>((n, part) => (n as Record<string, unknown> | undefined)?.[part], tree);
 
 describe('the code table', () => {
-	it('has an English and a Hindi line for every key, none of them empty', () => {
+	it('has an English line for every key, none of them empty', () => {
 		expect(GO_CODE_KEYS.size).toBeGreaterThan(25);
 		for (const [code, key] of GO_CODE_KEYS) {
-			for (const [name, locale] of [
-				['en', en],
-				['hi', hi]
-			] as const) {
+			// English only for now (L46): hi.json is frozen and not asserted
+			for (const [name, locale] of [['en', en]] as const) {
 				const text = dig(locale, key);
 				expect(typeof text, `${name} ${code}`).toBe('string');
 				expect((text as string).trim().length, `${name} ${code}`).toBeGreaterThan(0);

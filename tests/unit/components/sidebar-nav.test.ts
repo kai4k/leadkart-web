@@ -166,6 +166,32 @@ describe('below lg: the sidebar is a sheet', () => {
 		await vi.waitFor(() => expect(document.querySelector('[role="dialog"]')).toBeNull());
 	});
 
+	it('has a visible, named Close for touch users without an Escape key', async () => {
+		await render({});
+		trigger().click();
+		flushSync();
+		await tick();
+		const dialog = document.querySelector('[role="dialog"]')!;
+		const close = dialog.querySelector<HTMLButtonElement>('[data-slot="sheet-close"]');
+		expect(close, 'a Close button inside the sheet').not.toBeNull();
+		expect(close!.textContent).toContain('Close');
+		close!.click();
+		flushSync();
+		await vi.waitFor(() => expect(document.querySelector('[role="dialog"]')).toBeNull());
+	});
+
+	it('starts below the notch (--safe-top) and slides in from the start edge in RTL', async () => {
+		document.documentElement.setAttribute('dir', 'rtl');
+		await render({});
+		trigger().click();
+		flushSync();
+		await tick();
+		const content = document.querySelector('[data-mobile="true"]')!;
+		expect(content.className).toContain('rtl:data-[side=left]:data-open:slide-in-from-right-10');
+		expect(content.querySelector('[class~="pt-(--safe-top)"]')).not.toBeNull();
+		document.documentElement.removeAttribute('dir');
+	});
+
 	it('growing past lg closes the sheet, and shrinking again does not reopen it', async () => {
 		await render({});
 		trigger().click();

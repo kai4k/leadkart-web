@@ -191,11 +191,13 @@ copied). `tailwind-variants` in `sidebar-menu-button` became `cva` (normaliser),
 - `sidebar-provider.svelte`: no `document.cookie` write, no inline `--sidebar-width*` style;
   `open` / `onOpenChange` are controlled by AppShell (`open = prefs.sidebar !== 'small'`).
 - `sidebar.svelte`: every `md:` is `lg:`; no in-flow gap element (the page is offset by
-  `--shell-content-start`); the fixed container is `top-(--shell-sidebar-top)
+  `--shell-content-start`); the fixed container is `top-[max(var(--shell-sidebar-top),var(--safe-top))]
 bottom-(--shell-sidebar-bottom) start-(--shell-sidebar-start)` at `z-(--z-sticky)`; the border (and
   the semibox radius) sit on the inner pane; the mobile Sheet is named (`common.navigation`, hidden
-  title), has no close button (Escape and the scrim close it) and `--sidebar-width-mobile` width.
-- `sidebar-menu-button.svelte`: the tooltip exists only while the sidebar is icon-only and not in the
+  title), keeps the Sheet's visible, named Close (touch users have no Escape; fix round B), starts below
+  `--safe-top` (`pt-(--safe-top)`) and has `--sidebar-width-mobile` width.
+- `sidebar-menu-button.svelte`: the tooltip's `side` is `inlineEndSide()` (`utils/direction.ts`: right in
+  LTR, left in RTL; bits-ui's side is physical). The tooltip exists only while the sidebar is icon-only and not in the
   sheet. A tooltip that stays open on a focused expanded item is a dismissible layer and took the first
   Escape away from the sheet.
 - `sidebar-trigger.svelte`: `aria-expanded`, localised name (`shell.toggleSidebar`, prop `label`),
@@ -208,3 +210,12 @@ bottom-(--shell-sidebar-bottom) start-(--shell-sidebar-start)` at `z-(--z-sticky
 bits-ui is imported only under `src/lib/components/ui/**` (gate `check-bits-ui-boundary`); form
 components, features, layouts and routes compose these files. The form Combobox is a `Popover` +
 `Command`, the DatePicker a `Popover` + `Calendar`, the DateRangePicker a `Popover` + `RangeCalendar`.
+
+## fix round B additions
+
+- `sheet/sheet-content.svelte`: the slide-in/out classes are physical (`slide-in-from-left`) while the
+  position is logical (`start-0`), so in RTL a start-edge sheet slid in from the wrong side. `rtl:` variants
+  swap the slide direction for `data-side=left|right`.
+- `alert/alert.svelte`: a `role="alert"` banner has `tabindex="-1"` and a focus-visible ring so a failed
+  submit that marked no field invalid (409, 429, expired session, 5xx) can move focus to it
+  (`focusFirstInvalid`) instead of dropping it on `<body>`. It is not a tab stop.
