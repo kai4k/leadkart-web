@@ -18,12 +18,13 @@ vi.mock('#lib/server/scope.ts', () => ({
 	scopeFingerprint: (r: { state: string }) => r.state
 }));
 vi.mock('$api/jwt', () => ({ decodeJwtPrincipal: () => ({ tenantId: 't-1' }) }));
-vi.mock('#lib/server/cookies.ts', () => ({ ACCESS_COOKIE: () => 'lk_access' }));
+vi.mock('#lib/server/cookies.ts', () => ({
+	ACCESS_COOKIE: () => 'lk_access',
+	sessionRenewalPending: () => false
+}));
 
-import {
-	saveTenantSection,
-	TENANT_SECTION_PERMISSION
-} from '../../../src/routes/(app)/settings/tenant/_actions.ts';
+import { saveTenantSection } from '../../../src/routes/(app)/settings/tenant/_actions.ts';
+import { TENANT_SECTION_PERMISSION } from '#lib/config/tenant-sections.ts';
 import { actions as profile } from '../../../src/routes/(app)/settings/tenant/profile/+page.server.ts';
 import { actions as statutory } from '../../../src/routes/(app)/settings/tenant/statutory/+page.server.ts';
 import { actions as contact } from '../../../src/routes/(app)/settings/tenant/contact/+page.server.ts';
@@ -240,5 +241,14 @@ describe('saveTenantSection answers', () => {
 			status: 502,
 			data: { formErrorKey: 'auth.errors.upstreamUnavailable' }
 		});
+	});
+});
+
+describe('the section permission table covers exactly the gateway sections', () => {
+	it('has the keys of TENANT_SECTIONS', async () => {
+		const { TENANT_SECTIONS } = await import('$features/tenant/server');
+		expect(Object.keys(TENANT_SECTION_PERMISSION).sort()).toEqual(
+			Object.keys(TENANT_SECTIONS).sort()
+		);
 	});
 });

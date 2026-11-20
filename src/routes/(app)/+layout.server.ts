@@ -21,8 +21,7 @@ import { assertRefreshReachable } from '#lib/server/auth-refresh.ts';
 import { ACCESS_COOKIE, mustChangePassword } from '#lib/server/cookies.ts';
 import { loadCapabilities } from '#lib/server/capabilities.ts';
 import { clearOperatorScope, readOperatorScope, scopeFingerprint } from '#lib/server/scope.ts';
-import { OPERATOR_SCOPE_PERMISSION } from '#lib/server/guards.ts';
-import { can } from '#lib/features/auth/capabilities.ts';
+import { meetsAccess, NAV_ROUTES } from '#lib/config/nav.ts';
 import { CAPABILITIES_DEPENDENCY } from '#lib/api/capabilities-refresh.ts';
 import { SCOPE_DEPENDENCY } from '#lib/api/scope-header.ts';
 import type { LayoutServerLoad } from './$types';
@@ -84,7 +83,7 @@ export const load: LayoutServerLoad = async ({ cookies, url, locals, depends }) 
 	// which by design never exits the scope, the own pages redirect into the scope tree and the
 	// scope tree redirects out of it, and the Exit control is unreachable. Drop the cookie here,
 	// where the capabilities are fresh anyway.
-	if (scope.state === 'valid' && !can(capabilities, OPERATOR_SCOPE_PERMISSION)) {
+	if (scope.state === 'valid' && !meetsAccess(capabilities, NAV_ROUTES.scope)) {
 		clearOperatorScope(cookies);
 		scope = { state: 'none' };
 	}

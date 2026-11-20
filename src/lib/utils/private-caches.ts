@@ -1,6 +1,6 @@
 /**
- * Service-worker caches that hold authenticated data (SSR navigations and
- * /api GET JSON). They must not outlive the identity or tenant context that
+ * Service-worker caches that hold authenticated data (/api GET JSON; the runtime cache only holds
+ * public images since generation v2, and signed-in HTML pages are never stored). They must not outlive the identity or tenant context that
  * filled them: clear on logout, session end and operator scope change.
  *
  * This file is the ONE source of the cache-name prefixes: the service worker
@@ -11,6 +11,13 @@
 export const RUNTIME_CACHE_PREFIX = 'lk-runtime-';
 export const API_CACHE_PREFIX = 'lk-api-';
 export const CLEAR_PRIVATE_CACHES_MESSAGE = 'CLEAR_PRIVATE_CACHES';
+
+/**
+ * Part of every cache name the worker owns. Bump it whenever what the worker may store gets
+ * narrower: the activating worker deletes every `lk*` cache that is not its own, so caches written
+ * under the old rules (v1 stored signed-in HTML pages) are purged on upgrade, not left on disk.
+ */
+export const CACHE_GENERATION = 'v2';
 
 /** localStorage entry naming the operator's active impersonation session (user-specific). */
 export const IMPERSONATION_SESSION_KEY = 'leadkart-impersonation-session';

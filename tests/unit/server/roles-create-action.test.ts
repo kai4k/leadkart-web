@@ -25,7 +25,7 @@ const event = (ctx = 'none') =>
 			method: 'POST',
 			body: new URLSearchParams({ name: 'Auditor', hierarchy_level: '5', scope_context: ctx })
 		}),
-		cookies: {},
+		cookies: { get: () => 'tok' },
 		route: { id: '/(app)/settings/roles/new' }
 	}) as never;
 

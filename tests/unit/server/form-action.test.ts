@@ -85,13 +85,17 @@ describe('callGoForAction', () => {
 	});
 });
 
+/** A cookie jar: signed in by default; `jar({})` has nothing. */
+const jar = (values: Record<string, string> = { lk_access: 'token' }) =>
+	({ get: (n: string) => values[n] }) as never;
+
 describe('authoriseAction', () => {
 	/** An action on the tenant-settings route (an `own` nav entry) from a page rendered with context `ctx`. */
 	const at = (
 		routeId: string | null = '/(app)/settings/tenant/profile',
 		ctx: string | null = 'none'
 	) => ({
-		event: { cookies: {}, route: { id: routeId } } as never,
+		event: { cookies: jar(), route: { id: routeId } } as never,
 		form: new URLSearchParams(ctx === null ? {} : { scope_context: ctx }) as unknown as FormData
 	});
 	const authorise = (permission: string | readonly string[], values: object, where = at()) =>
@@ -132,6 +136,34 @@ describe('authoriseAction', () => {
 		loadCapabilities.mockResolvedValue(caps([P.crmLeadsManage]));
 		expect(await authorise(P.crmLeadsManage, {}, at('/(app)/leads', 'fp-valid'))).toMatchObject({
 			status: 403
+		});
+	});
+
+	describe('the session is being renewed (the hook could not reach Go)', () => {
+		it('no access cookie but a refresh cookie is an outage that keeps the form, not a sign-out', async () => {
+			const where = {
+				...at(),
+				event: {
+					cookies: jar({ lk_refresh: 'r' }),
+					route: { id: '/(app)/settings/tenant/profile' }
+				} as never
+			};
+			expect(await authorise(P.identityTenantsUpdate, { a: 1 }, where)).toMatchObject({
+				status: 503,
+				data: { values: { a: 1 }, formErrorKey: 'auth.errors.upstreamUnavailable' }
+			});
+			expect(loadCapabilities).not.toHaveBeenCalled();
+		});
+		it('neither cookie is a real sign-out', async () => {
+			const where = {
+				...at(),
+				event: { cookies: jar({}), route: { id: '/(app)/settings/tenant/profile' } } as never
+			};
+			loadCapabilities.mockResolvedValue(null);
+			await expect(authorise(P.identityTenantsUpdate, {}, where)).rejects.toMatchObject({
+				status: 303,
+				location: '/signin'
+			});
 		});
 	});
 

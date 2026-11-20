@@ -12,10 +12,11 @@ import { describe, expect, it } from 'vitest';
 import { canSee, routeForPath, visibleNav } from '#lib/config/nav.ts';
 import { guardAppRoute, pathForRouteId } from '#lib/server/guards.ts';
 import {
-	EXISTING_ADMIN_READ_BUNDLE,
 	NEW_TENANT_ADMIN,
 	OPERATOR_ONE_PERMISSION,
 	OWNER,
+	persona,
+	READ_ONLY_GRANTS,
 	SALES_EXECUTIVE,
 	SALES_MANAGER,
 	SUPER_USER,
@@ -99,7 +100,7 @@ describe('the (app) route tree', () => {
 const PERSONAS = {
 	owner: OWNER,
 	'new-tenant admin': NEW_TENANT_ADMIN,
-	'existing-tenant admin (read bundle)': EXISTING_ADMIN_READ_BUNDLE,
+	'read-only grants (no tenant.admin)': persona({ grants: READ_ONLY_GRANTS }),
 	'sales manager': SALES_MANAGER,
 	'team lead': TEAM_LEAD,
 	'sales executive': SALES_EXECUTIVE,
@@ -181,7 +182,7 @@ describe('guard matrix: explicit expectations (independent of nav.ts)', () => {
 	});
 
 	it('existing-tenant admin with the read bundle: lists but not roles/new, no inventory', async () => {
-		expect(await allowedIds(EXISTING_ADMIN_READ_BUNDLE, false)).toEqual(
+		expect(await allowedIds(persona({ grants: READ_ONLY_GRANTS }), false)).toEqual(
 			[
 				'/dashboard',
 				'/leads',

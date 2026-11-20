@@ -27,7 +27,7 @@ import { assertCsrf } from '#lib/server/csrf.ts';
 import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
 import { loadCapabilities } from '#lib/server/capabilities.ts';
 import { goFetch } from '#lib/server/go.ts';
-import { hasRequiredCapability, OPERATOR_SCOPE_PERMISSION } from '#lib/server/guards.ts';
+import { meetsAccess, NAV_ROUTES } from '#lib/config/nav.ts';
 import { jsonError, upstreamJsonError } from '#lib/server/http.ts';
 
 const sessionExpired = (): Response =>
@@ -54,7 +54,7 @@ export async function POST(event: RequestEvent): Promise<Response> {
 		return upstreamJsonError(err);
 	}
 	if (!capabilities) return sessionExpired();
-	if (!hasRequiredCapability(capabilities, OPERATOR_SCOPE_PERMISSION)) {
+	if (!meetsAccess(capabilities, NAV_ROUTES.scope)) {
 		return jsonError(403, 'forbidden', 'Tenant scope requires platform access');
 	}
 

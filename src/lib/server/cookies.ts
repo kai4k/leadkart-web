@@ -26,6 +26,15 @@ export const REFRESH_COOKIE = 'lk_refresh';
 export const CSRF_COOKIE = 'lk_csrf';
 const MCP_COOKIE = 'lk_mcp';
 
+/**
+ * No access cookie but a refresh cookie: the hook's silent refresh could not reach Go (a rejected
+ * one clears the refresh cookie), so the session is NOT known to be over. Callers keep the user's
+ * form / page (503) instead of sending them to /signin.
+ */
+export function sessionRenewalPending(cookies: Cookies): boolean {
+	return !cookies.get(ACCESS_COOKIE()) && Boolean(cookies.get(REFRESH_COOKIE));
+}
+
 /** Go access JWT lifetime (internal/identity/app/jwt/jwt.go:30). */
 const ACCESS_MAX_AGE = 10 * 60;
 /** Go refresh family: 14 days, rolling — every refresh re-sets the cookie (backend-checklist #13). */

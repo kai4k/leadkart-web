@@ -3,6 +3,7 @@
 	import { Alert, Button } from '$ui';
 	import { session } from '$features/auth';
 	import { ScopeContextField } from '$form';
+	import { TENANT_SECTION_PERMISSION, type TenantSectionId } from '#lib/config/tenant-sections.ts';
 
 	/**
 	 * What every tenant-settings form ends with: the action's outcome (a refusal or Go's answer,
@@ -14,12 +15,13 @@
 	type Props = {
 		form?: { formErrorKey?: string | null; success?: boolean };
 		loading: boolean;
-		permission: string;
+		/** Which section this form saves: the one permission table says what it needs. */
+		section: TenantSectionId;
 		successMessage: string;
 	};
-	let { form, loading, permission, successMessage }: Props = $props();
+	let { form, loading, section, successMessage }: Props = $props();
 
-	const allowed = $derived(session.can(permission));
+	const allowed = $derived(session.can(TENANT_SECTION_PERMISSION[section]));
 </script>
 
 <ScopeContextField />

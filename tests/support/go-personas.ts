@@ -2,7 +2,8 @@
  * The ONE persona builder for unit and e2e tests: it projects a caller the way leadkart-go does,
  * so a test never hand-writes `effective_permissions`.
  *
- * Go's rules (leadkart-go, read-only reference):
+ * Go's rules (leadkart-go, read-only reference; `tests/unit/support/go-personas-pinned.test.ts` pins
+ * the tables below to Go's own files at the commit in SOURCE.json):
  *   - `internal/identity/ports/authn/authorize.go` `satisfiesIn` + `EffectivePermissions`: for every
  *     name in the catalogue, in the caller's OWN tenant
  *       1. a super user satisfies everything;
@@ -19,7 +20,7 @@
  *     (copied below, bundle by bundle, so a role's persona is its real grant set).
  *
  * `tests/unit/features/auth/permissions.test.ts` already pins the catalogue to Go's file; the
- * rules here are pinned by `tests/unit/helpers/go-personas.test.ts`.
+ * rules here are exercised by `tests/unit/support/go-personas.test.ts`.
  */
 import type { Capabilities } from '../../src/lib/features/auth/capabilities.ts';
 import { P } from '../../src/lib/features/auth/permissions.ts';
@@ -49,7 +50,7 @@ export const PLATFORM_RESERVED: ReadonlySet<string> = new Set([
 ]);
 
 /** Go `platformEquivalents`: an operator holding any of the right-hand names satisfies the left-hand one. */
-const PLATFORM_EQUIVALENTS: Readonly<Record<string, readonly string[]>> = {
+export const PLATFORM_EQUIVALENTS: Readonly<Record<string, readonly string[]>> = {
 	[P.identityTenantsView]: [P.platformTenantsView, P.platformTenantsManage],
 	[P.identityTenantsUpdate]: [P.platformTenantsManage],
 	[P.identityTenantsUpdateSettings]: [P.platformTenantsManage],
@@ -153,7 +154,7 @@ const crmManager = [P.crmLeadsRead, P.crmLeadsReadAll, P.crmLeadsAssign, P.crmLe
 const crmExec = [P.crmLeadsRead, P.crmLeadsManage];
 const invRead = [P.inventoryCatalogRead, P.inventoryStockRead];
 
-interface SeededRole {
+export interface SeededRole {
 	level: number;
 	grants: readonly string[];
 }
@@ -224,7 +225,7 @@ const SPECS: Record<string, SeededRole> = {
  * Go's post-loop: every role gets the notification inbox, and every role but the owner may request
  * a permission elevation (the owner's tenant.admin already implies it).
  */
-const SEEDED: Record<string, SeededRole> = Object.fromEntries(
+export const SEEDED: Record<string, SeededRole> = Object.fromEntries(
 	Object.entries(SPECS).map(([name, role]) => [
 		name,
 		{
@@ -308,17 +309,17 @@ export function persona(input: PersonaInput = {}): Capabilities {
 export const OWNER = persona({ roles: ['Company Owner'] });
 /** A tenant created today: Administrator holds `tenant.admin` (new tenants; ADR 0069 Q2). */
 export const NEW_TENANT_ADMIN = persona({ roles: ['Administrator'] });
-/** An existing admin who has the read bundle but not `tenant.admin` (a tenant that did not opt in). */
-export const EXISTING_ADMIN_READ_BUNDLE = persona({
-	grants: [
-		P.identityTenantsView,
-		P.identityUsersView,
-		P.identityRolesView,
-		P.crmLeadsRead,
-		P.ordersQuotationsRead
-	],
-	rank: 8
-});
+/**
+ * A hand-picked set of read grants WITHOUT `tenant.admin`, for tests that need "can see these pages and
+ * nothing else". It is an input to `persona({ grants })`, not a role Go seeds: no rank is claimed.
+ */
+export const READ_ONLY_GRANTS: readonly string[] = [
+	P.identityTenantsView,
+	P.identityUsersView,
+	P.identityRolesView,
+	P.crmLeadsRead,
+	P.ordersQuotationsRead
+];
 export const SENIOR_MANAGER = persona({ roles: ['Senior Manager'] });
 export const SALES_MANAGER = persona({ roles: ['Sales Manager'] });
 export const PURCHASE_MANAGER = persona({ roles: ['Purchase Manager'] });

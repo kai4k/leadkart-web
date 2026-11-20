@@ -88,6 +88,10 @@ export function useForm<TSchema extends AnyObjectSchema>(
 	let generation = 0;
 	// The latest submit owns the busy flag, whatever generation it started in.
 	let latestSubmit = 0;
+	// The generation that has a submit in flight, if any: a second submit of the SAME generation is
+	// ignored (a double click, Enter then click) without waiting for the button to disable on the
+	// next render. A new generation (reopen, reset) may submit while an old one is still running.
+	let busyGeneration: number | null = null;
 	let wasOpen: boolean | undefined;
 	$effect.pre(() => {
 		const isOpen = opts.open();
@@ -129,6 +133,7 @@ export function useForm<TSchema extends AnyObjectSchema>(
 		submitFn: (values: z.output<TSchema>, current: SubmitIsCurrent) => Promise<void>
 	): Promise<void> {
 		e.preventDefault();
+		if (busyGeneration === generation) return;
 		const mine = generation;
 		const myTurn = ++latestSubmit;
 		const current: SubmitIsCurrent = () => generation === mine;
@@ -148,6 +153,7 @@ export function useForm<TSchema extends AnyObjectSchema>(
 		}
 
 		isSubmitting = true;
+		busyGeneration = mine;
 		try {
 			await submitFn(result.data as z.output<TSchema>, current);
 		} catch (err) {
@@ -158,6 +164,7 @@ export function useForm<TSchema extends AnyObjectSchema>(
 				bannerError = describeError(err, { fallback: 'An unexpected error occurred' });
 			}
 		} finally {
+			if (busyGeneration === mine) busyGeneration = null;
 			// A newer submit owns the flag; a stale result must not clear it under that submit.
 			if (myTurn === latestSubmit) isSubmitting = false;
 		}

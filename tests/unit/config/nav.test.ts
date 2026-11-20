@@ -6,16 +6,23 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { NAV_ROUTES, canSee, routeForPath, visibleNav, type NavRoute } from '#lib/config/nav.ts';
+import {
+	NAV_ROUTES,
+	canSee,
+	meetsAccess,
+	routeForPath,
+	visibleNav,
+	type NavRoute
+} from '#lib/config/nav.ts';
 import type { Capabilities } from '#lib/features/auth/capabilities.ts';
 import { ACTION, P } from '#lib/features/auth/permissions.ts';
 import {
 	caps,
-	EXISTING_ADMIN_READ_BUNDLE,
 	NEW_TENANT_ADMIN,
 	OPERATOR_ONE_PERMISSION,
 	OWNER,
 	persona,
+	READ_ONLY_GRANTS,
 	SALES_EXECUTIVE,
 	SALES_MANAGER,
 	SUPER_USER,
@@ -45,7 +52,7 @@ describe('visibleNav: capability set × tenant context → entries', () => {
 		['new-tenant admin', NEW_TENANT_ADMIN, OWN_ALL_TENANT_PAGES, null],
 		[
 			'existing-tenant admin with the read bundle',
-			EXISTING_ADMIN_READ_BUNDLE,
+			persona({ grants: READ_ONLY_GRANTS }),
 			[
 				'/dashboard',
 				'/settings/tenant',
@@ -301,5 +308,22 @@ describe('the create-role page and the create action are one rule', () => {
 			grants: [P.platformTenantsView]
 		});
 		expect(canSee(operatorOwner, NAV_ROUTES.roleNew, true)).toBe(false);
+	});
+});
+
+describe('meetsAccess: the one permission rule behind canSee', () => {
+	it('answers without redirecting, for null capabilities too', () => {
+		expect(meetsAccess(null, NAV_ROUTES.team)).toBe(false);
+		expect(meetsAccess(caps([P.identityUsersView]), NAV_ROUTES.team)).toBe(true);
+		expect(meetsAccess(caps([]), NAV_ROUTES.team)).toBe(false);
+	});
+	it('is_platform / is_super_user alone grant no name; tenant.admin implies nothing on the web', () => {
+		expect(meetsAccess(caps([], { is_platform: true }), NAV_ROUTES.tenants)).toBe(false);
+		expect(meetsAccess(caps([], { is_super_user: true }), NAV_ROUTES.roleNew)).toBe(false);
+		expect(meetsAccess(caps(['tenant.admin']), NAV_ROUTES.team)).toBe(false);
+	});
+	it('the scope entry is what may enter (or stay in) a tenant context: platform.tenants.view', () => {
+		expect(meetsAccess(OPERATOR_ONE_PERMISSION, NAV_ROUTES.scope)).toBe(true);
+		expect(meetsAccess(NEW_TENANT_ADMIN, NAV_ROUTES.scope)).toBe(false);
 	});
 });

@@ -8,9 +8,13 @@
  *    `$app/manifest` exposes the build + static asset lists and
  *    `$app/env` the versioned cache name.
  *
- * 2. **Runtime caching**:
+ * 2. **Runtime caching** (this is everything it ever writes):
  *    - Build chunks / static assets → CacheFirst (immutable hashes).
  *    - Static images → StaleWhileRevalidate.
+ *    - NOT stored, ever: HTML navigations and `__data.json` of signed-in routes (capabilities,
+ *      tenant data, the CSRF value: the Cache API ignores `no-store`, so the only safe copy is
+ *      none). A navigation is network-only; offline it shows the precached static
+ *      `/offline.html`.
  *    - API GETs (/api/v1/*) → NetworkFirst with 10s timeout, then
  *      cache fallback so the user sees stale-but-readable data when
  *      offline.
@@ -37,15 +41,18 @@ import { assets, immutable } from '$app/manifest';
 import { asset, resolve } from '$app/paths';
 import {
 	API_CACHE_PREFIX,
+	CACHE_GENERATION,
 	CLEAR_PRIVATE_CACHES_MESSAGE,
 	isCacheableApiResponse,
 	RUNTIME_CACHE_PREFIX
 } from '#lib/utils/private-caches.ts';
 
 const CACHE_PREFIX = 'lk';
-const APP_SHELL_CACHE = `${CACHE_PREFIX}-shell-${version}`;
-const RUNTIME_CACHE = `${RUNTIME_CACHE_PREFIX}${version}`;
-const API_CACHE = `${API_CACHE_PREFIX}${version}`;
+const APP_SHELL_CACHE = `${CACHE_PREFIX}-shell-${CACHE_GENERATION}-${version}`;
+const RUNTIME_CACHE = `${RUNTIME_CACHE_PREFIX}${CACHE_GENERATION}-${version}`;
+const API_CACHE = `${API_CACHE_PREFIX}${CACHE_GENERATION}-${version}`;
+/** The static page an offline navigation shows (a file in `static/`, so it is in the precached shell). */
+const OFFLINE_PAGE = asset('offline.html');
 
 /**
  * `immutable` paths are plain build-output strings, not typed routes.
@@ -99,7 +106,7 @@ self.addEventListener('message', (event) => {
 		void self.skipWaiting();
 	}
 	if (event.data?.type === CLEAR_PRIVATE_CACHES_MESSAGE) {
-		// Authenticated HTML + API JSON must not outlive the identity/tenant that fetched it.
+		// Authenticated API JSON must not outlive the identity/tenant that fetched it.
 		epoch++;
 		event.waitUntil(Promise.all([caches.delete(RUNTIME_CACHE), caches.delete(API_CACHE)]));
 	}
@@ -111,6 +118,7 @@ self.addEventListener('fetch', (event) => {
 
 	if (url.origin !== self.location.origin) return; // cross-origin: let browser handle
 	if (url.pathname.startsWith('/auth/')) return; // auth flows must reach origin
+	if (url.pathname.endsWith('/__data.json')) return; // a signed-in route's data: never stored
 
 	if (url.pathname.startsWith('/api/')) {
 		event.respondWith(networkFirstApi(event.request));
@@ -128,7 +136,7 @@ self.addEventListener('fetch', (event) => {
 	}
 
 	if (event.request.mode === 'navigate') {
-		event.respondWith(networkFirstNavigate(event.request));
+		event.respondWith(networkOnlyNavigate(event.request));
 	}
 });
 
@@ -175,17 +183,15 @@ async function networkFirstApi(req: Request): Promise<Response> {
 	}
 }
 
-async function networkFirstNavigate(req: Request): Promise<Response> {
-	const startedAt = epoch;
-	const cache = await caches.open(RUNTIME_CACHE);
+/**
+ * A navigation is a signed-in page (or a public one: they cannot be told apart here): always the
+ * network, never written to a cache. Offline, the static offline page.
+ */
+async function networkOnlyNavigate(req: Request): Promise<Response> {
 	try {
-		const fresh = await fetch(req);
-		if (fresh.ok && startedAt === epoch) void cache.put(req, fresh.clone());
-		return fresh;
+		return await fetch(req);
 	} catch {
-		const cached = await cache.match(req);
-		if (cached) return cached;
-		const offline = await caches.match('/');
+		const offline = await caches.match(OFFLINE_PAGE);
 		return offline ?? Response.error();
 	}
 }

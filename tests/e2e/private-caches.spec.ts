@@ -5,10 +5,10 @@ import { signInAsTier } from './helpers/sign-in';
 import { API_CACHE_PREFIX, RUNTIME_CACHE_PREFIX } from '../../src/lib/utils/private-caches.ts';
 
 /**
- * The service worker caches authenticated navigations and JSON /api GETs for
- * offline use. They must not outlive the session that filled them: signing
- * out, landing on an auth page for any reason, or changing scope clears them;
- * auth responses and downloads are never written in the first place.
+ * The service worker caches JSON /api GETs for offline reading. They must not outlive the session
+ * that filled them: signing out, landing on an auth page for any reason, or changing scope clears
+ * them; auth responses and downloads are never written in the first place. Signed-in HTML pages and
+ * `__data.json` are never written at all (the Cache API ignores `no-store`).
  */
 
 /** Request paths held in the caches whose name starts with `prefix`. */
@@ -28,7 +28,7 @@ const privateCachePaths = async (page: Page): Promise<string[]> => [
 	...(await cachePaths(page, API_CACHE_PREFIX))
 ];
 
-/** Sign in, let the worker take control, then browse a list page so both caches fill. */
+/** Sign in, let the worker take control, then browse a list page so the API cache fills. */
 async function warmCaches(page: Page): Promise<void> {
 	await signInAsTier(page, { tier: 'tenant-admin', permissions: ['crm.leads.view'] });
 	await registerMock({
@@ -43,13 +43,29 @@ async function warmCaches(page: Page): Promise<void> {
 	await page.reload();
 	await page.goto('/leads');
 	await expect(page.locator('#main-content')).toBeVisible();
-	await expect.poll(() => cachePaths(page, RUNTIME_CACHE_PREFIX)).toContain('/leads');
 	await expect.poll(() => cachePaths(page, API_CACHE_PREFIX)).toContain('/api/v1/crm/leads');
 }
 
 test.describe('private service-worker caches', () => {
 	test.beforeEach(async () => {
 		await resetMock();
+	});
+
+	test('a signed-in page is never written to any cache (HTML or __data.json)', async ({ page }) => {
+		await warmCaches(page);
+		await page.goto('/dashboard');
+		await expect(page.locator('#main-content')).toBeVisible();
+		const everything = await page.evaluate(async () => {
+			const out: string[] = [];
+			for (const name of await caches.keys()) {
+				for (const req of await (await caches.open(name)).keys())
+					out.push(new URL(req.url).pathname);
+			}
+			return out;
+		});
+		expect(
+			everything.filter((p) => p === '/leads' || p === '/dashboard' || p.endsWith('__data.json'))
+		).toEqual([]);
 	});
 
 	test('are emptied on sign out', async ({ page }) => {

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { P } from '$features/auth';
 	import { fieldText, readFailure } from '#lib/utils/form-failure.ts';
 	import TenantSaveFooter from './TenantSaveFooter.svelte';
 	import { enhance } from '$app/forms';
@@ -62,10 +61,5 @@
 		error={err('display_name')}
 	/>
 
-	<TenantSaveFooter
-		{form}
-		{loading}
-		permission={P.identityTenantsUpdate}
-		successMessage="Profile saved."
-	/>
+	<TenantSaveFooter {form} {loading} section="profile" successMessage="Profile saved." />
 </form>

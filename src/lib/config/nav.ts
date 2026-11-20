@@ -218,11 +218,20 @@ export function contextMatches(route: NavRoute, inTenantContext: boolean): boole
 	return route.context === 'both' || (route.context === 'scope') === inTenantContext;
 }
 
-export function canSee(caps: Caps, route: NavRoute, inTenantContext = false): boolean {
-	if (!caps || !contextMatches(route, inTenantContext)) return false;
+/**
+ * Does the caller hold what the entry's access rule asks, whatever context they are in? The one
+ * permission rule behind `canSee`; also what decides "may this caller act in a tenant context" (the
+ * `scope` entry: the endpoint that enters one and the layout that drops one the caller can no longer hold).
+ */
+export function meetsAccess(caps: Caps, route: NavRoute, inTenantContext = false): boolean {
+	if (!caps) return false;
 	return route.access.kind === 'authenticated'
 		? true
 		: canAny(caps, route.access.permissions, inTenantContext);
+}
+
+export function canSee(caps: Caps, route: NavRoute, inTenantContext = false): boolean {
+	return contextMatches(route, inTenantContext) && meetsAccess(caps, route, inTenantContext);
 }
 
 interface VisibleNavItem {

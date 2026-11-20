@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-	guardAppRoute,
-	hasRequiredCapability,
-	pathForRouteId,
-	requireRouteAccess
-} from '#lib/server/guards.ts';
+import { guardAppRoute, pathForRouteId, requireRouteAccess } from '#lib/server/guards.ts';
 import { P } from '#lib/features/auth/permissions.ts';
 import { caps, OPERATOR_ONE_PERMISSION, OWNER, SUPER_USER } from '../../support/go-personas.ts';
 
@@ -16,25 +11,6 @@ function thrown(fn: () => void): { status: number; location?: string } | null {
 		return e as { status: number; location?: string };
 	}
 }
-
-describe('hasRequiredCapability', () => {
-	it('answers without redirecting, including for null capabilities', () => {
-		expect(hasRequiredCapability(caps([P.identityUsersView]), P.identityUsersView)).toBe(true);
-		expect(hasRequiredCapability(caps([]), P.identityUsersView)).toBe(false);
-		expect(hasRequiredCapability(null, P.identityUsersView)).toBe(false);
-	});
-	it('is_platform / is_super_user alone grant no name', () => {
-		expect(hasRequiredCapability(caps([], { is_platform: true }), P.platformTenantsView)).toBe(
-			false
-		);
-		expect(hasRequiredCapability(caps([], { is_super_user: true }), P.identityRolesCreate)).toBe(
-			false
-		);
-	});
-	it('tenant.admin implies nothing on the web (Go expands it into effective_permissions)', () => {
-		expect(hasRequiredCapability(caps(['tenant.admin']), P.identityUsersView)).toBe(false);
-	});
-});
 
 describe('pathForRouteId', () => {
 	it('drops route groups and keeps param segments', () => {

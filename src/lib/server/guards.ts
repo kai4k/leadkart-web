@@ -1,26 +1,7 @@
 import { error, redirect } from '@sveltejs/kit';
 import { NAV_ROUTES, canSee, routeForPath } from '#lib/config/nav.ts';
 // Pure module imported directly: the auth barrel re-exports .svelte components.
-import { can, type Capabilities } from '#lib/features/auth/capabilities.ts';
-import { P } from '#lib/features/auth/permissions.ts';
-
-/**
- * The permission entering (and staying in) a tenant's operator scope requires: Go refuses the
- * `X-Tenant-Id` header without it. Same name as the /operator/tenants entry in `nav.ts`.
- */
-export const OPERATOR_SCOPE_PERMISSION = P.platformTenantsView;
-
-/**
- * Non-redirecting check for JSON endpoints (which answer 403, never a
- * redirect). `null` is what `loadCapabilities` returns when Go gave no usable
- * capabilities.
- */
-export function hasRequiredCapability(
-	caps: Capabilities | null | undefined,
-	permission: string
-): boolean {
-	return can(caps, permission);
-}
+import type { Capabilities } from '#lib/features/auth/capabilities.ts';
 
 /**
  * The URL path a route id stands for: route groups dropped, param segments kept

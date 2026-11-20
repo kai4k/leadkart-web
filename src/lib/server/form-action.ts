@@ -10,6 +10,7 @@
 import { fail, isHttpError, redirect, type RequestEvent } from '@sveltejs/kit';
 import { contextMatches, routeForPath } from '../config/nav.ts';
 import { canAny } from '../features/auth/capabilities.ts';
+import { sessionRenewalPending } from './cookies.ts';
 import { goCodeKey } from '../api/code-copy.ts';
 import { SCOPE_CONTEXT_FIELD } from '../api/scope-header.ts';
 import { loadCapabilities } from './capabilities.ts';
@@ -73,6 +74,10 @@ export async function authoriseAction<V extends object>(
 	const claimed = form.get(SCOPE_CONTEXT_FIELD);
 	if (typeof claimed !== 'string' || !pageShowsContext(claimed, scope)) {
 		return failForm(409, { values, formErrorKey: SCOPE_CHANGED_KEY });
+	}
+	// The hook's refresh could not reach Go: the capabilities would answer 401 and read as a sign-out.
+	if (sessionRenewalPending(cookies)) {
+		return failForm(503, { values, formErrorKey: UPSTREAM_UNAVAILABLE_KEY });
 	}
 	let caps;
 	try {

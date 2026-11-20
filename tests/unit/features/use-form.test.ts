@@ -287,3 +287,57 @@ describe('Form generations: a result from a previous open is ignored', () => {
 		expect(form.bannerError).toBeNull();
 	});
 });
+
+describe('Form.submit — one submit in flight at a time', () => {
+	const deferred = () => {
+		let resolve!: () => void;
+		const promise = new Promise<void>((r) => (resolve = r));
+		return { promise, resolve };
+	};
+	const valid = { email: 'alice@example.com', name: 'Alice' };
+
+	it('ignores a second submit (a double click, Enter then click) while the first is running', async () => {
+		const form = formInRoot(testSchema, valid).form;
+		const gate = deferred();
+		const submitFn = vi.fn(() => gate.promise);
+
+		const first = form.submit(makeEvent(), submitFn);
+		const second = form.submit(makeEvent(), submitFn);
+		await second;
+		expect(submitFn).toHaveBeenCalledTimes(1);
+
+		gate.resolve();
+		await first;
+		expect(form.isSubmitting).toBe(false);
+	});
+
+	it('still prevents the browser default for the ignored submit', async () => {
+		const form = formInRoot(testSchema, valid).form;
+		const gate = deferred();
+		void form.submit(makeEvent(), () => gate.promise);
+		const e = makeEvent();
+		await form.submit(e, vi.fn());
+		expect(e.preventDefault).toHaveBeenCalled();
+		gate.resolve();
+	});
+
+	it('accepts the next submit once the first has finished', async () => {
+		const form = formInRoot(testSchema, valid).form;
+		const submitFn = vi.fn().mockResolvedValue(undefined);
+		await form.submit(makeEvent(), submitFn);
+		await form.submit(makeEvent(), submitFn);
+		expect(submitFn).toHaveBeenCalledTimes(2);
+	});
+
+	it('a reset starts a new generation: a submit may start while the old one is still running', async () => {
+		const form = formInRoot(testSchema, valid).form;
+		const gate = deferred();
+		const old = form.submit(makeEvent(), () => gate.promise);
+		form.reset(valid);
+		const fresh = vi.fn().mockResolvedValue(undefined);
+		await form.submit(makeEvent(), fresh);
+		expect(fresh).toHaveBeenCalledTimes(1);
+		gate.resolve();
+		await old;
+	});
+});

@@ -18,8 +18,10 @@ import {
 	failForm,
 	failFromGo,
 	failOutage,
+	UPSTREAM_UNAVAILABLE_KEY,
 	zodFieldMessages
 } from '#lib/server/form-action.ts';
+import { sessionRenewalPending } from '#lib/server/cookies.ts';
 import { goFetch, readGoJson } from '#lib/server/go.ts';
 import { updateProfileRequestSchema } from '$features/auth/schemas';
 import { ownPrincipal } from '#lib/server/principal.ts';
@@ -29,7 +31,9 @@ import type { Actions, PageServerLoad } from './$types';
 const getMembershipId = (cookies: Parameters<typeof goFetch>[0]): string =>
 	ownPrincipal(cookies).membershipId;
 
-export const load: PageServerLoad = async ({ cookies }) => {
+export const load: PageServerLoad = async ({ cookies, parent }) => {
+	// The section guard runs in the parent layout: wait for it before any Go call.
+	await parent();
 	const membershipId = getMembershipId(cookies);
 	const resp = await goFetch(cookies, `/v1/users/${membershipId}`, { scoped: false });
 	if (!resp.ok) {
@@ -41,7 +45,6 @@ export const load: PageServerLoad = async ({ cookies }) => {
 
 export const actions: Actions = {
 	default: async ({ request, cookies }) => {
-		const membershipId = getMembershipId(cookies);
 		const formData = await request.formData();
 		const patch = {
 			designation: (formData.get('designation') ?? '').toString(),
@@ -49,6 +52,11 @@ export const actions: Actions = {
 			status_message: (formData.get('status_message') ?? '').toString()
 		};
 
+		// The hook's refresh could not reach Go: keep the form, do not sign the user out.
+		if (sessionRenewalPending(cookies)) {
+			return failForm(503, { values: patch, formErrorKey: UPSTREAM_UNAVAILABLE_KEY });
+		}
+		const membershipId = getMembershipId(cookies);
 		const parsed = updateProfileRequestSchema.safeParse(patch);
 		if (!parsed.success) {
 			return failForm(422, { values: patch, fieldMessages: zodFieldMessages(parsed.error) });

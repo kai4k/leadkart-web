@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { P } from '$features/auth';
 	import TenantSaveFooter from './TenantSaveFooter.svelte';
 	import { enhance } from '$app/forms';
 	import { Select, type SelectOption } from '$form';
@@ -86,7 +85,7 @@
 	<TenantSaveFooter
 		{form}
 		{loading}
-		permission={P.identityTenantsUpdate}
+		section="display-preferences"
 		successMessage="Preferences saved."
 	/>
 </form>

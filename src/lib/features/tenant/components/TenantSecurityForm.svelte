@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { P } from '$features/auth';
 	import TenantSaveFooter from './TenantSaveFooter.svelte';
 	import { enhance } from '$app/forms';
 	import { untrack } from 'svelte';
@@ -136,10 +135,5 @@
 		</Card.Content>
 	</Card.Root>
 
-	<TenantSaveFooter
-		{form}
-		{loading}
-		permission={P.identityTenantsUpdateSettings}
-		successMessage="Security settings saved."
-	/>
+	<TenantSaveFooter {form} {loading} section="settings" successMessage="Security settings saved." />
 </form>

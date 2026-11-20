@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { P } from '$features/auth';
 	import { fieldText, readFailure } from '#lib/utils/form-failure.ts';
 	import TenantSaveFooter from './TenantSaveFooter.svelte';
 	import { enhance } from '$app/forms';
@@ -77,10 +76,5 @@
 		error={err('drug_licence_number')}
 	/>
 
-	<TenantSaveFooter
-		{form}
-		{loading}
-		permission={P.identityTenantsUpdate}
-		successMessage="Statutory IDs saved."
-	/>
+	<TenantSaveFooter {form} {loading} section="statutory" successMessage="Statutory IDs saved." />
 </form>
