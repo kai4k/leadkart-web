@@ -137,7 +137,7 @@ async function proxy(
 	// Whose call this is, for Go's per-address limits: the one address of this request. Nothing the
 	// browser sent (x-forwarded-for, forwarded, x-real-ip, x-command-id) is ever copied: the headers
 	// above are built from scratch.
-	setClientAddress(upstreamHeaders, () => event.getClientAddress());
+	setClientAddress(upstreamHeaders, () => event.getClientAddress(), event.request);
 
 	// Buffered once so the request can be replayed after a refresh.
 	const body = MUTATING.has(request.method)

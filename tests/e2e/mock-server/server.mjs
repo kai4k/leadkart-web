@@ -109,6 +109,8 @@ const server = http.createServer(async (req, res) => {
 		body,
 		authorization: req.headers.authorization ?? null,
 		'x-tenant-id': req.headers['x-tenant-id'] ?? null,
+		// The caller's address as the BFF told Go (a repeated header arrives joined with a comma).
+		'x-forwarded-for': req.headers['x-forwarded-for'] ?? null,
 		at: Date.now()
 	});
 

@@ -49,7 +49,10 @@ describe('the code table', () => {
 			expect(goCodeKey(code), code).toBe(`errors.code.${code}`);
 		}
 		expect(codeCopy('email_has_active_membership')).toBe(
-			'This email already belongs to an active member of another company.'
+			'This email is active in another company. It must be deactivated there before it can be added here.'
+		);
+		expect(codeCopy('person_active_elsewhere')).toBe(
+			'This person is active in another company. They must be deactivated there before they can be reactivated here.'
 		);
 	});
 

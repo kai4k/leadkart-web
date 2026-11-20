@@ -232,7 +232,7 @@ test.describe('Tenant user management — negative', () => {
 
 		// Error banner: the fixed line of the code (errors.code.email_has_active_membership), never Go's own text
 		await expect(
-			page.getByText(/already belongs to an active member of another company/i).first()
+			page.getByText(/active in another company\. It must be deactivated there/i).first()
 		).toBeVisible({
 			timeout: 5000
 		});

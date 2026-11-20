@@ -14,6 +14,7 @@ import type { Cookies } from '@sveltejs/kit';
 import { goAuthFetch, goFetch } from '#lib/server/go.ts';
 import { refreshTokens } from '#lib/server/auth-refresh.ts';
 import {
+	noteForwardedWithoutAddressHeader,
 	resetClientAddressWarning,
 	setClientAddress,
 	validClientAddress
@@ -113,6 +114,98 @@ describe('the address itself', () => {
 	});
 });
 
+describe('the address: zone ids and IPv4-mapped forms', () => {
+	it.each(['fe80::1%eth0', 'fe80::1%25eth0', '::1%lo'])(
+		'refuses %s: Go would ignore the whole header, so none is sent',
+		(value) => {
+			expect(validClientAddress(() => value)).toBeUndefined();
+			expect(warn).toHaveBeenCalledTimes(1);
+		}
+	);
+
+	it.each([
+		['::ffff:192.0.2.4', '192.0.2.4'],
+		['::FFFF:192.0.2.4', '192.0.2.4'],
+		['::ffff:c000:204', '192.0.2.4'],
+		['0:0:0:0:0:ffff:192.0.2.4', '192.0.2.4'],
+		['::ffff:0.0.0.0', '0.0.0.0'],
+		['::ffff:255.255.255.255', '255.255.255.255']
+	])('sends %s as the IPv4 %s (Go unmaps it too)', (value, expected) => {
+		expect(validClientAddress(() => value)).toBe(expected);
+		expect(warn).not.toHaveBeenCalled();
+	});
+
+	it.each(['2001:db8::1', '::1', '::', '64:ff9b::192.0.2.4', '::ffff:0:192.0.2.4', '203.0.113.7'])(
+		'leaves %s as it is',
+		(value) => {
+			expect(validClientAddress(() => value)).toBe(value);
+		}
+	);
+
+	it('a very long value is refused before any parsing', () => {
+		expect(validClientAddress(() => `::${'1:'.repeat(200)}1`)).toBeUndefined();
+	});
+});
+
+describe('the warnings are visible while the misconfiguration lasts', () => {
+	beforeEach(() => vi.useFakeTimers());
+	afterEach(() => vi.useRealTimers());
+
+	it('at most one warning per five minutes, with the count of what was suppressed', () => {
+		const bad = () => 'not an ip';
+		validClientAddress(bad);
+		validClientAddress(bad);
+		validClientAddress(bad);
+		expect(warn).toHaveBeenCalledTimes(1);
+		vi.advanceTimersByTime(4 * 60_000);
+		validClientAddress(bad);
+		expect(warn).toHaveBeenCalledTimes(1);
+		vi.advanceTimersByTime(60_001);
+		validClientAddress(bad);
+		expect(warn).toHaveBeenCalledTimes(2);
+		expect(String(warn.mock.calls[1]![0])).toContain('3 more since the last warning');
+		expect(String(warn.mock.calls[0]![0])).not.toContain('more since');
+	});
+
+	it('X-Forwarded-For with no ADDRESS_HEADER is its own warning (the BFF reports the proxy address)', () => {
+		vi.stubEnv('ADDRESS_HEADER', '');
+		const proxied = new Request('http://x/', { headers: { 'x-forwarded-for': '198.51.100.20' } });
+		noteForwardedWithoutAddressHeader(proxied);
+		noteForwardedWithoutAddressHeader(proxied);
+		expect(warn).toHaveBeenCalledTimes(1);
+		expect(String(warn.mock.calls[0]![0])).toContain('ADDRESS_HEADER is not set');
+		// ... independent of the "no header sent" warning
+		validClientAddress(() => 'nope');
+		expect(warn).toHaveBeenCalledTimes(2);
+		vi.unstubAllEnvs();
+	});
+
+	it('no warning when ADDRESS_HEADER is set, or when no X-Forwarded-For arrived', () => {
+		vi.stubEnv('ADDRESS_HEADER', 'x-forwarded-for');
+		noteForwardedWithoutAddressHeader(
+			new Request('http://x/', { headers: { 'x-forwarded-for': '198.51.100.20' } })
+		);
+		vi.stubEnv('ADDRESS_HEADER', '');
+		noteForwardedWithoutAddressHeader(new Request('http://x/'));
+		noteForwardedWithoutAddressHeader(undefined);
+		expect(warn).not.toHaveBeenCalled();
+		vi.unstubAllEnvs();
+	});
+
+	it('the proxy path says it too (setClientAddress is given the request)', () => {
+		vi.stubEnv('ADDRESS_HEADER', '');
+		const h = new Headers();
+		setClientAddress(
+			h,
+			() => '203.0.113.7',
+			new Request('http://x/', { headers: { 'x-forwarded-for': '198.51.100.20' } })
+		);
+		expect(h.get('x-forwarded-for')).toBe('203.0.113.7');
+		expect(warn).toHaveBeenCalledTimes(1);
+		vi.unstubAllEnvs();
+	});
+});
+
 describe('goFetch (server loads and form actions)', () => {
 	it('sends exactly one x-forwarded-for, the request address; every caller-supplied forwarding header is dropped', async () => {
 		const f = vi.fn((_u: string, _i: RequestInit) => Promise.resolve(new Response('{}')));
@@ -121,7 +214,7 @@ describe('goFetch (server loads and form actions)', () => {
 		const sent = sentHeaders(lastInit(f));
 		expect(sent['x-forwarded-for']).toBe('203.0.113.7');
 		for (const name of FORBIDDEN) expect(sent, name).not.toHaveProperty(name);
-		expect(sent['x-keep']).toBe('kept');
+		expect(sent['x-keep']).toBeUndefined(); // goFetch sends only what its allowlist names
 	});
 
 	it('an unusable address sends NO header (and none of the caller)', async () => {
@@ -227,7 +320,11 @@ describe('the generic proxy', () => {
 		vi.stubGlobal('fetch', f);
 		await call(GET, address, SPOOF);
 		expect(sentHeaders(lastInit(f))).not.toHaveProperty('x-forwarded-for');
-		expect(warn).toHaveBeenCalledTimes(1);
+		// SPOOF carries an X-Forwarded-For and the test has no ADDRESS_HEADER: that has its own warning.
+		const noHeader = warn.mock.calls.filter((c: unknown[]) =>
+			String(c[0]).includes('no X-Forwarded-For sent')
+		);
+		expect(noHeader).toHaveLength(1);
 	});
 });
 

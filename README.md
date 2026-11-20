@@ -81,11 +81,12 @@ Auth state lives only in httpOnly cookies set by the BFF; the browser never sees
 
 ### Client address
 
-Go rate-limits login, refresh and password reset per client address (30 per minute per address on login). It takes that address from `X-Forwarded-For` **only when the direct peer is a trusted proxy**, so the BFF sends one on every call to Go (the proxy, server loads and form actions, the silent refresh): `event.getClientAddress()`, exactly one IP, never a header the browser sent. When the address cannot be read or is not a single IP the header is omitted (Go falls back to the BFF's own address) and a warning is logged once.
+Go rate-limits login, refresh and password reset per client address (30 per minute per address on login). It takes that address from `X-Forwarded-For` **only when the direct peer is a trusted proxy**, so the BFF sends one on every call to Go (the proxy, server loads and form actions, the silent refresh): `event.getClientAddress()`, exactly one IP, never a header the browser sent. When the address cannot be read or is not a single IP the header is omitted (Go falls back to the BFF's own address) and a warning is logged (at most once per five minutes, with a count of the rest).
 
 - Web: `ADDRESS_HEADER=x-forwarded-for` and `XFF_DEPTH=<number of proxies in front of the BFF>` (unset when nothing sits in front: the socket address is then used).
 - Go: list the BFF's address in `LEADKART_HTTP__TRUSTED_PROXIES`, or Go ignores the header and every user shares the BFF's bucket.
-- A wrong `XFF_DEPTH` (too small) makes the address client-spoofable (a caller can pick the value the BFF reads); too large and the BFF errors or reads the wrong hop.
+- `XFF_DEPTH` must equal, never exceed, the number of proxies in front of the BFF that append to `X-Forwarded-For`. adapter-node reads `addresses[addresses.length - XFF_DEPTH]` (counted from the right, the end the proxies append to; `adapter-node/src/handler.js`). **Too small** reads a proxy's own hop: not spoofable, but every user shares one address, so one bucket of login attempts that anyone can fill to lock everyone out. **Too large** reads further left, into hops the client wrote itself: the address is client-spoofable, and the call fails only when the client sent fewer hops than the depth.
+- The BFF warns (at most once per five minutes, with a count) when it sends no address to Go, and when a request carries `X-Forwarded-For` while `ADDRESS_HEADER` is unset (it is probably behind a proxy and reporting the proxy's address for every user).
 
 ### Cookies
 

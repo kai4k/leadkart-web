@@ -19,6 +19,12 @@ import { page } from '$app/state';
 import { refreshCapabilities } from './capabilities-refresh.ts';
 import { SCOPE_CONTEXT_HEADER, SESSION_RENEWED_HEADER } from './scope-header.ts';
 
+/**
+ * A download's body may take as long as it needs, but not stand still: no chunk for this long and it
+ * is cancelled (a stalled export would otherwise hold the connection and the button for ever).
+ */
+export const DOWNLOAD_IDLE_TIMEOUT_MS = 30_000;
+
 /** Default client timeout for reads. Must exceed 3 x the BFF upstream timeout; see timeouts.ts. */
 export const DEFAULT_TIMEOUT_MS = DEFAULT_READ_TIMEOUT_MS;
 export type QueryValue =
@@ -62,6 +68,55 @@ export function buildQueryString(query?: QueryParams): string {
 	}
 	const s = qs.toString();
 	return s ? `?${s}` : '';
+}
+
+/**
+ * The body of a download as a Blob, chunk by chunk: an idle clock restarts with every chunk and
+ * aborts the read (and cancels the stream) when nothing arrives for `idleMs` (never when it is not
+ * finite); `signal` (the caller's, plus the deadline while it still runs) cancels it at once. Rejects with `TimeoutError` / the signal's reason.
+ */
+async function readBlobBody(
+	response: Response,
+	idleMs: number,
+	signal: AbortSignal | undefined
+): Promise<Blob> {
+	if (!response.body) return response.blob();
+	const reader = response.body.getReader();
+	const chunks: Uint8Array<ArrayBuffer>[] = [];
+	let idle: ReturnType<typeof setTimeout> | undefined;
+	let stop: (() => void) | undefined;
+	const gone = new Promise<never>((_, reject) => {
+		const onAbort = () => reject(signal?.reason ?? new DOMException('Aborted', 'AbortError'));
+		if (signal?.aborted) onAbort();
+		else signal?.addEventListener('abort', onAbort, { once: true });
+		stop = () => signal?.removeEventListener('abort', onAbort);
+	});
+	gone.catch(() => {});
+	try {
+		for (;;) {
+			const next = await Promise.race([
+				reader.read(),
+				...(Number.isFinite(idleMs)
+					? [
+							new Promise<never>((_, reject) => {
+								idle = setTimeout(() => reject(new TimeoutError()), idleMs);
+							})
+						]
+					: []),
+				gone
+			]);
+			clearTimeout(idle);
+			if (next.done) break;
+			chunks.push(next.value as Uint8Array<ArrayBuffer>);
+		}
+		return new Blob(chunks);
+	} catch (cause) {
+		await reader.cancel(cause).catch(() => {});
+		throw cause;
+	} finally {
+		clearTimeout(idle);
+		stop?.();
+	}
 }
 
 function safeJsonParse(text: string): unknown {
@@ -116,12 +171,18 @@ async function send(
 			}
 		);
 		// A download's deadline covers the HEADERS only: a large export streams for as long as it needs
-		// (the caller's own signal still cancels it), where the read budget would cut a slow body.
-		if (asBlob) stopTimer();
-		if (asBlob && response.ok) blob = await response.blob();
-		else text = await response.text();
+		// (the caller's own signal still cancels it, and a body that stands still for
+		// DOWNLOAD_IDLE_TIMEOUT_MS is cancelled), where the read budget would cut a slow body. An ERROR
+		// answer is a small JSON body: it is read under the normal deadline.
+		if (asBlob && response.ok) {
+			stopTimer();
+			blob = await readBlobBody(response, DOWNLOAD_IDLE_TIMEOUT_MS, signal);
+		} else if (asBlob) {
+			text = await (await readBlobBody(response, Number.POSITIVE_INFINITY, signal)).text();
+		} else text = await response.text();
 	} catch (cause) {
 		if (opts.signal?.aborted) throw opts.signal.reason ?? cause;
+		if (cause instanceof TimeoutError) throw cause;
 		// The deadline's own signal decides, not the rejection reason (a stalled body read may reject with anything).
 		if (timedOut()) throw new TimeoutError();
 		throw ApiError.transport(cause);

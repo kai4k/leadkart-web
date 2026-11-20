@@ -57,6 +57,8 @@ export async function listMockCalls(): Promise<
 		body: string;
 		authorization: string | null;
 		'x-tenant-id': string | null;
+		/** What the BFF sent as the caller's address: exactly one IP on every call. */
+		'x-forwarded-for': string | null;
 		at: number;
 	}>
 > {

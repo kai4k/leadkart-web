@@ -73,6 +73,13 @@ const APP_SHELL: string[] = [
 ];
 
 /**
+ * NOTE on how far this reaches. The detection runs ONCE, at install: a worker that is already
+ * installed and in control keeps control (its old behaviour, the old private caches it owns) until
+ * every tab it serves is closed, or until `skipWaiting` replaces it. A worker of an older generation
+ * whose caches are empty therefore keeps serving after this build is deployed; that is acceptable
+ * because `main` never shipped a service worker: no user holds a worker of an earlier generation, and
+ * the generations this function names exist only on development and preview browsers.
+ *
  * Is there a cache an earlier generation filled with private data (API JSON, signed-in HTML)? Then
  * the worker that owns it must be replaced now, not after the user accepts an update prompt. The
  * generations before this one: `lk-api-*` (API JSON) and `lk-runtime-*` without the current

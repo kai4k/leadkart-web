@@ -21,10 +21,18 @@ import {
 } from '../api/errors.ts';
 import { isAuthExpired, refreshSession } from './auth-refresh.ts';
 import { config } from './config.ts';
-import { currentClientAddress, FORWARDED_FOR_HEADER, stripForwarding } from './client-address.ts';
+import { currentClientAddress, FORWARDED_FOR_HEADER } from './client-address.ts';
 import { ACCESS_COOKIE, REFRESH_COOKIE, sessionRenewalPending } from './cookies.ts';
 import { upstreamTimeout } from './proxy.ts';
 import { clearOperatorScope, readOperatorScope } from './scope.ts';
+
+/**
+ * The only headers a caller of `goFetch` may choose. Everything else on the outgoing request is set
+ * here from what the BFF knows (authorization from the access cookie, the tenant scope, the client
+ * address): an allowlist, so a header the browser influenced (authorization, x-tenant-id, cookie,
+ * forwarding headers, a command id, anything not yet invented) can never reach Go through a caller.
+ */
+const CALLER_HEADERS: ReadonlySet<string> = new Set(['content-type', 'accept']);
 
 export interface GoRequestInit extends Omit<RequestInit, 'headers' | 'body'> {
 	headers?: Record<string, string>;
@@ -60,19 +68,13 @@ export async function goFetch(
 		throw redirect(303, '/signin');
 	}
 
-	const headers: Record<string, string> = {
-		...(init.headers ?? {}),
-		accept: 'application/json'
-	};
-	// The scope cookie is the only source of X-Tenant-Id; a caller-supplied
-	// header (any casing) is dropped.
-	for (const name of Object.keys(headers)) {
-		if (name.toLowerCase() === 'x-tenant-id') delete headers[name];
+	const headers: Record<string, string> = { accept: 'application/json' };
+	for (const [name, value] of Object.entries(init.headers ?? {})) {
+		if (CALLER_HEADERS.has(name.toLowerCase())) headers[name.toLowerCase()] = value;
 	}
 
-	// Where the call came from is the BFF's to say (see client-address.ts): whatever the caller put in
-	// is dropped, and the one address of the request being served is set.
-	stripForwarding(headers);
+	// Where the call came from is the BFF's to say (see client-address.ts): the one address of the
+	// request being served.
 	const address = currentClientAddress();
 	if (address !== undefined) headers[FORWARDED_FOR_HEADER] = address;
 
@@ -94,8 +96,10 @@ export async function goFetch(
 	const send = async (token: string | undefined): Promise<Response> => {
 		const timeout = upstreamTimeout(init.signal ?? undefined, config.UPSTREAM_TIMEOUT_MS);
 		try {
+			// An explicit set of fields, never `...init`: nothing a caller adds to the init reaches fetch.
 			return await fetch(`${config.GO_API_URL}/api${path}`, {
-				...init,
+				method: init.method,
+				body: init.body,
 				redirect: 'manual',
 				signal: timeout.signal,
 				headers: token ? { ...headers, authorization: `Bearer ${token}` } : headers

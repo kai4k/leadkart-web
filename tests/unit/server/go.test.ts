@@ -23,6 +23,70 @@ function jar(values: Record<string, string>): Cookies {
 
 afterEach(() => vi.unstubAllGlobals());
 
+describe('goFetch: the outgoing headers come from an allowlist', () => {
+	const send = async (headers: Record<string, string>, init: object = {}) => {
+		const fetchFn = vi.fn((_url: string, _init: RequestInit) =>
+			Promise.resolve(new Response('{}', { status: 200 }))
+		);
+		vi.stubGlobal('fetch', fetchFn);
+		await goFetch(jar({ lk_access: 'tok' }), '/v1/users', { headers, ...init });
+		const out = fetchFn.mock.calls[0]![1];
+		const sent = Object.fromEntries(
+			Object.entries(out.headers as Record<string, string>).map(([k, v]) => [k.toLowerCase(), v])
+		);
+		return { sent, out };
+	};
+
+	it.each([
+		['Authorization', 'Bearer attacker'],
+		['authorization', 'Bearer attacker'],
+		['X-Tenant-Id', '00000000-0000-4000-8000-0000000000aa'],
+		['Cookie', 'lk_access=stolen'],
+		['X-Forwarded-For', '6.6.6.6'],
+		['x-csrf-token', 'x'],
+		['x-lk-scope-context', 'x'],
+		['x-command-id', 'attacker'],
+		['x-anything-else', 'x']
+	])('a caller-supplied %s never reaches Go', async (name, value) => {
+		const { sent } = await send({ [name]: value });
+		expect(sent['authorization']).toBe('Bearer tok');
+		expect(sent['x-tenant-id']).toBeUndefined();
+		expect(sent['cookie']).toBeUndefined();
+		expect(sent['x-csrf-token']).toBeUndefined();
+		expect(sent['x-lk-scope-context']).toBeUndefined();
+		expect(sent['x-command-id']).toBeUndefined();
+		expect(sent['x-anything-else']).toBeUndefined();
+		expect(sent['x-forwarded-for']).not.toBe('6.6.6.6');
+	});
+
+	it('content-type and accept are for the caller to choose', async () => {
+		const { sent } = await send({
+			'Content-Type': 'application/merge-patch+json',
+			Accept: 'text/csv'
+		});
+		expect(sent['content-type']).toBe('application/merge-patch+json');
+		expect(sent['accept']).toBe('text/csv');
+	});
+
+	it('only method, body and the timeout signal are passed to fetch (nothing else of the init)', async () => {
+		const { out } = await send(
+			{},
+			{
+				method: 'POST',
+				body: '{}',
+				credentials: 'include',
+				mode: 'no-cors',
+				cache: 'force-cache',
+				keepalive: true,
+				scoped: false
+			}
+		);
+		expect(Object.keys(out).sort()).toEqual(['body', 'headers', 'method', 'redirect', 'signal']);
+		expect(out.method).toBe('POST');
+		expect(out.redirect).toBe('manual');
+	});
+});
+
 describe('goFetch', () => {
 	it('drops a caller-supplied X-Tenant-Id (any case) and never follows redirects', async () => {
 		const fetchFn = vi.fn((_url: string, _init: RequestInit) =>
@@ -40,7 +104,7 @@ describe('goFetch', () => {
 			Object.entries(init.headers as Record<string, string>).map(([k, v]) => [k.toLowerCase(), v])
 		);
 		expect(sent['x-tenant-id']).toBeUndefined();
-		expect(sent['x-other']).toBe('keep');
+		expect(sent['x-other']).toBeUndefined(); // not on the allowlist
 		expect(sent['authorization']).toBe('Bearer tok');
 	});
 
