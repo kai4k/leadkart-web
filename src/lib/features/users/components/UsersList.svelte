@@ -354,7 +354,7 @@
 					: 'bg-muted text-muted-foreground hover:text-foreground'}"
 			>
 				{opt.label}
-				<span class="caption tabular-nums opacity-70">{opt.count}</span>
+				<span class="caption tabular-nums">{opt.count}</span>
 			</button>
 		{/each}
 	</nav>
