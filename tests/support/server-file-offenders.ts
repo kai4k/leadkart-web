@@ -242,8 +242,113 @@ export const MODULE_OK: Offender[] = toList({
 	'only declarations and a guard': `${PRELUDE}\nconst helper = (c) => goFetch(c, '/v1/x');\nexport const load = guardAppRoute;`
 });
 
+const GOOD_ACTIONS = `export const actions = { a: async (event) => { ${FD} ${AUTH} ${GO} } };`;
+const EVIL = 'async () => { await goFetch(undefined as never, "/v1/x"); }';
+
+/**
+ * Module-level offenders, second group: mutation of what the walker read (finding 5: `load`,
+ * `actions`, a member of them, or anything the export resolves through must be `const` and never
+ * assigned, anywhere in the file) and the module syntax that runs code (finding 15).
+ */
+export const MODULE_REFUSED_MORE: Offender[] = toList({
+	'(5a) export let load, reassigned at module level': [
+		`${PRELUDE}\nexport let load = guardAppRoute;\nload = ${EVIL};`,
+		'const'
+	],
+	'(5a2) export let load, never reassigned (it still can be)': [
+		`${PRELUDE}\nexport let load = guardAppRoute;`,
+		'const'
+	],
+	'(5b) actions.a reassigned': [`${PRELUDE}\n${GOOD_ACTIONS}\nactions.a = ${EVIL};`, 'assign'],
+	'(5b2) actions["a"] reassigned': [
+		`${PRELUDE}\n${GOOD_ACTIONS}\nactions['a'] = ${EVIL};`,
+		'assign'
+	],
+	'(5b3) actions.a reassigned with a compound operator': [
+		`${PRELUDE}\n${GOOD_ACTIONS}\nactions.a ||= ${EVIL};`,
+		'assign'
+	],
+	'(5c) a let alias of the guard, reassigned': [
+		`${PRELUDE}\nlet g = guardAppRoute;\ng = ${EVIL};\nexport const load = g;`,
+		'const'
+	],
+	'(5c2) a let alias of the guard that is only assigned inside a function': [
+		`${PRELUDE}\nlet g = guardAppRoute;\nexport function swap() { g = ${EVIL}; }\nexport const load = g;`,
+		'const'
+	],
+	'(5d) destructuring assignment into a member of actions': [
+		`${PRELUDE}\n${GOOD_ACTIONS}\n({ x: actions.a } = { x: ${EVIL} });`,
+		'assign'
+	],
+	'(5d2) array destructuring assignment into a member of actions': [
+		`${PRELUDE}\n${GOOD_ACTIONS}\n[actions.a] = [${EVIL}];`,
+		'assign'
+	],
+	'(5d3) shorthand destructuring assignment of the alias the load resolves through': [
+		`${PRELUDE}\nlet load0 = guardAppRoute;\nexport const load = load0;\n({ load0 } = { load0: ${EVIL} });`,
+		'const'
+	],
+	'(5e) Object.assign(actions, ...) inside a function': [
+		`${PRELUDE}\n${GOOD_ACTIONS}\nexport function later() { Object.assign(actions, { a: ${EVIL} }); }`,
+		'assign'
+	],
+	'(5f) Object.defineProperty(actions, ...) inside a function': [
+		`${PRELUDE}\n${GOOD_ACTIONS}\nexport function later() { Object.defineProperty(actions, 'a', { value: ${EVIL} }); }`,
+		'assign'
+	],
+	'(5g) delete actions.a': [
+		`${PRELUDE}\n${GOOD_ACTIONS}\nexport function later() { delete actions.a; }`,
+		'assign'
+	],
+	'(5h) a function-declaration load reassigned from inside a function': [
+		`${PRELUDE}\nexport async function load({ parent }) { await parent(); }\nexport function later() { load = ${EVIL}; }`,
+		'assign'
+	],
+	'(5i) a for-of target that is the alias of the guard': [
+		`${PRELUDE}\nlet g = guardAppRoute;\nexport const load = g;\nfor (g of [${EVIL}]) {}`,
+		'const'
+	],
+	'(5j) Reflect.set(actions, ...) inside a function': [
+		`${PRELUDE}\n${GOOD_ACTIONS}\nexport function later() { Reflect.set(actions, 'a', ${EVIL}); }`,
+		'assign'
+	],
+	'(15a) a class decorator': [
+		`${PRELUDE}\nfunction dec(c) { return c; }\n@dec\nclass K {}\nexport const load = guardAppRoute;`,
+		'decorator'
+	],
+	'(15b) a member decorator': [
+		`${PRELUDE}\nfunction dec(a, b) {}\nclass K { @dec m() {} }\nexport const load = guardAppRoute;`,
+		'decorator'
+	],
+	'(15c) a side-effect import of a relative module': [
+		`${PRELUDE}\nimport './load-ok-source.ts';\nexport const load = guardAppRoute;`,
+		'side-effect import'
+	],
+	'(15d) a side-effect import through an alias': [
+		`${PRELUDE}\nimport '#lib/utils/__synthetic_reach.ts';\nexport const load = guardAppRoute;`,
+		'side-effect import'
+	]
+});
+
+/** Shapes the module rule must keep accepting. */
+export const MODULE_OK_MORE: Offender[] = toList({
+	'a const alias of the guard': `${PRELUDE}\nconst g = guardAppRoute;\nexport const load = g;`,
+	'reading actions members in a function': `${PRELUDE}\n${GOOD_ACTIONS}\nexport function names() { return Object.keys(actions); }`,
+	'a local object that merely shares a member name': `${PRELUDE}\n${GOOD_ACTIONS}\nexport function f() { const o = { a: 1 }; o.a = 2; return o; }`,
+	'a side-effect import of a bare package': `${PRELUDE}\nimport 'server-only';\nexport const load = guardAppRoute;`
+});
+
 export const ACTION_OK: Offender[] = toList({
 	'formData, the pair, then Go': actionSrc(`${FD} ${AUTH} ${GO}`),
+	'(11) values: an object literal': actionSrc(
+		`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, { a: 1 }); if (refused) return refused; ${GO}`
+	),
+	'(11) values: a function reading the form with get / getAll / String': actionSrc(
+		`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, () => ({ a: String(fd.get('a') ?? ''), b: fd.getAll('b') })); if (refused) return refused; ${GO}`
+	),
+	'(11) values: a function with a block body and no calls': actionSrc(
+		`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, () => { return { a: 1 }; }); if (refused) return refused; ${GO}`
+	),
 	'a permission from the ACTION table': actionSrc(
 		`${FD} const refused = await authoriseAction(event, fd, ACTION.roleCreate, () => ({})); if (refused) return refused; ${GO}`
 	),
@@ -260,6 +365,24 @@ export const ACTION_OK: Offender[] = toList({
 
 export const SELF_OK: Offender[] = toList({
 	'formData, the self-service pair, then Go': actionSrc(`${FD} ${SELF} ${GO}`)
+});
+
+/** Self-service actions (analysed as pinned self-service) the walker must refuse. */
+export const SELF_REFUSED: Offender[] = toList({
+	'(11k) the self-service values is a call to a local helper': [
+		actionSrc(
+			`${FD} const refused = await authoriseSelfService(event, fd, () => readIt(fd)); if (refused) return refused; ${GO}`,
+			'const readIt = (f) => ({});'
+		),
+		'values'
+	],
+	'(11l) the self-service second argument is not the form data': [
+		actionSrc(
+			`${FD} const refused = await authoriseSelfService(event, other, () => ({})); if (refused) return refused; ${GO}`,
+			'const other = {} as never;'
+		),
+		'second argument'
+	]
 });
 
 export const ACTION_REFUSED: Offender[] = toList({
@@ -392,6 +515,89 @@ export const ACTION_REFUSED: Offender[] = toList({
 		),
 		'first argument'
 	],
+	// finding 4: parameters (and their defaults) run before the body
+	'(4) a call in a default parameter of the action': [
+		actionSrc(`${FD} ${AUTH} ${GO}`, '', 'event, _ = goFetch(event.cookies, "/v1/x")'),
+		'parameters'
+	],
+	'(4b) a call in a destructuring default of a second parameter': [
+		actionSrc(
+			`${FD} ${AUTH} ${GO}`,
+			'',
+			"event, { x = goFetch(undefined as never, '/v1/x') } = {}"
+		),
+		'parameters'
+	],
+	'(4c) a call in a default parameter of a method action': [
+		`${PRELUDE}\nexport const actions = { async a(event, _ = goFetch(event.cookies, '/v1/x')) { ${FD} ${AUTH} } };`,
+		'parameters'
+	],
+	// finding 11: the second argument and the values
+	'(11a) the second argument is an object literal, not the form data read before': [
+		actionSrc(
+			`${FD} const refused = await authoriseAction(event, { get: () => '' } as never, P.identityUsersCreate, () => ({})); if (refused) return refused; ${GO}`
+		),
+		'second argument'
+	],
+	'(11b) the second argument is another value (declared elsewhere)': [
+		actionSrc(
+			`${FD} const refused = await authoriseAction(event, other, P.identityUsersCreate, () => ({})); if (refused) return refused; ${GO}`,
+			'const other = {} as never;'
+		),
+		'second argument'
+	],
+	'(11c) the second argument is missing': [
+		actionSrc(
+			`${FD} const refused = await (authoriseAction as any)(event); if (refused) return refused; ${GO}`
+		),
+		'second argument'
+	],
+	'(11d) a values function that reaches Go': [
+		actionSrc(
+			`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, () => goFetch(event.cookies, '/v1/x') as never); if (refused) return refused; ${GO}`
+		),
+		'values'
+	],
+	'(11e) a values function that calls a helper the pin list does not name': [
+		actionSrc(
+			`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, () => readIt(fd)); if (refused) return refused; ${GO}`,
+			'const readIt = (f) => ({});'
+		),
+		'values'
+	],
+	'(11f) a values function that calls get on something else': [
+		actionSrc(
+			`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, () => ({ a: other.get('a') })); if (refused) return refused; ${GO}`,
+			'const other = new Map<string, string>();'
+		),
+		'values'
+	],
+	'(11g) a values function with a local String that is not the global': [
+		actionSrc(
+			`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, () => ({ a: String(fd.get('a')) })); if (refused) return refused; ${GO}`,
+			'const String = (x) => goFetch(undefined as never, "/v1/x");'
+		),
+		'values'
+	],
+	'(11h) a values function that awaits': [
+		actionSrc(
+			`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, async () => ({ a: await fd.get('a') })); if (refused) return refused; ${GO}`
+		),
+		'values'
+	],
+	'(11i) values is an identifier (what it holds is not read)': [
+		actionSrc(
+			`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, v); if (refused) return refused; ${GO}`,
+			'const v = () => ({});'
+		),
+		'values'
+	],
+	'(11j) a values function that calls a method of the form data that is not get / getAll': [
+		actionSrc(
+			`${FD} const refused = await authoriseAction(event, fd, P.identityUsersCreate, () => ({ a: [...fd.entries()] })); if (refused) return refused; ${GO}`
+		),
+		'values'
+	],
 	'a spread in actions': [
 		`${PRELUDE}\nconst other = {};\nexport const actions = { ...other };`,
 		'spread'
@@ -439,3 +645,143 @@ export const SUPPORT_MODULES: Record<string, string> = {
 		`${PRELUDE}\nexport const load = async ({ parent }) => { await parent(); };`,
 	[NON_SERVER_MODULE]: `import { goFetch } from '#lib/server/go.ts';\nexport async function reach(c) { return goFetch(c, '/v1/x'); }`
 };
+
+/**
+ * Where a held server file sits (finding 2). `files` are all in-memory; the first is the file under
+ * test. A held file must live under src/routes/(app)/ and have a REAL guardAppRoute layout load in
+ * its own directory or above it (below the (app) root layout), or be the guard layout itself.
+ */
+export interface PlacementCase {
+	name: string;
+	/** Absolute path -> source; the first entry is the file under test. */
+	files: Record<string, string>;
+	reason: string;
+}
+const ROUTES = join(process.cwd(), 'src/routes');
+const GUARD_LAYOUT = `import { guardAppRoute } from '#lib/server/guards.ts';
+export const load = guardAppRoute;`;
+const GUARDED_LOAD = loadSrc("await parent(); await goFetch(cookies, '/v1/x');");
+
+export const PLACEMENT_REFUSED: PlacementCase[] = [
+	{
+		name: 'a route in another group that awaits only the root layout',
+		files: { [join(ROUTES, '(marketing)/__synthetic__/x/+page.server.ts')]: GUARDED_LOAD },
+		reason: 'under src/routes/(app)'
+	},
+	{
+		name: 'a route in another group even beside a guard layout of its own',
+		files: {
+			[join(ROUTES, '(marketing)/__synthetic__/y/+page.server.ts')]: GUARDED_LOAD,
+			[join(ROUTES, '(marketing)/__synthetic__/y/+layout.server.ts')]: GUARD_LAYOUT
+		},
+		reason: 'under src/routes/(app)'
+	},
+	{
+		name: 'a route at the top of the tree',
+		files: { [join(ROUTES, '__synthetic__/+page.server.ts')]: GUARDED_LOAD },
+		reason: 'under src/routes/(app)'
+	},
+	{
+		name: 'a route under (app) with no guard layout above it',
+		files: { [join(SYNTH_DIR, 'noguard/inner/+page.server.ts')]: GUARDED_LOAD },
+		reason: 'guardAppRoute layout'
+	},
+	{
+		name: 'a route whose layout above it only looks like the guard (a local stub)',
+		files: {
+			[join(SYNTH_DIR, 'stubbed/inner/+page.server.ts')]: GUARDED_LOAD,
+			[join(SYNTH_DIR, 'stubbed/+layout.server.ts')]:
+				'const guardAppRoute = async () => {}; export const load = guardAppRoute;'
+		},
+		reason: 'guardAppRoute layout'
+	},
+	{
+		name: 'a route whose layout above it only awaits parent() (not the guard)',
+		files: {
+			[join(SYNTH_DIR, 'plain/inner/+page.server.ts')]: GUARDED_LOAD,
+			[join(SYNTH_DIR, 'plain/+layout.server.ts')]: loadSrc('await parent();')
+		},
+		reason: 'guardAppRoute layout'
+	}
+];
+
+export const PLACEMENT_OK: PlacementCase[] = [
+	{
+		name: 'a page under a guard layout',
+		files: {
+			[join(SYNTH_DIR, 'guarded/inner/+page.server.ts')]: GUARDED_LOAD,
+			[join(SYNTH_DIR, 'guarded/+layout.server.ts')]: GUARD_LAYOUT
+		},
+		reason: ''
+	},
+	{
+		name: 'a page beside the guard layout in the same directory',
+		files: {
+			[join(SYNTH_DIR, 'beside/+page.server.ts')]: GUARDED_LOAD,
+			[join(SYNTH_DIR, 'beside/+layout.server.ts')]: GUARD_LAYOUT
+		},
+		reason: ''
+	},
+	{
+		name: 'a page whose guard layout is several directories up',
+		files: {
+			[join(SYNTH_DIR, 'deep/a/b/c/+page.server.ts')]: GUARDED_LOAD,
+			[join(SYNTH_DIR, 'deep/+layout.server.ts')]: GUARD_LAYOUT
+		},
+		reason: ''
+	},
+	{
+		name: 'the guard layout itself',
+		files: { [join(SYNTH_DIR, 'itself/+layout.server.ts')]: GUARD_LAYOUT },
+		reason: ''
+	}
+];
+
+/** Which server functions a file references (finding: pinned files are not walked at all). */
+export const CALLEE_CASES: Array<{ name: string; src: string; callees: string[] }> = [
+	{
+		name: 'a direct call',
+		src: `${PRELUDE}
+export async function POST({ cookies }) { return goFetch(cookies, '/v1/x'); }`,
+		callees: ['src/lib/server/go.ts#goFetch']
+	},
+	{
+		name: 'through a namespace import',
+		src: `${PRELUDE}
+export async function POST({ cookies }) { return goModule.goFetch(cookies, '/v1/x'); }`,
+		callees: ['src/lib/server/go.ts#goFetch']
+	},
+	{
+		name: 'through an alias',
+		src: `${PRELUDE}
+const g = goFetch;
+export async function POST({ cookies }) { return g(cookies, '/v1/x'); }`,
+		callees: ['src/lib/server/go.ts#goFetch']
+	},
+	{
+		name: 'passed as a value, never called here',
+		src: `${PRELUDE}
+export const handlers = [goFetch];`,
+		callees: ['src/lib/server/go.ts#goFetch']
+	},
+	{
+		name: 'a second server function',
+		src: `${PRELUDE}
+export async function POST({ cookies }) { await goFetch(cookies, '/v1/x'); return changePasswordViaGo(cookies, {} as never); }`,
+		callees: ['src/lib/server/auth-errors.ts#changePasswordViaGo', 'src/lib/server/go.ts#goFetch']
+	},
+	{
+		name: 'imports that are never used',
+		src: `${PRELUDE}
+export const x = 1;`,
+		callees: []
+	},
+	{
+		name: 'a type-only use of a server module',
+		src: `import type { Cookies } from '@sveltejs/kit';
+import type { goFetch as G } from '#lib/server/go.ts';
+export type T = typeof G;
+export const x = (c: Cookies) => c;`,
+		callees: []
+	}
+];

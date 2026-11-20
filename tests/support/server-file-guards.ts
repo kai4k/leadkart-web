@@ -31,7 +31,22 @@
  *
  * MODULE LEVEL of a held file: no top-level `await`, no call / `new` / tagged template that runs at
  * module scope (function and method bodies do not run there; computed keys, `extends` and static
- * initialisers do), except the pinned `saveTenantSection('<literal>')` as an action.
+ * initialisers do), except the pinned `saveTenantSection('<literal>')` as an action. No class or
+ * member decorator, no side-effect import of a local module (`import './x.ts'`). `load`, `actions`
+ * and every name the export resolves through are `const` and never assigned anywhere in the file
+ * (including compound / destructuring assignment, `delete`, `Object.assign(actions, ...)`,
+ * `Object.defineProperty`, `Reflect.set`).
+ *
+ * PLACEMENT of a held file: under `src/routes/(app)/`, and a real `guardAppRoute` layout load in its
+ * own directory or above it (or it is that guard); a new route group needs an explicit decision.
+ *
+ * OUT OF THE CONTRACT: the evaluation of IMPORTED modules. A module runs once per process, when it is
+ * first imported, not per request; what it does at import time is not a property of a route file and
+ * is not walked. Static code in `src/lib/server/**` is covered by its own tests.
+ *
+ * The guard's arguments: the first is the action's event parameter; the second is the `FormData` read
+ * by the statement before it; the values is an object literal or a function that only reads the form
+ * (`<fd>.get(...)`, `<fd>.getAll(...)`, the global `String(...)`, and the pinned field readers below).
  */
 import { resolve } from 'node:path';
 import ts from 'typescript';
@@ -60,6 +75,21 @@ const PERMISSION_TABLES: ReadonlySet<string> = new Set([
 export const PINNED_ACTION_HELPER =
 	'src/routes/(app)/settings/tenant/_actions.ts#saveTenantSection';
 
+/**
+ * The local functions a `values` function of the guard may call, EXACTLY: each only reads form fields
+ * (it is called with the form data and nothing else). A new reader is a decision, with a reason.
+ */
+export const PINNED_FIELD_READERS: Record<string, string> = {
+	'src/routes/(app)/settings/account/profile/+page.server.ts#profilePatch':
+		'Reads the profile fields from the form.',
+	'src/routes/(app)/settings/account/security/+page.server.ts#emailValues':
+		'Reads the new-email field from the form.',
+	'src/routes/(app)/settings/roles/new/+page.server.ts#rolePayload':
+		'Reads the role fields from the form.',
+	'src/routes/(app)/settings/tenant/_actions.ts#SECTION_FORMS':
+		'The per-section form readers of the tenant settings (called as SECTION_FORMS[section](form)).'
+};
+
 export interface ActionReport {
 	name: string;
 	problems: string[];
@@ -80,6 +110,13 @@ export interface Analysis {
 	isSharedGuard(file: string): boolean;
 	/** The pinned helper's returned function, held to the action contract itself. */
 	pinnedHelperProblems(): string[];
+	/**
+	 * Where a held file sits: under src/routes/(app)/, and (unless `guardChain` is false) under a real
+	 * guardAppRoute layout, or being one. The file and its layouts must be in the program.
+	 */
+	placementProblems(file: string, opts?: { guardChain?: boolean }): string[];
+	/** Every value exported by src/lib/server/** that the file references (`<file>#<name>`, sorted). */
+	serverCallees(file: string): string[];
 }
 
 type FnLike =
@@ -470,12 +507,96 @@ export function createAnalysis(files: string[], overlay: Record<string, string> 
 		);
 	}
 
+	/** Is `callee` the global `String`, not a local that shares the name? */
+	function isGlobalString(callee: ts.Node): boolean {
+		const c = unwrap(callee);
+		if (!ts.isIdentifier(c) || c.text !== 'String') return false;
+		const d = declOf(c);
+		return !!d && program.isSourceFileDefaultLibrary(d.getSourceFile());
+	}
+
+	/** `<fd>.get(...)` / `<fd>.getAll(...)` on exactly the FormData the guard was given. */
+	function isFormRead(callee: ts.Node, formData: ts.VariableDeclaration): boolean {
+		const c = unwrap(callee);
+		return (
+			ts.isPropertyAccessExpression(c) &&
+			(c.name.text === 'get' || c.name.text === 'getAll') &&
+			localDecl(c.expression) === formData
+		);
+	}
+
+	/** A call of a pinned field reader with the guard's FormData as its only argument. */
+	function isPinnedReaderCall(call: ts.CallExpression, formData: ts.VariableDeclaration): boolean {
+		const callee = unwrap(call.expression);
+		const target = ts.isElementAccessExpression(callee) ? callee.expression : callee;
+		if (!ts.isIdentifier(target)) return false;
+		const d = declOf(target);
+		if (!d || !(idOf(d) in PINNED_FIELD_READERS)) return false;
+		return call.arguments.length === 1 && localDecl(call.arguments[0]!) === formData;
+	}
+
+	/** Null when the `values` argument may only read the form; else why not. */
+	function valuesArgumentProblem(
+		arg: ts.Expression | undefined,
+		formData: ts.VariableDeclaration
+	): string | null {
+		if (!arg) return 'it is missing';
+		const v = unwrap(arg);
+		if (ts.isObjectLiteralExpression(v)) {
+			let hidden: ts.Node | null = null;
+			const visit = (n: ts.Node): void => {
+				if (hidden) return;
+				if (isFunctionBoundary(n)) {
+					hidden = n;
+					return;
+				}
+				ts.forEachChild(n, visit);
+			};
+			ts.forEachChild(v, visit);
+			return hidden
+				? `an object literal must not contain a function or accessor (${short(hidden)}): it can run when the values are read`
+				: null;
+		}
+		if (!isFnLike(v) || ts.isFunctionDeclaration(v)) {
+			return `it must be an object literal or a function that only reads the form, not \`${short(v)}\``;
+		}
+		for (const p of v.parameters) {
+			const run = firstRun(p);
+			if (run) return `a call in the parameters (${short(run.node)}) is not a form read`;
+		}
+		const allowed = new Set<ts.Node>();
+		const collect = (n: ts.Node): void => {
+			if (isFunctionBoundary(n)) return;
+			if (
+				ts.isCallExpression(n) &&
+				(isFormRead(n.expression, formData) ||
+					isGlobalString(n.expression) ||
+					isPinnedReaderCall(n, formData))
+			)
+				allowed.add(n);
+			ts.forEachChild(n, collect);
+		};
+		if (v.body) collect(v.body);
+		const run = v.body ? firstRun(v.body, allowed) : null;
+		return run
+			? `${run.kind === 'await' ? 'an await' : 'the call'} \`${short(run.node)}\` is not a read of the form (only <fd>.get, <fd>.getAll, String and the pinned field readers are allowed)`
+			: null;
+	}
+
 	function actionFnProblems(fn: FnLike): { problems: string[]; guard: ActionReport['guard'] } {
 		const fail = (p: string) => ({ problems: [p], guard: null as ActionReport['guard'] });
+		// Parameters (and their defaults) run before the body, so before everything the contract reads.
+		for (const p of fn.parameters) {
+			const run = firstRun(p);
+			if (run) {
+				return fail(`a call in the action's parameters (${short(run.node)}) runs before the guard`);
+			}
+		}
 		if (!fn.body || !ts.isBlock(fn.body)) return fail(`an expression body: ${GUARD_SHAPE}`);
 		const statements = fn.body.statements;
 		let i = 0;
 		const first = statements[0];
+		let formData: ts.VariableDeclaration | undefined;
 		if (
 			first &&
 			ts.isVariableStatement(first) &&
@@ -483,8 +604,10 @@ export function createAnalysis(files: string[], overlay: Record<string, string> 
 			first.declarationList.declarations.length === 1 &&
 			ts.isIdentifier(first.declarationList.declarations[0]!.name) &&
 			isFormDataRead(first.declarationList.declarations[0]!.initializer, fn)
-		)
+		) {
 			i = 1;
+			formData = first.declarationList.declarations[0]!;
+		}
 
 		const st = statements[i];
 		const decl =
@@ -517,6 +640,11 @@ export function createAnalysis(files: string[], overlay: Record<string, string> 
 				"the first argument of the guard must be the action's own event parameter (not a spread, an object literal or another value)"
 			);
 		}
+		if (!formData || !args[1] || localDecl(args[1]) !== formData) {
+			return fail(
+				'the second argument of the guard must be the FormData read by `const fd = await <event>.request.formData();` in the statement before it'
+			);
+		}
 		for (const a of args) {
 			const run = firstRun(a);
 			if (run) {
@@ -525,6 +653,9 @@ export function createAnalysis(files: string[], overlay: Record<string, string> 
 				);
 			}
 		}
+		const valuesIndex = kind === 'authoriseAction' ? 3 : 2;
+		const valuesProblem = valuesArgumentProblem(args[valuesIndex], formData);
+		if (valuesProblem) return fail(`the values argument of the guard: ${valuesProblem}`);
 		if (kind === 'authoriseAction' && (!args[2] || !permissionOk(args[2]))) {
 			return fail(
 				'the permission of authoriseAction does not resolve to a member of the P / ACTION tables'
@@ -678,10 +809,147 @@ export function createAnalysis(files: string[], overlay: Record<string, string> 
 
 	/* -------------------------------- module level ---------------------------------- */
 
+	/** The names `load` and `actions` stand for in this file, and the const-ness of each link. */
+	function protectedNames(sf: ts.SourceFile): { names: Set<string>; problems: string[] } {
+		const names = new Set<string>();
+		const problems: string[] = [];
+		const localNameOf = (exportName: string): string => {
+			for (const s of sf.statements) {
+				if (
+					ts.isExportDeclaration(s) &&
+					!s.moduleSpecifier &&
+					s.exportClause &&
+					ts.isNamedExports(s.exportClause)
+				) {
+					for (const el of s.exportClause.elements) {
+						if (el.name.text === exportName) return (el.propertyName ?? el.name).text;
+					}
+				}
+			}
+			return exportName;
+		};
+		for (const exportName of ['load', 'actions']) {
+			let cur = localNameOf(exportName);
+			for (let depth = 0; depth < 8; depth++) {
+				names.add(cur);
+				let next: string | null = null;
+				for (const s of sf.statements) {
+					if (!ts.isVariableStatement(s)) continue;
+					for (const d of s.declarationList.declarations) {
+						if (!ts.isIdentifier(d.name) || d.name.text !== cur) continue;
+						if (!(s.declarationList.flags & ts.NodeFlags.Const)) {
+							problems.push(
+								`"${cur}" is not declared with const (what ${exportName} resolves through must not be reassignable)`
+							);
+						}
+						const init = d.initializer ? unwrap(d.initializer) : undefined;
+						if (init && ts.isIdentifier(init)) next = init.text;
+					}
+				}
+				if (next === null) break;
+				cur = next;
+			}
+		}
+		return { names, problems };
+	}
+
+	const ASSIGNMENT_CALLEES =
+		/^(Object\.(assign|defineProperty|defineProperties|setPrototypeOf)|Reflect\.(set|defineProperty|deleteProperty|setPrototypeOf))$/;
+
+	function assignmentProblems(sf: ts.SourceFile, names: Set<string>): string[] {
+		const problems: string[] = [];
+		const rootOf = (e: ts.Node): string | undefined => {
+			const x = unwrap(e);
+			if (ts.isIdentifier(x)) return x.text;
+			if (ts.isPropertyAccessExpression(x) || ts.isElementAccessExpression(x))
+				return rootOf(x.expression);
+			return undefined;
+		};
+		const flag = (target: ts.Node, how: string): void => {
+			const root = rootOf(target);
+			if (root !== undefined && names.has(root)) {
+				problems.push(
+					`"${root}" is assigned (${how}: ${short(target)}): load, actions and what they resolve through are never reassigned`
+				);
+			}
+		};
+		/** Every target an assignment writes: plain, and inside object / array destructuring patterns. */
+		const targets = (e: ts.Node, how: string): void => {
+			const x = unwrap(e);
+			if (ts.isObjectLiteralExpression(x)) {
+				for (const p of x.properties) {
+					if (ts.isPropertyAssignment(p)) targets(p.initializer, how);
+					else if (ts.isShorthandPropertyAssignment(p)) flag(p.name, how);
+					else if (ts.isSpreadAssignment(p)) targets(p.expression, how);
+				}
+			} else if (ts.isArrayLiteralExpression(x)) {
+				for (const el of x.elements) targets(el, how);
+			} else if (ts.isSpreadElement(x)) {
+				targets(x.expression, how);
+			} else if (ts.isBinaryExpression(x) && x.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+				targets(x.left, how); // `{ a = 1 }`: a default inside a pattern
+			} else flag(x, how);
+		};
+		const visit = (n: ts.Node): void => {
+			if (
+				ts.isBinaryExpression(n) &&
+				n.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+				n.operatorToken.kind <= ts.SyntaxKind.LastAssignment
+			)
+				targets(n.left, 'assignment');
+			else if (
+				(ts.isPrefixUnaryExpression(n) || ts.isPostfixUnaryExpression(n)) &&
+				(n.operator === ts.SyntaxKind.PlusPlusToken || n.operator === ts.SyntaxKind.MinusMinusToken)
+			)
+				flag(n.operand, 'increment');
+			else if (ts.isDeleteExpression(n)) flag(n.expression, 'delete');
+			else if (
+				(ts.isForOfStatement(n) || ts.isForInStatement(n)) &&
+				!ts.isVariableDeclarationList(n.initializer)
+			)
+				targets(n.initializer, 'loop target');
+			else if (ts.isCallExpression(n) && ASSIGNMENT_CALLEES.test(n.expression.getText())) {
+				if (n.arguments[0]) flag(n.arguments[0], n.expression.getText());
+			}
+			ts.forEachChild(n, visit);
+		};
+		visit(sf);
+		return problems;
+	}
+
+	const isLocalSpecifier = (spec: string): boolean => /^(\.|#|\$|\/)/.test(spec);
+
+	function syntaxProblems(sf: ts.SourceFile): string[] {
+		const problems: string[] = [];
+		for (const s of sf.statements) {
+			if (
+				ts.isImportDeclaration(s) &&
+				!s.importClause &&
+				ts.isStringLiteral(s.moduleSpecifier) &&
+				isLocalSpecifier(s.moduleSpecifier.text)
+			) {
+				problems.push(
+					`a side-effect import of a local module (${short(s)}) runs that module before any guard`
+				);
+			}
+		}
+		const visit = (n: ts.Node): void => {
+			const decorators = ts.canHaveDecorators(n) ? ts.getDecorators(n) : undefined;
+			if (decorators && decorators.length > 0) {
+				problems.push(`a decorator (${short(decorators[0])}) runs code when its class is defined`);
+			}
+			ts.forEachChild(n, visit);
+		};
+		visit(sf);
+		return problems;
+	}
+
 	function moduleProblems(file: string): string[] {
 		const sf = sourceFileOf(file);
 		const allowed = pinnedCallsOf(sf);
 		const problems: string[] = [];
+		const { names, problems: constProblems } = protectedNames(sf);
+		problems.push(...constProblems, ...assignmentProblems(sf, names), ...syntaxProblems(sf));
 		for (const s of sf.statements) {
 			const run = firstRun(s, allowed);
 			if (!run) continue;
@@ -694,12 +962,70 @@ export function createAnalysis(files: string[], overlay: Record<string, string> 
 		return problems;
 	}
 
+	/* --------------------------------- placement, callees --------------------------------- */
+
+	function placementProblems(file: string, opts: { guardChain?: boolean } = {}): string[] {
+		const f = norm(file);
+		const appDir = `${ROOT}/src/routes/(app)`;
+		if (!f.startsWith(`${appDir}/`)) {
+			return [
+				'a held server file must live under src/routes/(app)/ (its load chain starts at the guarded layouts there); a new route group needs an explicit decision: pin the file with a reason, or give the group its own guarded layout and extend the contract'
+			];
+		}
+		if (opts.guardChain === false) return [];
+		const guardLoad = (candidate: string): boolean =>
+			!!program.getSourceFile(candidate) && isSharedGuard(candidate);
+		if (guardLoad(f)) return [];
+		for (let dir = f.slice(0, f.lastIndexOf('/')); dir.length > appDir.length; ) {
+			const layout = `${dir}/+layout.server.ts`;
+			if (layout !== f && guardLoad(layout)) return [];
+			dir = dir.slice(0, dir.lastIndexOf('/'));
+		}
+		return [
+			'no real guardAppRoute layout load in its directory or above it (below the (app) root layout): `await parent()` there reaches no guard'
+		];
+	}
+
+	const VALUE_FLAGS =
+		ts.SymbolFlags.Function |
+		ts.SymbolFlags.Variable |
+		ts.SymbolFlags.Class |
+		ts.SymbolFlags.RegularEnum;
+
+	function serverCallees(file: string): string[] {
+		const sf = sourceFileOf(file);
+		const serverDir = `${ROOT}/src/lib/server/`;
+		const found = new Set<string>();
+		const visit = (n: ts.Node): void => {
+			if (ts.isTypeNode(n) || ts.isImportDeclaration(n)) return;
+			if (ts.isIdentifier(n)) {
+				let sym = checker.getSymbolAtLocation(n);
+				if (sym && sym.flags & ts.SymbolFlags.Alias) sym = checker.getAliasedSymbol(sym);
+				const d = sym?.valueDeclaration;
+				if (
+					sym &&
+					d &&
+					sym.flags & VALUE_FLAGS &&
+					!ts.isSourceFile(d) &&
+					norm(d.getSourceFile().fileName).startsWith(serverDir)
+				) {
+					found.add(`${rel(d.getSourceFile().fileName)}#${sym.name}`);
+				}
+			}
+			ts.forEachChild(n, visit);
+		};
+		visit(sf);
+		return [...found].sort();
+	}
+
 	return {
 		program,
 		loadProblems,
 		actionReports,
 		moduleProblems,
 		isSharedGuard,
-		pinnedHelperProblems
+		pinnedHelperProblems,
+		placementProblems,
+		serverCallees
 	};
 }

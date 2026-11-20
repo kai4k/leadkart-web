@@ -169,6 +169,14 @@ function scan(code, kind, line0 = 0, urlOnly = undefined) {
 			}
 		}
 		if (
+			ts.isBindingElement(n) &&
+			n.propertyName &&
+			ts.isStringLiteralLike(n.propertyName) &&
+			isNetworkName(n.propertyName.text)
+		) {
+			add(n.propertyName, `'${n.propertyName.text}' destructured`);
+		}
+		if (
 			(ts.isPropertyAssignment(n) || ts.isMethodDeclaration(n) || ts.isPropertyDeclaration(n)) &&
 			n.name &&
 			ts.isStringLiteralLike(n.name) &&
@@ -187,7 +195,10 @@ function scan(code, kind, line0 = 0, urlOnly = undefined) {
 				ts.isTypeReferenceNode(parent) ||
 				ts.isImportSpecifier(parent) ||
 				ts.isExportSpecifier(parent);
-			if (n.text === 'fetch' && !isMemberName) {
+			if (n.text === 'fetch' && ts.isBindingElement(parent) && parent.propertyName === n) {
+				// `const { fetch: f } = window`: the property is read here, whatever it is renamed to.
+				add(n, 'a destructured `fetch`');
+			} else if (n.text === 'fetch' && !isMemberName) {
 				if (!(urlOnly && permittedFetch(n))) add(n, 'a reference to `fetch`');
 			} else if (n.text === 'fetch' && ts.isPropertyAccessExpression(parent) && parent.name === n) {
 				const recv = parent.expression;

@@ -16,11 +16,17 @@ import { createAnalysis, type Analysis } from '../../support/server-file-guards.
 import {
 	ACTION_OK,
 	ACTION_REFUSED,
+	CALLEE_CASES,
 	LOAD_OK,
 	LOAD_REFUSED,
 	MODULE_OK,
+	MODULE_OK_MORE,
 	MODULE_REFUSED,
+	MODULE_REFUSED_MORE,
+	PLACEMENT_OK,
+	PLACEMENT_REFUSED,
 	SELF_OK,
+	SELF_REFUSED,
 	SUPPORT_MODULES,
 	SYNTH_DIR,
 	type Offender
@@ -48,11 +54,140 @@ const UNGUARDED: Record<string, string> = {
 	'auth/logout/+server.ts':
 		'Sign-out: allowed with or without a live session; it only ends it (CSRF-checked).',
 	'auth/confirm-email-change/+server.ts':
-		'Confirms an email change from the emailed token: the token is the credential (CSRF-checked).',
+		"Confirms an email change from the emailed token: the token is the credential; it is not CSRF-checked (Kit's origin check covers form content types).",
 	'api/[...path]/+server.ts':
 		'The BFF proxy: its own ordered checks (session ended, CSRF, scope fingerprint) run before the call to Go, proven by proxy*.test.ts and proxy-hardening.spec.ts.',
 	'api/operator/scope/+server.ts':
 		'Enter / exit an operator tenant context: its own ordered checks (session, CSRF, permission), proven by operator-scope-endpoint.test.ts.'
+};
+
+/**
+ * The server functions each UNGUARDED file may reference, EXACTLY (`<file under src/lib/server>#<name>`
+ * with the reason it is there). A pinned file is not walked, so without this a later Go call added to
+ * an `(auth)` file or an endpoint would go unnoticed: a new reference from `#lib/server/**` fails
+ * until it is added here with a reason (and a removed one until it is deleted).
+ */
+const UNGUARDED_CALLEES: Record<string, Record<string, string>> = {
+	'+layout.server.ts': {
+		'src/lib/server/cookies.ts#CSRF_COOKIE': 'The cookie name the CSRF token is read from.'
+	},
+	'+page.server.ts': {
+		'src/lib/server/auth-refresh.ts#assertRefreshReachable':
+			'Answers 503 instead of a redirect to sign-in when only the refresh outage hides the session.',
+		'src/lib/server/cookies.ts#ACCESS_COOKIE': 'Reads the access cookie to decide the redirect.'
+	},
+	'(app)/+layout.server.ts': {
+		'src/lib/server/auth-refresh.ts#assertRefreshReachable':
+			'Outage of the refresh endpoint is a 503, not a sign-out.',
+		'src/lib/server/capabilities.ts#loadCapabilities':
+			'The one capabilities read every guard reads through parent().',
+		'src/lib/server/cookies.ts#ACCESS_COOKIE': 'Is there a session at all.',
+		'src/lib/server/cookies.ts#mustChangePassword':
+			'The forced-change flag the layout redirects on.',
+		'src/lib/server/scope.ts#clearOperatorScope':
+			'A dead or no-longer-permitted scope cookie is cleared.',
+		'src/lib/server/scope.ts#readOperatorScope': 'The operator context the page data carries.',
+		'src/lib/server/scope.ts#scopeFingerprint': 'The context fingerprint the page data carries.'
+	},
+	'(auth)/signin/+page.server.ts': {
+		'src/lib/server/proxy.ts#goAuthFetch': 'The login call: the only call this page makes to Go.',
+		'src/lib/server/auth-refresh.ts#establishSession':
+			'Sets the session cookies from the login answer.',
+		'src/lib/server/auth-refresh.ts#tokenPairSchema': 'Validates the login answer.',
+		'src/lib/server/auth-errors.ts#validationFieldKeys': 'Maps Go field errors to form keys.',
+		'src/lib/server/form-action.ts#callGoForAction': 'Runs the Go call with outage handling.',
+		'src/lib/server/form-action.ts#failForm': 'Form failure helper.',
+		'src/lib/server/form-action.ts#failFromStatus': 'Form failure helper.',
+		'src/lib/server/form-action.ts#failOutage': 'Form failure helper.',
+		'src/lib/server/redirect.ts#safeRedirectPath': 'Validates the `next` redirect target.'
+	},
+	'(auth)/forgot-password/+page.server.ts': {
+		'src/lib/server/proxy.ts#goAuthFetch':
+			'The reset-request call: the only call this page makes to Go.',
+		'src/lib/server/auth-errors.ts#fieldValidationKeys': 'Maps Go field errors to form keys.',
+		'src/lib/server/form-action.ts#callGoForAction': 'Runs the Go call with outage handling.',
+		'src/lib/server/form-action.ts#failForm': 'Form failure helper.',
+		'src/lib/server/form-action.ts#failFromStatus': 'Form failure helper.',
+		'src/lib/server/form-action.ts#failOutage': 'Form failure helper.'
+	},
+	'(auth)/reset-password/+page.server.ts': {
+		'src/lib/server/proxy.ts#goAuthFetch':
+			'The reset call with the emailed token: the only call this page makes to Go.',
+		'src/lib/server/go.ts#readGoError': 'Reads the error body of a refused reset.',
+		'src/lib/server/auth-errors.ts#RESET_TOKEN_INVALID': 'The code for a dead token.',
+		'src/lib/server/auth-errors.ts#passwordErrorKey': 'Maps a password refusal to a form key.',
+		'src/lib/server/form-action.ts#callGoForAction': 'Runs the Go call with outage handling.',
+		'src/lib/server/form-action.ts#failForm': 'Form failure helper.',
+		'src/lib/server/form-action.ts#failFromStatus': 'Form failure helper.',
+		'src/lib/server/form-action.ts#failOutage': 'Form failure helper.'
+	},
+	'auth/logout/+server.ts': {
+		'src/lib/server/proxy.ts#goAuthFetch':
+			'Revokes the refresh token at Go: the only call it makes.',
+		'src/lib/server/cookies.ts#REFRESH_COOKIE': 'The refresh token to revoke.',
+		'src/lib/server/cookies.ts#clearAuthCookies': 'Ends the session in the browser.',
+		'src/lib/server/csrf.ts#assertCsrf': 'CSRF check.',
+		'src/lib/server/scope.ts#clearOperatorScope': 'Sign-out ends any operator context.'
+	},
+	'auth/confirm-email-change/+server.ts': {
+		'src/lib/server/proxy.ts#goAuthFetch':
+			'Confirms the emailed token at Go: the only call it makes.',
+		'src/lib/server/go.ts#goErrorStatus': 'Maps a refused confirmation to a page status.',
+		'src/lib/server/http.ts#jsonError': 'JSON error answer.',
+		'src/lib/server/http.ts#upstreamJsonError': 'JSON error answer for an outage.'
+	},
+	'api/[...path]/+server.ts': {
+		'src/lib/server/auth-refresh.ts#isAuthExpired':
+			'Decides whether a 401 from Go is an expired session.',
+		'src/lib/server/auth-refresh.ts#refreshSession': 'The one silent renewal, then one replay.',
+		'src/lib/server/client-address.ts#setClientAddress': 'Forwards the client address to Go.',
+		'src/lib/server/config.ts#config': 'Upstream base URL and timeouts.',
+		'src/lib/server/cookies.ts#ACCESS_COOKIE': 'The Bearer source.',
+		'src/lib/server/cookies.ts#sessionEnded': 'Session check before CSRF.',
+		'src/lib/server/cookies.ts#sessionRenewalPending':
+			'A pending renewal is a 503, not a sign-out.',
+		'src/lib/server/csrf.ts#assertCsrf': 'CSRF check.',
+		'src/lib/server/http.ts#jsonError': 'JSON error answer.',
+		'src/lib/server/http.ts#upstreamJsonError': 'JSON error answer for an outage.',
+		'src/lib/server/proxy.ts#buildUpstreamUrl': 'The only way a request path becomes a Go URL.',
+		'src/lib/server/proxy.ts#isTokenEndpoint': 'Token endpoints are never proxied.',
+		'src/lib/server/proxy.ts#pickResponseHeaders': 'Allowlist of response headers.',
+		'src/lib/server/proxy.ts#scrubsTokens': 'Token fields never reach the browser.',
+		'src/lib/server/proxy.ts#stripTokenFields': 'Token fields never reach the browser.',
+		'src/lib/server/proxy.ts#upstreamStatus': 'Maps an upstream failure to a status.',
+		'src/lib/server/proxy.ts#upstreamTimeout': 'Upstream deadline.',
+		'src/lib/server/scope-context.ts#pageShowsCurrentContext': 'The context fingerprint check.',
+		'src/lib/server/scope.ts#readOperatorScope':
+			'The X-Tenant-Id source (the BFF is its only writer).'
+	},
+	'api/operator/scope/+server.ts': {
+		'src/lib/server/go.ts#goFetch':
+			'The tenant lookup by slug (scoped:false): the only Go call it makes.',
+		'src/lib/server/capabilities.ts#loadCapabilities':
+			'The permission check for entering a context.',
+		'src/lib/server/cookies.ts#ACCESS_COOKIE': 'Is there a session.',
+		'src/lib/server/cookies.ts#sessionEnded': 'Session check before CSRF.',
+		'src/lib/server/cookies.ts#sessionRenewalPending':
+			'A pending renewal is a 503, not a sign-out.',
+		'src/lib/server/csrf.ts#assertCsrf': 'CSRF check.',
+		'src/lib/server/http.ts#jsonError': 'JSON error answer.',
+		'src/lib/server/http.ts#upstreamJsonError': 'JSON error answer for an outage.',
+		'src/lib/server/scope-context.ts#pageShowsCurrentContext':
+			'The exit needs the fingerprint of the context shown.',
+		'src/lib/server/scope.ts#clearOperatorScope': 'Leaving the context clears the cookie.',
+		'src/lib/server/scope.ts#readOperatorScope': 'The context the answer names.',
+		'src/lib/server/scope.ts#scopeFingerprint': 'The fingerprint the answer carries.',
+		'src/lib/server/scope.ts#setOperatorScope': 'Entering the context writes the signed cookie.'
+	}
+};
+
+/**
+ * Held files that are under (app) but NOT under a guardAppRoute layout, EXACTLY, with the reason. The
+ * location rule (under src/routes/(app)/) has no exception.
+ */
+const OUTSIDE_GUARD_CHAIN: Record<string, string> = {
+	'(app)/must-change-password/+page.server.ts':
+		'The forced-change page has no permission and no nav entry (the (app) layout sends the user here); its one action holds authoriseSelfService (session, then the person-bound context fingerprint).'
 };
 
 /**
@@ -92,18 +227,35 @@ const entries = (list: Offender[], prefix: string) =>
 const loadOk = entries(LOAD_OK, 'load-ok');
 const loadRefused = entries(LOAD_REFUSED, 'load-refused');
 const moduleOk = entries(MODULE_OK, 'module-ok');
-const moduleRefused = entries(MODULE_REFUSED, 'module-refused');
+const moduleRefused = [
+	...entries(MODULE_REFUSED, 'module-refused'),
+	...entries(MODULE_REFUSED_MORE, 'module-refused-more')
+];
+const moduleOkMore = entries(MODULE_OK_MORE, 'module-ok-more');
+const selfRefused = entries(SELF_REFUSED, 'self-refused');
 const actionOk = entries(ACTION_OK, 'action-ok');
 const selfOk = entries(SELF_OK, 'self-ok');
 const actionRefused = entries(ACTION_REFUSED, 'action-refused');
+const placementFiles = Object.assign(
+	{},
+	...[...PLACEMENT_REFUSED, ...PLACEMENT_OK].map((c) => c.files)
+) as Record<string, string>;
+const calleeFiles = CALLEE_CASES.map((c, i) => ({
+	...c,
+	file: join(SYNTH_DIR, `callee-${i}.server.ts`)
+}));
 const OVERLAY: Record<string, string> = {
 	...SUPPORT_MODULES,
+	...placementFiles,
+	...Object.fromEntries(calleeFiles.map((c) => [c.file, c.src])),
 	...Object.fromEntries(
 		[
 			...loadOk,
 			...loadRefused,
 			...moduleOk,
+			...moduleOkMore,
 			...moduleRefused,
+			...selfRefused,
 			...actionOk,
 			...selfOk,
 			...actionRefused
@@ -115,7 +267,8 @@ let an: Analysis;
 let buildMs = 0;
 beforeAll(() => {
 	const start = performance.now();
-	an = createAnalysis(HELD, OVERLAY);
+	// ALL (not only HELD): the pinned files are read for their callees and the layouts for the guard chain.
+	an = createAnalysis(ALL, OVERLAY);
 	for (const f of HELD) an.loadProblems(f);
 	buildMs = performance.now() - start;
 }, 120_000);
@@ -152,6 +305,22 @@ describe('every server route file is held to the contract or pinned as unguarded
 	});
 });
 
+describe('unguarded files: the server functions each may reference are pinned', () => {
+	it.each(Object.keys(UNGUARDED))('%s', (name) => {
+		const pinned = Object.keys(UNGUARDED_CALLEES[name] ?? {}).sort();
+		expect(an.serverCallees(join(ROUTES_DIR, name)), name).toEqual(pinned);
+	});
+
+	it('every unguarded file has a pin, and every pin has a reason', () => {
+		expect(Object.keys(UNGUARDED_CALLEES).sort()).toEqual(Object.keys(UNGUARDED).sort());
+		for (const [name, callees] of Object.entries(UNGUARDED_CALLEES)) {
+			for (const [callee, reason] of Object.entries(callees)) {
+				expect(reason.length, `${name} ${callee}`).toBeGreaterThan(10);
+			}
+		}
+	});
+});
+
 describe('held files: the guard is the first thing a load or an action does', () => {
 	it.each(HELD.map(relRoute))('%s', (name) => {
 		const file = join(ROUTES_DIR, name);
@@ -163,6 +332,19 @@ describe('held files: the guard is the first thing a load or an action does', ()
 			for (const r of actions.reports) expect(r.problems, `${name}#${r.name}`).toEqual([]);
 		}
 		expect(an.moduleProblems(file), `${name}: module level`).toEqual([]);
+		expect(
+			an.placementProblems(file, { guardChain: !(name in OUTSIDE_GUARD_CHAIN) }),
+			`${name}: placement`
+		).toEqual([]);
+	});
+
+	it('the guard-chain exceptions are exact: real held files, each with a reason', () => {
+		for (const [file, reason] of Object.entries(OUTSIDE_GUARD_CHAIN)) {
+			expect(HELD.map(relRoute), file).toContain(file);
+			expect(reason.length, file).toBeGreaterThan(20);
+			// ... and the file really is outside the chain (a stale exception is a hidden hole)
+			expect(an.placementProblems(join(ROUTES_DIR, file)), file).not.toEqual([]);
+		}
 	});
 
 	it('every held file has a load or actions (a file with neither is dead weight or hides one)', () => {
@@ -220,9 +402,12 @@ describe('walker self-test: loads', () => {
 });
 
 describe('walker self-test: module level', () => {
-	it.each(moduleOk.map((c) => [c.name, c.file] as const))('accepts %s', (_n, file) => {
-		expect(an.moduleProblems(file)).toEqual([]);
-	});
+	it.each([...moduleOk, ...moduleOkMore].map((c) => [c.name, c.file] as const))(
+		'accepts %s',
+		(_n, file) => {
+			expect(an.moduleProblems(file)).toEqual([]);
+		}
+	);
 
 	it.each(moduleRefused.map((c) => [c.name, c.file, c.reason] as const))(
 		'refuses %s',
@@ -239,6 +424,40 @@ describe('walker self-test: module level', () => {
 	});
 });
 
+describe('walker self-test: placement', () => {
+	it.each(PLACEMENT_OK.map((c) => [c.name, Object.keys(c.files)[0]!] as const))(
+		'accepts %s',
+		(_n, file) => {
+			expect(an.placementProblems(file)).toEqual([]);
+		}
+	);
+
+	it.each(PLACEMENT_REFUSED.map((c) => [c.name, Object.keys(c.files)[0]!, c.reason] as const))(
+		'refuses %s',
+		(_n, file, reason) => {
+			const problems = an.placementProblems(file);
+			expect(problems).not.toEqual([]);
+			expect(problems.join(' | ')).toContain(reason);
+		}
+	);
+
+	it('a guard chain can be waived by a pinned exception, the location never', () => {
+		const misplaced = Object.keys(PLACEMENT_REFUSED[0]!.files)[0]!;
+		expect(an.placementProblems(misplaced, { guardChain: false })).not.toEqual([]);
+		const unguarded = Object.keys(PLACEMENT_REFUSED[3]!.files)[0]!;
+		expect(an.placementProblems(unguarded, { guardChain: false })).toEqual([]);
+	});
+});
+
+describe('walker self-test: the server functions a file references', () => {
+	it.each(calleeFiles.map((c) => [c.name, c.file, c.callees] as const))(
+		'%s',
+		(_n, file, callees) => {
+			expect(an.serverCallees(file)).toEqual(callees);
+		}
+	);
+});
+
 describe('walker self-test: actions', () => {
 	it.each(actionOk.map((c) => [c.name, c.file] as const))('accepts %s', (_n, file) => {
 		expect(actionProblemsOf(file)).toEqual([]);
@@ -248,6 +467,15 @@ describe('walker self-test: actions', () => {
 		'refuses %s',
 		(_n, file, reason) => {
 			const problems = actionProblemsOf(file);
+			expect(problems).not.toEqual([]);
+			expect(problems.join(' | ')).toContain(reason);
+		}
+	);
+
+	it.each(selfRefused.map((c) => [c.name, c.file, c.reason] as const))(
+		'refuses %s (a pinned self-service action)',
+		(_n, file, reason) => {
+			const problems = actionProblemsOf(file, true);
 			expect(problems).not.toEqual([]);
 			expect(problems.join(' | ')).toContain(reason);
 		}
