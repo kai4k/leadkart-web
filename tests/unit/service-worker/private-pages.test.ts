@@ -224,21 +224,54 @@ describe('/api is not the worker business', () => {
 	});
 });
 
-describe('lifecycle: the new worker takes control at once', () => {
-	it('install calls skipWaiting after the precache, so the OLD worker stops answering immediately', async () => {
+describe('lifecycle: takeover only for the migration, otherwise the update prompt decides', () => {
+	/** Caches of the generations that stored private data (signed-in HTML, API JSON). */
+	const OLD_PRIVATE = [
+		'lk-api-v2-build-6',
+		'lk-api-build-5',
+		'lk-runtime-v2-build-6',
+		'lk-runtime-build-4'
+	];
+
+	it.each(OLD_PRIVATE)(
+		'the migration (%s is present): install takes over at once so the OLD worker stops answering, then purges',
+		async (name) => {
+			cachesFake.stores.set(name, new Map([['/api/v1/users', new Response('old')]]));
+			await install();
+			expect(sw.lifecycle).toEqual(['skipWaiting']);
+			expect([...cachesFake.stores.keys()]).toContain('lk-shell-v3-build-7');
+			await activate();
+			expect(sw.lifecycle).toEqual(['skipWaiting', 'claim']);
+			expect([...cachesFake.stores.keys()]).not.toContain(name);
+		}
+	);
+
+	it('an ordinary update (only public caches of an older build) WAITS: no takeover at install', async () => {
+		cachesFake.stores.set('lk-shell-v3-build-6', new Map());
+		cachesFake.stores.set('lk-runtime-v3-build-6', new Map());
 		await install();
-		expect(sw.lifecycle).toEqual(['skipWaiting']);
+		expect(sw.lifecycle).toEqual([]);
 		expect([...cachesFake.stores.keys()]).toContain('lk-shell-v3-build-7');
 	});
 
-	it('activate claims the open pages', async () => {
+	it('a first install (no caches at all) waits too: there is no old worker to replace', async () => {
 		await install();
-		await activate();
-		expect(sw.lifecycle).toEqual(['skipWaiting', 'claim']);
+		expect(sw.lifecycle).toEqual([]);
 	});
 
-	it('the update prompt message still skips waiting', () => {
+	it('the update prompt: its SKIP_WAITING message takes over, then activate claims and purges the older build', async () => {
+		cachesFake.stores.set('lk-shell-v3-build-6', new Map());
+		await install();
+		expect(sw.lifecycle).toEqual([]);
 		sw.handlers.message!({ data: { type: 'SKIP_WAITING' }, waitUntil: () => {} });
 		expect(sw.lifecycle).toEqual(['skipWaiting']);
+		await activate();
+		expect(sw.lifecycle).toEqual(['skipWaiting', 'claim']);
+		expect([...cachesFake.stores.keys()]).not.toContain('lk-shell-v3-build-6');
+	});
+
+	it('any other message does nothing', () => {
+		sw.handlers.message!({ data: { type: 'PING' }, waitUntil: () => {} });
+		expect(sw.lifecycle).toEqual([]);
 	});
 });

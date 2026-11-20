@@ -76,6 +76,8 @@ export function deadlineSignal(parent: AbortSignal | undefined, ms: number): Dea
 export interface RequestSignal {
 	signal: AbortSignal | undefined;
 	timedOut: () => boolean;
+	/** Stops the clock only (response headers are in); the signal keeps following the caller's. */
+	stopTimer: () => void;
 	dispose: () => void;
 }
 
@@ -85,8 +87,8 @@ export function requestSignal(
 	timeoutMs: number | undefined
 ): RequestSignal {
 	if (!isFiniteTimeout(timeoutMs)) {
-		return { signal: callerSignal, timedOut: () => false, dispose: () => {} };
+		return { signal: callerSignal, timedOut: () => false, stopTimer: () => {}, dispose: () => {} };
 	}
-	const { signal, timedOut, dispose } = deadlineSignal(callerSignal, timeoutMs);
-	return { signal, timedOut, dispose };
+	const { signal, timedOut, stopTimer, dispose } = deadlineSignal(callerSignal, timeoutMs);
+	return { signal, timedOut, stopTimer, dispose };
 }

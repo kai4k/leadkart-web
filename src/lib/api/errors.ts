@@ -383,6 +383,20 @@ type OwnLineStatus = 400 | 401 | 403 | 404 | 409 | 422;
  *   5. the caller's own line for the status
  *   6. the error's own message (fixed copy; Go's text is never one: it lives in `detail`)
  */
+/**
+ * A failure that may pass on its own (network, timeout, 5xx, 429): the answer the user already has
+ * may still be right. Any other failure (403, 404, 409, 4xx, a session or scope refusal) is an
+ * ANSWER about the record or the access: what was shown before is not to be trusted.
+ */
+export function isTransientError(err: unknown): boolean {
+	return (
+		err instanceof NetworkError ||
+		err instanceof TimeoutError ||
+		err instanceof ServerError ||
+		err instanceof RateLimitError
+	);
+}
+
 export function describeError(err: unknown, opts: DescribeErrorOptions = {}): string {
 	if (!(err instanceof ApiError)) return opts.fallback ?? 'Something went wrong';
 	const own = err.status === undefined ? undefined : opts.status?.[err.status as OwnLineStatus];

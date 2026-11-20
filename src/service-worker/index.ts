@@ -26,13 +26,14 @@
  *      private to clear on sign-out or a tenant-context change.
  *
  * 3. **Lifecycle**:
- *    - `install` → precache the shell, then `skipWaiting`: the new worker takes control at once
- *      instead of waiting for every tab to close. This generation (v3) needs that: the worker it
- *      replaces stored signed-in HTML and API JSON, and it must stop answering from those and
- *      purge them now, not after the user accepts an update prompt. Trade-off: an open tab can have
- *      its precached build chunks replaced under it, so a lazily imported chunk of the OLD build may
- *      miss (SvelteKit then reloads the page on a failed chunk import); acceptable for this one
- *      bump, and a worker that stores nothing private no longer needs it.
+ *    - `install` → precache the shell. Then `skipWaiting` ONLY for the migration: when caches of a
+ *      generation that stored private data are present (`lk-api-*`, the signed-in HTML of the
+ *      `lk-runtime-*` of an older generation), the worker it replaces would keep answering from
+ *      them, so this one takes over at once and `activate` purges them. Otherwise it WAITS, as a
+ *      worker should: an open tab keeps the build it loaded (its precached chunks are not replaced
+ *      under it) and the update prompt (`SKIP_WAITING` message) decides when to switch; an
+ *      unconditional `skipWaiting` would make the prompt dead (it would post to an already-active
+ *      worker and `controllerchange` would never fire again).
  *    - `activate` → delete every cache this worker does not own (older generations included: that
  *      is what purges `lk-api-v2-*` and the v2 runtime cache) and claim the open tabs.
  *    - `message` → SKIP_WAITING from the update-prompt UI.
@@ -71,12 +72,27 @@ const APP_SHELL: string[] = [
 	...assets.map(({ path }) => asset(path))
 ];
 
+/**
+ * Is there a cache an earlier generation filled with private data (API JSON, signed-in HTML)? Then
+ * the worker that owns it must be replaced now, not after the user accepts an update prompt. The
+ * generations before this one: `lk-api-*` (API JSON) and `lk-runtime-*` without the current
+ * generation (it held navigations). Public caches of an older build do not count.
+ */
+async function holdsPrivateData(): Promise<boolean> {
+	const current = `${CACHE_PREFIX}-runtime-${CACHE_GENERATION}-`;
+	return (await caches.keys()).some(
+		(n) =>
+			n.startsWith(`${CACHE_PREFIX}-api-`) ||
+			(n.startsWith(`${CACHE_PREFIX}-runtime-`) && !n.startsWith(current))
+	);
+}
+
 self.addEventListener('install', (event) => {
 	event.waitUntil(
 		(async () => {
 			const cache = await caches.open(APP_SHELL_CACHE);
 			await cache.addAll(APP_SHELL);
-			await self.skipWaiting();
+			if (await holdsPrivateData()) await self.skipWaiting();
 		})()
 	);
 });

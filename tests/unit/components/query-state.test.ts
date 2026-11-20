@@ -2,7 +2,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createRawSnippet, flushSync, mount, unmount } from 'svelte';
 import QueryState from '#lib/components/feedback/QueryState.svelte';
 import { reactiveProps } from '../helpers/reactive-props.svelte.ts';
-import { ApiError, AuthError, NetworkError, NotFoundError } from '#lib/api/errors.ts';
+import {
+	ApiError,
+	AuthError,
+	ConflictError,
+	NetworkError,
+	NotFoundError,
+	RateLimitError,
+	ServerError,
+	TimeoutError
+} from '#lib/api/errors.ts';
 
 type Lead = { name: string };
 interface FakeQuery {
@@ -46,7 +55,7 @@ const text = () => target.textContent ?? '';
 describe('QueryState', () => {
 	it('shows the default skeleton while pending, announced as a status with visually hidden text', () => {
 		render(q({ isPending: true }));
-		const busy = target.querySelector('[aria-busy="true"]');
+		const busy = target.querySelector('[role="status"]');
 		expect(busy).not.toBeNull();
 		// aria-label on a div with no role is ignored by screen readers: the region is a status
 		// and the words are real (visually hidden) text.
@@ -59,9 +68,7 @@ describe('QueryState', () => {
 
 	it('uses the caller skeleton inside the same busy region', () => {
 		render(q({ isPending: true }), { skeleton: skeletonSnippet });
-		expect(
-			target.querySelector('[aria-busy="true"] [data-testid="custom-skeleton"]')
-		).not.toBeNull();
+		expect(target.querySelector('[role="status"] [data-testid="custom-skeleton"]')).not.toBeNull();
 		expect(target.querySelector('[data-slot="skeleton"]')).toBeNull();
 	});
 
@@ -135,6 +142,36 @@ describe('QueryState', () => {
 		expect(refetch).toHaveBeenCalledTimes(1);
 	});
 
+	it.each([
+		['a network failure', () => new NetworkError(new TypeError('x'))],
+		['a timeout', () => new TimeoutError()],
+		['a 5xx', () => new ServerError(503, null)],
+		['a 429', () => new RateLimitError(5)]
+	])('%s on a refetch keeps the data (it may pass)', (_n, make) => {
+		render(q({ isError: true, error: make(), data: { name: 'Asha' }, refetch: vi.fn() }));
+		expect(target.querySelector('[data-testid="content"]')?.textContent).toBe('Hello Asha');
+		expect(target.querySelector('[role="alert"]')?.textContent).toContain("Couldn't refresh lead");
+	});
+
+	it.each([
+		['a 404 (the record may be gone)', () => new NotFoundError('/v1/leads/1'), 'Not found'],
+		['a 403 (access may be lost)', () => new AuthError(403), 'No access'],
+		['a 409', () => new ConflictError(undefined), "Couldn't load lead"],
+		['an unknown error', () => new Error('boom'), "Couldn't load lead"]
+	])('%s on a refetch REPLACES the stale data with the error state', (_n, make, title) => {
+		render(q({ isError: true, error: make(), data: { name: 'Asha' }, refetch: vi.fn() }));
+		expect(target.querySelector('[data-testid="content"]')).toBeNull();
+		expect(target.querySelector('[role="alert"]')?.textContent).toContain(title);
+		expect(text()).not.toContain('Asha');
+	});
+
+	it('the loading region is a status with no aria-busy (busy can hold back the announcement)', () => {
+		render(q({ isPending: true }));
+		const status = target.querySelector('[role="status"]');
+		expect(status?.textContent).toContain('Loading lead');
+		expect(status?.hasAttribute('aria-busy')).toBe(false);
+	});
+
 	it('an error with no data yet still replaces the content with the alert', () => {
 		render(q({ isError: true, error: new NetworkError(new TypeError('x')), refetch: vi.fn() }));
 		expect(target.querySelector('[data-testid="content"]')).toBeNull();
@@ -163,10 +200,10 @@ describe('QueryState', () => {
 
 	it('follows the query as it changes (pending, then data)', () => {
 		const props = render(q({ isPending: true }));
-		expect(target.querySelector('[aria-busy="true"]')).not.toBeNull();
+		expect(target.querySelector('[role="status"]')).not.toBeNull();
 		props.query = q({ data: { name: 'Zed' } });
 		flushSync();
 		expect(target.querySelector('[data-testid="content"]')?.textContent).toBe('Hello Zed');
-		expect(target.querySelector('[aria-busy="true"]')).toBeNull();
+		expect(target.querySelector('[role="status"]')).toBeNull();
 	});
 });

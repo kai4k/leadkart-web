@@ -13,7 +13,7 @@
 	import type { Snippet } from 'svelte';
 	import { Alert, Button, EmptyState, Skeleton } from '#lib/components/ui/index.ts';
 	import { Inbox } from '#lib/icons/index.ts';
-	import { AuthError, NotFoundError } from '#lib/api/errors.ts';
+	import { AuthError, isTransientError, NotFoundError } from '#lib/api/errors.ts';
 	import { getListErrorMessage } from '#lib/api/error-messages.ts';
 
 	type Props = {
@@ -37,6 +37,9 @@
 	const forbidden = $derived(query.error instanceof AuthError && query.error.status === 403);
 	const title = $derived(missing ? 'Not found' : forbidden ? 'No access' : `Couldn't load ${noun}`);
 	const message = $derived(getListErrorMessage(query.error, noun, notFound));
+	// A failed refetch keeps the data on screen only when the failure may pass (network, timeout, 5xx,
+	// 429). A 403 / 404 / other answer means the record may be gone or the access lost: not the old data.
+	const keepsData = $derived(!query.isError || isTransientError(query.error));
 	const canRetry = $derived(!missing && !forbidden && query.refetch !== undefined);
 </script>
 
@@ -55,7 +58,8 @@
 
 {#if query.isPending}
 	<!-- A div with aria-label and no role is ignored by screen readers: a status region with real text. -->
-	<div class="stack stack-relaxed" role="status" aria-busy="true">
+	<!-- No aria-busy: on a live region it lets assistive technology hold back the very announcement this is for. -->
+	<div class="stack stack-relaxed" role="status">
 		<span class="sr-only">Loading {noun}</span>
 		{#if skeleton}
 			{@render skeleton()}
@@ -68,8 +72,10 @@
 	{#if query.isError}
 		{@render failure(title)}
 	{/if}
+{:else if !keepsData}
+	{@render failure(title)}
 {:else}
-	<!-- A failed refetch keeps the data on screen (it is still the last good answer) with a notice. -->
+	<!-- A failed refetch that may pass keeps the data on screen (still the last good answer) with a notice. -->
 	{#if query.isError}
 		{@render failure(`Couldn't refresh ${noun}`)}
 	{/if}

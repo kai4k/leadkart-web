@@ -11,6 +11,7 @@
  * body must be `FormData`; the proxy still forwards both untouched.
  */
 import { api, apiLegacy, parseResponse } from '#lib/api/client.ts';
+import { CSV_TYPE, downloadBlob } from '#lib/utils/download.ts';
 import {
 	crmLeadDtoSchema,
 	listLeadsResponseSchema,
@@ -170,12 +171,12 @@ export async function bulkUploadCommit(
 }
 
 /**
- * CSV export with the same filter set as `listLeads`: a Blob for the caller to hand to a download
- * anchor (an object URL). Not a link: a plain navigation cannot carry the context header the BFF
- * requires on every call.
+ * CSV export with the same filter set as `listLeads`, saved as a file through the one download
+ * helper. Not a link: a plain navigation cannot carry the context header the BFF requires on every
+ * call. The Blob is `text/csv` whatever the response said.
  */
-export function exportLeads(params: ListLeadsParams = {}): Promise<Blob> {
-	return api.getBlob('/v1/crm/leads/export', {
+export async function exportLeads(params: ListLeadsParams = {}): Promise<void> {
+	const csv = await api.getBlob('/v1/crm/leads/export', CSV_TYPE, {
 		query: {
 			q: params.q,
 			stage: params.stage,
@@ -183,4 +184,5 @@ export function exportLeads(params: ListLeadsParams = {}): Promise<Blob> {
 			owner_membership_id: params.owner_membership_id
 		}
 	});
+	downloadBlob(csv, 'leads.csv');
 }

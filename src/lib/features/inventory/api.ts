@@ -10,6 +10,7 @@
  * `/api/...` directly (BFF still injects cookies + CSRF transparently).
  */
 import { api, apiLegacy, parseResponse } from '#lib/api/client.ts';
+import { CSV_TYPE, downloadBlob } from '#lib/utils/download.ts';
 import {
 	batchDtoSchema,
 	bulkActionResultSchema,
@@ -228,11 +229,11 @@ export async function bulkUploadCommit(
 	return api.postForm('/v1/inventory/products/bulk-upload/commit', form, bulkUploadResultSchema);
 }
 
-/** CSV export — a Blob for the caller to hand to a download anchor (an object URL). */
-export function exportProducts(params?: ListProductsParams): Promise<Blob> {
+/** CSV export, saved as a file through the one download helper (the Blob is `text/csv`, whatever the response said). */
+export async function exportProducts(params?: ListProductsParams): Promise<void> {
 	const path = buildProductListQuery(params).replace(
 		'/v1/inventory/products',
 		'/v1/inventory/products/export'
 	);
-	return api.getBlob(path);
+	downloadBlob(await api.getBlob(path, CSV_TYPE), 'products.csv');
 }

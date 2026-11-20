@@ -147,7 +147,7 @@ describe('multipart and downloads go through the same transport', () => {
 		fetchMock.mockResolvedValue(
 			new Response('a,b\n1,2', { status: 200, headers: { 'content-type': 'text/csv' } })
 		);
-		const blob = await api.getBlob('/v1/crm/leads/export', { query: { q: 'x' } });
+		const blob = await api.getBlob('/v1/crm/leads/export', 'text/csv', { query: { q: 'x' } });
 		expect(blob).toBeInstanceOf(Blob);
 		expect(await blob.text()).toBe('a,b\n1,2');
 		expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/crm/leads/export?q=x');
@@ -157,7 +157,9 @@ describe('multipart and downloads go through the same transport', () => {
 	});
 	it('getBlob maps a failed download to the typed error (a 409 scope_changed included)', async () => {
 		fetchMock.mockResolvedValue(json(409, { error: 'scope_changed', message: 'x' }));
-		await expect(api.getBlob('/v1/crm/leads/export')).rejects.toBeInstanceOf(ScopeChangedError);
+		await expect(api.getBlob('/v1/crm/leads/export', 'text/csv')).rejects.toBeInstanceOf(
+			ScopeChangedError
+		);
 	});
 });
 

@@ -5,8 +5,8 @@
  * through the API client. English and Hindi live in the locale files under `errors.code.<code>`.
  * A code not listed here gets the generic line of its status class; Go's own text is never shown.
  * Adding a code is one entry here plus its two lines. The locale files load lazily (see
- * `i18n/index.ts`), so this module never imports one: before a locale is ready the answer is a
- * short built-in line, never the key and never Go's text.
+ * `i18n/index.ts`), so this module never imports one: before a locale is ready there is no answer
+ * (`undefined`), never the key and never Go's text.
  */
 import { _ } from 'svelte-i18n';
 import { get } from 'svelte/store';
@@ -71,10 +71,12 @@ export function goCodeKey(code: string | undefined): string | undefined {
 	return code === undefined ? undefined : GO_CODE_KEYS.get(code);
 }
 
-/** What the user reads when the locale is not ready yet (a unit test, an error before i18n started). */
-export const UNREADY_COPY = 'Something went wrong. Please try again.';
-
-/** The user's text for a code in the active locale (undefined when the table does not know the code). */
+/**
+ * The user's text for a code in the active locale. `undefined` when the table does not know the code
+ * AND while no locale is ready (an error before i18n started): the caller then falls back to its own
+ * built-in line for the code or the status, which says what happened; a generic "something went
+ * wrong" would hide a line the caller has.
+ */
 export function codeCopy(code: string | undefined): string | undefined {
 	const key = goCodeKey(code);
 	if (key === undefined) return undefined;
@@ -84,5 +86,5 @@ export function codeCopy(code: string | undefined): string | undefined {
 	} catch {
 		// no locale yet
 	}
-	return UNREADY_COPY;
+	return undefined;
 }

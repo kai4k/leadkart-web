@@ -97,7 +97,7 @@ async function send(
 		const csrf = getCsrfToken();
 		if (csrf) headers.set('X-CSRF-Token', csrf);
 	}
-	const { signal, timedOut, dispose } = requestSignal(
+	const { signal, timedOut, stopTimer, dispose } = requestSignal(
 		opts.signal,
 		opts.timeoutMs ?? (method === 'GET' ? DEFAULT_TIMEOUT_MS : undefined)
 	);
@@ -115,6 +115,9 @@ async function send(
 				signal
 			}
 		);
+		// A download's deadline covers the HEADERS only: a large export streams for as long as it needs
+		// (the caller's own signal still cancels it), where the read budget would cut a slow body.
+		if (asBlob) stopTimer();
 		if (asBlob && response.ok) blob = await response.blob();
 		else text = await response.text();
 	} catch (cause) {
@@ -180,9 +183,16 @@ export const api = {
 		opts?: RequestOptions
 	): Promise<z.output<S>> =>
 		parseWith(schema, await send('POST', path, form, opts, true), `POST ${path}`),
-	/** A download as a `Blob` (CSV export): a plain link cannot carry the context header, this can. */
-	getBlob: async (path: string, opts?: RequestOptions): Promise<Blob> =>
-		(await send('GET', path, undefined, opts, false, true)) as Blob,
+	/**
+	 * A download as a `Blob` (CSV export): a plain link cannot carry the context header, this can. The
+	 * caller names the type it expects and the Blob carries THAT, never whatever the response said
+	 * (the bytes are only ever offered to the user as a file, not interpreted as a page). The deadline
+	 * bounds the headers, not the body.
+	 */
+	getBlob: async (path: string, type: string, opts?: RequestOptions): Promise<Blob> => {
+		const received = (await send('GET', path, undefined, opts, false, true)) as Blob;
+		return new Blob([received], { type });
+	},
 	post: voidCall('POST'),
 	put: voidCall('PUT'),
 	patch: voidCall('PATCH'),
