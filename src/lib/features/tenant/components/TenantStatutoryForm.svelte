@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { P } from '$features/auth';
+	import { fieldText, readFailure } from '#lib/utils/form-failure.ts';
 	import TenantSaveFooter from './TenantSaveFooter.svelte';
 	import { enhance } from '$app/forms';
 	import { TextField } from '$form';
@@ -11,8 +13,9 @@
 	 */
 	type FormResult = {
 		values?: { gst_number: string; pan_number: string; drug_licence_number: string };
-		errors?: Record<string, string | string[] | undefined>;
-		bannerError?: string;
+		fieldKeys?: Record<string, string>;
+		fieldMessages?: Record<string, string>;
+		formErrorKey?: string | null;
 		success?: boolean;
 	};
 	type Props = { tenant: Tenant; form?: FormResult };
@@ -20,12 +23,8 @@
 
 	let loading = $state(false);
 
-	function err(field: string): string | undefined {
-		const v = form?.errors?.[field];
-		if (typeof v === 'string') return v;
-		if (Array.isArray(v)) return v[0];
-		return undefined;
-	}
+	const failure = $derived(readFailure(form));
+	const err = (field: string) => fieldText(failure, field, $_);
 
 	const values = $derived(
 		form?.values ?? {

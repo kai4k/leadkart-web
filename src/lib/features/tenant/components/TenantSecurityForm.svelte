@@ -14,8 +14,9 @@
 	 */
 	type FormResult = {
 		values?: { password_policy: Tenant['password_policy'] };
-		errors?: Record<string, string | string[] | undefined>;
-		bannerError?: string;
+		fieldKeys?: Record<string, string>;
+		fieldMessages?: Record<string, string>;
+		formErrorKey?: string | null;
 		success?: boolean;
 	};
 	type Props = { tenant: Tenant; form?: FormResult };

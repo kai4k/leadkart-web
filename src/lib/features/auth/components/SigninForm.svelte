@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
+	import { bannerText, fieldText, readFailure } from '#lib/utils/form-failure.ts';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import { Icon, Lock } from '#lib/icons/index.ts';
@@ -32,27 +33,28 @@
 	let loading = $state(false);
 	let errorRegion: HTMLElement | undefined = $state();
 
-	// Repopulate email after a failed submit (server returned `email`).
+	const failure = $derived(readFailure<{ email?: string }>(form));
+
+	// Repopulate email after a failed submit (the action returns what was typed).
 	// Falls back to ?email= prefill on first render.
-	const initialEmail = $derived(form?.email ?? page.url.searchParams.get('email') ?? '');
+	const initialEmail = $derived(failure?.values.email ?? page.url.searchParams.get('email') ?? '');
 
 	const formError = $derived.by(() => {
-		if (!form || !('formError' in form) || !form.formError) return null;
-		const key = form.formError;
+		const key = failure?.formErrorKey;
+		if (!key) return null;
 		const rawSeconds =
-			'retryAfterSeconds' in form ? (form.retryAfterSeconds as unknown) : undefined;
+			form && 'retryAfterSeconds' in form ? (form.retryAfterSeconds as unknown) : undefined;
 		const seconds = typeof rawSeconds === 'number' ? rawSeconds : undefined;
 		if (key === 'auth.errors.accountLocked' && seconds !== undefined) {
 			return $_(key, { values: { seconds } });
 		}
-		return $_(key);
+		return bannerText(failure, $_);
 	});
 
-	const fieldErrors = $derived(
-		form && 'errors' in form && form.errors
-			? form.errors
-			: ({} as { email?: string; password?: string })
-	);
+	const fieldErrors = $derived({
+		email: fieldText(failure, 'email', $_),
+		password: fieldText(failure, 'password', $_)
+	});
 
 	$effect(() => {
 		if (formError) queueMicrotask(() => errorRegion?.focus());

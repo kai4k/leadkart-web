@@ -25,11 +25,19 @@ export function timingSafeEqualString(a: string, b: string): boolean {
  * header must equal the `lk_csrf` cookie. Returns the 403 response to send,
  * or null when the request passes. The one implementation (proxy, logout,
  * operator scope).
+ *
+ * A plain HTML form cannot set a header, so a route that must work without JavaScript passes
+ * `formToken` (the form's `csrf` field): used ONLY when there is no header, and held to the same
+ * rule, equal to the cookie by the same constant-time comparison. A wrong header never falls back.
  */
-export function assertCsrf(event: Pick<RequestEvent, 'request' | 'cookies'>): Response | null {
+export function assertCsrf(
+	event: Pick<RequestEvent, 'request' | 'cookies'>,
+	formToken?: string
+): Response | null {
 	const header = event.request.headers.get('x-csrf-token');
+	const token = header ?? formToken;
 	const cookie = event.cookies.get(CSRF_COOKIE);
-	if (!header || !cookie || !timingSafeEqualString(header, cookie)) {
+	if (!token || !cookie || !timingSafeEqualString(token, cookie)) {
 		return jsonError(403, 'csrf_mismatch', 'CSRF token missing or invalid');
 	}
 	return null;

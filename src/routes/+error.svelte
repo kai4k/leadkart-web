@@ -1,23 +1,18 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { Button } from '$ui';
-	import { getCsrfToken } from '$api/csrf';
 	import { session } from '$features/auth';
 
 	// A 5xx here can come from the (app) layout (capabilities 502, refresh-unreachable 503) where the
 	// "home" link leads straight back to the same error: the user must still be able to end the session.
-	// The httpOnly cookies are invisible to the page; the non-httpOnly CSRF cookie exists exactly while
-	// a session does, so it is the signal. Known only after hydration.
-	let hasSession = $state(false);
-	onMount(() => {
-		hasSession = getCsrfToken() !== '';
-	});
-	const showSignOut = $derived(page.status >= 500 && hasSession);
+	// The CSRF value exists exactly while a session does; the server renders it into the form, so the
+	// button is there from the first byte (no JS needed, e.g. when the client bundle failed to load).
+	const csrfToken = $derived(page.data.csrfToken ?? null);
+	const showSignOut = $derived(page.status >= 500 && csrfToken !== null);
 
-	// The logout endpoint is POST + CSRF header (double-submit). A form cannot set a header, so the
-	// submit goes through the one logout call that does; without JS the native POST is refused (403).
+	// With JS the sign-out goes through the one logout call (header double-submit, client navigation).
+	// Without it the native form POST carries the same value as the `csrf` field.
 	function signOut(event: SubmitEvent) {
 		event.preventDefault();
 		void session.logout();
@@ -39,6 +34,7 @@
 			</a>
 			{#if showSignOut}
 				<form method="POST" action="/auth/logout" onsubmit={signOut}>
+					<input type="hidden" name="csrf" value={csrfToken} />
 					<div class="form-footer">
 						<Button type="submit" variant="outline" size="sm">Sign out</Button>
 					</div>

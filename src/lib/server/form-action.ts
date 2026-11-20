@@ -7,12 +7,12 @@
  * the i18n key `auth.errors.upstreamUnavailable`. A redirect (the session is over) propagates.
  * Anything Go ANSWERS, whatever its status, comes back as `resp` for the action to map.
  */
-import { fail, isHttpError, isRedirect, redirect, type Cookies } from '@sveltejs/kit';
-import { FORBIDDEN_COPY, TENANT_CONTEXT_COPY, type DescribeErrorOptions } from '../api/errors.ts';
+import { fail, isHttpError, redirect, type Cookies } from '@sveltejs/kit';
 import { canAny } from '../features/auth/capabilities.ts';
 import { loadCapabilities } from './capabilities.ts';
-import { readGoFailure } from './go.ts';
-import { upstreamStatus } from './proxy.ts';
+import type { z } from 'zod';
+import { goErrorStatus, readGoFailure } from './go.ts';
+import { isUpstreamFailure, upstreamStatus } from './proxy.ts';
 import { readOperatorScope } from './scope.ts';
 
 export const UPSTREAM_UNAVAILABLE_KEY = 'auth.errors.upstreamUnavailable';
@@ -21,13 +21,23 @@ export type GoActionCall =
 	| { ok: true; resp: Response }
 	| { ok: false; status: number; key: string };
 
+/**
+ * The status of a real upstream failure, or null for anything else. Only these are outages: a
+ * timeout, a connection failure, an oversized pre-login body, and the 502 / 503 / 504 `HttpError`s
+ * goFetch itself throws. A `TypeError` from the caller's own closure is a bug, not an outage.
+ */
+function asOutage(err: unknown): number | null {
+	if (isHttpError(err)) return [502, 503, 504].includes(err.status) ? err.status : null;
+	return isUpstreamFailure(err) ? upstreamStatus(err) : null;
+}
+
 export async function callGoForAction(call: () => Promise<Response>): Promise<GoActionCall> {
 	try {
 		return { ok: true, resp: await call() };
 	} catch (err) {
-		if (isRedirect(err)) throw err;
-		const status = isHttpError(err) ? err.status : upstreamStatus(err);
-		return { ok: false, status, key: UPSTREAM_UNAVAILABLE_KEY };
+		const outage = asOutage(err);
+		if (outage === null) throw err; // a redirect, or a bug: both must reach the framework / the logger
+		return { ok: false, status: outage, key: UPSTREAM_UNAVAILABLE_KEY };
 	}
 }
 
@@ -39,7 +49,7 @@ export async function callGoForAction(call: () => Promise<Response>): Promise<Go
  * operator's tenant context); Go stays the enforcer, this gives the right message without a round
  * trip. Reading the capabilities is itself a Go call, so an outage there keeps the form too.
  */
-export async function authoriseAction<V>(
+export async function authoriseAction<V extends object>(
 	cookies: Cookies,
 	permission: string | readonly string[],
 	values: V,
@@ -50,9 +60,9 @@ export async function authoriseAction<V>(
 	try {
 		caps = await loadCapabilities(cookies);
 	} catch (err) {
-		if (isRedirect(err)) throw err;
-		const status = isHttpError(err) ? err.status : upstreamStatus(err);
-		return fail(status, { values, formErrorKey: UPSTREAM_UNAVAILABLE_KEY });
+		const status = asOutage(err);
+		if (status === null) throw err;
+		return failForm(status, { values, formErrorKey: UPSTREAM_UNAVAILABLE_KEY });
 	}
 	if (!caps) redirect(303, '/signin');
 	const permissions = typeof permission === 'string' ? [permission] : permission;
@@ -60,33 +70,97 @@ export async function authoriseAction<V>(
 	// The same context rule as the page guard (`canSee`): an own-tenant action would otherwise run
 	// under the scope header and write to the SCOPED tenant.
 	if (context === 'own' && inTenantContext) {
-		return fail(403, { values, bannerError: TENANT_CONTEXT_COPY });
+		return failForm(403, { values, formErrorKey: 'auth.errors.tenantContext' });
 	}
 	if (context === 'scope' && !inTenantContext) {
-		return fail(403, { values, bannerError: FORBIDDEN_COPY });
+		return failForm(403, { values, formErrorKey: goFailureKey(403) });
 	}
 	return canAny(caps, permissions, inTenantContext)
 		? null
-		: fail(403, { values, bannerError: FORBIDDEN_COPY });
+		: failForm(403, { values, formErrorKey: goFailureKey(403) });
 }
 
-/** Copy for a non-2xx Go answer no code explains: Go's rate limiter (429), else generic. */
+/** Copy for a non-2xx Go answer, by status class: i18n keys, never Go's text and never English. */
 export function goFailureKey(status: number): string {
-	return status === 429 ? 'auth.errors.rateLimited' : 'auth.errors.unexpected';
+	if (status === 429) return 'auth.errors.rateLimited';
+	if (status === 403) return 'auth.errors.forbidden';
+	if (status === 404) return 'auth.errors.notFound';
+	if (status === 409) return 'auth.errors.conflict';
+	return 'auth.errors.unexpected';
+}
+
+/**
+ * THE failure every form action returns, whatever went wrong: one shape, i18n keys for copy.
+ *
+ *   values        what the user typed, to repopulate the form (never a password)
+ *   fieldKeys     field -> i18n key
+ *   fieldMessages field -> text that comes from a schema or from Go's own per-field answer
+ *                 (kept apart from the keys so a page can tell the two sources)
+ *   formErrorKey  one banner line as an i18n key, or null
+ *
+ * `extra` adds the few action-specific facts a page needs (`which` for a page with two forms,
+ * `retryAfterSeconds` for the lockout countdown). The type is `ActionFailure` so pages and server
+ * agree; `readFailure` (utils/form-failure.ts) is the page-side reader.
+ */
+export function failForm<
+	V extends object = Record<never, never>,
+	X extends object = Record<never, never>
+>(
+	status: number,
+	parts: {
+		values?: V;
+		fieldKeys?: Record<string, string>;
+		fieldMessages?: Record<string, string>;
+		formErrorKey?: string | null;
+	},
+	extra?: X
+) {
+	return fail(status, {
+		values: (parts.values ?? {}) as V,
+		fieldKeys: parts.fieldKeys ?? {},
+		fieldMessages: parts.fieldMessages ?? {},
+		formErrorKey: parts.formErrorKey ?? null,
+		...(extra ?? ({} as X))
+	});
+}
+
+/** The kept-form failure for an outage `callGoForAction` reported. */
+export function failOutage<V extends object>(
+	call: { status: number; key: string },
+	values?: V,
+	extra?: object
+) {
+	return failForm(call.status, { values, formErrorKey: call.key }, extra);
+}
+
+/** A Go answer no code of ours explains: its status class's banner key (rate limit, forbidden, ...). */
+export function failFromStatus<V extends object>(resp: Response, values?: V, extra?: object) {
+	return failForm(goErrorStatus(resp), { values, formErrorKey: goFailureKey(resp.status) }, extra);
+}
+
+/** A schema's per-field messages as `field -> first message` (the client forms read the same text). */
+export function zodFieldMessages(error: z.ZodError): Record<string, string> {
+	const out: Record<string, string> = {};
+	for (const issue of error.issues) {
+		const field = issue.path.join('.');
+		if (field && !(field in out)) out[field] = issue.message;
+	}
+	return out;
 }
 
 /**
  * A failed Go answer for a form that keeps its values: Go's per-field messages go to the fields;
- * otherwise ONE banner line. Server actions speak i18n keys for the copy that has no Go code behind
- * it (rate limit), so the 429 line exists once; a coded failure keeps `readGoFailure`'s allowlisted line.
+ * otherwise ONE banner line, the i18n key of the status class (`goFailureKey`).
  */
-export async function failFromGo<V>(resp: Response, values: V, opts: DescribeErrorOptions) {
-	const failure = await readGoFailure(resp, opts);
+export async function failFromGo<V extends object>(resp: Response, values: V) {
+	const failure = await readGoFailure(resp);
 	if (Object.keys(failure.fields).length > 0) {
-		return fail(failure.status, { values, errors: failure.fields });
+		return failForm(failure.status, { values, fieldMessages: failure.fields });
 	}
-	if (failure.status === 429) {
-		return fail(failure.status, { values, formErrorKey: goFailureKey(failure.status) });
+	// A bare 400 / 422 (no field to blame) is "check the values"; unlike a password call's
+	// `invalid_body`, the forms using this have values the user can change.
+	if (failure.status === 400 || failure.status === 422) {
+		return failForm(failure.status, { values, formErrorKey: 'auth.errors.validation' });
 	}
-	return fail(failure.status, { values, bannerError: failure.message });
+	return failFromStatus(resp, values);
 }

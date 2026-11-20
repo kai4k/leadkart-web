@@ -33,3 +33,18 @@ describe('assertCsrf', () => {
 		expect(resp?.headers.get('cache-control')).toBe('no-store');
 	});
 });
+
+describe('assertCsrf with a form field (no-JavaScript posts)', () => {
+	it('uses the field when there is no header, under the same equality rule', () => {
+		expect(assertCsrf(event(null, 'tok'), 'tok')).toBeNull();
+		expect(assertCsrf(event(null, 'tok'), 'nope')?.status).toBe(403);
+		expect(assertCsrf(event(null, 'tok'), '')?.status).toBe(403);
+		expect(assertCsrf(event(null, undefined), 'tok')?.status).toBe(403);
+	});
+
+	it('a header, right or wrong, decides alone: a wrong header never falls back to the field', () => {
+		expect(assertCsrf(event('bad', 'tok'), 'tok')?.status).toBe(403);
+		expect(assertCsrf(event('', 'tok'), 'tok')?.status).toBe(403);
+		expect(assertCsrf(event('tok', 'tok'), 'whatever')).toBeNull();
+	});
+});

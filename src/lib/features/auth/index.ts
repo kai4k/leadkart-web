@@ -11,10 +11,8 @@
 export {
 	logout,
 	confirmEmailChange,
-	changePassword,
 	getMyCapabilities,
 	getMyProfile,
-	updateMyProfile,
 	listSessions,
 	revokeSession,
 	revokeOtherSessions
@@ -39,8 +37,7 @@ export type {
 	SessionPrincipal,
 	UserDto,
 	SessionDto,
-	ListSessionsResponse,
-	UpdateProfileRequest
+	ListSessionsResponse
 } from './types';
 
 export { session } from './stores/session.svelte';

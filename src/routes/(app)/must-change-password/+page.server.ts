@@ -8,8 +8,9 @@
  * Reached when login returns `must_change_password=true`. Successful
  * rotation redirects to `?next=` or `/dashboard`.
  */
-import { fail, redirect } from '@sveltejs/kit';
+import { redirect } from '@sveltejs/kit';
 import { changePasswordViaGo } from '#lib/server/auth-errors.ts';
+import { failForm } from '#lib/server/form-action.ts';
 import { setMustChangePassword } from '#lib/server/cookies.ts';
 import { safeRedirectPath } from '#lib/server/redirect.ts';
 import type { Actions } from './$types';
@@ -22,7 +23,7 @@ export const actions: Actions = {
 			next: (formData.get('new_password') ?? '').toString(),
 			confirm: (formData.get('confirm') ?? '').toString()
 		});
-		if (!result.ok) return fail(result.status, result.body);
+		if (!result.ok) return failForm(result.status, result.parts);
 
 		setMustChangePassword(cookies, false);
 		throw redirect(303, safeRedirectPath(url.searchParams.get('next'), url.origin));

@@ -28,8 +28,7 @@ import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
 import { loadCapabilities } from '#lib/server/capabilities.ts';
 import { goFetch } from '#lib/server/go.ts';
 import { hasRequiredCapability, OPERATOR_SCOPE_PERMISSION } from '#lib/server/guards.ts';
-import { jsonError } from '#lib/server/http.ts';
-import { upstreamStatus } from '#lib/server/proxy.ts';
+import { jsonError, upstreamJsonError } from '#lib/server/http.ts';
 
 const sessionExpired = (): Response =>
 	jsonError(401, SESSION_EXPIRED_CODE, 'Your session has expired');
@@ -52,9 +51,7 @@ export async function POST(event: RequestEvent): Promise<Response> {
 	} catch (err) {
 		// Go unreachable (503) or too slow (504): the session is fine, say so as JSON.
 		if (!isHttpError(err)) throw err;
-		return err.status === 504
-			? jsonError(504, 'upstream_timeout', 'Go API did not respond in time')
-			: jsonError(err.status, 'upstream_unavailable', 'Service temporarily unavailable');
+		return upstreamJsonError(err);
 	}
 	if (!capabilities) return sessionExpired();
 	if (!hasRequiredCapability(capabilities, OPERATOR_SCOPE_PERMISSION)) {
@@ -101,9 +98,7 @@ export async function POST(event: RequestEvent): Promise<Response> {
 		}
 		tenant = payload.data.tenants?.[0];
 	} catch (err) {
-		return upstreamStatus(err) === 504
-			? jsonError(504, 'upstream_timeout', 'Go API did not respond in time')
-			: jsonError(502, 'tenant_lookup_failed', 'Tenant lookup failed');
+		return upstreamJsonError(err);
 	}
 	// The filter is exact-match on the backend; verify rather than trust it, so
 	// a loose/prefix match can never scope the operator onto a different tenant.

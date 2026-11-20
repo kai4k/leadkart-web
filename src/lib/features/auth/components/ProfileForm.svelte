@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { _ } from 'svelte-i18n';
+	import { fieldText, readFailure } from '#lib/utils/form-failure.ts';
 	import { TextField } from '#lib/components/form/index.ts';
 	import { Alert, Button } from '$ui';
 	import { displayName } from '$features/auth/view-models';
@@ -12,12 +13,12 @@
 	 * is a pure renderer over the loaded `profile` + form action
 	 * result.
 	 */
+	type Values = { designation: string; department: string; status_message: string };
 	type FormResult = {
-		values?: { designation: string; department: string; status_message: string };
-		errors?: Record<string, string[] | undefined> | Record<string, string>;
-		bannerError?: string;
-		/** i18n key: outage or rate limit (copy that has no Go code behind it). */
-		formErrorKey?: string;
+		values?: Values;
+		fieldKeys?: Record<string, string>;
+		fieldMessages?: Record<string, string>;
+		formErrorKey?: string | null;
 		success?: boolean;
 	};
 	type Props = { profile: UserDto; form?: FormResult };
@@ -25,19 +26,11 @@
 
 	let loading = $state(false);
 
-	function readError(field: string): string | undefined {
-		const errs = form?.errors;
-		if (!errs) return undefined;
-		const value = (errs as Record<string, unknown>)[field];
-		if (typeof value === 'string') return value;
-		if (Array.isArray(value)) return value[0];
-		return undefined;
-	}
-
+	const failure = $derived(readFailure<Partial<Values>>(form));
 	const fieldErrors = $derived({
-		designation: readError('designation'),
-		department: readError('department'),
-		status_message: readError('status_message')
+		designation: fieldText(failure, 'designation', $_),
+		department: fieldText(failure, 'department', $_),
+		status_message: fieldText(failure, 'status_message', $_)
 	});
 
 	const values = $derived(
@@ -110,8 +103,6 @@
 
 	{#if form?.formErrorKey}
 		<Alert variant="danger">{$_(form.formErrorKey)}</Alert>
-	{:else if form?.bannerError}
-		<Alert variant="danger">{form.bannerError}</Alert>
 	{:else if form?.success}
 		<Alert variant="success">Profile saved.</Alert>
 	{/if}

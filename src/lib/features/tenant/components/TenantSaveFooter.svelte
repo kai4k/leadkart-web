@@ -11,7 +11,7 @@
 	 * stay the enforcers.
 	 */
 	type Props = {
-		form?: { bannerError?: string; formErrorKey?: string; success?: boolean };
+		form?: { formErrorKey?: string | null; success?: boolean };
 		loading: boolean;
 		permission: string;
 		successMessage: string;
@@ -23,8 +23,6 @@
 
 {#if form?.formErrorKey}
 	<Alert variant="danger">{$_(form.formErrorKey)}</Alert>
-{:else if form?.bannerError}
-	<Alert variant="danger">{form.bannerError}</Alert>
 {:else if form?.success}
 	<Alert variant="success">{successMessage}</Alert>
 {/if}

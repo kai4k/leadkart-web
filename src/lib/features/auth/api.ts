@@ -14,17 +14,18 @@
  * go through /api/[...path] proxy which injects Bearer from cookie.
  * The browser never sees access_token or refresh_token.
  *
- * Surface covers authenticated-user flows: logout, change-password, plus
- * profile read/update and session list/revoke.
+ * Surface covers authenticated-user flows: logout, profile read and session list/revoke.
+ * Password change and profile update are form actions (src/routes/(app)/settings/account/*).
  */
 import { api } from '#lib/api/client.ts';
+import { getCsrfToken } from '#lib/api/csrf.ts';
 import {
 	userDtoSchema,
 	listSessionsResponseSchema,
 	capabilitiesSchema,
 	revokeOtherSessionsResponseSchema
 } from './schemas';
-import type { UserDto, SessionDto, UpdateProfileRequest } from './types';
+import type { UserDto, SessionDto } from './types';
 import type { z } from 'zod';
 
 export type Capabilities = z.output<typeof capabilitiesSchema>;
@@ -41,11 +42,7 @@ export type Capabilities = z.output<typeof capabilitiesSchema>;
  * no auth state.
  */
 export async function logout(): Promise<void> {
-	// Read CSRF token from the non-httpOnly cookie for the mutation header
-	const csrf =
-		typeof document !== 'undefined'
-			? (document.cookie.match(/(?:^|; )lk_csrf=([^;]+)/)?.[1] ?? '')
-			: '';
+	const csrf = getCsrfToken();
 	await fetch('/auth/logout', {
 		method: 'POST',
 		headers: {
@@ -98,33 +95,11 @@ export async function confirmEmailChange(
 }
 
 /**
- * Authenticated. The server verifies current_password even with a
- * valid bearer (per security.md "Password change") so a stolen access
- * token can't permanently take over an account.
- */
-export function changePassword(body: {
-	current_password: string;
-	new_password: string;
-}): Promise<void> {
-	return api.post('/v1/auth/change-password', body);
-}
-
-/**
  * Authenticated. Server scopes to the caller's own membership when
  * `membershipId` matches the JWT's `membership_id` claim.
  */
 export function getMyProfile(membershipId: string, signal?: AbortSignal): Promise<UserDto> {
 	return api.get(`/v1/users/${membershipId}`, userDtoSchema, { signal });
-}
-
-/**
- * PATCH the caller's own designation / department / status_message.
- */
-export async function updateMyProfile(
-	membershipId: string,
-	patch: UpdateProfileRequest
-): Promise<void> {
-	await api.patch(`/v1/users/${membershipId}/profile`, patch);
 }
 
 /**

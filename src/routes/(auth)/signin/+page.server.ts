@@ -16,10 +16,11 @@
  *
  * Per ADR: docs/superpowers/specs/2026-05-20-bff-cookie-auth-adr.md
  */
-import { fail, redirect } from '@sveltejs/kit';
+import { redirect } from '@sveltejs/kit';
 import { parseRetryAfter } from '#lib/api/errors.ts';
-import { callGoForAction, goFailureKey } from '#lib/server/form-action.ts';
-import { goAuthFetch, goErrorStatus } from '#lib/server/go.ts';
+import { validationFieldKeys } from '#lib/server/auth-errors.ts';
+import { callGoForAction, failForm, failFromStatus, failOutage } from '#lib/server/form-action.ts';
+import { goAuthFetch } from '#lib/server/go.ts';
 import { establishSession, tokenPairSchema } from '#lib/server/auth-refresh.ts';
 import { safeRedirectPath } from '#lib/server/redirect.ts';
 import { loginRequestSchema } from '$features/auth/schemas';
@@ -31,20 +32,15 @@ export const actions: Actions = {
 		const email = (formData.get('email') ?? '').toString();
 		const password = (formData.get('password') ?? '').toString();
 
+		const values = { email };
+
 		const parsed = loginRequestSchema.safeParse({ email, password });
 		if (!parsed.success) {
-			const flat = parsed.error.flatten().fieldErrors;
-			return fail(422, {
-				email,
-				errors: {
-					email: flat.email?.[0],
-					password: flat.password?.[0]
-				}
-			});
+			return failForm(422, { values, fieldKeys: validationFieldKeys(parsed.error) });
 		}
 
 		const call = await callGoForAction(() => goAuthFetch('/v1/auth/login', { body: parsed.data }));
-		if (!call.ok) return fail(call.status, { email, formError: call.key });
+		if (!call.ok) return failOutage(call, values);
 		const resp = call.resp;
 
 		if (!resp.ok) {
@@ -52,22 +48,22 @@ export const actions: Actions = {
 			// unknown email, wrong password and a malformed email all answer the same
 			// 401 invalid_credentials, so there is one copy for all of them.
 			if (resp.status === 423) {
-				return fail(423, {
-					email,
-					formError: 'auth.errors.accountLocked',
-					retryAfterSeconds: parseRetryAfter(resp.headers.get('retry-after'))
-				});
+				return failForm(
+					423,
+					{ values, formErrorKey: 'auth.errors.accountLocked' },
+					{ retryAfterSeconds: parseRetryAfter(resp.headers.get('retry-after')) }
+				);
 			}
 			if (resp.status === 401) {
-				return fail(401, { email, formError: 'auth.errors.invalidCredentials' });
+				return failForm(401, { values, formErrorKey: 'auth.errors.invalidCredentials' });
 			}
 			// 429 is Go's IP rate limiter (rate_limited + Retry-After).
-			return fail(goErrorStatus(resp), { email, formError: goFailureKey(resp.status) });
+			return failFromStatus(resp, values);
 		}
 
 		const parsedTokens = tokenPairSchema.safeParse(await resp.json().catch(() => null));
 		if (!parsedTokens.success) {
-			return fail(502, { email, formError: 'auth.errors.unexpected' });
+			return failForm(502, { values, formErrorKey: 'auth.errors.unexpected' });
 		}
 		const tokens = parsedTokens.data;
 		establishSession(cookies, tokens);

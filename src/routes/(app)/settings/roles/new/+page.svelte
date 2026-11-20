@@ -7,6 +7,7 @@
 	import { Alert, Breadcrumbs, Button, Card, type BreadcrumbItem } from '$ui';
 	import { NumberInput, TextField } from '$form';
 	import { ROLE_LEVEL_MAX, ROLE_LEVEL_MIN, ROLE_NAME_MAX, ROLE_NAME_MIN } from '$features/roles';
+	import { bannerText, fieldText, readFailure } from '#lib/utils/form-failure.ts';
 	import type { ActionData } from './$types';
 
 	/**
@@ -19,20 +20,11 @@
 	let { form }: { form: ActionData } = $props();
 	let loading = $state(false);
 
-	function err(field: string): string | undefined {
-		const v = (form as { errors?: Record<string, string | string[] | undefined> } | null)?.errors?.[
-			field
-		];
-		if (typeof v === 'string') return v;
-		if (Array.isArray(v)) return v[0];
-		return undefined;
-	}
+	const failure = $derived(readFailure<{ name: string; hierarchy_level: number }>(form));
+	const err = (field: string) => fieldText(failure, field, $_);
 
 	const initial = $derived(
-		(form as { values?: { name: string; hierarchy_level: number } } | null)?.values ?? {
-			name: '',
-			hierarchy_level: 50
-		}
+		failure?.values.name !== undefined ? failure.values : { name: '', hierarchy_level: 50 }
 	);
 
 	let name = $state(untrack(() => initial.name));
@@ -42,10 +34,7 @@
 		hierarchyLevel = initial.hierarchy_level;
 	});
 
-	const bannerError = $derived.by(() => {
-		const f = form as { bannerError?: string; formErrorKey?: string } | null;
-		return f?.formErrorKey ? $_(f.formErrorKey) : (f?.bannerError ?? null);
-	});
+	const bannerError = $derived(bannerText(failure, $_));
 
 	const breadcrumbs: BreadcrumbItem[] = [
 		{ label: 'Settings' },

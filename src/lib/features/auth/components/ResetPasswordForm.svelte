@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
+	import { bannerText, fieldText, readFailure } from '#lib/utils/form-failure.ts';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
@@ -24,17 +25,11 @@
 	let loading = $state(false);
 	const success = $derived(Boolean(form && 'success' in form && form.success));
 
-	const formErrorKey = $derived(
-		form && 'formErrorKey' in form && form.formErrorKey ? form.formErrorKey : null
-	);
-	const formError = $derived(formErrorKey ? $_(formErrorKey) : null);
-
-	const fieldKeys = $derived<{ new_password?: string; confirm?: string }>(
-		form && 'fieldKeys' in form && form.fieldKeys ? form.fieldKeys : {}
-	);
+	const failure = $derived(readFailure(form));
+	const formError = $derived(bannerText(failure, $_));
 	const fieldErrors = $derived({
-		new_password: fieldKeys.new_password ? $_(fieldKeys.new_password) : undefined,
-		confirm: fieldKeys.confirm ? $_(fieldKeys.confirm) : undefined
+		new_password: fieldText(failure, 'new_password', $_),
+		confirm: fieldText(failure, 'confirm', $_)
 	});
 
 	$effect(() => {

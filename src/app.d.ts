@@ -19,6 +19,11 @@ declare global {
 			 * Undefined in (auth) routes and the root layout.
 			 */
 			capabilities?: Capabilities;
+			/**
+			 * The `lk_csrf` double-submit value from the root layout server load (null when there is no
+			 * session). The error page puts it in its sign-out form so signing out works without JS.
+			 */
+			csrfToken?: string | null;
 		}
 		// interface PageState {}
 		// interface Platform {}

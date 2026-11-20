@@ -65,7 +65,7 @@ describe('reset-password action: Go codes -> messages', () => {
 	it('invalid_body -> generic error, no field', async () => {
 		const r = await run(400, 'invalid_body');
 		expect(r.data.formErrorKey).toBe('auth.errors.unexpected');
-		expect(r.data.fieldKeys).toBeUndefined();
+		expect(r.data.fieldKeys).toEqual({});
 	});
 });
 

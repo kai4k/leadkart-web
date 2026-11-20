@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
+	import { bannerText, fieldText, readFailure } from '#lib/utils/form-failure.ts';
 	import { enhance } from '$app/forms';
 	import { Icon, Lock } from '#lib/icons/index.ts';
 	import { Alert, AuthCard, Button, Logo } from '#lib/components/ui/index.ts';
@@ -21,14 +22,10 @@
 	let loading = $state(false);
 
 	const submitted = $derived(Boolean(form && 'submitted' in form && form.submitted));
-	const fieldError = $derived(
-		form && 'fieldError' in form && form.fieldError ? form.fieldError : null
-	);
-	const formErrorKey = $derived(
-		form && 'formError' in form && form.formError ? form.formError : null
-	);
-	const formError = $derived(formErrorKey ? $_(formErrorKey) : null);
-	const initialEmail = $derived(form && 'email' in form ? form.email : '');
+	const failure = $derived(readFailure<{ email?: string }>(form));
+	const fieldError = $derived(fieldText(failure, 'email', $_) ?? null);
+	const formError = $derived(bannerText(failure, $_));
+	const initialEmail = $derived(failure?.values.email ?? '');
 </script>
 
 <AuthCard>

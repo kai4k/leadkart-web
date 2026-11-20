@@ -5,6 +5,7 @@
  * not something the user can fix, so callers show the generic message.
  */
 import type { Cookies } from '@sveltejs/kit';
+import type { z } from 'zod';
 import { changePasswordSchema } from '#lib/features/auth/schemas.ts';
 import { goErrorStatus, goFetch, readGoError } from './go.ts';
 import { callGoForAction, goFailureKey } from './form-action.ts';
@@ -25,12 +26,45 @@ export function passwordErrorKey(
 	return null;
 }
 
+/**
+ * The i18n key for a failed pre-auth / credential field, by what the schema objected to. The same
+ * table serves sign-in, forgot-password and change-email, so "email too long" is worded once.
+ */
+const FIELD_ISSUE_KEYS: Record<string, Record<string, string>> = {
+	email: {
+		too_small: 'auth.errors.emailRequired',
+		too_big: 'auth.errors.emailTooLong',
+		invalid_format: 'auth.changeEmail.errors.invalid'
+	},
+	password: {
+		too_small: 'auth.errors.passwordRequired',
+		too_big: 'auth.errors.passwordTooLong'
+	}
+};
+
+function issueKey(field: string, code: string): string {
+	return FIELD_ISSUE_KEYS[field]?.[code] ?? 'auth.errors.validation';
+}
+
+/** `field -> i18n key` for the first issue of each failed field of an object request schema. */
+export function validationFieldKeys(error: z.ZodError): Record<string, string> {
+	const out: Record<string, string> = {};
+	for (const issue of error.issues) {
+		const field = String(issue.path[0] ?? '');
+		if (field && !(field in out)) out[field] = issueKey(field, issue.code);
+	}
+	return out;
+}
+
+/** The same for a bare field schema (`lookupEmailField`): `{ [field]: key }` from its first issue. */
+export function fieldValidationKeys(field: string, error: z.ZodError): Record<string, string> {
+	return { [field]: issueKey(field, error.issues[0]?.code ?? '') };
+}
+
+/** What `failForm` takes beyond the status: the field keys and the banner key. */
 export type PasswordFormFailure = {
 	status: number;
-	body: {
-		fieldKeys?: Partial<Record<'current' | 'new' | 'confirm', string>>;
-		formErrorKey?: string;
-	};
+	parts: { fieldKeys?: Record<string, string>; formErrorKey?: string };
 };
 
 /**
@@ -47,7 +81,7 @@ export async function changePasswordViaGo(
 		return {
 			ok: false,
 			status: 422,
-			body: { fieldKeys: { confirm: 'account.security.changePassword.errors.mismatch' } }
+			parts: { fieldKeys: { confirm: 'account.security.changePassword.errors.mismatch' } }
 		};
 	}
 
@@ -56,18 +90,24 @@ export async function changePasswordViaGo(
 		new_password: input.next
 	});
 	if (!parsed.success) {
-		const flat = parsed.error.flatten().fieldErrors;
+		const tooLong = (field: string) =>
+			parsed.error.issues.some((i) => i.path[0] === field && i.code === 'too_big');
+		const failed = new Set(parsed.error.issues.map((i) => i.path[0]));
 		return {
 			ok: false,
 			status: 422,
-			body: {
+			parts: {
 				fieldKeys: {
-					current: flat.current_password?.[0]
-						? 'account.security.changePassword.currentPassword'
-						: undefined,
-					new: flat.new_password?.[0]
-						? 'account.security.changePassword.newPasswordHint'
-						: undefined
+					...(failed.has('current_password') && {
+						current: tooLong('current_password')
+							? 'auth.errors.passwordTooLong'
+							: 'account.security.changePassword.currentPassword'
+					}),
+					...(failed.has('new_password') && {
+						new: tooLong('new_password')
+							? 'auth.errors.passwordTooLong'
+							: 'account.security.changePassword.newPasswordHint'
+					})
 				}
 			}
 		};
@@ -81,17 +121,17 @@ export async function changePasswordViaGo(
 			scoped: false
 		})
 	);
-	if (!call.ok) return { ok: false, status: call.status, body: { formErrorKey: call.key } };
+	if (!call.ok) return { ok: false, status: call.status, parts: { formErrorKey: call.key } };
 	const resp = call.resp;
 	if (resp.ok) return { ok: true };
 
 	const mapped = passwordErrorKey(resp.status, (await readGoError(resp)).error);
 	if (mapped) {
-		return { ok: false, status: resp.status, body: { fieldKeys: { [mapped.field]: mapped.key } } };
+		return { ok: false, status: resp.status, parts: { fieldKeys: { [mapped.field]: mapped.key } } };
 	}
 	return {
 		ok: false,
 		status: goErrorStatus(resp),
-		body: { formErrorKey: goFailureKey(resp.status) }
+		parts: { formErrorKey: goFailureKey(resp.status) }
 	};
 }

@@ -12,20 +12,22 @@
  * On success, SvelteKit auto-reruns the load to surface the new values
  * without a manual invalidate() call.
  */
-import { fail, redirect } from '@sveltejs/kit';
-import { callGoForAction, failFromGo } from '#lib/server/form-action.ts';
+import { redirect } from '@sveltejs/kit';
+import {
+	callGoForAction,
+	failForm,
+	failFromGo,
+	failOutage,
+	zodFieldMessages
+} from '#lib/server/form-action.ts';
 import { goFetch, readGoJson } from '#lib/server/go.ts';
 import { updateProfileRequestSchema } from '$features/auth/schemas';
-import { decodeJwtPrincipal } from '$api/jwt';
-import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
+import { ownPrincipal } from '#lib/server/principal.ts';
 import type { UserDto } from '$features/auth/types';
 import type { Actions, PageServerLoad } from './$types';
 
-function getMembershipId(cookies: Parameters<typeof goFetch>[0]): string {
-	const access = cookies.get(ACCESS_COOKIE());
-	if (!access) throw redirect(303, '/signin');
-	return decodeJwtPrincipal(access).membershipId;
-}
+const getMembershipId = (cookies: Parameters<typeof goFetch>[0]): string =>
+	ownPrincipal(cookies).membershipId;
 
 export const load: PageServerLoad = async ({ cookies }) => {
 	const membershipId = getMembershipId(cookies);
@@ -49,10 +51,7 @@ export const actions: Actions = {
 
 		const parsed = updateProfileRequestSchema.safeParse(patch);
 		if (!parsed.success) {
-			return fail(422, {
-				values: patch,
-				errors: parsed.error.flatten().fieldErrors as Record<string, string[] | undefined>
-			});
+			return failForm(422, { values: patch, fieldMessages: zodFieldMessages(parsed.error) });
 		}
 
 		const call = await callGoForAction(() =>
@@ -62,9 +61,9 @@ export const actions: Actions = {
 				scoped: false
 			})
 		);
-		if (!call.ok) return fail(call.status, { values: patch, formErrorKey: call.key });
+		if (!call.ok) return failOutage(call, patch);
 
-		if (!call.resp.ok) return failFromGo(call.resp, patch, { fallback: 'Save failed' });
+		if (!call.resp.ok) return failFromGo(call.resp, patch);
 
 		return { success: true };
 	}

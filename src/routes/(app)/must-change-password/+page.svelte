@@ -3,6 +3,7 @@
 	import { enhance } from '$app/forms';
 	import { Alert, Button, Card } from '$ui';
 	import { PasswordField } from '#lib/components/form/index.ts';
+	import { bannerText, fieldText, readFailure } from '#lib/utils/form-failure.ts';
 	import type { ActionData } from './$types';
 
 	/**
@@ -15,18 +16,12 @@
 	let { form }: { form: ActionData } = $props();
 	let loading = $state(false);
 
-	const formErrorKey = $derived(
-		form && 'formErrorKey' in form && form.formErrorKey ? form.formErrorKey : null
-	);
-	const formError = $derived(formErrorKey ? $_(formErrorKey) : null);
-
-	const fieldKeys = $derived<{ current?: string; new?: string; confirm?: string }>(
-		form && 'fieldKeys' in form && form.fieldKeys ? form.fieldKeys : {}
-	);
+	const failure = $derived(readFailure(form));
+	const formError = $derived(bannerText(failure, $_));
 	const fieldErrors = $derived({
-		current: fieldKeys.current ? $_(fieldKeys.current) : undefined,
-		new: fieldKeys.new ? $_(fieldKeys.new) : undefined,
-		confirm: fieldKeys.confirm ? $_(fieldKeys.confirm) : undefined
+		current: fieldText(failure, 'current', $_),
+		new: fieldText(failure, 'new', $_),
+		confirm: fieldText(failure, 'confirm', $_)
 	});
 </script>
 

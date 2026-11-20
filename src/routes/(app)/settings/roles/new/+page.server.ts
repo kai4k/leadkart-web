@@ -4,13 +4,15 @@
  * On success, redirects to the new role's detail page so the operator
  * can immediately assign permissions.
  */
-import { fail, redirect } from '@sveltejs/kit';
+import { redirect } from '@sveltejs/kit';
 import {
 	authoriseAction,
 	callGoForAction,
+	failForm,
 	failFromGo,
-	goFailureKey,
-	UPSTREAM_UNAVAILABLE_KEY
+	failOutage,
+	UPSTREAM_UNAVAILABLE_KEY,
+	zodFieldMessages
 } from '#lib/server/form-action.ts';
 import { goFetch, readGoJson } from '#lib/server/go.ts';
 import { createRoleRequestSchema } from '$features/roles/schemas';
@@ -35,16 +37,13 @@ export const actions: Actions = {
 
 		const parsed = createRoleRequestSchema.safeParse(payload);
 		if (!parsed.success) {
-			return fail(422, {
-				values: payload,
-				errors: parsed.error.flatten().fieldErrors as Record<string, string[] | undefined>
-			});
+			return failForm(422, { values: payload, fieldMessages: zodFieldMessages(parsed.error) });
 		}
 
 		const call = await callGoForAction(() =>
 			goFetch(cookies, '/v1/roles', { method: 'POST', body: JSON.stringify(parsed.data) })
 		);
-		if (!call.ok) return fail(call.status, { values: payload, formErrorKey: call.key });
+		if (!call.ok) return failOutage(call, payload);
 
 		if (call.resp.ok) {
 			// The body read is a Go call too (a stalled stream): it keeps the form like the call does.
@@ -52,12 +51,13 @@ export const actions: Actions = {
 			try {
 				body = await readGoJson<CreateRoleResponse>(call.resp);
 			} catch {
-				return fail(502, { values: payload, formErrorKey: UPSTREAM_UNAVAILABLE_KEY });
+				return failForm(502, { values: payload, formErrorKey: UPSTREAM_UNAVAILABLE_KEY });
 			}
-			if (!body?.role_id) return fail(502, { values: payload, formErrorKey: goFailureKey(502) });
+			if (!body?.role_id)
+				return failForm(502, { values: payload, formErrorKey: 'auth.errors.unexpected' });
 			throw redirect(303, `/settings/roles/${encodeURIComponent(body.role_id)}`);
 		}
 
-		return failFromGo(call.resp, payload, { fallback: 'Create failed' });
+		return failFromGo(call.resp, payload);
 	}
 };

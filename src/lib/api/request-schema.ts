@@ -38,10 +38,25 @@ export const lookupEmailField = z
 	.min(1, 'Email is required')
 	.max(EMAIL_MAX_LENGTH, 'Email is too long');
 
+/**
+ * Ceilings on what a PRE-LOGIN (or any password-bearing) request may carry. Without them a body up
+ * to the 512 KB request limit would reach Go's password hasher. Plain lengths, no pattern.
+ */
+const PASSWORD_MAX_LENGTH = 1024;
+const TOKEN_MAX_LENGTH = 512;
+
+/** The sign-in password (and any "current password"): present, and not absurdly long. Nothing else is Go's call. */
+export const currentPasswordField = (requiredMessage = 'Password is required') =>
+	z.string().min(1, requiredMessage).max(PASSWORD_MAX_LENGTH, 'Password is too long');
+
+/** An emailed / URL token (password reset, email change): present, and at most 512 characters. */
+export const tokenField = z.string().min(1).max(TOKEN_MAX_LENGTH);
+
 /** The contract's password floor (identical for change-password, create-user and register-tenant). */
 const PASSWORD_MIN_LENGTH = ChangePasswordRequest.shape.new_password.minLength ?? 12;
 
 /** A NEW password a user picks. (The current/sign-in password is only checked for presence.) */
 export const newPasswordField = z
 	.string()
-	.min(PASSWORD_MIN_LENGTH, `Password must be at least ${PASSWORD_MIN_LENGTH} characters`);
+	.min(PASSWORD_MIN_LENGTH, `Password must be at least ${PASSWORD_MIN_LENGTH} characters`)
+	.max(PASSWORD_MAX_LENGTH, 'Password is too long');

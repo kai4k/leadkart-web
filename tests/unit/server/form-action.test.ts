@@ -6,7 +6,13 @@ const readOperatorScope = vi.hoisted(() => vi.fn(() => ({ state: 'none' }) as { 
 vi.mock('#lib/server/capabilities.ts', () => ({ loadCapabilities }));
 vi.mock('#lib/server/scope.ts', () => ({ readOperatorScope }));
 
-import { authoriseAction, callGoForAction } from '#lib/server/form-action.ts';
+import {
+	authoriseAction,
+	callGoForAction,
+	failForm,
+	zodFieldMessages
+} from '#lib/server/form-action.ts';
+import { z } from 'zod';
 import { P } from '#lib/features/auth/permissions.ts';
 import { caps } from '../helpers/capability-personas.ts';
 import { upstreamStatus } from '#lib/server/proxy.ts';
@@ -40,6 +46,35 @@ describe('callGoForAction', () => {
 		expect(r).toEqual({ ok: false, status: 503, key: 'auth.errors.upstreamUnavailable' });
 	});
 
+	it('rethrows a programming error: it is not an outage and must reach the logger', async () => {
+		await expect(
+			callGoForAction(() =>
+				Promise.reject(new TypeError("Cannot read properties of undefined (reading 'x')"))
+			)
+		).rejects.toBeInstanceOf(TypeError);
+		await expect(callGoForAction(() => Promise.reject(new RangeError('bad')))).rejects.toThrow(
+			'bad'
+		);
+	});
+
+	it('rethrows an HttpError that is not a bad-gateway family status', async () => {
+		await expect(callGoForAction(() => Promise.reject(error(500, 'boom')))).rejects.toMatchObject({
+			status: 500
+		});
+	});
+
+	it('maps a refused / reset connection (fetch failed with a cause code) and 502 / 504 HttpErrors', async () => {
+		const refused = new TypeError('fetch failed', { cause: { code: 'ECONNREFUSED' } });
+		expect(await callGoForAction(() => Promise.reject(refused))).toMatchObject({
+			ok: false,
+			status: 502
+		});
+		expect(await callGoForAction(() => Promise.reject(error(504, 'x')))).toMatchObject({
+			ok: false,
+			status: 504
+		});
+	});
+
 	it('lets a redirect (session over) through', async () => {
 		await expect(
 			callGoForAction(() => Promise.reject(redirect(303, '/signin')))
@@ -66,12 +101,12 @@ describe('authoriseAction', () => {
 		).toBeNull();
 	});
 
-	it('refuses with a 403 that keeps the values and speaks the copy map line, never Go text', async () => {
+	it('refuses with a 403 that keeps the values and speaks an i18n key, never Go text', async () => {
 		loadCapabilities.mockResolvedValue(caps([P.identityTenantsView]));
 		const r = await authoriseAction(cookies, P.identityTenantsUpdate, { a: 1 });
 		expect(r).toMatchObject({
 			status: 403,
-			data: { values: { a: 1 }, bannerError: "You don't have permission to do this." }
+			data: { values: { a: 1 }, formErrorKey: 'auth.errors.forbidden' }
 		});
 	});
 
@@ -104,10 +139,72 @@ describe('authoriseAction', () => {
 		});
 	});
 
+	it('rethrows a programming error: it is not an outage and must reach the logger', async () => {
+		await expect(
+			callGoForAction(() =>
+				Promise.reject(new TypeError("Cannot read properties of undefined (reading 'x')"))
+			)
+		).rejects.toBeInstanceOf(TypeError);
+		await expect(callGoForAction(() => Promise.reject(new RangeError('bad')))).rejects.toThrow(
+			'bad'
+		);
+	});
+
+	it('rethrows an HttpError that is not a bad-gateway family status', async () => {
+		await expect(callGoForAction(() => Promise.reject(error(500, 'boom')))).rejects.toMatchObject({
+			status: 500
+		});
+	});
+
+	it('maps a refused / reset connection (fetch failed with a cause code) and 502 / 504 HttpErrors', async () => {
+		const refused = new TypeError('fetch failed', { cause: { code: 'ECONNREFUSED' } });
+		expect(await callGoForAction(() => Promise.reject(refused))).toMatchObject({
+			ok: false,
+			status: 502
+		});
+		expect(await callGoForAction(() => Promise.reject(error(504, 'x')))).toMatchObject({
+			ok: false,
+			status: 504
+		});
+	});
+
 	it('lets a redirect (session over) through', async () => {
 		loadCapabilities.mockImplementation(() => Promise.reject(redirect(303, '/signin')));
 		await expect(authoriseAction(cookies, P.identityTenantsUpdate, {})).rejects.toMatchObject({
 			status: 303
 		});
+	});
+});
+
+describe('failForm', () => {
+	it('is always { values, fieldKeys, fieldMessages, formErrorKey }, defaults filled', () => {
+		expect(failForm(422, {})).toMatchObject({
+			status: 422,
+			data: { values: {}, fieldKeys: {}, fieldMessages: {}, formErrorKey: null }
+		});
+	});
+
+	it('carries the parts and the extra facts a page needs', () => {
+		const r = failForm(
+			423,
+			{ values: { email: 'a@b.co' }, fieldKeys: { email: 'k' }, formErrorKey: 'banner' },
+			{ retryAfterSeconds: 9 }
+		);
+		expect(r.data).toEqual({
+			values: { email: 'a@b.co' },
+			fieldKeys: { email: 'k' },
+			fieldMessages: {},
+			formErrorKey: 'banner',
+			retryAfterSeconds: 9
+		});
+	});
+});
+
+describe('zodFieldMessages', () => {
+	it('is the first message per (dotted) field', () => {
+		const r = z
+			.object({ a: z.string().min(2, 'a short'), b: z.object({ c: z.number('c nan') }) })
+			.safeParse({ a: '', b: { c: 'x' } });
+		expect(r.success ? {} : zodFieldMessages(r.error)).toEqual({ a: 'a short', 'b.c': 'c nan' });
 	});
 });

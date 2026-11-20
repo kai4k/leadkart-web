@@ -32,7 +32,7 @@ import { SESSION_EXPIRED_CODE } from '#lib/api/errors.ts';
 import { SCOPE_EXPIRED_MESSAGE } from '#lib/api/scope-header.ts';
 import { readOperatorScope } from '#lib/server/scope.ts';
 import { assertCsrf } from '#lib/server/csrf.ts';
-import { jsonError } from '#lib/server/http.ts';
+import { jsonError, upstreamJsonError } from '#lib/server/http.ts';
 import {
 	buildUpstreamUrl,
 	isTokenEndpoint,
@@ -54,9 +54,7 @@ const REDIRECTABLE_METHODS = new Set(['GET', 'HEAD']);
 function upstreamErrorResponse(err: unknown, method: string, path: string): Response {
 	const status = upstreamStatus(err);
 	console.warn('[bff-proxy]', status, method, `/${path}`);
-	return status === 504
-		? jsonError(504, 'upstream_timeout', 'Go API did not respond in time')
-		: jsonError(502, 'upstream_unavailable', 'Go API is unreachable');
+	return upstreamJsonError(err);
 }
 
 async function proxy(

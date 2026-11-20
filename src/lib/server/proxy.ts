@@ -161,15 +161,46 @@ export async function goAuthFetch(
 			body: init.body === undefined ? undefined : JSON.stringify(init.body)
 		});
 		// A status that cannot carry a body (redirects arrive as-is under redirect: 'manual').
-		const text = NULL_BODY_STATUS.has(resp.status) ? null : await resp.text();
-		return new Response(text, {
-			status: resp.status,
-			statusText: resp.statusText,
-			headers: resp.headers
-		});
+		const text = NULL_BODY_STATUS.has(resp.status) ? null : await readCapped(resp);
+		// The re-wrapped body is decoded text of a different length: these two no longer describe it.
+		const headers = new Headers(resp.headers);
+		headers.delete('content-encoding');
+		headers.delete('content-length');
+		return new Response(text, { status: resp.status, statusText: resp.statusText, headers });
 	} finally {
 		timeout.headersReceived();
 	}
+}
+
+/** What a pre-login answer may weigh: these are small token / error envelopes. */
+export const AUTH_BODY_LIMIT_BYTES = 64 * 1024;
+
+/** An upstream answer larger than the pre-login cap: a bad gateway, not a client problem. */
+class UpstreamBodyTooLarge extends Error {
+	constructor() {
+		super('Upstream response body exceeds the pre-login limit');
+		this.name = 'UpstreamBodyTooLarge';
+	}
+}
+
+/** Read through the body reader; past the cap the stream is cancelled and the call fails. */
+async function readCapped(resp: Response): Promise<string> {
+	if (!resp.body) return '';
+	const reader = resp.body.getReader();
+	const decoder = new TextDecoder();
+	let received = 0;
+	let text = '';
+	for (;;) {
+		const { done, value } = await reader.read();
+		if (done) break;
+		received += value.byteLength;
+		if (received > AUTH_BODY_LIMIT_BYTES) {
+			await reader.cancel().catch(() => {});
+			throw new UpstreamBodyTooLarge();
+		}
+		text += decoder.decode(value, { stream: true });
+	}
+	return text + decoder.decode();
 }
 
 const NULL_BODY_STATUS = new Set([101, 204, 205, 304]);
@@ -196,6 +227,18 @@ export function isUpstreamTimeout(err: unknown): boolean {
 	if (err instanceof DOMException && err.name === 'TimeoutError') return true;
 	if (!(err instanceof TypeError)) return false;
 	return (err.cause as { code?: unknown } | undefined)?.code === 'UND_ERR_BODY_TIMEOUT';
+}
+
+/**
+ * True for a failure that IS the upstream's (or the network's): a timeout, a fetch that could not
+ * connect (undici's `TypeError('fetch failed')`, or any TypeError carrying a connection error code),
+ * or an oversized pre-login body. A programming error (a TypeError from our own code) is not one.
+ */
+export function isUpstreamFailure(err: unknown): boolean {
+	if (isUpstreamTimeout(err) || err instanceof UpstreamBodyTooLarge) return true;
+	if (!(err instanceof TypeError)) return false;
+	if (err.message === 'fetch failed') return true;
+	return typeof (err.cause as { code?: unknown } | undefined)?.code === 'string';
 }
 
 /** The status a failed upstream call is reported as: 504 when Go was too slow, else 502. The one mapping. */

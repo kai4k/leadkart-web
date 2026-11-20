@@ -8,9 +8,15 @@
  * Go's PATCH routes are full-replace, so the gateway (`features/tenant/server.ts`) always sends
  * every field; field errors come back keyed by field (nested keys dotted) and land on the form.
  */
-import { fail, type Cookies } from '@sveltejs/kit';
+import type { Cookies } from '@sveltejs/kit';
 import { P } from '#lib/features/auth/permissions.ts';
-import { authoriseAction, failFromGo } from '#lib/server/form-action.ts';
+import {
+	authoriseAction,
+	failForm,
+	failFromGo,
+	failOutage,
+	zodFieldMessages
+} from '#lib/server/form-action.ts';
 import {
 	ownTenantId,
 	patchTenant,
@@ -41,14 +47,11 @@ export async function saveTenantSection<S extends TenantSection>({
 
 	const parsed = TENANT_SECTIONS[section].schema.safeParse(payload);
 	if (!parsed.success) {
-		return fail(422, {
-			values: payload,
-			errors: parsed.error.flatten().fieldErrors as Record<string, string[] | undefined>
-		});
+		return failForm(422, { values: payload, fieldMessages: zodFieldMessages(parsed.error) });
 	}
 
 	const call = await patchTenant(cookies, ownTenantId(cookies), section, payload);
-	if (!call.ok) return fail(call.status, { values: payload, formErrorKey: call.key });
+	if (!call.ok) return failOutage(call, payload);
 	if (call.resp.ok) return { success: true as const };
-	return failFromGo(call.resp, payload, { fallback: 'Save failed' });
+	return failFromGo(call.resp, payload);
 }

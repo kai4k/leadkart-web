@@ -9,12 +9,11 @@
  *
  * Both call Go directly via goFetch (cookie → Bearer).
  */
-import { fail } from '@sveltejs/kit';
 import { formEmailField } from '#lib/api/request-schema.ts';
-import { changePasswordViaGo } from '#lib/server/auth-errors.ts';
-import { callGoForAction, goFailureKey } from '#lib/server/form-action.ts';
+import { changePasswordViaGo, fieldValidationKeys } from '#lib/server/auth-errors.ts';
+import { callGoForAction, failForm, failFromStatus, failOutage } from '#lib/server/form-action.ts';
 import { setMustChangePassword } from '#lib/server/cookies.ts';
-import { goErrorStatus, goFetch, readGoError } from '#lib/server/go.ts';
+import { goFetch, readGoError } from '#lib/server/go.ts';
 import type { Actions } from './$types';
 
 export const actions: Actions = {
@@ -26,7 +25,7 @@ export const actions: Actions = {
 			confirm: (formData.get('confirm_password') ?? '').toString()
 		});
 		if (!result.ok) {
-			return fail(result.status, { which: 'changePassword' as const, ...result.body });
+			return failForm(result.status, result.parts, { which: 'changePassword' as const });
 		}
 		setMustChangePassword(cookies, false);
 		return { which: 'changePassword' as const, success: true };
@@ -36,13 +35,16 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const newEmail = (formData.get('new_email') ?? '').toString();
 
+		const values = { email: newEmail };
+		const which = { which: 'changeEmail' as const };
+
 		const parsed = formEmailField.safeParse(newEmail);
 		if (!parsed.success) {
-			return fail(422, {
-				which: 'changeEmail' as const,
-				email: newEmail,
-				fieldError: parsed.error.issues[0]?.message ?? 'Invalid email'
-			});
+			return failForm(
+				422,
+				{ values, fieldKeys: fieldValidationKeys('email', parsed.error) },
+				which
+			);
 		}
 
 		const call = await callGoForAction(() =>
@@ -52,13 +54,7 @@ export const actions: Actions = {
 				scoped: false
 			})
 		);
-		if (!call.ok) {
-			return fail(call.status, {
-				which: 'changeEmail' as const,
-				email: newEmail,
-				formErrorKey: call.key
-			});
-		}
+		if (!call.ok) return failOutage(call, values, which);
 		const resp = call.resp;
 
 		if (resp.ok || resp.status === 204) {
@@ -69,16 +65,12 @@ export const actions: Actions = {
 		// Go: 400 invalid_email. A taken or rejected address collapses to 204 there
 		// (anti-enumeration), so there is no 409 to read.
 		if (resp.status === 400 && body.error === 'invalid_email') {
-			return fail(400, {
-				which: 'changeEmail' as const,
-				email: newEmail,
-				fieldErrorKey: 'auth.changeEmail.errors.invalid'
-			});
+			return failForm(
+				400,
+				{ values, fieldKeys: { email: 'auth.changeEmail.errors.invalid' } },
+				which
+			);
 		}
-		return fail(goErrorStatus(resp), {
-			which: 'changeEmail' as const,
-			email: newEmail,
-			formErrorKey: goFailureKey(resp.status)
-		});
+		return failFromStatus(resp, values, which);
 	}
 };

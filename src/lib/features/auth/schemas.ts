@@ -9,7 +9,12 @@ import {
 	UpdateUserProfileRequest,
 	UserDto
 } from '#lib/api/generated/index.ts';
-import { lookupEmailField, newPasswordField } from '#lib/api/request-schema.ts';
+import {
+	currentPasswordField,
+	lookupEmailField,
+	newPasswordField,
+	tokenField
+} from '#lib/api/request-schema.ts';
 
 /**
  * CapabilitiesDto — GET /v1/auth/me/capabilities, straight from the generated
@@ -31,8 +36,11 @@ export const capabilitiesSchema = CapabilitiesDto;
 
 export const loginRequestSchema = LoginRequest.pick({ email: true, password: true }).extend({
 	email: lookupEmailField,
-	password: z.string().min(1, 'Password is required')
+	password: currentPasswordField()
 });
+
+/** The confirm-email-change BFF body: just the emailed token, bounded. */
+export const confirmEmailChangeBodySchema = z.object({ token: tokenField }).strict();
 
 /**
  * Change password (authenticated). Length floor mirrors the generated
@@ -40,7 +48,7 @@ export const loginRequestSchema = LoginRequest.pick({ email: true, password: tru
  * enforced server-side.
  */
 export const changePasswordSchema = ChangePasswordRequest.extend({
-	current_password: z.string().min(1, 'Current password is required'),
+	current_password: currentPasswordField('Current password is required'),
 	new_password: newPasswordField
 });
 

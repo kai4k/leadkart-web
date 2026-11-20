@@ -39,7 +39,10 @@ describe('create-role action authorisation', () => {
 		});
 		await expect(run()).resolves.toMatchObject({
 			status: 403,
-			data: { values: { name: 'Auditor', hierarchy_level: 5 }, bannerError: expect.any(String) }
+			data: {
+				values: { name: 'Auditor', hierarchy_level: 5 },
+				formErrorKey: 'auth.errors.forbidden'
+			}
 		});
 		expect(goFetch).not.toHaveBeenCalled();
 	});

@@ -5,6 +5,7 @@ vi.mock('#lib/api/jwt', () => ({ decodeJwtPrincipal: () => ({ membershipId: 'm1'
 const capabilities = vi.hoisted(() => ({ loadCapabilities: vi.fn() }));
 vi.mock('#lib/server/capabilities.ts', () => capabilities);
 
+import { failFromGo } from '#lib/server/form-action.ts';
 import { readGoFailure } from '#lib/server/go.ts';
 import { actions as profileActions } from '../../../src/routes/(app)/settings/account/profile/+page.server.ts';
 import { actions as newRoleActions } from '../../../src/routes/(app)/settings/roles/new/+page.server.ts';
@@ -21,31 +22,16 @@ const goError = (status: number, body: Record<string, unknown>) =>
 afterEach(() => vi.unstubAllGlobals());
 
 describe('readGoFailure', () => {
-	it("never returns Go's text: a code with allowlisted copy gets it, any other code the generic line", async () => {
-		const known = await readGoFailure(
-			await goError(409, { error: 'role_system_default', detail: RAW })
-		);
-		expect(known.message).toBe("Built-in roles can't be changed or deleted.");
-		const unknown = await readGoFailure(await goError(409, { error: 'new_code', detail: RAW }));
-		expect(unknown.message).toBe(
-			'This change conflicts with the current state. Refresh and try again.'
-		);
-		const forbidden = await readGoFailure(await goError(403, { error: 'weird', detail: RAW }));
-		expect(forbidden.message).toBe("You don't have permission to do this.");
-		expect(JSON.stringify([known, unknown, forbidden])).not.toContain('pq:');
-	});
-
-	it("the caller's line for the status wins over the generic one; fields keep Go's per-field text", async () => {
+	it("returns the status and Go's per-field text, and nothing else: Go's own text never leaves", async () => {
 		const r = await readGoFailure(
-			await goError(422, { error: 'validation_failed', errors: { name: ['name is taken'] } }),
-			{ status: { 422: 'Fix the form.' } }
+			await goError(422, {
+				error: 'validation_failed',
+				detail: RAW,
+				errors: { name: ['name is taken'] }
+			})
 		);
-		expect(r.status).toBe(422);
-		expect(r.fields).toEqual({ name: 'name is taken' });
-		const own = await readGoFailure(await goError(404, { error: 'gone', detail: RAW }), {
-			status: { 404: 'That role was deleted.' }
-		});
-		expect(own.message).toBe('That role was deleted.');
+		expect(r).toEqual({ status: 422, fields: { name: 'name is taken' } });
+		expect(JSON.stringify(r)).not.toContain('pq:');
 	});
 
 	it('maps an unfollowed 3xx to 502 like goErrorStatus', async () => {
@@ -54,10 +40,45 @@ describe('readGoFailure', () => {
 	});
 });
 
+describe('failFromGo: one banner KEY per status class, never English', () => {
+	it.each([
+		[403, 'forbidden', 'auth.errors.forbidden'],
+		[404, 'gone', 'auth.errors.notFound'],
+		[409, 'new_code', 'auth.errors.conflict'],
+		[429, 'rate_limited', 'auth.errors.rateLimited'],
+		[422, 'whatever', 'auth.errors.validation'],
+		[500, 'internal_error', 'auth.errors.unexpected']
+	])('%i -> %s', async (status, error, key) => {
+		const r = (await failFromGo(await goError(status, { error, detail: RAW }), { a: 1 })) as {
+			status: number;
+			data: Record<string, unknown>;
+		};
+		expect(r.status).toBe(status);
+		expect(r.data).toEqual({
+			values: { a: 1 },
+			fieldKeys: {},
+			fieldMessages: {},
+			formErrorKey: key
+		});
+		expect(JSON.stringify(r)).not.toContain('pq:');
+	});
+
+	it("Go's per-field text goes to fieldMessages with no banner", async () => {
+		const r = (await failFromGo(
+			await goError(422, { error: 'validation_failed', errors: { name: ['too long'] } }),
+			{ a: 1 }
+		)) as { data: Record<string, unknown> };
+		expect(r.data).toMatchObject({ fieldMessages: { name: 'too long' }, formErrorKey: null });
+	});
+});
+
 describe('actions that used to print Go detail raw', () => {
 	const cookies = (values: Record<string, string>) =>
 		({ get: (n: string) => values[n], set: vi.fn(), delete: vi.fn() }) as never;
-	type Fail = { status: number; data: { bannerError?: string; errors?: Record<string, unknown> } };
+	type Fail = {
+		status: number;
+		data: { formErrorKey?: string | null; fieldMessages?: Record<string, unknown> };
+	};
 
 	it('profile: a Go 500 with raw detail shows a generic banner, never the detail', async () => {
 		vi.stubGlobal(
@@ -72,8 +93,8 @@ describe('actions that used to print Go detail raw', () => {
 			cookies: cookies({ lk_access: 'tok' })
 		} as never)) as Fail;
 		expect(r.status).toBe(500);
-		expect(r.data.bannerError).toBeTruthy();
-		expect(r.data.bannerError).not.toContain('pq:');
+		expect(r.data.formErrorKey).toBe('auth.errors.unexpected');
+		expect(JSON.stringify(r)).not.toContain('pq:');
 	});
 
 	it('profile: blank fields are sent as empty strings, never omitted (Go replaces the whole profile)', async () => {
@@ -107,10 +128,10 @@ describe('actions that used to print Go detail raw', () => {
 			cookies: cookies({ lk_access: 'tok' })
 		} as never)) as Fail;
 		expect(r.status).toBe(422);
-		expect(r.data.errors).toEqual({ designation: 'too long' });
+		expect(r.data.fieldMessages).toEqual({ designation: 'too long' });
 	});
 
-	it('new role: a 409 with raw detail shows the generic conflict line', async () => {
+	it('new role: a 409 with raw detail shows the conflict key', async () => {
 		capabilities.loadCapabilities.mockResolvedValue({
 			is_platform: false,
 			is_super_user: true,
@@ -129,12 +150,10 @@ describe('actions that used to print Go detail raw', () => {
 			cookies: cookies({ lk_access: 'tok' })
 		} as never)) as Fail;
 		expect(r.status).toBe(409);
-		expect(r.data.bannerError).toBe(
-			'This change conflicts with the current state. Refresh and try again.'
-		);
+		expect(r.data.formErrorKey).toBe('auth.errors.conflict');
 	});
 
-	it('new role: the insufficient_rank code gets its own copy', async () => {
+	it('new role: a 403 insufficient_rank is the forbidden key', async () => {
 		capabilities.loadCapabilities.mockResolvedValue({
 			is_platform: false,
 			is_super_user: true,
@@ -152,7 +171,7 @@ describe('actions that used to print Go detail raw', () => {
 			}),
 			cookies: cookies({ lk_access: 'tok' })
 		} as never)) as Fail;
-		expect(r.data.bannerError).toBe('You can only make this change for people below your level.');
+		expect(r.data.formErrorKey).toBe('auth.errors.forbidden');
 	});
 });
 

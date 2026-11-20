@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
+	import { bannerText, fieldText, readFailure } from '#lib/utils/form-failure.ts';
 	import { enhance } from '$app/forms';
 	import { Alert, Button } from '$ui';
 	import { TextField } from '#lib/components/form/index.ts';
@@ -11,10 +12,10 @@
 	 */
 	type FormResult = {
 		which?: 'changePassword' | 'changeEmail';
-		email?: string;
-		fieldError?: string;
-		fieldErrorKey?: string;
-		formErrorKey?: string;
+		values?: { email?: string };
+		fieldKeys?: Record<string, string>;
+		fieldMessages?: Record<string, string>;
+		formErrorKey?: string | null;
 		submitted?: boolean;
 	};
 	type Props = { form?: FormResult };
@@ -24,16 +25,10 @@
 
 	const ours = $derived(form?.which === 'changeEmail');
 	const submitted = $derived(Boolean(ours && form?.submitted));
-	const fieldError = $derived(
-		ours && form?.fieldErrorKey
-			? $_(form.fieldErrorKey)
-			: ours && form?.fieldError
-				? form.fieldError
-				: null
-	);
-	const formErrorKey = $derived(ours && form?.formErrorKey ? form.formErrorKey : null);
-	const formError = $derived(formErrorKey ? $_(formErrorKey) : null);
-	const initialEmail = $derived(ours && form?.email ? form.email : '');
+	const failure = $derived(ours ? readFailure<{ email?: string }>(form) : null);
+	const fieldError = $derived(fieldText(failure, 'email', $_) ?? null);
+	const formError = $derived(bannerText(failure, $_));
+	const initialEmail = $derived(failure?.values.email ?? '');
 </script>
 
 {#if submitted}

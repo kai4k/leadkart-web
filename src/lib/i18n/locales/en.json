@@ -66,7 +66,16 @@
 			"mustChangePassword": "Set a new password to continue.",
 			"unexpected": "Something went wrong. Please try again.",
 			"rateLimited": "Too many attempts. Wait a moment and try again.",
-			"upstreamUnavailable": "The service is not reachable right now. Please try again in a moment."
+			"upstreamUnavailable": "The service is not reachable right now. Please try again in a moment.",
+			"forbidden": "You don't have permission to do this.",
+			"tenantContext": "Not available while acting in a tenant. Exit the tenant context first.",
+			"conflict": "This change conflicts with the current state. Refresh and try again.",
+			"notFound": "This item no longer exists.",
+			"validation": "The request was not accepted. Check the values and try again.",
+			"emailRequired": "Email is required.",
+			"emailTooLong": "Email is too long.",
+			"passwordRequired": "Password is required.",
+			"passwordTooLong": "Password is too long."
 		},
 		"mustChange": {
 			"title": "Set a new password",

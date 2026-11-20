@@ -78,30 +78,30 @@ describe('signin action', () => {
 		);
 		const r = asFail(await signin());
 		expect(r.status).toBe(423);
-		expect(r.data.formError).toBe('auth.errors.accountLocked');
+		expect(r.data.formErrorKey).toBe('auth.errors.accountLocked');
 		expect(r.data.retryAfterSeconds).toBe(90);
 	});
 
 	it('429 -> rate limited, 401 -> one invalid-credentials copy', async () => {
 		stubFetch(() => Promise.resolve(goError(429, 'rate_limited')));
-		expect(asFail(await signin()).data.formError).toBe('auth.errors.rateLimited');
+		expect(asFail(await signin()).data.formErrorKey).toBe('auth.errors.rateLimited');
 		stubFetch(() => Promise.resolve(goError(401, 'invalid_credentials')));
 		const r = asFail(await signin());
 		expect(r.status).toBe(401);
-		expect(r.data.formError).toBe('auth.errors.invalidCredentials');
+		expect(r.data.formErrorKey).toBe('auth.errors.invalidCredentials');
 	});
 
 	it.each([502, 504])('Go %i -> same status, generic copy', async (status) => {
 		stubFetch(() => Promise.resolve(new Response('', { status })));
 		const r = asFail(await signin());
 		expect(r.status).toBe(status);
-		expect(r.data.formError).toBe('auth.errors.unexpected');
+		expect(r.data.formErrorKey).toBe('auth.errors.unexpected');
 	});
 
 	it('transport failure -> upstream unavailable; timeout -> 504', async () => {
 		stubFetch(() => Promise.reject(new TypeError('fetch failed')));
 		const down = asFail(await signin());
-		expect([down.status, down.data.formError]).toEqual([502, 'auth.errors.upstreamUnavailable']);
+		expect([down.status, down.data.formErrorKey]).toEqual([502, 'auth.errors.upstreamUnavailable']);
 		stubFetch(() => Promise.reject(new DOMException('t', 'TimeoutError')));
 		expect(asFail(await signin()).status).toBe(504);
 	});
@@ -130,7 +130,7 @@ describe('signin action', () => {
 		const f = stubFetch(() => Promise.resolve(goError(401, 'invalid_credentials')));
 		const r = asFail(await signin('not-an-email'));
 		expect(f).toHaveBeenCalledTimes(1);
-		expect(r.data.formError).toBe('auth.errors.invalidCredentials');
+		expect(r.data.formErrorKey).toBe('auth.errors.invalidCredentials');
 	});
 
 	it('next survives a forced password change', async () => {
@@ -173,12 +173,14 @@ describe('forgot-password action', () => {
 
 	it('429 -> rate limited; 5xx -> generic; transport -> upstream unavailable', async () => {
 		stubFetch(() => Promise.resolve(goError(429, 'rate_limited')));
-		expect(asFail(await forgot('a@b.co')).data.formError).toBe('auth.errors.rateLimited');
+		expect(asFail(await forgot('a@b.co')).data.formErrorKey).toBe('auth.errors.rateLimited');
 		stubFetch(() => Promise.resolve(new Response('', { status: 503 })));
 		const r = asFail(await forgot('a@b.co'));
-		expect([r.status, r.data.formError]).toEqual([503, 'auth.errors.unexpected']);
+		expect([r.status, r.data.formErrorKey]).toEqual([503, 'auth.errors.unexpected']);
 		stubFetch(() => Promise.reject(new TypeError('fetch failed')));
-		expect(asFail(await forgot('a@b.co')).data.formError).toBe('auth.errors.upstreamUnavailable');
+		expect(asFail(await forgot('a@b.co')).data.formErrorKey).toBe(
+			'auth.errors.upstreamUnavailable'
+		);
 	});
 });
 
@@ -263,7 +265,7 @@ describe('security changeEmail action', () => {
 		stubFetch(() => Promise.resolve(goError(400, 'invalid_email')));
 		const r = asFail(await change('a@b.co'));
 		expect(r.status).toBe(400);
-		expect(r.data.fieldErrorKey).toBe('auth.changeEmail.errors.invalid');
+		expect(r.data.fieldKeys).toEqual({ email: 'auth.changeEmail.errors.invalid' });
 	});
 
 	it('empty or shapeless input -> 422, Go not called', async () => {
@@ -313,5 +315,130 @@ describe('an action reached with an expired access cookie goes through the hook 
 			'/v1/auth/request-email-change'
 		]);
 		expect(calls[1].auth).toBe('Bearer fresh-access');
+	});
+});
+
+describe('pre-auth input maxima (the body limit is 512 KB; Go hashes what it is given)', () => {
+	const tooLong = 'p'.repeat(1025);
+	const noGo = () => stubFetch(() => Promise.resolve(new Response(null, { status: 204 })));
+
+	it('signin: a password over 1024 characters is refused as a field key, Go is not called', async () => {
+		const f = noGo();
+		const r = asFail(
+			await run(signinActions.default, {
+				request: form({ email: 'u@x.co', password: tooLong }),
+				cookies: jar(),
+				url: new URL('http://x/signin')
+			})
+		);
+		expect([r.status, r.data.fieldKeys]).toEqual([
+			422,
+			{ password: 'auth.errors.passwordTooLong' }
+		]);
+		expect(f).not.toHaveBeenCalled();
+	});
+
+	it('signin: empty fields are required keys; the email is echoed back', async () => {
+		const f = noGo();
+		const r = asFail(
+			await run(signinActions.default, {
+				request: form({ email: ' ', password: '' }),
+				cookies: jar(),
+				url: new URL('http://x/signin')
+			})
+		);
+		expect(r.data.fieldKeys).toEqual({
+			email: 'auth.errors.emailRequired',
+			password: 'auth.errors.passwordRequired'
+		});
+		expect(r.data.values).toEqual({ email: ' ' });
+		expect(f).not.toHaveBeenCalled();
+	});
+
+	it('forgot-password: an email over 254 characters is a key, Go is not called', async () => {
+		const f = noGo();
+		const r = asFail(
+			await run(forgotActions.default, { request: form({ email: 'a'.repeat(255) }) })
+		);
+		expect(r.data.fieldKeys).toEqual({ email: 'auth.errors.emailTooLong' });
+		expect(f).not.toHaveBeenCalled();
+	});
+
+	it('reset-password: a token over 512 characters is the invalid-link banner, Go is not called', async () => {
+		const f = noGo();
+		const r = asFail(
+			await run(resetActions.default, {
+				request: form({ new_password: NEW_PW, confirm: NEW_PW }),
+				url: new URL(`http://x/reset-password?token=${'t'.repeat(513)}`)
+			})
+		);
+		expect([r.status, r.data.formErrorKey]).toEqual([
+			400,
+			'auth.resetPassword.errors.invalidToken'
+		]);
+		expect(f).not.toHaveBeenCalled();
+	});
+
+	it('reset-password: a new password over 1024 characters is a key, Go is not called', async () => {
+		const f = noGo();
+		const r = asFail(
+			await run(resetActions.default, {
+				request: form({ new_password: tooLong, confirm: tooLong }),
+				url: new URL('http://x/reset-password?token=t')
+			})
+		);
+		expect(r.data.fieldKeys).toEqual({ new_password: 'auth.errors.passwordTooLong' });
+		expect(f).not.toHaveBeenCalled();
+	});
+
+	it('change-password (forced and settings): over 1024 is a key, Go is not called', async () => {
+		const f = noGo();
+		const r = asFail(
+			await run(mustChangeActions.default, {
+				request: form({ current_password: tooLong, new_password: NEW_PW, confirm: NEW_PW }),
+				cookies: jar({ lk_access: 'tok' }),
+				url: new URL('http://x/must-change-password')
+			})
+		);
+		expect(r.data.fieldKeys).toEqual({ current: 'auth.errors.passwordTooLong' });
+		expect(f).not.toHaveBeenCalled();
+	});
+});
+
+describe('every form action fails in ONE shape: { values, fieldKeys, fieldMessages, formErrorKey }', () => {
+	const SHAPE = ['fieldKeys', 'fieldMessages', 'formErrorKey', 'values'];
+	const keys = (r: unknown) =>
+		Object.keys(asFail(r).data)
+			.filter((k) => k !== 'which' && k !== 'retryAfterSeconds')
+			.sort();
+
+	it('sign-in, forgot, reset, forced change, settings password and email', async () => {
+		stubFetch(() => Promise.resolve(goError(401, 'invalid_credentials')));
+		const results = [
+			await run(signinActions.default, {
+				request: form({ email: 'u@x.co', password: 'pw' }),
+				cookies: jar(),
+				url: new URL('http://x/signin')
+			}),
+			await run(forgotActions.default, { request: form({ email: ' ' }) }),
+			await run(resetActions.default, {
+				request: form({ new_password: 'a', confirm: 'b' }),
+				url: new URL('http://x/reset-password?token=t')
+			}),
+			await run(mustChangeActions.default, {
+				request: form({ current_password: 'a', new_password: 'b', confirm: 'c' }),
+				cookies: jar({ lk_access: 'tok' }),
+				url: new URL('http://x/must-change-password')
+			}),
+			await run(securityActions.changePassword, {
+				request: form({ current_password: 'a', new_password: 'b', confirm_password: 'c' }),
+				cookies: jar({ lk_access: 'tok' })
+			}),
+			await run(securityActions.changeEmail, {
+				request: form({ new_email: 'nope' }),
+				cookies: jar({ lk_access: 'tok' })
+			})
+		];
+		for (const r of results) expect(keys(r)).toEqual(SHAPE);
 	});
 });

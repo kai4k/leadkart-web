@@ -14,13 +14,7 @@
  * Per CLAUDE.md rule 6 + the BFF cookie-auth ADR.
  */
 import { error, redirect, type Cookies } from '@sveltejs/kit';
-import {
-	ApiError,
-	describeError,
-	flattenFieldErrors,
-	type ApiErrorBody,
-	type DescribeErrorOptions
-} from '../api/errors.ts';
+import { flattenFieldErrors, type ApiErrorBody } from '../api/errors.ts';
 import { isAuthExpired, refreshSession } from './auth-refresh.ts';
 import { config } from './config.ts';
 import { ACCESS_COOKIE, REFRESH_COOKIE } from './cookies.ts';
@@ -162,21 +156,15 @@ export async function readGoError(resp: Response): Promise<GoErrorBody> {
 }
 
 /**
- * A failed Go answer as an action's `fail()` payload: the status, Go's per-field messages (for the
- * form fields) and ONE user line from the same code → copy map the browser uses (`describeError`).
- * Go's own text never reaches `message`: a code without allowlisted copy gets the generic line for
- * its status. `opts.status` is the caller's own line per status, as in `describeError`.
+ * A failed Go answer as an action's `fail()` input: the status and Go's per-field messages (for the
+ * form fields). Go's own banner text never leaves here; the banner is the status class's i18n key
+ * (`failFromGo`).
  */
 export async function readGoFailure(
-	resp: Response,
-	opts: DescribeErrorOptions = {}
-): Promise<{ status: number; fields: Record<string, string>; message: string }> {
+	resp: Response
+): Promise<{ status: number; fields: Record<string, string> }> {
 	const body = await readGoError(resp);
-	return {
-		status: goErrorStatus(resp),
-		fields: flattenGoErrors(body),
-		message: describeError(ApiError.fromResponse(resp, body), opts)
-	};
+	return { status: goErrorStatus(resp), fields: flattenGoErrors(body) };
 }
 
 /** Go's `errors: { field: [msg] }` as a flat `{ field: msg }` for `fail(422, { errors })`. */

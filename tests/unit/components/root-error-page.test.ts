@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, tick, unmount } from 'svelte';
 
-const state = vi.hoisted(() => ({ page: { status: 503, error: { message: 'Down' } } }));
+const state = vi.hoisted(() => ({
+	page: { status: 503, error: { message: 'Down' }, data: { csrfToken: null as string | null } }
+}));
 const logout = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 vi.mock('$app/state', () => state);
 vi.mock('$app/paths', () => ({ resolve: (p: string) => p }));
@@ -21,18 +23,18 @@ const render = async () => {
 beforeEach(() => {
 	vi.clearAllMocks();
 	target = document.body.appendChild(document.createElement('div'));
-	document.cookie = 'lk_csrf=; Max-Age=0; path=/';
+	state.page.status = 503;
+	state.page.data.csrfToken = null;
 });
 afterEach(() => {
 	if (component) unmount(component);
 	component = undefined;
 	target.remove();
-	document.cookie = 'lk_csrf=; Max-Age=0; path=/';
 });
 
 describe('root error page sign-out', () => {
 	it('offers a POST sign-out form to the existing logout endpoint on a 5xx with a session', async () => {
-		document.cookie = 'lk_csrf=abc; path=/';
+		state.page.data.csrfToken = 'abc';
 		await render();
 		const form = target.querySelector<HTMLFormElement>('form[action="/auth/logout"]');
 		expect(form).not.toBeNull();
@@ -40,8 +42,17 @@ describe('root error page sign-out', () => {
 		expect(form!.querySelector('button[type="submit"]')?.textContent).toMatch(/sign out/i);
 	});
 
+	it('carries the CSRF value as a hidden `csrf` field, so the native POST works without JavaScript', async () => {
+		state.page.data.csrfToken = 'abc';
+		await render();
+		const field = target.querySelector<HTMLInputElement>(
+			'form[action="/auth/logout"] input[type="hidden"][name="csrf"]'
+		);
+		expect(field?.value).toBe('abc');
+	});
+
 	it('submitting it ends the session through the CSRF-protected logout, not a plain navigation', async () => {
-		document.cookie = 'lk_csrf=abc; path=/';
+		state.page.data.csrfToken = 'abc';
 		await render();
 		const form = target.querySelector<HTMLFormElement>('form[action="/auth/logout"]')!;
 		const ev = new Event('submit', { cancelable: true, bubbles: true });
@@ -52,19 +63,19 @@ describe('root error page sign-out', () => {
 
 	it('shows nothing extra for a 4xx, or when there is no session', async () => {
 		state.page.status = 404;
-		document.cookie = 'lk_csrf=abc; path=/';
+		state.page.data.csrfToken = 'abc';
 		await render();
 		expect(target.querySelector('form')).toBeNull();
 		unmount(component!);
 		component = undefined;
 		state.page.status = 503;
-		document.cookie = 'lk_csrf=; Max-Age=0; path=/';
+		state.page.data.csrfToken = null;
 		await render();
 		expect(target.querySelector('form')).toBeNull();
 	});
 
 	it('still renders only the fixed copy from the error', async () => {
-		document.cookie = 'lk_csrf=abc; path=/';
+		state.page.data.csrfToken = 'abc';
 		await render();
 		expect(target.textContent).toContain('503');
 		expect(target.textContent).toContain('Down');

@@ -8,7 +8,7 @@ import {
 	goFetch,
 	readGoError
 } from '#lib/server/go.ts';
-import { isUpstreamTimeout } from '#lib/server/proxy.ts';
+import { AUTH_BODY_LIMIT_BYTES, isUpstreamTimeout, upstreamStatus } from '#lib/server/proxy.ts';
 
 function jar(values: Record<string, string>): Cookies {
 	const store = new Map(Object.entries(values));
@@ -241,5 +241,50 @@ describe('goAuthFetch bounds the body read by the same deadline', () => {
 		const resp = await goAuthFetch('/v1/auth/login', { body: {} }, fetchFn as never);
 		expect(resp.status).toBe(302);
 		expect(resp.headers.get('location')).toBe('/x');
+	});
+});
+
+describe('goAuthFetch caps the body it buffers', () => {
+	it('fails as an upstream error (502) and cancels the stream once the cap is exceeded', async () => {
+		let cancelled = false;
+		const chunk = new Uint8Array(16 * 1024);
+		const body = new ReadableStream<Uint8Array>({
+			pull(controller) {
+				controller.enqueue(chunk); // endless stream
+			},
+			cancel() {
+				cancelled = true;
+			}
+		});
+		const fetchFn = vi.fn(() => Promise.resolve(new Response(body, { status: 200 })));
+		const caught = await goAuthFetch('/v1/auth/login', { body: {} }, fetchFn as never).catch(
+			(e: unknown) => e
+		);
+		expect(caught).toBeInstanceOf(Error);
+		expect(upstreamStatus(caught)).toBe(502);
+		expect(cancelled).toBe(true);
+	});
+
+	it('is 64 KiB and passes a body exactly at the cap', async () => {
+		expect(AUTH_BODY_LIMIT_BYTES).toBe(64 * 1024);
+		const text = 'a'.repeat(AUTH_BODY_LIMIT_BYTES);
+		const fetchFn = vi.fn(() => Promise.resolve(new Response(text, { status: 200 })));
+		const resp = await goAuthFetch('/v1/auth/login', { body: {} }, fetchFn as never);
+		expect((await resp.text()).length).toBe(AUTH_BODY_LIMIT_BYTES);
+	});
+
+	it('drops content-encoding and content-length: they no longer describe the re-wrapped body', async () => {
+		const fetchFn = vi.fn(() =>
+			Promise.resolve(
+				new Response('{"a":1}', {
+					status: 200,
+					headers: { 'content-encoding': 'gzip', 'content-length': '999', 'x-keep': '1' }
+				})
+			)
+		);
+		const resp = await goAuthFetch('/v1/auth/login', { body: {} }, fetchFn as never);
+		expect(resp.headers.get('content-encoding')).toBeNull();
+		expect(resp.headers.get('content-length')).toBeNull();
+		expect(resp.headers.get('x-keep')).toBe('1');
 	});
 });

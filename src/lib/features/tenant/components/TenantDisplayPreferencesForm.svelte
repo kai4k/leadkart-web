@@ -11,8 +11,9 @@
 	 */
 	type FormResult = {
 		values?: { locale: string; time_zone: string; date_format: string; currency: string };
-		errors?: Record<string, string | string[] | undefined>;
-		bannerError?: string;
+		fieldKeys?: Record<string, string>;
+		fieldMessages?: Record<string, string>;
+		formErrorKey?: string | null;
 		success?: boolean;
 	};
 	type Props = { tenant: Tenant; form?: FormResult };

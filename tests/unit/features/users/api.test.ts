@@ -5,7 +5,6 @@ import {
 	reactivateUser,
 	replacePermissionOverrides
 } from '#lib/features/users/api.ts';
-import { updateMyProfile } from '#lib/features/auth/api.ts';
 
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const user = (n: number) => ({
@@ -81,11 +80,5 @@ describe('full-replace bodies (Go answers 400 invalid_body when a field is missi
 		const body = sent();
 		await replacePermissionOverrides('m1', { granted: [], revoked: ['crm.leads.delete'] });
 		expect(body()).toEqual({ granted: [], revoked: ['crm.leads.delete'] });
-	});
-
-	it('PATCH /users/{id}/profile always carries designation, department and status_message, blank included', async () => {
-		const body = sent();
-		await updateMyProfile('m1', { designation: '', department: '', status_message: '' });
-		expect(body()).toEqual({ designation: '', department: '', status_message: '' });
 	});
 });

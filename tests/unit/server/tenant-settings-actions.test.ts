@@ -130,7 +130,7 @@ describe.each(SECTIONS)('$name action', ({ actions, path, permission, fields, se
 			caps([P.identityTenantsView, 'tenant.admin', ...others.filter((p) => p !== permission)])
 		);
 		const r = await run(actions, fields);
-		expect(r).toMatchObject({ status: 403, data: { bannerError: expect.any(String) } });
+		expect(r).toMatchObject({ status: 403, data: { formErrorKey: 'auth.errors.forbidden' } });
 		expect(goFetch).not.toHaveBeenCalled();
 	});
 
@@ -171,7 +171,10 @@ describe('saveTenantSection answers', () => {
 
 	it('invalid input is a 422 with field errors and no Go call', async () => {
 		const r = await call({ legal_name: '', display_name: 'A' });
-		expect(r).toMatchObject({ status: 422, data: { errors: { legal_name: expect.any(Array) } } });
+		expect(r).toMatchObject({
+			status: 422,
+			data: { fieldMessages: { legal_name: expect.any(String) } }
+		});
 		expect(goFetch).not.toHaveBeenCalled();
 	});
 
@@ -188,11 +191,13 @@ describe('saveTenantSection answers', () => {
 		const r = await call();
 		expect(r).toMatchObject({
 			status: 422,
-			data: { errors: { gst_number: 'GST number is not valid', 'address.pincode': 'bad pincode' } }
+			data: {
+				fieldMessages: { gst_number: 'GST number is not valid', 'address.pincode': 'bad pincode' }
+			}
 		});
 	});
 
-	it('a Go refusal speaks the copy map, never Go text', async () => {
+	it('a Go refusal speaks an i18n key, never Go text', async () => {
 		goFetch.mockResolvedValue(
 			new Response(JSON.stringify({ error: 'forbidden', detail: 'RAW BACKEND TEXT' }), {
 				status: 403,
@@ -202,7 +207,7 @@ describe('saveTenantSection answers', () => {
 		const r = await call();
 		expect(r).toMatchObject({
 			status: 403,
-			data: { bannerError: "You don't have permission to do this." }
+			data: { formErrorKey: 'auth.errors.forbidden' }
 		});
 		expect(JSON.stringify(r)).not.toContain('RAW BACKEND TEXT');
 	});

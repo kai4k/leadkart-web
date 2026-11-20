@@ -13,12 +13,11 @@
  * `invalid_body` with `errors` keyed by field (nested keys dotted: `address.pincode`). So
  * every field is always sent, blank as an empty string.
  */
-import { error, redirect, type Cookies } from '@sveltejs/kit';
-import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
+import { error, type Cookies } from '@sveltejs/kit';
 import { callGoForAction, type GoActionCall } from '#lib/server/form-action.ts';
 import { goErrorStatus, goFetch, readGoJson } from '#lib/server/go.ts';
 import { upstreamStatus } from '#lib/server/proxy.ts';
-import { decodeJwtPrincipal } from '$api/jwt';
+import { ownPrincipal } from '#lib/server/principal.ts';
 import {
 	tenantSchema,
 	updateTenantAdminContactSchema,
@@ -102,9 +101,7 @@ export const TENANT_SECTIONS = {
 
 /** The signed-in caller's own tenant, from the access token. Signed out: to /signin. */
 export function ownTenantId(cookies: Cookies): string {
-	const access = cookies.get(ACCESS_COOKIE());
-	if (!access) throw redirect(303, '/signin');
-	return decodeJwtPrincipal(access).tenantId;
+	return ownPrincipal(cookies).tenantId;
 }
 
 export type LoadedTenant = { status: 'ok'; tenant: Tenant } | { status: 'not_found' };
