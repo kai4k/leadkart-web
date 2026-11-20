@@ -35,6 +35,7 @@ p-0`, `sm:max-w-lg`) instead of the nova `grid p-4 sm:max-w-sm`, so Header/Body/
 - `sheet/sheet-content.svelte`: `gap-0`, `closeLabel`; `sheet-title.svelte`: same title size as Dialog.
 - `drawer/*`: a shim over `sheet` (plan L17), see its `index.ts`. Header/Body/Footer keep the vaul
   drawer's padding and `flex-col-reverse` footer so leads/orders/inventory render as before.
+- `pagination/pagination-link.svelte`: the current page is the `default` (primary fill, primary-foreground) variant, not `outline` (an unreadable chip in dark mode); gate: `primary-foreground on primary`.
 - `card/card-title.svelte`: an `<h2>` (the nova output is a `<div>`; a page has one `<h1>`, so its sections are `<h2>`: axe `heading-order`). `EmptyState` title likewise.
 - `dropdown-menu/dropdown-menu-trigger.svelte`: NOT regenerated. Keeps the `child` pattern and the
   `variant`/`size` Button props (a `<button>` inside a `<button>` fails axe).

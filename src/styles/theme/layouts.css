@@ -117,7 +117,7 @@
 	/* boxed: the app sits inside a margin on a primary canvas */
 	:root[data-layout='boxed'] {
 		--shell-boxed-margin: var(--spacing-8);
-		--shell-boxed-canvas: var(--primary);
+		--shell-boxed-canvas: var(--primary-500);
 		--shell-radius: 0.375rem;
 		--shell-sidebar-start: var(--shell-boxed-margin);
 		--shell-topbar-top: var(--shell-boxed-margin);
@@ -132,7 +132,7 @@
 	/* horizontal: a nav bar under the topbar instead of a sidebar */
 	:root[data-layout='horizontal'] {
 		--shell-content-start: 0rem;
-		--shell-page-pad-top: calc(var(--shell-topbar-height) * 1.9);
+		--shell-page-pad-top: calc(var(--shell-topbar-height) * 2.1);
 		--shell-banner-flow: calc(
 			var(--shell-topbar-top) + var(--shell-topbar-height) + var(--shell-hnav-height)
 		);
