@@ -118,7 +118,7 @@ test.describe('Roles list — positive', () => {
 
 		await page
 			.locator('#main-content')
-			.getByRole('button', { name: /create role/i })
+			.getByRole('link', { name: /create role/i })
 			.first()
 			.click();
 		await page.waitForURL(/\/settings\/roles\/new$/);
@@ -179,7 +179,7 @@ test.describe('Roles list — negative', () => {
 		// Header button opens the drawer
 		await page
 			.locator('#main-content')
-			.getByRole('button', { name: /create role/i })
+			.getByRole('link', { name: /create role/i })
 			.first()
 			.click();
 		await page.waitForURL(/\/settings\/roles\/new$/);

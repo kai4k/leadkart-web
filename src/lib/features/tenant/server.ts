@@ -132,7 +132,7 @@ export async function loadTenant(
 		throw err;
 	}
 	if (resp.status === 404) return { status: 'not_found' };
-	if (!resp.ok) throw error(goErrorStatus(resp), 'Could not load the tenant');
+	if (!resp.ok) throw error(goErrorStatus(resp), 'Could not load tenant settings');
 	const parsed = tenantSchema.safeParse(body);
 	if (!parsed.success) throw error(502, 'Tenant service returned an unexpected response');
 	return { status: 'ok', tenant: parsed.data };
