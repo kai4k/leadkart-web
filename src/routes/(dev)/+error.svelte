@@ -1,29 +1,26 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { Alert, Button } from '$ui';
+	import RouteError, { routeErrorTitleKey } from '#lib/components/feedback/RouteError.svelte';
 
 	const status = $derived(page.status);
-	const message = $derived(page.error?.message ?? 'Something broke in this dev surface.');
 </script>
 
 <svelte:head>
 	<title>{status} · Dev</title>
 </svelte:head>
 
-<div class="stack stack-relaxed container mx-auto py-12">
-	<div class="stack stack-tight">
-		<p class="overline">Error {status}</p>
-		<h1 class="h1">Dev page failed to load</h1>
-	</div>
-
-	<Alert variant="destructive" title="Something went wrong">
-		{message}
-	</Alert>
-
-	<div class="cluster">
-		<Button variant="default" onclick={() => location.reload()}>Try again</Button>
-
-		<a href={resolve('dashboard')}><Button variant="ghost">Back to dashboard</Button></a>
-	</div>
-</div>
+<main
+	id="main-content"
+	tabindex="-1"
+	class="stack stack-relaxed container mx-auto py-12 outline-none"
+>
+	<h1 class="text-foreground text-xl font-semibold">{$_(routeErrorTitleKey(status))}</h1>
+	<RouteError
+		{status}
+		message={page.error?.message}
+		homeHref={resolve('dashboard')}
+		homeLabel={$_('errors.route.backToDashboard')}
+	/>
+</main>

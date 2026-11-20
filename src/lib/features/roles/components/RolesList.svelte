@@ -1,4 +1,6 @@
 <script lang="ts">
+	import PageHeader from '$layouts/PageHeader.svelte';
+	import { _ } from 'svelte-i18n';
 	import {
 		Badge,
 		buttonVariants,
@@ -123,19 +125,18 @@
 {/snippet}
 
 <div class="stack stack-relaxed">
-	<header class="cluster cluster-spread">
-		<div class="stack stack-tight">
-			<h1 class="h1">Roles</h1>
-			<p class="caption text-muted-foreground">
-				{roleList.length} role{roleList.length === 1 ? '' : 's'}
-			</p>
-		</div>
-		{#if may.create}
-			<a href={resolve('/(app)/settings/roles/new')} class={buttonVariants()}
-				><Icon icon={Plus} size="sm" /> Create role</a
-			>
-		{/if}
-	</header>
+	<PageHeader
+		title={$_('pages.roles.title')}
+		description={$_('pages.roles.count', { values: { count: roleList.length } })}
+	>
+		{#snippet actions()}
+			{#if may.create}
+				<a href={resolve('/(app)/settings/roles/new')} class={buttonVariants()}
+					><Icon icon={Plus} size="sm" /> Create role</a
+				>
+			{/if}
+		{/snippet}
+	</PageHeader>
 
 	<DataTable.Root
 		{columns}

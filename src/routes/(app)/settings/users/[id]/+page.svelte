@@ -1,9 +1,11 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
+	import PageHeader from '$layouts/PageHeader.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { SvelteURL } from 'svelte/reactivity';
 	import type { ResolvedPathname } from '$app/types';
-	import { Avatar, Badge, Breadcrumbs, Dropdown, Skeleton, type BreadcrumbItem } from '$ui';
+	import { Avatar, Badge, Dropdown, Skeleton } from '$ui';
 	import { QueryState } from '#lib/components/feedback/index.ts';
 	import { Icon, Lock, MoreVertical, Shield, UserMinus, UserPlus, Users } from '$icons';
 	import { userDetailQuery, usersListQuery, reactivateUserMutation } from '$features/users/queries';
@@ -29,10 +31,10 @@
 	const userList = $derived(usersListQ.data ?? []);
 	const roleList = $derived(rolesQuery.data?.roles ?? []);
 
-	const breadcrumbs = $derived<BreadcrumbItem[]>([
-		{ label: 'Settings' },
-		{ href: '/settings/users', label: 'Team' },
-		{ label: user ? displayName(user) : '…' }
+	const crumbs = $derived([
+		{ label: $_('pages.crumbs.settings') },
+		{ href: '/settings/users', label: $_('nav.items.team') },
+		{ label: user ? displayName(user) : $_('pages.member.fallbackTitle') }
 	]);
 
 	let deactivateOpen = $state(false);
@@ -59,7 +61,14 @@
 </svelte:head>
 
 <div class="stack stack-relaxed">
-	<Breadcrumbs items={breadcrumbs} />
+	<PageHeader title={user ? displayName(user) : $_('pages.member.fallbackTitle')} {crumbs}>
+		{#snippet meta()}
+			{#if user}
+				{@const status = userStatus(user.status)}
+				<Badge variant={status.variant}>{status.label}</Badge>
+			{/if}
+		{/snippet}
+	</PageHeader>
 
 	<QueryState query={userQuery} noun="member">
 		{#snippet skeleton()}
@@ -68,15 +77,10 @@
 			<Skeleton class="h-48 w-full rounded-md" />
 		{/snippet}
 		{#snippet children(user)}
-			{@const status = userStatus(user.status)}
 			<header class="cluster cluster-spread items-start">
 				<div class="cluster cluster-tight items-start">
 					<Avatar initials={initials(displayName(user))} size="lg" />
 					<div class="stack stack-tight">
-						<div class="cluster cluster-tight">
-							<h1 class="h2">{displayName(user)}</h1>
-							<Badge variant={status.variant}>{status.label}</Badge>
-						</div>
 						<p class="body-sm text-muted-foreground">{user.email}</p>
 						{#if user.designation || user.department}
 							<p class="caption text-muted-foreground">

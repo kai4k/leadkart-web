@@ -22,7 +22,7 @@
 	<Card.Header>
 		<div class="cluster cluster-tight">
 			<Icon icon={Package} size="sm" />
-			<h3 class="h5">Profile</h3>
+			<h2 class="h5">Profile</h2>
 		</div>
 	</Card.Header>
 	<Card.Content>

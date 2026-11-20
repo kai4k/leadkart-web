@@ -83,7 +83,7 @@ test.describe('Role hierarchy editor', () => {
 		await page.goto(`/settings/roles/${CHILD_ROLE.id}`);
 
 		await expect(
-			page.getByRole('heading', { level: 3, name: /organizational hierarchy/i })
+			page.getByRole('heading', { level: 2, name: /organizational hierarchy/i })
 		).toBeVisible();
 
 		// Parent select offers PARENT_ROLE but NOT PROTECTED_ROLE

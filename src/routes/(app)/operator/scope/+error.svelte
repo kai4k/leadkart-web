@@ -1,35 +1,25 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { Alert, Button } from '$ui';
+	import PageHeader from '$layouts/PageHeader.svelte';
+	import RouteError, { routeErrorTitleKey } from '#lib/components/feedback/RouteError.svelte';
 
+	/** Tenant-context group error boundary: the way out is the tenants list. */
 	const status = $derived(page.status);
-	const message = $derived(page.error?.message ?? 'Something went wrong loading this tenant.');
 </script>
 
+<svelte:head>
+	<title>{status} · LeadKart</title>
+</svelte:head>
+
 <div class="stack stack-relaxed">
-	<Alert variant={status >= 500 ? 'destructive' : 'warning'} title="Couldn't load tenant scope">
-		<p>{message}</p>
-		<div class="cluster cluster-tight mt-3">
-			<Button variant="ghost" size="sm" onclick={() => location.reload()}>Retry</Button>
-
-			<a class="lk-link-btn" href={resolve('operator/tenants')}>Back to tenants</a>
-		</div>
-	</Alert>
+	<PageHeader title={$_(routeErrorTitleKey(status))} crumbs={[]} />
+	<RouteError
+		{status}
+		message={page.error?.message}
+		homeHref={resolve('operator/tenants')}
+		homeLabel={$_('errors.route.backToTenants')}
+		signInHref={status === 401 ? resolve('signin') : undefined}
+	/>
 </div>
-
-<style>
-	.lk-link-btn {
-		display: inline-flex;
-		align-items: center;
-		padding: 0.25rem 0.75rem;
-		border-radius: 0.375rem;
-		font-size: var(--text-sm);
-		font-weight: 500;
-		color: var(--muted-foreground);
-	}
-	.lk-link-btn:hover {
-		color: var(--foreground);
-		background: var(--muted);
-	}
-</style>

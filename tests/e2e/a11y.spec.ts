@@ -57,7 +57,7 @@ test.describe('A11y — WCAG 2.2 AA via axe-core', () => {
 	test('settings/account/security has no critical or serious violations', async ({ page }) => {
 		await signInAsTier(page, { tier: 'tenant-admin', permissions: ['tenant.admin'] });
 		await page.goto('/settings/account/security');
-		await expect(page.getByRole('heading', { level: 3, name: 'Change password' })).toBeVisible();
+		await expect(page.getByRole('heading', { level: 2, name: 'Change password' })).toBeVisible();
 		await expectNoSeriousOrCriticalViolations(page, 'main');
 	});
 });

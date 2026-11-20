@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PageHeader from '$layouts/PageHeader.svelte';
 	import { ACTION, session } from '$features/auth';
 	import { Badge, Dropdown } from '$ui';
 	import { Icon, ArrowLeft, MoreVertical, Edit, Trash2 } from '$icons';
@@ -30,6 +31,8 @@
 	}
 </script>
 
+<PageHeader title={product.brand_name} />
+
 <header class="stack stack-tight">
 	<button
 		type="button"
@@ -41,7 +44,6 @@
 
 	<div class="cluster cluster-spread items-start">
 		<div class="stack stack-tight min-w-0">
-			<h1 class="h1 truncate">{product.brand_name}</h1>
 			{#if product.generic_name}
 				<p class="body-base text-muted-foreground truncate">{product.generic_name}</p>
 			{/if}

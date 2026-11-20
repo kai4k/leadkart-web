@@ -50,7 +50,7 @@ test.describe('Tenant settings — positive', () => {
 			body: TENANT
 		});
 		await page.goto('/settings/tenant/profile');
-		await expect(page.getByRole('heading', { level: 3, name: 'Profile' })).toBeVisible();
+		await expect(page.getByRole('heading', { level: 2, name: 'Profile' })).toBeVisible();
 		// The form preloads with current display_name
 		await expect(page.getByLabel(/display name/i)).toHaveValue('Acme');
 	});
@@ -64,7 +64,7 @@ test.describe('Tenant settings — positive', () => {
 			body: TENANT
 		});
 		await page.goto('/settings/tenant/statutory');
-		await expect(page.getByRole('heading', { level: 3, name: 'Statutory IDs' })).toBeVisible();
+		await expect(page.getByRole('heading', { level: 2, name: 'Statutory IDs' })).toBeVisible();
 		await expect(page.getByLabel(/gst|gstin/i)).toHaveValue('27AAAPL1234C1Z1');
 	});
 
@@ -77,7 +77,7 @@ test.describe('Tenant settings — positive', () => {
 			body: TENANT
 		});
 		await page.goto('/settings/tenant/contact');
-		await expect(page.getByRole('heading', { level: 3, name: 'Contact' })).toBeVisible();
+		await expect(page.getByRole('heading', { level: 2, name: 'Contact' })).toBeVisible();
 	});
 
 	test('Preferences tab renders', async ({ page }) => {
@@ -90,7 +90,7 @@ test.describe('Tenant settings — positive', () => {
 		});
 		await page.goto('/settings/tenant/preferences');
 		await expect(
-			page.getByRole('heading', { level: 3, name: 'Display preferences' })
+			page.getByRole('heading', { level: 2, name: 'Display preferences' })
 		).toBeVisible();
 	});
 

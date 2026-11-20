@@ -18,7 +18,7 @@
 
 <div class="stack stack-relaxed">
 	<header class="stack stack-tight">
-		<h1 class="h1">{$_('account.security.title')}</h1>
+		<h2 class="h4">{$_('account.security.title')}</h2>
 		<p class="body-sm text-muted-foreground">{$_('account.security.subtitle')}</p>
 	</header>
 

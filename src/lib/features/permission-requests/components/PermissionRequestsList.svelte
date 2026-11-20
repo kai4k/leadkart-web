@@ -1,4 +1,6 @@
 <script lang="ts">
+	import PageHeader from '$layouts/PageHeader.svelte';
+	import { _ } from 'svelte-i18n';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -105,20 +107,18 @@
 {/snippet}
 
 <div class="stack stack-relaxed">
-	<header class="cluster cluster-spread">
-		<div class="stack stack-tight">
-			<h1 class="h1">Permission requests</h1>
-			<p class="caption text-muted-foreground">
-				Request time-bound elevated permissions; approve or deny requests waiting on you.
-			</p>
-		</div>
-
-		{#if maySubmit}
-			<Button onclick={() => (createOpen = true)}
-				><Icon icon={Plus} size="sm" /> Request permission</Button
-			>
-		{/if}
-	</header>
+	<PageHeader
+		title={$_('pages.permissionRequests.title')}
+		description={$_('pages.permissionRequests.description')}
+	>
+		{#snippet actions()}
+			{#if maySubmit}
+				<Button onclick={() => (createOpen = true)}
+					><Icon icon={Plus} size="sm" /> Request permission</Button
+				>
+			{/if}
+		{/snippet}
+	</PageHeader>
 
 	<nav aria-label="Request scope" class="border-border border-b">
 		<ul class="cluster gap-0" style="list-style:none;margin:0;padding:0;">

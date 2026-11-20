@@ -1,4 +1,6 @@
 <script lang="ts">
+	import PageHeader from '$layouts/PageHeader.svelte';
+	import { _ } from 'svelte-i18n';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import type { ResolvedPathname } from '$app/types';
@@ -276,17 +278,15 @@
 {/snippet}
 
 <div class="stack stack-relaxed">
-	<header class="cluster cluster-spread">
-		<div class="stack stack-tight">
-			<h1 class="h1">Tenants</h1>
-			<p class="caption text-muted-foreground">Operator-side tenant management.</p>
-		</div>
-		{#if canCreate}
-			<Button onclick={() => (createOpen = true)}>
-				<Icon icon={Plus} size="sm" /> Register tenant
-			</Button>
-		{/if}
-	</header>
+	<PageHeader title={$_('pages.tenants.title')} description={$_('pages.tenants.description')}>
+		{#snippet actions()}
+			{#if canCreate}
+				<Button onclick={() => (createOpen = true)}>
+					<Icon icon={Plus} size="sm" /> Register tenant
+				</Button>
+			{/if}
+		{/snippet}
+	</PageHeader>
 
 	<div class="stack stack-tight">
 		<div class="cluster">

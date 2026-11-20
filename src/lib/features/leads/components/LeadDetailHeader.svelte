@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PageHeader from '$layouts/PageHeader.svelte';
 	import { ACTION, session } from '$features/auth';
 	/**
 	 * LeadDetailHeader — top-of-page identity strip for a single lead.
@@ -38,10 +39,11 @@
 	}
 </script>
 
+<PageHeader title={lead.contact_name} />
+
 <header class="stack stack-tight" data-testid="lead-detail-header">
 	<div class="cluster cluster-spread items-start">
 		<div class="stack stack-tight min-w-0">
-			<h1 class="h1 truncate">{lead.contact_name}</h1>
 			<div class="cluster cluster-tight flex-wrap">
 				<span class="caption text-muted-foreground"
 					><Icon icon={Users} size="xs" /> {lead.mobile_number}</span

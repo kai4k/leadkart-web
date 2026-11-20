@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
+	import PageHeader from '$layouts/PageHeader.svelte';
+	import SectionNav from '$layouts/SectionNav.svelte';
 	import { page } from '$app/state';
-	import type { ResolvedPathname } from '$app/types';
-	import { Badge, Breadcrumbs, type BreadcrumbItem } from '$ui';
+	import { Badge } from '$ui';
 	import { tenantDisplayName, tenantStatus } from '$features/tenant/view-models';
-	import { cn } from '#lib/utils/cn.ts';
 	import type { LayoutData } from './$types';
 
 	/**
@@ -24,25 +25,20 @@
 	const tenantData = $derived(data.tenant);
 	const badge = $derived(tenantStatus(tenantData.status));
 
-	const tabs: ReadonlyArray<{ href: ResolvedPathname; label: string }> = [
-		{ href: '/settings/tenant/profile', label: 'Profile' },
-		{ href: '/settings/tenant/statutory', label: 'Statutory IDs' },
-		{ href: '/settings/tenant/contact', label: 'Contact' },
-		{ href: '/settings/tenant/security', label: 'Security' },
-		{ href: '/settings/tenant/preferences', label: 'Preferences' }
-	];
-
-	const activeTab = $derived(tabs.find((t) => isActive(t.href)));
-	const breadcrumbs = $derived<BreadcrumbItem[]>([
-		{ label: 'Settings' },
-		{ label: 'Tenant' },
-		...(activeTab ? [{ label: activeTab.label }] : [])
+	const tabs = $derived([
+		{ href: '/settings/tenant/profile', label: $_('pages.tenant.tabs.profile') },
+		{ href: '/settings/tenant/statutory', label: $_('pages.tenant.tabs.statutory') },
+		{ href: '/settings/tenant/contact', label: $_('pages.tenant.tabs.contact') },
+		{ href: '/settings/tenant/security', label: $_('pages.tenant.tabs.security') },
+		{ href: '/settings/tenant/preferences', label: $_('pages.tenant.tabs.preferences') }
 	]);
 
-	function isActive(href: string): boolean {
-		const path = page.url.pathname;
-		return path === href || path.startsWith(`${href}/`);
-	}
+	const activeTab = $derived(tabs.find((t) => page.url.pathname.startsWith(t.href)));
+	const crumbs = $derived([
+		{ label: $_('pages.crumbs.settings') },
+		{ label: $_('nav.items.tenantSettings') },
+		...(activeTab ? [{ label: activeTab.label }] : [])
+	]);
 </script>
 
 <svelte:head>
@@ -50,40 +46,16 @@
 </svelte:head>
 
 <div class="stack stack-relaxed">
-	<Breadcrumbs items={breadcrumbs} />
-	<header class="stack stack-tight">
-		<div class="cluster">
-			<h1 class="h1">{tenantDisplayName(tenantData)}</h1>
+	<PageHeader
+		title={tenantDisplayName(tenantData)}
+		description={$_('pages.tenant.description')}
+		{crumbs}
+	>
+		{#snippet meta()}
 			<Badge variant={badge.variant}>{badge.label}</Badge>
-		</div>
-		<p class="body-sm text-muted-foreground">
-			Manage your organisation's profile, statutory IDs, contact details, and platform preferences.
-		</p>
-	</header>
-
-	<nav aria-label="Tenant settings sections" class="border-border border-b">
-		<ul class="cluster gap-0">
-			{#each tabs as tab (tab.href)}
-				{@const active = isActive(tab.href)}
-				<li>
-					<a
-						href={tab.href}
-						aria-current={active ? 'page' : undefined}
-						class={cn(
-							'label -mb-px inline-block border-b-2 px-4 py-2 transition-colors',
-							'focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none',
-							'focus-visible:ring-ring',
-							active
-								? 'border-primary text-primary'
-								: 'text-muted-foreground hover:text-foreground border-transparent'
-						)}
-					>
-						{tab.label}
-					</a>
-				</li>
-			{/each}
-		</ul>
-	</nav>
+		{/snippet}
+	</PageHeader>
+	<SectionNav {tabs} label={$_('pages.tenant.sections')} />
 
 	{@render children()}
 </div>

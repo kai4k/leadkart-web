@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PageHeader from '$layouts/PageHeader.svelte';
 	import { _ } from 'svelte-i18n';
 	import { enhance } from '$app/forms';
 	import { withFocusOnFailure } from '#lib/utils/focus-first-invalid.ts';
@@ -31,10 +32,11 @@
 </svelte:head>
 
 <div class="stack stack-relaxed mx-auto max-w-5xl">
-	<header class="stack stack-tight">
-		<h1 class="h1">{$_('auth.mustChange.title')}</h1>
-		<p class="body-base text-muted-foreground">{$_('auth.mustChange.subtitle')}</p>
-	</header>
+	<PageHeader
+		title={$_('auth.mustChange.title')}
+		description={$_('auth.mustChange.subtitle')}
+		crumbs={[]}
+	/>
 
 	<Card.Root>
 		<Card.Content>

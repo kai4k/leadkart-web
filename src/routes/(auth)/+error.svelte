@@ -1,10 +1,11 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { Alert, Button } from '$ui';
+	import RouteError, { routeErrorTitleKey } from '#lib/components/feedback/RouteError.svelte';
 
+	// The auth frame supplies <main>; the page owns the <h1>.
 	const status = $derived(page.status);
-	const message = $derived(page.error?.message ?? 'Something went wrong while loading this page.');
 </script>
 
 <svelte:head>
@@ -12,18 +13,13 @@
 </svelte:head>
 
 <div class="stack stack-relaxed">
-	<div class="stack stack-tight">
-		<p class="overline">Error {status}</p>
-		<h1 class="h1">We hit a snag</h1>
-	</div>
-
-	<Alert variant="destructive" title="Could not complete your request">
-		{message}
-	</Alert>
-
-	<div class="cluster">
-		<Button variant="default" onclick={() => page.url && location.reload()}>Try again</Button>
-
-		<a href={resolve('signin')}><Button variant="ghost">Back to sign in</Button></a>
-	</div>
+	<h1 class="text-foreground text-center text-xl font-semibold">
+		{$_(routeErrorTitleKey(status))}
+	</h1>
+	<RouteError
+		{status}
+		message={page.error?.message}
+		homeHref={resolve('signin')}
+		homeLabel={$_('errors.route.backToSignIn')}
+	/>
 </div>

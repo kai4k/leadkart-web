@@ -9,11 +9,11 @@
 	}: WithElementRef<HTMLAttributes<HTMLHeadingElement>> = $props();
 </script>
 
-<h3
+<h2
 	bind:this={ref}
 	data-slot="card-title"
 	class={cn('text-base font-semibold leading-tight text-foreground', className)}
 	{...rest}
 >
 	{@render children?.()}
-</h3>
+</h2>

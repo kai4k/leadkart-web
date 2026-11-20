@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
+	import PageHeader from '$layouts/PageHeader.svelte';
 	import {
 		Activity,
 		Ban,
@@ -130,9 +132,8 @@
 </script>
 
 <div class="stack stack-relaxed">
-	<header class="stack stack-tight">
-		<div class="cluster">
-			<h1 class="h1">Operator Dashboard</h1>
+	<PageHeader title={$_('dashboard.title.operator')}>
+		{#snippet meta()}
 			{#if isSuper}
 				<span
 					class="label-small bg-destructive-soft text-destructive inline-flex items-center rounded-full px-2 py-0.5"
@@ -146,11 +147,11 @@
 					Platform Staff
 				</span>
 			{/if}
-		</div>
-		<p class="body-sm text-muted-foreground">
-			Cross-tenant operations: lead verification, tenant management, marketplace ops.
-		</p>
-	</header>
+		{/snippet}
+	</PageHeader>
+	<p class="body-sm text-muted-foreground">
+		Cross-tenant operations: lead verification, tenant management, marketplace ops.
+	</p>
 
 	{#if canViewStats && statsError}
 		<Alert variant="destructive" title="Stats unavailable">

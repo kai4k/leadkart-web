@@ -28,7 +28,7 @@ test.describe('Account security — change password', () => {
 	test('renders change-password form', async ({ page }) => {
 		await signInForAccount(page);
 		await page.goto('/settings/account/security');
-		await expect(page.getByRole('heading', { level: 3, name: 'Change password' })).toBeVisible();
+		await expect(page.getByRole('heading', { level: 2, name: 'Change password' })).toBeVisible();
 	});
 
 	test('successful change: 204 → success surface', async ({ page }) => {

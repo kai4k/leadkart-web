@@ -1,6 +1,7 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
+	import PageHeader from '$layouts/PageHeader.svelte';
 	import { PersonDetail, personDetailQuery, personDisplayName } from '$features/operator/people';
-	import { Breadcrumbs, type BreadcrumbItem } from '$ui';
 
 	let { data } = $props();
 
@@ -9,9 +10,9 @@
 	const title = $derived(query.data?.email ?? 'Person');
 	const personName = $derived(query.data ? personDisplayName(query.data) : 'Person');
 
-	const breadcrumbs = $derived<BreadcrumbItem[]>([
-		{ label: 'Operator' },
-		{ href: '/operator/persons', label: 'Persons' },
+	const crumbs = $derived([
+		{ label: $_('nav.sections.operator') },
+		{ href: '/operator/persons', label: $_('nav.items.persons') },
 		{ label: personName }
 	]);
 </script>
@@ -19,6 +20,6 @@
 <svelte:head><title>{title} · LeadKart</title></svelte:head>
 
 <div class="stack stack-relaxed">
-	<Breadcrumbs items={breadcrumbs} />
+	<PageHeader title={personName} {crumbs} />
 	<PersonDetail {personId} />
 </div>

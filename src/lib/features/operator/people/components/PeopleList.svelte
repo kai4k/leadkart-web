@@ -1,4 +1,6 @@
 <script lang="ts">
+	import PageHeader from '$layouts/PageHeader.svelte';
+	import { _ } from 'svelte-i18n';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import type { ResolvedPathname } from '$app/types';
@@ -90,10 +92,10 @@
 {/snippet}
 
 <div class="stack stack-relaxed">
-	<header class="stack stack-tight">
-		<h1 class="h1">Platform users</h1>
-		<p class="caption text-muted-foreground">Cross-tenant person identity management.</p>
-	</header>
+	<PageHeader
+		title={$_('pages.platformUsers.title')}
+		description={$_('pages.platformUsers.description')}
+	/>
 
 	<div class="flex flex-col gap-3 md:flex-row md:items-center">
 		<div class="relative flex-1">

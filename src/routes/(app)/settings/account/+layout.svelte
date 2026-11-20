@@ -1,12 +1,13 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
+	import PageHeader from '$layouts/PageHeader.svelte';
+	import SectionNav from '$layouts/SectionNav.svelte';
 	import { page } from '$app/state';
-	import type { ResolvedPathname } from '$app/types';
-	import { Breadcrumbs, Skeleton, type BreadcrumbItem } from '$ui';
+	import { Skeleton } from '$ui';
 	import { QueryState } from '#lib/components/feedback/index.ts';
 	import { myProfileQuery } from '$features/auth/queries';
 	import { session } from '$features/auth';
 	import { displayName } from '$features/auth/view-models';
-	import { cn } from '#lib/utils/cn.ts';
 
 	/**
 	 * Account Settings layout — owns the shared chrome (header + sub-
@@ -22,23 +23,18 @@
 	const profileQuery = myProfileQuery(() => membershipId);
 	const profileData = $derived(profileQuery.data ?? null);
 
-	const tabs: ReadonlyArray<{ href: ResolvedPathname; label: string }> = [
-		{ href: '/settings/account/profile', label: 'Profile' },
-		{ href: '/settings/account/security', label: 'Security' },
-		{ href: '/settings/account/sessions', label: 'Sessions' }
-	];
-
-	const activeTab = $derived(tabs.find((t) => isActive(t.href)));
-	const breadcrumbs = $derived<BreadcrumbItem[]>([
-		{ label: 'Settings' },
-		{ href: '/settings/account', label: 'Account' },
-		...(activeTab ? [{ label: activeTab.label }] : [])
+	const tabs = $derived([
+		{ href: '/settings/account/profile', label: $_('pages.account.tabs.profile') },
+		{ href: '/settings/account/security', label: $_('pages.account.tabs.security') },
+		{ href: '/settings/account/sessions', label: $_('pages.account.tabs.sessions') }
 	]);
 
-	function isActive(href: string): boolean {
-		const path = page.url.pathname;
-		return path === href || path.startsWith(`${href}/`);
-	}
+	const activeTab = $derived(tabs.find((t) => page.url.pathname.startsWith(`${t.href}`)));
+	const crumbs = $derived([
+		{ label: $_('pages.crumbs.settings') },
+		{ href: '/settings/account', label: $_('nav.items.account') },
+		...(activeTab ? [{ label: activeTab.label }] : [])
+	]);
 </script>
 
 <svelte:head>
@@ -46,41 +42,12 @@
 </svelte:head>
 
 <div class="stack stack-relaxed">
-	<Breadcrumbs items={breadcrumbs} />
-	<header class="stack stack-tight">
-		{#if profileData}
-			<h1 class="h1">{displayName(profileData)}</h1>
-			<p class="body-sm text-muted-foreground">
-				{profileData.email}
-			</p>
-		{:else}
-			<h1 class="h1">Account</h1>
-		{/if}
-	</header>
-
-	<nav aria-label="Account settings sections" class="border-border border-b">
-		<ul class="cluster gap-0">
-			{#each tabs as tab (tab.href)}
-				{@const active = isActive(tab.href)}
-				<li>
-					<a
-						href={tab.href}
-						aria-current={active ? 'page' : undefined}
-						class={cn(
-							'label -mb-px inline-block border-b-2 px-4 py-2 transition-colors',
-							'focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none',
-							'focus-visible:ring-ring',
-							active
-								? 'border-primary text-primary'
-								: 'text-muted-foreground hover:text-foreground border-transparent'
-						)}
-					>
-						{tab.label}
-					</a>
-				</li>
-			{/each}
-		</ul>
-	</nav>
+	<PageHeader
+		title={profileData ? displayName(profileData) : $_('pages.account.title')}
+		description={profileData?.email}
+		{crumbs}
+	/>
+	<SectionNav {tabs} label={$_('pages.account.sections')} />
 
 	<QueryState query={profileQuery} noun="account settings">
 		{#snippet skeleton()}

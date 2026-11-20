@@ -20,18 +20,21 @@ import { NAV_ICONS } from '#lib/config/nav-icons.ts';
 import type { LucideIcon } from '#lib/icons/index.ts';
 
 interface NavItem {
+	key: NavRouteKey;
 	href: string;
 	label: string;
 	icon: LucideIcon;
 }
 
 const ALL_ITEMS: NavItem[] = (Object.entries(NAV_ROUTES) as Array<[NavRouteKey, NavRoute]>).map(
-	([key, r]) => ({ href: r.href, label: r.label, icon: NAV_ICONS[key] })
+	([key, r]) => ({ key, href: r.href, label: r.label, icon: NAV_ICONS[key] })
 );
 
 type IconComponent = LucideIcon;
 
 interface Crumb {
+	/** the nav entry this segment is, when it is one (its label is localised from `nav.items.<key>`) */
+	key?: NavRouteKey;
 	label: string;
 	href: ResolvedPathname;
 	icon: IconComponent | null;
@@ -69,6 +72,7 @@ export function routeContext(pathname: string): RouteContext {
 		accum += `/${seg}`;
 		const nav = matchNav(accum);
 		crumbs.push({
+			key: nav?.key,
 			label: nav?.label ?? titleCase(seg),
 			href: accum as ResolvedPathname,
 			icon: nav?.icon ?? null

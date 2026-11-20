@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PageHeader from '$layouts/PageHeader.svelte';
 	import { resolve } from '$app/paths';
 	import { CopyButton } from '$ui';
 	import OrderActionButtons from './OrderActionButtons.svelte';
@@ -24,15 +25,17 @@
 	transitions that need extra input.
 -->
 
+<PageHeader title={`Order ${order.order_number}`} titleTestId="order-number">
+	{#snippet meta()}
+		<span data-testid="order-status-badge">
+			<OrderStatusBadge status={order.status} />
+		</span>
+	{/snippet}
+</PageHeader>
+
 <header class="stack stack-relaxed">
 	<div class="cluster cluster-spread items-start gap-4">
 		<div class="stack stack-tight min-w-0">
-			<div class="cluster cluster-tight">
-				<h1 class="h1" data-testid="order-number">Order {order.order_number}</h1>
-				<span data-testid="order-status-badge">
-					<OrderStatusBadge status={order.status} />
-				</span>
-			</div>
 			<div class="cluster cluster-tight">
 				<a
 					href={resolve('/(app)/leads/[id]', { id: order.customer_lead_id })}

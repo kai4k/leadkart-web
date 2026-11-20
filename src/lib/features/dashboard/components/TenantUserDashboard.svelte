@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
+	import PageHeader from '$layouts/PageHeader.svelte';
 	import { AlarmClock, ClipboardList, Icon, PhoneCall, UserPlus } from '#lib/icons/index.ts';
 	import { Alert, Card } from '$ui';
 	import { session } from '$features/auth';
@@ -55,12 +57,10 @@
 </script>
 
 <div class="stack stack-relaxed">
-	<header class="stack stack-tight">
-		<h1 class="h1">My Dashboard</h1>
-		<p class="body-sm text-muted-foreground">
-			Signed in as <code class="code-inline">{email}</code>.
-		</p>
-	</header>
+	<PageHeader title={$_('dashboard.title.tenantUser')} />
+	<p class="body-sm text-muted-foreground">
+		Signed in as <code class="code-inline">{email}</code>.
+	</p>
 
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 		{#each tiles as tile (tile.label)}

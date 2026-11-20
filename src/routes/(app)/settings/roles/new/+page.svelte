@@ -1,11 +1,12 @@
 <script lang="ts">
+	import PageHeader from '$layouts/PageHeader.svelte';
 	import { enhance } from '$app/forms';
 	import { withFocusOnFailure } from '#lib/utils/focus-first-invalid.ts';
 	import { untrack } from 'svelte';
 	import { _ } from 'svelte-i18n';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Alert, Breadcrumbs, Button, Card, type BreadcrumbItem } from '$ui';
+	import { Alert, Button, Card } from '$ui';
 	import { NumberInput, ScopeContextField, TextField } from '$form';
 	import { ROLE_LEVEL_MAX, ROLE_LEVEL_MIN, ROLE_NAME_MAX, ROLE_NAME_MIN } from '$features/roles';
 	import { bannerText, fieldText, readFailure } from '#lib/utils/form-failure.ts';
@@ -37,26 +38,21 @@
 
 	const bannerError = $derived(bannerText(failure, $_));
 
-	const breadcrumbs: BreadcrumbItem[] = [
-		{ label: 'Settings' },
-		{ href: '/settings/roles', label: 'Roles' },
-		{ label: 'New role' }
-	];
+	const crumbs = $derived([
+		{ label: $_('pages.crumbs.settings') },
+		{ href: '/settings/roles', label: $_('nav.items.roles') },
+		{ label: $_('nav.items.roleNew') }
+	]);
 </script>
 
 <svelte:head><title>New role · LeadKart</title></svelte:head>
 
 <div class="stack stack-relaxed">
-	<Breadcrumbs items={breadcrumbs} />
-
-	<header class="stack stack-tight">
-		<h1 class="h1">Create role</h1>
-		<p class="body-sm text-muted-foreground">
-			Roles bundle permissions for assignment to members. After creating the role, you'll be
-			redirected to its detail page where you can assign permissions and set its place in the
-			reporting hierarchy.
-		</p>
-	</header>
+	<PageHeader
+		title={$_('pages.roleNew.title')}
+		description={$_('pages.roleNew.description')}
+		{crumbs}
+	/>
 
 	<Card.Root padding="md" elevation="sm">
 		<Card.Content>

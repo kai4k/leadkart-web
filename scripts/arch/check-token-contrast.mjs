@@ -123,7 +123,21 @@ const RAW_PAIRS = [
 	['foreground', 'destructive-soft', TEXT, { note: 'impersonation banner text' }],
 	['primary-foreground', 'primary', TEXT, { note: 'pattern topbar: text and icons on the band' }],
 	['primary-foreground', 'primary-hover', TEXT, { note: 'pattern topbar: search fill, hover' }],
-	['primary-foreground', 'primary', UI, { note: 'pattern topbar: focus ring on the band' }]
+	['primary-foreground', 'primary', UI, { note: 'pattern topbar: focus ring on the band' }],
+	// the auth frame, the page header and the section nav (Tasks 13-14): their text/surface pairs, on record
+	['foreground', 'background', TEXT, { note: 'auth frame, page title' }],
+	['primary', 'card', TEXT, { note: 'auth brand headline' }],
+	['muted-foreground', 'card', TEXT, { note: 'auth brand tagline, route error status' }],
+	['primary', 'primary-soft', TEXT, { note: 'auth mobile brand row, feature icons' }],
+	[
+		'muted-foreground',
+		'background',
+		TEXT,
+		{ note: 'breadcrumbs, description, inactive section tab' }
+	],
+	['foreground', 'card', TEXT, { note: 'current section tab' }],
+	['foreground', 'muted', TEXT, { note: 'section tab on hover' }],
+	['destructive', 'destructive-soft', TEXT, { note: 'route error alert' }]
 ];
 
 /** @type {Pair[]} */

@@ -22,6 +22,7 @@
 	import { Icon } from '$icons';
 	import { cn } from '#lib/utils/cn.ts';
 	import Toolbar from './Toolbar.svelte';
+	import PageHeader from '$layouts/PageHeader.svelte';
 	import FilterChips from './FilterChips.svelte';
 
 	/**
@@ -75,15 +76,6 @@
 	let filtersOpen = $state(false);
 </script>
 
-{#snippet titleSlot()}
-	<div class="stack stack-tight">
-		<h1 class="h1">{title}</h1>
-		{#if subtitle}
-			<p class="caption text-muted-foreground">{subtitle}</p>
-		{/if}
-	</div>
-{/snippet}
-
 {#snippet actionsSlot()}
 	{#if secondaryActions}
 		{#each secondaryActions as a (a.label)}
@@ -135,12 +127,15 @@
 {/snippet}
 
 <div class={cn('stack stack-relaxed', className)}>
-	<Toolbar
-		title={titleSlot}
-		search={searchSlot}
-		actions={actionsSlot}
-		tabs={savedViews ? tabsSlot : undefined}
-	/>
+	<PageHeader {title} description={subtitle}>
+		{#snippet actions()}
+			<div class="cluster cluster-tight">{@render actionsSlot()}</div>
+		{/snippet}
+	</PageHeader>
+
+	{#if searchSlot || savedViews}
+		<Toolbar search={searchSlot} tabs={savedViews ? tabsSlot : undefined} />
+	{/if}
 
 	{#if filters}
 		<FilterBar fields={filters.config} urlFilters={filters.instance} bind:open={filtersOpen} />

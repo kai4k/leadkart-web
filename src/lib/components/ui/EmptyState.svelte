@@ -29,7 +29,7 @@
 		</div>
 	{/if}
 	<div class="stack stack-tight">
-		<h3 class="h6 text-foreground">{title}</h3>
+		<h2 class="h6 text-foreground">{title}</h2>
 		{#if description}<p class="body-sm">{description}</p>{/if}
 	</div>
 	{#if action}{@render action()}{/if}

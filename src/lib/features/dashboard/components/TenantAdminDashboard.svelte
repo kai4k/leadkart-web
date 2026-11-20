@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
+	import PageHeader from '$layouts/PageHeader.svelte';
 	import {
 		AlertTriangle,
 		ClipboardList,
@@ -84,20 +86,19 @@
 </script>
 
 <div class="stack stack-relaxed">
-	<header class="stack stack-tight">
-		<div class="cluster">
-			<h1 class="h1">Tenant Dashboard</h1>
+	<PageHeader title={$_('dashboard.title.tenantAdmin')}>
+		{#snippet meta()}
 			<span
 				class="label-small bg-primary-soft text-primary inline-flex items-center rounded-full px-2 py-0.5"
 			>
 				Admin
 			</span>
-		</div>
-		<p class="body-sm text-muted-foreground">
-			Signed in as <code class="code-inline">{email}</code>. Full team overview across CRM, orders,
-			inventory, and dispatch.
-		</p>
-	</header>
+		{/snippet}
+	</PageHeader>
+	<p class="body-sm text-muted-foreground">
+		Signed in as <code class="code-inline">{email}</code>. Full team overview across CRM, orders,
+		inventory, and dispatch.
+	</p>
 
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 		{#each tiles as tile (tile.label)}

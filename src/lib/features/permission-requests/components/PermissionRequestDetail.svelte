@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
+	import PageHeader from '$layouts/PageHeader.svelte';
 	import { Badge, Button, Card, CopyButton, DescriptionList, type DescriptionItem } from '$ui';
 	import { QueryState } from '#lib/components/feedback/index.ts';
 	import { TextareaField } from '$form';
@@ -101,11 +103,12 @@
 	>
 		{#snippet children(req)}
 			{@const badge = permissionRequestState(req.state)}
-			<header class="stack stack-tight">
-				<div class="cluster cluster-tight">
-					<h1 class="h1">Permission request</h1>
+			<PageHeader title={$_('pages.permissionRequest.title')}>
+				{#snippet meta()}
 					<Badge variant={badge.variant} size="sm">{badge.label}</Badge>
-				</div>
+				{/snippet}
+			</PageHeader>
+			<header class="stack stack-tight">
 				<div class="cluster cluster-tight">
 					<code class="caption text-muted-foreground">{req.id}</code>
 					<CopyButton value={req.id} label="Copy request ID" />

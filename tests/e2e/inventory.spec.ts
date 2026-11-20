@@ -156,6 +156,8 @@ test.describe('Inventory — discovery + empty state', () => {
 			body: { items: [], has_more: false }
 		});
 		await page.goto('/inventory');
+		// a click before hydration is lost: wait for the page to be interactive
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
 		await expect(
 			page.locator('#main-content').getByRole('heading', { level: 1, name: /inventory/i })
 		).toBeVisible();
@@ -180,6 +182,8 @@ test.describe('Inventory — list + pharma badges', () => {
 			body: { items: [productIn, productLow, productExpiring], has_more: false }
 		});
 		await page.goto('/inventory');
+		// a click before hydration is lost: wait for the page to be interactive
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
 		await expect(page.getByText('Crocin Advance').first()).toBeVisible();
 		await expect(page.getByText('Augmentin 625').first()).toBeVisible();
 		await expect(page.getByText('Calpol 250').first()).toBeVisible();
@@ -197,6 +201,8 @@ test.describe('Inventory — list + pharma badges', () => {
 			body: { items: [productIn, productLow, productExpiring], has_more: false }
 		});
 		await page.goto('/inventory');
+		// a click before hydration is lost: wait for the page to be interactive
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
 		await page.getByRole('button', { name: 'Low stock' }).first().click();
 		await page.waitForURL(/low_stock=true/);
 	});
@@ -647,6 +653,8 @@ test.describe('Inventory — create product', () => {
 			}
 		]);
 		await page.goto('/inventory');
+		// a click before hydration is lost: wait for the page to be interactive
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
 		await page
 			.getByRole('button', { name: /create product/i })
 			.first()
@@ -674,6 +682,8 @@ test.describe('Inventory — create product', () => {
 			body: { items: [], has_more: false }
 		});
 		await page.goto('/inventory');
+		// a click before hydration is lost: wait for the page to be interactive
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
 		await page
 			.getByRole('button', { name: /create product/i })
 			.first()
@@ -703,6 +713,8 @@ test.describe('Inventory — create product', () => {
 			}
 		]);
 		await page.goto('/inventory');
+		// a click before hydration is lost: wait for the page to be interactive
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
 		await page
 			.getByRole('button', { name: /create product/i })
 			.first()
@@ -753,6 +765,8 @@ test.describe('Inventory — keyboard nav (j/k/Enter/x)', () => {
 			}
 		]);
 		await page.goto('/inventory');
+		// a click before hydration is lost: wait for the page to be interactive
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
 		await expect(page.getByText('Crocin Advance').first()).toBeVisible();
 
 		// Roving-tabindex: focus the first row (the only row with
@@ -797,6 +811,8 @@ test.describe('Inventory — bulk actions', () => {
 			}
 		]);
 		await page.goto('/inventory');
+		// a click before hydration is lost: wait for the page to be interactive
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
 		await page.getByTestId(`row-checkbox-${productIn.id}`).check();
 		await page.getByTestId(`row-checkbox-${productLow.id}`).check();
 		await page
@@ -843,6 +859,8 @@ test.describe('Inventory — bulk upload', () => {
 			}
 		]);
 		await page.goto('/inventory');
+		// a click before hydration is lost: wait for the page to be interactive
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
 		await page
 			.locator('#main-content')
 			.getByRole('button', { name: /bulk upload/i })

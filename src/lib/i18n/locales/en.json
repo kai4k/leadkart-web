@@ -261,6 +261,22 @@
 		}
 	},
 	"errors": {
+		"route": {
+			"status": "Error {status}",
+			"notFound": "This page could not be found.",
+			"forbidden": "You do not have access to this page.",
+			"generic": "Something went wrong while loading this page.",
+			"signIn": "Sign in again",
+			"title": {
+				"notFound": "Page not found",
+				"forbidden": "Access denied",
+				"generic": "Something went wrong"
+			},
+			"backToDashboard": "Back to dashboard",
+			"backToTenants": "Back to tenants",
+			"backToSignIn": "Back to sign in",
+			"backToHome": "Back to home"
+		},
 		"code": {
 			"csrf_mismatch": "Your session token is out of date — reload the page and try again.",
 			"scope_changed": "Your tenant context changed in another tab. Reloading.",
@@ -352,6 +368,79 @@
 			"words": "{n} of {max} characters",
 			"near": "{remaining, plural, one {# character left} other {# characters left}}",
 			"limit": "Character limit reached"
+		}
+	},
+	"dashboard": {
+		"title": {
+			"operator": "Operator Dashboard",
+			"tenantAdmin": "Tenant Dashboard",
+			"tenantUser": "My Dashboard"
+		}
+	},
+	"pages": {
+		"crumbs": {
+			"settings": "Settings"
+		},
+		"team": {
+			"title": "Team",
+			"count": "{count, plural, one {# member} other {# members}}"
+		},
+		"roles": {
+			"title": "Roles",
+			"count": "{count, plural, one {# role} other {# roles}}"
+		},
+		"permissionRequests": {
+			"title": "Permission requests",
+			"description": "Request time-bound elevated permissions; approve or deny requests waiting on you."
+		},
+		"permissionRequest": {
+			"title": "Permission request"
+		},
+		"tenants": {
+			"title": "Tenants",
+			"description": "Operator-side tenant management."
+		},
+		"platformUsers": {
+			"title": "Platform users",
+			"description": "Cross-tenant person identity management."
+		},
+		"hierarchy": {
+			"title": "Reporting hierarchy",
+			"crumb": "Hierarchy",
+			"description": "Who reports to whom. Each member can have at most one manager — the line of authority used for task visibility and management chains."
+		},
+		"roleNew": {
+			"title": "Create role",
+			"description": "Roles bundle permissions for assignment to members. After creating the role, you'll be redirected to its detail page where you can assign permissions and set its place in the reporting hierarchy."
+		},
+		"role": {
+			"fallbackTitle": "Role"
+		},
+		"member": {
+			"fallbackTitle": "Member"
+		},
+		"account": {
+			"title": "Account",
+			"sections": "Account settings sections",
+			"tabs": {
+				"profile": "Profile",
+				"security": "Security",
+				"sessions": "Sessions"
+			}
+		},
+		"tenant": {
+			"description": "Manage your organisation's profile, statutory IDs, contact details, and platform preferences.",
+			"sections": "Tenant settings sections",
+			"tabs": {
+				"profile": "Profile",
+				"statutory": "Statutory IDs",
+				"contact": "Contact",
+				"security": "Security",
+				"preferences": "Preferences"
+			}
+		},
+		"scope": {
+			"sections": "Tenant sections"
 		}
 	}
 }

@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
+	import { _ } from 'svelte-i18n';
 	import { Button } from '$ui';
+	import RouteError, { routeErrorTitleKey } from '#lib/components/feedback/RouteError.svelte';
 	import { session } from '$features/auth';
 
 	// A 5xx here can come from the (app) layout (capabilities 502, refresh-unreachable 503) where the
@@ -19,27 +21,24 @@
 	}
 </script>
 
-<div class="flex min-h-screen items-center justify-center p-6">
-	<div class="max-w-3xl text-center">
-		<h1 class="text-foreground text-6xl font-bold">{page.status}</h1>
-		<p class="text-muted-foreground mt-4 text-lg">
-			{page.error?.message ?? 'Something went wrong.'}
-		</p>
-		<div class="mt-6 flex items-center justify-center gap-4">
-			<a
-				href={resolve('/')}
-				class="bg-primary text-primary-foreground hover:bg-primary-hover focus-visible:ring-ring inline-block rounded-md px-4 py-2 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
-			>
-				Back to home
-			</a>
-			{#if showSignOut}
-				<form method="POST" action="/auth/logout" onsubmit={signOut}>
-					<input type="hidden" name="csrf" value={csrfToken} />
-					<div class="form-footer">
-						<Button type="submit" variant="outline" size="sm">Sign out</Button>
-					</div>
-				</form>
-			{/if}
-		</div>
-	</div>
-</div>
+<main
+	id="main-content"
+	tabindex="-1"
+	class="mx-auto flex min-h-screen max-w-xl flex-col items-start justify-center gap-6 p-6 outline-none"
+>
+	<h1 class="text-foreground text-2xl font-semibold">{$_(routeErrorTitleKey(page.status))}</h1>
+	<RouteError
+		status={page.status}
+		message={page.error?.message}
+		homeHref={resolve('/')}
+		homeLabel={$_('errors.route.backToHome')}
+	/>
+	{#if showSignOut}
+		<form method="POST" action="/auth/logout" onsubmit={signOut}>
+			<input type="hidden" name="csrf" value={csrfToken} />
+			<div class="form-footer">
+				<Button type="submit" variant="outline" size="sm">{$_('shell.userMenu.signOut')}</Button>
+			</div>
+		</form>
+	{/if}
+</main>

@@ -15,7 +15,7 @@
 	<Card.Header>
 		<div class="cluster cluster-tight">
 			<Icon icon={ShieldCheck} size="sm" />
-			<h3 class="h5">Compliance</h3>
+			<h2 class="h5">Compliance</h2>
 		</div>
 	</Card.Header>
 	<Card.Content>

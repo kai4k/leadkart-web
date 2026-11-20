@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { Breadcrumbs, Card, EmptyState, Skeleton, type BreadcrumbItem } from '$ui';
+	import { _ } from 'svelte-i18n';
+	import PageHeader from '$layouts/PageHeader.svelte';
+	import { Card, EmptyState, Skeleton } from '$ui';
 	import { QueryState } from '#lib/components/feedback/index.ts';
 	import { Users } from '$icons';
 	import { usersListQuery } from '$features/users/queries';
@@ -19,11 +21,11 @@
 	const users = $derived(listQuery.data ?? []);
 	const tree = $derived(buildOrgTree(users));
 
-	const breadcrumbs: BreadcrumbItem[] = [
-		{ label: 'Settings' },
-		{ href: '/settings/users', label: 'Team' },
-		{ label: 'Hierarchy' }
-	];
+	const crumbs = $derived([
+		{ label: $_('pages.crumbs.settings') },
+		{ href: '/settings/users', label: $_('nav.items.team') },
+		{ label: $_('pages.hierarchy.crumb') }
+	]);
 </script>
 
 <svelte:head>
@@ -31,15 +33,11 @@
 </svelte:head>
 
 <div class="stack stack-relaxed">
-	<Breadcrumbs items={breadcrumbs} />
-
-	<header class="stack stack-tight">
-		<h1 class="h1">Reporting hierarchy</h1>
-		<p class="body-sm text-muted-foreground">
-			Who reports to whom. Each member can have at most one manager — the line of authority used for
-			task visibility and management chains.
-		</p>
-	</header>
+	<PageHeader
+		title={$_('pages.hierarchy.title')}
+		description={$_('pages.hierarchy.description')}
+		{crumbs}
+	/>
 
 	<UsersTruncatedAlert count={users.length} />
 

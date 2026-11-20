@@ -54,6 +54,8 @@ async function expectClean(page: Page, scope?: string): Promise<void> {
 				(a) => a.playState !== 'running' || a.effect?.getComputedTiming().iterations === Infinity
 			)
 	);
+	// One <h1> per route (PageHeader / the auth form / RouteError), every state of the page.
+	await expect(page.locator('h1')).toHaveCount(1);
 	let builder = new AxeBuilder({ page }).withTags(WCAG_TAGS);
 	if (scope) builder = builder.include(scope);
 	const results = await builder.analyze();

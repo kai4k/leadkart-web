@@ -1,14 +1,7 @@
 <script lang="ts">
-	import {
-		Alert,
-		Badge,
-		Breadcrumbs,
-		Button,
-		Card,
-		CopyButton,
-		Skeleton,
-		type BreadcrumbItem
-	} from '$ui';
+	import { _ } from 'svelte-i18n';
+	import PageHeader from '$layouts/PageHeader.svelte';
+	import { Alert, Badge, Button, Card, CopyButton, Skeleton } from '$ui';
 	import { QueryState } from '#lib/components/feedback/index.ts';
 	import { Select, TextField } from '#lib/components/form/index.ts';
 	import {
@@ -67,10 +60,10 @@
 	}
 	const query = roleDetailQuery(() => roleId);
 	const role = $derived(query.data ?? null);
-	const breadcrumbs = $derived<BreadcrumbItem[]>([
-		{ label: 'Settings' },
-		{ href: '/settings/roles', label: 'Roles' },
-		{ label: role?.name ?? 'Role' }
+	const crumbs = $derived([
+		{ label: $_('pages.crumbs.settings') },
+		{ href: '/settings/roles', label: $_('nav.items.roles') },
+		{ label: role?.name ?? $_('pages.role.fallbackTitle') }
 	]);
 	const protectedRole = $derived(role ? isProtectedRole(role) : false);
 
@@ -159,7 +152,14 @@
 </svelte:head>
 
 <div class="stack stack-relaxed">
-	<Breadcrumbs items={breadcrumbs} />
+	<PageHeader title={role?.name ?? $_('pages.role.fallbackTitle')} {crumbs}>
+		{#snippet meta()}
+			{#if role}
+				{@const badge = roleKind(roleKindKey(role))}
+				<Badge variant={badge.variant} size="sm">{badge.label}</Badge>
+			{/if}
+		{/snippet}
+	</PageHeader>
 
 	<QueryState {query} noun="role" notFound="This role doesn't exist or you don't have access.">
 		{#snippet skeleton()}
@@ -177,13 +177,8 @@
 			</Card.Root>
 		{/snippet}
 		{#snippet children(role)}
-			{@const badge = roleKind(roleKindKey(role))}
 			<header class="cluster cluster-spread">
 				<div class="stack stack-tight">
-					<div class="cluster cluster-tight">
-						<h1 class="h1">{role.name}</h1>
-						<Badge variant={badge.variant} size="sm">{badge.label}</Badge>
-					</div>
 					<p class="caption text-muted-foreground">Hierarchy level {role.hierarchy_level}</p>
 					<div class="cluster cluster-tight">
 						<code class="caption text-muted-foreground">{role.id}</code>

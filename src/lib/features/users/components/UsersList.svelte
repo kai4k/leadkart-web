@@ -1,4 +1,6 @@
 <script lang="ts">
+	import PageHeader from '$layouts/PageHeader.svelte';
+	import { _ } from 'svelte-i18n';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -310,34 +312,33 @@
 {/snippet}
 
 <div class="stack stack-relaxed">
-	<header class="cluster cluster-spread">
-		<div class="stack stack-tight">
-			<h1 class="h1">Team</h1>
-			<p class="caption text-muted-foreground">
-				{userList.length} member{userList.length === 1 ? '' : 's'}
-			</p>
-		</div>
-		<div class="cluster">
-			<input
-				type="search"
-				placeholder="Search by name, email, role…"
-				value={search}
-				oninput={(e) => setSearch((e.currentTarget as HTMLInputElement).value)}
-				class="bg-card border border-border rounded-md w-64 rounded-md px-3 py-2 text-sm"
-			/>
+	<PageHeader
+		title={$_('pages.team.title')}
+		description={$_('pages.team.count', { values: { count: userList.length } })}
+	>
+		{#snippet actions()}
+			<div class="cluster">
+				<input
+					type="search"
+					placeholder="Search by name, email, role…"
+					value={search}
+					oninput={(e) => setSearch((e.currentTarget as HTMLInputElement).value)}
+					class="bg-card border border-border rounded-md w-64 rounded-md px-3 py-2 text-sm"
+				/>
 
-			<a
-				href={resolve('/(app)/settings/users/hierarchy')}
-				class={buttonVariants({ variant: 'tonal' })}><Icon icon={Users} size="sm" /> Hierarchy</a
-			>
-
-			{#if may.create}
-				<Button onclick={() => (createOpen = true)}
-					><Icon icon={Plus} size="sm" /> Add member</Button
+				<a
+					href={resolve('/(app)/settings/users/hierarchy')}
+					class={buttonVariants({ variant: 'tonal' })}><Icon icon={Users} size="sm" /> Hierarchy</a
 				>
-			{/if}
-		</div>
-	</header>
+
+				{#if may.create}
+					<Button onclick={() => (createOpen = true)}
+						><Icon icon={Plus} size="sm" /> Add member</Button
+					>
+				{/if}
+			</div>
+		{/snippet}
+	</PageHeader>
 
 	<UsersTruncatedAlert count={userList.length} />
 

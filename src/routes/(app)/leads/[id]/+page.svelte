@@ -105,7 +105,7 @@
 			<Tabs.Content value="activity">
 				<div class="stack stack-relaxed">
 					<div class="cluster cluster-spread">
-						<h3 class="h5">Call history</h3>
+						<h2 class="h5">Call history</h2>
 						{#if session.canAny(...ACTION.leadManage)}
 							<Button size="sm" onclick={() => (logCallOpen = true)}>
 								<Icon icon={Plus} size="xs" /> Log call
