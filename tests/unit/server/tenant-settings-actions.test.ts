@@ -13,7 +13,10 @@ vi.mock('#lib/server/go.ts', async (importOriginal) => ({
 	goFetch
 }));
 vi.mock('#lib/server/capabilities.ts', () => ({ loadCapabilities }));
-vi.mock('#lib/server/scope.ts', () => ({ readOperatorScope: () => ({ state: 'none' }) }));
+vi.mock('#lib/server/scope.ts', () => ({
+	readOperatorScope: () => ({ state: 'none' }),
+	scopeFingerprint: (r: { state: string }) => r.state
+}));
 vi.mock('$api/jwt', () => ({ decodeJwtPrincipal: () => ({ tenantId: 't-1' }) }));
 vi.mock('#lib/server/cookies.ts', () => ({ ACCESS_COOKIE: () => 'lk_access' }));
 
@@ -28,10 +31,15 @@ import { actions as preferences } from '../../../src/routes/(app)/settings/tenan
 import { actions as security } from '../../../src/routes/(app)/settings/tenant/security/+page.server.ts';
 
 const cookies = { get: () => 'token' } as never;
+const route = { id: '/(app)/settings/tenant/profile' };
 const form = (fields: Record<string, string>) =>
 	({
-		request: new Request('http://x/', { method: 'POST', body: new URLSearchParams(fields) }),
-		cookies
+		request: new Request('http://x/', {
+			method: 'POST',
+			body: new URLSearchParams({ scope_context: 'none', ...fields })
+		}),
+		cookies,
+		route
 	}) as never;
 const run = (a: { default?: unknown }, fields: Record<string, string>) =>
 	(a.default as (e: never) => Promise<unknown>)(form(fields));
@@ -164,7 +172,12 @@ describe('the permission per section is what Go requires', () => {
 
 describe('saveTenantSection answers', () => {
 	const call = (payload = { legal_name: 'Acme', display_name: 'A' }) =>
-		saveTenantSection({ cookies, section: 'profile', payload });
+		saveTenantSection({
+			event: { cookies, route } as never,
+			form: new URLSearchParams({ scope_context: 'none' }) as never,
+			section: 'profile',
+			payload
+		});
 	beforeEach(() => {
 		loadCapabilities.mockResolvedValue(caps([P.identityTenantsUpdate]));
 	});

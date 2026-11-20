@@ -8,7 +8,7 @@
  * Go's PATCH routes are full-replace, so the gateway (`features/tenant/server.ts`) always sends
  * every field; field errors come back keyed by field (nested keys dotted) and land on the form.
  */
-import type { Cookies } from '@sveltejs/kit';
+import type { RequestEvent } from '@sveltejs/kit';
 import { P } from '#lib/features/auth/permissions.ts';
 import {
 	authoriseAction,
@@ -34,15 +34,18 @@ export const TENANT_SECTION_PERMISSION: Record<TenantSection, string> = {
 };
 
 export async function saveTenantSection<S extends TenantSection>({
-	cookies,
+	event,
+	form,
 	section,
 	payload
 }: {
-	cookies: Cookies;
+	event: Pick<RequestEvent, 'cookies' | 'route'>;
+	form: FormData;
 	section: S;
 	payload: TenantSectionBodies[S];
 }) {
-	const refused = await authoriseAction(cookies, TENANT_SECTION_PERMISSION[section], payload);
+	const { cookies } = event;
+	const refused = await authoriseAction(event, form, TENANT_SECTION_PERMISSION[section], payload);
 	if (refused) return refused;
 
 	const parsed = TENANT_SECTIONS[section].schema.safeParse(payload);

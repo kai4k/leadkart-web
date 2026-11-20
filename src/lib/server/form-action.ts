@@ -7,15 +7,20 @@
  * the i18n key `auth.errors.upstreamUnavailable`. A redirect (the session is over) propagates.
  * Anything Go ANSWERS, whatever its status, comes back as `resp` for the action to map.
  */
-import { fail, isHttpError, redirect, type Cookies } from '@sveltejs/kit';
+import { fail, isHttpError, redirect, type RequestEvent } from '@sveltejs/kit';
+import { contextMatches, routeForPath } from '../config/nav.ts';
 import { canAny } from '../features/auth/capabilities.ts';
+import { SCOPE_CONTEXT_FIELD } from '../api/scope-header.ts';
 import { loadCapabilities } from './capabilities.ts';
 import type { z } from 'zod';
 import { goErrorStatus, readGoFailure } from './go.ts';
+import { pathForRouteId } from './guards.ts';
 import { isUpstreamFailure, upstreamStatus } from './proxy.ts';
+import { pageShowsContext } from './scope-context.ts';
 import { readOperatorScope } from './scope.ts';
 
 export const UPSTREAM_UNAVAILABLE_KEY = 'auth.errors.upstreamUnavailable';
+const SCOPE_CHANGED_KEY = 'auth.errors.scopeChanged';
 
 export type GoActionCall =
 	| { ok: true; resp: Response }
@@ -45,17 +50,29 @@ export async function callGoForAction(call: () => Promise<Response>): Promise<Go
  * The action guard: a form action is a separate entry point from the page loads (it runs first,
  * and no layout guard stands in front of it), so it checks the specific permission its Go route
  * requires BEFORE any call that writes. `null` = go ahead; otherwise a `fail()` to return as is.
- * The check is the one rule (`canAny` on Go's effective permissions, minus what Go refuses in an
- * operator's tenant context); Go stays the enforcer, this gives the right message without a round
- * trip. Reading the capabilities is itself a Go call, so an outage there keeps the form too.
+ *
+ *   1. the form must carry the context fingerprint of the page it was rendered in
+ *      (`ScopeContextField`) and it must be the scope cookie's current one: the cookie is shared
+ *      by every tab, so a form on a page that is behind it never writes (409, kept form);
+ *   2. the matched route's nav entry decides whether the action exists in this context (the same
+ *      rule as the page guard: an own-tenant action would otherwise run under the scope header and
+ *      write to the SCOPED tenant); a route with no entry fails closed;
+ *   3. the one permission rule (`canAny` on Go's effective permissions, minus what Go refuses in an
+ *      operator's tenant context). Go stays the enforcer, this gives the right message without a
+ *      round trip. Reading the capabilities is itself a Go call, so an outage there keeps the form.
  */
 export async function authoriseAction<V extends object>(
-	cookies: Cookies,
+	event: Pick<RequestEvent, 'cookies' | 'route'>,
+	form: FormData,
 	permission: string | readonly string[],
-	values: V,
-	/** The nav config's context for the route the action belongs to: 'own' (default) refuses in tenant context. */
-	context: 'own' | 'scope' = 'own'
+	values: V
 ) {
+	const { cookies, route } = event;
+	const scope = readOperatorScope(cookies);
+	const claimed = form.get(SCOPE_CONTEXT_FIELD);
+	if (typeof claimed !== 'string' || !pageShowsContext(claimed, scope)) {
+		return failForm(409, { values, formErrorKey: SCOPE_CHANGED_KEY });
+	}
 	let caps;
 	try {
 		caps = await loadCapabilities(cookies);
@@ -66,14 +83,14 @@ export async function authoriseAction<V extends object>(
 	}
 	if (!caps) redirect(303, '/signin');
 	const permissions = typeof permission === 'string' ? [permission] : permission;
-	const inTenantContext = readOperatorScope(cookies).state === 'valid';
-	// The same context rule as the page guard (`canSee`): an own-tenant action would otherwise run
-	// under the scope header and write to the SCOPED tenant.
-	if (context === 'own' && inTenantContext) {
-		return failForm(403, { values, formErrorKey: 'auth.errors.tenantContext' });
-	}
-	if (context === 'scope' && !inTenantContext) {
-		return failForm(403, { values, formErrorKey: goFailureKey(403) });
+	const inTenantContext = scope.state === 'valid';
+	const entry = route.id === null ? null : routeForPath(pathForRouteId(route.id));
+	if (!entry) return failForm(403, { values, formErrorKey: goFailureKey(403) });
+	if (!contextMatches(entry, inTenantContext)) {
+		return failForm(403, {
+			values,
+			formErrorKey: inTenantContext ? 'auth.errors.tenantContext' : goFailureKey(403)
+		});
 	}
 	return canAny(caps, permissions, inTenantContext)
 		? null

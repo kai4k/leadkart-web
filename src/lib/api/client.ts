@@ -15,7 +15,8 @@ import { ApiError, isApiError, SchemaError, TimeoutError, type ApiErrorBody } fr
 import { requestSignal } from './abort.ts';
 import { DEFAULT_READ_TIMEOUT_MS } from './timeouts.ts';
 import { getCsrfToken } from './csrf.ts';
-import { isOperatorScopePath, SCOPE_REQUIRED_HEADER } from './scope-header.ts';
+import { pageScopeContext } from './scope-context.ts';
+import { SCOPE_CONTEXT_HEADER } from './scope-header.ts';
 
 /** Default client timeout for reads. Must exceed 3 x the BFF upstream timeout; see timeouts.ts. */
 export const DEFAULT_TIMEOUT_MS = DEFAULT_READ_TIMEOUT_MS;
@@ -80,10 +81,11 @@ async function send(
 	const headers = new Headers(opts.headers);
 	headers.set('Accept', 'application/json');
 	if (body !== undefined) headers.set('Content-Type', 'application/json');
-	// Tells the BFF this call needs the operator scope: it answers 409 scope_invalid
-	// (instead of running in the home tenant) when the cookie is gone.
-	if (typeof location !== 'undefined' && isOperatorScopePath(location.pathname))
-		headers.set(SCOPE_REQUIRED_HEADER, '1');
+	// The context this page shows. The BFF compares it with the scope cookie (shared by every tab)
+	// and answers 409 scope_changed instead of running the call in another tenant.
+	headers.delete(SCOPE_CONTEXT_HEADER);
+	const context = pageScopeContext.get();
+	if (context !== undefined) headers.set(SCOPE_CONTEXT_HEADER, context);
 	// CSRF double-submit: echo the lk_csrf cookie on mutations.
 	if (method !== 'GET') {
 		const csrf = getCsrfToken();

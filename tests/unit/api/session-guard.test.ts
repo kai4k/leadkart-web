@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { SCOPE_EXPIRED_MESSAGE } from '#lib/api/scope-header.ts';
+import { SCOPE_CHANGED_MESSAGE, SCOPE_EXPIRED_MESSAGE } from '#lib/api/scope-header.ts';
 import { createSessionGuard } from '#lib/api/session-guard.ts';
 import {
 	ApiError,
 	AuthError,
 	ConflictError,
+	ScopeChangedError,
 	ScopeInvalidError,
 	ServerError,
 	SESSION_EXPIRED_CODE
@@ -17,9 +18,9 @@ function setup(location = { pathname: '/leads', search: '?page=2' }) {
 			location.search = '';
 		}),
 		clearCache: vi.fn(),
-		resetCache: vi.fn(),
 		notify: vi.fn(),
 		exitScope: vi.fn(() => Promise.resolve()),
+		followContext: vi.fn(() => Promise.resolve()),
 		location: () => location
 	};
 	return { deps, guard: createSessionGuard(deps) };
@@ -84,7 +85,6 @@ describe('session guard — scope codes', () => {
 		const { deps, guard } = setup({ pathname: '/operator/scope/members', search: '' });
 		expect(guard.handle(ApiError.fromResponse(res(status), { error: code }))).toBe(false);
 		expect(deps.exitScope).not.toHaveBeenCalled();
-		expect(deps.resetCache).not.toHaveBeenCalled();
 		expect(deps.notify).not.toHaveBeenCalled();
 		expect(deps.goto).not.toHaveBeenCalled();
 	});
@@ -102,19 +102,18 @@ describe('session guard — scope codes', () => {
 describe('session guard — scope_invalid', () => {
 	const scopeError = () => new ScopeInvalidError('expired');
 
-	it('exits scope, resets the cache, toasts, then goes to /operator/tenants — once', async () => {
+	it('exits scope (cookie, cache and layout in the right order, inside exitScope), toasts, then goes to /operator/tenants — once', async () => {
 		const { deps, guard } = setup({ pathname: '/operator/scope/members', search: '' });
 		expect(guard.handle(scopeError())).toBe(true);
 		expect(guard.handle(scopeError())).toBe(true);
 		await vi.waitFor(() => expect(deps.goto).toHaveBeenCalledTimes(1));
 		expect(deps.exitScope).toHaveBeenCalledTimes(1);
-		expect(deps.resetCache).toHaveBeenCalledTimes(1);
 		expect(deps.clearCache).not.toHaveBeenCalled();
 		expect(deps.notify).toHaveBeenCalledTimes(1);
 		expect(deps.notify).toHaveBeenCalledWith(SCOPE_EXPIRED_MESSAGE);
 		expect(deps.goto).toHaveBeenCalledWith('/operator/tenants');
-		// The cache is emptied before navigation, not after.
-		expect(deps.resetCache.mock.invocationCallOrder[0]).toBeLessThan(
+		// The exit (which follows the change and resets the cache) finishes before the navigation.
+		expect(deps.exitScope.mock.invocationCallOrder[0]).toBeLessThan(
 			deps.goto.mock.invocationCallOrder[0]
 		);
 	});
@@ -155,9 +154,9 @@ describe('session guard: scope errors regardless of HTTP status', () => {
 		const deps = {
 			goto: vi.fn(() => Promise.resolve()),
 			clearCache: vi.fn(),
-			resetCache: vi.fn(),
 			notify: vi.fn(),
 			exitScope: vi.fn(() => Promise.resolve()),
+			followContext: vi.fn(() => Promise.resolve()),
 			location: () => ({ pathname: '/operator/scope/members', search: '' })
 		};
 		const guard = createSessionGuard(deps);
@@ -167,5 +166,41 @@ describe('session guard: scope errors regardless of HTTP status', () => {
 		expect(guard.handle(err)).toBe(true);
 		await vi.waitFor(() => expect(deps.goto).toHaveBeenCalledWith('/operator/tenants'));
 		expect(deps.exitScope).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe('session guard — scope_changed (another tab changed the context)', () => {
+	const changed = () => new ScopeChangedError('x');
+
+	it('tells the user, re-runs the layout once, and does not navigate by itself', async () => {
+		const { deps, guard } = setup({ pathname: '/settings/users', search: '' });
+		expect(guard.handle(changed())).toBe(true);
+		expect(guard.handle(changed())).toBe(true); // a second in-flight call failing the same way
+		await vi.waitFor(() => expect(deps.followContext).toHaveBeenCalledTimes(1));
+		expect(deps.notify).toHaveBeenCalledTimes(1);
+		expect(deps.notify).toHaveBeenCalledWith(SCOPE_CHANGED_MESSAGE);
+		expect(deps.exitScope).not.toHaveBeenCalled();
+		expect(deps.goto).not.toHaveBeenCalled();
+		expect(deps.clearCache).not.toHaveBeenCalled();
+	});
+
+	it('can fire again after the first refresh settled', async () => {
+		const { deps, guard } = setup({ pathname: '/settings/users', search: '' });
+		guard.handle(changed());
+		await vi.waitFor(() => expect(deps.followContext).toHaveBeenCalledTimes(1));
+		await Promise.resolve();
+		await Promise.resolve();
+		guard.handle(changed());
+		await vi.waitFor(() => expect(deps.followContext).toHaveBeenCalledTimes(2));
+	});
+
+	it('comes from the BFF response as its own error with its own copy', () => {
+		const err = ApiError.fromResponse(new Response(null, { status: 409 }), {
+			error: 'scope_changed',
+			message: 'raw'
+		});
+		expect(err).toBeInstanceOf(ScopeChangedError);
+		expect(err.message).toBe(SCOPE_CHANGED_MESSAGE);
+		expect(err.code).toBe('scope_changed');
 	});
 });

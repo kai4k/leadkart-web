@@ -53,12 +53,49 @@ const DISABLE_HOVER_PRELOAD = () => {
 	else document.addEventListener('DOMContentLoaded', off);
 };
 
+/**
+ * Every call the APP makes to /api carries the tenant-context fingerprint of its page
+ * (`x-lk-scope-context`, see api/scope-context.ts) and the BFF refuses a call without it. A spec that
+ * speaks to the proxy itself (`page.evaluate(() => fetch('/api/v1/...'))`) is not the app, so by
+ * default it speaks the way the page does: the fingerprint in the DOM (or `none` before any page).
+ * A spec that tests the proxy's treatment of the header sets `test.use({ rawProxyCalls: true })`.
+ */
+const PAGE_CONTEXT_FETCH = () => {
+	const original = window.fetch.bind(window);
+	window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+		const url =
+			typeof input === 'string' ? input : input instanceof URL ? input.pathname : input.url;
+		let sent = init;
+		if (url.startsWith('/api/v1/')) {
+			const headers = new Headers(init?.headers);
+			if (!headers.has('x-lk-scope-context')) {
+				const fp =
+					document.querySelector('[data-scope-context]')?.getAttribute('data-scope-context') ??
+					'none';
+				headers.set('x-lk-scope-context', fp);
+				sent = { ...init, headers };
+			}
+		}
+		return original(input, sent);
+	};
+};
+
 export const test = base.extend<{
 	allowUnregistered: boolean;
+	rawProxyCalls: boolean;
+	pageContextFetch: void;
 	noUnregisteredCalls: void;
 	noHoverPreload: void;
 }>({
 	allowUnregistered: [false, { option: true }],
+	rawProxyCalls: [false, { option: true }],
+	pageContextFetch: [
+		async ({ context, rawProxyCalls }, use) => {
+			if (!rawProxyCalls) await context.addInitScript(PAGE_CONTEXT_FETCH);
+			await use();
+		},
+		{ auto: true }
+	],
 	noHoverPreload: [
 		async ({ context }, use) => {
 			await context.addInitScript(DISABLE_HOVER_PRELOAD);

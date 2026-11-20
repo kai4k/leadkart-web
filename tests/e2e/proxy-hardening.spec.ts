@@ -28,7 +28,10 @@ test.describe('proxy redirects', () => {
 			headers: { location: `http://localhost:9999${THING_2}` }
 		});
 
-		const resp = await page.request.get(THING, { maxRedirects: 0 });
+		const resp = await page.request.get(THING, {
+			maxRedirects: 0,
+			headers: { 'x-lk-scope-context': 'none' }
+		});
 
 		expect(resp.status()).toBe(302);
 		expect(resp.headers()['location']).toBe(THING_2);
@@ -45,7 +48,10 @@ test.describe('proxy redirects', () => {
 			headers: { location: 'http://evil.example/steal' }
 		});
 
-		const resp = await page.request.get(THING, { maxRedirects: 0 });
+		const resp = await page.request.get(THING, {
+			maxRedirects: 0,
+			headers: { 'x-lk-scope-context': 'none' }
+		});
 
 		expect(resp.status()).toBe(502);
 		expect(resp.headers()['location']).toBeUndefined();
@@ -79,7 +85,7 @@ test.describe('proxy redirects on writes', () => {
 
 			const resp = await page.request.post('/api/v1/roles', {
 				data: {},
-				headers: { 'x-csrf-token': csrf },
+				headers: { 'x-csrf-token': csrf, 'x-lk-scope-context': 'none' },
 				maxRedirects: 0
 			});
 

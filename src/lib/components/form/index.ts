@@ -1,4 +1,5 @@
 export { default as TextField } from './TextField.svelte';
+export { default as ScopeContextField } from './ScopeContextField.svelte';
 export { default as PasswordField } from './PasswordField.svelte';
 export { default as Select, type SelectOption } from './Select.svelte';
 export { default as NumberInput } from './NumberInput.svelte';

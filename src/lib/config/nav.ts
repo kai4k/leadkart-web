@@ -211,7 +211,8 @@ const SECTIONS: ReadonlyArray<{ id: NavSectionId; title?: string }> = [
 	{ id: 'account', title: 'Account' }
 ];
 
-function contextMatches(route: NavRoute, inTenantContext: boolean): boolean {
+/** THE context rule: does this entry exist in the caller's current context? (guards, sidebar and form actions) */
+export function contextMatches(route: NavRoute, inTenantContext: boolean): boolean {
 	return route.context === 'both' || (route.context === 'scope') === inTenantContext;
 }
 

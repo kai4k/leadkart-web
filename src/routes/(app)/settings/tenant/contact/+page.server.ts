@@ -2,10 +2,11 @@ import { saveTenantSection } from '../_actions';
 import type { Actions } from './$types';
 
 export const actions: Actions = {
-	default: async ({ request, cookies }) => {
-		const fd = await request.formData();
+	default: async (event) => {
+		const fd = await event.request.formData();
 		return saveTenantSection({
-			cookies,
+			event,
+			form: fd,
 			section: 'admin-contact',
 			// Every field is sent, blank as ''. Go rejects a body with a missing address field.
 			payload: {

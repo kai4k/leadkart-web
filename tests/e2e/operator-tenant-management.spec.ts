@@ -249,6 +249,10 @@ test.describe('Operator scope flow', () => {
 
 		const cookies = await page.context().cookies();
 		expect(cookies.find((c) => c.name === 'lk_op_tenant')).toBeUndefined();
+		// The list the Exit lands on has its rows (the cache clear used to run after the navigation
+		// and leave this on a spinner).
+		await expect(page.getByText('Acme Pharma').first()).toBeVisible();
+		await expect(page.getByText('Beta Meds').first()).toBeVisible();
 	});
 
 	test('BFF auto-injects X-Tenant-Id for in-scope API calls', async ({ page }) => {
@@ -347,6 +351,8 @@ test.describe('Operator scope flow', () => {
 		await context.addCookies([
 			{ name: 'lk_op_tenant', value: mintScopeCookie(scope, 600), url: 'http://localhost:4173' }
 		]);
+		// The page must show the context the cookie names (its fingerprint is in the page data).
+		await page.reload();
 		expect(await probe()).toBe(200);
 		expect((await listMockCalls()).at(-1)?.['x-tenant-id']).toBe(ACME.id);
 
@@ -358,7 +364,7 @@ test.describe('Operator scope flow', () => {
 		expect(await listMockCalls()).toHaveLength(before);
 	});
 
-	test('scope cookie vanishes while in the scope tree: marked calls get 409, no Go call, SPA returns to the tenant list', async ({
+	test('scope cookie vanishes while in the scope tree: calls get 409 scope_changed, no Go call, SPA returns to the tenant list', async ({
 		page,
 		context
 	}) => {
@@ -378,13 +384,13 @@ test.describe('Operator scope flow', () => {
 		await context.clearCookies({ name: 'lk_op_tenant' });
 		const before = (await listMockCalls()).length;
 
-		// Proxy rule: the marker plus no valid cookie never reaches Go.
+		// Proxy rule: a page that shows a tenant context never reaches Go once the cookie is gone.
 		const out = await page.evaluate(async () => {
-			const r = await fetch('/api/v1/users', { headers: { 'x-lk-scope-required': '1' } });
+			const r = await fetch('/api/v1/users');
 			return { status: r.status, body: (await r.json()) as { error: string } };
 		});
 		expect(out.status).toBe(409);
-		expect(out.body.error).toBe('scope_invalid');
+		expect(out.body.error).toBe('scope_changed');
 		expect(await listMockCalls()).toHaveLength(before);
 
 		// SPA rule: a real client-side refetch inside the scope tree bounces to the list.

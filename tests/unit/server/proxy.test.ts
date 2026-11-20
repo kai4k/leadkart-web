@@ -4,7 +4,6 @@ import {
 	isTokenEndpoint,
 	isUpstreamTimeout,
 	pickResponseHeaders,
-	scopeRequired,
 	upstreamTimeout,
 	scrubsTokens,
 	stripTokenFields
@@ -147,14 +146,6 @@ describe('upstreamTimeout', () => {
 	it('is already aborted when the request signal is', () => {
 		const { signal } = upstreamTimeout(AbortSignal.abort(), 1000);
 		expect(signal.aborted).toBe(true);
-	});
-});
-
-describe('scopeRequired', () => {
-	it('is true only for the marker header set to 1', () => {
-		expect(scopeRequired(new Headers({ 'x-lk-scope-required': '1' }))).toBe(true);
-		expect(scopeRequired(new Headers({ 'x-lk-scope-required': '0' }))).toBe(false);
-		expect(scopeRequired(new Headers())).toBe(false);
 	});
 });
 

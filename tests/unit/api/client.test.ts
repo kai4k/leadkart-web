@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { api, apiLegacy, buildQueryString, parseResponse } from '#lib/api/client.ts';
 import { ConflictError, SchemaError, TimeoutError } from '#lib/api/errors.ts';
+import { pageScopeContext } from '#lib/api/scope-context.ts';
 
 const fetchMock = vi.fn();
 vi.stubGlobal('fetch', fetchMock);
@@ -68,11 +69,26 @@ describe('api client v2', () => {
 		await api.get('/v1/x', z.unknown());
 		expect(sentHeaders().get('X-CSRF-Token')).toBeNull();
 	});
-	it('marks operator-scope pages with the scope-required header', async () => {
-		vi.stubGlobal('location', { pathname: '/operator/scope/profile' });
+	it('sends the context the page shows on every call, reads and writes alike', async () => {
+		pageScopeContext.set('fp-tenant-a');
+		fetchMock.mockImplementation(() => Promise.resolve(json(200, {})));
+		await api.get('/v1/x', z.unknown());
+		expect(sentHeaders().get('x-lk-scope-context')).toBe('fp-tenant-a');
+		fetchMock.mockClear();
+		await api.post('/v1/x', {});
+		expect(sentHeaders().get('x-lk-scope-context')).toBe('fp-tenant-a');
+	});
+	it('sends none of its own when the page has no context yet (the proxy then refuses)', async () => {
+		pageScopeContext.set(undefined);
 		fetchMock.mockResolvedValue(json(200, {}));
 		await api.get('/v1/x', z.unknown());
-		expect(sentHeaders().get('x-lk-scope-required')).toBe('1');
+		expect(sentHeaders().has('x-lk-scope-context')).toBe(false);
+	});
+	it('a browser-set X-Tenant-Id or context header is replaced, never trusted', async () => {
+		pageScopeContext.set('fp-real');
+		fetchMock.mockResolvedValue(json(200, {}));
+		await api.get('/v1/x', z.unknown(), { headers: { 'x-lk-scope-context': 'forged' } });
+		expect(sentHeaders().get('x-lk-scope-context')).toBe('fp-real');
 	});
 });
 

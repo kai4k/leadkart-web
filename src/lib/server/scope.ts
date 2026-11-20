@@ -12,7 +12,9 @@
 import { createHmac } from 'node:crypto';
 import type { Cookies } from '@sveltejs/kit';
 import { z } from 'zod';
+import { decodeJwtPrincipal } from '../api/jwt.ts';
 import { config, isProd } from './config.ts';
+import { ACCESS_COOKIE } from './cookies.ts';
 import { timingSafeEqualString } from './csrf.ts';
 
 const OP_TENANT_COOKIE = 'lk_op_tenant';
@@ -25,8 +27,12 @@ const scopeSchema = z.object({
 	display_name: z.string().max(200)
 });
 
-/** The signed payload: the scope plus its expiry (unix seconds). */
-const payloadSchema = scopeSchema.extend({ exp: z.number().int() });
+/**
+ * The signed payload: the scope, its expiry (unix seconds) and `pid`, the person who entered the
+ * context. A cookie written before `pid` existed fails this schema, so it reads as `invalid`
+ * (fail closed) and never as a valid context.
+ */
+const payloadSchema = scopeSchema.extend({ exp: z.number().int(), pid: z.string().min(1) });
 
 export type OperatorScope = z.infer<typeof scopeSchema>;
 
@@ -56,9 +62,27 @@ function sign(payload: string): string {
 	return createHmac('sha256', config.SCOPE_COOKIE_SECRET).update(payload).digest('base64url');
 }
 
+/**
+ * The person the access cookie belongs to (its `sub`), or null without a readable one. The scope
+ * cookie is bound to this person: it is read back only for the same person, so a copy replayed
+ * from another account's browser (or one left behind by a previous sign-in) is never a context.
+ */
+function callerPersonId(cookies: Cookies): string | null {
+	const access = cookies.get(ACCESS_COOKIE());
+	if (!access) return null;
+	try {
+		return decodeJwtPrincipal(access).personId;
+	} catch {
+		return null;
+	}
+}
+
+/** Signs the caller's context into the cookie. Throws when there is no signed-in caller to bind it to. */
 export function setOperatorScope(cookies: Cookies, scope: OperatorScope): void {
+	const pid = callerPersonId(cookies);
+	if (pid === null) throw new Error('operator scope needs a signed-in caller to bind to');
 	const exp = Math.floor(Date.now() / 1000) + SCOPE_TTL_SECONDS;
-	const payload = Buffer.from(JSON.stringify({ ...scopeSchema.parse(scope), exp })).toString(
+	const payload = Buffer.from(JSON.stringify({ ...scopeSchema.parse(scope), exp, pid })).toString(
 		'base64url'
 	);
 	cookies.set(OP_TENANT_COOKIE, `${payload}.${sign(payload)}`, {
@@ -90,11 +114,29 @@ export function readOperatorScope(cookies: Cookies): ScopeReading {
 		if (!parsed.success || parsed.data.exp < Math.floor(Date.now() / 1000)) {
 			return { state: 'invalid' };
 		}
+		const caller = callerPersonId(cookies);
+		if (caller === null || !timingSafeEqualString(parsed.data.pid, caller)) {
+			return { state: 'invalid' };
+		}
 		const { id, slug, display_name } = parsed.data;
 		return { state: 'valid', scope: { id, slug, display_name } };
 	} catch {
 		return { state: 'invalid' };
 	}
+}
+
+/**
+ * What a page sends with every API call to say which context it is showing: an opaque keyed hash
+ * of the scope cookie's tenant id (HMAC with the server secret, domain-separated from the cookie
+ * signature), or `none` / `invalid`. It reveals nothing to scripts or logs: the tenant id cannot be
+ * recovered without the secret. The proxy and the form actions compare it with the cookie's own
+ * fingerprint, so a tab never writes into a tenant it is not showing.
+ */
+export function scopeFingerprint(reading: ScopeReading): string {
+	if (reading.state !== 'valid') return reading.state;
+	return createHmac('sha256', config.SCOPE_COOKIE_SECRET)
+		.update(`scope-context:${reading.scope.id}`)
+		.digest('base64url');
 }
 
 /** Scope when valid, otherwise null — use `readOperatorScope` where invalid must fail closed. */

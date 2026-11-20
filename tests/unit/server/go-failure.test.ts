@@ -145,9 +145,10 @@ describe('actions that used to print Go detail raw', () => {
 		const r = (await (newRoleActions.default as (e: never) => Promise<unknown>)({
 			request: new Request('http://x/', {
 				method: 'POST',
-				body: new URLSearchParams({ name: 'Auditor', hierarchy_level: '5' })
+				body: new URLSearchParams({ name: 'Auditor', hierarchy_level: '5', scope_context: 'none' })
 			}),
-			cookies: cookies({ lk_access: 'tok' })
+			cookies: cookies({ lk_access: 'tok' }),
+			route: { id: '/(app)/settings/roles/new' }
 		} as never)) as Fail;
 		expect(r.status).toBe(409);
 		expect(r.data.formErrorKey).toBe('auth.errors.conflict');
@@ -167,9 +168,10 @@ describe('actions that used to print Go detail raw', () => {
 		const r = (await (newRoleActions.default as (e: never) => Promise<unknown>)({
 			request: new Request('http://x/', {
 				method: 'POST',
-				body: new URLSearchParams({ name: 'Auditor', hierarchy_level: '5' })
+				body: new URLSearchParams({ name: 'Auditor', hierarchy_level: '5', scope_context: 'none' })
 			}),
-			cookies: cookies({ lk_access: 'tok' })
+			cookies: cookies({ lk_access: 'tok' }),
+			route: { id: '/(app)/settings/roles/new' }
 		} as never)) as Fail;
 		expect(r.data.formErrorKey).toBe('auth.errors.forbidden');
 	});
@@ -200,9 +202,10 @@ describe('form actions keep the form on an outage and share one 429 line', () =>
 		return (newRoleActions.default as (e: never) => Promise<unknown>)({
 			request: new Request('http://x/', {
 				method: 'POST',
-				body: new URLSearchParams({ name: 'Auditor', hierarchy_level: '5' })
+				body: new URLSearchParams({ name: 'Auditor', hierarchy_level: '5', scope_context: 'none' })
 			}),
-			cookies
+			cookies,
+			route: { id: '/(app)/settings/roles/new' }
 		} as never) as Promise<Out>;
 	};
 

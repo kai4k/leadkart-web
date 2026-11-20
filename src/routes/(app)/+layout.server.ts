@@ -20,7 +20,9 @@ import { redirect } from '@sveltejs/kit';
 import { assertRefreshReachable } from '#lib/server/auth-refresh.ts';
 import { ACCESS_COOKIE, mustChangePassword } from '#lib/server/cookies.ts';
 import { loadCapabilities } from '#lib/server/capabilities.ts';
-import { clearOperatorScope, readOperatorScope } from '#lib/server/scope.ts';
+import { clearOperatorScope, readOperatorScope, scopeFingerprint } from '#lib/server/scope.ts';
+import { OPERATOR_SCOPE_PERMISSION } from '#lib/server/guards.ts';
+import { can } from '#lib/features/auth/capabilities.ts';
 import { CAPABILITIES_DEPENDENCY } from '#lib/api/capabilities-refresh.ts';
 import { SCOPE_DEPENDENCY } from '#lib/api/scope-header.ts';
 import type { LayoutServerLoad } from './$types';
@@ -54,9 +56,10 @@ export const load: LayoutServerLoad = async ({ cookies, url, locals, depends }) 
 	// cannot loop 409 → DELETE → /signin. /operator/scope clears it itself (and
 	// redirects). The state is checked first so `url` is only read (and tracked
 	// as a load dependency) when there is something to clear.
-	const scope = readOperatorScope(cookies);
+	let scope = readOperatorScope(cookies);
 	if (scope.state === 'invalid' && !url.pathname.startsWith('/operator/scope')) {
 		clearOperatorScope(cookies);
+		scope = { state: 'none' };
 	}
 
 	// Go answered without usable capabilities (401 after refresh, non-2xx, empty
@@ -71,7 +74,24 @@ export const load: LayoutServerLoad = async ({ cookies, url, locals, depends }) 
 		throw redirect(303, `/signin?next=${next}`);
 	}
 
+	// A context this operator can no longer hold (platform.tenants.view was taken away while the
+	// cookie is still signed and unexpired): Go answers every scoped call `tenant_scope_forbidden`,
+	// which by design never exits the scope, the own pages redirect into the scope tree and the
+	// scope tree redirects out of it, and the Exit control is unreachable. Drop the cookie here,
+	// where the capabilities are fresh anyway.
+	if (scope.state === 'valid' && !can(capabilities, OPERATOR_SCOPE_PERMISSION)) {
+		clearOperatorScope(cookies);
+		scope = { state: 'none' };
+	}
+
 	// Tenant context = a valid scope cookie: the BFF sends X-Tenant-Id on every Go call, so the
-	// nav and permission checks must know (nav.ts, capabilities.ts). Never carries the tenant itself.
-	return { capabilities, inTenantContext: scope.state === 'valid' };
+	// nav and permission checks must know (nav.ts, capabilities.ts). `scopeContext` is the
+	// fingerprint of that context (a keyed hash, never the tenant itself): the page sends it with
+	// every API call and form post, and the BFF refuses a call whose page shows another context
+	// than the cookie names now (another tab entered or left one).
+	return {
+		capabilities,
+		inTenantContext: scope.state === 'valid',
+		scopeContext: scopeFingerprint(scope)
+	};
 };

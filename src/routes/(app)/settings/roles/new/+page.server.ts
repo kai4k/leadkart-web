@@ -24,15 +24,16 @@ interface CreateRoleResponse {
 }
 
 export const actions: Actions = {
-	default: async ({ request, cookies }) => {
-		const fd = await request.formData();
+	default: async (event) => {
+		const { cookies } = event;
+		const fd = await event.request.formData();
 		const payload = {
 			name: (fd.get('name') ?? '').toString(),
 			hierarchy_level: Number(fd.get('hierarchy_level') ?? 0)
 		};
 
 		// An action is a separate entry point from the page guard: authorise before any Go call.
-		const refused = await authoriseAction(cookies, P.identityRolesCreate, payload);
+		const refused = await authoriseAction(event, fd, P.identityRolesCreate, payload);
 		if (refused) return refused;
 
 		const parsed = createRoleRequestSchema.safeParse(payload);

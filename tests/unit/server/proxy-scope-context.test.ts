@@ -1,0 +1,176 @@
+/**
+ * The proxy only runs a call in the context the page says it is showing. The browser sends the
+ * page's context fingerprint (`x-lk-scope-context`, from SSR page data); the proxy compares it with
+ * the signed cookie's BEFORE any call to Go. A mismatch, or no fingerprint, is a 409 `scope_changed`.
+ */
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { DELETE, GET, POST } from '../../../src/routes/api/[...path]/+server.ts';
+import { scopeFingerprint, setOperatorScope, type OperatorScope } from '#lib/server/scope.ts';
+import { SCOPE_CONTEXT_HEADER } from '#lib/api/scope-header.ts';
+
+const PERSON = 'person-aaaa';
+const TENANT_A: OperatorScope = {
+	id: '3f2504e0-4f89-41d3-9a0c-0305e82c3301',
+	slug: 'tenant-a',
+	display_name: 'Tenant A'
+};
+const TENANT_B: OperatorScope = {
+	id: '9d9c7a52-0c7b-4e8d-8a3e-0e5d3e0b9f11',
+	slug: 'tenant-b',
+	display_name: 'Tenant B'
+};
+
+function accessToken(person: string): string {
+	const seg = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url');
+	return `${seg({ alg: 'none' })}.${seg({ sub: person, tenant_id: 't1', membership_id: 'm1', exp: 4_000_000_000 })}.sig`;
+}
+
+function newJar(person = PERSON) {
+	const store = new Map<string, string>([
+		['lk_access', accessToken(person)],
+		['lk_csrf', 'csrf-1']
+	]);
+	return {
+		store,
+		api: {
+			get: (n: string) => store.get(n),
+			set: (n: string, v: string) => void store.set(n, v),
+			delete: (n: string) => void store.delete(n)
+		}
+	};
+}
+
+const fpOf = (scope: OperatorScope) => scopeFingerprint({ state: 'valid', scope });
+
+let upstream: ReturnType<typeof vi.fn>;
+beforeEach(() => {
+	upstream = vi.fn(() => Promise.resolve(Response.json({ ok: true })));
+	vi.stubGlobal('fetch', upstream);
+});
+afterEach(() => vi.unstubAllGlobals());
+
+function call(
+	handler: typeof GET,
+	jar: ReturnType<typeof newJar>,
+	opts: { method?: string; context?: string; headers?: Record<string, string> } = {}
+) {
+	const method = opts.method ?? 'GET';
+	const headers = new Headers(opts.headers);
+	if (opts.context !== undefined) headers.set(SCOPE_CONTEXT_HEADER, opts.context);
+	if (method !== 'GET') headers.set('x-csrf-token', 'csrf-1');
+	return handler({
+		request: new Request('http://app/api/v1/users', {
+			method,
+			headers,
+			body: method === 'GET' ? undefined : JSON.stringify({ a: 1 })
+		}),
+		params: { path: 'v1/users' },
+		cookies: jar.api
+	} as never);
+}
+
+const sentTenantHeader = () =>
+	(upstream.mock.calls[0]![1] as RequestInit).headers instanceof Headers
+		? ((upstream.mock.calls[0]![1] as RequestInit).headers as Headers).get('x-tenant-id')
+		: null;
+
+describe('proxy context fingerprint', () => {
+	it('a page showing tenant A runs in tenant A', async () => {
+		const jar = newJar();
+		setOperatorScope(jar.api as never, TENANT_A);
+		const res = await call(GET, jar, { context: fpOf(TENANT_A) });
+		expect(res.status).toBe(200);
+		expect(sentTenantHeader()).toBe(TENANT_A.id);
+	});
+
+	it.each(['GET', 'POST', 'DELETE'] as const)(
+		'a %s from a tab showing tenant A never reaches Go once the cookie names tenant B',
+		async (method) => {
+			const jar = newJar();
+			setOperatorScope(jar.api as never, TENANT_B); // tab 2 entered B
+			const res = await call(method === 'GET' ? GET : method === 'POST' ? POST : DELETE, jar, {
+				method,
+				context: fpOf(TENANT_A) // tab 1 still shows A
+			});
+			expect(res.status).toBe(409);
+			expect(await res.json()).toMatchObject({ error: 'scope_changed' });
+			expect(upstream).not.toHaveBeenCalled();
+		}
+	);
+
+	it('a tab showing the operator\'s own tenant ("none") is refused once a context was entered', async () => {
+		const jar = newJar();
+		setOperatorScope(jar.api as never, TENANT_B);
+		const res = await call(POST, jar, { method: 'POST', context: 'none' });
+		expect(res.status).toBe(409);
+		expect(await res.json()).toMatchObject({ error: 'scope_changed' });
+		expect(upstream).not.toHaveBeenCalled();
+	});
+
+	it('a tab showing tenant A is refused after the context was exited elsewhere', async () => {
+		const jar = newJar(); // no scope cookie any more
+		const res = await call(GET, jar, { context: fpOf(TENANT_A) });
+		expect(res.status).toBe(409);
+		expect(await res.json()).toMatchObject({ error: 'scope_changed' });
+		expect(upstream).not.toHaveBeenCalled();
+	});
+
+	it('own tenant on both sides ("none" and no cookie) goes through with no tenant header', async () => {
+		const jar = newJar();
+		const res = await call(POST, jar, { method: 'POST', context: 'none' });
+		expect(res.status).toBe(200);
+		expect(sentTenantHeader()).toBeNull();
+	});
+
+	it.each(['GET', 'POST'] as const)(
+		'a %s with no fingerprint is refused, in or out of a context',
+		async (method) => {
+			for (const entered of [false, true]) {
+				upstream.mockClear();
+				const jar = newJar();
+				if (entered) setOperatorScope(jar.api as never, TENANT_A);
+				const res = await call(method === 'GET' ? GET : POST, jar, { method });
+				expect(res.status).toBe(409);
+				expect(await res.json()).toMatchObject({ error: 'scope_changed' });
+				expect(upstream).not.toHaveBeenCalled();
+			}
+		}
+	);
+
+	it('an invalid cookie keeps its own answer (scope_invalid) whatever the page says', async () => {
+		const jar = newJar();
+		jar.store.set('lk_op_tenant', 'garbage.sig');
+		const res = await call(GET, jar, { context: 'invalid' });
+		expect(res.status).toBe(409);
+		expect(await res.json()).toMatchObject({ error: 'scope_invalid' });
+		expect(upstream).not.toHaveBeenCalled();
+	});
+
+	it('a cookie replayed by another signed-in person is not a context: scope_invalid', async () => {
+		const entered = newJar();
+		setOperatorScope(entered.api as never, TENANT_A);
+		const replayer = newJar('person-bbbb');
+		replayer.store.set('lk_op_tenant', entered.store.get('lk_op_tenant')!);
+		const res = await call(GET, replayer, { context: fpOf(TENANT_A) });
+		expect(res.status).toBe(409);
+		expect(await res.json()).toMatchObject({ error: 'scope_invalid' });
+		expect(upstream).not.toHaveBeenCalled();
+	});
+
+	it('never forwards a tenant the browser supplied', async () => {
+		const jar = newJar();
+		setOperatorScope(jar.api as never, TENANT_A);
+		await call(GET, jar, {
+			context: fpOf(TENANT_A),
+			headers: { 'x-tenant-id': TENANT_B.id }
+		});
+		expect(sentTenantHeader()).toBe(TENANT_A.id);
+	});
+
+	it('does not forward the fingerprint to Go', async () => {
+		const jar = newJar();
+		await call(GET, jar, { context: 'none' });
+		const sent = (upstream.mock.calls[0]![1] as RequestInit).headers as Headers;
+		expect(sent.has(SCOPE_CONTEXT_HEADER)).toBe(false);
+	});
+});

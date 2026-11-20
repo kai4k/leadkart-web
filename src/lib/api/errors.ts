@@ -1,4 +1,8 @@
-import { SCOPE_EXPIRED_MESSAGE } from './scope-header.ts';
+import {
+	SCOPE_CHANGED_CODE,
+	SCOPE_CHANGED_MESSAGE,
+	SCOPE_EXPIRED_MESSAGE
+} from './scope-header.ts';
 
 /**
  * Typed API errors. Two JSON envelopes reach the browser:
@@ -189,10 +193,9 @@ export class ApiError extends Error {
 				err = new NotFoundError(response.url || 'unknown resource', traceId, text);
 				break;
 			case 409:
-				err =
-					code === SCOPE_INVALID_CODE
-						? new ScopeInvalidError(text, traceId)
-						: new ConflictError(copy, traceId, text);
+				if (code === SCOPE_INVALID_CODE) err = new ScopeInvalidError(text, traceId);
+				else if (code === SCOPE_CHANGED_CODE) err = new ScopeChangedError(text, traceId);
+				else err = new ConflictError(copy, traceId, text);
 				break;
 			case 429:
 				err = new RateLimitError(retryAfter, traceId);
@@ -389,6 +392,24 @@ export class ScopeInvalidError extends ApiError {
 	}
 }
 
+/**
+ * 409 `scope_changed` from the BFF proxy: the page that made the call shows another tenant context
+ * than the (shared) scope cookie now names, typically because another tab entered or left one. The
+ * call never reached Go. The session guard re-runs the (app) layout so the page catches up; this is
+ * not a failed action, and its copy says what is happening.
+ */
+export class ScopeChangedError extends ApiError {
+	declare readonly status: 409;
+	readonly detail: string | undefined;
+
+	constructor(detail?: string, traceId?: string) {
+		super(409, traceId, SCOPE_CHANGED_CODE);
+		this.name = 'ScopeChangedError';
+		this.detail = detail;
+		this.message = SCOPE_CHANGED_MESSAGE;
+	}
+}
+
 export interface DescribeErrorOptions {
 	/** Line for anything that is not an `ApiError` (a thrown string, a bug). Default "Something went wrong". */
 	fallback?: string;
@@ -420,7 +441,13 @@ export function describeError(err: unknown, opts: DescribeErrorOptions = {}): st
 	const known = err.code === undefined ? undefined : CODE_COPY.get(err.code);
 	const callerLineWins = own !== undefined && CALLER_LINE_WINS_CODES.has(err.code ?? '');
 	if (known !== undefined && !callerLineWins) return known;
-	if (err instanceof ScopeInvalidError || err.status === undefined) return err.message;
+	if (
+		err instanceof ScopeInvalidError ||
+		err instanceof ScopeChangedError ||
+		err.status === undefined
+	) {
+		return err.message;
+	}
 	if (err instanceof ValidationError) {
 		return err.hasFieldErrors ? err.message : (own ?? VALIDATION_FALLBACK_COPY);
 	}

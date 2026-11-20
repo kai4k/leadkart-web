@@ -5,7 +5,6 @@
  */
 
 import { deadlineSignal } from '../api/abort.ts';
-import { SCOPE_REQUIRED_HEADER } from '../api/scope-header.ts';
 import { config } from './config.ts';
 
 const UPSTREAM_PREFIX = '/api/v1/';
@@ -204,18 +203,6 @@ async function readCapped(resp: Response): Promise<string> {
 }
 
 const NULL_BODY_STATUS = new Set([101, 204, 205, 304]);
-
-/**
- * True when the browser says the request is made from inside the operator
- * scope tree. The proxy then refuses to run it unless a valid scope cookie
- * is present (covers the cookie having vanished: `none` would otherwise
- * run in the operator's home tenant). The header can only make the proxy
- * stricter, never looser, so trusting a client-supplied value is safe.
- * It is not forwarded to Go.
- */
-export function scopeRequired(headers: Headers): boolean {
-	return headers.get(SCOPE_REQUIRED_HEADER) === '1';
-}
 
 /**
  * True when an upstream call failed because Go was too slow: our own

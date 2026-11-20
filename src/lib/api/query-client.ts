@@ -39,7 +39,7 @@ import { browser } from '$app/env';
 import { goto } from '$app/navigation';
 import { toast } from '$ui';
 import { describeError, NetworkError, ServerError, AuthError, TimeoutError } from './errors';
-import { exitOperatorScope } from './operator-scope';
+import { followScopeChange, leaveTenantContext } from './operator-scope';
 import { createSessionGuard } from './session-guard';
 import { clearPrivateCaches, IMPERSONATION_SESSION_KEY } from '#lib/utils/private-caches.ts';
 
@@ -50,9 +50,10 @@ export function createQueryClient(): QueryClient {
 		// eslint-disable-next-line svelte/no-navigation-without-resolve
 		goto: (url) => goto(url),
 		clearCache: () => void clearUserBrowserState(),
-		resetCache: () => void client.resetQueries(),
 		notify: (message) => toast.error(message),
-		exitScope: exitOperatorScope,
+		exitScope: () => leaveTenantContext(client),
+		// Announced to no one: the tab that changed the context already told the others.
+		followContext: () => followScopeChange(client, false),
 		location: () => window.location
 	});
 

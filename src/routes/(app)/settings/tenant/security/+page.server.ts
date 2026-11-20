@@ -2,15 +2,16 @@ import { saveTenantSection } from '../_actions';
 import type { Actions } from './$types';
 
 export const actions: Actions = {
-	default: async ({ request, cookies }) => {
-		const fd = await request.formData();
+	default: async (event) => {
+		const fd = await event.request.formData();
 		const toInt = (v: FormDataEntryValue | null) => {
 			const n = Number((v ?? '').toString());
 			return Number.isFinite(n) ? n : 0;
 		};
 		const toBool = (v: FormDataEntryValue | null) => (v ?? '').toString() === 'on';
 		return saveTenantSection({
-			cookies,
+			event,
+			form: fd,
 			section: 'settings',
 			payload: {
 				password_policy: {

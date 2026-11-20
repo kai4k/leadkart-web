@@ -2,6 +2,7 @@
 	import { _ } from 'svelte-i18n';
 	import { Alert, Button } from '$ui';
 	import { session } from '$features/auth';
+	import { ScopeContextField } from '$form';
 
 	/**
 	 * What every tenant-settings form ends with: the action's outcome (a refusal or Go's answer,
@@ -20,6 +21,8 @@
 
 	const allowed = $derived(session.can(permission));
 </script>
+
+<ScopeContextField />
 
 {#if form?.formErrorKey}
 	<Alert variant="danger">{$_(form.formErrorKey)}</Alert>

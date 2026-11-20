@@ -7,7 +7,10 @@ const readGoJson = vi.hoisted(() => vi.fn());
 const scopeState = vi.hoisted(() => ({ state: 'none' }));
 
 vi.mock('#lib/server/capabilities.ts', () => ({ loadCapabilities }));
-vi.mock('#lib/server/scope.ts', () => ({ readOperatorScope: () => scopeState }));
+vi.mock('#lib/server/scope.ts', () => ({
+	readOperatorScope: () => scopeState,
+	scopeFingerprint: (r: { state: string }) => r.state
+}));
 vi.mock('#lib/server/go.ts', () => ({
 	goFetch,
 	readGoJson,
@@ -16,16 +19,17 @@ vi.mock('#lib/server/go.ts', () => ({
 
 import { actions } from '../../../src/routes/(app)/settings/roles/new/+page.server.ts';
 
-const event = () =>
+const event = (ctx = 'none') =>
 	({
 		request: new Request('http://x/settings/roles/new', {
 			method: 'POST',
-			body: new URLSearchParams({ name: 'Auditor', hierarchy_level: '5' })
+			body: new URLSearchParams({ name: 'Auditor', hierarchy_level: '5', scope_context: ctx })
 		}),
-		cookies: {}
+		cookies: {},
+		route: { id: '/(app)/settings/roles/new' }
 	}) as never;
 
-const run = () => (actions.default as (e: never) => Promise<unknown>)(event());
+const run = (ctx?: string) => (actions.default as (e: never) => Promise<unknown>)(event(ctx));
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -109,7 +113,7 @@ describe('create-role action keeps the form on an outage', () => {
 	it('refuses in a tenant context: the create would land in the scoped tenant', async () => {
 		allowed();
 		scopeState.state = 'valid';
-		await expect(run()).resolves.toMatchObject({ status: 403 });
+		await expect(run('valid')).resolves.toMatchObject({ status: 403 });
 		expect(goFetch).not.toHaveBeenCalled();
 		scopeState.state = 'none';
 	});

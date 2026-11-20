@@ -16,6 +16,10 @@
  *      impersonation-start response is scrubbed of token fields.
  *   6. Header allowlists both ways, upstream timeout, streamed responses.
  *   7. Fail closed on an invalid operator-scope cookie (409 scope_invalid).
+ *   8. Every call carries the context fingerprint of the page that made it
+ *      (x-lk-scope-context); a mismatch with the cookie, or none, is a 409
+ *      scope_changed BEFORE Go is called, so a tab never writes into (or reads
+ *      from) a tenant it is not showing.
  *
  * The browser never reads a JWT, never knows the active tenant UUID,
  * never sees a slug in a URL path it didn't choose to type. The proxy
@@ -29,15 +33,19 @@ import { config } from '#lib/server/config.ts';
 import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
 import { isAuthExpired, refreshSession } from '#lib/server/auth-refresh.ts';
 import { SESSION_EXPIRED_CODE } from '#lib/api/errors.ts';
-import { SCOPE_EXPIRED_MESSAGE } from '#lib/api/scope-header.ts';
+import {
+	SCOPE_CHANGED_CODE,
+	SCOPE_CHANGED_MESSAGE,
+	SCOPE_EXPIRED_MESSAGE
+} from '#lib/api/scope-header.ts';
 import { readOperatorScope } from '#lib/server/scope.ts';
+import { pageShowsCurrentContext } from '#lib/server/scope-context.ts';
 import { assertCsrf } from '#lib/server/csrf.ts';
 import { jsonError, upstreamJsonError } from '#lib/server/http.ts';
 import {
 	buildUpstreamUrl,
 	isTokenEndpoint,
 	pickResponseHeaders,
-	scopeRequired,
 	scrubsTokens,
 	stripTokenFields,
 	upstreamStatus,
@@ -83,13 +91,17 @@ async function proxy(
 
 	// Operator scope is trusted only from the signed cookie. Any
 	// X-Tenant-Id sent by the browser is ignored: the headers above are
-	// built from scratch. Fail closed: an invalid cookie, or a request from
-	// the scope tree with no valid cookie, never runs in the operator's home
-	// tenant. The invalid cookie is NOT cleared, so every later call keeps
-	// getting 409 until the user exits scope or selects a tenant again.
+	// built from scratch. Fail closed: an invalid cookie never runs in the
+	// operator's home tenant. The invalid cookie is NOT cleared, so every later
+	// call keeps getting 409 until the user exits scope or selects a tenant again.
+	// The cookie is shared by every tab: the call also has to come from a page
+	// that shows the context the cookie names now (a tab that is behind is told
+	// to reload, and nothing reaches Go). Reads included: the wrong tenant's
+	// data under the wrong label is as wrong as a write.
 	const scope = readOperatorScope(cookies);
-	if (scope.state === 'invalid' || (scope.state === 'none' && scopeRequired(request.headers))) {
-		return jsonError(409, 'scope_invalid', SCOPE_EXPIRED_MESSAGE);
+	if (scope.state === 'invalid') return jsonError(409, 'scope_invalid', SCOPE_EXPIRED_MESSAGE);
+	if (!pageShowsCurrentContext(request.headers, scope)) {
+		return jsonError(409, SCOPE_CHANGED_CODE, SCOPE_CHANGED_MESSAGE);
 	}
 	if (scope.state === 'valid') upstreamHeaders.set('x-tenant-id', scope.scope.id);
 

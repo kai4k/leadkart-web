@@ -5,7 +5,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { Alert, Breadcrumbs, Button, Card, type BreadcrumbItem } from '$ui';
-	import { NumberInput, TextField } from '$form';
+	import { NumberInput, ScopeContextField, TextField } from '$form';
 	import { ROLE_LEVEL_MAX, ROLE_LEVEL_MIN, ROLE_NAME_MAX, ROLE_NAME_MIN } from '$features/roles';
 	import { bannerText, fieldText, readFailure } from '#lib/utils/form-failure.ts';
 	import type { ActionData } from './$types';
@@ -71,6 +71,7 @@
 					};
 				}}
 			>
+				<ScopeContextField />
 				<TextField
 					label="Role name"
 					hint="A short, descriptive name. Visible to members on permission requests."

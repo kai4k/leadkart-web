@@ -4,7 +4,10 @@ import { error, redirect } from '@sveltejs/kit';
 const loadCapabilities = vi.hoisted(() => vi.fn());
 const readOperatorScope = vi.hoisted(() => vi.fn(() => ({ state: 'none' }) as { state: string }));
 vi.mock('#lib/server/capabilities.ts', () => ({ loadCapabilities }));
-vi.mock('#lib/server/scope.ts', () => ({ readOperatorScope }));
+vi.mock('#lib/server/scope.ts', () => ({
+	readOperatorScope,
+	scopeFingerprint: (r: { state: string }) => (r.state === 'valid' ? 'fp-valid' : r.state)
+}));
 
 import {
 	authoriseAction,
@@ -83,7 +86,16 @@ describe('callGoForAction', () => {
 });
 
 describe('authoriseAction', () => {
-	const cookies = {} as never;
+	/** An action on the tenant-settings route (an `own` nav entry) from a page rendered with context `ctx`. */
+	const at = (
+		routeId: string | null = '/(app)/settings/tenant/profile',
+		ctx: string | null = 'none'
+	) => ({
+		event: { cookies: {}, route: { id: routeId } } as never,
+		form: new URLSearchParams(ctx === null ? {} : { scope_context: ctx }) as unknown as FormData
+	});
+	const authorise = (permission: string | readonly string[], values: object, where = at()) =>
+		authoriseAction(where.event, where.form, permission, values);
 	beforeEach(() => {
 		loadCapabilities.mockReset();
 		readOperatorScope.mockReturnValue({ state: 'none' });
@@ -91,19 +103,17 @@ describe('authoriseAction', () => {
 
 	it('is null (go ahead) when the permission is held', async () => {
 		loadCapabilities.mockResolvedValue(caps([P.identityTenantsUpdate]));
-		expect(await authoriseAction(cookies, P.identityTenantsUpdate, { a: 1 })).toBeNull();
+		expect(await authorise(P.identityTenantsUpdate, { a: 1 })).toBeNull();
 	});
 
 	it('any-of: one held permission is enough', async () => {
 		loadCapabilities.mockResolvedValue(caps([P.platformUsersManage]));
-		expect(
-			await authoriseAction(cookies, [P.identityUsersCreate, P.platformUsersManage], {})
-		).toBeNull();
+		expect(await authorise([P.identityUsersCreate, P.platformUsersManage], {})).toBeNull();
 	});
 
 	it('refuses with a 403 that keeps the values and speaks an i18n key, never Go text', async () => {
 		loadCapabilities.mockResolvedValue(caps([P.identityTenantsView]));
-		const r = await authoriseAction(cookies, P.identityTenantsUpdate, { a: 1 });
+		const r = await authorise(P.identityTenantsUpdate, { a: 1 });
 		expect(r).toMatchObject({
 			status: 403,
 			data: { values: { a: 1 }, formErrorKey: 'auth.errors.forbidden' }
@@ -112,7 +122,7 @@ describe('authoriseAction', () => {
 
 	it('does not infer: is_super_user / tenant.admin alone hold nothing', async () => {
 		loadCapabilities.mockResolvedValue(caps(['tenant.admin'], { is_super_user: true }));
-		expect(await authoriseAction(cookies, P.identityTenantsUpdate, {})).toMatchObject({
+		expect(await authorise(P.identityTenantsUpdate, {})).toMatchObject({
 			status: 403
 		});
 	});
@@ -120,12 +130,67 @@ describe('authoriseAction', () => {
 	it('applies the tenant-context restriction (a blocked write is refused in context)', async () => {
 		readOperatorScope.mockReturnValue({ state: 'valid' });
 		loadCapabilities.mockResolvedValue(caps([P.crmLeadsManage]));
-		expect(await authoriseAction(cookies, P.crmLeadsManage, {})).toMatchObject({ status: 403 });
+		expect(await authorise(P.crmLeadsManage, {}, at('/(app)/leads', 'fp-valid'))).toMatchObject({
+			status: 403
+		});
+	});
+
+	describe('the context rule comes from the matched route, as in the page guard', () => {
+		it('an own-tenant route refuses inside a tenant context, with the context copy', async () => {
+			readOperatorScope.mockReturnValue({ state: 'valid' });
+			loadCapabilities.mockResolvedValue(caps([P.identityTenantsUpdate]));
+			expect(await authorise(P.identityTenantsUpdate, {}, at(undefined, 'fp-valid'))).toMatchObject(
+				{
+					status: 403,
+					data: { formErrorKey: 'auth.errors.tenantContext' }
+				}
+			);
+		});
+		it('a scope route refuses outside a tenant context', async () => {
+			loadCapabilities.mockResolvedValue(caps([P.platformTenantsManage]));
+			expect(
+				await authorise(P.platformTenantsManage, {}, at('/(app)/operator/scope/settings'))
+			).toMatchObject({ status: 403, data: { formErrorKey: 'auth.errors.forbidden' } });
+		});
+		it('a route with no nav entry fails closed', async () => {
+			loadCapabilities.mockResolvedValue(caps([P.identityTenantsUpdate]));
+			expect(await authorise(P.identityTenantsUpdate, {}, at('/(app)/nowhere'))).toMatchObject({
+				status: 403
+			});
+			expect(await authorise(P.identityTenantsUpdate, {}, at(null))).toMatchObject({ status: 403 });
+		});
+	});
+
+	describe('the form must come from a page that shows the current context', () => {
+		it('a form with no fingerprint is refused before anything is read from Go', async () => {
+			expect(await authorise(P.identityTenantsUpdate, { a: 1 }, at(undefined, null))).toMatchObject(
+				{
+					status: 409,
+					data: { values: { a: 1 }, formErrorKey: 'auth.errors.scopeChanged' }
+				}
+			);
+			expect(loadCapabilities).not.toHaveBeenCalled();
+		});
+		it('a form rendered in own context is refused once another tab entered a tenant', async () => {
+			readOperatorScope.mockReturnValue({ state: 'valid' });
+			expect(await authorise(P.identityTenantsUpdate, {}, at(undefined, 'none'))).toMatchObject({
+				status: 409,
+				data: { formErrorKey: 'auth.errors.scopeChanged' }
+			});
+			expect(loadCapabilities).not.toHaveBeenCalled();
+		});
+		it('a form rendered in a tenant context is refused after the context was exited', async () => {
+			expect(await authorise(P.identityTenantsUpdate, {}, at(undefined, 'fp-valid'))).toMatchObject(
+				{
+					status: 409
+				}
+			);
+		});
 	});
 
 	it('no usable capabilities means the session is over: redirect to sign-in', async () => {
 		loadCapabilities.mockResolvedValue(null);
-		await expect(authoriseAction(cookies, P.identityTenantsUpdate, {})).rejects.toMatchObject({
+		await expect(authorise(P.identityTenantsUpdate, {})).rejects.toMatchObject({
 			status: 303,
 			location: '/signin'
 		});
@@ -133,7 +198,7 @@ describe('authoriseAction', () => {
 
 	it('an outage reading capabilities keeps the form (same failure as a Go outage)', async () => {
 		loadCapabilities.mockImplementation(() => Promise.reject(error(503, 'down')));
-		expect(await authoriseAction(cookies, P.identityTenantsUpdate, { a: 1 })).toMatchObject({
+		expect(await authorise(P.identityTenantsUpdate, { a: 1 })).toMatchObject({
 			status: 503,
 			data: { values: { a: 1 }, formErrorKey: 'auth.errors.upstreamUnavailable' }
 		});
@@ -170,7 +235,7 @@ describe('authoriseAction', () => {
 
 	it('lets a redirect (session over) through', async () => {
 		loadCapabilities.mockImplementation(() => Promise.reject(redirect(303, '/signin')));
-		await expect(authoriseAction(cookies, P.identityTenantsUpdate, {})).rejects.toMatchObject({
+		await expect(authorise(P.identityTenantsUpdate, {})).rejects.toMatchObject({
 			status: 303
 		});
 	});
