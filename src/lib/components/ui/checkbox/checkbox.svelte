@@ -1,36 +1,37 @@
 <script lang="ts">
 	import { Checkbox as CheckboxPrimitive } from 'bits-ui';
-	import { Check, Minus, Icon } from '$icons';
-	import { cn } from '#lib/utils/cn.ts';
+	import { Check as CheckIcon, Minus as MinusIcon } from '#lib/icons/index.ts';
+	import { cn, type WithoutChildrenOrChild } from '#lib/utils/cn.ts';
+
 	let {
 		ref = $bindable(null),
-		class: className,
 		checked = $bindable(false),
 		indeterminate = $bindable(false),
-		...rest
-	}: CheckboxPrimitive.RootProps = $props();
+		class: className,
+		...restProps
+	}: WithoutChildrenOrChild<CheckboxPrimitive.RootProps> = $props();
 </script>
 
 <CheckboxPrimitive.Root
 	bind:ref
-	bind:checked
-	bind:indeterminate
 	data-slot="checkbox"
 	class={cn(
-		'peer h-4 w-4 shrink-0 rounded-sm border border-border ring-offset-bg',
-		'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2',
-		'disabled:cursor-not-allowed disabled:opacity-50',
-		'data-[state=checked]:bg-primary data-[state=checked]:text-primary-fg data-[state=checked]:border-primary',
+		'border-input dark:bg-input-fill data-checked:bg-primary data-checked:text-primary-foreground dark:data-checked:bg-primary data-checked:border-primary aria-invalid:aria-checked:border-primary aria-invalid:border-destructive  focus-visible:border-ring focus-visible:ring-ring   flex size-4 items-center justify-center rounded-[4px] border transition-colors group-has-disabled/field:opacity-50 focus-visible:ring-3  group-has-[:focus-visible]/field-label:ring-0 group-has-[:focus-visible]/field-label:not-data-checked:border-input group-has-[:focus-visible]/field-label:data-checked:border-primary peer relative shrink-0 outline-none after:absolute after:-inset-x-3 after:-inset-y-2 disabled:cursor-not-allowed disabled:opacity-50',
 		className
 	)}
-	{...rest}
+	bind:checked
+	bind:indeterminate
+	{...restProps}
 >
-	{#snippet children({ checked: c, indeterminate: i })}
-		<div class="flex items-center justify-center">
-			{#if i}
-				<Icon icon={Minus} size="xs" class="text-current" />
-			{:else if c}
-				<Icon icon={Check} size="xs" class="text-current" />
+	{#snippet children({ checked, indeterminate })}
+		<div
+			data-slot="checkbox-indicator"
+			class="[&>svg]:size-3.5 grid place-content-center text-current transition-none"
+		>
+			{#if checked}
+				<CheckIcon />
+			{:else if indeterminate}
+				<MinusIcon />
 			{/if}
 		</div>
 	{/snippet}

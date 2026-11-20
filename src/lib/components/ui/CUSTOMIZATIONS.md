@@ -86,3 +86,25 @@ text-xs` sm, `h-12 px-7` lg, `icon*` squares); `default` uses `hover:bg-primary-
   `aria-invalid:(ring|border)-destructive/N` dropped.
 - Deleted (L16, no users): `aspect-ratio`, `button-group`, `combobox`, `context-menu`,
   `date-picker`, `form`, `hover-card`, `kbd`, `menubar`, `navigation-menu`, `tree`, `InlineEdit`.
+
+## Field family (Task 6)
+
+Regenerated: `field`, `input`, `textarea`, `label`, `checkbox`, `radio-group`, `switch`, `select`
+(`calendar` and `range-calendar` follow in Task 7). Same CLI run as Task 4. The normaliser now also
+converts `tailwind-variants` to `cva` (`base` string form), drops `aria-invalid:ring-3` (its ring
+colour was an alpha; the invalid border `aria-invalid:border-destructive` is the signal), drops the
+dark switch thumb `bg-foreground` (2.4:1 on the gray dark `input` track), and rewrites `z-50` to
+`z-(--z-popover)`, selected-card tints to `bg-primary-soft` / `border-primary`, disabled / hover
+`bg-input/50|80` to `bg-muted`, and `bg-accent/50` to `bg-accent`.
+
+- `input/input.svelte`: `h-10 rounded-md px-4 py-2` (Domiex `.form-input`) instead of nova's `h-8
+rounded-lg px-2.5 py-1`, both branches.
+- `textarea/textarea.svelte`: `rounded-md px-4 py-2`; `field-sizing-content` removed (it ignores `rows`).
+- `field/field.svelte`: no `role="group"` (a nameless group on every field is noise; RadioGroup is
+  its own group). `field-separator.svelte`: `Boolean(children)` (eslint no-implicit-coercion).
+- `radio-group/radio-group-item.svelte`: the dot is centred with `absolute inset-0 m-auto` (the
+  generated `left-1/2 -translate-x-1/2` is a physical direction, `check-rtl-safety`).
+- `select/*` is generated and unused by any field (the form `Select` is native, plan L36).
+- Used by: `form/{TextField,PasswordField,NumberInput,Switch,RadioGroup,RadioItem,Select,TextareaField}`.
+  They wrap `Field.Field` > `Field.Label` + control + `Field.Description` + `Field.Error`; ids come from
+  `$props.id()`. The hint and the error are both shown and both in `aria-describedby`.

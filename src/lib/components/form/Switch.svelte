@@ -1,22 +1,16 @@
-<!-- src/lib/components/form/Switch.svelte -->
 <!--
-	Switch — labelled toggle over bits-ui Switch.
+	Switch — labelled toggle on the regenerated `ui/switch` (bits Switch).
 
-	bits-ui provides the button + role=switch + aria-checked semantics,
-	keyboard Space toggle, and a hidden form input (rendered if `name`
-	is provided) for native form submission.
+	bits-ui provides the button + role=switch + aria-checked semantics, Space to toggle, and a
+	hidden form input (rendered when `name` is passed) for native form submission.
 
-	Visual: 36×20 track; 16×16 thumb; off=bg-muted; on=primary. Thumb
-	translates 16px right when checked, animated via Tailwind transform.
-
-	Used both standalone and as a settings-row toggle. The `label`
-	prop wires up a real <label for=...> for screen readers + click-
-	target expansion. Use `srLabel` to hide the label visually
-	(common in icon-only toggles).
+	The `label` prop is a real <label for=...> (screen readers + a larger click target); `srLabel`
+	hides it visually (icon-only toggles). `hint` is the description, linked by `aria-describedby`.
 -->
 <script lang="ts">
-	import { Switch as BitsSwitch } from 'bits-ui';
 	import type { Snippet } from 'svelte';
+	import * as Field from '#lib/components/ui/field/index.ts';
+	import { Switch as SwitchControl } from '#lib/components/ui/switch/index.ts';
 	import { cn } from '#lib/utils/cn.ts';
 
 	type Props = {
@@ -49,12 +43,13 @@
 		labelTrailing
 	}: Props = $props();
 
-	const switchId = $derived(id ?? `switch-${label.toLowerCase().replace(/\s+/g, '-')}`);
+	const uid = $props.id();
+	const switchId = $derived(id ?? `switch-${uid}`);
 	const hintId = $derived(`${switchId}-hint`);
 </script>
 
-<div class={cn('flex items-start gap-3', className)}>
-	<BitsSwitch.Root
+<Field.Field orientation="horizontal" class={cn('items-start gap-3', className)}>
+	<SwitchControl
 		id={switchId}
 		bind:checked
 		{onCheckedChange}
@@ -63,35 +58,15 @@
 		{name}
 		{value}
 		aria-describedby={hint ? hintId : undefined}
-		class={cn(
-			'relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full',
-			'transition-colors duration-[var(--duration-fast)]',
-			'data-[state=unchecked]:bg-bg-muted data-[state=checked]:bg-primary',
-			'focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
-			'disabled:cursor-not-allowed disabled:opacity-50'
-		)}
-	>
-		<BitsSwitch.Thumb
-			class={cn(
-				'pointer-events-none block size-4 rounded-full bg-white shadow-sm',
-				'transition-transform duration-[var(--duration-fast)] ease-[var(--ease-out)]',
-				'translate-x-0.5',
-				'data-[state=checked]:translate-x-4'
-			)}
-		/>
-	</BitsSwitch.Root>
+	/>
 
-	{#if !srLabel || hint}
-		<div class="flex min-w-0 flex-col">
-			<label for={switchId} class={cn('body-sm text-fg font-medium', srLabel && 'sr-only')}>
-				{label}
-				{#if labelTrailing}{@render labelTrailing()}{/if}
-			</label>
-			{#if hint}
-				<p id={hintId} class="caption text-fg-muted">{hint}</p>
-			{/if}
-		</div>
-	{:else}
-		<label for={switchId} class="sr-only">{label}</label>
-	{/if}
-</div>
+	<Field.Content>
+		<Field.Label for={switchId} class={srLabel ? 'sr-only' : undefined}>
+			{label}
+			{#if labelTrailing}{@render labelTrailing()}{/if}
+		</Field.Label>
+		{#if hint}
+			<Field.Description id={hintId}>{hint}</Field.Description>
+		{/if}
+	</Field.Content>
+</Field.Field>

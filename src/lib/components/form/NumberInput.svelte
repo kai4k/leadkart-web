@@ -16,6 +16,9 @@
 
 <script lang="ts">
 	import { Icon, Minus, Plus } from '#lib/icons/index.ts';
+	import * as Field from '#lib/components/ui/field/index.ts';
+	import { Button } from '#lib/components/ui/button/index.ts';
+	import { Input } from '#lib/components/ui/input/index.ts';
 	import { cn } from '#lib/utils/cn.ts';
 
 	type Props = {
@@ -58,11 +61,12 @@
 		class: className = ''
 	}: Props = $props();
 
-	const fieldId = $derived(id ?? `number-${label.toLowerCase().replace(/\s+/g, '-')}`);
+	const uid = $props.id();
+	const fieldId = $derived(id ?? `number-${uid}`);
 	const hintId = $derived(`${fieldId}-hint`);
 	const errorId = $derived(`${fieldId}-error`);
 	const describedBy = $derived(
-		[error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined
+		[hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined
 	);
 
 	let displayValue = $state(value === null || Number.isNaN(value) ? '' : String(value));
@@ -124,39 +128,32 @@
 	}
 </script>
 
-<div class={cn('stack stack-tight', className)}>
-	<label for={fieldId} class={cn('label text-fg', srLabel && 'sr-only')}>
-		{label}
-	</label>
+<Field.Field class={className}>
+	<Field.Label for={fieldId} class={srLabel ? 'sr-only' : undefined}>{label}</Field.Label>
 
 	<div class="flex items-stretch gap-1">
-		<button
-			type="button"
-			class={cn(
-				'bg-bg-elevated border border-border rounded-md flex items-center justify-center px-2',
-				'text-fg-muted hover:text-fg',
-				'focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:outline-none',
-				'disabled:cursor-not-allowed disabled:opacity-40'
-			)}
+		<Button
+			variant="outline"
+			size="icon"
 			aria-label="Decrement"
 			disabled={disabled || isAtMin}
 			onclick={() => nudge(-step)}
-			tabindex="-1"
+			tabindex={-1}
 		>
 			<Icon icon={Minus} size="sm" />
-		</button>
+		</Button>
 
 		<div class="relative flex-1">
 			{#if prefix}
 				<span
-					class="text-fg-subtle body-sm pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3"
+					class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3 text-sm text-muted-foreground"
 					aria-hidden="true"
 				>
 					{prefix}
 				</span>
 			{/if}
 
-			<input
+			<Input
 				id={fieldId}
 				type="text"
 				inputmode={precision > 0 ? 'decimal' : 'numeric'}
@@ -174,22 +171,12 @@
 				oninput={(e) => (displayValue = e.currentTarget.value)}
 				onblur={() => commit(displayValue)}
 				onkeydown={onKeyDown}
-				class={cn(
-					'bg-bg-elevated border border-border rounded-md body-sm text-fg block w-full px-3 py-2 text-center tabular-nums',
-					'placeholder:text-fg-subtle',
-					'focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
-					'disabled:cursor-not-allowed disabled:opacity-60',
-					error
-						? 'border-danger-500 focus-visible:ring-danger-500'
-						: 'focus-visible:ring-focus-ring',
-					prefix && 'ps-7',
-					suffix && 'pe-7'
-				)}
+				class={cn('text-center tabular-nums', prefix && 'ps-7', suffix && 'pe-7')}
 			/>
 
 			{#if suffix}
 				<span
-					class="text-fg-subtle body-sm pointer-events-none absolute inset-y-0 end-0 flex items-center pe-3"
+					class="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-3 text-sm text-muted-foreground"
 					aria-hidden="true"
 				>
 					{suffix}
@@ -197,28 +184,23 @@
 			{/if}
 		</div>
 
-		<button
-			type="button"
-			class={cn(
-				'bg-bg-elevated border border-border rounded-md flex items-center justify-center px-2',
-				'text-fg-muted hover:text-fg',
-				'focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:outline-none',
-				'disabled:cursor-not-allowed disabled:opacity-40'
-			)}
+		<Button
+			variant="outline"
+			size="icon"
 			aria-label="Increment"
 			disabled={disabled || isAtMax}
 			onclick={() => nudge(step)}
-			tabindex="-1"
+			tabindex={-1}
 		>
 			<Icon icon={Plus} size="sm" />
-		</button>
+		</Button>
 	</div>
 
-	{#if hint && !error}
-		<p id={hintId} class="caption">{hint}</p>
+	{#if hint}
+		<Field.Description id={hintId}>{hint}</Field.Description>
 	{/if}
 
 	{#if error}
-		<p id={errorId} class="body-sm text-danger-700">{error}</p>
+		<Field.Error id={errorId}>{error}</Field.Error>
 	{/if}
-</div>
+</Field.Field>

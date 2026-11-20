@@ -1,26 +1,48 @@
 <script lang="ts">
-	import type { HTMLInputAttributes } from 'svelte/elements';
 	import { cn, type WithElementRef } from '#lib/utils/cn.ts';
+	import type { HTMLInputAttributes, HTMLInputTypeAttribute } from 'svelte/elements';
+
+	type InputType = Exclude<HTMLInputTypeAttribute, 'file'>;
+
+	type Props = WithElementRef<
+		Omit<HTMLInputAttributes, 'type'> &
+			({ type: 'file'; files?: FileList | null } | { type?: InputType; files?: undefined })
+	>;
+
 	let {
 		ref = $bindable(null),
 		value = $bindable(),
+		type,
+		files = $bindable(),
 		class: className,
-		type = 'text',
-		...rest
-	}: WithElementRef<HTMLInputAttributes> = $props();
+		'data-slot': dataSlot = 'input',
+		...restProps
+	}: Props = $props();
 </script>
 
-<input
-	bind:this={ref}
-	bind:value
-	data-slot="input"
-	{type}
-	class={cn(
-		'flex h-10 w-full rounded-md border border-border bg-bg-elevated px-3 py-2 text-sm',
-		'placeholder:text-fg-subtle',
-		'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1',
-		'disabled:cursor-not-allowed disabled:opacity-50',
-		className
-	)}
-	{...rest}
-/>
+{#if type === 'file'}
+	<input
+		bind:this={ref}
+		data-slot={dataSlot}
+		class={cn(
+			'dark:bg-input-fill border-input focus-visible:border-ring focus-visible:ring-ring   aria-invalid:border-destructive  disabled:bg-muted dark:disabled:bg-muted h-10 rounded-md border bg-transparent px-4 py-2 text-base transition-colors file:h-6 file:text-sm file:font-medium focus-visible:ring-3  md:text-sm w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
+			className
+		)}
+		type="file"
+		bind:files
+		bind:value
+		{...restProps}
+	/>
+{:else}
+	<input
+		bind:this={ref}
+		data-slot={dataSlot}
+		class={cn(
+			'dark:bg-input-fill border-input focus-visible:border-ring focus-visible:ring-ring   aria-invalid:border-destructive  disabled:bg-muted dark:disabled:bg-muted h-10 rounded-md border bg-transparent px-4 py-2 text-base transition-colors file:h-6 file:text-sm file:font-medium focus-visible:ring-3  md:text-sm w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
+			className
+		)}
+		{type}
+		bind:value
+		{...restProps}
+	/>
+{/if}

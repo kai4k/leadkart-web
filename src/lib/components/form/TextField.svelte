@@ -1,61 +1,28 @@
-<script lang="ts" module>
-	import { cva, type VariantProps } from 'class-variance-authority';
-
-	export const textFieldInputVariants = cva(
-		[
-			'bg-bg-elevated border border-border rounded-md body-sm block w-full px-3 py-2 text-fg',
-			'placeholder:text-fg-subtle',
-			'focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
-			'disabled:cursor-not-allowed disabled:opacity-60'
-		],
-		{
-			variants: {
-				error: {
-					true: 'border-danger-500 focus-visible:ring-danger-500',
-					false: 'focus-visible:ring-focus-ring'
-				},
-				hasLeading: {
-					true: 'ps-10',
-					false: ''
-				},
-				hasTrailing: {
-					true: 'pe-10',
-					false: ''
-				}
-			},
-			defaultVariants: {
-				error: false,
-				hasLeading: false,
-				hasTrailing: false
-			}
-		}
-	);
-
-	export type TextFieldInputVariants = VariantProps<typeof textFieldInputVariants>;
-</script>
-
 <script lang="ts">
-	import type { HTMLInputAttributes } from 'svelte/elements';
+	import type { HTMLInputAttributes, HTMLInputTypeAttribute } from 'svelte/elements';
 	import type { Snippet } from 'svelte';
+	import * as Field from '#lib/components/ui/field/index.ts';
+	import { Input } from '#lib/components/ui/input/index.ts';
 	import { cn } from '#lib/utils/cn.ts';
 
 	/**
-	 * TextField — labelled text input primitive. Mandatory for every
-	 * form field per WAI-ARIA Authoring Practices: every input MUST
-	 * have a programmatically associated label. Plain `<input>` with
-	 * placeholder-as-label is an a11y anti-pattern.
+	 * TextField — labelled text input. Every input has a programmatically associated label
+	 * (WAI-ARIA APG); a placeholder is never the label.
+	 *
+	 * Anatomy (the one field wrapper, `ui/field`): label, the control, the hint, the error.
+	 * `aria-describedby` lists the hint and the error that are present; `aria-invalid` is set
+	 * with the error, which is announced (`role="alert"`). The id comes from `$props.id()` unless
+	 * the caller passes one, never from the label text, so two fields with one label never collide.
 	 *
 	 * Surfaces:
-	 *   - label (required, visually hidden via `srLabel` if needed)
-	 *   - hint (optional, body-sm subdued)
-	 *   - error (optional, body-sm danger; aria-describedby linked)
+	 *   - label (required; `srLabel` hides it visually)
+	 *   - hint, error
 	 *   - leading / trailing slots for icons or in-field actions
-	 *
-	 * Industry refs: shadcn-svelte Input, Material 3 Text Field,
-	 * Salesforce Lightning, Atlassian Form, GitHub Primer.
 	 */
 
-	type Props = Omit<HTMLInputAttributes, 'class' | 'value'> & {
+	type Props = Omit<HTMLInputAttributes, 'class' | 'value' | 'type' | 'files'> & {
+		/** Any input type except `file` (use FileDropZone). */
+		type?: Exclude<HTMLInputTypeAttribute, 'file'>;
 		label: string;
 		srLabel?: boolean;
 		hint?: string;
@@ -79,42 +46,34 @@
 		...rest
 	}: Props = $props();
 
-	const fieldId = $derived(id ?? `field-${label.toLowerCase().replace(/\s+/g, '-')}`);
+	const uid = $props.id();
+	const fieldId = $derived(id ?? `field-${uid}`);
 	const hintId = $derived(`${fieldId}-hint`);
 	const errorId = $derived(`${fieldId}-error`);
-
 	const describedBy = $derived(
-		[error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined
+		[hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined
 	);
 </script>
 
-<div class={cn('stack stack-tight', className)}>
-	<label for={fieldId} class={cn('label text-fg', srLabel && 'sr-only')}>
-		{label}
-	</label>
+<Field.Field class={className}>
+	<Field.Label for={fieldId} class={srLabel ? 'sr-only' : undefined}>{label}</Field.Label>
 
 	<div class="relative">
 		{#if leading}
 			<span
-				class="text-fg-subtle pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3"
+				class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3 text-muted-foreground"
 				aria-hidden="true"
 			>
 				{@render leading()}
 			</span>
 		{/if}
 
-		<input
+		<Input
 			id={fieldId}
 			bind:value
 			aria-invalid={error ? 'true' : undefined}
 			aria-describedby={describedBy}
-			class={cn(
-				textFieldInputVariants({
-					error: Boolean(error),
-					hasLeading: Boolean(leading),
-					hasTrailing: Boolean(trailing)
-				})
-			)}
+			class={cn(leading && 'ps-10', trailing && 'pe-10')}
 			{...rest}
 		/>
 
@@ -125,13 +84,11 @@
 		{/if}
 	</div>
 
-	{#if hint && !error}
-		<p id={hintId} class="caption">{hint}</p>
+	{#if hint}
+		<Field.Description id={hintId}>{hint}</Field.Description>
 	{/if}
 
 	{#if error}
-		<p id={errorId} role="alert" aria-live="polite" class="body-sm text-danger-700">
-			{error}
-		</p>
+		<Field.Error id={errorId}>{error}</Field.Error>
 	{/if}
-</div>
+</Field.Field>

@@ -1,14 +1,12 @@
 <!-- src/lib/components/form/RadioGroup.svelte -->
 <!--
-	RadioGroup — bits-ui RadioGroup wrapper.
+	RadioGroup — the regenerated `ui/radio-group` (bits RadioGroup) with the field anatomy around it.
 
-	bits-ui handles ARIA radiogroup / radio roles, arrow-key navigation
-	between items, Tab to focus the group + arrow keys to move within,
-	and a hidden form input (rendered if `name` provided).
+	bits-ui handles the radiogroup / radio roles, arrow-key movement between items, Tab into the
+	group, and a hidden form input (rendered when `name` is passed). The group is named by its
+	label (`aria-labelledby`) and described by the hint and the error.
 
-	Layout via the `orientation` prop:
-	  - 'vertical'   (default): items stacked
-	  - 'horizontal': items inline
+	Layout via `orientation`: 'vertical' (default) stacks the items, 'horizontal' puts them in a row.
 
 	Used compound:
 	  <RadioGroup label="Plan" bind:value>
@@ -17,8 +15,9 @@
 	  </RadioGroup>
 -->
 <script lang="ts">
-	import { RadioGroup as BitsRadioGroup } from 'bits-ui';
 	import type { Snippet } from 'svelte';
+	import * as Field from '#lib/components/ui/field/index.ts';
+	import { RadioGroup as RadioGroupRoot } from '#lib/components/ui/radio-group/index.ts';
 	import { cn } from '#lib/utils/cn.ts';
 
 	type Props = {
@@ -51,23 +50,22 @@
 		children
 	}: Props = $props();
 
-	const groupId = $derived(
-		`radio-${(label ?? name ?? 'group').toLowerCase().replace(/\s+/g, '-')}`
-	);
+	const uid = $props.id();
+	const groupId = $derived(`radio-${uid}`);
 	const hintId = $derived(`${groupId}-hint`);
 	const errorId = $derived(`${groupId}-error`);
 
 	const describedBy = $derived(
-		[error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined
+		[hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined
 	);
 </script>
 
-<div class={cn('stack stack-tight', className)}>
+<Field.Field class={className}>
 	{#if label}
-		<span id={groupId} class={cn('label text-fg', srLabel && 'sr-only')}>{label}</span>
+		<Field.Title id={groupId} class={srLabel ? 'sr-only' : undefined}>{label}</Field.Title>
 	{/if}
 
-	<BitsRadioGroup.Root
+	<RadioGroupRoot
 		bind:value
 		{onValueChange}
 		{orientation}
@@ -77,16 +75,18 @@
 		aria-labelledby={label ? groupId : undefined}
 		aria-invalid={error ? 'true' : undefined}
 		aria-describedby={describedBy}
-		class={cn('flex', orientation === 'horizontal' ? 'flex-row flex-wrap gap-4' : 'flex-col gap-2')}
+		class={cn(
+			orientation === 'horizontal' ? 'flex flex-row flex-wrap gap-4' : 'flex flex-col gap-2'
+		)}
 	>
 		{@render children()}
-	</BitsRadioGroup.Root>
+	</RadioGroupRoot>
 
-	{#if hint && !error}
-		<p id={hintId} class="caption">{hint}</p>
+	{#if hint}
+		<Field.Description id={hintId}>{hint}</Field.Description>
 	{/if}
 
 	{#if error}
-		<p id={errorId} class="body-sm text-danger-700">{error}</p>
+		<Field.Error id={errorId}>{error}</Field.Error>
 	{/if}
-</div>
+</Field.Field>

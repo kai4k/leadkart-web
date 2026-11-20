@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Badge, Button, Card, CopyButton, DescriptionList, type DescriptionItem } from '$ui';
 	import { QueryState } from '#lib/components/feedback/index.ts';
+	import { TextareaField } from '$form';
 	import { formatDateTime } from '#lib/utils/format.ts';
 	import { ChevronLeft, CheckCircle2, XCircle, Icon } from '$icons';
 	import {
@@ -134,15 +135,13 @@
 					</Card.Header>
 					<Card.Content class="stack stack-relaxed">
 						{#if decision.canApprove}
-							<label class="stack stack-tight">
-								<span class="label">Approval note (optional)</span>
-								<textarea
-									bind:value={approveReason}
-									maxlength={1024}
-									rows={2}
-									class="bg-bg-elevated border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
-								></textarea>
-							</label>
+							<TextareaField
+								label="Approval note (optional)"
+								name="approval_note"
+								bind:value={approveReason}
+								maxlength={1024}
+								rows={2}
+							/>
 							<div class="cluster">
 								<Button onclick={approve} loading={approveMutation.isPending} disabled={isMutating}>
 									<Icon icon={CheckCircle2} size="sm" /> Approve
@@ -150,18 +149,15 @@
 							</div>
 							<hr class="border-border-subtle" />
 						{/if}
-						<label class="stack stack-tight">
-							<span class="label">Deny reason (required)</span>
-							<textarea
-								bind:value={denyReason}
-								maxlength={1024}
-								rows={2}
-								class="bg-bg-elevated border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
-							></textarea>
-							{#if denyError}
-								<span class="caption text-danger-700">{denyError}</span>
-							{/if}
-						</label>
+						<TextareaField
+							label="Deny reason (required)"
+							name="deny_reason"
+							bind:value={denyReason}
+							maxlength={1024}
+							rows={2}
+							required
+							error={denyError}
+						/>
 						<div class="cluster">
 							<Button
 								variant="destructive"

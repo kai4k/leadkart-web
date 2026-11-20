@@ -1,24 +1,23 @@
 <script lang="ts">
+	import { cn, type WithElementRef, type WithoutChildren } from '#lib/utils/cn.ts';
 	import type { HTMLTextareaAttributes } from 'svelte/elements';
-	import { cn, type WithElementRef } from '#lib/utils/cn.ts';
+
 	let {
 		ref = $bindable(null),
 		value = $bindable(),
 		class: className,
-		...rest
-	}: WithElementRef<HTMLTextareaAttributes> = $props();
+		'data-slot': dataSlot = 'textarea',
+		...restProps
+	}: WithoutChildren<WithElementRef<HTMLTextareaAttributes>> = $props();
 </script>
 
 <textarea
 	bind:this={ref}
-	bind:value
-	data-slot="textarea"
+	data-slot={dataSlot}
 	class={cn(
-		'flex min-h-[80px] w-full rounded-md border border-border bg-bg-elevated px-3 py-2 text-sm',
-		'placeholder:text-fg-subtle',
-		'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1',
-		'disabled:cursor-not-allowed disabled:opacity-50',
+		'border-input dark:bg-input-fill focus-visible:border-ring focus-visible:ring-ring   aria-invalid:border-destructive  disabled:bg-muted dark:disabled:bg-muted rounded-md border bg-transparent px-4 py-2 text-base transition-colors focus-visible:ring-3  md:text-sm flex min-h-16 w-full outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50',
 		className
 	)}
-	{...rest}
+	bind:value
+	{...restProps}
 ></textarea>

@@ -37,6 +37,7 @@ export {
 	Calendar,
 	Check,
 	CheckCircle2,
+	Circle,
 	CircleCheck,
 	ChevronDown,
 	ChevronLeft,

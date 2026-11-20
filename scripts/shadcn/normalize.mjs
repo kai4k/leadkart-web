@@ -14,7 +14,9 @@
  *      animation names (`slide-in-from-left-*`) and centring (`left-1/2`) are left alone
  *   5. opaque tokens (plan L37): `hover:bg-primary/90` -> `hover:bg-primary-hover`,
  *      `ring-ring/50` -> `ring-ring`, `dark:bg-input/30` -> `dark:bg-input-fill`, …
- *   6. FAILS on any `/<alpha>` modifier left on a text, ring, border-input or solid-fill colour
+ *   6. `tailwind-variants` -> `cva`: `tv({ base: '…', variants })` becomes `cva('…', { variants })`
+ *      (the `slots` form is not supported and FAILS)
+ *   7. FAILS on any `/<alpha>` modifier left on a text, ring, border-input or solid-fill colour
  *      (the same rule as the `check-tokens` arch gate; the only alpha allowed is `bg-black/50`)
  *
  * Idempotent: a second run changes nothing.
@@ -68,16 +70,36 @@ const OPAQUE = [
 	[/^ring-foreground\/10$/, 'ring-border'],
 	[/^bg-muted\/50$/, 'bg-muted'],
 	[/^bg-destructive\/(?:10|20)$/, 'bg-destructive-soft'],
+	// selected-card tint of a field label: the soft primary fill and the full border
+	[/^bg-primary\/(?:5|10)$/, 'bg-primary-soft'],
+	[/^border-primary\/(?:20|30)$/, 'border-primary'],
+	// disabled / hovered control fill: the muted surface (disabled text is exempt, hover is `foreground`)
+	[/^bg-input\/(?:50|80)$/, 'bg-muted', /(^|:)(?:disabled|hover)$/],
+	// the unchecked switch track in dark
+	[/^bg-input\/80$/, 'bg-input'],
+	// calendar day hover and range-middle hover: the accent fill, or none over the accent cell
+	[/^bg-accent\/50$/, 'bg-accent'],
+	[/^bg-accent\/0$/, 'bg-transparent'],
 	// the overlay scrim: the one pinned decorative alpha
 	[/^bg-black\/10$/, 'bg-black/50'],
 	// secondary text: the muted token, not the foreground at 60%
 	[/^text-foreground\/60$/, 'text-muted-foreground'],
+	// floating content (select, calendar popups): the popover layer, not a bare z-50 under the sticky shell
+	[/^z-50$/, 'z-(--z-popover)'],
 	// nova style hook (no CSS behind it in this repo): flip the chevron in RTL
 	[/^cn-rtl-flip$/, 'rtl:rotate-180']
 ];
 
 /** Invalid-state ring/border alphas on a control: dropped (the control shows `aria-invalid` through its own border token). */
-const DROP = [{ variants: /aria-invalid/, utility: /^(?:ring|border)-destructive\/\d+$/ }];
+const DROP = [
+	{ variants: /aria-invalid/, utility: /^(?:ring|border)-destructive\/\d+$/ },
+	// `aria-invalid:ring-3` has no colour left once its alpha ring colour is gone: it would paint a
+	// currentColor ring. The invalid border (`aria-invalid:border-destructive`) is the signal.
+	{ variants: /aria-invalid/, utility: /^ring-3$/ },
+	// the switch thumb in dark: `bg-foreground` on the dark `input` track is 2.4:1 in the gray dark
+	// palette (gate pair background on input holds in all 400), so the thumb stays `bg-background`
+	{ variants: /^dark:data-unchecked$/, utility: /^bg-foreground$/ }
+];
 
 const PHYSICAL = [
 	[
@@ -165,6 +187,29 @@ export function mergeImports(src) {
 	});
 }
 
+/** `tailwind-variants` -> `class-variance-authority` (`base` string form only). */
+export function tvToCva(src, problems = []) {
+	if (!/from\s+['"]tailwind-variants['"]/.test(src)) return src;
+	if (/slots\s*:/.test(src))
+		problems.push('tailwind-variants `slots` is not supported; hand-convert to cva');
+	return src
+		.replace(/import\s*\{([^}]*)\}\s*from\s*['"]tailwind-variants['"];?/g, (_m, names) => {
+			const parts = names
+				.split(',')
+				.map((x) => x.trim())
+				.filter(Boolean);
+			const out = [];
+			if (parts.some((x) => x === 'tv')) out.push('cva');
+			if (parts.some((x) => x.replace(/^type\s+/, '') === 'VariantProps'))
+				out.push('type VariantProps');
+			return `import { ${out.join(', ')} } from 'class-variance-authority';`;
+		})
+		.replace(
+			/\btv\(\{(\s*)base:\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`),/g,
+			'cva($2, {$1'
+		);
+}
+
 // ── whole-file pass ────────────────────────────────────────────────────────
 
 let names;
@@ -199,6 +244,7 @@ export function normalizeSource(src, { icons = iconExports() } = {}) {
 				return `import { ${name} as ${local} } from '#lib/icons/index.ts';`;
 			}
 		);
+	out = tvToCva(out, problems);
 	out = mergeImports(out);
 	out = normalizeClasses(out);
 	for (const f of remainingAlpha(out))

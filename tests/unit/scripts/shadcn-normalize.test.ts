@@ -143,7 +143,22 @@ describe('shadcn normaliser: opaque tokens (L37)', () => {
 		['bg-black/10', 'bg-black/50'],
 		['text-foreground/60', 'text-muted-foreground'],
 		['cn-rtl-flip', 'rtl:rotate-180'],
+		['z-50', 'z-(--z-popover)'],
+		['has-data-checked:bg-primary/5', 'has-data-checked:bg-primary-soft'],
+		['dark:has-data-checked:bg-primary/10', 'dark:has-data-checked:bg-primary-soft'],
+		['has-data-checked:border-primary/30', 'has-data-checked:border-primary'],
+		['dark:has-data-checked:border-primary/20', 'dark:has-data-checked:border-primary'],
+		['disabled:bg-input/50', 'disabled:bg-muted'],
+		['dark:disabled:bg-input/80', 'dark:disabled:bg-muted'],
+		['dark:hover:bg-input/50', 'dark:hover:bg-muted'],
+		['dark:data-unchecked:bg-input/80', 'dark:data-unchecked:bg-input'],
+		['not-data-selected:hover:bg-accent/50', 'not-data-selected:hover:bg-accent'],
+		['dark:data-[range-middle]:hover:bg-accent/0', 'dark:data-[range-middle]:hover:bg-transparent'],
 		['aria-invalid:ring-destructive/20', ''],
+		['aria-invalid:ring-3', ''],
+		['dark:data-unchecked:bg-foreground', ''],
+		['dark:data-checked:bg-foreground', 'dark:data-checked:bg-foreground'],
+		['focus-visible:ring-3', 'focus-visible:ring-3'],
 		['dark:aria-invalid:ring-destructive/40', ''],
 		[
 			'data-[variant=destructive]:focus:bg-destructive/10',
@@ -173,6 +188,40 @@ describe('shadcn normaliser: opaque tokens (L37)', () => {
 	it('does not flag sizes, fractions or the pinned scrim', () => {
 		const { problems } = run(`<i class="text-sm/6 w-1/2 h-2/3 bg-black/50 top-1/3"></i>`);
 		expect(problems).toEqual([]);
+	});
+});
+
+describe('shadcn normaliser: tailwind-variants to cva', () => {
+	const tv = `<script lang="ts" module>
+	import { tv, type VariantProps } from "tailwind-variants";
+
+	export const fieldVariants = tv({
+		base: "group/field flex w-full",
+		variants: { orientation: { vertical: "flex-col", horizontal: "flex-row" } },
+		defaultVariants: { orientation: "vertical" },
+	});
+	export type FieldOrientation = VariantProps<typeof fieldVariants>["orientation"];
+</script>`;
+
+	it('rewrites the import and the base form', () => {
+		const { out, problems } = run(tv);
+		expect(problems).toEqual([]);
+		expect(out).toContain(`import { cva, type VariantProps } from 'class-variance-authority';`);
+		expect(out).toContain(`fieldVariants = cva("group/field flex w-full", {`);
+		expect(out).toContain('variants: { orientation');
+		expect(out).not.toContain('tailwind-variants');
+		expect(out).not.toMatch(/\btv\(/);
+	});
+	it('is idempotent', () => {
+		const once = run(tv).out;
+		expect(run(once).out).toBe(once);
+	});
+	it('fails on the slots form', () => {
+		const slots = `import { tv } from "tailwind-variants";\nconst v = tv({ slots: { root: "a" } });`;
+		expect(run(slots).problems.join('\n')).toContain('slots');
+	});
+	it('leaves a file without tailwind-variants alone', () => {
+		expect(run(`const tv = 1;`).out).toBe(`const tv = 1;`);
 	});
 });
 

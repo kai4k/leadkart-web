@@ -1,26 +1,29 @@
 <script lang="ts">
 	import { Select as SelectPrimitive } from 'bits-ui';
-	import { ChevronDown, Icon } from '$icons';
-	import { cn } from '#lib/utils/cn.ts';
+	import { ChevronDown as ChevronDownIcon } from '#lib/icons/index.ts';
+	import { cn, type WithoutChild } from '#lib/utils/cn.ts';
+
 	let {
 		ref = $bindable(null),
 		class: className,
 		children,
-		...rest
-	}: SelectPrimitive.TriggerProps = $props();
+		size = 'default',
+		...restProps
+	}: WithoutChild<SelectPrimitive.TriggerProps> & {
+		size?: 'sm' | 'default';
+	} = $props();
 </script>
 
 <SelectPrimitive.Trigger
 	bind:ref
 	data-slot="select-trigger"
+	data-size={size}
 	class={cn(
-		'flex h-10 w-full items-center justify-between rounded-md border border-border bg-bg-elevated px-3 py-2 text-sm',
-		'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1',
-		'disabled:cursor-not-allowed disabled:opacity-50',
+		"border-input data-placeholder:text-muted-foreground dark:bg-input-fill dark:hover:bg-muted focus-visible:border-ring focus-visible:ring-ring   aria-invalid:border-destructive  gap-1.5 rounded-lg border bg-transparent py-2 pe-2 ps-2.5 text-sm transition-colors select-none focus-visible:ring-3  data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:flex *:data-[slot=select-value]:gap-1.5 [&_svg:not([class*='size-'])]:size-4 flex w-fit items-center justify-between whitespace-nowrap outline-none disabled:cursor-not-allowed disabled:opacity-50 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center [&_svg]:pointer-events-none [&_svg]:shrink-0",
 		className
 	)}
-	{...rest}
+	{...restProps}
 >
 	{@render children?.()}
-	<Icon icon={ChevronDown} size="sm" class="opacity-50" />
+	<ChevronDownIcon class="text-muted-foreground size-4 pointer-events-none" />
 </SelectPrimitive.Trigger>

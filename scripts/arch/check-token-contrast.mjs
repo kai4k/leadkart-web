@@ -76,6 +76,18 @@ const RAW_PAIRS = [
 	['muted-foreground', 'input-fill', TEXT, { over: 'card' }],
 	['foreground', 'input-fill', TEXT, { over: 'muted' }],
 	['muted-foreground', 'input-fill', TEXT, { over: 'muted' }],
+	// field error text (Field.Error) and the invalid border (WCAG 1.4.3 / 1.4.11)
+	// (not on `muted`: destructive 600 is 3.84:1 there; forms sit on background, card and popover)
+	...['background', 'card', 'popover'].map((s) => ['destructive', s, TEXT]),
+	// floating surfaces (select, combobox, calendar popups) and their highlighted / today / range cells
+	['popover-foreground', 'popover', TEXT],
+	['muted-foreground', 'popover', TEXT],
+	['accent-foreground', 'accent', TEXT],
+	['muted-foreground', 'accent', TEXT],
+	['foreground', 'primary-soft', TEXT],
+	// switch thumb on its track, both states (WCAG 1.4.11): off track is `input`, on track `primary`
+	['background', 'input', UI],
+	['primary-foreground', 'primary', UI],
 	// non-text indicators: focus ring, form-control border (WCAG 1.4.11)
 	...[...SURFACES, 'popover'].map((s) => ['ring', s, UI]),
 	...SURFACES.map((s) => ['input', s, UI]),

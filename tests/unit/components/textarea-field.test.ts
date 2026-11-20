@@ -1,0 +1,80 @@
+import { afterEach, describe, expect, it } from 'vitest';
+import { flushSync, mount, unmount } from 'svelte';
+import TextareaField from '#lib/components/form/TextareaField.svelte';
+
+let target: HTMLElement;
+let component: ReturnType<typeof mount> | undefined;
+
+afterEach(() => {
+	if (component) unmount(component);
+	component = undefined;
+	target?.remove();
+	document.body.innerHTML = '';
+});
+
+function render(props: Record<string, unknown>) {
+	target = document.body.appendChild(document.createElement('div'));
+	component = mount(TextareaField, { target, props: props as never });
+	flushSync();
+	return target.querySelector('textarea')!;
+}
+
+const type = (el: HTMLTextAreaElement, text: string) => {
+	el.value = text;
+	el.dispatchEvent(new Event('input', { bubbles: true }));
+	flushSync();
+};
+const described = (el: Element) =>
+	(el.getAttribute('aria-describedby') ?? '').split(' ').filter(Boolean);
+
+describe('TextareaField', () => {
+	it('shows a counter once maxlength is set, and the textarea is described by it', () => {
+		const ta = render({ label: 'Reason', name: 'reason', value: '', maxlength: 10 });
+		type(ta, 'abc');
+		const counter = target.querySelector('[aria-live="polite"]')!;
+		expect(counter.textContent?.trim()).toBe('3/10');
+		expect(described(ta)).toContain(counter.id);
+	});
+
+	it('has no counter without maxlength', () => {
+		render({ label: 'Reason', name: 'reason', value: '' });
+		expect(target.querySelector('[aria-live="polite"]')).toBeNull();
+	});
+
+	it('error sets aria-invalid and is an alert, described together with the hint', () => {
+		const ta = render({
+			label: 'Reason',
+			name: 'reason',
+			value: '',
+			hint: 'Why?',
+			error: 'Required'
+		});
+		expect(ta.getAttribute('aria-invalid')).toBe('true');
+		const alert = target.querySelector('[role="alert"]')!;
+		expect(alert.textContent?.trim()).toBe('Required');
+		expect(described(ta)).toContain(alert.id);
+		expect(described(ta)).toHaveLength(2);
+	});
+
+	it('is labelled by its visible label and forwards name, rows, required, placeholder', () => {
+		const ta = render({
+			label: 'Reason',
+			name: 'reason',
+			value: '',
+			rows: 5,
+			required: true,
+			placeholder: 'Say why'
+		});
+		expect(ta.labels?.[0]?.textContent?.trim()).toBe('Reason');
+		expect(ta.name).toBe('reason');
+		expect(ta.rows).toBe(5);
+		expect(ta.required).toBe(true);
+		expect(ta.placeholder).toBe('Say why');
+	});
+
+	it('defaults to 3 rows and passes a caller id through', () => {
+		const ta = render({ label: 'Reason', name: 'reason', value: '', id: 'my-reason' });
+		expect(ta.rows).toBe(3);
+		expect(ta.id).toBe('my-reason');
+	});
+});
