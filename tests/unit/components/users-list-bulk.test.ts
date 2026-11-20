@@ -39,7 +39,15 @@ vi.mock('$ui', async (importOriginal) => ({
 // The auth barrel also exports form components that need SvelteKit's form runtime.
 vi.mock('$features/auth', async () => {
 	const { displayName, initials } = await import('#lib/utils/person-name.ts');
-	return { displayName, initials };
+	const { ACTION } = await import('#lib/features/auth/permissions.ts');
+	// The caller holds the bulk routes' permissions (the list shows only what Go would allow).
+	const held: string[] = [...ACTION.userDeactivate, ...ACTION.userReactivate];
+	return {
+		displayName,
+		initials,
+		ACTION,
+		session: { canAny: (...perms: string[]) => perms.some((p) => held.includes(p)) }
+	};
 });
 const gw = vi.hoisted(() => ({ deactivateUser: vi.fn(), reactivateUser: vi.fn() }));
 vi.mock('#lib/features/users/api.ts', () => gw);

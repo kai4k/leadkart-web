@@ -32,7 +32,7 @@ export {
 
 export { displayName, initials } from './view-models';
 export { can, canAny, dashboardVariant, type DashboardVariant, type Tier } from './capabilities';
-export { P, type Permission } from './permissions';
+export { ACTION, P, type Permission } from './permissions';
 
 export type {
 	LoginResponse,

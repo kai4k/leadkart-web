@@ -7,6 +7,7 @@
 	import { displayName } from '$features/auth';
 	import { describeError } from '$api/errors';
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
+	import { createMemberPermissions } from '../member-permissions.svelte.ts';
 
 	type Props = {
 		roleList: RoleDto[];
@@ -18,6 +19,7 @@
 	let { roleList, open = $bindable(false), user, onOpenChange }: Props = $props();
 
 	let bannerError = $state<string | null>(null);
+	const may = createMemberPermissions();
 
 	const assignMutation = assignRoleMutation();
 	const revokeMutation = revokeRoleMutation();
@@ -94,7 +96,9 @@
 											>System</Badge
 										>{/if}
 								</div>
-								{#if canRevokeRole(role)}
+								{#if !may.revokeRoles}
+									<!-- Go's identity.roles.revoke / platform.roles.manage is not held: nothing to offer. -->
+								{:else if canRevokeRole(role)}
 									<Button variant="ghost" size="sm" onclick={() => onRevoke(role.id)}>
 										<Icon icon={X} size="sm" /> Revoke
 									</Button>
@@ -115,9 +119,11 @@
 						{#each availableRoles as role (role.id)}
 							<li class="cluster cluster-spread border-border rounded-md border px-3 py-2">
 								<span class="label">{role.name}</span>
-								<Button variant="ghost" size="sm" onclick={() => onAssign(role.id)}>
-									<Icon icon={Plus} size="sm" /> Assign
-								</Button>
+								{#if may.assignRoles}
+									<Button variant="ghost" size="sm" onclick={() => onAssign(role.id)}>
+										<Icon icon={Plus} size="sm" /> Assign
+									</Button>
+								{/if}
 							</li>
 						{/each}
 					</ul>

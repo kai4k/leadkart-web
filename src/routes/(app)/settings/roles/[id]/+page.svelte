@@ -19,12 +19,12 @@
 		PermissionTree,
 		roleBadgeVariant,
 		isProtectedRole,
+		createRolePermissions,
 		ROLE_LEVEL_MAX,
 		ROLE_LEVEL_MIN,
 		ROLE_NAME_MAX,
 		ROLE_NAME_MIN
 	} from '$features/roles';
-	import { P, session } from '$features/auth';
 	import { describeError } from '$api/errors';
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 
@@ -72,7 +72,8 @@
 	]);
 	const protectedRole = $derived(role ? isProtectedRole(role) : false);
 
-	const canUpdate = $derived(!protectedRole && session.can(P.identityRolesUpdate));
+	const may = createRolePermissions();
+	const canUpdate = $derived(!protectedRole && may.update);
 	// Created once: the role id travels in the mutation variables.
 	const updateMutation = updateRoleMutation();
 	const replacePermsMutation = replaceRolePermissionsMutation();

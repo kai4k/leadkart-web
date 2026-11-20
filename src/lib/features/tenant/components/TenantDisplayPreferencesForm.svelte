@@ -1,6 +1,7 @@
 <script lang="ts">
+	import { P } from '$features/auth';
+	import TenantSaveFooter from './TenantSaveFooter.svelte';
 	import { enhance } from '$app/forms';
-	import { Alert, Button } from '$ui';
 	import { Select, type SelectOption } from '$form';
 	import type { Tenant } from '../types';
 
@@ -81,13 +82,10 @@
 		<Select label="Currency" name="currency" options={currencyOptions} value={values.currency} />
 	</div>
 
-	{#if form?.bannerError}
-		<Alert variant="danger">{form.bannerError}</Alert>
-	{:else if form?.success}
-		<Alert variant="success">Preferences saved.</Alert>
-	{/if}
-
-	<div class="form-footer">
-		<Button type="submit" {loading}>Save changes</Button>
-	</div>
+	<TenantSaveFooter
+		{form}
+		{loading}
+		permission={P.identityTenantsUpdate}
+		successMessage="Preferences saved."
+	/>
 </form>

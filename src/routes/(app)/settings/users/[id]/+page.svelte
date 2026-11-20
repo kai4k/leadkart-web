@@ -14,7 +14,8 @@
 		RoleAssignmentDrawer,
 		ManagerSelectorDrawer,
 		PermissionOverridesPanel,
-		UserDetailTabs
+		UserDetailTabs,
+		createMemberPermissions
 	} from '$features/users';
 
 	const membershipId = $derived(page.params.id ?? '');
@@ -42,6 +43,7 @@
 	let permsOpen = $state(false);
 
 	const reactivate = reactivateUserMutation();
+	const may = createMemberPermissions();
 
 	function setTab(name: string) {
 		const url = new SvelteURL(page.url.href);
@@ -89,35 +91,44 @@
 				</div>
 			</div>
 
-			<Dropdown.Root>
-				<Dropdown.Trigger variant="tonal" size="sm">
-					<Icon icon={MoreVertical} size="sm" /> Actions
-				</Dropdown.Trigger>
-				<Dropdown.Menu>
-					<Dropdown.Item onclick={() => (rolesOpen = true)}
-						><Icon icon={Shield} size="sm" /> Manage roles</Dropdown.Item
-					>
-					<Dropdown.Item onclick={() => (managerOpen = true)}
-						><Icon icon={Users} size="sm" /> Set manager</Dropdown.Item
-					>
+			{#if may.manageRoles || may.update || may.overrides || (may.deactivate && user.status === 'active') || (may.reactivate && user.status === 'inactive')}
+				<Dropdown.Root>
+					<Dropdown.Trigger variant="tonal" size="sm">
+						<Icon icon={MoreVertical} size="sm" /> Actions
+					</Dropdown.Trigger>
+					<Dropdown.Menu>
+						{#if may.manageRoles}
+							<Dropdown.Item onclick={() => (rolesOpen = true)}
+								><Icon icon={Shield} size="sm" /> Manage roles</Dropdown.Item
+							>
+						{/if}
+						{#if may.update}
+							<Dropdown.Item onclick={() => (managerOpen = true)}
+								><Icon icon={Users} size="sm" /> Set manager</Dropdown.Item
+							>
+						{/if}
+						{#if may.overrides}
+							<Dropdown.Item onclick={() => (permsOpen = true)}>
+								<Icon icon={Lock} size="sm" />
+								Permission overrides
+							</Dropdown.Item>
+						{/if}
 
-					<Dropdown.Item onclick={() => (permsOpen = true)}>
-						<Icon icon={Lock} size="sm" />
-						Permission overrides
-					</Dropdown.Item>
-
-					<Dropdown.Separator />
-					{#if user.status === 'active'}
-						<Dropdown.Item variant="danger" onclick={() => (deactivateOpen = true)}
-							><Icon icon={UserMinus} size="sm" /> Deactivate</Dropdown.Item
-						>
-					{:else if user.status === 'inactive'}
-						<Dropdown.Item onclick={() => reactivate.mutate(user.membership_id)}>
-							<Icon icon={UserPlus} size="sm" /> Reactivate
-						</Dropdown.Item>
-					{/if}
-				</Dropdown.Menu>
-			</Dropdown.Root>
+						{#if (may.manageRoles || may.update || may.overrides) && ((may.deactivate && user.status === 'active') || (may.reactivate && user.status === 'inactive'))}
+							<Dropdown.Separator />
+						{/if}
+						{#if may.deactivate && user.status === 'active'}
+							<Dropdown.Item variant="danger" onclick={() => (deactivateOpen = true)}
+								><Icon icon={UserMinus} size="sm" /> Deactivate</Dropdown.Item
+							>
+						{:else if may.reactivate && user.status === 'inactive'}
+							<Dropdown.Item onclick={() => reactivate.mutate(user.membership_id)}>
+								<Icon icon={UserPlus} size="sm" /> Reactivate
+							</Dropdown.Item>
+						{/if}
+					</Dropdown.Menu>
+				</Dropdown.Root>
+			{/if}
 		</header>
 
 		<UserDetailTabs

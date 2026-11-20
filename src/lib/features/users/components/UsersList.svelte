@@ -8,6 +8,7 @@
 		Avatar,
 		Badge,
 		Button,
+		buttonVariants,
 		DataTable,
 		Dropdown,
 		EmptyState,
@@ -43,6 +44,7 @@
 	import RoleAssignmentDrawer from './RoleAssignmentDrawer.svelte';
 	import ManagerSelectorDrawer from './ManagerSelectorDrawer.svelte';
 	import PermissionOverridesPanel from './PermissionOverridesPanel.svelte';
+	import { createMemberPermissions } from '../member-permissions.svelte.ts';
 
 	/**
 	 * Tenant scope is set by the BFF via the lk_op_tenant cookie. When
@@ -57,6 +59,8 @@
 	let managerOpen = $state(false);
 	let permsOpen = $state(false);
 	let targetUser = $state<UserDto | null>(null);
+	// Each action shows when Go's route permission for it is held (one rule, `ACTION`).
+	const may = createMemberPermissions();
 
 	// URL-driven filter state.
 	const search = $derived(page.url.searchParams.get('q') ?? '');
@@ -106,27 +110,30 @@
 		}
 	}
 
-	const bulkActions: BulkAction[] = [
-		{
-			id: 'deactivate',
-			label: 'Deactivate',
-			icon: UserMinus as never,
-			variant: 'danger',
-			confirm: {
-				title: 'Deactivate selected members?',
-				description:
-					'Selected members lose access immediately. You can reactivate them later from this list.',
-				confirmLabel: 'Deactivate'
-			},
-			onClick: () => runBulk('deactivate')
+	const deactivateBulk: BulkAction = {
+		id: 'deactivate',
+		label: 'Deactivate',
+		icon: UserMinus as never,
+		variant: 'danger',
+		confirm: {
+			title: 'Deactivate selected members?',
+			description:
+				'Selected members lose access immediately. You can reactivate them later from this list.',
+			confirmLabel: 'Deactivate'
 		},
-		{
-			id: 'reactivate',
-			label: 'Reactivate',
-			icon: UserPlus as never,
-			onClick: () => runBulk('reactivate')
-		}
-	];
+		onClick: () => runBulk('deactivate')
+	};
+	const reactivateBulk: BulkAction = {
+		id: 'reactivate',
+		label: 'Reactivate',
+		icon: UserPlus as never,
+		onClick: () => runBulk('reactivate')
+	};
+	// Only the bulk actions whose Go route permission is held.
+	const bulkActions: BulkAction[] = $derived([
+		...(may.deactivate ? [deactivateBulk] : []),
+		...(may.reactivate ? [reactivateBulk] : [])
+	]);
 
 	const userList = $derived(listQuery.data ?? []);
 	const roleList = $derived(rolesQuery.data?.roles ?? []);
@@ -264,32 +271,42 @@
 {/snippet}
 
 {#snippet rowActions(user: UserDto)}
-	<Dropdown.Root>
-		<Dropdown.Trigger variant="ghost" size="sm" aria-label="Row actions">
-			<Icon icon={MoreVertical} size="sm" />
-		</Dropdown.Trigger>
-		<Dropdown.Menu>
-			<Dropdown.Item onclick={() => onAction('roles', user)}>
-				<Icon icon={Shield} size="sm" /> Manage roles
-			</Dropdown.Item>
-			<Dropdown.Item onclick={() => onAction('manager', user)}>
-				<Icon icon={Users} size="sm" /> Set manager
-			</Dropdown.Item>
-			<Dropdown.Item onclick={() => onAction('permissions', user)}>
-				<Icon icon={Lock} size="sm" /> Permission overrides
-			</Dropdown.Item>
-			<Dropdown.Separator />
-			{#if canDeactivate(user)}
-				<Dropdown.Item variant="danger" onclick={() => onAction('deactivate', user)}>
-					<Icon icon={UserMinus} size="sm" /> Deactivate
-				</Dropdown.Item>
-			{:else if user.status === 'inactive'}
-				<Dropdown.Item onclick={() => onAction('reactivate', user)}>
-					<Icon icon={UserPlus} size="sm" /> Reactivate
-				</Dropdown.Item>
-			{/if}
-		</Dropdown.Menu>
-	</Dropdown.Root>
+	{#if may.manageRoles || may.update || may.overrides || may.deactivate || may.reactivate}
+		<Dropdown.Root>
+			<Dropdown.Trigger variant="ghost" size="sm" aria-label="Row actions">
+				<Icon icon={MoreVertical} size="sm" />
+			</Dropdown.Trigger>
+			<Dropdown.Menu>
+				{#if may.manageRoles}
+					<Dropdown.Item onclick={() => onAction('roles', user)}>
+						<Icon icon={Shield} size="sm" /> Manage roles
+					</Dropdown.Item>
+				{/if}
+				{#if may.update}
+					<Dropdown.Item onclick={() => onAction('manager', user)}>
+						<Icon icon={Users} size="sm" /> Set manager
+					</Dropdown.Item>
+				{/if}
+				{#if may.overrides}
+					<Dropdown.Item onclick={() => onAction('permissions', user)}>
+						<Icon icon={Lock} size="sm" /> Permission overrides
+					</Dropdown.Item>
+				{/if}
+				{#if (may.manageRoles || may.update || may.overrides) && ((may.deactivate && canDeactivate(user)) || (may.reactivate && user.status === 'inactive'))}
+					<Dropdown.Separator />
+				{/if}
+				{#if may.deactivate && canDeactivate(user)}
+					<Dropdown.Item variant="danger" onclick={() => onAction('deactivate', user)}>
+						<Icon icon={UserMinus} size="sm" /> Deactivate
+					</Dropdown.Item>
+				{:else if may.reactivate && user.status === 'inactive'}
+					<Dropdown.Item onclick={() => onAction('reactivate', user)}>
+						<Icon icon={UserPlus} size="sm" /> Reactivate
+					</Dropdown.Item>
+				{/if}
+			</Dropdown.Menu>
+		</Dropdown.Root>
+	{/if}
 {/snippet}
 
 <div class="stack stack-relaxed">
@@ -309,11 +326,16 @@
 				class="bg-bg-elevated border border-border rounded-md w-64 rounded-md px-3 py-2 text-sm"
 			/>
 
-			<Button variant="tonal" onclick={() => goto(resolve('settings/users/hierarchy'))}
-				><Icon icon={Users} size="sm" /> Hierarchy</Button
+			<a
+				href={resolve('/(app)/settings/users/hierarchy')}
+				class={buttonVariants({ variant: 'tonal' })}><Icon icon={Users} size="sm" /> Hierarchy</a
 			>
 
-			<Button onclick={() => (createOpen = true)}><Icon icon={Plus} size="sm" /> Add member</Button>
+			{#if may.create}
+				<Button onclick={() => (createOpen = true)}
+					><Icon icon={Plus} size="sm" /> Add member</Button
+				>
+			{/if}
 		</div>
 	</header>
 
@@ -355,7 +377,7 @@
 					: 'Invite your first member to start collaborating.'}
 			>
 				{#snippet action()}
-					{#if !search}
+					{#if !search && may.create}
 						<Button onclick={() => (createOpen = true)}
 							><Icon icon={UserPlus} size="sm" /> Add member</Button
 						>

@@ -1,8 +1,7 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import {
 		Badge,
-		Button,
+		buttonVariants,
 		DataTable,
 		Dropdown,
 		EmptyState,
@@ -17,10 +16,14 @@
 	import { createListPagination } from '#lib/hooks/index.ts';
 	import { resolve } from '$app/paths';
 	import DeleteRoleDialog from './DeleteRoleDialog.svelte';
+	import { createRolePermissions } from '../role-permissions.svelte.ts';
 
-	let { roster }: { roster: ReadonlyArray<{ role_ids: string[]; status: string }> } = $props();
+	/** `null` = the caller may not list members: no count is shown rather than a false 0. */
+	let { roster }: { roster: ReadonlyArray<{ role_ids: string[]; status: string }> | null } =
+		$props();
 
 	let deleteOpen = $state(false);
+	const may = createRolePermissions();
 	let targetRole = $state<RoleDto | null>(null);
 
 	const rolesQuery = rolesListQuery();
@@ -40,34 +43,38 @@
 
 	const listErrorCopy = $derived(getListErrorMessage(rolesQuery.error, 'roles'));
 
-	const columns: DataTableColumn<RoleDto>[] = [
+	const columns: DataTableColumn<RoleDto>[] = $derived([
 		{ id: 'name', header: 'Role', accessor: 'name', cell: nameCell },
 		{
 			id: 'type',
 			header: 'Type',
-			accessor: (r) =>
+			accessor: (r: RoleDto) =>
 				r.is_super_admin ? 'superadmin' : r.is_system_default ? 'system' : 'custom',
 			cell: typeCell
 		},
-		{
-			id: 'members',
-			header: 'Members',
-			accessor: (r) => roleMemberCount(r, roster),
-			hideBelow: 'md'
-		},
+		...(roster
+			? [
+					{
+						id: 'members',
+						header: 'Members',
+						accessor: (r: RoleDto) => roleMemberCount(r, roster),
+						hideBelow: 'md' as const
+					}
+				]
+			: []),
 		{
 			id: 'permissions',
 			header: 'Permissions',
-			accessor: (r) => r.permissions.length,
-			hideBelow: 'sm'
+			accessor: (r: RoleDto) => r.permissions.length,
+			hideBelow: 'sm' as const
 		},
 		{
 			id: 'level',
 			header: 'Hierarchy',
-			accessor: 'hierarchy_level',
-			hideBelow: 'lg'
+			accessor: 'hierarchy_level' as const,
+			hideBelow: 'lg' as const
 		}
-	];
+	]);
 
 	function onDelete(role: RoleDto) {
 		targetRole = role;
@@ -96,10 +103,11 @@
 			<Dropdown.Item>
 				<a
 					href={resolve('/(app)/settings/roles/[id]', { id: role.id })}
-					class="cluster cluster-tight"><Icon icon={Edit} size="sm" /> Edit</a
+					class="cluster cluster-tight"
+					><Icon icon={Edit} size="sm" /> {may.update ? 'Edit' : 'View'}</a
 				>
 			</Dropdown.Item>
-			{#if !isProtectedRole(role)}
+			{#if may.delete && !isProtectedRole(role)}
 				<Dropdown.Separator />
 				<Dropdown.Item variant="danger" onSelect={() => onDelete(role)}>
 					<Icon icon={Trash2} size="sm" /> Delete
@@ -117,9 +125,11 @@
 				{roleList.length} role{roleList.length === 1 ? '' : 's'}
 			</p>
 		</div>
-		<Button onclick={() => goto(resolve('settings/roles/new'))}
-			><Icon icon={Plus} size="sm" /> Create role</Button
-		>
+		{#if may.create}
+			<a href={resolve('/(app)/settings/roles/new')} class={buttonVariants()}
+				><Icon icon={Plus} size="sm" /> Create role</a
+			>
+		{/if}
 	</header>
 
 	<DataTable.Root
@@ -137,9 +147,11 @@
 				description="Roles bundle permissions for easy assignment to team members."
 			>
 				{#snippet action()}
-					<Button onclick={() => goto(resolve('settings/roles/new'))}
-						><Icon icon={Plus} size="sm" /> Create role</Button
-					>
+					{#if may.create}
+						<a href={resolve('/(app)/settings/roles/new')} class={buttonVariants()}
+							><Icon icon={Plus} size="sm" /> Create role</a
+						>
+					{/if}
 				{/snippet}
 			</EmptyState>
 		{/snippet}

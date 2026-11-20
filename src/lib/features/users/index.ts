@@ -6,6 +6,7 @@ export * from './schemas';
 export * from './types';
 export * from './view-models';
 export * from './queries';
+export { createMemberPermissions } from './member-permissions.svelte.ts';
 export { default as UsersList } from './components/UsersList.svelte';
 export { default as OrgTreeNode } from './components/OrgTreeNode.svelte';
 export { default as DeactivateUserDialog } from './components/DeactivateUserDialog.svelte';

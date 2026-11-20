@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { P } from '$features/auth';
+	import TenantSaveFooter from './TenantSaveFooter.svelte';
 	import { enhance } from '$app/forms';
 	import { untrack } from 'svelte';
-	import { Alert, Button, Card } from '$ui';
+	import { Card } from '$ui';
 	import { NumberInput, Switch } from '$form';
 	import type { Tenant } from '../types';
 
@@ -133,13 +135,10 @@
 		</Card.Content>
 	</Card.Root>
 
-	{#if form?.bannerError}
-		<Alert variant="danger">{form.bannerError}</Alert>
-	{:else if form?.success}
-		<Alert variant="success">Security settings saved.</Alert>
-	{/if}
-
-	<div class="form-footer">
-		<Button type="submit" {loading}>Save changes</Button>
-	</div>
+	<TenantSaveFooter
+		{form}
+		{loading}
+		permission={P.identityTenantsUpdateSettings}
+		successMessage="Security settings saved."
+	/>
 </form>

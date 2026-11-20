@@ -54,8 +54,8 @@ const usersListOptions = () => ({
 });
 
 /** Every active member (all pages) — `data: UserDto[]`. */
-export function usersListQuery() {
-	return createQuery(() => ({ ...usersListOptions(), select: (r) => r.items }));
+export function usersListQuery(enabled: () => boolean = () => true) {
+	return createQuery(() => ({ ...usersListOptions(), enabled: enabled(), select: (r) => r.items }));
 }
 
 /** True when the page cap stopped the read, so `usersListQuery` data is incomplete (same cache entry). */

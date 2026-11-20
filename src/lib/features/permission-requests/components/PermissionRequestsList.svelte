@@ -12,6 +12,7 @@
 	import type { PermissionRequestDto } from '$features/permission-requests/schemas';
 	import type { ListRole } from '$features/permission-requests/api';
 	import { getListErrorMessage } from '$api/error-messages';
+	import { ACTION, session } from '$features/auth';
 	import CreatePermissionRequestDrawer from './CreatePermissionRequestDrawer.svelte';
 
 	/**
@@ -26,6 +27,8 @@
 	const list = permissionRequestsInfiniteQuery(() => role);
 
 	let createOpen = $state(false);
+	// Go: submitting needs identity.meta.request_permission_elevation.
+	const maySubmit = $derived(session.canAny(...ACTION.requestSubmit));
 
 	function setRole(next: ListRole) {
 		const url = new SvelteURL(page.url.href);
@@ -104,9 +107,11 @@
 			</p>
 		</div>
 
-		<Button onclick={() => (createOpen = true)}
-			><Icon icon={Plus} size="sm" /> Request permission</Button
-		>
+		{#if maySubmit}
+			<Button onclick={() => (createOpen = true)}
+				><Icon icon={Plus} size="sm" /> Request permission</Button
+			>
+		{/if}
 	</header>
 
 	<nav aria-label="Request scope" class="border-border border-b">
@@ -151,7 +156,7 @@
 					: 'Submit a request to ask for a time-bound elevated permission.'}
 			>
 				{#snippet action()}
-					{#if role === 'requester'}
+					{#if role === 'requester' && maySubmit}
 						<Button onclick={() => (createOpen = true)}
 							><Icon icon={Plus} size="sm" /> Request permission</Button
 						>

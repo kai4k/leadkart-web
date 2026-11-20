@@ -1,6 +1,7 @@
 <script lang="ts">
+	import { P } from '$features/auth';
+	import TenantSaveFooter from './TenantSaveFooter.svelte';
 	import { enhance } from '$app/forms';
-	import { Alert, Button } from '$ui';
 	import { TextField } from '$form';
 	import type { Tenant } from '../types';
 
@@ -119,13 +120,10 @@
 		</div>
 	</fieldset>
 
-	{#if form?.bannerError}
-		<Alert variant="danger">{form.bannerError}</Alert>
-	{:else if form?.success}
-		<Alert variant="success">Contact details saved.</Alert>
-	{/if}
-
-	<div class="form-footer">
-		<Button type="submit" {loading}>Save changes</Button>
-	</div>
+	<TenantSaveFooter
+		{form}
+		{loading}
+		permission={P.identityTenantsUpdate}
+		successMessage="Contact details saved."
+	/>
 </form>

@@ -9,6 +9,7 @@
 	import { personActivityQuery, ActivityTimeline } from '$features/audit';
 	import { describeError } from '$api/errors';
 	import { resolve } from '$app/paths';
+	import { createMemberPermissions } from '../member-permissions.svelte.ts';
 
 	/**
 	 * UserDetailTabs — render-only sub-component for the dedicated
@@ -44,6 +45,7 @@
 	const directReports = $derived(roster.filter((u) => u.reports_to === user.membership_id));
 
 	const removeManager = removeManagerMutation();
+	const may = createMemberPermissions();
 
 	const activityQuery = $derived(personActivityQuery(user.person_id));
 </script>
@@ -116,19 +118,21 @@
 								<Icon icon={Users} size="sm" class="text-fg-muted" />
 								<span class="body-base text-fg">{manager}</span>
 							</div>
-							<div class="cluster cluster-tight">
-								<Button variant="ghost" size="sm" onclick={onManageManager}
-									><Icon icon={Edit} size="sm" /> Change</Button
-								>
+							{#if may.update}
+								<div class="cluster cluster-tight">
+									<Button variant="ghost" size="sm" onclick={onManageManager}
+										><Icon icon={Edit} size="sm" /> Change</Button
+									>
 
-								<Button
-									variant="ghost"
-									size="sm"
-									onclick={() => removeManager.mutate(user.membership_id)}
-								>
-									Remove
-								</Button>
-							</div>
+									<Button
+										variant="ghost"
+										size="sm"
+										onclick={() => removeManager.mutate(user.membership_id)}
+									>
+										Remove
+									</Button>
+								</div>
+							{/if}
 						</div>
 					{:else}
 						<EmptyState
@@ -137,9 +141,11 @@
 							description="Assign a manager so this member appears in the reporting hierarchy."
 						>
 							{#snippet action()}
-								<Button size="sm" onclick={onManageManager}>
-									<Icon icon={UserPlus} size="sm" /> Assign manager
-								</Button>
+								{#if may.update}
+									<Button size="sm" onclick={onManageManager}>
+										<Icon icon={UserPlus} size="sm" /> Assign manager
+									</Button>
+								{/if}
 							{/snippet}
 						</EmptyState>
 					{/if}
@@ -159,9 +165,11 @@
 								Effective permissions = role defaults + user grants − user revocations.
 							</Card.Description>
 						</div>
-						<Button size="sm" onclick={onManageRoles}>
-							<Icon icon={Shield} size="sm" /> Manage roles
-						</Button>
+						{#if may.manageRoles}
+							<Button size="sm" onclick={onManageRoles}>
+								<Icon icon={Shield} size="sm" /> Manage roles
+							</Button>
+						{/if}
 					</div>
 				</Card.Header>
 				<Card.Content>
@@ -194,9 +202,11 @@
 								Per-user grants and revocations layered on top of role defaults.
 							</Card.Description>
 						</div>
-						<Button size="sm" variant="tonal" onclick={onManagePerms}>
-							<Icon icon={Lock} size="sm" /> Edit overrides
-						</Button>
+						{#if may.overrides}
+							<Button size="sm" variant="tonal" onclick={onManagePerms}>
+								<Icon icon={Lock} size="sm" /> Edit overrides
+							</Button>
+						{/if}
 					</div>
 				</Card.Header>
 				<Card.Content>
