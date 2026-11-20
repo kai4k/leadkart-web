@@ -152,7 +152,8 @@ test.describe('Role hierarchy editor', () => {
 				status: 204
 			}
 		]);
-		const saved = page.getByRole('alert').getByText('Saved.', { exact: true });
+		// A success Alert is role=status since 5b23601 (only destructive and warning are role=alert).
+		const saved = page.getByRole('status').getByText('Saved.', { exact: true });
 		const heading = (name: string) => page.getByRole('heading', { level: 1, name });
 
 		await page.goto(`/settings/roles/${CHILD_ROLE.id}`);
