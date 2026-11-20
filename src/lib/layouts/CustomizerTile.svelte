@@ -23,14 +23,14 @@
 		value: string;
 		label: string;
 		kind: TileKind;
-		/** the tile is not rendered below this breakpoint */
+		/** the tile is not rendered below this breakpoint, unless it is the checked one (the group keeps a checked radio) */
 		hideBelow?: 'lg';
 	} = $props();
 
 	const id = $derived(`${group}-${value}`);
 </script>
 
-<RadioGroup.Tile {value} class={cn(hideBelow === 'lg' && 'max-lg:hidden')}>
+<RadioGroup.Tile {value} class={cn(hideBelow === 'lg' && 'max-lg:aria-[checked=false]:hidden')}>
 	{#if kind === 'wireframe'}
 		<span
 			class="cz-preview border-border group-aria-checked/tile:border-primary group-aria-checked/tile:ring-primary group-aria-checked/tile:ring-offset-popover block h-28 w-full overflow-hidden rounded-lg border group-aria-checked/tile:ring-2 group-aria-checked/tile:ring-offset-2"

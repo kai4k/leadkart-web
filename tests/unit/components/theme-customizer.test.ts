@@ -216,11 +216,22 @@ describe('accessibility and tokens', () => {
 		expect(dialog().querySelector('[data-preview="layout-semibox"]')).not.toBeNull();
 	});
 
-	it('the layouts that need room are hidden below lg by class, the others are not', async () => {
+	it('the layouts that need room are hidden below lg by class unless checked, the others never', async () => {
 		await render();
-		expect(radio('Layout', 'Semibox').className).toContain('max-lg:hidden');
-		expect(radio('Layout', 'Modern').className).toContain('max-lg:hidden');
-		expect(radio('Layout', 'Vertical').className).not.toContain('max-lg:hidden');
+		const hideUnchecked = 'max-lg:aria-[checked=false]:hidden';
+		expect(radio('Layout', 'Semibox').className).toContain(hideUnchecked);
+		expect(radio('Layout', 'Modern').className).toContain(hideUnchecked);
+		expect(radio('Layout', 'Vertical').className).not.toContain('max-lg:');
+	});
+
+	it('a saved semibox layout keeps a checked tile in the group (it is never hidden while checked)', async () => {
+		await render({ layout: 'semibox' });
+		const checked = [...group('Layout').querySelectorAll('[role="radio"]')].filter(
+			(r) => r.getAttribute('aria-checked') === 'true'
+		);
+		expect(checked).toHaveLength(1);
+		expect(checked[0]).toBe(radio('Layout', 'Semibox'));
+		expect(checked[0]!.className).not.toMatch(/(^|\s)max-lg:hidden/);
 	});
 
 	it('arrow keys move through a group (roving focus: one tab stop per group)', async () => {
