@@ -13,6 +13,8 @@
 
 <script lang="ts">
 	import { Icon, UploadCloud, X } from '#lib/icons/index.ts';
+	import { Button } from '#lib/components/ui/button/index.ts';
+	import * as Field from '#lib/components/ui/field/index.ts';
 	import { cn } from '#lib/utils/cn.ts';
 
 	type Props = {
@@ -47,7 +49,8 @@
 		onError
 	}: Props = $props();
 
-	const fieldId = $derived(id ?? `dropzone-${label.toLowerCase().replace(/\s+/g, '-')}`);
+	const uid = $props.id();
+	const fieldId = $derived(id ?? `dropzone-${uid}`);
 	const hintId = $derived(`${fieldId}-hint`);
 	const errorId = $derived(`${fieldId}-error`);
 
@@ -55,8 +58,9 @@
 	let localError = $state<string | null>(null);
 	let inputEl: HTMLInputElement | null = $state(null);
 
+	const localErrorId = $derived(`${fieldId}-localerror`);
 	const describedBy = $derived(
-		[error ? errorId : null, hint ? hintId : null, localError ? `${fieldId}-localerror` : null]
+		[hint ? hintId : null, error ? errorId : null, localError ? localErrorId : null]
 			.filter(Boolean)
 			.join(' ') || undefined
 	);
@@ -141,10 +145,8 @@
 	const hasFiles = $derived(files.length > 0);
 </script>
 
-<div class={cn('stack stack-tight', className)}>
-	<span class={cn('label text-fg', srLabel && 'sr-only')} id="{fieldId}-label">
-		{label}
-	</span>
+<Field.Field class={className}>
+	<Field.Label for={fieldId} class={srLabel ? 'sr-only' : undefined}>{label}</Field.Label>
 
 	<input
 		bind:this={inputEl}
@@ -154,7 +156,6 @@
 		{accept}
 		{multiple}
 		{disabled}
-		aria-labelledby="{fieldId}-label"
 		aria-describedby={describedBy}
 		aria-invalid={error || localError ? 'true' : undefined}
 		onchange={onChange}
@@ -163,40 +164,34 @@
 	{#if hasFiles}
 		<div
 			class={cn(
-				'bg-bg-elevated border border-border rounded-md flex items-start gap-3 px-4 py-3',
-				disabled && 'is-disabled',
-				(error || localError) && 'border-danger-500'
+				'flex items-start gap-3 rounded-md border border-border bg-card px-4 py-3',
+				disabled && 'opacity-50',
+				(error || localError) && 'border-destructive'
 			)}
 		>
-			<Icon icon={UploadCloud} size="md" class="text-primary mt-0.5 flex-shrink-0" />
-			<div class="stack stack-tight flex-1">
+			<Icon icon={UploadCloud} size="md" class="mt-0.5 shrink-0 text-primary" />
+			<div class="flex min-w-0 flex-1 flex-col gap-1">
 				{#each files as f, i (`${f.name}-${i}`)}
-					<div class="flex items-center justify-between gap-2">
-						<div class="min-w-0 flex-1">
-							<p class="body-sm text-fg truncate-1">{f.name}</p>
-							<p class="caption text-fg-muted">{formatBytes(f.size)}</p>
-						</div>
+					<div class="min-w-0">
+						<p class="truncate text-sm text-foreground">{f.name}</p>
+						<p class="text-sm text-muted-foreground">{formatBytes(f.size)}</p>
 					</div>
 				{/each}
 			</div>
 			<div class="flex gap-1">
-				<button
-					type="button"
-					class="text-fg-muted hover:text-fg label rounded-md px-2 py-1"
-					onclick={() => inputEl?.click()}
-					{disabled}
-				>
+				<Button variant="ghost" size="sm" onclick={() => inputEl?.click()} {disabled}>
 					Replace
-				</button>
-				<button
-					type="button"
-					class="text-fg-subtle hover:text-fg rounded-md p-1"
+				</Button>
+				<Button
+					variant="ghost"
+					size="icon-sm"
+					class="text-muted-foreground"
 					aria-label="Remove file"
 					onclick={clearFiles}
 					{disabled}
 				>
 					<Icon icon={X} size="sm" />
-				</button>
+				</Button>
 			</div>
 		</div>
 	{:else}
@@ -204,15 +199,14 @@
 			type="button"
 			data-drag-over={isDragOver ? 'true' : undefined}
 			class={cn(
-				'flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-10',
-				'transition-colors duration-200',
-				'focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
-				disabled && 'is-disabled',
+				'flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-6 py-10 transition-colors duration-200',
+				'focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none',
+				'disabled:cursor-not-allowed disabled:opacity-50',
 				error || localError
-					? 'border-danger-500 bg-danger-50'
+					? 'border-destructive bg-card'
 					: isDragOver
 						? 'border-primary bg-primary-soft'
-						: 'border-border hover:border-border-strong bg-bg-subtle'
+						: 'border-input bg-card hover:bg-muted'
 			)}
 			onclick={() => inputEl?.click()}
 			ondrop={onDrop}
@@ -223,20 +217,25 @@
 			<Icon
 				icon={UploadCloud}
 				size="xl"
-				class={cn(isDragOver ? 'text-primary' : 'text-fg-subtle')}
+				class={cn(isDragOver ? 'text-primary' : 'text-muted-foreground')}
 			/>
-			<p class="body-sm text-fg font-medium">{placeholder}</p>
+			<p class="text-sm font-medium text-foreground">{placeholder}</p>
 			{#if hint}
-				<p class="caption text-fg-muted">{hint}</p>
+				<p class="text-sm text-muted-foreground">{hint}</p>
 			{/if}
 		</button>
 	{/if}
 
-	{#if error}
-		<p id={errorId} class="body-sm text-danger-700">{error}</p>
-	{:else if localError}
-		<p id="{fieldId}-localerror" class="body-sm text-danger-700">{localError}</p>
-	{:else if hint && !hasFiles}
-		<p id={hintId} class="sr-only">{hint}</p>
+	{#if hint && hasFiles}
+		<Field.Description id={hintId}>{hint}</Field.Description>
+	{:else if hint}
+		<span id={hintId} class="sr-only">{hint}</span>
 	{/if}
-</div>
+
+	{#if error}
+		<Field.Error id={errorId}>{error}</Field.Error>
+	{/if}
+	{#if localError}
+		<Field.Error id={localErrorId}>{localError}</Field.Error>
+	{/if}
+</Field.Field>

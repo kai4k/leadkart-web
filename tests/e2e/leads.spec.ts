@@ -523,11 +523,11 @@ test.describe('CRM Leads — detail page tabs', () => {
 		await page.getByRole('button', { name: /^reassign/i }).click();
 		await expect(page.getByRole('heading', { name: 'Reassign lead' })).toBeVisible();
 
-		// Combobox: focus the typeahead input and type two+ characters to
+		// Combobox: open the field, then type two+ characters into its filter to
 		// trigger the membership search query (gated by q.length >= 2).
-		const newOwnerInput = page.getByRole('combobox', { name: 'New owner' });
-		await newOwnerInput.focus();
-		await newOwnerInput.pressSequentially('Asha', { delay: 30 });
+		await page.getByRole('combobox', { name: 'New owner' }).click();
+		const filter = page.getByRole('combobox', { name: 'Filter options' });
+		await filter.pressSequentially('Asha', { delay: 30 });
 		await expect(page.getByRole('option').filter({ hasText: /Asha Verma/ })).toBeVisible({
 			timeout: 5000
 		});

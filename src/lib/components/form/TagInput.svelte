@@ -2,19 +2,21 @@
 	/**
 	 * TagInput — chip multi-select with autocomplete.
 	 *
-	 * Industry refs: Linear labels picker, Notion multi-select, GitHub Primer
-	 * AutoComplete, react-tag-input. Renders an inline pill cluster + an
-	 * open-ended input. Comma or Enter commits the input as a new pill;
-	 * Backspace on empty input removes the last pill.
+	 * Renders an inline cluster of tags and an open-ended input. Comma or Enter commits the input as
+	 * a tag; Backspace on an empty input removes the last tag. The input is labelled by the visible
+	 * `label` (never by the placeholder).
 	 *
-	 * Autocomplete: when `suggestions` is provided and the input matches at
-	 * least one suggestion (case-insensitive substring), a portal-free
-	 * dropdown surfaces options. Click or Enter picks the highlighted item.
+	 * Autocomplete: when `suggestions` is provided and the input matches at least one (case-
+	 * insensitive substring), a listbox surfaces the options. Arrow keys move the highlight
+	 * (`aria-activedescendant`), Enter or a click picks it.
 	 */
 </script>
 
 <script lang="ts">
 	import { Icon, X } from '#lib/icons/index.ts';
+	import { Badge } from '#lib/components/ui/badge/index.ts';
+	import * as Field from '#lib/components/ui/field/index.ts';
+	import { Input } from '#lib/components/ui/input/index.ts';
 	import { cn } from '#lib/utils/cn.ts';
 
 	type Props = {
@@ -47,9 +49,11 @@
 		class: className = ''
 	}: Props = $props();
 
-	const fieldId = $derived(id ?? `tag-${label.toLowerCase().replace(/\s+/g, '-')}`);
+	const uid = $props.id();
+	const fieldId = $derived(id ?? `tag-${uid}`);
 	const hintId = $derived(`${fieldId}-hint`);
 	const errorId = $derived(`${fieldId}-error`);
+	const localErrorId = $derived(`${fieldId}-localerror`);
 	const listboxId = $derived(`${fieldId}-listbox`);
 
 	let inputText = $state('');
@@ -59,7 +63,7 @@
 	let inputEl: HTMLInputElement | null = $state(null);
 
 	const describedBy = $derived(
-		[error ? errorId : null, hint ? hintId : null, localError ? `${fieldId}-localerror` : null]
+		[hint ? hintId : null, error ? errorId : null, localError ? localErrorId : null]
 			.filter(Boolean)
 			.join(' ') || undefined
 	);
@@ -131,33 +135,28 @@
 	}
 </script>
 
-<div class={cn('stack stack-tight', className)}>
-	<label for={fieldId} class={cn('label text-fg', srLabel && 'sr-only')}>
-		{label}
-	</label>
+<Field.Field class={className}>
+	<Field.Label for={fieldId} class={srLabel ? 'sr-only' : undefined}>{label}</Field.Label>
 
 	<div class="relative">
+		<!-- The frame only forwards a click to the input; the input is the keyboard target. -->
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class={cn(
-				'bg-bg-elevated border border-border rounded-md body-sm flex w-full flex-wrap items-center gap-2 px-2 py-1.5 text-start',
-				'focus-within:ring-2 focus-within:ring-offset-1 focus-within:outline-none',
-				disabled && 'is-disabled',
-				error || localError
-					? 'border-danger-500 focus-within:ring-danger-500'
-					: 'focus-within:ring-focus-ring'
+				'flex min-h-10 w-full flex-wrap items-center gap-2 rounded-md border border-input bg-transparent px-2 py-1 text-start transition-colors dark:bg-input-fill',
+				'focus-within:border-ring focus-within:ring-3 focus-within:ring-ring',
+				(error || localError) && 'border-destructive',
+				disabled && 'cursor-not-allowed bg-muted opacity-50'
 			)}
 			onclick={() => inputEl?.focus()}
 		>
 			{#each value as tag, i (tag)}
-				<span
-					class="bg-primary-soft text-primary inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs"
-				>
+				<Badge variant="brand" class="gap-1 ps-2.5 pe-1">
 					<span>{tag}</span>
 					<button
 						type="button"
-						class="hover:text-primary-active rounded-full"
+						class="inline-flex size-4 items-center justify-center rounded-full hover:bg-primary hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
 						aria-label={`Remove ${tag}`}
 						onclick={(e) => {
 							e.stopPropagation();
@@ -167,23 +166,21 @@
 					>
 						<Icon icon={X} size="xs" />
 					</button>
-				</span>
+				</Badge>
 			{/each}
 
-			<input
-				bind:this={inputEl}
+			<Input
+				bind:ref={inputEl}
 				id={fieldId}
 				type="text"
 				role="combobox"
 				aria-expanded={showDropdown}
-				aria-controls={listboxId}
+				aria-controls={showDropdown ? listboxId : undefined}
+				aria-activedescendant={showDropdown ? `${listboxId}-${highlightIndex}` : undefined}
 				aria-autocomplete="list"
 				aria-invalid={error || localError ? 'true' : undefined}
 				aria-describedby={describedBy}
-				class={cn(
-					'body-sm text-fg placeholder:text-fg-subtle min-w-[6rem] flex-1 bg-transparent px-1 py-0.5',
-					'focus-visible:outline-none'
-				)}
+				class="h-auto min-w-24 flex-1 rounded-none border-0 bg-transparent px-1 py-0.5 shadow-none focus-visible:ring-0 dark:bg-transparent"
 				placeholder={value.length === 0 ? placeholder : ''}
 				{disabled}
 				value={inputText}
@@ -198,17 +195,17 @@
 			<ul
 				id={listboxId}
 				role="listbox"
-				class={cn(
-					'bg-bg-elevated border border-border rounded-xl shadow-card z-dropdown absolute start-0 end-0 top-full mt-1 max-h-60 overflow-auto p-1'
-				)}
+				aria-label={label}
+				class="absolute inset-x-0 top-full z-(--z-dropdown) mt-1 max-h-60 overflow-auto rounded-md bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-border"
 			>
 				{#each filteredSuggestions as suggestion, i (suggestion)}
 					<li
+						id="{listboxId}-{i}"
 						role="option"
 						aria-selected={i === highlightIndex}
 						class={cn(
-							'body-sm cursor-pointer rounded-md px-3 py-1.5',
-							i === highlightIndex ? 'bg-primary-soft text-primary' : 'text-fg hover:bg-bg-muted'
+							'cursor-pointer rounded-sm px-3 py-1.5 text-sm',
+							i === highlightIndex ? 'bg-muted text-foreground' : 'hover:bg-muted'
 						)}
 						onmousedown={(e) => {
 							e.preventDefault();
@@ -223,13 +220,14 @@
 		{/if}
 	</div>
 
-	{#if hint && !error && !localError}
-		<p id={hintId} class="caption">{hint}</p>
+	{#if hint}
+		<Field.Description id={hintId}>{hint}</Field.Description>
 	{/if}
 
 	{#if error}
-		<p id={errorId} class="body-sm text-danger-700">{error}</p>
-	{:else if localError}
-		<p id="{fieldId}-localerror" class="body-sm text-danger-700">{localError}</p>
+		<Field.Error id={errorId}>{error}</Field.Error>
 	{/if}
-</div>
+	{#if localError}
+		<Field.Error id={localErrorId}>{localError}</Field.Error>
+	{/if}
+</Field.Field>

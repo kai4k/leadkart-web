@@ -1,24 +1,26 @@
 <!-- src/lib/components/form/Combobox.svelte -->
 <!--
-	Combobox — typeahead select over bits-ui Combobox.
+	Combobox — typeahead single-select on `ui/popover` + `ui/command` (the shadcn recipe).
 
-	bits-ui handles ARIA combobox + listbox semantics, keyboard nav
-	(Up/Down to move highlight, Enter to select, Esc to close, typing
-	to filter), and floating list positioning. We supply the option-
-	filtering logic (client-side, default) and the visual chrome —
-	input + chevron + popover list — styled to match TextField + Popover.
+	The field is a button with `role="combobox"` (named by the visible label, `aria-expanded`,
+	`aria-controls`); it opens a popover whose first control is a filter input (`Command.Input`,
+	"Filter options") above a named listbox. Command handles the keyboard: Up/Down moves the
+	highlight, Enter selects, Escape closes, typing filters.
 
-	Server-side search: pass `onInput` to receive the typed query, then
-	update `options` from the parent. The component does not filter
-	when `onInput` is provided — the parent owns the filtering.
+	Server-side search: pass `onInput` to receive the typed query and update `options` from the
+	parent. The component does not filter when `onInput` is provided; the parent owns the filtering.
+	With a `name`, a hidden input carries the value for native form submission.
 
-	Single-select only. Multi-select belongs in a separate primitive
-	when 3+ features need it (Rule of Three).
+	Single-select only. Multi-select belongs in a separate primitive when 3+ features need it
+	(Rule of Three).
 -->
 <script lang="ts">
-	import { Combobox as BitsCombobox } from 'bits-ui';
-	import { Check, ChevronDown, Icon } from '#lib/icons/index.ts';
+	import { ChevronDown, Icon } from '#lib/icons/index.ts';
+	import * as Command from '#lib/components/ui/command/index.ts';
+	import * as Field from '#lib/components/ui/field/index.ts';
+	import * as Popover from '#lib/components/ui/popover/index.ts';
 	import { cn } from '#lib/utils/cn.ts';
+	import { fieldControlClass } from './field-control.ts';
 
 	export interface ComboboxOption {
 		value: string;
@@ -65,150 +67,104 @@
 		class: className = ''
 	}: Props = $props();
 
-	const fieldId = $derived(id ?? `combobox-${label.toLowerCase().replace(/\s+/g, '-')}`);
+	const uid = $props.id();
+	const fieldId = $derived(id ?? `combobox-${uid}`);
 	const hintId = $derived(`${fieldId}-hint`);
 	const errorId = $derived(`${fieldId}-error`);
+	const listId = $derived(`${fieldId}-list`);
 
 	const describedBy = $derived(
-		[error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined
+		[hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined
 	);
 
-	let query = $state('');
 	let open = $state(false);
+	let query = $state('');
 
 	const selectedLabel = $derived(options.find((o) => o.value === value)?.label ?? '');
 
-	// Server-side search mode: parent owns the filtering, we just relay input.
-	// Client-side search mode (no onInput): filter locally on the query.
-	const filteredOptions = $derived(
-		onInput
-			? options
-			: query.trim() === ''
-				? options
-				: options.filter((o) => o.label.toLowerCase().includes(query.trim().toLowerCase()))
-	);
-
-	function handleInput(e: Event & { currentTarget: HTMLInputElement }) {
-		query = e.currentTarget.value;
-		onInput?.(query);
+	function select(opt: ComboboxOption) {
+		value = opt.value;
+		onValueChange?.(opt.value);
+		open = false;
 	}
 
-	function handleValueChange(v: string) {
-		value = v || null;
-		onValueChange?.(v);
-		// Sync the input display to the selected label when the popover closes.
-		query = options.find((o) => o.value === v)?.label ?? '';
-	}
-
-	function handleOpenChange(o: boolean) {
-		open = o;
-		if (!o) {
-			// On close, snap the input back to the selected label so the field
-			// doesn't show a stale half-typed query.
-			query = selectedLabel;
-		} else if (selectedLabel && !query) {
+	function handleOpenChange(next: boolean) {
+		open = next;
+		// A closed list starts empty next time, so a half-typed query never lingers.
+		if (!next) {
 			query = '';
+			onInput?.('');
 		}
 	}
 </script>
 
-<div class={cn('stack stack-tight', className)}>
-	<label for={fieldId} class={cn('label text-fg', srLabel && 'sr-only')}>
-		{label}
-	</label>
+<Field.Field class={className}>
+	<Field.Label for={fieldId} class={srLabel ? 'sr-only' : undefined}>{label}</Field.Label>
 
-	<BitsCombobox.Root
-		type="single"
-		value={value ?? ''}
-		onValueChange={handleValueChange}
-		bind:open
-		onOpenChange={handleOpenChange}
-		{disabled}
-		{required}
-		{name}
-	>
-		<div class="relative">
-			<BitsCombobox.Input
-				id={fieldId}
-				oninput={handleInput}
-				{placeholder}
-				aria-invalid={error ? 'true' : undefined}
-				aria-describedby={describedBy}
-				class={cn(
-					'bg-bg-elevated border border-border rounded-md body-sm text-fg block w-full py-2 ps-3 pe-10',
-					'placeholder:text-fg-subtle',
-					'focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
-					'disabled:cursor-not-allowed disabled:opacity-60',
-					error
-						? 'border-danger-500 focus-visible:ring-danger-500'
-						: 'focus-visible:ring-focus-ring'
-				)}
-			/>
-			<BitsCombobox.Trigger
-				class={cn(
-					'text-fg-subtle absolute inset-y-0 end-0 flex items-center pe-3',
-					'focus-visible:outline-none'
-				)}
-				aria-label="Toggle options"
-			>
-				<Icon icon={ChevronDown} size="sm" />
-			</BitsCombobox.Trigger>
-		</div>
+	<Popover.Root {open} onOpenChange={handleOpenChange}>
+		<Popover.Trigger
+			id={fieldId}
+			role="combobox"
+			aria-expanded={open}
+			aria-haspopup="listbox"
+			aria-controls={listId}
+			aria-required={required ? 'true' : undefined}
+			aria-invalid={error ? 'true' : undefined}
+			aria-describedby={describedBy}
+			{disabled}
+			class={cn(fieldControlClass, 'justify-between gap-2 text-start')}
+		>
+			<span class={cn('truncate', !selectedLabel && 'text-muted-foreground')}>
+				{selectedLabel || placeholder}
+			</span>
+			<Icon icon={ChevronDown} size="sm" class="shrink-0 text-muted-foreground" />
+		</Popover.Trigger>
 
-		<BitsCombobox.Portal>
-			<BitsCombobox.Content
-				sideOffset={6}
-				class={cn(
-					'bg-bg-elevated border border-border rounded-xl shadow-card z-popover',
-					'max-h-60 min-w-[var(--bits-combobox-anchor-width)] overflow-y-auto rounded-xl p-1',
-					'border border-[var(--glass-border-subtle)]',
-					'shadow-[var(--glass-shadow-sm)]',
-					'data-[state=open]:animate-pop-in data-[state=closed]:animate-fade-out'
-				)}
-			>
-				{#if loading}
-					<div class="body-sm text-fg-muted px-3 py-2">Loading…</div>
-				{:else if filteredOptions.length === 0}
-					<div class="body-sm text-fg-muted px-3 py-2">{emptyState}</div>
-				{:else}
-					{#each filteredOptions as opt (opt.value)}
-						<BitsCombobox.Item
-							value={opt.value}
-							label={opt.label}
-							disabled={opt.disabled}
-							class={cn(
-								'flex cursor-pointer items-start gap-2 rounded-lg px-3 py-2 text-sm outline-none',
-								'transition-colors duration-[var(--duration-fast)]',
-								'text-fg',
-								'data-[highlighted]:bg-brand-50 data-[highlighted]:text-brand-600',
-								'data-[disabled]:pointer-events-none data-[disabled]:opacity-40'
-							)}
-						>
-							{#snippet children({ selected }: { selected: boolean })}
-								<span class="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center">
-									{#if selected}
-										<Icon icon={Check} size="xs" class="text-primary" />
-									{/if}
-								</span>
-								<span class="flex min-w-0 flex-col">
+		<Popover.Content align="start" class="w-(--bits-popover-anchor-width) min-w-56 gap-0 p-0">
+			<Command.Root shouldFilter={!onInput} class="p-1">
+				<Command.Input
+					aria-label="Filter options"
+					placeholder="Search…"
+					bind:value={query}
+					oninput={() => onInput?.(query)}
+				/>
+				<Command.List id={listId} aria-label={label}>
+					{#if loading}
+						<div class="px-3 py-2 text-sm text-muted-foreground">Loading…</div>
+					{:else}
+						<Command.Empty>{emptyState}</Command.Empty>
+						{#each options as opt (opt.value)}
+							<Command.Item
+								value={opt.value}
+								keywords={[opt.label, opt.description ?? '']}
+								disabled={opt.disabled}
+								data-checked={opt.value === value}
+								onSelect={() => select(opt)}
+								class="items-start"
+							>
+								<span class="flex min-w-0 flex-1 flex-col">
 									<span>{opt.label}</span>
 									{#if opt.description}
-										<span class="caption text-fg-muted">{opt.description}</span>
+										<span class="text-xs text-muted-foreground">{opt.description}</span>
 									{/if}
 								</span>
-							{/snippet}
-						</BitsCombobox.Item>
-					{/each}
-				{/if}
-			</BitsCombobox.Content>
-		</BitsCombobox.Portal>
-	</BitsCombobox.Root>
+							</Command.Item>
+						{/each}
+					{/if}
+				</Command.List>
+			</Command.Root>
+		</Popover.Content>
+	</Popover.Root>
 
-	{#if hint && !error}
-		<p id={hintId} class="caption">{hint}</p>
+	{#if name}
+		<input type="hidden" {name} value={value ?? ''} />
+	{/if}
+
+	{#if hint}
+		<Field.Description id={hintId}>{hint}</Field.Description>
 	{/if}
 
 	{#if error}
-		<p id={errorId} class="body-sm text-danger-700">{error}</p>
+		<Field.Error id={errorId}>{error}</Field.Error>
 	{/if}
-</div>
+</Field.Field>

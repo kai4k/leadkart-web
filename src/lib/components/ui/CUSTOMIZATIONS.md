@@ -108,3 +108,18 @@ rounded-lg px-2.5 py-1`, both branches.
 - Used by: `form/{TextField,PasswordField,NumberInput,Switch,RadioGroup,RadioItem,Select,TextareaField}`.
   They wrap `Field.Field` > `Field.Label` + control + `Field.Description` + `Field.Error`; ids come from
   `$props.id()`. The hint and the error are both shown and both in `aria-describedby`.
+
+## Calendar family (Task 7)
+
+Regenerated: `calendar`, `range-calendar` (same CLI run; `@internationalized/date` is already a
+direct dependency, a peer of bits-ui). The `locale` default is `en-US`: the form pickers pass theirs.
+No hand edits beyond the normaliser output (opaque hover `bg-accent`, `bg-transparent` for the dark
+range-middle hover). Contrast pairs the cells rely on are in `check-token-contrast`:
+`primary-foreground` on `primary` (selected, range ends), `accent-foreground` on `accent` (today),
+`muted-foreground` on `popover` and `accent` (weekday heads, outside days).
+
+## bits-ui boundary
+
+bits-ui is imported only under `src/lib/components/ui/**` (gate `check-bits-ui-boundary`); form
+components, features, layouts and routes compose these files. The form Combobox is a `Popover` +
+`Command`, the DatePicker a `Popover` + `Calendar`, the DateRangePicker a `Popover` + `RangeCalendar`.

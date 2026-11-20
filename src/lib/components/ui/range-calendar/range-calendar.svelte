@@ -1,15 +1,55 @@
 <script lang="ts">
+	import { isEqualMonth, type DateValue } from '@internationalized/date';
 	import { RangeCalendar as RangeCalendarPrimitive } from 'bits-ui';
-	import { ChevronLeft, ChevronRight, Icon } from '$icons';
-	import { cn } from '#lib/utils/cn.ts';
+	import type { ButtonVariant } from '#lib/components/ui/button/index.ts';
+	import { cn, type WithoutChildrenOrChild } from '#lib/utils/cn.ts';
+	import RangeCalendarCaption from './range-calendar-caption.svelte';
+	import RangeCalendarCell from './range-calendar-cell.svelte';
+	import RangeCalendarDay from './range-calendar-day.svelte';
+	import RangeCalendarGridBody from './range-calendar-grid-body.svelte';
+	import RangeCalendarGridHead from './range-calendar-grid-head.svelte';
+	import RangeCalendarGridRow from './range-calendar-grid-row.svelte';
+	import RangeCalendarGrid from './range-calendar-grid.svelte';
+	import RangeCalendarHeadCell from './range-calendar-head-cell.svelte';
+	import RangeCalendarHeader from './range-calendar-header.svelte';
+	import RangeCalendarMonth from './range-calendar-month.svelte';
+	import RangeCalendarMonths from './range-calendar-months.svelte';
+	import RangeCalendarNav from './range-calendar-nav.svelte';
+	import RangeCalendarNextButton from './range-calendar-next-button.svelte';
+	import RangeCalendarPrevButton from './range-calendar-prev-button.svelte';
+	import type { Snippet } from 'svelte';
+
 	let {
 		ref = $bindable(null),
-		class: className,
 		value = $bindable(),
 		placeholder = $bindable(),
 		weekdayFormat = 'short',
-		...rest
-	}: RangeCalendarPrimitive.RootProps = $props();
+		class: className,
+		buttonVariant = 'ghost',
+		captionLayout = 'label',
+		locale = 'en-US',
+		months: monthsProp,
+		years,
+		monthFormat: monthFormatProp,
+		yearFormat = 'numeric',
+		day,
+		disableDaysOutsideMonth = false,
+		...restProps
+	}: WithoutChildrenOrChild<RangeCalendarPrimitive.RootProps> & {
+		buttonVariant?: ButtonVariant;
+		captionLayout?: 'dropdown' | 'dropdown-months' | 'dropdown-years' | 'label';
+		months?: RangeCalendarPrimitive.MonthSelectProps['months'];
+		years?: RangeCalendarPrimitive.YearSelectProps['years'];
+		monthFormat?: RangeCalendarPrimitive.MonthSelectProps['monthFormat'];
+		yearFormat?: RangeCalendarPrimitive.YearSelectProps['yearFormat'];
+		day?: Snippet<[{ day: DateValue; outsideMonth: boolean }]>;
+	} = $props();
+
+	const monthFormat = $derived.by(() => {
+		if (monthFormatProp) return monthFormatProp;
+		if (captionLayout.startsWith('dropdown')) return 'short';
+		return 'long';
+	});
 </script>
 
 <RangeCalendarPrimitive.Root
@@ -17,58 +57,69 @@
 	bind:value
 	bind:placeholder
 	{weekdayFormat}
-	data-slot="range-calendar"
-	class={cn('rounded-md border border-border bg-bg-elevated p-3', className)}
-	{...rest}
+	{disableDaysOutsideMonth}
+	class={cn(
+		'p-2 [--cell-radius:var(--radius-md)] [--cell-size:--spacing(7)] group/calendar bg-background p-3 [[data-slot=card-content]_&]:bg-transparent [[data-slot=popover-content]_&]:bg-transparent',
+		className
+	)}
+	{locale}
+	{monthFormat}
+	{yearFormat}
+	{...restProps}
 >
 	{#snippet children({ months, weekdays })}
-		<RangeCalendarPrimitive.Header class="flex items-center justify-between">
-			<RangeCalendarPrimitive.PrevButton
-				class="inline-flex h-7 w-7 items-center justify-center rounded-md hover:bg-bg-muted"
-			>
-				<Icon icon={ChevronLeft} size="sm" />
-			</RangeCalendarPrimitive.PrevButton>
-			<RangeCalendarPrimitive.Heading class="text-sm font-medium" />
-			<RangeCalendarPrimitive.NextButton
-				class="inline-flex h-7 w-7 items-center justify-center rounded-md hover:bg-bg-muted"
-			>
-				<Icon icon={ChevronRight} size="sm" />
-			</RangeCalendarPrimitive.NextButton>
-		</RangeCalendarPrimitive.Header>
-		{#each months as month (month.value)}
-			<RangeCalendarPrimitive.Grid class="mt-3 w-full border-collapse space-y-1">
-				<RangeCalendarPrimitive.GridHead>
-					<RangeCalendarPrimitive.GridRow class="flex">
-						{#each weekdays as day, i (i)}
-							<RangeCalendarPrimitive.HeadCell
-								class="w-9 rounded-md text-[0.8rem] font-normal text-fg-muted"
-							>
-								{day.slice(0, 2)}
-							</RangeCalendarPrimitive.HeadCell>
-						{/each}
-					</RangeCalendarPrimitive.GridRow>
-				</RangeCalendarPrimitive.GridHead>
-				<RangeCalendarPrimitive.GridBody>
-					{#each month.weeks as weekDates (weekDates)}
-						<RangeCalendarPrimitive.GridRow class="mt-2 flex w-full">
-							{#each weekDates as date (date)}
-								<RangeCalendarPrimitive.Cell {date} month={month.value} class="p-0">
-									<RangeCalendarPrimitive.Day
-										class={cn(
-											'inline-flex h-9 w-9 items-center justify-center rounded-md text-sm font-normal',
-											'hover:bg-bg-muted',
-											'data-[selected]:bg-primary data-[selected]:text-primary-fg',
-											'data-[range-middle]:bg-primary-soft',
-											'data-[outside-month]:text-fg-subtle data-[outside-month]:opacity-50',
-											'data-[disabled]:opacity-50 data-[disabled]:pointer-events-none'
-										)}
-									/>
-								</RangeCalendarPrimitive.Cell>
+		<RangeCalendarMonths>
+			<RangeCalendarNav>
+				<RangeCalendarPrevButton variant={buttonVariant} />
+				<RangeCalendarNextButton variant={buttonVariant} />
+			</RangeCalendarNav>
+			{#each months as month, monthIndex (month)}
+				<RangeCalendarMonth>
+					<RangeCalendarHeader>
+						<RangeCalendarCaption
+							{captionLayout}
+							months={monthsProp}
+							{monthFormat}
+							{years}
+							{yearFormat}
+							month={month.value}
+							bind:placeholder
+							{locale}
+							{monthIndex}
+						/>
+					</RangeCalendarHeader>
+
+					<RangeCalendarGrid>
+						<RangeCalendarGridHead>
+							<RangeCalendarGridRow class="select-none">
+								{#each weekdays as weekday, i (i)}
+									<RangeCalendarHeadCell>
+										{weekday.slice(0, 2)}
+									</RangeCalendarHeadCell>
+								{/each}
+							</RangeCalendarGridRow>
+						</RangeCalendarGridHead>
+						<RangeCalendarGridBody>
+							{#each month.weeks as weekDates (weekDates)}
+								<RangeCalendarGridRow class="mt-2 w-full">
+									{#each weekDates as date (date)}
+										<RangeCalendarCell {date} month={month.value}>
+											{#if day}
+												{@render day({
+													day: date,
+													outsideMonth: !isEqualMonth(date, month.value)
+												})}
+											{:else}
+												<RangeCalendarDay />
+											{/if}
+										</RangeCalendarCell>
+									{/each}
+								</RangeCalendarGridRow>
 							{/each}
-						</RangeCalendarPrimitive.GridRow>
-					{/each}
-				</RangeCalendarPrimitive.GridBody>
-			</RangeCalendarPrimitive.Grid>
-		{/each}
+						</RangeCalendarGridBody>
+					</RangeCalendarGrid>
+				</RangeCalendarMonth>
+			{/each}
+		</RangeCalendarMonths>
 	{/snippet}
 </RangeCalendarPrimitive.Root>

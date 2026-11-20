@@ -1,28 +1,31 @@
 <!-- src/lib/components/form/DateRangePicker.svelte -->
 <!--
-	DateRangePicker — date-range picker over bits-ui DateRangePicker.
+	DateRangePicker — date-range picker on `ui/popover` + `ui/range-calendar`.
 
-	bits-ui composes DateRangeField (two segmented inputs — start +
-	end), Popover (calendar dropdown), and RangeCalendar (range-aware
-	month grid). ARIA wiring + range-selection keyboard nav handled
-	by bits-ui.
+	The field is a button (named by the visible label) showing "start – end" or a placeholder; it
+	opens a popover with the range month grid. bits-ui's range calendar handles the semantics and the
+	keyboard: arrow keys move between days, PageUp/PageDown change month, Enter or Space picks the
+	start, then the end; Escape closes. The popover closes once both ends are chosen.
 
-	Visual: dual-segment input with an en-dash separator, calendar
-	icon trigger, popover-hosted range calendar with primary-soft
-	fill for the range body + primary fill for the endpoints.
-
-	Value shape is `{ start, end }` per bits-ui's DateRange contract.
+	The value is `{ start, end }` (bits-ui's DateRange contract). With `startName` / `endName`,
+	hidden inputs carry the ISO dates for native form submission.
 -->
-<script lang="ts">
-	import { DateRangePicker as BitsDateRangePicker, type SegmentPart } from 'bits-ui';
-	import type { DateValue } from '@internationalized/date';
-	import { Calendar, ChevronLeft, ChevronRight, Icon } from '#lib/icons/index.ts';
-	import { cn } from '#lib/utils/cn.ts';
+<script lang="ts" module>
+	import { DateFormatter, getLocalTimeZone, type DateValue } from '@internationalized/date';
 
 	export type DateRange = {
 		start: DateValue | undefined;
 		end: DateValue | undefined;
 	};
+</script>
+
+<script lang="ts">
+	import { Calendar as CalendarIcon, Icon } from '#lib/icons/index.ts';
+	import * as Field from '#lib/components/ui/field/index.ts';
+	import * as Popover from '#lib/components/ui/popover/index.ts';
+	import { RangeCalendar } from '#lib/components/ui/range-calendar/index.ts';
+	import { cn } from '#lib/utils/cn.ts';
+	import { fieldControlClass } from './field-control.ts';
 
 	type Props = {
 		label: string;
@@ -66,181 +69,76 @@
 		class: className = ''
 	}: Props = $props();
 
-	const fieldId = $derived(id ?? `daterange-${label.toLowerCase().replace(/\s+/g, '-')}`);
+	const uid = $props.id();
+	const fieldId = $derived(id ?? `daterange-${uid}`);
 	const hintId = $derived(`${fieldId}-hint`);
 	const errorId = $derived(`${fieldId}-error`);
 
 	const describedBy = $derived(
-		[error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined
+		[hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined
 	);
 
-	const segmentClass =
-		'rounded px-0.5 text-fg focus-visible:outline-none focus-visible:bg-brand-50 focus-visible:text-brand-600 data-[placeholder]:text-fg-subtle';
+	let open = $state(false);
+
+	const formatter = $derived(new DateFormatter(locale, { dateStyle: 'medium' }));
+	const fmt = (d: DateValue | undefined) =>
+		d ? formatter.format(d.toDate(getLocalTimeZone())) : '';
+	const text = $derived(
+		value?.start ? `${fmt(value.start)} – ${value.end ? fmt(value.end) : '…'}` : ''
+	);
+
+	function handleValueChange(next: DateRange) {
+		onValueChange?.(next);
+		if (next.start && next.end) open = false;
+	}
 </script>
 
-<div class={cn('stack stack-tight', className)}>
-	<label for={fieldId} class={cn('label text-fg', srLabel && 'sr-only')}>
-		{label}
-	</label>
+<Field.Field class={className}>
+	<Field.Label for={fieldId} class={srLabel ? 'sr-only' : undefined}>{label}</Field.Label>
 
-	<BitsDateRangePicker.Root
-		bind:value
-		{onValueChange}
-		{placeholder}
-		{minValue}
-		{maxValue}
-		{disabled}
-		{required}
-		{readonly}
-		{locale}
-		{weekStartsOn}
-	>
-		<div
-			class={cn(
-				'bg-bg-elevated border border-border rounded-md text-fg relative flex w-full items-center gap-1 px-3 py-2 pe-10',
-				'body-sm focus-within:ring-focus-ring focus-within:ring-2 focus-within:ring-offset-1',
-				'disabled:cursor-not-allowed disabled:opacity-60',
-				error && 'border-danger-500 focus-within:ring-danger-500'
-			)}
+	<Popover.Root bind:open>
+		<Popover.Trigger
+			id={fieldId}
+			disabled={disabled || readonly}
+			aria-required={required ? 'true' : undefined}
+			aria-invalid={error ? 'true' : undefined}
 			aria-describedby={describedBy}
+			class={cn(fieldControlClass, 'justify-between gap-2 text-start')}
 		>
-			<BitsDateRangePicker.Input type="start" name={startName} class="flex items-center gap-px">
-				{#snippet children({ segments }: { segments: Array<{ part: SegmentPart; value: string }> })}
-					{#each segments as { part, value: segValue } (part)}
-						{#if part === 'literal'}
-							<BitsDateRangePicker.Segment {part} class="text-fg-subtle">
-								{segValue}
-							</BitsDateRangePicker.Segment>
-						{:else}
-							<BitsDateRangePicker.Segment {part} class={segmentClass}>
-								{segValue}
-							</BitsDateRangePicker.Segment>
-						{/if}
-					{/each}
-				{/snippet}
-			</BitsDateRangePicker.Input>
-			<span class="text-fg-subtle px-1" aria-hidden="true">–</span>
-			<BitsDateRangePicker.Input type="end" name={endName} class="flex items-center gap-px">
-				{#snippet children({ segments }: { segments: Array<{ part: SegmentPart; value: string }> })}
-					{#each segments as { part, value: segValue } (part)}
-						{#if part === 'literal'}
-							<BitsDateRangePicker.Segment {part} class="text-fg-subtle">
-								{segValue}
-							</BitsDateRangePicker.Segment>
-						{:else}
-							<BitsDateRangePicker.Segment {part} class={segmentClass}>
-								{segValue}
-							</BitsDateRangePicker.Segment>
-						{/if}
-					{/each}
-				{/snippet}
-			</BitsDateRangePicker.Input>
-			<BitsDateRangePicker.Trigger
-				id={fieldId}
-				class={cn(
-					'text-fg-subtle absolute inset-y-0 end-0 flex items-center pe-3',
-					'hover:text-fg transition-colors',
-					'focus-visible:outline-none'
-				)}
-				aria-label="Open calendar"
-			>
-				<Icon icon={Calendar} size="sm" />
-			</BitsDateRangePicker.Trigger>
-		</div>
+			<span class={cn('truncate', !text && 'text-muted-foreground')}>
+				{text || 'Pick a date range'}
+			</span>
+			<Icon icon={CalendarIcon} size="sm" class="shrink-0 text-muted-foreground" />
+		</Popover.Trigger>
 
-		<BitsDateRangePicker.Content
-			sideOffset={6}
-			class={cn(
-				'bg-bg-elevated border border-border rounded-xl shadow-card z-popover rounded-xl p-3',
-				'border border-[var(--glass-border-subtle)]',
-				'shadow-[var(--glass-shadow-sm)]',
-				'data-[state=open]:animate-pop-in data-[state=closed]:animate-fade-out'
-			)}
-		>
-			<BitsDateRangePicker.Calendar class="w-fit">
-				{#snippet children({ months, weekdays })}
-					<BitsDateRangePicker.Header class="mb-2 flex items-center justify-between">
-						<BitsDateRangePicker.PrevButton
-							class={cn(
-								'inline-flex size-7 items-center justify-center rounded-md',
-								'text-fg-muted hover:bg-bg-muted hover:text-fg',
-								'focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:outline-none'
-							)}
-							aria-label="Previous month"
-						>
-							<Icon icon={ChevronLeft} size="sm" />
-						</BitsDateRangePicker.PrevButton>
-						<BitsDateRangePicker.Heading class="body-sm text-fg font-medium" />
-						<BitsDateRangePicker.NextButton
-							class={cn(
-								'inline-flex size-7 items-center justify-center rounded-md',
-								'text-fg-muted hover:bg-bg-muted hover:text-fg',
-								'focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:outline-none'
-							)}
-							aria-label="Next month"
-						>
-							<Icon icon={ChevronRight} size="sm" />
-						</BitsDateRangePicker.NextButton>
-					</BitsDateRangePicker.Header>
-					{#each months as month (month.value)}
-						<BitsDateRangePicker.Grid class="w-full border-collapse">
-							<BitsDateRangePicker.GridHead>
-								<BitsDateRangePicker.GridRow class="flex">
-									{#each weekdays as day (day)}
-										<BitsDateRangePicker.HeadCell
-											class="text-fg-subtle caption flex size-8 items-center justify-center font-normal"
-										>
-											{day}
-										</BitsDateRangePicker.HeadCell>
-									{/each}
-								</BitsDateRangePicker.GridRow>
-							</BitsDateRangePicker.GridHead>
-							<BitsDateRangePicker.GridBody>
-								{#each month.weeks as weekDates (weekDates[0].toString())}
-									<BitsDateRangePicker.GridRow class="flex w-full">
-										{#each weekDates as date (date.toString())}
-											<BitsDateRangePicker.Cell
-												{date}
-												month={month.value}
-												class={cn(
-													'relative size-8 p-0 text-center',
-													// Inside-range visual: primary-soft band; rounded only at the row edges.
-													'data-[selected]:bg-brand-50',
-													'data-[range-end]:rounded-r-md data-[range-start]:rounded-l-md'
-												)}
-											>
-												<BitsDateRangePicker.Day
-													class={cn(
-														'inline-flex size-8 items-center justify-center rounded-md',
-														'body-sm text-fg',
-														'hover:bg-bg-muted',
-														'focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:outline-none',
-														'data-[outside-month]:text-fg-subtle data-[outside-month]:pointer-events-none',
-														'data-[disabled]:pointer-events-none data-[disabled]:opacity-40',
-														'data-[unavailable]:text-fg-subtle data-[unavailable]:line-through',
-														// Range endpoints — solid primary fill.
-														'data-[selection-start]:bg-primary data-[selection-start]:text-primary-fg',
-														'data-[selection-end]:bg-primary data-[selection-end]:text-primary-fg',
-														'data-[today]:ring-primary data-[today]:ring-1 data-[today]:ring-inset'
-													)}
-												/>
-											</BitsDateRangePicker.Cell>
-										{/each}
-									</BitsDateRangePicker.GridRow>
-								{/each}
-							</BitsDateRangePicker.GridBody>
-						</BitsDateRangePicker.Grid>
-					{/each}
-				{/snippet}
-			</BitsDateRangePicker.Calendar>
-		</BitsDateRangePicker.Content>
-	</BitsDateRangePicker.Root>
+		<Popover.Content align="start" class="w-auto p-0">
+			<RangeCalendar
+				bind:value
+				onValueChange={handleValueChange}
+				{placeholder}
+				{minValue}
+				{maxValue}
+				{locale}
+				{weekStartsOn}
+				{disabled}
+				{readonly}
+				aria-label={label}
+			/>
+		</Popover.Content>
+	</Popover.Root>
 
-	{#if hint && !error}
-		<p id={hintId} class="caption">{hint}</p>
+	{#if startName}
+		<input type="hidden" name={startName} value={value?.start?.toString() ?? ''} />
+	{/if}
+	{#if endName}
+		<input type="hidden" name={endName} value={value?.end?.toString() ?? ''} />
+	{/if}
+
+	{#if hint}
+		<Field.Description id={hintId}>{hint}</Field.Description>
 	{/if}
 
 	{#if error}
-		<p id={errorId} class="body-sm text-danger-700">{error}</p>
+		<Field.Error id={errorId}>{error}</Field.Error>
 	{/if}
-</div>
+</Field.Field>

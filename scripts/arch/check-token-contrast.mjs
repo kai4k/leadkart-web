@@ -63,8 +63,6 @@ const RAW_PAIRS = [
 	['primary-foreground', 'primary-hover', TEXT],
 	...SURFACES.map((s) => ['primary', s, TEXT]),
 	['primary', 'primary-soft', TEXT],
-	// LEGACY: text-brand-600 on bg-brand-50 (Combobox, DatePicker, DateRangePicker) until Task 7
-	['brand-600', 'primary-50', TEXT, { legacy: true }],
 	['secondary-foreground', 'secondary', TEXT],
 	['destructive-foreground', 'destructive', TEXT],
 	['destructive-foreground', 'destructive-hover', TEXT],
@@ -85,6 +83,7 @@ const RAW_PAIRS = [
 	['accent-foreground', 'accent', TEXT],
 	['muted-foreground', 'accent', TEXT],
 	['foreground', 'primary-soft', TEXT],
+	['muted-foreground', 'primary-soft', TEXT],
 	// switch thumb on its track, both states (WCAG 1.4.11): off track is `input`, on track `primary`
 	['background', 'input', UI],
 	['primary-foreground', 'primary', UI],
