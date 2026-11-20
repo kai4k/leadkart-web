@@ -3,7 +3,7 @@
 	import { bannerText, fieldText, readFailure } from '#lib/utils/form-failure.ts';
 	import { enhance } from '$app/forms';
 	import { Alert, Button } from '$ui';
-	import { TextField } from '#lib/components/form/index.ts';
+	import { ScopeContextField, TextField } from '#lib/components/form/index.ts';
 
 	/**
 	 * ChangeEmailForm — authenticated email-change request via SvelteKit
@@ -49,6 +49,8 @@
 			};
 		}}
 	>
+		<ScopeContextField />
+
 		<TextField
 			label={$_('auth.changeEmail.newEmail')}
 			name="new_email"

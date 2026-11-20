@@ -6,6 +6,14 @@ import { actions as resetActions } from '../../../src/routes/(auth)/reset-passwo
 import { actions as mustChangeActions } from '../../../src/routes/(app)/must-change-password/+page.server.ts';
 import { actions as securityActions } from '../../../src/routes/(app)/settings/account/security/+page.server.ts';
 
+// These tests are about how Go's answers map to form copy. That the form comes from the page of the
+// SAME person and context is the subject of self-service-actions.test.ts, with the real scope code:
+// here every form carries a fingerprint (the field is required) and the comparison is stubbed true.
+vi.mock('#lib/server/scope-context.ts', () => ({
+	pageShowsContext: () => true,
+	pageShowsCurrentContext: () => true
+}));
+
 // Kit's `sequence` needs a live request store; run the handles in order instead.
 vi.mock('@sveltejs/kit/hooks', () => ({
 	sequence:
@@ -40,7 +48,10 @@ function jar(values: Record<string, string> = {}) {
 	};
 }
 const form = (fields: Record<string, string>) =>
-	new Request('http://x/', { method: 'POST', body: new URLSearchParams(fields) });
+	new Request('http://x/', {
+		method: 'POST',
+		body: new URLSearchParams({ scope_context: 'page-fingerprint', ...fields })
+	});
 type Fail = { status: number; data: Record<string, unknown> };
 const run = (fn: unknown, event: object) =>
 	(fn as (e: never) => Promise<unknown>)(event as never) as Promise<unknown>;

@@ -2,7 +2,7 @@
 	import { _ } from 'svelte-i18n';
 	import { enhance } from '$app/forms';
 	import { Alert, Button, Card } from '$ui';
-	import { PasswordField } from '#lib/components/form/index.ts';
+	import { PasswordField, ScopeContextField } from '#lib/components/form/index.ts';
 	import { bannerText, fieldText, readFailure } from '#lib/utils/form-failure.ts';
 	import type { ActionData } from './$types';
 
@@ -49,6 +49,7 @@
 					};
 				}}
 			>
+				<ScopeContextField />
 				<PasswordField
 					label={$_('account.security.changePassword.currentPassword')}
 					name="current_password"

@@ -86,3 +86,31 @@ describe('DELETE /api/operator/scope', () => {
 		expect(gone.store.has('lk_op_tenant')).toBe(true);
 	});
 });
+
+describe('an ended session on the scope endpoint', () => {
+	it('is reported as one (401 session_expired), not as a CSRF problem, when no session cookie is left', async () => {
+		const jar = newJar({}); // the rejected refresh deleted every cookie, lk_csrf included
+		jar.store.delete('lk_csrf');
+		const res = await DELETE({
+			request: new Request('http://app/api/operator/scope', {
+				method: 'DELETE',
+				headers: { 'x-csrf-token': 'stale' }
+			}),
+			cookies: jar.api
+		} as never);
+		expect(res.status).toBe(401);
+		expect(await res.json()).toMatchObject({ error: 'session_expired' });
+	});
+
+	it('with a session cookie a bad CSRF token is still a 403 first', async () => {
+		const jar = newJar();
+		const res = await DELETE({
+			request: new Request('http://app/api/operator/scope', {
+				method: 'DELETE',
+				headers: { 'x-csrf-token': 'wrong' }
+			}),
+			cookies: jar.api
+		} as never);
+		expect(res.status).toBe(403);
+	});
+});

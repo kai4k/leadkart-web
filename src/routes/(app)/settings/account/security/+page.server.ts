@@ -11,7 +11,13 @@
  */
 import { formEmailField } from '#lib/api/request-schema.ts';
 import { changePasswordViaGo, fieldValidationKeys } from '#lib/server/auth-errors.ts';
-import { callGoForAction, failForm, failFromStatus, failOutage } from '#lib/server/form-action.ts';
+import {
+	authoriseSelfService,
+	callGoForAction,
+	failForm,
+	failFromStatus,
+	failOutage
+} from '#lib/server/form-action.ts';
 import { setMustChangePassword } from '#lib/server/cookies.ts';
 import { goFetch, readGoError } from '#lib/server/go.ts';
 import type { Actions } from './$types';
@@ -19,6 +25,10 @@ import type { Actions } from './$types';
 export const actions: Actions = {
 	changePassword: async ({ request, cookies }) => {
 		const formData = await request.formData();
+		// Own account, no permission; bound to the page of the person the browser holds now. No values
+		// are kept: never a password.
+		const refused = await authoriseSelfService({ cookies }, formData, {});
+		if (refused) return refused;
 		const result = await changePasswordViaGo(cookies, {
 			current: (formData.get('current_password') ?? '').toString(),
 			next: (formData.get('new_password') ?? '').toString(),
@@ -37,6 +47,9 @@ export const actions: Actions = {
 
 		const values = { email: newEmail };
 		const which = { which: 'changeEmail' as const };
+
+		const refused = await authoriseSelfService({ cookies }, formData, values);
+		if (refused) return refused;
 
 		const parsed = formEmailField.safeParse(newEmail);
 		if (!parsed.success) {

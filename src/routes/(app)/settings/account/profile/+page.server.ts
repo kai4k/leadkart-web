@@ -14,14 +14,13 @@
  */
 import { redirect } from '@sveltejs/kit';
 import {
+	authoriseSelfService,
 	callGoForAction,
 	failForm,
 	failFromGo,
 	failOutage,
-	UPSTREAM_UNAVAILABLE_KEY,
 	zodFieldMessages
 } from '#lib/server/form-action.ts';
-import { sessionRenewalPending } from '#lib/server/cookies.ts';
 import { goFetch, readGoJson } from '#lib/server/go.ts';
 import { updateProfileRequestSchema } from '$features/auth/schemas';
 import { ownPrincipal } from '#lib/server/principal.ts';
@@ -52,10 +51,10 @@ export const actions: Actions = {
 			status_message: (formData.get('status_message') ?? '').toString()
 		};
 
-		// The hook's refresh could not reach Go: keep the form, do not sign the user out.
-		if (sessionRenewalPending(cookies)) {
-			return failForm(503, { values: patch, formErrorKey: UPSTREAM_UNAVAILABLE_KEY });
-		}
+		// The caller's own profile needs no permission, but the form must come from the page of the
+		// person the browser holds now (session first, then the fingerprint).
+		const refused = await authoriseSelfService({ cookies }, formData, patch);
+		if (refused) return refused;
 		const membershipId = getMembershipId(cookies);
 		const parsed = updateProfileRequestSchema.safeParse(patch);
 		if (!parsed.success) {

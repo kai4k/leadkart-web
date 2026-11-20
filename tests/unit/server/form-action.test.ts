@@ -11,6 +11,7 @@ vi.mock('#lib/server/scope.ts', () => ({
 
 import {
 	authoriseAction,
+	authoriseSelfService,
 	callGoForAction,
 	failForm,
 	zodFieldMessages
@@ -244,6 +245,17 @@ describe('authoriseAction', () => {
 		});
 	});
 
+	it('a dead scope cookie answers scope_invalid (the proxy word for the same state), not scope_changed', async () => {
+		readOperatorScope.mockReturnValue({ state: 'invalid' });
+		expect(
+			await authorise(P.identityTenantsUpdate, { a: 1 }, at(undefined, 'invalid'))
+		).toMatchObject({
+			status: 409,
+			data: { values: { a: 1 }, formErrorKey: 'errors.code.scope_invalid' }
+		});
+		expect(loadCapabilities).not.toHaveBeenCalled();
+	});
+
 	it('no usable capabilities means the session is over: redirect to sign-in', async () => {
 		loadCapabilities.mockResolvedValue(null);
 		await expect(authorise(P.identityTenantsUpdate, {})).rejects.toMatchObject({
@@ -327,5 +339,48 @@ describe('zodFieldMessages', () => {
 			.object({ a: z.string().min(2, 'a short'), b: z.object({ c: z.number('c nan') }) })
 			.safeParse({ a: '', b: { c: 'x' } });
 		expect(r.success ? {} : zodFieldMessages(r.error)).toEqual({ a: 'a short', 'b.c': 'c nan' });
+	});
+});
+
+describe('authoriseSelfService: the same session and fingerprint prefix, no permission part', () => {
+	const run = (cookies: object, ctx: string | null, values: object = { a: 1 }) =>
+		authoriseSelfService(
+			{ cookies: cookies as never },
+			new URLSearchParams(ctx === null ? {} : { scope_context: ctx }) as unknown as FormData,
+			values
+		);
+	beforeEach(() => {
+		loadCapabilities.mockReset();
+		readOperatorScope.mockReturnValue({ state: 'none' });
+	});
+
+	it('is null when the page shows the current context; it never reads capabilities', async () => {
+		expect(await run(jar(), 'none')).toBeNull();
+		expect(loadCapabilities).not.toHaveBeenCalled();
+	});
+
+	it('refuses a stale or missing fingerprint with the kept form (409)', async () => {
+		for (const ctx of ['fp-valid', null]) {
+			expect(await run(jar(), ctx)).toMatchObject({
+				status: 409,
+				data: { values: { a: 1 }, formErrorKey: 'auth.errors.scopeChanged' }
+			});
+		}
+	});
+
+	it('a dead scope cookie is scope_invalid', async () => {
+		readOperatorScope.mockReturnValue({ state: 'invalid' });
+		expect(await run(jar(), 'invalid')).toMatchObject({
+			status: 409,
+			data: { formErrorKey: 'errors.code.scope_invalid' }
+		});
+	});
+
+	it('the session comes first: renewal pending is a kept-form 503, no session is a sign-in', async () => {
+		expect(await run(jar({ lk_refresh: 'r' }), 'stale')).toMatchObject({
+			status: 503,
+			data: { formErrorKey: 'auth.errors.upstreamUnavailable' }
+		});
+		await expect(run(jar({}), 'stale')).rejects.toMatchObject({ status: 303, location: '/signin' });
 	});
 });

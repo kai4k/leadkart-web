@@ -5,7 +5,8 @@
  *
  * Responsibilities:
  *   1. CSRF validation on mutating methods (POST/PUT/PATCH/DELETE) via
- *      assertCsrf (constant-time comparison).
+ *      assertCsrf (constant-time comparison); a request with no session cookie at all
+ *      is answered 401 session_expired first (the session is over, not the token stale).
  *   2. Bearer token injection for server-to-server calls to Go.
  *   3. Operator scope: auto-inject X-Tenant-Id from the lk_op_tenant
  *      cookie when present. The browser NEVER ships an X-Tenant-Id
@@ -30,7 +31,7 @@
 
 import type { RequestEvent } from './$types';
 import { config } from '#lib/server/config.ts';
-import { ACCESS_COOKIE, sessionRenewalPending } from '#lib/server/cookies.ts';
+import { ACCESS_COOKIE, sessionEnded, sessionRenewalPending } from '#lib/server/cookies.ts';
 import { isAuthExpired, refreshSession } from '#lib/server/auth-refresh.ts';
 import { SESSION_EXPIRED_CODE, SESSION_RENEWAL_FAILED_MESSAGE } from '#lib/api/errors.ts';
 import {
@@ -87,6 +88,11 @@ async function proxy(
 	const path = params.path;
 
 	if (MUTATING.has(request.method)) {
+		// An ended session first: a rejected refresh deleted lk_csrf with the session cookies, so the
+		// next save would otherwise read "CSRF token out of date, reload" instead of "signed out". With
+		// any session cookie present CSRF still runs before anything else.
+		if (sessionEnded(cookies))
+			return jsonError(401, SESSION_EXPIRED_CODE, 'Your session has expired');
 		const csrfFail = assertCsrf(event);
 		if (csrfFail) return csrfFail;
 	}

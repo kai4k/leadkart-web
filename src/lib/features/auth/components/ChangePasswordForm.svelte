@@ -3,7 +3,7 @@
 	import { bannerText, fieldText, readFailure } from '#lib/utils/form-failure.ts';
 	import { enhance } from '$app/forms';
 	import { Alert, Button } from '$ui';
-	import { PasswordField } from '$form';
+	import { PasswordField, ScopeContextField } from '$form';
 
 	/**
 	 * ChangePasswordForm — authenticated password change via SvelteKit
@@ -51,6 +51,8 @@
 		};
 	}}
 >
+	<ScopeContextField />
+
 	<PasswordField
 		label={$_('account.security.changePassword.currentPassword')}
 		name="current_password"

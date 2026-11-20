@@ -13,8 +13,10 @@
  *                            fails, sign out instead (the server clears the scope
  *                            cookie on sign-in) rather than loop on 409s.
  *   ScopeChangedError     -> another tab changed the tenant context this page shows: tell
- *                            the user and re-run the (app) layout so the page catches up
- *                            (its guards decide where the user lands). Nothing was run.
+ *                            the user and hand it to the one foreign-change path (a hard reset:
+ *                            re-running the layout in place would re-bind forms that stay
+ *                            mounted). Nothing was run. A refusal caused by THIS tab's own enter or
+ *                            exit in flight is not a foreign change and is ignored there.
  *
  * Each fires once; later failures from in-flight queries are swallowed until
  * the navigation settles. Dependencies are injected so the guard is
@@ -34,8 +36,11 @@ export interface SessionGuardDeps {
 	 * then follow the change (the cache and the (app) layout, mounted observers kept alive).
 	 */
 	exitScope: () => Promise<unknown>;
-	/** Re-run the (app) layout and reset the cache: the page catches up with the cookie's context. */
-	followContext: () => Promise<unknown>;
+	/**
+	 * The context was changed by someone else: hard reset this tab. True when this call started the
+	 * reset (so the user is told once), false when it was declined (own change in flight, already under way).
+	 */
+	foreignChange: () => boolean;
 	location: () => { pathname: string; search: string };
 }
 
@@ -69,6 +74,11 @@ export function createSessionGuard(deps: SessionGuardDeps): SessionGuard {
 		});
 	}
 
+	/** Another tab changed the context: one hard reset, told to the user once. */
+	function notifyForeign(): void {
+		if (deps.foreignChange()) deps.notify(codeCopy('scope_changed') ?? SCOPE_CHANGED_MESSAGE);
+	}
+
 	return {
 		handle(error) {
 			if (error instanceof AuthError && isSessionEndingError(error)) {
@@ -93,7 +103,13 @@ export function createSessionGuard(deps: SessionGuardDeps): SessionGuard {
 							deps.notify(codeCopy('scope_invalid') ?? SCOPE_EXPIRED_MESSAGE);
 							return deps.goto('/operator/tenants');
 						},
-						() => {
+						(failure: unknown) => {
+							// The exit itself was refused because another tab moved the context meanwhile: a valid
+							// session in a new context, not a failure to leave. Reload; never sign out for it.
+							if (failure instanceof ScopeChangedError) {
+								notifyForeign();
+								return undefined;
+							}
 							deps.clearCache();
 							deps.notify(SCOPE_EXIT_FAILED_MESSAGE);
 							return deps.goto('/signin');
@@ -103,11 +119,7 @@ export function createSessionGuard(deps: SessionGuardDeps): SessionGuard {
 				return true;
 			}
 			if (error instanceof ScopeChangedError) {
-				if (redirecting) return true;
-				redirecting = true;
-				deps.notify(codeCopy('scope_changed') ?? SCOPE_CHANGED_MESSAGE);
-				// Whatever the refresh does (a guard may redirect), a failure here is not worth a second toast.
-				settle(deps.followContext().catch(() => undefined));
+				notifyForeign();
 				return true;
 			}
 			return false;

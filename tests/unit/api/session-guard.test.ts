@@ -20,7 +20,7 @@ function setup(location = { pathname: '/leads', search: '?page=2' }) {
 		clearCache: vi.fn(),
 		notify: vi.fn(),
 		exitScope: vi.fn(() => Promise.resolve()),
-		followContext: vi.fn(() => Promise.resolve()),
+		foreignChange: vi.fn(() => true),
 		location: () => location
 	};
 	return { deps, guard: createSessionGuard(deps) };
@@ -156,7 +156,7 @@ describe('session guard: scope errors regardless of HTTP status', () => {
 			clearCache: vi.fn(),
 			notify: vi.fn(),
 			exitScope: vi.fn(() => Promise.resolve()),
-			followContext: vi.fn(() => Promise.resolve()),
+			foreignChange: vi.fn(() => true),
 			location: () => ({ pathname: '/operator/scope/members', search: '' })
 		};
 		const guard = createSessionGuard(deps);
@@ -172,11 +172,12 @@ describe('session guard: scope errors regardless of HTTP status', () => {
 describe('session guard — scope_changed (another tab changed the context)', () => {
 	const changed = () => new ScopeChangedError('x');
 
-	it('tells the user, re-runs the layout once, and does not navigate by itself', async () => {
+	it('tells the user and hands the change to the one foreign-change path, once; nothing navigates here', () => {
 		const { deps, guard } = setup({ pathname: '/settings/users', search: '' });
+		deps.foreignChange.mockReturnValueOnce(true).mockReturnValue(false); // the first call starts the reload
 		expect(guard.handle(changed())).toBe(true);
 		expect(guard.handle(changed())).toBe(true); // a second in-flight call failing the same way
-		await vi.waitFor(() => expect(deps.followContext).toHaveBeenCalledTimes(1));
+		expect(deps.foreignChange).toHaveBeenCalledTimes(2);
 		expect(deps.notify).toHaveBeenCalledTimes(1);
 		expect(deps.notify).toHaveBeenCalledWith(SCOPE_CHANGED_MESSAGE);
 		expect(deps.exitScope).not.toHaveBeenCalled();
@@ -184,14 +185,23 @@ describe('session guard — scope_changed (another tab changed the context)', ()
 		expect(deps.clearCache).not.toHaveBeenCalled();
 	});
 
-	it('can fire again after the first refresh settled', async () => {
+	it('says nothing when the change was this tab own (the foreign path declined)', () => {
 		const { deps, guard } = setup({ pathname: '/settings/users', search: '' });
-		guard.handle(changed());
-		await vi.waitFor(() => expect(deps.followContext).toHaveBeenCalledTimes(1));
-		await Promise.resolve();
-		await Promise.resolve();
-		guard.handle(changed());
-		await vi.waitFor(() => expect(deps.followContext).toHaveBeenCalledTimes(2));
+		deps.foreignChange.mockReturnValue(false);
+		expect(guard.handle(changed())).toBe(true);
+		expect(deps.notify).not.toHaveBeenCalled();
+	});
+
+	it('an exit answered 409 scope_changed is a foreign change (reload), not a failure to leave: no sign-out', async () => {
+		const { deps, guard } = setup({ pathname: '/operator/scope/members', search: '' });
+		deps.exitScope.mockRejectedValue(changed());
+		expect(guard.handle(new ScopeInvalidError('expired'))).toBe(true);
+		await vi.waitFor(() => expect(deps.foreignChange).toHaveBeenCalledTimes(1));
+		expect(deps.goto).not.toHaveBeenCalled();
+		expect(deps.clearCache).not.toHaveBeenCalled();
+		expect(deps.notify).not.toHaveBeenCalledWith(
+			'Could not leave the tenant context — signing out'
+		);
 	});
 
 	it('comes from the BFF response as its own error with its own copy', () => {

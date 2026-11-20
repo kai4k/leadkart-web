@@ -27,7 +27,7 @@ import { SCOPE_CHANGED_CODE, SCOPE_CHANGED_MESSAGE } from '#lib/api/scope-header
 import { setOperatorScope, clearOperatorScope, readOperatorScope } from '#lib/server/scope.ts';
 import { pageShowsCurrentContext } from '#lib/server/scope-context.ts';
 import { assertCsrf } from '#lib/server/csrf.ts';
-import { ACCESS_COOKIE, sessionRenewalPending } from '#lib/server/cookies.ts';
+import { ACCESS_COOKIE, sessionEnded, sessionRenewalPending } from '#lib/server/cookies.ts';
 import { loadCapabilities } from '#lib/server/capabilities.ts';
 import { goFetch } from '#lib/server/go.ts';
 import { meetsAccess, NAV_ROUTES } from '#lib/config/nav.ts';
@@ -43,6 +43,8 @@ const tenantLookupSchema = z.object({
 });
 
 export async function POST(event: RequestEvent): Promise<Response> {
+	// An ended session is reported as one, before CSRF (the rejected refresh deleted lk_csrf too).
+	if (sessionEnded(event.cookies)) return sessionExpired();
 	const csrfFail = assertCsrf(event);
 	if (csrfFail) return csrfFail;
 
@@ -129,9 +131,11 @@ export async function POST(event: RequestEvent): Promise<Response> {
 
 // eslint-disable-next-line @typescript-eslint/require-await -- SvelteKit handler signature is async by contract
 export async function DELETE(event: RequestEvent): Promise<Response> {
+	const { cookies, request } = event;
+	// An ended session is reported as one, before CSRF (the rejected refresh deleted lk_csrf too).
+	if (sessionEnded(cookies)) return sessionExpired();
 	const csrfFail = assertCsrf(event);
 	if (csrfFail) return csrfFail;
-	const { cookies, request } = event;
 	// Session first (as in the proxy): without a caller there is no context to compare.
 	if (!cookies.get(ACCESS_COOKIE())) {
 		return sessionRenewalPending(cookies)

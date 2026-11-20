@@ -15,6 +15,17 @@ import { scopeFingerprint } from '#lib/server/scope.ts';
 import { actions as profileActions } from '../../../src/routes/(app)/settings/account/profile/+page.server.ts';
 import { actions as newRoleActions } from '../../../src/routes/(app)/settings/roles/new/+page.server.ts';
 
+/** A profile form as the page renders it: the values plus the context fingerprint of the signed-in person. */
+const profileBody = () =>
+	new URLSearchParams({
+		designation: 'a',
+		department: 'b',
+		status_message: 'c',
+		scope_context: scopeFingerprint({ state: 'none' }, {
+			get: (n: string) => (n === 'lk_access' ? 'tok' : undefined)
+		} as never)
+	});
+
 const RAW = 'pq: duplicate key value violates unique constraint "roles_name_key"';
 const goError = (status: number, body: Record<string, unknown>) =>
 	Promise.resolve(
@@ -97,7 +108,12 @@ describe('actions that used to print Go detail raw', () => {
 		const r = (await (profileActions.default as (e: never) => Promise<unknown>)({
 			request: new Request('http://x/', {
 				method: 'POST',
-				body: new URLSearchParams({ designation: 'a', department: 'b', status_message: 'c' })
+				body: new URLSearchParams({
+					designation: 'a',
+					department: 'b',
+					status_message: 'c',
+					scope_context: scopeFingerprint({ state: 'none' }, cookies({ lk_access: 'tok' }))
+				})
 			}),
 			cookies: cookies({ lk_access: 'tok' })
 		} as never)) as Fail;
@@ -110,7 +126,12 @@ describe('actions that used to print Go detail raw', () => {
 		const fetchFn = vi.fn(() => Promise.resolve(new Response(null, { status: 204 })));
 		vi.stubGlobal('fetch', fetchFn);
 		const r = await (profileActions.default as (e: never) => Promise<unknown>)({
-			request: new Request('http://x/', { method: 'POST', body: new URLSearchParams({}) }),
+			request: new Request('http://x/', {
+				method: 'POST',
+				body: new URLSearchParams({
+					scope_context: scopeFingerprint({ state: 'none' }, cookies({ lk_access: 'tok' }))
+				})
+			}),
 			cookies: cookies({ lk_access: 'tok' })
 		} as never);
 		expect(r).toEqual({ success: true });
@@ -132,7 +153,7 @@ describe('actions that used to print Go detail raw', () => {
 		const r = (await (profileActions.default as (e: never) => Promise<unknown>)({
 			request: new Request('http://x/', {
 				method: 'POST',
-				body: new URLSearchParams({ designation: 'a', department: 'b', status_message: 'c' })
+				body: profileBody()
 			}),
 			cookies: cookies({ lk_access: 'tok' })
 		} as never)) as Fail;
@@ -205,7 +226,7 @@ describe('form actions keep the form on an outage and share one 429 line', () =>
 		(profileActions.default as (e: never) => Promise<unknown>)({
 			request: new Request('http://x/', {
 				method: 'POST',
-				body: new URLSearchParams({ designation: 'a', department: 'b', status_message: 'c' })
+				body: profileBody()
 			}),
 			cookies
 		} as never) as Promise<Out>;

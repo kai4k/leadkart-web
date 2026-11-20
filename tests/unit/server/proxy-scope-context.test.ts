@@ -263,3 +263,43 @@ describe('session renewal signal', () => {
 		expect(res.headers.get('x-lk-session-renewed')).toBe('1');
 	});
 });
+
+describe('proxy: an ended session is reported as one, whatever the CSRF state', () => {
+	/** A write whose CSRF token does not match the cookie (or whose cookie is gone). */
+	const badCsrfWrite = (jar: ReturnType<typeof newJar>) =>
+		(POST as (e: never) => Promise<Response>)({
+			request: new Request('http://app/api/v1/users', {
+				method: 'POST',
+				headers: { 'x-csrf-token': 'not-the-cookie', [SCOPE_CONTEXT_HEADER]: fpNone() },
+				body: '{}'
+			}),
+			params: { path: 'v1/users' },
+			cookies: jar.api
+		} as never);
+
+	it('no access and no refresh cookie (the rejected refresh deleted lk_csrf too): 401 session_expired, not csrf_mismatch', async () => {
+		const jar = newJar();
+		jar.store.delete('lk_access');
+		jar.store.delete('lk_csrf');
+		const res = await badCsrfWrite(jar);
+		expect(res.status).toBe(401);
+		expect(await res.json()).toMatchObject({ error: 'session_expired' });
+		expect(upstream).not.toHaveBeenCalled();
+	});
+
+	it('with an access cookie a bad CSRF token is still a 403 before anything else', async () => {
+		const res = await badCsrfWrite(newJar());
+		expect(res.status).toBe(403);
+		expect(await res.json()).toMatchObject({ error: 'csrf_mismatch' });
+		expect(upstream).not.toHaveBeenCalled();
+	});
+
+	it('with only a refresh cookie (a renewal is pending) a bad CSRF token is still a 403', async () => {
+		const jar = newJar();
+		jar.store.delete('lk_access');
+		jar.store.set('lk_refresh', 'r1');
+		const res = await badCsrfWrite(jar);
+		expect(res.status).toBe(403);
+		expect(await res.json()).toMatchObject({ error: 'csrf_mismatch' });
+	});
+});

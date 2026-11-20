@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { _ } from 'svelte-i18n';
 	import { fieldText, readFailure } from '#lib/utils/form-failure.ts';
-	import { TextField } from '#lib/components/form/index.ts';
+	import { ScopeContextField, TextField } from '#lib/components/form/index.ts';
 	import { Alert, Button, DescriptionList } from '$ui';
 	import { displayName, userStatus } from '$features/auth/view-models';
 	import type { UserDto } from '$features/auth/types';
@@ -54,6 +54,8 @@
 		};
 	}}
 >
+	<ScopeContextField />
+
 	<!-- Read-only identity block -->
 	<section class="stack stack-tight">
 		<h2 class="h5">{displayName(profile)}</h2>

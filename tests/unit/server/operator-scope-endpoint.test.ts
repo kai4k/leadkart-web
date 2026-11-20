@@ -8,7 +8,11 @@ const setOperatorScope = vi.hoisted(() => vi.fn());
 vi.mock('#lib/server/capabilities.ts', () => ({ loadCapabilities }));
 vi.mock('#lib/server/go.ts', () => ({ goFetch }));
 vi.mock('#lib/server/csrf.ts', () => ({ assertCsrf: () => null }));
-vi.mock('#lib/server/cookies.ts', () => ({ ACCESS_COOKIE: () => 'lk_access' }));
+vi.mock('#lib/server/cookies.ts', () => ({
+	ACCESS_COOKIE: () => 'lk_access',
+	// no refresh cookie in this suite: the session is over exactly when the access cookie is gone
+	sessionEnded: (c: { get(n: string): string | undefined }) => !c.get('lk_access')
+}));
 vi.mock('#lib/server/scope.ts', () => ({ setOperatorScope, clearOperatorScope: vi.fn() }));
 
 import { POST } from '../../../src/routes/api/operator/scope/+server.ts';

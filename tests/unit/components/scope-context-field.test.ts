@@ -1,7 +1,9 @@
 /**
  * Every form that posts to a scope-sensitive server action carries the tenant-context fingerprint of
  * the page it was rendered in, as a hidden field (so it also works without JavaScript). When the
- * action refuses because the context changed meanwhile, the page re-runs the (app) layout.
+ * action refuses because the context changed meanwhile (or the scope cookie died), the page does a
+ * hard reset through the one foreign-change function: re-running the layout in place would re-bind
+ * the typed values to the new context.
  */
 import { flushSync, mount, tick, unmount } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -10,8 +12,8 @@ const state = vi.hoisted(() => ({
 	page: { data: { scopeContext: 'fp-a' } as Record<string, unknown>, form: null as unknown }
 }));
 vi.mock('$app/state', () => state);
-const refresh = vi.hoisted(() => vi.fn(() => Promise.resolve()));
-vi.mock('#lib/api/operator-scope.ts', () => ({ refreshTenantContext: refresh }));
+const refresh = vi.hoisted(() => vi.fn(() => true));
+vi.mock('#lib/api/operator-scope.ts', () => ({ scopeChangedElsewhere: refresh }));
 
 import ScopeContextField from '#lib/components/form/ScopeContextField.svelte';
 
@@ -52,8 +54,15 @@ describe('ScopeContextField', () => {
 		);
 	});
 
-	it('re-runs the (app) layout when the action said the context changed', async () => {
+	it('hands the change to the foreign-change path when the action said the context changed', async () => {
 		state.page.form = { formErrorKey: 'auth.errors.scopeChanged' };
+		await render(ScopeContextField);
+		await vi.waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
+		expect(refresh).toHaveBeenCalledWith(undefined, 'refusal');
+	});
+
+	it('does the same when the action said the scope cookie is dead', async () => {
+		state.page.form = { formErrorKey: 'errors.code.scope_invalid' };
 		await render(ScopeContextField);
 		await vi.waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
 	});

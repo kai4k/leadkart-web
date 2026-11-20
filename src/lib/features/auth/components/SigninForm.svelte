@@ -2,6 +2,7 @@
 	import { _ } from 'svelte-i18n';
 	import { bannerText, fieldText, readFailure } from '#lib/utils/form-failure.ts';
 	import { enhance } from '$app/forms';
+	import { announceContextChange } from '#lib/api/operator-scope.ts';
 	import { page } from '$app/state';
 	import { Icon, Lock } from '#lib/icons/index.ts';
 	import { Alert, AuthCard, Button, Logo } from '#lib/components/ui/index.ts';
@@ -76,7 +77,9 @@
 		novalidate
 		use:enhance={() => {
 			loading = true;
-			return async ({ update }) => {
+			return async ({ result, update }) => {
+				// A sign-in changes the person the browser holds: the other tabs reload instead of collecting 409s.
+				if (result.type === 'redirect') announceContextChange();
 				await update();
 				loading = false;
 			};

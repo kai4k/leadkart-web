@@ -15,7 +15,8 @@
  *     if (refused) return refused;
  * (the result is used: returned on refusal), or hand off with a top-level `return helper(...)` /
  * `return await helper(...)` where the helper is an authorising helper whose OWN body satisfies the
- * pair. Actions listed as self-service are exempt, exactly, by `<file>#<action>`.
+ * pair. Actions listed as self-service are exempt from the PERMISSION part only, exactly, by
+ * `<file>#<action>`: they hold the same pair with `authoriseSelfService` (session + context fingerprint).
  *
  * `export { load } from './x'`, `export { load }` and `export { actions } from './x'` are followed;
  * `export * from` and a spread inside `actions` are refused (they hide what is exported).
@@ -32,6 +33,8 @@ export const GO_CALLS = new Set([
 	'ownPrincipal',
 	'fetch'
 ]);
+/** The call a self-service action makes instead of `authoriseAction`: session + fingerprint, no permission. */
+export const SELF_SERVICE_GUARD = 'authoriseSelfService';
 const GUARD_NAMES = new Set(['parent', 'guardAppRoute']);
 
 export interface LoadedModule {
@@ -224,7 +227,8 @@ export function analyzeLoad(node: ts.Node, sf: ts.SourceFile): string[] {
 
 /** `const X = await authoriseAction(...)` with a top-level `if (X) return X;` after it. -> index after the `if`, or an error. */
 function authorisationEnd(
-	statements: readonly ts.Statement[]
+	statements: readonly ts.Statement[],
+	guardName = 'authoriseAction'
 ): { end: number } | { error: string } {
 	for (let i = 0; i < statements.length; i++) {
 		const st = statements[i]!;
@@ -237,7 +241,7 @@ function authorisationEnd(
 			return (
 				ts.isCallExpression(call) &&
 				ts.isIdentifier(unwrap(call.expression)) &&
-				(unwrap(call.expression) as ts.Identifier).text === 'authoriseAction'
+				(unwrap(call.expression) as ts.Identifier).text === guardName
 			);
 		});
 		if (!decl) continue;
@@ -260,14 +264,15 @@ function authorisationEnd(
 			error: `the result of authoriseAction (\`${name}\`) is never returned on refusal (\`if (${name}) return ${name};\`)`
 		};
 	}
-	return { error: 'no unconditional top-level `const refused = await authoriseAction(...)`' };
+	return { error: `no unconditional top-level \`const refused = await ${guardName}(...)\`` };
 }
 
 /** Violations of the ACTION rule for one action function. */
 export function analyzeAction(
 	node: ts.Node,
 	sf: ts.SourceFile,
-	helpers: Record<string, ts.Node | undefined>
+	helpers: Record<string, ts.Node | undefined>,
+	guardName = 'authoriseAction'
 ): string[] {
 	const n = unwrap(node);
 	if (!isFnLike(n)) return ['action is not a function the walker can read'];
@@ -276,7 +281,7 @@ export function analyzeAction(
 	const go = goReachingCalls(n, sf);
 
 	// The authorising pair in this function ...
-	const pair = authorisationEnd(statements);
+	const pair = authorisationEnd(statements, guardName);
 	if (!('error' in pair)) {
 		const early = go.find((c) => c.start < pair.end);
 		return early ? [`action reaches Go (${early.name}) before it is authorised`] : [];
@@ -360,7 +365,10 @@ export function analyzeActions(
 		return {
 			name,
 			selfService: exempt,
-			problems: exempt ? [] : analyzeAction(node, resolved.sf, helpers)
+			// A self-service action needs no permission but IS held to the session + fingerprint check.
+			problems: exempt
+				? analyzeAction(node, resolved.sf, {}, SELF_SERVICE_GUARD)
+				: analyzeAction(node, resolved.sf, helpers)
 		};
 	});
 	return { reports, errors };

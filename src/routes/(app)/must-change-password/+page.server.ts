@@ -10,7 +10,7 @@
  */
 import { redirect } from '@sveltejs/kit';
 import { changePasswordViaGo } from '#lib/server/auth-errors.ts';
-import { failForm } from '#lib/server/form-action.ts';
+import { authoriseSelfService, failForm } from '#lib/server/form-action.ts';
 import { setMustChangePassword } from '#lib/server/cookies.ts';
 import { safeRedirectPath } from '#lib/server/redirect.ts';
 import type { Actions } from './$types';
@@ -18,6 +18,9 @@ import type { Actions } from './$types';
 export const actions: Actions = {
 	default: async ({ request, cookies, url }) => {
 		const formData = await request.formData();
+		// Own account, no permission; bound to the page of the person the browser holds now.
+		const refused = await authoriseSelfService({ cookies }, formData, {});
+		if (refused) return refused;
 		const result = await changePasswordViaGo(cookies, {
 			current: (formData.get('current_password') ?? '').toString(),
 			next: (formData.get('new_password') ?? '').toString(),

@@ -42,9 +42,12 @@ const LOAD_ROOTS: Record<string, string> = {
 };
 
 /**
- * Actions exempt from `authoriseAction`, EXACTLY, keyed `<file>#<action>`. Each acts on the caller's
- * own account (the calls pass scoped:false, so a tenant context never changes their target) and needs
- * no permission beyond being signed in; Go enforces the rest.
+ * Actions exempt from the PERMISSION part of `authoriseAction`, EXACTLY, keyed `<file>#<action>`. Each
+ * acts on the caller's own account (the calls pass scoped:false, so a tenant context never changes
+ * their target) and needs no permission beyond being signed in; Go enforces the rest. They are NOT
+ * exempt from the page binding: each holds the top-level pair with `authoriseSelfService` (session,
+ * then the context fingerprint, which is bound to the person), so a stale page never writes as
+ * whoever signed in since.
  */
 const SELF_SERVICE_ACTIONS: Record<string, string> = {
 	'must-change-password/+page.server.ts#default':
@@ -136,18 +139,24 @@ describe('every form action is authorised', () => {
 		for (const report of reports) expect(report.problems, `${name}#${report.name}`).toEqual([]);
 	});
 
-	it('the self-service list is exact: real actions, none of which authorises', () => {
+	it('the self-service list is exact: real actions, each binds to the page, none checks a permission', () => {
 		for (const [key, reason] of Object.entries(SELF_SERVICE_ACTIONS)) {
 			const [file, action] = key.split('#') as [string, string];
 			expect(reason).toBeTruthy();
 			const entry = withActions.find((w) => rel(w.f) === file);
 			expect(entry, `${file} has actions`).toBeDefined();
 			const r = entry!.resolved as { node: ts.Node; sf: ts.SourceFile };
-			const { reports } = analyzeActions(r, helperNodes());
-			const found = reports.find((x) => x.name === action);
+			// Held to the self-service pair (fingerprint required) ...
+			const { reports: held } = analyzeActions(r, helperNodes(), (a) => a === action);
+			const found = held.find((x) => x.name === action);
 			expect(found, key).toBeDefined();
-			// Not exempt only because it is unguarded by accident: it must not authorise at all.
-			expect(found!.problems.length, `${key} is listed but authorises`).toBeGreaterThan(0);
+			expect(found!.problems, key).toEqual([]);
+			// ... and exempt only from the permission: it must not be a permission-checked action.
+			const { reports } = analyzeActions(r, helperNodes());
+			expect(
+				reports.find((x) => x.name === action)!.problems.length,
+				`${key} is listed but checks a permission`
+			).toBeGreaterThan(0);
 		}
 	});
 
@@ -357,13 +366,27 @@ describe('walker self-test: actions', () => {
 		expect(r && !('error' in r) ? analyzeActions(r, {}).reports[0]!.problems : []).not.toEqual([]);
 	});
 
-	it('honours the exact self-service exemption, by action', () => {
-		const { r } = synth(
-			'export const actions = { a: async () => { await goFetch(); } };',
-			'actions'
-		);
-		const res = r as { node: ts.Node; sf: ts.SourceFile };
-		expect(analyzeActions(res, {}, (n) => n === 'a').reports[0]!.problems).toEqual([]);
-		expect(analyzeActions(res, {}, (n) => n === 'b').reports[0]!.problems).not.toEqual([]);
+	it('a self-service exemption drops the permission, never the page binding', () => {
+		const SELF =
+			'const refused = await authoriseSelfService(event, fd, v); if (refused) return refused;';
+		const res = (body: string) =>
+			synth(`export const actions = { a: async (event) => { ${body} } };`, 'actions').r as {
+				node: ts.Node;
+				sf: ts.SourceFile;
+			};
+		const problems = (body: string, exempt: string) =>
+			analyzeActions(res(body), {}, (n) => n === exempt).reports[0]!.problems;
+		// the exact pair, before Go
+		expect(problems(`${SELF} await goFetch();`, 'a')).toEqual([]);
+		// exempt by name only: another action of the same name is still held to authoriseAction
+		expect(problems(`${SELF} await goFetch();`, 'b')).not.toEqual([]);
+		// a self-service action with no binding at all, or with the binding after Go, is refused
+		expect(problems('await goFetch();', 'a')).not.toEqual([]);
+		expect(problems(`await goFetch(); ${SELF}`, 'a')).not.toEqual([]);
+		// authoriseAction does not stand in for the self-service guard (and the reverse)
+		expect(problems(`${AUTH} await goFetch();`, 'a')).not.toEqual([]);
+		expect(
+			actionProblems(`export const actions = { a: async (event) => { ${SELF} await goFetch(); } };`)
+		).not.toEqual([]);
 	});
 });

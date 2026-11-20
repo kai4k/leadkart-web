@@ -19,10 +19,12 @@ import { goErrorStatus, readGoFailure } from './go.ts';
 import { pathForRouteId } from './guards.ts';
 import { isUpstreamFailure, upstreamStatus } from './proxy.ts';
 import { pageShowsContext } from './scope-context.ts';
-import { readOperatorScope } from './scope.ts';
+import { readOperatorScope, type ScopeReading } from './scope.ts';
 
 export const UPSTREAM_UNAVAILABLE_KEY = 'auth.errors.upstreamUnavailable';
 const SCOPE_CHANGED_KEY = 'auth.errors.scopeChanged';
+/** The proxy answers a dead scope cookie `scope_invalid`; so does an action (same state, same copy). */
+const SCOPE_INVALID_KEY = goCodeKey('scope_invalid') ?? 'auth.errors.unexpected';
 
 export type GoActionCall =
 	| { ok: true; resp: Response }
@@ -48,15 +50,67 @@ export async function callGoForAction(call: () => Promise<Response>): Promise<Go
 	}
 }
 
+/** The kept-form failure a refused action returns (a `fail()` carrying the form's values and one banner key). */
+type Refusal<V extends object> = ReturnType<typeof failForm<V>>;
+
+type Bound<V extends object> = { refused: Refusal<V> } | { refused: null; scope: ScopeReading };
+
+/**
+ * The prefix EVERY action runs first, shared by `authoriseAction` and `authoriseSelfService`: the
+ * session, then "is this form from a page that shows the person and context the cookies name now".
+ *
+ *   - renewal pending (the hook could not reach Go) -> 503 kept form; no access cookie -> sign-in:
+ *     neither is a "context changed" problem, so the session is decided before any fingerprint talk;
+ *   - a dead scope cookie -> 409 `scope_invalid`, the key the proxy uses for the same state;
+ *   - the form must carry the context fingerprint of the page it was rendered in
+ *     (`ScopeContextField`) and it must be the current one. The fingerprint is bound to the person
+ *     and to the scope cookie, which every tab shares: a form on a page that is behind it (another
+ *     tab entered or left a context, or signed out and in as somebody else) never writes (409, kept form).
+ */
+function bindToPage<V extends object>(
+	cookies: RequestEvent['cookies'],
+	form: FormData,
+	values: V
+): Bound<V> {
+	if (sessionRenewalPending(cookies)) {
+		return { refused: failForm(503, { values, formErrorKey: UPSTREAM_UNAVAILABLE_KEY }) };
+	}
+	if (!cookies.get(ACCESS_COOKIE())) redirect(303, '/signin');
+	const scope = readOperatorScope(cookies);
+	if (scope.state === 'invalid') {
+		return { refused: failForm(409, { values, formErrorKey: SCOPE_INVALID_KEY }) };
+	}
+	const claimed = form.get(SCOPE_CONTEXT_FIELD);
+	if (typeof claimed !== 'string' || !pageShowsContext(claimed, scope, cookies)) {
+		return { refused: failForm(409, { values, formErrorKey: SCOPE_CHANGED_KEY }) };
+	}
+	return { refused: null, scope };
+}
+
+/**
+ * The guard of a self-service action (the caller's own password, email or profile): no permission
+ * is needed, but the form must still come from the page of the person the browser holds now (see
+ * `bindToPage`), or tab 1's form for X would write as the Y who signed in in tab 2. `null` = go
+ * ahead; otherwise a `fail()` to return as is. A promise, like `authoriseAction`, so both are used
+ * the same way (`await`, then `if (refused) return refused`) and the walker holds both to one shape.
+ */
+export function authoriseSelfService<V extends object>(
+	event: Pick<RequestEvent, 'cookies'>,
+	form: FormData,
+	values: V
+): Promise<Refusal<V> | null> {
+	// A promise like `authoriseAction`'s, so both guards are used the same way (`await`, then `if (refused)`).
+	return Promise.resolve().then(() => bindToPage(event.cookies, form, values).refused);
+}
+
 /**
  * The action guard: a form action is a separate entry point from the page loads (it runs first,
  * and no layout guard stands in front of it), so it checks the specific permission its Go route
  * requires BEFORE any call that writes. `null` = go ahead; otherwise a `fail()` to return as is.
  *
- *   0. the session: renewal pending -> 503 kept form; no access cookie -> sign-in;
- *   1. the form must carry the context fingerprint of the page it was rendered in
- *      (`ScopeContextField`) and it must be the scope cookie's current one: the cookie is shared
- *      by every tab, so a form on a page that is behind it never writes (409, kept form);
+ *   0-1. the session, then the page binding (`bindToPage`: renewal pending -> 503 kept form; no
+ *      access cookie -> sign-in; a dead scope cookie or a fingerprint that is not the current one
+ *      -> 409, kept form);
  *   2. the matched route's nav entry decides whether the action exists in this context (the same
  *      rule as the page guard: an own-tenant action would otherwise run under the scope header and
  *      write to the SCOPED tenant); a route with no entry fails closed;
@@ -71,18 +125,9 @@ export async function authoriseAction<V extends object>(
 	values: V
 ) {
 	const { cookies, route } = event;
-	// The session first: a form posted during an outage keeps its values (503), and a session that is
-	// over goes to sign-in; neither is a "context changed" problem.
-	// The hook's refresh could not reach Go: the capabilities would answer 401 and read as a sign-out.
-	if (sessionRenewalPending(cookies)) {
-		return failForm(503, { values, formErrorKey: UPSTREAM_UNAVAILABLE_KEY });
-	}
-	if (!cookies.get(ACCESS_COOKIE())) redirect(303, '/signin');
-	const scope = readOperatorScope(cookies);
-	const claimed = form.get(SCOPE_CONTEXT_FIELD);
-	if (typeof claimed !== 'string' || !pageShowsContext(claimed, scope, cookies)) {
-		return failForm(409, { values, formErrorKey: SCOPE_CHANGED_KEY });
-	}
+	const bound = bindToPage(cookies, form, values);
+	if (bound.refused) return bound.refused;
+	const { scope } = bound;
 	let caps;
 	try {
 		caps = await loadCapabilities(cookies);

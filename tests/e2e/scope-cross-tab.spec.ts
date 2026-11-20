@@ -19,7 +19,12 @@ test.beforeEach(async ({ page }) => {
 	await resetMock();
 	await signInAsTier(page, {
 		tier: 'platform-super',
-		permissions: ['platform.tenants.view', 'platform.tenants.manage', 'platform.users.view'],
+		permissions: [
+			'platform.tenants.view',
+			'platform.tenants.manage',
+			'platform.users.view',
+			'platform.users.manage'
+		],
 		is_super_user: true,
 		tenant_id: TEST_TENANT_ID,
 		tenant_slug: TEST_TENANT_SLUG
@@ -49,6 +54,7 @@ test('a tab that shows the own tenant cannot write once another tab entered a te
 	await expect(page.getByText('Acme Pharma').first()).toBeVisible();
 	// What this tab shows: the cookie's context now, before another tab changes it.
 	const shownByTab1 = await currentFingerprint(context);
+	await page.evaluate(() => ((window as unknown as { marker: string }).marker = 'still here'));
 
 	// Tab 2 enters Acme: the shared cookie now names it.
 	const second = await context.newPage();
@@ -56,7 +62,12 @@ test('a tab that shows the own tenant cannot write once another tab entered a te
 	await second.getByText('Acme Pharma').first().click();
 	await second.waitForURL(/\/operator\/scope\/profile$/);
 
-	// Tab 1 still holds its page: the write it sends is refused before Go, with the typed code.
+	// Tab 1 is told and reloads into the new context; a call that still carries what the page showed
+	// before (a request already in flight, a script of the old page) is refused before Go, with the
+	// typed code.
+	await expect
+		.poll(() => page.evaluate(() => (window as unknown as { marker?: string }).marker))
+		.toBeUndefined();
 	const csrf = (await context.cookies()).find((c) => c.name === 'lk_csrf')?.value ?? '';
 	const out = await page.evaluate(
 		async ({ csrf, fp }) => {
@@ -79,7 +90,10 @@ test('a tab that shows the own tenant cannot write once another tab entered a te
 	).toHaveLength(0);
 });
 
-test('the other tab is told at once and catches up without a click', async ({ page, context }) => {
+test('the other tab is told at once and reloads: nothing is re-bound in place', async ({
+	page,
+	context
+}) => {
 	// The fingerprint each of tab 1's own tenant-list calls carries (the page's committed data).
 	const sent: string[] = [];
 	page.on('request', (r) => {
@@ -92,6 +106,9 @@ test('the other tab is told at once and catches up without a click', async ({ pa
 	const before = await currentFingerprint(context);
 	expect(sent.at(-1)).toBe(before);
 
+	// Reloads show as a fresh navigation of the document: a marker on window disappears.
+	await page.evaluate(() => ((window as unknown as { marker: string }).marker = 'still here'));
+
 	const second = await context.newPage();
 	await second.goto('/operator/tenants');
 	await second.getByText('Acme Pharma').first().click();
@@ -99,7 +116,48 @@ test('the other tab is told at once and catches up without a click', async ({ pa
 	const after = await currentFingerprint(context);
 	expect(after).not.toBe(before);
 
-	// The broadcast re-runs tab 1's layout and resets its queries: its next own call carries the new
-	// context's fingerprint, with no click and no reload.
-	await expect.poll(() => sent.at(-1)).toBe(after);
+	// The broadcast hard-resets tab 1 (no click): the document is new, and it follows the new context
+	// (the tenants list stays available in a context, so it stays on the same URL).
+	await expect
+		.poll(() => page.evaluate(() => (window as unknown as { marker?: string }).marker))
+		.toBeUndefined();
+});
+
+test('a tab with a filled-in dialog is reset when another tab changes the context: the dialog is gone and nothing is written', async ({
+	page,
+	context
+}) => {
+	await registerMocks([
+		{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [], has_more: false } },
+		{ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [] } }
+	]);
+	// Tab 1 acts inside Acme and has the Add member dialog open and filled in.
+	await page.goto('/operator/tenants');
+	await page.getByText('Acme Pharma').first().click();
+	await page.waitForURL(/\/operator\/scope\/profile$/);
+	await page.goto('/operator/scope/members');
+	await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
+	await page
+		.locator('#main-content')
+		.getByRole('button', { name: /add member/i })
+		.first()
+		.click();
+	const dialog = page.getByRole('dialog');
+	await expect(dialog).toBeVisible();
+	await dialog.getByLabel(/email/i).first().fill('typed-for-acme@example.com');
+
+	// Tab 2 leaves the context: the cookie now names none.
+	const second = await context.newPage();
+	await second.goto('/operator/scope/profile');
+	await second.getByRole('button', { name: /exit context/i }).click();
+	await second.waitForURL(/\/operator\/tenants$/);
+
+	// Tab 1 is reset by the announcement: it lands where the new context sends it, the dialog and
+	// what was typed in it are gone, and no write reached Go for either tenant.
+	await page.waitForURL(/\/operator\/tenants$/);
+	await expect(page.getByRole('dialog')).toHaveCount(0);
+	await expect(page.getByText('Acme Pharma').first()).toBeVisible();
+	expect(
+		(await listMockCalls()).filter((c) => c.method === 'POST' && c.path === '/api/v1/users')
+	).toHaveLength(0);
 });

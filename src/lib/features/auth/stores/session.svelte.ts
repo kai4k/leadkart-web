@@ -21,6 +21,7 @@
  */
 
 import { page } from '$app/state';
+import { announceContextChange } from '#lib/api/operator-scope.ts';
 import { clearUserBrowserState } from '#lib/api/query-client.ts';
 import { logout as logoutRequest } from '../api';
 import { can, canAny, type Capabilities } from '../capabilities.ts';
@@ -82,6 +83,8 @@ function createSession(): Session {
 	async function logout(): Promise<void> {
 		try {
 			await logoutRequest();
+			// The person the browser holds just changed: the other tabs reload instead of collecting 409s.
+			announceContextChange();
 		} finally {
 			// Even when the request fails (offline) the user leaves and everything
 			// user-specific in the browser (query cache, offline caches) is dropped.

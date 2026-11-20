@@ -35,6 +35,15 @@ export function sessionRenewalPending(cookies: Cookies): boolean {
 	return !cookies.get(ACCESS_COOKIE()) && Boolean(cookies.get(REFRESH_COOKIE));
 }
 
+/**
+ * Neither session cookie is present: the session is over (a rejected refresh clears both, and the
+ * CSRF cookie with them). Callers answer "your session ended" first, never "your CSRF token is out of
+ * date", which would send the user to reload a page that can only lead back to sign-in.
+ */
+export function sessionEnded(cookies: Cookies): boolean {
+	return !cookies.get(ACCESS_COOKIE()) && !cookies.get(REFRESH_COOKIE);
+}
+
 /** Go access JWT lifetime (internal/identity/app/jwt/jwt.go:30). */
 const ACCESS_MAX_AGE = 10 * 60;
 /** Go refresh family: 14 days, rolling — every refresh re-sets the cookie (backend-checklist #13). */

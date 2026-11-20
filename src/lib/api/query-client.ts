@@ -39,7 +39,7 @@ import { browser } from '$app/env';
 import { goto } from '$app/navigation';
 import { toast } from '$ui';
 import { describeError, NetworkError, ServerError, AuthError, TimeoutError } from './errors';
-import { followScopeChange, leaveTenantContext } from './operator-scope';
+import { leaveTenantContext, scopeChangedElsewhere } from './operator-scope';
 import { createSessionGuard } from './session-guard';
 import { IMPERSONATION_SESSION_KEY } from '#lib/utils/impersonation-session-key.ts';
 
@@ -52,8 +52,8 @@ export function createQueryClient(): QueryClient {
 		clearCache: () => clearUserBrowserState(),
 		notify: (message) => toast.error(message),
 		exitScope: () => leaveTenantContext(client),
-		// Announced to no one: the tab that changed the context already told the others.
-		followContext: () => followScopeChange(client, false),
+		// A refusal this tab did not cause: the one foreign-change path (hard reset, own change excepted).
+		foreignChange: () => scopeChangedElsewhere(client, 'refusal'),
 		location: () => window.location
 	});
 
