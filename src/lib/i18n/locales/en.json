@@ -114,5 +114,39 @@
 		"quotation": {
 			"revisionLineSummary": "{lineCount, plural, one {# line} other {# lines}} · subtotal {subtotal} · GST {gstTotal}"
 		}
+	},
+	"errors": {
+		"code": {
+			"csrf_mismatch": "Your session token is out of date — reload the page and try again.",
+			"tenant_scope_not_supported": "Not available while acting in a tenant. Exit the tenant context first.",
+			"tenant_scope_read_only": "Read-only while acting in a tenant. Exit the tenant context to make this change.",
+			"tenant_scope_forbidden": "You don't have permission to act in another tenant.",
+			"tenant_scope_conflict": "This action targets a different tenant than the one you are acting in. Exit the tenant context and try again.",
+			"tenant_not_active": "This tenant is not active. Changes are disabled.",
+			"tenant_has_dependents": "This tenant still has members or data, so it can't be deleted yet.",
+			"forbidden": "You don't have permission to do this.",
+			"insufficient_rank": "You can only make this change for people below your level.",
+			"ownership_authority_required": "Only a platform administrator with ownership authority can change who owns a company.",
+			"grant_exceeds_authority": "You can't grant a permission or role above your own.",
+			"self_modification_forbidden": "You can't make this change to your own account.",
+			"impersonation_not_allowed": "Not available during an impersonation session.",
+			"not_approver": "You can't approve this request.",
+			"last_owner_protected": "A company must keep at least one active owner.",
+			"owner_protected": "An owner's administrator access can't be removed.",
+			"person_memberships_changing": "This person's memberships are changing right now. Try again in a moment.",
+			"member_roles_inconsistent": "This member's roles need attention from support before they can be changed.",
+			"manager_not_eligible": "This person can't be set as the manager.",
+			"role_in_use": "This role is still assigned to active members.",
+			"role_deleted": "This role no longer exists.",
+			"role_name_taken": "A role with this name already exists.",
+			"role_system_default": "Built-in roles can't be changed or deleted.",
+			"role_parent_not_eligible": "The parent role must be more senior.",
+			"role_level_breaks_reporting": "That level would put someone at or above their manager. Pick a different level.",
+			"permission_not_requestable": "This permission can't be requested.",
+			"permission_request_requester_inactive": "The person who asked is no longer active, so this request can not be approved.",
+			"incorrect_current_password": "Your current password is incorrect.",
+			"search_category_forbidden": "You don't have access to that search category.",
+			"invalid_search_include": "The request was not accepted. Check the values and try again."
+		}
 	}
 }

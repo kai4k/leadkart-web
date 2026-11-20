@@ -92,6 +92,25 @@ describe('(app) layout: sign-in only for a real auth failure', () => {
 	});
 });
 
+describe('(app) layout: its result reaches the client whenever it is recomputed', () => {
+	it('depends on the route (url.pathname is read on every run), so a re-run triggered by a guard is not skipped', async () => {
+		loadCapabilities.mockResolvedValue({ person_id: 'p', effective_permissions: [] });
+		let reads = 0;
+		const url = {
+			get pathname() {
+				reads += 1;
+				return '/dashboard';
+			},
+			search: ''
+		};
+		await (load as unknown as (e: never) => Promise<unknown>)({
+			...(event() as object),
+			url
+		} as never);
+		expect(reads).toBeGreaterThan(0);
+	});
+});
+
 describe('(app) layout: an operator who lost the scope permission is not stuck in a context', () => {
 	const VALID = { state: 'valid', scope: { id: 'u', slug: 's', display_name: 'd' } } as never;
 

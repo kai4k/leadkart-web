@@ -16,7 +16,8 @@ import { requestSignal } from './abort.ts';
 import { DEFAULT_READ_TIMEOUT_MS } from './timeouts.ts';
 import { getCsrfToken } from './csrf.ts';
 import { pageScopeContext } from './scope-context.ts';
-import { SCOPE_CONTEXT_HEADER } from './scope-header.ts';
+import { refreshCapabilities } from './capabilities-refresh.ts';
+import { SCOPE_CONTEXT_HEADER, SESSION_RENEWED_HEADER } from './scope-header.ts';
 
 /** Default client timeout for reads. Must exceed 3 x the BFF upstream timeout; see timeouts.ts. */
 export const DEFAULT_TIMEOUT_MS = DEFAULT_READ_TIMEOUT_MS;
@@ -117,6 +118,8 @@ async function send(
 	} finally {
 		dispose();
 	}
+	// The BFF renewed the session for this call: the caller's permissions may be new.
+	if (response.headers.has(SESSION_RENEWED_HEADER)) void refreshCapabilities();
 	const data = text.length > 0 ? safeJsonParse(text) : undefined;
 	if (!response.ok) throw ApiError.fromResponse(response, (data ?? null) as ApiErrorBody | null);
 	if (expectJson && data === undefined)

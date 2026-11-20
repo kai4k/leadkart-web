@@ -127,12 +127,41 @@ describe('tenant context (Go tenant_scope_read_only / tenant_scope_not_supported
 		expect(isBlockedInTenantContext(P.platformMarketplacePurchase)).toBe(true);
 	});
 
-	it('leaves identity writes and platform names alone (Go accepts 17 identity writes under scope)', () => {
+	it('blocks every identity.* name for a non-super caller: in a foreign tenant Go counts only the platform.* equivalent', () => {
 		for (const name of [
+			P.identityUsersView,
 			P.identityUsersCreate,
+			P.identityUsersUpdate,
+			P.identityUsersDeactivate,
+			P.identityUsersUpdatePermissions,
+			P.identityRolesView,
 			P.identityRolesCreate,
+			P.identityRolesUpdate,
+			P.identityRolesDelete,
+			P.identityRolesAssign,
+			P.identityRolesRevoke,
+			P.identityTenantsView,
+			P.identityTenantsUpdate,
+			P.identityTenantsUpdateSettings
+		])
+			expect(isBlockedInTenantContext(name), name).toBe(true);
+	});
+
+	it('a super user keeps the identity.* names (Go satisfies everything for a super user)', () => {
+		for (const name of [P.identityUsersCreate, P.identityRolesCreate, P.identityTenantsUpdate])
+			expect(isBlockedInTenantContext(name, true), name).toBe(false);
+	});
+
+	it('leaves the platform names, the platform-reserved lifecycle names and notifications alone', () => {
+		for (const name of [
 			P.platformUsersManage,
+			P.platformRolesManage,
 			P.platformTenantsManage,
+			P.platformTenantsOwnership,
+			P.identityTenantsSuspend,
+			P.identityTenantsActivate,
+			P.identityTenantsDelete,
+			P.identityUsersAnonymise,
 			P.notificationsManage
 		])
 			expect(isBlockedInTenantContext(name), name).toBe(false);

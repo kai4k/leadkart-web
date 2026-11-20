@@ -32,23 +32,28 @@ export const load: LayoutServerLoad = async ({ cookies, url, locals, depends }) 
 	// load would notice: those flows invalidate this key (see api/operator-scope.ts).
 	depends(SCOPE_DEPENDENCY, CAPABILITIES_DEPENDENCY);
 
+	// Depend on the route. Every section guard awaits `parent()`, which re-runs this load on the
+	// server on each route change (a fresh capabilities call to Go); without a dependency of its
+	// own SvelteKit answers "skip" to the client for it and the fresh result was thrown away, so the
+	// browser kept the capabilities of the first render while the server guarded with newer ones.
+	// Reading the pathname makes this load part of every navigation: the data it already computes
+	// reaches the client, no extra Go call.
+	const pathname = url.pathname;
+
 	// hooks.server.ts already tried to refresh an expired access cookie. Still
 	// missing: Go down → 503; otherwise the session is really gone.
 	const access = cookies.get(ACCESS_COOKIE());
 
 	if (!access) {
 		assertRefreshReachable(locals);
-		const next = encodeURIComponent(url.pathname + url.search);
+		const next = encodeURIComponent(pathname + url.search);
 		throw redirect(303, `/signin?next=${next}`);
 	}
 
 	// lk_mcp is a UX gate only (page redirects). /api/* calls are not blocked
 	// by it; the Go API must enforce forced password change itself.
-	if (mustChangePassword(cookies) && url.pathname !== '/must-change-password') {
-		throw redirect(
-			303,
-			`/must-change-password?next=${encodeURIComponent(url.pathname + url.search)}`
-		);
+	if (mustChangePassword(cookies) && pathname !== '/must-change-password') {
+		throw redirect(303, `/must-change-password?next=${encodeURIComponent(pathname + url.search)}`);
 	}
 
 	// An expired/tampered scope cookie makes every scoped /api call answer 409. A
@@ -57,7 +62,7 @@ export const load: LayoutServerLoad = async ({ cookies, url, locals, depends }) 
 	// redirects). The state is checked first so `url` is only read (and tracked
 	// as a load dependency) when there is something to clear.
 	let scope = readOperatorScope(cookies);
-	if (scope.state === 'invalid' && !url.pathname.startsWith('/operator/scope')) {
+	if (scope.state === 'invalid' && !pathname.startsWith('/operator/scope')) {
 		clearOperatorScope(cookies);
 		scope = { state: 'none' };
 	}
@@ -70,7 +75,7 @@ export const load: LayoutServerLoad = async ({ cookies, url, locals, depends }) 
 	// the same body, so no signin bounce.
 	const capabilities = await loadCapabilities(cookies);
 	if (!capabilities) {
-		const next = encodeURIComponent(url.pathname + url.search);
+		const next = encodeURIComponent(pathname + url.search);
 		throw redirect(303, `/signin?next=${next}`);
 	}
 

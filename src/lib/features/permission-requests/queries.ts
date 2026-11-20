@@ -40,6 +40,21 @@ export function permissionRequestDetailQuery(getId: () => string) {
 	});
 }
 
+/**
+ * The request as the approver queue lists it (null = not listed: no say over it). Only fetched once
+ * the detail says it is a pending request someone else submitted; this is where `can_approve` lives.
+ */
+export function permissionRequestQueueItemQuery(getId: () => string, getEnabled: () => boolean) {
+	return createQuery(() => {
+		const id = getId();
+		return {
+			queryKey: [...permissionRequestsKeys.all, 'queue-item', id] as const,
+			queryFn: ({ signal }) => api.findInApproverQueue(id, signal),
+			enabled: Boolean(id) && getEnabled()
+		};
+	});
+}
+
 export function createPermissionRequestMutation() {
 	return createResourceMutation({
 		fn: (req: CreatePermissionRequest) => api.createPermissionRequest(req),

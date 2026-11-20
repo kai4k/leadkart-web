@@ -1,3 +1,4 @@
+import { codeCopy } from './code-copy.ts';
 import {
 	SCOPE_CHANGED_CODE,
 	SCOPE_CHANGED_MESSAGE,
@@ -39,69 +40,14 @@ const GO_SCOPE_EXIT_CODES: ReadonlySet<string> = new Set([
 /** The generic "your input was refused" line: validation errors without field errors, `invalid_search_include`. */
 const VALIDATION_FALLBACK_COPY = 'The request was not accepted. Check the values and try again.';
 /**
- * THE code → copy map: Go (and BFF) codes whose user text is fixed, whatever Go says. Raw Go text is
- * technical or empty (enumeration safety), so it is NEVER shown: a code that is not in this map gets
- * the generic line for its status, and Go's text stays in the error's `detail` for logs and support.
- * Adding a code here is the one way to give it its own wording. None of the `tenant_scope_*` ones exits
- * the operator scope (the operator stays in context and must be told the truth).
+ * The code → copy table is `code-copy.ts` (ONE table of i18n keys, shared with the server-action
+ * failure helper). Raw Go text is technical or empty (enumeration safety), so it is NEVER shown: a
+ * code that is not in the table gets the generic line for its status, and Go's text stays in the
+ * error's `detail` for logs and support. None of the `tenant_scope_*` codes exits the operator scope
+ * (the operator stays in context and must be told the truth).
  * Precedence is in `describeError`: a caller's own line for the status never replaces a code
- * here, except the plain `forbidden` (CALLER_LINE_WINS_CODES).
+ * in the table, except the plain `forbidden` (CALLER_LINE_WINS_CODES).
  */
-/** An own-tenant action while an operator acts inside another tenant (the nav config's `own` context). */
-export const TENANT_CONTEXT_COPY =
-	'Not available while acting in a tenant. Exit the tenant context first.';
-const CODE_COPY: ReadonlyMap<string, string> = new Map([
-	[CSRF_MISMATCH_CODE, 'Your session token is out of date — reload the page and try again.'],
-	['tenant_scope_not_supported', TENANT_CONTEXT_COPY],
-	[
-		'tenant_scope_read_only',
-		'Read-only while acting in a tenant. Exit the tenant context to make this change.'
-	],
-	['tenant_scope_forbidden', "You don't have permission to act in another tenant."],
-	[
-		'tenant_scope_conflict',
-		'This action targets a different tenant than the one you are acting in. Exit the tenant context and try again.'
-	],
-	['tenant_not_active', 'This tenant is not active. Changes are disabled.'],
-	['forbidden', "You don't have permission to do this."],
-	['insufficient_rank', 'You can only make this change for people below your level.'],
-	[
-		'ownership_authority_required',
-		'Only a platform administrator with ownership authority can change who owns a company.'
-	],
-	[
-		'role_level_breaks_reporting',
-		'That level would put someone at or above their manager. Pick a different level.'
-	],
-	[
-		'person_memberships_changing',
-		"This person's memberships are changing right now. Try again in a moment."
-	],
-	['impersonation_not_allowed', 'Not available during an impersonation session.'],
-	['tenant_has_dependents', "This tenant still has members or data, so it can't be deleted yet."],
-	['permission_not_requestable', "This permission can't be requested."],
-	['last_owner_protected', 'A company must keep at least one active owner.'],
-	['owner_protected', "An owner's administrator access can't be removed."],
-	['role_in_use', 'This role is still assigned to active members.'],
-	['role_deleted', 'This role no longer exists.'],
-	[
-		'member_roles_inconsistent',
-		"This member's roles need attention from support before they can be changed."
-	],
-	['not_approver', "You can't approve this request."],
-	[
-		'permission_request_requester_inactive',
-		'The person who asked is no longer active, so this request can not be approved.'
-	],
-	['role_system_default', "Built-in roles can't be changed or deleted."],
-	['manager_not_eligible', "This person can't be set as the manager."],
-	['role_parent_not_eligible', 'The parent role must be more senior.'],
-	['incorrect_current_password', 'Your current password is incorrect.'],
-	['grant_exceeds_authority', "You can't grant a permission or role above your own."],
-	['self_modification_forbidden', "You can't make this change to your own account."],
-	['search_category_forbidden', "You don't have access to that search category."],
-	['invalid_search_include', VALIDATION_FALLBACK_COPY]
-]);
 /** Codes whose copy is the least specific one there is: the caller's own line for the status is better. */
 const CALLER_LINE_WINS_CODES: ReadonlySet<string> = new Set([
 	'forbidden',
@@ -170,7 +116,7 @@ export class ApiError extends Error {
 		const text = firstText(body?.message, body?.detail);
 		const traceId = response.headers.get(CORRELATION_ID_HEADER) ?? undefined;
 		const retryAfter = parseRetryAfter(response.headers.get('retry-after'));
-		const copy = code === undefined ? undefined : CODE_COPY.get(code);
+		const copy = codeCopy(code);
 		let err: ApiError;
 		if (code !== undefined && GO_SCOPE_EXIT_CODES.has(code)) {
 			err = new ScopeInvalidError(text, traceId, response.status);
@@ -361,7 +307,7 @@ export class NotFoundError extends ApiError {
 /** 409 — conflict (slug taken, duplicate record, etc.). */
 export class ConflictError extends ApiError {
 	declare readonly status: 409;
-	/** Go's own text, for logs and support; never shown. `copy` is a code's allowlisted wording (CODE_COPY). */
+	/** Go's own text, for logs and support; never shown. `copy` is a code's allowlisted wording (the code table). */
 	readonly detail: string | undefined;
 
 	constructor(copy?: string, traceId?: string, detail?: string) {
@@ -426,7 +372,7 @@ type OwnLineStatus = 400 | 401 | 403 | 404 | 409 | 422;
  * The one user-facing line for any failure: toasts, inline banners, list errors.
  * Precedence, first match wins:
  *   1. not an ApiError → `fallback`
- *   2. a code in CODE_COPY → its fixed copy, EXCEPT plain `forbidden`, which the caller's own
+ *   2. a code in the code table → its fixed copy, EXCEPT plain `forbidden`, which the caller's own
  *      line for the status replaces (it is more specific). So a caller's 403 line never beats a
  *      `tenant_scope_*` code, `grant_exceeds_authority` or `self_modification_forbidden`.
  *   3. a dead operator scope / an error without status → its own message
@@ -438,7 +384,7 @@ type OwnLineStatus = 400 | 401 | 403 | 404 | 409 | 422;
 export function describeError(err: unknown, opts: DescribeErrorOptions = {}): string {
 	if (!(err instanceof ApiError)) return opts.fallback ?? 'Something went wrong';
 	const own = err.status === undefined ? undefined : opts.status?.[err.status as OwnLineStatus];
-	const known = err.code === undefined ? undefined : CODE_COPY.get(err.code);
+	const known = codeCopy(err.code);
 	const callerLineWins = own !== undefined && CALLER_LINE_WINS_CODES.has(err.code ?? '');
 	if (known !== undefined && !callerLineWins) return known;
 	if (

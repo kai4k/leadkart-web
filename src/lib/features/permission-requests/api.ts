@@ -32,6 +32,28 @@ export async function listPermissionRequests(
 	);
 }
 
+/** Pages the approver queue may span before the search gives up (100 requests a page). */
+const MAX_QUEUE_PAGES = 10;
+
+/**
+ * The request as the caller's approver queue lists it, or null when it is not listed. `can_approve`
+ * is present only on the queue, so this is how the detail page learns what Go says the caller may do.
+ */
+export async function findInApproverQueue(
+	id: string,
+	signal?: AbortSignal
+): Promise<PermissionRequestDto | null> {
+	let cursor: string | undefined;
+	for (let i = 0; i < MAX_QUEUE_PAGES; i += 1) {
+		const page = await listPermissionRequests({ role: 'approver', cursor, page_size: 100 }, signal);
+		const hit = page.items.find((r) => r.id === id);
+		if (hit) return hit;
+		if (!page.has_more || !page.next_cursor) return null;
+		cursor = page.next_cursor;
+	}
+	return null;
+}
+
 export function getPermissionRequest(
 	id: string,
 	signal?: AbortSignal

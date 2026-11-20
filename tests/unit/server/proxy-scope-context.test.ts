@@ -174,3 +174,45 @@ describe('proxy context fingerprint', () => {
 		expect(sent.has(SCOPE_CONTEXT_HEADER)).toBe(false);
 	});
 });
+
+describe('session renewal signal', () => {
+	const stale = () =>
+		new Response('{"error":"stale_token"}', {
+			status: 401,
+			headers: {
+				'www-authenticate': 'Bearer error="invalid_token"',
+				'content-type': 'application/json'
+			}
+		});
+	const tokens = () => Response.json({ access_token: accessToken(PERSON), refresh_token: 'r2' });
+
+	it('a stale token that the BFF refreshes silently is reported to the page (so it re-reads its capabilities)', async () => {
+		const jar = newJar();
+		jar.store.set('lk_refresh', 'refresh-signal-1');
+		upstream
+			.mockReturnValueOnce(Promise.resolve(stale()))
+			.mockReturnValueOnce(Promise.resolve(tokens())) // POST /v1/auth/refresh
+			.mockReturnValueOnce(Promise.resolve(Response.json({ ok: true })));
+		const res = await call(GET, jar, { context: 'none' });
+		expect(res.status).toBe(200);
+		expect(res.headers.get('x-lk-session-renewed')).toBe('1');
+	});
+
+	it('a call that needed no renewal carries no signal', async () => {
+		const res = await call(GET, newJar(), { context: 'none' });
+		expect(res.headers.has('x-lk-session-renewed')).toBe(false);
+	});
+
+	it('a refresh the hook already did for this request is reported too', async () => {
+		const jar = newJar();
+		const res = await (GET as (e: never) => Promise<Response>)({
+			request: new Request('http://app/api/v1/users', {
+				headers: { [SCOPE_CONTEXT_HEADER]: 'none' }
+			}),
+			params: { path: 'v1/users' },
+			cookies: jar.api,
+			locals: { refreshOutcome: 'renewed' }
+		} as never);
+		expect(res.headers.get('x-lk-session-renewed')).toBe('1');
+	});
+});

@@ -98,7 +98,13 @@ export type Permission = (typeof P)[keyof typeof P];
  *   - 403 `forbidden` to every READ of those modules and to `platform.lead_credits.read` for a
  *     NON-super operator (they hold no platform equivalent of those names): only a super user
  *     reads them in another tenant;
- *   - `tenant_scope_not_supported` to the permission-request routes and lead purchase.
+ *   - `tenant_scope_not_supported` to the permission-request routes and lead purchase;
+ *   - 403 to an `identity.*` gate unless the caller is a super user or holds the `platform.*`
+ *     equivalent: `effective_permissions` is Go's projection in the caller's OWN tenant, and an
+ *     own-tenant `identity.*` name (implied by `tenant.admin`, or granted) does not count in a
+ *     foreign one. The tenant-lifecycle names and `identity.users.anonymise` are platform-reserved
+ *     (only an operator holds them, Go never implies them) and are not tenant-plane gates, so they
+ *     are left alone.
  * A permission blocked here is not usable in tenant context even when the operator holds it.
  *
  * `isSuperUser` is the ONE place the web looks at that flag, because it is Go's literal rule for
@@ -113,6 +119,12 @@ const SCOPE_MODULES: ReadonlySet<string> = new Set([
 	'tasks'
 ]);
 const NON_SUPER_BLOCKED_READS: ReadonlySet<string> = new Set(['platform.lead_credits.read']);
+const PLATFORM_RESERVED_IDENTITY: ReadonlySet<string> = new Set([
+	P.identityTenantsSuspend,
+	P.identityTenantsActivate,
+	P.identityTenantsDelete,
+	P.identityUsersAnonymise
+]);
 const SCOPE_UNSUPPORTED: ReadonlySet<string> = new Set([
 	P.identityMetaRequestPermissionElevation,
 	P.identityRolesApprove,
@@ -123,6 +135,7 @@ export function isBlockedInTenantContext(permission: string, isSuperUser = false
 	if (SCOPE_UNSUPPORTED.has(permission)) return true;
 	const parts = permission.split('.');
 	const action = parts[parts.length - 1];
+	if (parts[0] === 'identity') return !isSuperUser && !PLATFORM_RESERVED_IDENTITY.has(permission);
 	if (!SCOPE_MODULES.has(parts[0] ?? '')) {
 		return !isSuperUser && NON_SUPER_BLOCKED_READS.has(permission);
 	}
@@ -134,9 +147,9 @@ export function isBlockedInTenantContext(permission: string, isSuperUser = false
  * What each identity action needs, as an any-of list, straight from Go's route gates
  * (`internal/identity/ports/http.go`). Go satisfies an `identity.*` gate with the matching
  * `platform.*` equivalents for operators (ADR 0068), and an operator acting in a tenant holds
- * only the `platform.*` names, so a list carries both. Tenant users never hold `platform.*`
- * (Go keeps them reserved), so the same list is right in either context: no context switch,
- * no tier, rank or role test. A permitted caller can still be refused per target
+ * only the `platform.*` names, so a list carries both. In a tenant context the `identity.*` names
+ * are subtracted (`isBlockedInTenantContext`: they are the caller's OWN-tenant projection) and the
+ * `platform.*` alternative decides; at home Go's projection decides. No tier, rank or role test. A permitted caller can still be refused per target
  * (`insufficient_rank`, `grant_exceeds_authority`, ...): the UI shows the action and renders
  * Go's refusal.
  *
@@ -160,8 +173,6 @@ export const ACTION = {
 	roleDelete: [P.identityRolesDelete, P.platformRolesManage],
 	/** Submit a permission request (own tenant only: Go refuses the route in tenant context). */
 	requestSubmit: [P.identityMetaRequestPermissionElevation],
-	/** Approve / deny. Go decides per request by the authority policy; this holds the permission. */
-	requestDecide: [P.identityRolesApprove],
 
 	// Business modules, straight from Go's route gates (crm/ports/http.go, orders/ports/http.go,
 	// inventory/ports/http.go). In an operator's tenant context every one of them is blocked (writes

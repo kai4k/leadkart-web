@@ -5,6 +5,7 @@
 	import { ChevronLeft, CheckCircle2, XCircle, Icon } from '$icons';
 	import {
 		permissionRequestDetailQuery,
+		permissionRequestQueueItemQuery,
 		approvePermissionRequestMutation,
 		denyPermissionRequestMutation,
 		cancelPermissionRequestMutation
@@ -13,20 +14,26 @@
 		permissionRequestState,
 		canCancel,
 		canDecide,
+		decisionControls,
 		daysOrIndefinite
 	} from '$features/permission-requests/view-models';
-	import { ACTION, session } from '$features/auth';
+	import { session } from '$features/auth';
 	import { resolve } from '$app/paths';
 	import type { PermissionRequestDto } from '$features/permission-requests/schemas';
 
 	type Props = { id: string };
 	let { id }: Props = $props();
 
-	// Go decides per request by the authority policy; the buttons need the approve permission.
-	const mayDecide = $derived(session.canAny(...ACTION.requestDecide));
 	const callerMembershipId = $derived(session.principal?.membershipId ?? '');
 
 	const query = permissionRequestDetailQuery(() => id);
+	// Go decides per request by its authority policy and says so in the approver queue: a request is
+	// listed there exactly when the caller may deny it, with `can_approve` for approving it as asked.
+	// The controls follow that answer; the browser holds no permission or rank rule for it.
+	const queueItem = permissionRequestQueueItemQuery(
+		() => id,
+		() => query.data !== undefined && canDecide(query.data, callerMembershipId)
+	);
 
 	const approveMutation = approvePermissionRequestMutation();
 	const denyMutation = denyPermissionRequestMutation();
@@ -112,31 +119,36 @@
 				</Card.Content>
 			</Card.Root>
 
-			{#if mayDecide && canDecide(req, callerMembershipId)}
+			{@const decision = decisionControls(req, callerMembershipId, queueItem.data)}
+			{#if decision.canDeny}
 				<Card.Root>
 					<Card.Header>
 						<Card.Title>Decision</Card.Title>
 						<Card.Description
-							>Approve grants the permission for {daysOrIndefinite(req.duration_days)}. Deny
-							requires a reason.</Card.Description
+							>{#if decision.canApprove}Approve grants the permission for {daysOrIndefinite(
+									req.duration_days
+								)}.
+							{/if}Deny requires a reason.</Card.Description
 						>
 					</Card.Header>
 					<Card.Content class="stack stack-relaxed">
-						<label class="stack stack-tight">
-							<span class="label">Approval note (optional)</span>
-							<textarea
-								bind:value={approveReason}
-								maxlength={1024}
-								rows={2}
-								class="bg-bg-elevated border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
-							></textarea>
-						</label>
-						<div class="cluster">
-							<Button onclick={approve} loading={approveMutation.isPending} disabled={isMutating}>
-								<Icon icon={CheckCircle2} size="sm" /> Approve
-							</Button>
-						</div>
-						<hr class="border-border-subtle" />
+						{#if decision.canApprove}
+							<label class="stack stack-tight">
+								<span class="label">Approval note (optional)</span>
+								<textarea
+									bind:value={approveReason}
+									maxlength={1024}
+									rows={2}
+									class="bg-bg-elevated border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
+								></textarea>
+							</label>
+							<div class="cluster">
+								<Button onclick={approve} loading={approveMutation.isPending} disabled={isMutating}>
+									<Icon icon={CheckCircle2} size="sm" /> Approve
+								</Button>
+							</div>
+							<hr class="border-border-subtle" />
+						{/if}
 						<label class="stack stack-tight">
 							<span class="label">Deny reason (required)</span>
 							<textarea

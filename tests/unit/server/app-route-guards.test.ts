@@ -245,13 +245,18 @@ describe('guard matrix: explicit expectations (independent of nav.ts)', () => {
 	it('an owner has no tenant context to act in: own-tenant pages close in it', async () => {
 		const ids = await allowedIds(OWNER, true);
 		expect(
-			ids.filter((id) => id.startsWith('/settings/') && !id.startsWith('/settings/account'))
+			ids.filter(
+				(id) =>
+					id.startsWith('/settings/') &&
+					!id.startsWith('/settings/account') &&
+					!id.startsWith('/settings/roles/new')
+			)
 		).toEqual([]);
 		expect(ids).not.toContain('/permission-requests');
 		expect(await outcome('/(app)/settings/users', OWNER, true)).toBe('303 /operator/scope/profile');
-		expect(await outcome('/(app)/settings/roles/new', OWNER, true)).toBe(
-			'303 /operator/scope/profile'
-		);
+		// The create form exists in either context (an operator with platform.roles.manage may use it);
+		// an owner's own-tenant identity.roles.create does not count there, so it is simply not theirs.
+		expect(await outcome('/(app)/settings/roles/new', OWNER, true)).toBe('303 /dashboard');
 	});
 
 	it('a caller with no permissions reaches the dashboard, permission requests (open to every member) and the account pages', async () => {

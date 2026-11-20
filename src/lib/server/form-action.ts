@@ -10,6 +10,7 @@
 import { fail, isHttpError, redirect, type RequestEvent } from '@sveltejs/kit';
 import { contextMatches, routeForPath } from '../config/nav.ts';
 import { canAny } from '../features/auth/capabilities.ts';
+import { goCodeKey } from '../api/code-copy.ts';
 import { SCOPE_CONTEXT_FIELD } from '../api/scope-header.ts';
 import { loadCapabilities } from './capabilities.ts';
 import type { z } from 'zod';
@@ -97,9 +98,15 @@ export async function authoriseAction<V extends object>(
 		: failForm(403, { values, formErrorKey: goFailureKey(403) });
 }
 
-/** Copy for a non-2xx Go answer, by status class: i18n keys, never Go's text and never English. */
-export function goFailureKey(status: number): string {
+/**
+ * Copy for a non-2xx Go answer: i18n keys, never Go's text and never English. A code in THE code
+ * table (`api/code-copy.ts`, the one the client describer reads) names its own line; anything else
+ * (and a rate limit, whatever the code) gets the key of its status class.
+ */
+export function goFailureKey(status: number, code?: string): string {
 	if (status === 429) return 'auth.errors.rateLimited';
+	const own = goCodeKey(code);
+	if (own !== undefined) return own;
 	if (status === 403) return 'auth.errors.forbidden';
 	if (status === 404) return 'auth.errors.notFound';
 	if (status === 409) return 'auth.errors.conflict';
@@ -173,6 +180,13 @@ export async function failFromGo<V extends object>(resp: Response, values: V) {
 	const failure = await readGoFailure(resp);
 	if (Object.keys(failure.fields).length > 0) {
 		return failForm(failure.status, { values, fieldMessages: failure.fields });
+	}
+	// A code the table knows says what to fix (a role name taken, a level above your own, ...).
+	if (goCodeKey(failure.code) !== undefined) {
+		return failForm(failure.status, {
+			values,
+			formErrorKey: goFailureKey(failure.status, failure.code)
+		});
 	}
 	// A bare 400 / 422 (no field to blame) is "check the values"; unlike a password call's
 	// `invalid_body`, the forms using this have values the user can change.

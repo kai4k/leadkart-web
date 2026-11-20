@@ -36,7 +36,8 @@ import { SESSION_EXPIRED_CODE } from '#lib/api/errors.ts';
 import {
 	SCOPE_CHANGED_CODE,
 	SCOPE_CHANGED_MESSAGE,
-	SCOPE_EXPIRED_MESSAGE
+	SCOPE_EXPIRED_MESSAGE,
+	SESSION_RENEWED_HEADER
 } from '#lib/api/scope-header.ts';
 import { readOperatorScope } from '#lib/server/scope.ts';
 import { pageShowsCurrentContext } from '#lib/server/scope-context.ts';
@@ -63,6 +64,18 @@ function upstreamErrorResponse(err: unknown, method: string, path: string): Resp
 	const status = upstreamStatus(err);
 	console.warn('[bff-proxy]', status, method, `/${path}`);
 	return upstreamJsonError(err);
+}
+
+/** Requests whose session the proxy renewed itself (a stale token refreshed, then the call replayed). */
+const renewedHere = new WeakSet<RequestEvent>();
+
+/** `proxy`, plus the signal that the caller's session was renewed (here, or by the hook before this ran). */
+async function proxyWithRenewalSignal(event: RequestEvent): Promise<Response> {
+	const response = await proxy(event);
+	if (renewedHere.has(event) || event.locals?.refreshOutcome === 'renewed') {
+		response.headers.set(SESSION_RENEWED_HEADER, '1');
+	}
+	return response;
 }
 
 async function proxy(
@@ -135,6 +148,7 @@ async function proxy(
 		if (attempt === 1) {
 			const refreshed = await refreshSession(cookies);
 			if (refreshed.ok) {
+				renewedHere.add(event);
 				await upstream.body?.cancel();
 				return proxy(event, 2, body);
 			}
@@ -173,8 +187,8 @@ async function proxy(
 	return new Response(upstream.body, { status: upstream.status, headers });
 }
 
-export const GET = (e: RequestEvent) => proxy(e);
-export const POST = (e: RequestEvent) => proxy(e);
-export const PUT = (e: RequestEvent) => proxy(e);
-export const PATCH = (e: RequestEvent) => proxy(e);
-export const DELETE = (e: RequestEvent) => proxy(e);
+export const GET = (e: RequestEvent) => proxyWithRenewalSignal(e);
+export const POST = (e: RequestEvent) => proxyWithRenewalSignal(e);
+export const PUT = (e: RequestEvent) => proxyWithRenewalSignal(e);
+export const PATCH = (e: RequestEvent) => proxyWithRenewalSignal(e);
+export const DELETE = (e: RequestEvent) => proxyWithRenewalSignal(e);

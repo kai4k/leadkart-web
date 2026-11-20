@@ -220,7 +220,7 @@ describe('saveTenantSection answers', () => {
 		const r = await call();
 		expect(r).toMatchObject({
 			status: 403,
-			data: { formErrorKey: 'auth.errors.forbidden' }
+			data: { formErrorKey: 'errors.code.forbidden' }
 		});
 		expect(JSON.stringify(r)).not.toContain('RAW BACKEND TEXT');
 	});

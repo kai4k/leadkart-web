@@ -30,7 +30,11 @@ describe('readGoFailure', () => {
 				errors: { name: ['name is taken'] }
 			})
 		);
-		expect(r).toEqual({ status: 422, fields: { name: 'name is taken' } });
+		expect(r).toEqual({
+			status: 422,
+			fields: { name: 'name is taken' },
+			code: 'validation_failed'
+		});
 		expect(JSON.stringify(r)).not.toContain('pq:');
 	});
 
@@ -42,7 +46,7 @@ describe('readGoFailure', () => {
 
 describe('failFromGo: one banner KEY per status class, never English', () => {
 	it.each([
-		[403, 'forbidden', 'auth.errors.forbidden'],
+		[403, 'forbidden', 'errors.code.forbidden'],
 		[404, 'gone', 'auth.errors.notFound'],
 		[409, 'new_code', 'auth.errors.conflict'],
 		[429, 'rate_limited', 'auth.errors.rateLimited'],
@@ -131,7 +135,7 @@ describe('actions that used to print Go detail raw', () => {
 		expect(r.data.fieldMessages).toEqual({ designation: 'too long' });
 	});
 
-	it('new role: a 409 with raw detail shows the conflict key', async () => {
+	it('new role: a 409 role_name_taken says so (its table key), never the raw detail', async () => {
 		capabilities.loadCapabilities.mockResolvedValue({
 			is_platform: false,
 			is_super_user: true,
@@ -151,10 +155,10 @@ describe('actions that used to print Go detail raw', () => {
 			route: { id: '/(app)/settings/roles/new' }
 		} as never)) as Fail;
 		expect(r.status).toBe(409);
-		expect(r.data.formErrorKey).toBe('auth.errors.conflict');
+		expect(r.data.formErrorKey).toBe('errors.code.role_name_taken');
 	});
 
-	it('new role: a 403 insufficient_rank is the forbidden key', async () => {
+	it('new role: a 403 insufficient_rank says what to fix (its own table key), not the generic forbidden', async () => {
 		capabilities.loadCapabilities.mockResolvedValue({
 			is_platform: false,
 			is_super_user: true,
@@ -173,7 +177,7 @@ describe('actions that used to print Go detail raw', () => {
 			cookies: cookies({ lk_access: 'tok' }),
 			route: { id: '/(app)/settings/roles/new' }
 		} as never)) as Fail;
-		expect(r.data.formErrorKey).toBe('auth.errors.forbidden');
+		expect(r.data.formErrorKey).toBe('errors.code.insufficient_rank');
 	});
 });
 

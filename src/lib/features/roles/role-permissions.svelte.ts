@@ -9,9 +9,9 @@ import { ACTION, session } from '$features/auth';
 export function createRolePermissions() {
 	const may = (rule: readonly string[]): boolean => session.canAny(...rule);
 	return {
-		/** The create form is an own-tenant route (the nav config's `own` context): not offered in a tenant context. */
+		/** Offered in either context: `session.canAny` already drops the own-tenant name inside a tenant context. */
 		get create() {
-			return may(ACTION.roleCreate) && !session.inTenantContext;
+			return may(ACTION.roleCreate);
 		},
 		/** Rename / re-level, permissions, parent. */
 		get update() {

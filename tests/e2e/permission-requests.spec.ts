@@ -207,6 +207,13 @@ test.describe('Permission requests — approver flow', () => {
 				status: 200,
 				body: otherUserReq
 			},
+			// The approver queue is where Go says what the caller may do with it.
+			{
+				method: 'GET',
+				path: '/api/v1/permission-requests',
+				status: 200,
+				body: { requests: [{ ...otherUserReq, can_approve: true }], has_more: false }
+			},
 			{
 				method: 'POST',
 				path: `/api/v1/permission-requests/${otherUserReq.id}/approve`,
@@ -223,6 +230,43 @@ test.describe('Permission requests — approver flow', () => {
 		await expect(page.getByRole('button', { name: /^deny$/i })).toBeVisible();
 		await page.getByRole('button', { name: /^approve$/i }).click();
 		await expect(page.getByText(/request approved/i)).toBeVisible({ timeout: 5000 });
+	});
+
+	test('Go says the caller may deny but not approve: only Deny is offered', async ({ page }) => {
+		await signInAsTier(page, { tier: 'tenant-admin', permissions: ['tenant.admin'] });
+		const req = makeRequest({ requester_membership_id: ANOTHER_MEMBERSHIP, id: REQUEST_ID_ALT });
+		await registerMocks([
+			{ method: 'GET', path: `/api/v1/permission-requests/${req.id}`, status: 200, body: req },
+			{
+				method: 'GET',
+				path: '/api/v1/permission-requests',
+				status: 200,
+				body: { requests: [{ ...req, can_approve: false }], has_more: false }
+			}
+		]);
+		await page.goto(`/permission-requests/${req.id}`);
+		await expect(page.getByRole('button', { name: /^deny$/i })).toBeVisible({ timeout: 5000 });
+		await expect(page.getByRole('button', { name: /^approve$/i })).toHaveCount(0);
+	});
+
+	test('a request the queue does not list (no say over it): no decision controls at all', async ({
+		page
+	}) => {
+		await signInAsTier(page, { tier: 'tenant-admin', permissions: ['tenant.admin'] });
+		const req = makeRequest({ requester_membership_id: ANOTHER_MEMBERSHIP, id: REQUEST_ID_ALT });
+		await registerMocks([
+			{ method: 'GET', path: `/api/v1/permission-requests/${req.id}`, status: 200, body: req },
+			{
+				method: 'GET',
+				path: '/api/v1/permission-requests',
+				status: 200,
+				body: { requests: [], has_more: false }
+			}
+		]);
+		await page.goto(`/permission-requests/${req.id}`);
+		await expect(page.getByRole('heading', { name: 'Permission request' })).toBeVisible();
+		await expect(page.getByRole('button', { name: /^deny$/i })).toHaveCount(0);
+		await expect(page.getByRole('button', { name: /^approve$/i })).toHaveCount(0);
 	});
 
 	test('cancel surfaces only on the requester own pending request', async ({ page }) => {

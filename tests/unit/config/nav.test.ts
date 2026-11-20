@@ -8,13 +8,14 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { NAV_ROUTES, canSee, routeForPath, visibleNav, type NavRoute } from '#lib/config/nav.ts';
 import type { Capabilities } from '#lib/features/auth/capabilities.ts';
-import { P } from '#lib/features/auth/permissions.ts';
+import { ACTION, P } from '#lib/features/auth/permissions.ts';
 import {
 	caps,
 	EXISTING_ADMIN_READ_BUNDLE,
 	NEW_TENANT_ADMIN,
 	OPERATOR_ONE_PERMISSION,
 	OWNER,
+	persona,
 	SALES_EXECUTIVE,
 	SALES_MANAGER,
 	SUPER_USER,
@@ -277,5 +278,28 @@ describe('routeForPath', () => {
 	it('does not match look-alike prefixes or unknown paths', () => {
 		expect(routeForPath('/leads-archive')).toBeNull();
 		expect(routeForPath('/nowhere')).toBeNull();
+	});
+});
+
+describe('the create-role page and the create action are one rule', () => {
+	const operatorRoles = persona({
+		isPlatform: true,
+		grants: [P.platformTenantsView, P.platformRolesManage]
+	});
+	it('its entry reads ACTION.roleCreate: nothing is spelled twice', () => {
+		const access = NAV_ROUTES.roleNew.access;
+		expect(access.kind === 'any' && access.permissions).toEqual([...ACTION.roleCreate]);
+	});
+	it('an operator with platform.roles.manage may open it inside a tenant context (Go allows POST /roles there)', () => {
+		expect(canSee(operatorRoles, NAV_ROUTES.roleNew, true)).toBe(true);
+	});
+	it('a tenant admin may open it at home, and its own-tenant identity.roles.create does not count inside a context', () => {
+		expect(canSee(NEW_TENANT_ADMIN, NAV_ROUTES.roleNew, false)).toBe(true);
+		const operatorOwner = persona({
+			isPlatform: true,
+			roles: ['Company Owner'],
+			grants: [P.platformTenantsView]
+		});
+		expect(canSee(operatorOwner, NAV_ROUTES.roleNew, true)).toBe(false);
 	});
 });

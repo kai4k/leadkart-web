@@ -19,7 +19,7 @@
  */
 import type { ResolvedPathname } from '$app/types';
 import { canAny, type Capabilities } from '#lib/features/auth/capabilities.ts';
-import { P } from '#lib/features/auth/permissions.ts';
+import { ACTION, P } from '#lib/features/auth/permissions.ts';
 
 type Caps = Capabilities | null | undefined;
 
@@ -124,13 +124,15 @@ export const NAV_ROUTES = {
 		context: 'own',
 		access: anyOf(P.identityTenantsView)
 	},
-	// Go: POST /roles needs identity.roles.create, stricter than seeing the list.
+	// Go: POST /roles needs identity.roles.create (or platform.roles.manage for an operator under
+	// X-Tenant-Id), stricter than seeing the list: the one list is ACTION.roleCreate. The create form
+	// posts through the scope header, so it exists in either context.
 	roleNew: {
 		href: '/settings/roles/new',
 		label: 'New role',
 		section: 'administration',
-		context: 'own',
-		access: anyOf(P.identityRolesCreate),
+		context: 'both',
+		access: anyOf(...ACTION.roleCreate),
 		hidden: true
 	},
 	team: {

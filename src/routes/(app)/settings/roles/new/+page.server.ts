@@ -16,7 +16,8 @@ import {
 } from '#lib/server/form-action.ts';
 import { goFetch, readGoJson } from '#lib/server/go.ts';
 import { createRoleRequestSchema } from '$features/roles/schemas';
-import { P } from '#lib/features/auth/permissions.ts';
+import { ACTION } from '#lib/features/auth/permissions.ts';
+import { readOperatorScope } from '#lib/server/scope.ts';
 import type { Actions } from './$types';
 
 interface CreateRoleResponse {
@@ -33,7 +34,7 @@ export const actions: Actions = {
 		};
 
 		// An action is a separate entry point from the page guard: authorise before any Go call.
-		const refused = await authoriseAction(event, fd, P.identityRolesCreate, payload);
+		const refused = await authoriseAction(event, fd, ACTION.roleCreate, payload);
 		if (refused) return refused;
 
 		const parsed = createRoleRequestSchema.safeParse(payload);
@@ -56,6 +57,9 @@ export const actions: Actions = {
 			}
 			if (!body?.role_id)
 				return failForm(502, { values: payload, formErrorKey: 'auth.errors.unexpected' });
+			// An operator creating in a tenant context has no role detail page there: back to the tenant's roles.
+			if (readOperatorScope(cookies).state === 'valid')
+				throw redirect(303, '/operator/scope/roles');
 			throw redirect(303, `/settings/roles/${encodeURIComponent(body.role_id)}`);
 		}
 

@@ -14,7 +14,9 @@ describe('can() in tenant context', () => {
 
 	it('what they hold at platform level still works inside a tenant', () => {
 		expect(can(operator, P.platformTenantsView, true)).toBe(true);
-		expect(can(operator, P.identityTenantsView, true)).toBe(true);
+		// The projected identity.* equivalent is Go's own-tenant answer: not usable under the header.
+		expect(can(operator, P.identityTenantsView, false)).toBe(true);
+		expect(can(operator, P.identityTenantsView, true)).toBe(false);
 	});
 
 	it('a super user keeps the reads inside a tenant, but never the writes', () => {

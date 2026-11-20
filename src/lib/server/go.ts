@@ -162,9 +162,10 @@ export async function readGoError(resp: Response): Promise<GoErrorBody> {
  */
 export async function readGoFailure(
 	resp: Response
-): Promise<{ status: number; fields: Record<string, string> }> {
+): Promise<{ status: number; fields: Record<string, string>; code: string | undefined }> {
 	const body = await readGoError(resp);
-	return { status: goErrorStatus(resp), fields: flattenGoErrors(body) };
+	const code = typeof body.error === 'string' && body.error !== '' ? body.error : undefined;
+	return { status: goErrorStatus(resp), fields: flattenGoErrors(body), code };
 }
 
 /** Go's `errors: { field: [msg] }` as a flat `{ field: msg }` for `fail(422, { errors })`. */

@@ -29,3 +29,10 @@ export function isOperatorScopePath(pathname: string): boolean {
 
 /** The one user-facing line for a dead operator scope (BFF 409, Go invalid/unknown scope, session guard toast). */
 export const SCOPE_EXPIRED_MESSAGE = 'Operator scope expired — select the tenant again';
+
+/**
+ * Response header the BFF proxy sets when it renewed the session while answering a call (a stale
+ * token after a role change, or the hook's silent refresh): the caller's permissions may have
+ * changed, so the client has the page re-read its capabilities.
+ */
+export const SESSION_RENEWED_HEADER = 'x-lk-session-renewed';
