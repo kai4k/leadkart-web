@@ -1,13 +1,24 @@
 <script lang="ts">
 	import { X, RotateCcw, Icon } from '$icons';
 	import { Drawer } from '$ui';
-	import {
-		theme,
-		PRIMARY_COLORS,
-		CONTENT_WIDTHS,
-		type PrimaryColor,
-		type ContentWidth
-	} from '#lib/hooks/use-theme.svelte.ts';
+	import { getPreferences, PREFERENCE_VALUES, type Preferences } from '$features/preferences';
+
+	const prefs = getPreferences();
+
+	const COLOUR_LABELS: Record<Preferences['colors'], string> = {
+		leadkart: 'LeadKart',
+		green: 'Green',
+		violet: 'Violet',
+		orange: 'Orange',
+		teal: 'Teal',
+		fuchsia: 'Fuchsia',
+		lime: 'Lime',
+		amber: 'Amber'
+	};
+	const WIDTH_LABELS: Record<Preferences['contentWidth'], string> = {
+		default: 'Boxed',
+		fluid: 'Fluid'
+	};
 
 	/**
 	 * SettingsModal — right-side drawer. Two legitimate axes that real
@@ -47,16 +58,16 @@
 					<h3 class="h6">Brand colour</h3>
 					<p class="caption text-fg-muted">Re-skins primary surfaces across the app.</p>
 					<div class="flex flex-wrap items-center gap-3">
-						{#each PRIMARY_COLORS as colour (colour.id)}
-							{@const selected = theme.primary === colour.id}
+						{#each PREFERENCE_VALUES.colors as id (id)}
+							{@const selected = prefs.colors === id}
 							<button
 								type="button"
 								class={['lk-swatch', selected && 'lk-swatch--selected']}
-								style="background: {colour.hex};"
-								aria-label={colour.label}
+								data-swatch={id}
+								aria-label={COLOUR_LABELS[id]}
 								aria-pressed={selected}
-								title={colour.label}
-								onclick={() => theme.setPrimary(colour.id as PrimaryColor)}
+								title={COLOUR_LABELS[id]}
+								onclick={() => prefs.set({ colors: id })}
 							></button>
 						{/each}
 					</div>
@@ -66,18 +77,18 @@
 				<section class="stack stack-tight">
 					<h3 class="h6">Content width</h3>
 					<div class="grid grid-cols-2 gap-2">
-						{#each CONTENT_WIDTHS as opt (opt.id)}
-							{@const selected = theme.contentWidth === opt.id}
+						{#each PREFERENCE_VALUES.contentWidth as id (id)}
+							{@const selected = prefs.contentWidth === id}
 							<button
 								type="button"
 								class={['lk-pref-card', selected && 'lk-pref-card--selected']}
 								aria-pressed={selected}
-								onclick={() => theme.setContentWidth(opt.id as ContentWidth)}
+								onclick={() => prefs.set({ contentWidth: id })}
 							>
-								<span class={`lk-cw-preview lk-cw-preview--${opt.id}`} aria-hidden="true">
+								<span class={`lk-cw-preview lk-cw-preview--${id}`} aria-hidden="true">
 									<span class="lk-cw-preview-body"></span>
 								</span>
-								<span class="label-small">{opt.label}</span>
+								<span class="label-small">{WIDTH_LABELS[id]}</span>
 							</button>
 						{/each}
 					</div>
@@ -94,7 +105,7 @@
 					'focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
 					'focus-visible:ring-focus-ring'
 				]}
-				onclick={() => theme.reset()}
+				onclick={() => prefs.reset()}
 			>
 				<Icon icon={RotateCcw} size="sm" />
 				Reset to defaults

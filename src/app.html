@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" %lk.html.attrs%>
 	<head>
 		<meta charset="utf-8" />
 		<!-- LeadKart favicon set — multi-size PNG matching the Blazor canon.
@@ -39,10 +39,8 @@
 			href="%sveltekit.assets%/images/favicon/favicon_512x512.png"
 		/>
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-		<meta name="color-scheme" content="light" />
 		<!-- Mobile browser chrome — LeadKart logo purple-violet (#502d81
-		     wordmark base). Overridden at runtime if the user picks an
-		     alt primary (theme.svelte.ts). -->
+		     wordmark base). Static. -->
 		<meta name="theme-color" content="#502d81" />
 		<!-- PWA manifest — installable as standalone app via Add to Home
 		     Screen on iOS/Android + Install via Chromium prompt on
@@ -53,57 +51,6 @@
 		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 		<meta name="apple-mobile-web-app-title" content="LeadKart" />
 		<title>LeadKart</title>
-		<!--
-			Customiser prime — runs SYNCHRONOUSLY before first paint so
-			the page renders branded on first paint (no FOUC).
-
-			Industry canon: every modern dashboard (Vercel, Linear,
-			GitHub, Stripe Dashboard) ships an inline blocking prime
-			script. The cost is ~200 bytes + ~1ms execution; the win is
-			no flash-of-unbranded-content.
-
-			Tracks `localStorage['leadkart-primary']` and
-			`leadkart-content-width` written by lib/hooks/use-theme.svelte.ts.
-			data-layout='semibox' is set unconditionally — semibox is
-			the only supported chrome shape (the prior 'default' flat
-			variant + dark sidebar + RTL toggles were removed
-			2026-05-17). Failure-mode tolerant: try/catch swallows
-			errors so a private-mode browser falls back to defaults
-			cleanly.
-		-->
-		<script nonce="%sveltekit.nonce%">
-			(function () {
-				try {
-					var root = document.documentElement;
-					root.setAttribute('data-layout', 'semibox');
-
-					function applyIfValid(key, attr, valid) {
-						var v = localStorage.getItem(key);
-						if (v && valid.indexOf(v) >= 0) root.setAttribute(attr, v);
-					}
-
-					applyIfValid('leadkart-primary', 'data-primary', [
-						'blue',
-						'green',
-						'indigo',
-						'orange',
-						'teal',
-						'purple',
-						'pink',
-						'red',
-						'mint',
-						'cyan'
-					]);
-					applyIfValid('leadkart-content-width', 'data-content-width', ['fluid']);
-
-					if (localStorage.getItem('leadkart-sidebar-collapsed') === '1') {
-						root.setAttribute('data-sidebar-collapsed', '');
-					}
-				} catch (e) {
-					/* private-mode: fall back to defaults */
-				}
-			})();
-		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="tap" data-sveltekit-preload-code="hover">

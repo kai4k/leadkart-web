@@ -1,11 +1,14 @@
 // See https://svelte.dev/docs/kit/types#app
 // for information about these interfaces
 import type { Capabilities } from '#lib/features/auth/api.ts';
+import type { Preferences } from '#lib/features/preferences/schema.ts';
 
 declare global {
 	namespace App {
 		// interface Error {}
 		interface Locals {
+			/** The decoded `lk_ui` cookie (presentation only), set by htmlShellHandle. */
+			preferences: Preferences;
 			/**
 			 * Outcome of the silent refresh in hooks.server.ts; unset when none was
 			 * attempted. `unavailable` = Go could not be reached: the session may be fine.
@@ -24,6 +27,8 @@ declare global {
 			 * session). The error page puts it in its sign-out form so signing out works without JS.
 			 */
 			csrfToken?: string | null;
+			/** The decoded `lk_ui` cookie from the root layout server load (presentation only). */
+			preferences?: Preferences;
 		}
 		// interface PageState {}
 		// interface Platform {}

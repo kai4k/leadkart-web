@@ -16,8 +16,10 @@
 	 * variant a11y silently rots whenever a new variant ships under-tested.
 	 */
 	import { Button, Card, Alert } from '#lib/components/ui/index.ts';
-	import { PRIMARY_COLORS, theme } from '#lib/hooks/use-theme.svelte.ts';
+	import { getPreferences, PREFERENCE_VALUES } from '$features/preferences';
 	import { Icon, Plus } from '#lib/icons/index.ts';
+
+	const prefs = getPreferences();
 
 	const buttonVariants = [
 		'primary',
@@ -161,25 +163,25 @@
 	<section aria-labelledby="theme-heading" class="stack stack-loose">
 		<h2 id="theme-heading" class="h2">Theme picker</h2>
 		<p class="body-sm text-fg-muted">
-			11 primary colour choices. <strong>Navy</strong> is the default (logo wordmark). Picking
-			re-skins every <code>--color-brand-*</code> token instantly via a
-			<code>&lt;html data-primary="X"&gt;</code> attribute swap.
+			8 primary colour choices. <strong>LeadKart</strong> is the default (logo wordmark). Picking
+			re-skins the primary tokens instantly via a <code>&lt;html data-colors="X"&gt;</code> attribute
+			swap.
 		</p>
 		<div class="flex flex-wrap gap-2">
-			{#each PRIMARY_COLORS as { id, label, hex } (id)}
+			{#each PREFERENCE_VALUES.colors as id (id)}
 				<button
 					type="button"
-					onclick={() => theme.setPrimary(id)}
+					onclick={() => prefs.set({ colors: id })}
 					class="interactive label border-border flex items-center gap-2 rounded-md border px-3 py-2"
-					class:ring-2={theme.primary === id}
-					aria-pressed={theme.primary === id}
+					class:ring-2={prefs.colors === id}
+					aria-pressed={prefs.colors === id}
 				>
 					<span
 						aria-hidden="true"
-						class="border-border h-4 w-4 rounded-full border"
-						style="background: {hex};"
+						class="lk-swatch border-border h-4 w-4 rounded-full border"
+						data-swatch={id}
 					></span>
-					{label}
+					{id}
 				</button>
 			{/each}
 		</div>

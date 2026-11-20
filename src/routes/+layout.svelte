@@ -2,9 +2,19 @@
 	import '../app.css';
 	import { onMount } from 'svelte';
 	import { Tooltip } from '$ui';
-	import { theme } from '#lib/hooks/use-theme.svelte.ts';
+	import {
+		createPreferences,
+		DEFAULT_PREFERENCES,
+		removeLegacyThemeKeys,
+		setPreferences
+	} from '$features/preferences';
 
-	let { children } = $props();
+	let { children, data } = $props();
+
+	// Per request (context), never a module singleton: the server renders many requests in one process.
+	// `data.preferences` is the decoded lk_ui cookie; the store keeps <html data-*> in step with it.
+	// svelte-ignore state_referenced_locally
+	setPreferences(createPreferences(data.preferences ?? DEFAULT_PREFERENCES));
 
 	// Children mount before their parent, so this runs once the whole tree is
 	// hydrated. E2E checks wait for it: SSR-rendered controls prove nothing.
@@ -12,15 +22,8 @@
 		document.documentElement.dataset.hydrated = 'true';
 	});
 
-	// Reflect customiser state on <html> on mount AND on every change.
-	// The effect re-runs whenever any $state field on the theme store
-	// mutates — touch each so the dep graph picks them up.
-	$effect(() => {
-		void theme.primary;
-		void theme.sidebarCollapsed;
-		void theme.contentWidth;
-		theme.applyToDocument();
-	});
+	// The old localStorage customiser keys are dead weight now that preferences live in the lk_ui cookie.
+	onMount(removeLegacyThemeKeys);
 </script>
 
 <a href="#main-content" class="skip-link">Skip to main content</a>

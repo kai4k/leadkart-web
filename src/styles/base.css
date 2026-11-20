@@ -56,13 +56,13 @@
 }
 
 /* ═══ PRIMARY COLOUR PICKER — multi-hue theme switching
- * Activated by `<html data-primary="X">` attribute set by
- * lib/hooks/use-theme.svelte.ts. Each variant overrides the brand 11-stop
+ * Activated by `<html data-colors="X">` written at SSR from the lk_ui
+ * cookie (lib/features/preferences). Replaced wholesale by theme/semantic.css (Task 2). Each variant overrides the brand 11-stop
  * to a different OKLCH hue while keeping the lightness + chroma curves
  * consistent. Components consuming `var(--color-brand-{N})` re-skin
  * automatically — no per-component changes.
  *
- * Default (no data-primary attr) = purple-violet logo brand from
+ * Default (data-colors="leadkart") = purple-violet logo brand from
  * tokens.css (#502d81 wordmark base, hue ≈ 296). Picker alternatives:
  *   blue    #265A8E   (hue ≈ 245)  — legacy corporate blue
  *   green   #34C759   (hue ≈ 145)  — iOS pure green
@@ -79,24 +79,7 @@
  * picker — it stays brand-coherent regardless of primary choice.
  * ───────────────────────────────────────────────────────────── */
 
-:root[data-primary='blue'] {
-	/* Legacy corporate blue (#265A8E, hue 245). Customiser picker alt
-	 * for users who prefer the older Blazor-side identity over the
-	 * purple-violet logo brand (default). */
-	--color-brand-50: oklch(0.96 0.02 245);
-	--color-brand-100: oklch(0.92 0.04 245);
-	--color-brand-200: oklch(0.85 0.06 245);
-	--color-brand-300: oklch(0.74 0.07 245);
-	--color-brand-400: oklch(0.6 0.09 245);
-	--color-brand-500: oklch(0.5 0.1 245);
-	--color-brand-600: oklch(0.42 0.09 245);
-	--color-brand-700: oklch(0.34 0.08 245);
-	--color-brand-800: oklch(0.27 0.07 245);
-	--color-brand-900: oklch(0.21 0.06 245);
-	--color-brand-950: oklch(0.13 0.04 245);
-}
-
-:root[data-primary='green'] {
+:root[data-colors='green'] {
 	--color-brand-50: oklch(0.97 0.03 145);
 	--color-brand-100: oklch(0.93 0.07 145);
 	--color-brand-200: oklch(0.87 0.11 145);
@@ -110,21 +93,7 @@
 	--color-brand-950: oklch(0.2 0.05 145);
 }
 
-:root[data-primary='indigo'] {
-	--color-brand-50: oklch(0.97 0.03 285);
-	--color-brand-100: oklch(0.93 0.07 285);
-	--color-brand-200: oklch(0.86 0.12 285);
-	--color-brand-300: oklch(0.78 0.16 285);
-	--color-brand-400: oklch(0.7 0.18 285);
-	--color-brand-500: oklch(0.62 0.19 285);
-	--color-brand-600: oklch(0.55 0.2 285);
-	--color-brand-700: oklch(0.47 0.18 285);
-	--color-brand-800: oklch(0.38 0.15 285);
-	--color-brand-900: oklch(0.3 0.1 285);
-	--color-brand-950: oklch(0.2 0.07 285);
-}
-
-:root[data-primary='orange'] {
+:root[data-colors='orange'] {
 	--color-brand-50: oklch(0.97 0.04 60);
 	--color-brand-100: oklch(0.93 0.1 60);
 	--color-brand-200: oklch(0.88 0.14 60);
@@ -138,7 +107,7 @@
 	--color-brand-950: oklch(0.24 0.07 55);
 }
 
-:root[data-primary='teal'] {
+:root[data-colors='teal'] {
 	--color-brand-50: oklch(0.97 0.02 220);
 	--color-brand-100: oklch(0.93 0.06 220);
 	--color-brand-200: oklch(0.86 0.1 220);
@@ -152,83 +121,13 @@
 	--color-brand-950: oklch(0.22 0.05 220);
 }
 
-:root[data-primary='purple'] {
-	--color-brand-50: oklch(0.97 0.03 310);
-	--color-brand-100: oklch(0.93 0.08 310);
-	--color-brand-200: oklch(0.86 0.13 310);
-	--color-brand-300: oklch(0.78 0.16 310);
-	--color-brand-400: oklch(0.7 0.18 310);
-	--color-brand-500: oklch(0.65 0.2 310);
-	--color-brand-600: oklch(0.55 0.2 310);
-	--color-brand-700: oklch(0.47 0.18 310);
-	--color-brand-800: oklch(0.38 0.15 310);
-	--color-brand-900: oklch(0.3 0.1 310);
-	--color-brand-950: oklch(0.2 0.07 310);
-}
-
-:root[data-primary='pink'] {
-	--color-brand-50: oklch(0.97 0.03 0);
-	--color-brand-100: oklch(0.93 0.07 0);
-	--color-brand-200: oklch(0.87 0.11 0);
-	--color-brand-300: oklch(0.79 0.16 0);
-	--color-brand-400: oklch(0.72 0.2 0);
-	--color-brand-500: oklch(0.66 0.23 0);
-	--color-brand-600: oklch(0.56 0.21 0);
-	--color-brand-700: oklch(0.47 0.18 0);
-	--color-brand-800: oklch(0.39 0.15 0);
-	--color-brand-900: oklch(0.31 0.11 0);
-	--color-brand-950: oklch(0.22 0.08 0);
-}
-
-:root[data-primary='red'] {
-	--color-brand-50: oklch(0.97 0.02 25);
-	--color-brand-100: oklch(0.93 0.07 25);
-	--color-brand-200: oklch(0.87 0.13 25);
-	--color-brand-300: oklch(0.79 0.18 25);
-	--color-brand-400: oklch(0.72 0.21 25);
-	--color-brand-500: oklch(0.66 0.23 25);
-	--color-brand-600: oklch(0.56 0.21 25);
-	--color-brand-700: oklch(0.47 0.18 25);
-	--color-brand-800: oklch(0.39 0.15 25);
-	--color-brand-900: oklch(0.31 0.11 25);
-	--color-brand-950: oklch(0.22 0.08 25);
-}
-
-:root[data-primary='mint'] {
-	--color-brand-50: oklch(0.97 0.03 180);
-	--color-brand-100: oklch(0.93 0.07 180);
-	--color-brand-200: oklch(0.86 0.11 180);
-	--color-brand-300: oklch(0.78 0.13 180);
-	--color-brand-400: oklch(0.74 0.13 180);
-	--color-brand-500: oklch(0.7 0.13 180);
-	--color-brand-600: oklch(0.6 0.12 180);
-	--color-brand-700: oklch(0.5 0.1 180);
-	--color-brand-800: oklch(0.4 0.08 180);
-	--color-brand-900: oklch(0.3 0.06 180);
-	--color-brand-950: oklch(0.2 0.04 180);
-}
-
-:root[data-primary='cyan'] {
-	--color-brand-50: oklch(0.97 0.02 230);
-	--color-brand-100: oklch(0.93 0.06 230);
-	--color-brand-200: oklch(0.86 0.1 230);
-	--color-brand-300: oklch(0.78 0.13 230);
-	--color-brand-400: oklch(0.72 0.14 230);
-	--color-brand-500: oklch(0.7 0.14 230);
-	--color-brand-600: oklch(0.6 0.13 230);
-	--color-brand-700: oklch(0.5 0.11 230);
-	--color-brand-800: oklch(0.4 0.09 230);
-	--color-brand-900: oklch(0.3 0.07 230);
-	--color-brand-950: oklch(0.2 0.05 230);
-}
-
 /* ═══ LAYOUT CUSTOMISER — Linear/Vercel pattern
  * One shell, sidebar collapses via hamburger. The customiser exposes
  * three legitimate axes:
  *
- *   data-primary           — brand colour (re-skins the 11-stop brand
+ *   data-colors            — brand colour (re-skins the 11-stop brand
  *                            palette to a different hue)
- *   data-sidebar-collapsed — desktop collapsed state (boolean attr)
+ *   data-sidebar="small"   — desktop collapsed (icon-only) sidebar
  *   dir                    — LTR | RTL
  *
  * Removed 2026-05-13 (Domiex theme-marketplace gimmicks no real SaaS
@@ -316,7 +215,7 @@
 /* ── Sidebar collapsed (desktop) ──────────────────────────────
    Boolean attribute set by ThemeStore.toggleSidebarCollapsed().
    On mobile the sidebar is a drawer and this attr is ignored.  */
-:root[data-sidebar-collapsed] {
+:root[data-sidebar='small'] {
 	--lk-sidebar-width: var(--lk-sidebar-width-collapsed);
 }
 
@@ -455,4 +354,31 @@
 			--glass-inner-gradient: none;
 		}
 	}
+}
+
+/* Customiser colour swatches: the colour comes from the palette token, never an inline style
+   (CSP and token canon). `--palette-*` arrives with theme/palettes.css; until then the brand ramp. */
+.lk-swatch[data-swatch='leadkart'] {
+	background: var(--palette-leadkart-500, var(--color-brand-500));
+}
+.lk-swatch[data-swatch='green'] {
+	background: var(--palette-green-500, var(--color-brand-500));
+}
+.lk-swatch[data-swatch='violet'] {
+	background: var(--palette-violet-500, var(--color-brand-500));
+}
+.lk-swatch[data-swatch='orange'] {
+	background: var(--palette-orange-500, var(--color-brand-500));
+}
+.lk-swatch[data-swatch='teal'] {
+	background: var(--palette-teal-500, var(--color-brand-500));
+}
+.lk-swatch[data-swatch='fuchsia'] {
+	background: var(--palette-fuchsia-500, var(--color-brand-500));
+}
+.lk-swatch[data-swatch='lime'] {
+	background: var(--palette-lime-500, var(--color-brand-500));
+}
+.lk-swatch[data-swatch='amber'] {
+	background: var(--palette-amber-500, var(--color-brand-500));
 }

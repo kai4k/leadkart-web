@@ -137,6 +137,6 @@ export async function refreshSession(
  * Go, the session is not known to be over, so answer 503 (cookies kept, a
  * reload retries) instead of sending the user to /signin.
  */
-export function assertRefreshReachable(locals: App.Locals): void {
+export function assertRefreshReachable(locals: Pick<App.Locals, 'refreshOutcome'>): void {
 	if (locals.refreshOutcome === 'unavailable') error(503, 'Service temporarily unavailable');
 }

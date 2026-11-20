@@ -4,7 +4,7 @@
 	import Sidebar from './Sidebar.svelte';
 	import Footer from './Footer.svelte';
 	import { Drawer } from '$ui';
-	import { theme } from '#lib/hooks/use-theme.svelte.ts';
+	import { getPreferences } from '$features/preferences';
 
 	/**
 	 * AppShell — Linear/Vercel-style canonical layout:
@@ -12,13 +12,13 @@
 	 *   Sidebar   — position: fixed, top-offset by topbar height,
 	 *               full-height column; width animates between
 	 *               16rem (expanded) and 4.5rem (collapsed) via the
-	 *               --lk-sidebar-width var driven by [data-sidebar-
-	 *               collapsed] on <html>.
+	 *               --lk-sidebar-width var driven by [data-sidebar]
+	 *               on <html>.
 	 *   main      — padding-top: topbar-height; padding-inline-start:
 	 *               sidebar-width on lg+, 0 on mobile.
 	 *
 	 * Hamburger (in Topbar):
-	 *   ≥ lg : toggles theme.sidebarCollapsed (full ⇄ icon-only)
+	 *   ≥ lg : toggles prefs.sidebar (large ⇄ small, icon-only)
 	 *   < lg : opens the mobile drawer (bits-ui Dialog primitive)
 	 *
 	 * The viewport check uses window.matchMedia at click time so a user
@@ -31,6 +31,7 @@
 	 */
 
 	let { children } = $props();
+	const prefs = getPreferences();
 	let sidebarOpen = $state(false);
 	let settingsOpen = $state(false);
 
@@ -58,7 +59,7 @@
 	}
 
 	function onHamburger() {
-		if (isDesktop()) theme.toggleSidebarCollapsed();
+		if (isDesktop()) prefs.set({ sidebar: prefs.sidebar === 'small' ? 'large' : 'small' });
 		else sidebarOpen = true;
 	}
 

@@ -66,12 +66,3 @@ export { useResetOnChange } from './use-reset-on-change.svelte';
 export { createPwa, type Pwa } from './use-pwa.svelte';
 
 export { useForm, type Form, type FormOpts, type FieldErrors } from './use-form.svelte';
-
-export {
-	theme,
-	type Theme,
-	PRIMARY_COLORS,
-	CONTENT_WIDTHS,
-	type PrimaryColor,
-	type ContentWidth
-} from './use-theme.svelte';

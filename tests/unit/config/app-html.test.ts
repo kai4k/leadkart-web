@@ -16,3 +16,15 @@ describe('app.html preloading', () => {
 		expect(body).toContain('data-sveltekit-preload-code="hover"');
 	});
 });
+
+describe('app.html preferences shell', () => {
+	const html = readFileSync('src/app.html', 'utf8');
+	it('takes the preference attributes from the server', () => {
+		expect(html).toContain('%lk.html.attrs%');
+	});
+	it('has no inline script, no localStorage and no forced colour scheme', () => {
+		expect(html).not.toContain('<script');
+		expect(html).not.toContain('localStorage');
+		expect(html).not.toContain('name="color-scheme"');
+	});
+});
