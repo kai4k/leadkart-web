@@ -32,8 +32,8 @@
 
 	const trail = $derived.by<Crumb[]>(() => {
 		const full = fullTrail();
-		// One crumb that only repeats the h1 says nothing: no trail.
-		return full.length === 1 && full[0]?.label === title ? [] : full;
+		// A trail needs somewhere to go: one crumb only repeats the h1 (or names the page above it).
+		return full.length < 2 ? [] : full;
 	});
 
 	function fullTrail(): Crumb[] {

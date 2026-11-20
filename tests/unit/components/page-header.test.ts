@@ -87,9 +87,9 @@ describe('PageHeader', () => {
 		expect(document.querySelector('nav')).toBeNull();
 	});
 
-	it('a single crumb that differs from the title is kept', () => {
+	it('a trail of fewer than two items is not rendered, whatever the label', () => {
 		render({ title: 'Acme', crumbs: [{ label: 'Tenants' }] });
-		expect(document.querySelector('nav')!.textContent).toContain('Tenants');
+		expect(document.querySelector('nav')).toBeNull();
 	});
 
 	it('crumbs=[] renders no navigation at all', () => {
