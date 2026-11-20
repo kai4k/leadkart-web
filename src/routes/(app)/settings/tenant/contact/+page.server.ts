@@ -1,14 +1,12 @@
-import { updateTenantAdminContactSchema } from '$features/tenant/schemas';
-import { patchTenant } from '../_actions';
+import { saveTenantSection } from '../_actions';
 import type { Actions } from './$types';
 
 export const actions: Actions = {
 	default: async ({ request, cookies }) => {
 		const fd = await request.formData();
-		return patchTenant({
+		return saveTenantSection({
 			cookies,
-			pathSuffix: '/admin-contact',
-			schema: updateTenantAdminContactSchema,
+			section: 'admin-contact',
 			// Every field is sent, blank as ''. Go rejects a body with a missing address field.
 			payload: {
 				phone: (fd.get('phone') ?? '').toString(),

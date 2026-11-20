@@ -5,30 +5,33 @@
  * can immediately assign permissions.
  */
 import { fail, redirect } from '@sveltejs/kit';
-import { callGoForAction, failFromGo } from '#lib/server/form-action.ts';
+import {
+	authoriseAction,
+	callGoForAction,
+	failFromGo,
+	goFailureKey,
+	UPSTREAM_UNAVAILABLE_KEY
+} from '#lib/server/form-action.ts';
 import { goFetch, readGoJson } from '#lib/server/go.ts';
 import { createRoleRequestSchema } from '$features/roles/schemas';
 import { P } from '#lib/features/auth/permissions.ts';
-import { guardPage, requireCapability } from '#lib/server/guards.ts';
-import { loadCapabilities } from '#lib/server/capabilities.ts';
 import type { Actions } from './$types';
 
 interface CreateRoleResponse {
 	role_id: string;
 }
 
-export const load = guardPage(P.identityRolesCreate);
-
 export const actions: Actions = {
 	default: async ({ request, cookies }) => {
-		// Actions are a separate entry point from the load above: authorise here too.
-		requireCapability(await loadCapabilities(cookies), P.identityRolesCreate);
-
 		const fd = await request.formData();
 		const payload = {
 			name: (fd.get('name') ?? '').toString(),
 			hierarchy_level: Number(fd.get('hierarchy_level') ?? 0)
 		};
+
+		// An action is a separate entry point from the page guard: authorise before any Go call.
+		const refused = await authoriseAction(cookies, P.identityRolesCreate, payload);
+		if (refused) return refused;
 
 		const parsed = createRoleRequestSchema.safeParse(payload);
 		if (!parsed.success) {
@@ -44,8 +47,15 @@ export const actions: Actions = {
 		if (!call.ok) return fail(call.status, { values: payload, formErrorKey: call.key });
 
 		if (call.resp.ok) {
-			const body = (await readGoJson<CreateRoleResponse>(call.resp)) as CreateRoleResponse;
-			throw redirect(303, `/settings/roles/${body.role_id}`);
+			// The body read is a Go call too (a stalled stream): it keeps the form like the call does.
+			let body: CreateRoleResponse | null;
+			try {
+				body = await readGoJson<CreateRoleResponse>(call.resp);
+			} catch {
+				return fail(502, { values: payload, formErrorKey: UPSTREAM_UNAVAILABLE_KEY });
+			}
+			if (!body?.role_id) return fail(502, { values: payload, formErrorKey: goFailureKey(502) });
+			throw redirect(303, `/settings/roles/${encodeURIComponent(body.role_id)}`);
 		}
 
 		return failFromGo(call.resp, payload, { fallback: 'Create failed' });

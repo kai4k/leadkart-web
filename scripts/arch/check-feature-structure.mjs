@@ -34,16 +34,17 @@ function hasNestedApi(dir) {
 }
 
 // Features without an HTTP surface (purely composed / computed). These
-// don't ship api.ts but still need index.ts as the public barrel. (tenant: its settings
-// forms save through SvelteKit server actions, not a browser gateway.)
-const NO_API_REQUIRED = new Set(['dashboard', 'tenant']);
+// don't ship api.ts but still need index.ts as the public barrel.
+const NO_API_REQUIRED = new Set(['dashboard']);
 
 const errors = [];
 for (const f of features) {
 	const dir = join(FEATURES_DIR, f);
-	const hasApi = existsSync(join(dir, 'api.ts')) || hasNestedApi(dir);
+	// server.ts is the gateway of a feature reached only from SvelteKit loads and form actions (tenant).
+	const hasApi =
+		existsSync(join(dir, 'api.ts')) || existsSync(join(dir, 'server.ts')) || hasNestedApi(dir);
 	if (!hasApi && !NO_API_REQUIRED.has(f)) {
-		errors.push(`features/${f}/api.ts (or any nested api.ts) missing`);
+		errors.push(`features/${f}/api.ts (or server.ts, or any nested api.ts) missing`);
 	}
 	if (!existsSync(join(dir, 'index.ts'))) errors.push(`features/${f}/index.ts missing`);
 }

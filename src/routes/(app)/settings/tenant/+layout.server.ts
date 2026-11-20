@@ -1,26 +1,21 @@
 /**
- * Tenant settings shared layout load — fetches the current tenant
- * once for all five tabs (profile / statutory / contact / preferences
- * / security). Each page's form pre-populates from `data.tenant`;
- * each page's action PATCHes the relevant sub-resource. After a
- * successful action, SvelteKit auto-reruns this load to surface the
- * new values without manual invalidation.
+ * Tenant settings shared layout load — fetches the caller's own tenant once for all five tabs
+ * (profile / statutory / contact / preferences / security). Each page's form pre-populates from
+ * `data.tenant`; each page's action saves one section. After a successful action, SvelteKit
+ * auto-reruns this load to surface the new values without manual invalidation.
  *
- * tenant_id is extracted from the JWT access cookie.
+ * Access is the route guard (`/settings` layout, entry `/settings/tenant` in the nav config); the
+ * fetch itself is the tenant gateway's `loadTenant`, shared with the operator scope layout.
  */
-import { error, redirect } from '@sveltejs/kit';
-import { goErrorStatus, goFetch, readGoJson } from '#lib/server/go.ts';
-import { decodeJwtPrincipal } from '$api/jwt';
-import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
-import type { Tenant } from '$features/tenant/types';
+import { error } from '@sveltejs/kit';
+import { loadTenant, ownTenantId } from '$features/tenant/server';
 import type { LayoutServerLoad } from './$types';
 
-export const load: LayoutServerLoad = async ({ cookies }) => {
-	const access = cookies.get(ACCESS_COOKIE());
-	if (!access) throw redirect(303, '/signin');
-	const { tenantId } = decodeJwtPrincipal(access);
-	const resp = await goFetch(cookies, `/v1/tenants/${tenantId}`);
-	if (!resp.ok) throw error(goErrorStatus(resp), 'Could not load tenant settings');
-	const tenant = (await readGoJson<Tenant>(resp)) as Tenant;
-	return { tenant };
+export const load: LayoutServerLoad = async ({ cookies, parent }) => {
+	// Loads run concurrently: wait for the section guard (a redirect throws here) before any Go call.
+	await parent();
+	// scoped:false: this is the caller's OWN tenant, never an operator's selected one.
+	const loaded = await loadTenant(cookies, ownTenantId(cookies), { scoped: false });
+	if (loaded.status === 'not_found') throw error(404, 'Could not load tenant settings');
+	return { tenant: loaded.tenant };
 };

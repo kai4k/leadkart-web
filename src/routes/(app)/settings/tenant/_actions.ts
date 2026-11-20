@@ -1,54 +1,54 @@
 /**
- * Shared helpers for the five tenant-settings PATCH actions.
- * All actions follow the same shape — read form data, validate with a
- * Zod schema, PATCH a sub-resource of /v1/tenants/{tenant_id}/*, and
- * return fail() / { success } accordingly.
+ * The one save path of the five tenant-settings actions: authorise → validate → PATCH → map the
+ * answer. Each section's `+page.server.ts` only turns its form into a payload.
  *
- * Authorisation is enforced by the Go API only: there is no BFF-side permission check (no permission string exists yet; tracked in docs/superpowers/plans/2026-11-18-phase-1c-worklist.md item 4).
+ * The permission per section is what Go's route requires (`internal/identity/ports/http.go`):
+ * the password policy needs `identity.tenants.update_settings`, every other section
+ * `identity.tenants.update`. The check runs before any write to Go; Go stays the enforcer.
+ * Go's PATCH routes are full-replace, so the gateway (`features/tenant/server.ts`) always sends
+ * every field; field errors come back keyed by field (nested keys dotted) and land on the form.
  */
-import { fail, redirect, type Cookies } from '@sveltejs/kit';
-import type { z } from 'zod';
-import { goErrorStatus, goFetch, readGoError, flattenGoErrors } from '#lib/server/go.ts';
-import { decodeJwtPrincipal } from '$api/jwt';
-import { ACCESS_COOKIE } from '#lib/server/cookies.ts';
+import { fail, type Cookies } from '@sveltejs/kit';
+import { P } from '#lib/features/auth/permissions.ts';
+import { authoriseAction, failFromGo } from '#lib/server/form-action.ts';
+import {
+	ownTenantId,
+	patchTenant,
+	TENANT_SECTIONS,
+	type TenantSection,
+	type TenantSectionBodies
+} from '$features/tenant/server';
 
-function getTenantId(cookies: Cookies): string {
-	const access = cookies.get(ACCESS_COOKIE());
-	if (!access) throw redirect(303, '/signin');
-	return decodeJwtPrincipal(access).tenantId;
-}
+export const TENANT_SECTION_PERMISSION: Record<TenantSection, string> = {
+	profile: P.identityTenantsUpdate,
+	statutory: P.identityTenantsUpdate,
+	'admin-contact': P.identityTenantsUpdate,
+	'display-preferences': P.identityTenantsUpdate,
+	settings: P.identityTenantsUpdateSettings
+};
 
-export interface PatchTenantOptions<P> {
-	cookies: Cookies;
-	pathSuffix: `/${string}`;
-	schema: z.ZodSchema<P>;
-	payload: P;
-}
-
-export async function patchTenant<P>({
+export async function saveTenantSection<S extends TenantSection>({
 	cookies,
-	pathSuffix,
-	schema,
+	section,
 	payload
-}: PatchTenantOptions<P>) {
-	const parsed = schema.safeParse(payload);
+}: {
+	cookies: Cookies;
+	section: S;
+	payload: TenantSectionBodies[S];
+}) {
+	const refused = await authoriseAction(cookies, TENANT_SECTION_PERMISSION[section], payload);
+	if (refused) return refused;
+
+	const parsed = TENANT_SECTIONS[section].schema.safeParse(payload);
 	if (!parsed.success) {
 		return fail(422, {
 			values: payload,
 			errors: parsed.error.flatten().fieldErrors as Record<string, string[] | undefined>
 		});
 	}
-	const tenantId = getTenantId(cookies);
-	const resp = await goFetch(cookies, `/v1/tenants/${tenantId}${pathSuffix}`, {
-		method: 'PATCH',
-		body: JSON.stringify(parsed.data)
-	});
-	if (resp.ok || resp.status === 204) {
-		return { success: true as const };
-	}
-	const body = await readGoError(resp);
-	if (resp.status === 422) {
-		return fail(422, { values: payload, errors: flattenGoErrors(body) });
-	}
-	return fail(goErrorStatus(resp), { values: payload, bannerError: body.detail ?? 'Save failed' });
+
+	const call = await patchTenant(cookies, ownTenantId(cookies), section, payload);
+	if (!call.ok) return fail(call.status, { values: payload, formErrorKey: call.key });
+	if (call.resp.ok) return { success: true as const };
+	return failFromGo(call.resp, payload, { fallback: 'Save failed' });
 }

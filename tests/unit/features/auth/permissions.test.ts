@@ -9,7 +9,7 @@ import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import SOURCE from '#lib/api/generated/SOURCE.json';
-import { P } from '#lib/features/auth/permissions.ts';
+import { ACTION, P } from '#lib/features/auth/permissions.ts';
 import { PERMISSION_CATALOGUE } from '#lib/features/roles/permissions-catalogue.ts';
 
 const GO_FILE = 'internal/identity/domain/permission/permission.go';
@@ -66,5 +66,30 @@ describe('catalogue list', () => {
 	it.skipIf(go === null)('equals Go catalogue at the pinned commit', () => {
 		expect(go!.length).toBeGreaterThan(40); // the parse found the literal
 		expect([...names].sort()).toEqual([...go!].sort());
+	});
+});
+
+describe('ACTION', () => {
+	it('carries only names that exist in P', () => {
+		const known = new Set<string>(Object.values(P));
+		for (const [action, list] of Object.entries(ACTION)) {
+			for (const name of list) expect(known.has(name), `${action}: ${name}`).toBe(true);
+		}
+	});
+
+	it('is any-of identity.* plus the platform.* equivalent Go accepts for the same route', () => {
+		expect(ACTION.userCreate).toEqual([
+			'identity.users.create',
+			'platform.users.create',
+			'platform.users.manage'
+		]);
+		expect(ACTION.userDeactivate).toEqual(['identity.users.deactivate', 'platform.users.manage']);
+		expect(ACTION.roleAssign).toEqual(['identity.roles.assign', 'platform.roles.manage']);
+		expect(ACTION.roleDelete).toEqual(['identity.roles.delete', 'platform.roles.manage']);
+		expect(ACTION.requestSubmit).toEqual(['identity.meta.request_permission_elevation']);
+	});
+
+	it('never names tenant.admin', () => {
+		for (const list of Object.values(ACTION)) expect(list).not.toContain('tenant.admin');
 	});
 });

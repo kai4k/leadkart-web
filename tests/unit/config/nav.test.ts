@@ -9,91 +9,20 @@ import { describe, expect, it } from 'vitest';
 import { NAV_ROUTES, canSee, routeForPath, visibleNav, type NavRoute } from '#lib/config/nav.ts';
 import type { Capabilities } from '#lib/features/auth/capabilities.ts';
 import { P } from '#lib/features/auth/permissions.ts';
-import { ALL_PERMISSIONS, TENANT_ADMIN_EFFECTIVE } from '../../e2e/helpers/permission-sets.ts';
+import {
+	caps,
+	EXISTING_ADMIN_READ_BUNDLE,
+	NEW_TENANT_ADMIN,
+	OPERATOR_ONE_PERMISSION,
+	OWNER,
+	SALES_EXECUTIVE,
+	SALES_MANAGER,
+	SUPER_USER,
+	TEAM_LEAD
+} from '../helpers/capability-personas.ts';
 
-function caps(effective: readonly string[], overrides: Partial<Capabilities> = {}): Capabilities {
-	return {
-		person_id: 'per-1',
-		membership_id: 'mid-1',
-		tenant_id: 'tid-1',
-		tenant_slug: 'acme',
-		is_platform: false,
-		is_super_user: false,
-		permissions: [],
-		effective_permissions: [...effective],
-		roles: [],
-		rank: 99,
-		tier: 'user',
-		...overrides
-	};
-}
 const hrefs = (c: Capabilities | null, inTenantContext: boolean) =>
 	visibleNav(c, inTenantContext).flatMap((s) => s.items.map((i) => i.href));
-
-const ALL = ALL_PERMISSIONS;
-const TENANT_ADMIN_EFFECTIVE_SET = TENANT_ADMIN_EFFECTIVE;
-
-const OWNER = caps(TENANT_ADMIN_EFFECTIVE_SET, { tier: 'owner', rank: 0 });
-const NEW_TENANT_ADMIN = caps(TENANT_ADMIN_EFFECTIVE_SET, {
-	tier: 'admin',
-	rank: 5
-});
-const EXISTING_ADMIN_READ_BUNDLE = caps(
-	[
-		P.identityTenantsView,
-		P.identityUsersView,
-		P.identityRolesView,
-		P.crmLeadsRead,
-		P.ordersQuotationsRead
-	],
-	{ tier: 'admin', rank: 8 }
-);
-const SALES_MANAGER = caps(
-	[
-		P.crmLeadsRead,
-		P.crmLeadsReadAll,
-		P.crmLeadsAssign,
-		P.crmLeadsManage,
-		P.ordersOrdersRead,
-		P.ordersOrdersManage,
-		P.ordersQuotationsRead,
-		P.ordersQuotationsManage,
-		P.inventoryCatalogRead,
-		P.identityUsersView,
-		P.identityRolesApprove,
-		P.identityMetaRequestPermissionElevation,
-		P.tasksRead,
-		P.tasksReadAll,
-		P.notificationsRead
-	],
-	{ tier: 'manager', rank: 15 }
-);
-const TEAM_LEAD = caps(
-	[
-		P.crmLeadsRead,
-		P.crmLeadsManage,
-		P.ordersOrdersRead,
-		P.identityRolesApprove,
-		P.identityMetaRequestPermissionElevation
-	],
-	{ tier: 'team_lead', rank: 25 }
-);
-const SALES_EXECUTIVE = caps(
-	[
-		P.crmLeadsRead,
-		P.crmLeadsManage,
-		P.ordersQuotationsRead,
-		P.ordersQuotationsManage,
-		P.inventoryCatalogRead,
-		P.identityMetaRequestPermissionElevation
-	],
-	{ tier: 'user', rank: 40 }
-);
-const OPERATOR_ONE_PERMISSION = caps([P.platformTenantsView], {
-	is_platform: true,
-	tenant_slug: 'platform'
-});
-const SUPER_USER = caps(ALL, { is_platform: true, is_super_user: true, tenant_slug: 'platform' });
 
 const OWN_ALL_TENANT_PAGES = [
 	'/dashboard',
@@ -109,17 +38,12 @@ const OWN_ALL_TENANT_PAGES = [
 
 describe('visibleNav: capability set × tenant context → entries', () => {
 	const table: Array<[string, Capabilities, string[], string[]]> = [
-		[
-			'owner',
-			OWNER,
-			OWN_ALL_TENANT_PAGES,
-			['/dashboard', '/leads', '/orders', '/inventory', '/settings/account']
-		],
+		['owner', OWNER, OWN_ALL_TENANT_PAGES, ['/dashboard', '/settings/account']],
 		[
 			'new-tenant admin',
 			NEW_TENANT_ADMIN,
 			OWN_ALL_TENANT_PAGES,
-			['/dashboard', '/leads', '/orders', '/inventory', '/settings/account']
+			['/dashboard', '/settings/account']
 		],
 		[
 			'existing-tenant admin with the read bundle',
@@ -131,9 +55,10 @@ describe('visibleNav: capability set × tenant context → entries', () => {
 				'/settings/roles',
 				'/leads',
 				'/orders',
+				'/permission-requests',
 				'/settings/account'
 			],
-			['/dashboard', '/leads', '/orders', '/settings/account']
+			['/dashboard', '/settings/account']
 		],
 		[
 			'sales manager',
@@ -147,13 +72,13 @@ describe('visibleNav: capability set × tenant context → entries', () => {
 				'/permission-requests',
 				'/settings/account'
 			],
-			['/dashboard', '/leads', '/orders', '/inventory', '/settings/account']
+			['/dashboard', '/settings/account']
 		],
 		[
 			'team lead',
 			TEAM_LEAD,
 			['/dashboard', '/leads', '/orders', '/permission-requests', '/settings/account'],
-			['/dashboard', '/leads', '/orders', '/settings/account']
+			['/dashboard', '/settings/account']
 		],
 		[
 			'sales executive',
@@ -166,12 +91,12 @@ describe('visibleNav: capability set × tenant context → entries', () => {
 				'/permission-requests',
 				'/settings/account'
 			],
-			['/dashboard', '/leads', '/orders', '/inventory', '/settings/account']
+			['/dashboard', '/settings/account']
 		],
 		[
 			'operator with one platform permission',
 			OPERATOR_ONE_PERMISSION,
-			['/dashboard', '/operator/tenants', '/settings/account'],
+			['/dashboard', '/operator/tenants', '/permission-requests', '/settings/account'],
 			[
 				'/dashboard',
 				'/operator/tenants',
@@ -219,13 +144,33 @@ describe('visibleNav: capability set × tenant context → entries', () => {
 		expect(hrefs(c, true)).toEqual(inContext);
 	});
 
+	it('in tenant context a non-super operator loses Leads / Orders / Inventory (Go 403s their reads); a super user keeps them', () => {
+		const operator = caps(
+			[P.platformTenantsView, P.crmLeadsRead, P.ordersOrdersRead, P.inventoryCatalogRead],
+			{ is_platform: true }
+		);
+		expect(hrefs(operator, false)).toEqual(
+			expect.arrayContaining(['/leads', '/orders', '/inventory'])
+		);
+		expect(hrefs(operator, true)).not.toContain('/leads');
+		expect(hrefs(operator, true)).not.toContain('/orders');
+		expect(hrefs(operator, true)).not.toContain('/inventory');
+		expect(hrefs({ ...operator, is_super_user: true }, true)).toEqual(
+			expect.arrayContaining(['/leads', '/orders', '/inventory'])
+		);
+	});
+
 	it('a caller with no capabilities sees nothing, in either context', () => {
 		expect(hrefs(null, false)).toEqual([]);
 		expect(hrefs(null, true)).toEqual([]);
 	});
 
 	it('a caller with no permissions still sees the always-available entries', () => {
-		expect(hrefs(caps([]), false)).toEqual(['/dashboard', '/settings/account']);
+		expect(hrefs(caps([]), false)).toEqual([
+			'/dashboard',
+			'/permission-requests',
+			'/settings/account'
+		]);
 	});
 
 	it('never decides on tier, rank, is_super_user or is_platform', () => {
@@ -237,7 +182,11 @@ describe('visibleNav: capability set × tenant context → entries', () => {
 			tenant_slug: 'platform',
 			permissions: ['tenant.admin']
 		});
-		expect(hrefs(flags, false)).toEqual(['/dashboard', '/settings/account']);
+		expect(hrefs(flags, false)).toEqual([
+			'/dashboard',
+			'/permission-requests',
+			'/settings/account'
+		]);
 		expect(hrefs(flags, true)).toEqual(['/dashboard', '/settings/account']);
 	});
 
@@ -267,7 +216,8 @@ describe('visibleNav: capability set × tenant context → entries', () => {
 		expect(hrefs(caps([P.identityMetaRequestPermissionElevation]), false)).toContain(
 			'/permission-requests'
 		);
-		expect(hrefs(caps([P.identityUsersView]), false)).not.toContain('/permission-requests');
+		expect(hrefs(caps([P.identityUsersView]), false)).toContain('/permission-requests');
+		expect(hrefs(caps([P.identityUsersView]), true)).not.toContain('/permission-requests');
 	});
 
 	it('hidden (guard-only) entries are never listed', () => {

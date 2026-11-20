@@ -1,18 +1,19 @@
-import { redirect } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
+import { NAV_ROUTES, canSee, routeForPath } from '#lib/config/nav.ts';
 // Pure module imported directly: the auth barrel re-exports .svelte components.
 import { can, type Capabilities } from '#lib/features/auth/capabilities.ts';
 import { P } from '#lib/features/auth/permissions.ts';
 
 /**
- * The permission the /operator/tenants page requires. Entering (and staying in)
- * a tenant's operator scope requires the same one.
+ * The permission entering (and staying in) a tenant's operator scope requires: Go refuses the
+ * `X-Tenant-Id` header without it. Same name as the /operator/tenants entry in `nav.ts`.
  */
 export const OPERATOR_SCOPE_PERMISSION = P.platformTenantsView;
 
 /**
  * Non-redirecting check for JSON endpoints (which answer 403, never a
- * redirect) and the one rule behind `requireCapability`. `null` is what
- * `loadCapabilities` returns when Go gave no usable capabilities.
+ * redirect). `null` is what `loadCapabilities` returns when Go gave no usable
+ * capabilities.
  */
 export function hasRequiredCapability(
 	caps: Capabilities | null | undefined,
@@ -22,23 +23,60 @@ export function hasRequiredCapability(
 }
 
 /**
- * Server-side route guard. Runs in a `+page.server.ts` / `+layout.server.ts`
- * load, so an unauthorised user never receives the page or its data.
- * Behaviour matches the old client guard: back to the dashboard.
+ * The URL path a route id stands for: route groups dropped, param segments kept
+ * (`/(app)/settings/users/[id]` -> `/settings/users/[id]`). Guards resolve the
+ * MATCHED ROUTE, never `url.pathname`: the browser's spelling of a path (percent
+ * encoding, dot segments) must not pick which nav entry guards a page.
  */
-export function requireCapability(caps: Capabilities | null | undefined, permission: string): void {
-	if (!hasRequiredCapability(caps, permission)) redirect(303, '/dashboard');
+export function pathForRouteId(routeId: string): string {
+	return routeId
+		.split('/')
+		.filter((segment) => !(segment.startsWith('(') && segment.endsWith(')')))
+		.join('/');
 }
 
 /**
- * A `+page.server.ts` load that only guards the page:
- *   export const load = guardPage(P.identityUsersView);
- * Capabilities come from the (app) layout load via `parent()`.
+ * THE server route guard rule: the page's entry in `nav.ts` (longest prefix, so a
+ * detail or nested page resolves to its parent) decides, with the request's
+ * capabilities and tenant-context flag, exactly as it decides what the sidebar
+ * shows. A page with no entry is a 404 (the route-walk unit test keeps that from
+ * shipping): the guard never fails open.
  */
-export function guardPage(
-	permission: string
-): (event: { parent: () => Promise<{ capabilities?: Capabilities }> }) => Promise<void> {
-	return async ({ parent }) => {
-		requireCapability((await parent()).capabilities, permission);
-	};
+export function requireRouteAccess(
+	caps: Capabilities | null | undefined,
+	pathname: string,
+	inTenantContext: boolean
+): void {
+	const route = routeForPath(pathname);
+	if (!route) throw error(404, 'Not found');
+	if (canSee(caps, route, inTenantContext)) return;
+	// An own-tenant page requested inside a tenant context: its data would be the SCOPED tenant's
+	// under own-tenant labels. Send the operator to the tenant's own tree (that route's guard decides
+	// further); no Go call has been made.
+	if (route.context === 'own' && inTenantContext) {
+		redirect(303, NAV_ROUTES.scopeProfile.href);
+	}
+	// A scope page opened outside a tenant context: back to where a context is chosen.
+	if (route.context === 'scope' && !inTenantContext && canSee(caps, NAV_ROUTES.tenants)) {
+		redirect(303, NAV_ROUTES.tenants.href);
+	}
+	redirect(303, NAV_ROUTES.dashboard.href);
+}
+
+interface GuardEvent {
+	route: { id: string | null };
+	parent: () => Promise<{ capabilities?: Capabilities | null; inTenantContext?: boolean }>;
+}
+
+/**
+ * The load every `(app)` section exports from its `+layout.server.ts`:
+ *   export const load = guardAppRoute;
+ * Capabilities and the tenant-context flag come from the (app) layout via `parent()`,
+ * so no extra Go call; a layout load re-runs on navigation, so it guards client-side
+ * transitions too. Runs before any child load reaches Go.
+ */
+export async function guardAppRoute({ route, parent }: GuardEvent): Promise<void> {
+	if (route.id === null) throw error(404, 'Not found');
+	const { capabilities, inTenantContext } = await parent();
+	requireRouteAccess(capabilities, pathForRouteId(route.id), inTenantContext === true);
 }

@@ -84,6 +84,11 @@ export async function POST(event: RequestEvent): Promise<Response> {
 			requireAuth: false
 		});
 		if (resp.status === 401) return sessionExpired();
+		// Go answers the lookup 403 when the header's authority is missing (platform.tenants.view):
+		// that is "no access", not a failed lookup, and no scope cookie is set.
+		if (resp.status === 403) {
+			return jsonError(403, 'forbidden', 'Tenant scope requires platform access');
+		}
 		if (!resp.ok) return jsonError(502, 'tenant_lookup_failed', 'Tenant lookup failed');
 		const payload = tenantLookupSchema.safeParse(await resp.json());
 		if (!payload.success) {

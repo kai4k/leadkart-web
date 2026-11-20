@@ -1,6 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { error, redirect } from '@sveltejs/kit';
-import { callGoForAction } from '#lib/server/form-action.ts';
+
+const loadCapabilities = vi.hoisted(() => vi.fn());
+const readOperatorScope = vi.hoisted(() => vi.fn(() => ({ state: 'none' }) as { state: string }));
+vi.mock('#lib/server/capabilities.ts', () => ({ loadCapabilities }));
+vi.mock('#lib/server/scope.ts', () => ({ readOperatorScope }));
+
+import { authoriseAction, callGoForAction } from '#lib/server/form-action.ts';
+import { P } from '#lib/features/auth/permissions.ts';
+import { caps } from '../helpers/capability-personas.ts';
 import { upstreamStatus } from '#lib/server/proxy.ts';
 
 describe('upstreamStatus', () => {
@@ -36,5 +44,70 @@ describe('callGoForAction', () => {
 		await expect(
 			callGoForAction(() => Promise.reject(redirect(303, '/signin')))
 		).rejects.toMatchObject({ status: 303 });
+	});
+});
+
+describe('authoriseAction', () => {
+	const cookies = {} as never;
+	beforeEach(() => {
+		loadCapabilities.mockReset();
+		readOperatorScope.mockReturnValue({ state: 'none' });
+	});
+
+	it('is null (go ahead) when the permission is held', async () => {
+		loadCapabilities.mockResolvedValue(caps([P.identityTenantsUpdate]));
+		expect(await authoriseAction(cookies, P.identityTenantsUpdate, { a: 1 })).toBeNull();
+	});
+
+	it('any-of: one held permission is enough', async () => {
+		loadCapabilities.mockResolvedValue(caps([P.platformUsersManage]));
+		expect(
+			await authoriseAction(cookies, [P.identityUsersCreate, P.platformUsersManage], {})
+		).toBeNull();
+	});
+
+	it('refuses with a 403 that keeps the values and speaks the copy map line, never Go text', async () => {
+		loadCapabilities.mockResolvedValue(caps([P.identityTenantsView]));
+		const r = await authoriseAction(cookies, P.identityTenantsUpdate, { a: 1 });
+		expect(r).toMatchObject({
+			status: 403,
+			data: { values: { a: 1 }, bannerError: "You don't have permission to do this." }
+		});
+	});
+
+	it('does not infer: is_super_user / tenant.admin alone hold nothing', async () => {
+		loadCapabilities.mockResolvedValue(caps(['tenant.admin'], { is_super_user: true }));
+		expect(await authoriseAction(cookies, P.identityTenantsUpdate, {})).toMatchObject({
+			status: 403
+		});
+	});
+
+	it('applies the tenant-context restriction (a blocked write is refused in context)', async () => {
+		readOperatorScope.mockReturnValue({ state: 'valid' });
+		loadCapabilities.mockResolvedValue(caps([P.crmLeadsManage]));
+		expect(await authoriseAction(cookies, P.crmLeadsManage, {})).toMatchObject({ status: 403 });
+	});
+
+	it('no usable capabilities means the session is over: redirect to sign-in', async () => {
+		loadCapabilities.mockResolvedValue(null);
+		await expect(authoriseAction(cookies, P.identityTenantsUpdate, {})).rejects.toMatchObject({
+			status: 303,
+			location: '/signin'
+		});
+	});
+
+	it('an outage reading capabilities keeps the form (same failure as a Go outage)', async () => {
+		loadCapabilities.mockImplementation(() => Promise.reject(error(503, 'down')));
+		expect(await authoriseAction(cookies, P.identityTenantsUpdate, { a: 1 })).toMatchObject({
+			status: 503,
+			data: { values: { a: 1 }, formErrorKey: 'auth.errors.upstreamUnavailable' }
+		});
+	});
+
+	it('lets a redirect (session over) through', async () => {
+		loadCapabilities.mockImplementation(() => Promise.reject(redirect(303, '/signin')));
+		await expect(authoriseAction(cookies, P.identityTenantsUpdate, {})).rejects.toMatchObject({
+			status: 303
+		});
 	});
 });

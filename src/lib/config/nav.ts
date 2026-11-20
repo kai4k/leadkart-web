@@ -71,6 +71,15 @@ export const NAV_ROUTES = {
 	// The operator scope tree (an operator acting inside a tenant). Go, scoped calls:
 	// tenant read + audit = platform.tenants.view|manage; users read = platform.users.view|manage;
 	// roles read = platform.roles.view|manage.
+	// The tree's own root (a redirect to Profile): guard-only, so every page under /operator/scope resolves.
+	scope: {
+		href: '/operator/scope',
+		label: 'Tenant context',
+		section: 'tenantContext',
+		context: 'scope',
+		access: anyOf(P.platformTenantsView),
+		hidden: true
+	},
 	scopeProfile: {
 		href: '/operator/scope/profile',
 		label: 'Profile',
@@ -114,6 +123,15 @@ export const NAV_ROUTES = {
 		section: 'administration',
 		context: 'own',
 		access: anyOf(P.identityTenantsView)
+	},
+	// Go: POST /roles needs identity.roles.create, stricter than seeing the list.
+	roleNew: {
+		href: '/settings/roles/new',
+		label: 'New role',
+		section: 'administration',
+		context: 'own',
+		access: anyOf(P.identityRolesCreate),
+		hidden: true
 	},
 	team: {
 		href: '/settings/users',
@@ -164,12 +182,15 @@ export const NAV_ROUTES = {
 	},
 
 	// Go answers tenant_scope_not_supported on every /permission-requests route in tenant context.
+	// Submitting needs identity.meta.request_permission_elevation (gated on the button, ACTION.requestSubmit).
 	permissionRequests: {
 		href: '/permission-requests',
 		label: 'Permission requests',
 		section: 'account',
 		context: 'own',
-		access: anyOf(P.identityMetaRequestPermissionElevation, P.identityRolesApprove)
+		// Go lets any signed-in member list and read requests, and an Administrator-tier member decide
+		// them without holding identity.roles.approve: the page is open to everyone, the buttons are not.
+		access: AUTHENTICATED
 	},
 	account: {
 		href: '/settings/account',

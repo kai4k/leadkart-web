@@ -5,8 +5,8 @@
  * A component must not redirect on a capability check: by the time client
  * code runs (`$effect`, `$effect.pre`, `$derived` + effect, `onMount`, …) the
  * server has already rendered the page and fired its queries. Capability
- * guards belong in +page.server.ts / +layout.server.ts via guardPage() /
- * requireCapability() from #lib/server/guards.ts.
+ * guards belong in +layout.server.ts via guardAppRoute (the nav config decides) and, for form
+ * actions, authoriseAction() from #lib/server/form-action.ts.
  *
  * File-level rule (no attempt to parse which block does what): a route
  * component (src/routes/**\/*.svelte) or feature component
@@ -36,7 +36,9 @@ const ALLOWLIST = [
 	// goto leaves the scope after "Exit context"; capabilities only choose which tabs are listed.
 	'src/routes/(app)/operator/scope/+layout.svelte',
 	// goto opens a tenant scope / person picked from a search hit; capabilities only choose the groups listed.
-	'src/lib/features/search/components/CommandPalette.svelte'
+	'src/lib/features/search/components/CommandPalette.svelte',
+	// goto syncs the requester / approver tab into the URL; capabilities only hide the request button.
+	'src/lib/features/permission-requests/components/PermissionRequestsList.svelte'
 ];
 
 const CAPABILITY =
@@ -77,7 +79,7 @@ if (violations.length > 0) {
 	);
 	for (const v of violations) console.error(`  ${v}`);
 	console.error(
-		'\nFix: move the check to +page.server.ts / +layout.server.ts with guardPage() / requireCapability() (#lib/server/guards.ts).' +
+		'\nFix: move the check to a +layout.server.ts guard (guardAppRoute, #lib/server/guards.ts; the nav config decides) or, for an action, authoriseAction() (#lib/server/form-action.ts).' +
 			'\nIf the goto is not a guard, add the file to ALLOWLIST with a comment saying why.'
 	);
 }

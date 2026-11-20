@@ -43,12 +43,12 @@ const VALIDATION_FALLBACK_COPY = 'The request was not accepted. Check the values
  * Precedence is in `describeError`: a caller's own line for the status never replaces a code
  * here, except the plain `forbidden` (CALLER_LINE_WINS_CODES).
  */
+/** An own-tenant action while an operator acts inside another tenant (the nav config's `own` context). */
+export const TENANT_CONTEXT_COPY =
+	'Not available while acting in a tenant. Exit the tenant context first.';
 const CODE_COPY: ReadonlyMap<string, string> = new Map([
 	[CSRF_MISMATCH_CODE, 'Your session token is out of date — reload the page and try again.'],
-	[
-		'tenant_scope_not_supported',
-		'Not available while acting in a tenant. Exit the tenant context first.'
-	],
+	['tenant_scope_not_supported', TENANT_CONTEXT_COPY],
 	[
 		'tenant_scope_read_only',
 		'Read-only while acting in a tenant. Exit the tenant context to make this change.'
@@ -66,6 +66,17 @@ const CODE_COPY: ReadonlyMap<string, string> = new Map([
 	['permission_not_requestable', "This permission can't be requested."],
 	['last_owner_protected', 'A company must keep at least one active owner.'],
 	['owner_protected', "An owner's administrator access can't be removed."],
+	['role_in_use', 'This role is still assigned to active members.'],
+	['role_deleted', 'This role no longer exists.'],
+	[
+		'member_roles_inconsistent',
+		"This member's roles need attention from support before they can be changed."
+	],
+	['not_approver', "You can't approve this request."],
+	[
+		'permission_request_requester_inactive',
+		'The person who asked is no longer active, so this request can not be approved.'
+	],
 	['role_system_default', "Built-in roles can't be changed or deleted."],
 	['manager_not_eligible', "This person can't be set as the manager."],
 	['role_parent_not_eligible', 'The parent role must be more senior.'],
@@ -80,7 +91,7 @@ const CALLER_LINE_WINS_CODES: ReadonlySet<string> = new Set([
 	'forbidden',
 	'invalid_search_include'
 ]);
-const FORBIDDEN_COPY = "You don't have permission to do this.";
+export const FORBIDDEN_COPY = "You don't have permission to do this.";
 const CONFLICT_COPY = 'This change conflicts with the current state. Refresh and try again.';
 const FIELDS_COPY = 'Check the highlighted fields.';
 const NOT_FOUND_COPY = 'This item no longer exists.';

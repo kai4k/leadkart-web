@@ -1,14 +1,12 @@
-import { updateTenantDisplayPreferencesSchema } from '$features/tenant/schemas';
-import { patchTenant } from '../_actions';
+import { saveTenantSection } from '../_actions';
 import type { Actions } from './$types';
 
 export const actions: Actions = {
 	default: async ({ request, cookies }) => {
 		const fd = await request.formData();
-		return patchTenant({
+		return saveTenantSection({
 			cookies,
-			pathSuffix: '/display-preferences',
-			schema: updateTenantDisplayPreferencesSchema,
+			section: 'display-preferences',
 			payload: {
 				locale: (fd.get('locale') ?? '').toString(),
 				time_zone: (fd.get('time_zone') ?? '').toString(),

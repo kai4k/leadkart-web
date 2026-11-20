@@ -17,8 +17,9 @@
  * acts inside another tenant ("tenant context", the BFF sends X-Tenant-Id),
  * capabilities still describe the operator's own account, but Go refuses the
  * writes of several modules and the permission-request routes
- * (`tenant_scope_read_only` / `tenant_scope_not_supported`). `inTenantContext`
- * applies exactly that, in this one place (see `isBlockedInTenantContext`).
+ * (`tenant_scope_read_only` / `tenant_scope_not_supported`), and refuses those modules' reads to
+ * a non-super operator. `inTenantContext` applies exactly that, in this one place (see
+ * `isBlockedInTenantContext`, the one use of `is_super_user`).
  */
 import type { Capabilities } from './api';
 import { isBlockedInTenantContext } from './permissions.ts';
@@ -32,7 +33,7 @@ export type Tier = Capabilities['tier'];
 
 export function can(caps: Caps, permission: string, inTenantContext = false): boolean {
 	if (!caps) return false;
-	if (inTenantContext && isBlockedInTenantContext(permission)) return false;
+	if (inTenantContext && isBlockedInTenantContext(permission, caps.is_super_user)) return false;
 	return caps.effective_permissions.includes(permission);
 }
 

@@ -109,6 +109,26 @@ describe('POST /api/operator/scope', () => {
 		});
 	});
 
+	it('refuses an operator who holds other platform permissions but not platform.tenants.view, before any lookup', async () => {
+		loadCapabilities.mockResolvedValue({
+			...PLATFORM,
+			effective_permissions: ['platform.users.view', 'platform.roles.manage']
+		});
+		expect((await post()).status).toBe(403);
+		expect(goFetch).not.toHaveBeenCalled();
+		expect(setOperatorScope).not.toHaveBeenCalled();
+	});
+
+	it('maps Go refusing the slug lookup (403) to "no access" and sets no scope cookie', async () => {
+		loadCapabilities.mockResolvedValue(PLATFORM);
+		goFetch.mockResolvedValue(Response.json({ error: 'forbidden' }, { status: 403 }));
+		expect(await json(await post())).toMatchObject({
+			status: 403,
+			body: { error: 'forbidden' }
+		});
+		expect(setOperatorScope).not.toHaveBeenCalled();
+	});
+
 	it('sets the scope for a platform user', async () => {
 		loadCapabilities.mockResolvedValue(PLATFORM);
 		goFetch.mockResolvedValue(Response.json({ tenants: [TENANT] }));

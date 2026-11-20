@@ -1,5 +1,4 @@
-import { updateTenantSettingsSchema } from '$features/tenant/schemas';
-import { patchTenant } from '../_actions';
+import { saveTenantSection } from '../_actions';
 import type { Actions } from './$types';
 
 export const actions: Actions = {
@@ -10,10 +9,9 @@ export const actions: Actions = {
 			return Number.isFinite(n) ? n : 0;
 		};
 		const toBool = (v: FormDataEntryValue | null) => (v ?? '').toString() === 'on';
-		return patchTenant({
+		return saveTenantSection({
 			cookies,
-			pathSuffix: '/settings',
-			schema: updateTenantSettingsSchema,
+			section: 'settings',
 			payload: {
 				password_policy: {
 					min_length: toInt(fd.get('min_length')),

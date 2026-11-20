@@ -88,7 +88,7 @@ describe('canAny', () => {
 });
 
 describe('tenant context (Go tenant_scope_read_only / tenant_scope_not_supported)', () => {
-	it('blocks writes of crm / orders / inventory / dispatch / tasks, keeps their reads', () => {
+	it('blocks writes of crm / orders / inventory / dispatch / tasks for everyone; reads only for a non-super operator', () => {
 		for (const name of [
 			P.crmLeadsManage,
 			P.crmLeadsAssign,
@@ -114,7 +114,11 @@ describe('tenant context (Go tenant_scope_read_only / tenant_scope_not_supported
 			P.tasksRead,
 			P.tasksReadAll
 		])
-			expect(isBlockedInTenantContext(name), name).toBe(false);
+			expect(isBlockedInTenantContext(name, true), name).toBe(false); // super user reads
+		for (const name of [P.crmLeadsRead, P.ordersOrdersRead, P.inventoryCatalogRead, P.tasksReadAll])
+			expect(isBlockedInTenantContext(name), name).toBe(true); // non-super operator: Go 403
+		expect(isBlockedInTenantContext('platform.lead_credits.read')).toBe(true);
+		expect(isBlockedInTenantContext('platform.lead_credits.read', true)).toBe(false);
 	});
 
 	it('blocks permission requests and marketplace purchase', () => {
@@ -135,12 +139,26 @@ describe('tenant context (Go tenant_scope_read_only / tenant_scope_not_supported
 	});
 
 	it('can() only subtracts in tenant context, never adds', () => {
-		const c = caps({ effective_permissions: [P.crmLeadsManage, P.crmLeadsRead] });
+		const c = caps({
+			is_super_user: true,
+			effective_permissions: [P.crmLeadsManage, P.crmLeadsRead]
+		});
 		expect(can(c, P.crmLeadsManage)).toBe(true);
 		expect(can(c, P.crmLeadsManage, true)).toBe(false);
 		expect(can(c, P.crmLeadsRead, true)).toBe(true);
 		expect(canAny(c, [P.crmLeadsManage], true)).toBe(false);
 		expect(can(c, P.crmLeadsAssign, true)).toBe(false);
+	});
+
+	it('a non-super operator loses the reads too: Go answers 403 for them under the scope header', () => {
+		const c = caps({
+			is_platform: true,
+			effective_permissions: [P.crmLeadsRead, P.ordersOrdersRead, P.inventoryCatalogRead]
+		});
+		expect(can(c, P.crmLeadsRead)).toBe(true);
+		expect(can(c, P.crmLeadsRead, true)).toBe(false);
+		expect(can(c, P.ordersOrdersRead, true)).toBe(false);
+		expect(can(c, P.inventoryCatalogRead, true)).toBe(false);
 	});
 });
 

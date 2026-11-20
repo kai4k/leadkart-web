@@ -1,5 +1,6 @@
 import { existsSync, globSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { TENANT_SECTIONS } from '#lib/features/tenant/server.ts';
 import { findEndpoint, normalizePath } from '../../e2e/helpers/contract.ts';
 
 /**
@@ -78,15 +79,13 @@ function methodAt(src: string, idx: number): string {
 
 const routeFiles = [
 	...globSync('src/lib/features/**/api.ts'),
+	...globSync('src/lib/features/**/server.ts'),
 	...globSync('src/lib/server/**/*.ts'),
 	...globSync('src/routes/**/*.ts')
 ].filter((f) => !f.endsWith('.test.ts'));
 
-const suffixes = new Set<string>();
-for (const file of routeFiles) {
-	for (const m of readFileSync(file, 'utf8').matchAll(/pathSuffix:\s*'(\/[^']+)'/g))
-		suffixes.add(m[1]);
-}
+// The tenant gateway builds `/v1/tenants/{id}/${section}`: every section is a real PATCH route.
+const suffixes = new Set<string>(Object.keys(TENANT_SECTIONS).map((x) => `/${x}`));
 
 const calls: Call[] = [];
 for (const file of routeFiles) {
@@ -97,8 +96,8 @@ for (const file of routeFiles) {
 		const method = methodAt(src, m.index!);
 		const base = { file: file.replaceAll('\\', '/'), line: lineOf(src, m.index!), method };
 		// `${pathSuffix}` is a typed parameter whose literals live in the callers.
-		if (m[2].includes('${pathSuffix}'))
-			for (const s of suffixes) calls.push({ ...base, path: m[2].replace('${pathSuffix}', s) });
+		if (m[2].endsWith('/${section}'))
+			for (const s of suffixes) calls.push({ ...base, path: m[2].replace('/${section}', s) });
 		else calls.push({ ...base, path: m[2] });
 	}
 }
@@ -117,7 +116,7 @@ describe('every web call targets a route in leadkart-go api/openapi.yaml', () =>
 		expect(files.has('src/lib/features/users/api.ts')).toBe(true);
 		expect(files.has('src/lib/server/capabilities.ts')).toBe(true);
 		expect(files.has('src/routes/auth/confirm-email-change/+server.ts')).toBe(true);
-		expect(files.has('src/routes/(app)/settings/tenant/_actions.ts')).toBe(true);
+		expect(files.has('src/lib/features/tenant/server.ts')).toBe(true);
 	});
 
 	it('the raw-echo BFF auth routes are gone (sign-in and reset are form actions)', () => {
