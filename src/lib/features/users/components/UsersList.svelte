@@ -260,14 +260,14 @@
 {#snippet rolesCell(user: UserDto)}
 	<div class="cluster cluster-tight">
 		{#each userRoleBadges(user, roleList) as r (r.id)}
-			<Badge variant="brand">{r.name}</Badge>
+			<Badge variant="brand" size="sm">{r.name}</Badge>
 		{/each}
 	</div>
 {/snippet}
 
 {#snippet statusCell(user: UserDto)}
 	{@const status = userStatus(user.status)}
-	<Badge variant={status.variant}>{status.label}</Badge>
+	<Badge variant={status.variant} size="sm">{status.label}</Badge>
 {/snippet}
 
 {#snippet rowActions(user: UserDto)}

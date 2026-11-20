@@ -48,7 +48,7 @@
 				{#each sorted as p (p.id)}
 					<tr class="border-border border-b">
 						<td class="px-2 py-2">
-							<Badge variant={p.kind === 'token' ? 'info' : 'success'}>
+							<Badge variant={p.kind === 'token' ? 'info' : 'success'} size="sm">
 								{p.kind === 'token' ? 'Token' : 'Full'}
 							</Badge>
 						</td>

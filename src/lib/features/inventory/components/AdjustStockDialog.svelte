@@ -80,10 +80,10 @@
 </script>
 
 <Dialog.Root bind:open busy={form.isSubmitting} {onOpenChange}>
-	<Dialog.Content>
+	<Dialog.Content size="xl">
 		<Dialog.Header>
 			<div class="stack stack-tight">
-				<h2 class="h5">Adjust stock</h2>
+				<Dialog.Title class="h5 text-base">Adjust stock</Dialog.Title>
 				{#if batch}
 					<p class="caption text-fg-muted">
 						Batch <code>{batch.batch_number}</code>
@@ -156,7 +156,9 @@
 		</Dialog.Body>
 		<Dialog.Footer>
 			<Dialog.Close>
-				<Button variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
+				{#snippet child({ props })}
+					<Button {...props} variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
+				{/snippet}
 			</Dialog.Close>
 			<Button type="submit" form="adjust-stock-form" loading={form.isSubmitting}>
 				Apply adjustment

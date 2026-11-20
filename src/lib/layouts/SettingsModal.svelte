@@ -39,10 +39,10 @@
 </script>
 
 <Drawer.Root bind:open {onOpenChange}>
-	<Drawer.Content class="max-w-sm">
+	<Drawer.Content>
 		<Drawer.Header>
 			<div class="stack stack-tight">
-				<h2 class="h4 text-fg">Appearance</h2>
+				<Drawer.Title class="h4 text-fg">Appearance</Drawer.Title>
 				<p class="caption text-fg-muted">Brand colour and content width</p>
 			</div>
 			<Drawer.Close class="hover:bg-bg-muted rounded-md p-1.5">
@@ -102,7 +102,7 @@
 				class={[
 					'label border-border inline-flex items-center gap-2 rounded-md border px-4 py-2',
 					'text-fg hover:bg-bg-muted transition-colors',
-					'focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
+					'focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none',
 					'focus-visible:ring-focus-ring'
 				]}
 				onclick={() => prefs.reset()}

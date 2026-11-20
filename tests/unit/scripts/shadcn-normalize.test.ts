@@ -192,8 +192,10 @@ describe('shadcn normaliser: opaque tokens (L37)', () => {
 });
 
 describe('shadcn normaliser: tailwind-variants to cva', () => {
+	// the package name is assembled so this fixture is not itself an import of it (check-banned-packages)
+	const pkg = ['tailwind', 'variants'].join('-');
 	const tv = `<script lang="ts" module>
-	import { tv, type VariantProps } from "tailwind-variants";
+	import { tv, type VariantProps } from "${pkg}";
 
 	export const fieldVariants = tv({
 		base: "group/field flex w-full",
@@ -243,5 +245,49 @@ describe('shadcn normaliser: the whole pass', () => {
 		const names = iconExports();
 		expect(names.has('X')).toBe(true);
 		expect(names.has('ChevronRight')).toBe(true);
+	});
+});
+
+describe('shadcn normaliser: only class strings are rewritten', () => {
+	it('leaves a comment and a non-class string alone', () => {
+		const src = [
+			'<script lang="ts">',
+			'	// right-click opens the menu',
+			"	const placement = 'left-start';",
+			"	const label = 'text-left of the box';",
+			'</script>',
+			'<div class="ml-2 text-left"></div>'
+		].join('\n');
+		const { out } = run(src);
+		expect(out).toContain('// right-click opens the menu');
+		expect(out).toContain("const placement = 'left-start';");
+		expect(out).toContain("const label = 'text-left of the box';");
+		expect(out).toContain('<div class="ms-2 text-start"></div>');
+	});
+
+	it('rewrites the string literals of cn() and cva() and class={...}', () => {
+		const { out } = run(
+			[
+				"<div class={cn('mr-1', open && 'pl-2')}></div>",
+				"const v = cva('left-2 text-right', { variants: { a: { b: 'border-l' } } });"
+			].join('\n')
+		);
+		expect(out).toContain("cn('me-1', open && 'ps-2')");
+		expect(out).toContain("cva('start-2 text-end', { variants: { a: { b: 'border-s' } } })");
+	});
+});
+
+describe('shadcn normaliser: z-50 takes the layer of its component family', () => {
+	const z = (file: string) =>
+		(normalizeSource('<div class="z-50"></div>', { icons: ICONS, file }) as { out: string }).out;
+	it('modal surfaces use the modal layer for panel and scrim', () => {
+		for (const folder of ['dialog', 'sheet', 'alert-dialog'])
+			expect(z(`src/lib/components/ui/${folder}/x.svelte`)).toContain('z-(--z-modal)');
+	});
+	it('sidebar and table parts are sticky, everything else floats', () => {
+		expect(z('src/lib/components/ui/sidebar/x.svelte')).toContain('z-(--z-sticky)');
+		expect(z('src/lib/components/ui/table/x.svelte')).toContain('z-(--z-sticky)');
+		expect(z('src/lib/components/ui/popover/x.svelte')).toContain('z-(--z-popover)');
+		expect(z('src/lib/components/ui/select/x.svelte')).toContain('z-(--z-popover)');
 	});
 });

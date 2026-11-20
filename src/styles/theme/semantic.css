@@ -91,6 +91,12 @@
 	--accent-foreground: var(--foreground);
 	--secondary: light-dark(var(--primary-50), var(--dark-800));
 	--secondary-foreground: light-dark(var(--primary-800), var(--dark-100));
+	/* OPAQUE hover fill of a secondary button (was `bg-[color-mix(...)]` in the class, which no gate can see) */
+	--secondary-hover: color-mix(in oklch, var(--secondary), var(--foreground) 5%);
+	/* OPAQUE table-row hover: half way between the card and the selected-row fill (--muted), so a
+	   hovered row is visibly NOT a selected one (the generated `hover:bg-muted/50` collapsed to the
+	   selected fill once alpha was banned). */
+	--row-hover: color-mix(in oklch, var(--muted) 50%, var(--card));
 
 	/* lines + focus (input meets 3:1 against the card, WCAG 1.4.11) */
 	--border: light-dark(oklch(0.92 0.01 296), var(--dark-800));

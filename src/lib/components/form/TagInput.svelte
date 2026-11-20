@@ -204,8 +204,9 @@
 						id="{listboxId}-{i}"
 						role="option"
 						aria-selected={i === highlightIndex}
+						data-active={i === highlightIndex}
 						class={cn(
-							'cursor-pointer rounded-sm px-3 py-1.5 text-sm',
+							'item-highlight cursor-pointer rounded-sm px-3 py-1.5 text-sm',
 							i === highlightIndex ? 'bg-muted text-foreground' : 'hover:bg-muted'
 						)}
 						onmousedown={(e) => {

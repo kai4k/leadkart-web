@@ -50,10 +50,10 @@
 	<p class="caption text-fg-muted truncate">{locationLabel(lead)}</p>
 
 	<div class="cluster cluster-tight">
-		<Badge variant="neutral">
+		<Badge variant="neutral" size="sm">
 			{BUSINESS_TYPE_LABEL[lead.business_type]}
 		</Badge>
-		<Badge variant={tempVariant}>
+		<Badge variant={tempVariant} size="sm">
 			{ORDER_VALUE_BAND_LABEL[lead.order_value_band]}
 		</Badge>
 	</div>

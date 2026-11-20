@@ -73,9 +73,9 @@
 </script>
 
 <Dialog.Root bind:open busy={form.isSubmitting} {onOpenChange}>
-	<Dialog.Content>
+	<Dialog.Content size="xl">
 		<Dialog.Header>
-			<h2 class="h5">Record payment</h2>
+			<Dialog.Title class="h5 text-base">Record payment</Dialog.Title>
 		</Dialog.Header>
 		<form id="record-payment-form" onsubmit={handleSubmit}>
 			<Dialog.Body>
@@ -122,7 +122,9 @@
 			</Dialog.Body>
 			<Dialog.Footer>
 				<Dialog.Close>
-					<Button variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
+					{#snippet child({ props })}
+						<Button {...props} variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
+					{/snippet}
 				</Dialog.Close>
 				<Button
 					type="submit"

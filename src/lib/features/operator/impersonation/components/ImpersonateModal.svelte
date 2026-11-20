@@ -51,10 +51,10 @@
 </script>
 
 <Dialog.Root bind:open busy={isPending} {onOpenChange}>
-	<Dialog.Content>
+	<Dialog.Content size="xl">
 		<Dialog.Header>
 			<div class="stack stack-tight">
-				<h2 class="h4">Impersonate {tenant?.display_name ?? 'tenant'}</h2>
+				<Dialog.Title class="h4">Impersonate {tenant?.display_name ?? 'tenant'}</Dialog.Title>
 				<p class="caption text-fg-muted">
 					Records an audited session of your activity while acting on this tenant's behalf. All
 					requests are logged with this session ID for the operator audit trail.
@@ -101,7 +101,9 @@
 		</Dialog.Body>
 		<Dialog.Footer class="flex flex-col gap-2 sm:flex-row sm:justify-end">
 			<Dialog.Close>
-				<Button variant="ghost" disabled={isPending}>Cancel</Button>
+				{#snippet child({ props })}
+					<Button {...props} variant="ghost" disabled={isPending}>Cancel</Button>
+				{/snippet}
 			</Dialog.Close>
 			<Button
 				type="submit"

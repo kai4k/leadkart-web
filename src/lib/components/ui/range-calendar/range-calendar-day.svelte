@@ -29,7 +29,7 @@
 		// focus
 		'focus-visible:relative focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-popover',
 		// inner spans
-		'[&>span]:text-xs [&>span]:opacity-70',
+		'[&>span]:text-xs',
 		className
 	)}
 	{...restProps}

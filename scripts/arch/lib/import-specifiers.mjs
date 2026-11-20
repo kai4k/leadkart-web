@@ -19,9 +19,9 @@ export function importSpecifiers(src) {
 		.replace(/^[ \t]*\/\/.*$/gm, blank);
 	const found = [];
 	const patterns = [
-		/(?:^|[\s;{}])(?:import|export)\s[^'"`;]*?\bfrom\s*['"]([^'"\n]+)['"]/g,
-		/(?:^|[\s;{}])import\s*['"]([^'"\n]+)['"]/g,
-		/(?:^|[^\w$.])import\s*\(\s*['"]([^'"\n]+)['"]\s*\)/g
+		/(?:^|[>\s;{}])(?:import|export)\s[^'"`;]*?\bfrom\s*['"]([^'"\n]+)['"]/gm,
+		/(?:^|[>\s;{}])import\s*['"]([^'"\n]+)['"]/gm,
+		/(?:^|[^\w$.])import\s*\(\s*['"`]([^'"`$\n]+)['"`]\s*\)/gm
 	];
 	for (const re of patterns)
 		for (const m of text.matchAll(re)) {

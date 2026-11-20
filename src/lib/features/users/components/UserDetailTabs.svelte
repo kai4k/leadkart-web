@@ -52,7 +52,7 @@
 </script>
 
 {#snippet statusBadge()}
-	<Badge variant={status.variant}>{status.label}</Badge>
+	<Badge variant={status.variant} size="sm">{status.label}</Badge>
 {/snippet}
 
 <Tabs.Root value={tab} onValueChange={onTabChange}>
@@ -232,7 +232,7 @@
 										</span>
 										<span class="caption text-fg-muted truncate">{report.email}</span>
 									</div>
-									<Badge variant={rs.variant}>{rs.label}</Badge>
+									<Badge variant={rs.variant} size="sm">{rs.label}</Badge>
 								</a>
 							</li>
 						{/each}

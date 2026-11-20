@@ -29,7 +29,7 @@
 		<Alert variant="success">{$_('auth.changeEmail.confirm.success')}</Alert>
 		<a
 			href={resolve('signin')}
-			class="bg-primary hover:bg-primary-hover focus-visible:ring-focus-ring inline-flex h-10 w-full items-center justify-center rounded-md px-4 text-sm font-medium text-white focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+			class="bg-primary hover:bg-primary-hover focus-visible:ring-focus-ring inline-flex h-10 w-full items-center justify-center rounded-md px-4 text-sm font-medium text-white focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none"
 		>
 			{$_('auth.signin.title')}
 		</a>
@@ -49,7 +49,7 @@
 		<Alert variant="destructive">{$_('auth.changeEmail.confirm.invalidToken')}</Alert>
 		<a
 			href={resolve('settings/account/security')}
-			class="text-fg-muted hover:bg-bg-muted focus-visible:ring-focus-ring inline-flex h-10 w-full items-center justify-center rounded-md px-4 text-sm font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+			class="text-fg-muted hover:bg-bg-muted focus-visible:ring-focus-ring inline-flex h-10 w-full items-center justify-center rounded-md px-4 text-sm font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none"
 		>
 			{$_('common.cancel')}
 		</a>

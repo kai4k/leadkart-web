@@ -58,10 +58,10 @@
 </script>
 
 <Dialog.Root bind:open busy={form.isSubmitting} {onOpenChange}>
-	<Dialog.Content class="max-w-md">
+	<Dialog.Content size="lg">
 		<Dialog.Header>
 			<div class="stack stack-tight">
-				<h2 class="h5">Log call</h2>
+				<Dialog.Title class="h5 text-base">Log call</Dialog.Title>
 				<p class="body-sm text-fg-muted">Record the outcome and optionally schedule a callback.</p>
 			</div>
 		</Dialog.Header>
@@ -117,7 +117,9 @@
 
 		<Dialog.Footer>
 			<Dialog.Close>
-				<Button variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
+				{#snippet child({ props })}
+					<Button {...props} variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
+				{/snippet}
 			</Dialog.Close>
 			<Button type="submit" form="log-call-form" loading={form.isSubmitting}>Log call</Button>
 		</Dialog.Footer>

@@ -450,12 +450,14 @@
 	--z-toast: 1500;
 	--z-tooltip: 1600;
 
-	/* ═══ CONTAINER WIDTHS ═══════════════════════════════════════ */
-	--container-sm: 40rem;
-	--container-md: 48rem;
-	--container-lg: 64rem;
-	--container-xl: 80rem;
-	--container-2xl: 96rem;
+	/* ═══ PAGE WIDTHS ═══════════════════════════════════════════
+	 * Named page-width, NOT container-*: Tailwind v4 derives max-w-sm|md|lg|xl|2xl
+	 * from --container-*, so reusing those names silently changed max-w-lg (32rem) to 64rem. */
+	--page-width-sm: 40rem;
+	--page-width-md: 48rem;
+	--page-width-lg: 64rem;
+	--page-width-xl: 80rem;
+	--page-width-2xl: 96rem;
 
 	/* ═══ LIQUID GLASS ═══════════════════════════════════════════
 	 * Apple WWDC25 design language adapted for the web. A frosted
@@ -583,6 +585,8 @@
 	--color-input: var(--input);
 	--color-ring: var(--ring);
 	--color-primary-hover: var(--primary-hover);
+	--color-secondary-hover: var(--secondary-hover);
+	--color-row-hover: var(--row-hover);
 	--color-destructive-hover: var(--destructive-hover);
 	--color-input-fill: var(--input-fill);
 	--color-sidebar-muted-foreground: var(--sidebar-muted-foreground);

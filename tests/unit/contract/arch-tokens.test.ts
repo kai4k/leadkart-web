@@ -79,3 +79,45 @@ describe('check-tokens: color-scheme', () => {
 		).toEqual([]);
 	});
 });
+
+describe('check-tokens: the alpha forms the plain pattern misses (fix round A)', () => {
+	it.each([
+		'hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)]',
+		'text-(--sidebar-fg)/50',
+		'bg-(--x)/[0.4]'
+	])('flags %s', (cls) => {
+		expect(flagged(`<div class="x ${cls} y"></div>`)).toEqual([cls]);
+	});
+
+	it('flags a dynamic alpha in a template literal', () => {
+		expect(flagged('const c = `bg-primary/${level}`;')).toEqual(['bg-primary/${']);
+	});
+
+	it('flags opacity on an element that may carry text, but not on a disabled control', () => {
+		expect(flagged('<p class="[&>span]:opacity-70"></p>')).toEqual(['[&>span]:opacity-70']);
+		expect(flagged('<p class="opacity-50"></p>')).toEqual(['opacity-50']);
+		expect(flagged('<p class="disabled:opacity-50 data-disabled:opacity-60"></p>')).toEqual([]);
+		expect(flagged('<p class="opacity-0 opacity-100 after:opacity-0"></p>')).toEqual([]);
+	});
+
+	it('applies to ui/ only', () => {
+		expect(flagged('<p class="opacity-70"></p>', 'src/lib/features/x/X.svelte')).toEqual([]);
+	});
+});
+
+describe('check-tokens: Tailwind scheme-* utilities', () => {
+	it('flags scheme-dark and friends outside theme/semantic.css', () => {
+		expect(findColorScheme('src/lib/x/X.svelte', '<div class="scheme-dark"></div>')).toHaveLength(
+			1
+		);
+		expect(
+			findColorScheme('src/lib/x/X.svelte', '<div class="dark:scheme-light-dark"></div>')
+		).toHaveLength(1);
+		expect(findColorScheme('src/styles/theme/semantic.css', '.scheme-dark {}')).toEqual([]);
+	});
+	it('does not flag unrelated names', () => {
+		expect(findColorScheme('src/lib/x/X.svelte', '<div class="scheme-foo scheme"></div>')).toEqual(
+			[]
+		);
+	});
+});

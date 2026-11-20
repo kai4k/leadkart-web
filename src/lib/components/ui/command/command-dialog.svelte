@@ -29,16 +29,17 @@
 </script>
 
 <Dialog.Root bind:open {...restProps}>
-	<Dialog.Header class="sr-only">
-		<Dialog.Title>{title ?? $_('common.commandPalette.title')}</Dialog.Title>
-		<Dialog.Description>{description ?? $_('common.commandPalette.description')}</Dialog.Description
-		>
-	</Dialog.Header>
 	<Dialog.Content
 		class={cn('rounded-xl! top-1/3 translate-y-0 overflow-hidden p-0', className)}
 		{showCloseButton}
 		{portalProps}
 	>
+		<Dialog.Header class="sr-only">
+			<Dialog.Title>{title ?? $_('common.commandPalette.title')}</Dialog.Title>
+			<Dialog.Description
+				>{description ?? $_('common.commandPalette.description')}</Dialog.Description
+			>
+		</Dialog.Header>
 		<Command {...restProps} bind:value bind:ref {children} />
 	</Dialog.Content>
 </Dialog.Root>

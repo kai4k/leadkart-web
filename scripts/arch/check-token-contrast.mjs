@@ -97,7 +97,24 @@ const RAW_PAIRS = [
 	// the active-link tint is `color-mix(accent-fg 10%, transparent)`: composited over the sidebar
 	['sidebar-accent-foreground', 'sidebar-accent', TEXT, { over: 'sidebar' }],
 	['sidebar-primary-foreground', 'sidebar-primary', TEXT],
-	['sidebar-ring', 'sidebar', UI]
+	['sidebar-ring', 'sidebar', UI],
+	// fix round A: the indicators and fills the review found ungated. `note` names the use; several
+	// of these re-check a value another pair already covers, on purpose, so the use is on record.
+	['ring', 'popover', UI, { note: 'highlighted list item bar' }],
+	['ring', 'popover', UI, { note: 'today marker' }],
+	['ring', 'card', UI, { note: 'selected table row bar' }],
+	['input', 'muted', UI, { note: 'active tab border on the tab list' }],
+	['background', 'foreground', TEXT, { note: 'tooltip' }],
+	['background', 'primary', UI, { note: 'switch thumb on the checked track (light)' }],
+	['primary-foreground', 'primary', UI, { note: 'switch thumb on the checked track (dark)' }],
+	['secondary-foreground', 'secondary-hover', TEXT],
+	['foreground', 'row-hover', TEXT],
+	['muted-foreground', 'row-hover', TEXT],
+	['primary-hover', 'background', TEXT, { note: 'link hover' }],
+	['primary-hover', 'card', TEXT, { note: 'link hover' }],
+	// toasts: text and icon on the soft status fills
+	...STATUS.map((s) => ['foreground', `${s}-soft`, TEXT, { note: 'toast text' }]),
+	['foreground', 'destructive-soft', TEXT, { note: 'toast text' }]
 ];
 
 /** @type {Pair[]} */
@@ -106,7 +123,7 @@ export const PAIRS = RAW_PAIRS.map(([fg, bg, min, opts = {}]) => ({
 	bg,
 	min,
 	...opts,
-	label: `${fg} on ${bg}${opts.over && opts.over !== 'card' ? ` (over ${opts.over})` : ''}${opts.alpha ? ` @${opts.alpha}` : ''}`
+	label: `${fg} on ${bg}${opts.over && opts.over !== 'card' ? ` (over ${opts.over})` : ''}${opts.alpha ? ` @${opts.alpha}` : ''}${opts.note ? ` [${opts.note}]` : ''}`
 }));
 
 const toRgb = converter('rgb');

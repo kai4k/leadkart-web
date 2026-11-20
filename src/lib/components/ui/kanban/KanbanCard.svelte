@@ -114,7 +114,7 @@
 		'hover:ring-border-strong hover:ring-1',
 		'focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:outline-none',
 		draggable && 'cursor-grab active:cursor-grabbing',
-		isDragging && 'ring-primary opacity-50 ring-2',
+		isDragging && 'bg-muted ring-primary shadow-md ring-2',
 		className
 	)}
 	ondragstart={onDragStart}

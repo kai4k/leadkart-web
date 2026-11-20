@@ -56,10 +56,48 @@ bottom-right`, `richColors`, `closeButton`, token classes only; icons via `#lib/
 
 ## Stacking
 
-Generated `z-50` becomes the token scale (`--z-overlay` 1200 for scrims, `--z-modal` 1300 for
-dialog/sheet/alert-dialog panels, `--z-popover` 1400 for popover/dropdown, `--z-tooltip` 1600).
-The shell's topbar and footer sit at `--z-sticky` 1100, so a `z-50` sheet slid UNDER them and its
-header was clipped (the vaul drawer had the same bug).
+The normaliser maps a generated `z-50` per component family (`Z_BY_FAMILY` in
+`scripts/shadcn/normalize.mjs`): dialog, sheet and alert-dialog use `--z-modal` (1300) for the panel
+AND the scrim; sidebar and table parts use `--z-sticky`; everything else (popover, select, dropdown,
+calendar popups) floats at `--z-popover` (1400); tooltip is `--z-tooltip`. The scrim shares the
+panel's layer on purpose: scrims at 1200 under panels at 1300 meant a second modal's scrim sat UNDER
+the first panel (not dimmed; a click on it was an outside press for the second modal). On one layer
+the DOM order decides, and portal order is open order, so a confirm over a form sheet covers it.
+The shell's topbar and footer sit at `--z-sticky` 1100, below every modal.
+
+## Overlay names, sizes and close controls (fix round A)
+
+- `dialog-content`, `sheet-content` (and the Drawer shim through them) need an accessible name: a
+  `title` prop (rendered as the Title part; `titleHidden` keeps it as the name only), a `Title`
+  part, or `aria-label`. `assertOverlayName` (`ui/overlay-name.ts`) throws in development and tests
+  when none is present after mount; it is a no-op in a production build.
+- `dialog-content` takes `size`: `sm` 24rem, `md` 32rem (default), `lg` 48rem, `xl` 64rem (from
+  `sm` up; below it the viewport minus 2rem). `sheet-content` takes `size` for left/right sheets:
+  `sm` 24rem, `md` 32rem, `lg` 40rem (default). Call sites use a named size, never a `max-w-*`
+  override. The project's page-width tokens are `--page-width-*`, not `--container-*`: Tailwind v4
+  derives `max-w-sm|md|lg|xl|2xl` from `--container-*`, and reusing the names silently made
+  `max-w-lg` 64rem.
+- A close control is ONE element: `<Dialog.Close>{#snippet child({ props })}<Button {...props}>` .
+  A `<button>` or `<Button>` nested in a Close part (which is itself a button) is invalid HTML.
+- `command/command-dialog.svelte`: the sr-only Header (title, description) is inside `Content`.
+- `sonner/sonner.svelte`: no `richColors`; success, error, warning and info toasts are the soft status
+  fill + a full-strength status border + a status icon, tokens only (`!` beats sonner's unlayered
+  per-toast background).
+
+## Labels (the i18n pattern for shared primitives)
+
+`ui/**` and `form/**` may import the `svelte-i18n` `_` store for DEFAULT labels (`common.close`,
+`common.pagination.*`, `form.calendar.*`, `form.combobox.*`, ...); they still must not import from
+`features/**`. A caller overrides any label through a prop. There is no labels context. bits-ui's own
+English defaults ("Previous", "Select a month", pagination labels) are overridden through its props.
+
+## Highlight, hover and selection (fix round A)
+
+- `.item-highlight` (`src/styles/utilities.css`): the one indicator of the active item in every popover
+  list (command, combobox, dropdown, select, TagInput suggestions): a 2px start-edge bar in `--ring`
+  (3:1 on the popover, gated). The fill alone (`--muted` on `--popover`) is ~1.35:1.
+- `table/table-row.svelte`: hover is the opaque `--row-hover` (half way between card and muted); a
+  selected row (`data-[state=selected]`) is `--muted` with a 3px start-edge `--ring` bar (mirrored in RTL).
 
 ## Display family (Task 5)
 
@@ -68,17 +106,20 @@ Regenerated: `button`, `badge`, `alert` (root only), `tabs`, `pagination` (parts
 alphas fixed: `card` (padding/elevation/surface props, 40+ call sites), `avatar` (initials +
 group), `skeleton` (shapes), `progress`, `slider`, `breadcrumb` (items array).
 
-- `button/button.svelte`: `cva` (not tailwind-variants); Domiex sizes (`h-10 px-6` default, `h-8 px-3
+- `button/button.svelte`: focus ring offset is `ring-offset-background` (the default offset colour is white:
+  a white halo in dark); `secondary` hover is the opaque `--secondary-hover`; `cva` (not tailwind-variants); Domiex sizes (`h-10 px-6` default, `h-8 px-3
 text-xs` sm, `h-12 px-7` lg, `icon*` squares); `default` uses `hover:bg-primary-hover`,
   `destructive` is a SOLID fill with `hover:bg-destructive-hover` (the stock one is a translucent
   tint); `outline` keeps `dark:bg-input-fill`; extra `tonal` variant; `loading` (spinner,
   `aria-busy`, disabled) and `focusableWhileLoading`; `href` renders an `<a>` (a disabled one has no
   href). The `aria-invalid:` ring alphas are dropped. `fullWidth` is gone: `class="w-full"`.
 - `badge/badge.svelte`: shadcn variants + soft status variants `neutral|info|success|warning|danger|brand`
-  on the soft tokens (`bg-success-soft text-success`, ...). `appearance` and `size` are gone.
+  on the soft tokens (`bg-success-soft text-success`, ...). `appearance` is gone. `size` is
+  `default | sm`: `sm` is the compact badge of dense lists, status columns and card corners.
 - `alert/alert.svelte`: LeadKart root (title, icon, dismiss) on soft status tokens; role is `alert` for
   destructive and warning, `status` otherwise. No compound parts (no user).
-- `tabs/tabs-trigger`: `text-foreground/60` -> `text-muted-foreground`. `tabs-list`, `toggle`,
+- `tabs/tabs-trigger`: `text-foreground/60` -> `text-muted-foreground`; the active tab has a
+  `border-input` border in light too (it was dark only): the active fill alone is ~1.2:1 on the tab list. `tabs-list`, `toggle`,
   `toggle-group`: tailwind-variants -> `cva`.
 - `pagination/*`: bits-ui parts as generated. The app's pager is `data/Pagination.svelte`
   (`page / pageCount / onChange`, plus `label`).

@@ -14,6 +14,17 @@
  * ───────────────────────────────────────────────────────────────────── */
 
 @layer utilities {
+	/* ═══ The highlighted item of a popover list ═════════════════════
+	 * One indicator for every list a keyboard moves through (command palette, combobox, dropdown,
+	 * select, TagInput suggestions). The fill (--muted / --accent on --popover) is only ~1.35:1, so
+	 * the active item also gets a 2px start-edge bar in --ring (3:1 on the popover, gated). */
+	.item-highlight {
+		border-inline-start: 2px solid transparent;
+	}
+	.item-highlight:is([data-selected], [data-highlighted], [data-active='true']) {
+		border-inline-start-color: var(--ring);
+	}
+
 	/* ═══ Fixed-overlay stack helpers ════════════════════════════════
 	 * Canonical position+z-index pairs for every overlay layer in the
 	 * stacking order. Use the `-fixed` variants when the element must

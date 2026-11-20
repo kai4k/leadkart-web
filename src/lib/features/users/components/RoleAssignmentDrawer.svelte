@@ -69,16 +69,21 @@
 	<Drawer.Content>
 		<Drawer.Header>
 			<div class="stack stack-tight">
-				<h2 class="h4">Roles for {user ? displayName(user) : 'user'}</h2>
+				<Drawer.Title class="h4">Roles for {user ? displayName(user) : 'user'}</Drawer.Title>
 				<p class="caption text-fg-muted">
 					Assignments are immediate. Each role contributes its default permissions; user-level
 					grants/revokes overlay on top.
 				</p>
 			</div>
 			<Drawer.Close>
-				<button type="button" class="hover:bg-bg-muted rounded-md p-1.5" aria-label="Close"
-					>×</button
-				>
+				{#snippet child({ props })}
+					<button
+						{...props}
+						type="button"
+						class="hover:bg-bg-muted rounded-md p-1.5"
+						aria-label="Close">×</button
+					>
+				{/snippet}
 			</Drawer.Close>
 		</Drawer.Header>
 		<Drawer.Body>
@@ -92,7 +97,7 @@
 							<li class="cluster cluster-spread border-border rounded-md border px-3 py-2">
 								<div class="stack stack-tight">
 									<span class="label">{role.name}</span>
-									{#if role.is_system_default}<Badge variant="info">System</Badge>{/if}
+									{#if role.is_system_default}<Badge variant="info" size="sm">System</Badge>{/if}
 								</div>
 								{#if !may.revokeRoles}
 									<!-- Go's identity.roles.revoke / platform.roles.manage is not held: nothing to offer. -->
@@ -101,7 +106,7 @@
 										<Icon icon={X} size="sm" /> Revoke
 									</Button>
 								{:else}
-									<Badge variant="warning">Protected</Badge>
+									<Badge variant="warning" size="sm">Protected</Badge>
 								{/if}
 							</li>
 						{/each}
@@ -131,7 +136,9 @@
 		</Drawer.Body>
 		<Drawer.Footer>
 			<Drawer.Close>
-				<Button variant="ghost">Done</Button>
+				{#snippet child({ props })}
+					<Button {...props} variant="ghost">Done</Button>
+				{/snippet}
 			</Drawer.Close>
 		</Drawer.Footer>
 	</Drawer.Content>

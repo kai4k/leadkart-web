@@ -62,7 +62,7 @@
 			id: 'reason',
 			header: 'Reason',
 			accessor: 'reason',
-			class: 'max-w-md truncate'
+			class: 'max-w-3xl truncate'
 		},
 		{
 			id: 'duration',
@@ -97,7 +97,7 @@
 
 {#snippet stateCell(req: PermissionRequestDto)}
 	{@const b = permissionRequestState(req.state)}
-	<Badge variant={b.variant}>{b.label}</Badge>
+	<Badge variant={b.variant} size="sm">{b.label}</Badge>
 {/snippet}
 
 {#snippet dateCell(req: PermissionRequestDto)}
@@ -131,7 +131,7 @@
 						onclick={() => setRole(tab.role)}
 						class={[
 							'label -mb-px inline-block border-b-2 px-4 py-2 transition-colors',
-							'focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
+							'focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none',
 							'focus-visible:ring-focus-ring',
 							active
 								? 'border-primary text-primary'

@@ -54,7 +54,7 @@
 		<Alert
 			variant="warning"
 			title={$_(`reload.${resetBlock.kind}.title`)}
-			class="pointer-events-auto max-w-md"
+			class="pointer-events-auto max-w-3xl"
 		>
 			<p>{$_(`reload.${resetBlock.kind}.body`)}</p>
 			<div class="mt-3">

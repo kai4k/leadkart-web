@@ -20,7 +20,7 @@
 </script>
 
 <div class="flex min-h-screen items-center justify-center p-6">
-	<div class="max-w-md text-center">
+	<div class="max-w-3xl text-center">
 		<h1 class="text-fg text-6xl font-bold">{page.status}</h1>
 		<p class="text-fg-muted mt-4 text-lg">
 			{page.error?.message ?? 'Something went wrong.'}

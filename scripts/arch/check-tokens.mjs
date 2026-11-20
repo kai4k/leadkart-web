@@ -35,6 +35,31 @@ export const PENDING_REGENERATION = new Set();
 const COLOUR_UTILITY =
 	/(?<![\w-])((?:[\w[\]&>*=.-]+:)*)(bg|text|ring|ring-offset|border|border-[xytblrse]|outline|fill|stroke|divide|decoration|from|via|to|shadow|placeholder|caret|accent)-([a-z][a-z0-9-]*)\/(\d{1,3}|\[[^\]\s]+\])(?![\w/])/g;
 
+// The forms the plain `utility-name/NN` pattern above cannot see, all of which paint a colour the
+// contrast gate never checked:
+//   bg-[color-mix(in_oklch,var(--x),var(--y)_5%)]      an arbitrary mix
+//   text-(--x)/50                                      a custom property with an alpha
+//   bg-primary/${n}                                    a dynamic alpha in a template literal
+//   opacity-70 on a text-bearing element               alpha by another name (disabled: is exempt)
+const COLOUR_PREFIX =
+	'bg|text|ring|ring-offset|border|border-[xytblrse]|outline|fill|stroke|divide|decoration|from|via|to|shadow|placeholder|caret|accent';
+const VARIANTS = '((?:[\\w[\\]&>*=.-]+:)*)';
+const ARBITRARY_MIX = new RegExp(
+	`(?<![\\w-])${VARIANTS}((?:${COLOUR_PREFIX})-\\[color-mix\\([^\\]]*\\])`,
+	'g'
+);
+const VAR_ALPHA = new RegExp(
+	`(?<![\\w-])${VARIANTS}((?:${COLOUR_PREFIX})-\\(--[\\w-]+\\)/(?:\\d{1,3}|\\[[^\\]\\s]+\\]))(?![\\w/])`,
+	'g'
+);
+const DYNAMIC_ALPHA = new RegExp(
+	`(?<![\\w-])${VARIANTS}((?:${COLOUR_PREFIX})-[a-z][a-z0-9-]*/\\$\\{)`,
+	'g'
+);
+const OPACITY = /(?<![\w-])((?:[\w[\]&>*=.()/-]+:)*)(opacity-(?:[1-9]\d?))(?![\w/])/g;
+/** A disabled control is exempt from the contrast requirement (WCAG 1.4.3), so its opacity is too. */
+const DISABLED_VARIANT = /disabled/;
+
 /** Colour names Tailwind can resolve: the `--color-*` theme entries plus the CSS keywords. */
 export function colourNames(tokensCss) {
 	const names = new Set(['black', 'white', 'transparent', 'current']);
@@ -54,6 +79,16 @@ export function findAlphaModifiers(rel, src, names) {
 		if (ALLOWED_ALPHA.has(utility) && variants === '') continue;
 		found.push({ line: src.slice(0, m.index).split('\n').length, utility: variants + utility });
 	}
+	for (const re of [ARBITRARY_MIX, VAR_ALPHA, DYNAMIC_ALPHA]) {
+		for (const m of src.matchAll(re)) {
+			found.push({ line: src.slice(0, m.index).split('\n').length, utility: m[1] + m[2] });
+		}
+	}
+	for (const m of src.matchAll(OPACITY)) {
+		const [, variants, utility] = m;
+		if (DISABLED_VARIANT.test(variants)) continue;
+		found.push({ line: src.slice(0, m.index).split('\n').length, utility: variants + utility });
+	}
 	return found;
 }
 
@@ -68,6 +103,11 @@ export function findColorScheme(rel, src) {
 	const stripped = src.replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '));
 	const found = [];
 	for (const m of stripped.matchAll(/(?<![\w-])color-scheme\s*:/g))
+		found.push({ line: stripped.slice(0, m.index).split('\n').length });
+	// Tailwind's `scheme-light` / `scheme-dark` / `scheme-light-dark` utilities set the same property.
+	for (const m of stripped.matchAll(
+		/(?<![\w-])(?:[\w[\]&>*=.-]+:)*scheme-(?:normal|light|dark|light-dark|only-light|only-dark)(?![\w-])/g
+	))
 		found.push({ line: stripped.slice(0, m.index).split('\n').length });
 	return found;
 }

@@ -14,7 +14,6 @@
 	{theme}
 	class="toaster group"
 	position="bottom-right"
-	richColors
 	closeButton
 	style="--normal-bg: var(--color-popover); --normal-text: var(--color-popover-foreground); --normal-border: var(--color-border);"
 	toastOptions={{
@@ -23,7 +22,14 @@
 				'bg-popover text-popover-foreground border border-border rounded-md shadow-lg group toast',
 			description: 'group-[.toast]:text-muted-foreground',
 			actionButton: 'group-[.toast]:bg-primary group-[.toast]:text-primary-foreground',
-			cancelButton: 'group-[.toast]:bg-muted group-[.toast]:text-muted-foreground'
+			cancelButton: 'group-[.toast]:bg-muted group-[.toast]:text-muted-foreground',
+			// Typed toasts: the soft status fill, a full-strength status border and a status icon, all
+			// tokens (sonner's own `richColors` palette ignores the primary colour and dark mode, and
+			// no gate can see it). `!` beats sonner's unlayered per-toast background.
+			success: 'bg-success-soft! border-success! text-foreground!',
+			error: 'bg-destructive-soft! border-destructive! text-foreground!',
+			warning: 'bg-warning-soft! border-warning! text-foreground!',
+			info: 'bg-info-soft! border-info! text-foreground!'
 		}
 	}}
 	{...restProps}
@@ -32,15 +38,15 @@
 		<Loader2 class="size-4 animate-spin" />
 	{/snippet}
 	{#snippet successIcon()}
-		<CircleCheck class="size-4" />
+		<CircleCheck class="size-4 text-success" />
 	{/snippet}
 	{#snippet errorIcon()}
-		<OctagonX class="size-4" />
+		<OctagonX class="size-4 text-destructive" />
 	{/snippet}
 	{#snippet infoIcon()}
-		<Info class="size-4" />
+		<Info class="size-4 text-info" />
 	{/snippet}
 	{#snippet warningIcon()}
-		<TriangleAlert class="size-4" />
+		<TriangleAlert class="size-4 text-warning" />
 	{/snippet}
 </Sonner>

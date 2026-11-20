@@ -53,15 +53,22 @@
 	<Drawer.Content>
 		<Drawer.Header>
 			<div class="stack stack-tight">
-				<h2 class="h4">Add team member</h2>
+				<Drawer.Title class="h4">Add team member</Drawer.Title>
 				<p class="caption text-fg-muted">
 					Sends a sign-in to the email below. Roles can be assigned after creation.
 				</p>
 			</div>
 			<Drawer.Close>
-				<button type="button" class="hover:bg-bg-muted rounded-md p-1.5" aria-label="Close">
-					×
-				</button>
+				{#snippet child({ props })}
+					<button
+						{...props}
+						type="button"
+						class="hover:bg-bg-muted rounded-md p-1.5"
+						aria-label="Close"
+					>
+						×
+					</button>
+				{/snippet}
 			</Drawer.Close>
 		</Drawer.Header>
 		<Drawer.Body>
@@ -123,7 +130,9 @@
 		{#if !success}
 			<Drawer.Footer>
 				<Drawer.Close>
-					<Button variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
+					{#snippet child({ props })}
+						<Button {...props} variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
+					{/snippet}
 				</Drawer.Close>
 				<Button type="submit" form="create-user-form" loading={form.isSubmitting}
 					>Create user</Button

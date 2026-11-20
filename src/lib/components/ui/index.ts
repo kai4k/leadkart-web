@@ -13,7 +13,13 @@ export {
 	avatarVariants,
 	avatarGroupItemVariants
 } from './avatar';
-export { Badge, type BadgeVariant, type BadgeVariants, badgeVariants } from './badge';
+export {
+	Badge,
+	type BadgeSize,
+	type BadgeVariant,
+	type BadgeVariants,
+	badgeVariants
+} from './badge';
 export { Breadcrumb, Breadcrumbs, type BreadcrumbItem } from './breadcrumb';
 export {
 	Button,

@@ -33,9 +33,9 @@
 		</div>
 		<div class="cluster cluster-tight">
 			{#if node.cycleBroken}
-				<Badge variant="warning">Cycle</Badge>
+				<Badge variant="warning" size="sm">Cycle</Badge>
 			{/if}
-			<Badge variant={status.variant}>{status.label}</Badge>
+			<Badge variant={status.variant} size="sm">{status.label}</Badge>
 		</div>
 	</a>
 

@@ -133,13 +133,20 @@
 	<Drawer.Content>
 		<Drawer.Header>
 			<div class="stack stack-tight">
-				<h2 class="h4">Create product</h2>
+				<Drawer.Title class="h4">Create product</Drawer.Title>
 				<p class="caption text-fg-muted">Add a pharma product to the tenant catalog.</p>
 			</div>
 			<Drawer.Close>
-				<button type="button" class="hover:bg-bg-muted rounded-md p-1.5" aria-label="Close">
-					<Icon icon={X} size="sm" />
-				</button>
+				{#snippet child({ props })}
+					<button
+						{...props}
+						type="button"
+						class="hover:bg-bg-muted rounded-md p-1.5"
+						aria-label="Close"
+					>
+						<Icon icon={X} size="sm" />
+					</button>
+				{/snippet}
 			</Drawer.Close>
 		</Drawer.Header>
 
@@ -334,7 +341,9 @@
 
 		<Drawer.Footer>
 			<Drawer.Close>
-				<Button variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
+				{#snippet child({ props })}
+					<Button {...props} variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
+				{/snippet}
 			</Drawer.Close>
 			<Button type="submit" form="create-product-form" loading={form.isSubmitting}>
 				Create product

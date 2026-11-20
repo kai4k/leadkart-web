@@ -38,10 +38,10 @@
 </script>
 
 <Dialog.Root bind:open busy={form.isSubmitting} {onOpenChange}>
-	<Dialog.Content>
+	<Dialog.Content size="xl">
 		<Dialog.Header>
 			<div class="stack stack-tight">
-				<h2 class="h5">Write off batch</h2>
+				<Dialog.Title class="h5 text-base">Write off batch</Dialog.Title>
 				{#if batch}
 					<p class="caption text-fg-muted">
 						Batch <code>{batch.batch_number}</code> · {batch.quantity_available} available
@@ -76,7 +76,9 @@
 		</Dialog.Body>
 		<Dialog.Footer>
 			<Dialog.Close>
-				<Button variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
+				{#snippet child({ props })}
+					<Button {...props} variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
+				{/snippet}
 			</Dialog.Close>
 			<Button type="submit" form="write-off-form" variant="destructive" loading={form.isSubmitting}>
 				Write off

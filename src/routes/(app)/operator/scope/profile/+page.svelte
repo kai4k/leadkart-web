@@ -26,7 +26,7 @@
 
 <div class="stack stack-relaxed">
 	<header class="cluster cluster-spread">
-		<Badge variant={badge.variant}>{badge.label}</Badge>
+		<Badge variant={badge.variant} size="sm">{badge.label}</Badge>
 		{#if canImpersonate}
 			<Button variant="ghost" onclick={() => (impersonateOpen = true)}>
 				<Icon icon={Eye} size="sm" /> Impersonate this tenant

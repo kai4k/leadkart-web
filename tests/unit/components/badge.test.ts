@@ -39,6 +39,18 @@ describe('Badge', () => {
 		render({ variant: 'outline' });
 		expect(cls()).toContain('border-border');
 	});
+	it('size="sm" is the compact badge: tighter padding and the 2xs type step', () => {
+		render({ variant: 'success', size: 'sm' });
+		expect(cls()).toContain('px-1.5');
+		expect(cls()).toContain('text-2xs');
+		expect(cls()).not.toContain('px-2 ');
+		expect(cls()).not.toContain('text-xs');
+	});
+	it('the default size keeps the regular padding and text-xs', () => {
+		render({ variant: 'success' });
+		expect(cls()).toContain('px-2');
+		expect(cls()).toContain('text-xs');
+	});
 	it('renders a link for href', () => {
 		render({ href: '/x' });
 		expect(target.querySelector('a[data-slot="badge"]')).not.toBeNull();

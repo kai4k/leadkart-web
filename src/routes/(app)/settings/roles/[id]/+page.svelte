@@ -182,7 +182,7 @@
 				<div class="stack stack-tight">
 					<div class="cluster cluster-tight">
 						<h1 class="h1">{role.name}</h1>
-						<Badge variant={badge.variant}>{badge.label}</Badge>
+						<Badge variant={badge.variant} size="sm">{badge.label}</Badge>
 					</div>
 					<p class="caption text-fg-muted">Hierarchy level {role.hierarchy_level}</p>
 					<div class="cluster cluster-tight">

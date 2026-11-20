@@ -82,15 +82,20 @@
 	<Drawer.Content>
 		<Drawer.Header>
 			<div class="stack stack-tight">
-				<h2 class="h4">Manager for {user ? displayName(user) : 'user'}</h2>
+				<Drawer.Title class="h4">Manager for {user ? displayName(user) : 'user'}</Drawer.Title>
 				<p class="caption text-fg-muted">
 					Used by hierarchy-scoped lists (lead reports, leave approvals) and the org tree.
 				</p>
 			</div>
 			<Drawer.Close>
-				<button type="button" class="hover:bg-bg-muted rounded-md p-1.5" aria-label="Close"
-					>×</button
-				>
+				{#snippet child({ props })}
+					<button
+						{...props}
+						type="button"
+						class="hover:bg-bg-muted rounded-md p-1.5"
+						aria-label="Close">×</button
+					>
+				{/snippet}
 			</Drawer.Close>
 		</Drawer.Header>
 		<Drawer.Body>
@@ -108,7 +113,9 @@
 		</Drawer.Body>
 		<Drawer.Footer>
 			<Drawer.Close>
-				<Button variant="ghost" disabled={isPending}>Cancel</Button>
+				{#snippet child({ props })}
+					<Button {...props} variant="ghost" disabled={isPending}>Cancel</Button>
+				{/snippet}
 			</Drawer.Close>
 			<Button loading={isPending} onclick={onSave}>Save</Button>
 		</Drawer.Footer>

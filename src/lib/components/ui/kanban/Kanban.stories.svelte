@@ -60,7 +60,7 @@
 							<p class="caption text-fg-muted truncate-1">{lead.company}</p>
 							<div class="flex items-center justify-between">
 								<span class="caption text-fg tabular-nums">{lead.value}</span>
-								<Badge variant="neutral">{lead.owner}</Badge>
+								<Badge variant="neutral" size="sm">{lead.owner}</Badge>
 							</div>
 						</div>
 					</Kanban.Card>
@@ -75,7 +75,7 @@
 							<p class="caption text-fg-muted truncate-1">{lead.company}</p>
 							<div class="flex items-center justify-between">
 								<span class="caption text-fg tabular-nums">{lead.value}</span>
-								<Badge variant="neutral">{lead.owner}</Badge>
+								<Badge variant="neutral" size="sm">{lead.owner}</Badge>
 							</div>
 						</div>
 					</Kanban.Card>
@@ -90,7 +90,7 @@
 							<p class="caption text-fg-muted truncate-1">{lead.company}</p>
 							<div class="flex items-center justify-between">
 								<span class="caption text-fg tabular-nums">{lead.value}</span>
-								<Badge variant="neutral">{lead.owner}</Badge>
+								<Badge variant="neutral" size="sm">{lead.owner}</Badge>
 							</div>
 						</div>
 					</Kanban.Card>
@@ -105,7 +105,7 @@
 							<p class="caption text-fg-muted truncate-1">{lead.company}</p>
 							<div class="flex items-center justify-between">
 								<span class="caption text-fg tabular-nums">{lead.value}</span>
-								<Badge variant="neutral">{lead.owner}</Badge>
+								<Badge variant="neutral" size="sm">{lead.owner}</Badge>
 							</div>
 						</div>
 					</Kanban.Card>

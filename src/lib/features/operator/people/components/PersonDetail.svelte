@@ -102,7 +102,7 @@
 						<div class="stack stack-tight min-w-0">
 							<div class="flex flex-wrap items-center gap-2">
 								<span class="h2">{displayName}</span>
-								<Badge variant={badge.variant}>{badge.label}</Badge>
+								<Badge variant={badge.variant} size="sm">{badge.label}</Badge>
 							</div>
 							<div class="cluster cluster-tight flex-wrap">
 								<p class="body-base text-fg-muted break-all">{p.email}</p>
@@ -179,7 +179,7 @@
 												{formatDate(m.joined_at)}
 											</td>
 											<td class="py-2 pe-4">
-												<Badge variant={membership.variant}>
+												<Badge variant={membership.variant} size="sm">
 													{membership.label}
 												</Badge>
 											</td>

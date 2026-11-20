@@ -129,7 +129,7 @@
 <Drawer.Root bind:open busy={form.isSubmitting} {onOpenChange}>
 	<Drawer.Content>
 		<Drawer.Header>
-			<h2 class="h5">Revise quotation</h2>
+			<Drawer.Title class="h5 text-base">Revise quotation</Drawer.Title>
 			<p class="body-sm text-fg-muted">
 				Edits create a new revision; previous revisions remain on file.
 			</p>
@@ -163,7 +163,9 @@
 			</Drawer.Body>
 			<Drawer.Footer>
 				<Drawer.Close>
-					<Button variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
+					{#snippet child({ props })}
+						<Button {...props} variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
+					{/snippet}
 				</Drawer.Close>
 				<Button
 					type="submit"

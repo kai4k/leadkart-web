@@ -19,6 +19,7 @@
 	import { getPreferences, PREFERENCE_VALUES } from '$features/preferences';
 	import { Icon, Plus } from '#lib/icons/index.ts';
 	import Fields from './Fields.svelte';
+	import Overlays from './Overlays.svelte';
 
 	const prefs = getPreferences();
 
@@ -82,6 +83,9 @@
 
 	<!-- ═══ FIELDS ═══════════════════════════════════════════════════════ -->
 	<Fields />
+
+	<!-- ═══ OVERLAYS & FEEDBACK ══════════════════════════════════════════ -->
+	<Overlays />
 
 	<!-- ═══ CARDS ════════════════════════════════════════════════════════ -->
 	<section aria-labelledby="cards-heading" class="stack stack-loose">

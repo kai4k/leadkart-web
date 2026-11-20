@@ -61,10 +61,10 @@
 </script>
 
 <Dialog.Root bind:open busy={form.isSubmitting} {onOpenChange}>
-	<Dialog.Content class="max-w-md">
+	<Dialog.Content size="lg">
 		<Dialog.Header>
 			<div class="stack stack-tight">
-				<h2 class="h5">Reassign lead</h2>
+				<Dialog.Title class="h5 text-base">Reassign lead</Dialog.Title>
 				<p class="body-sm text-fg-muted">
 					Transfer ownership to another team member. The history tab keeps an audit trail.
 				</p>
@@ -111,7 +111,9 @@
 
 		<Dialog.Footer>
 			<Dialog.Close>
-				<Button variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
+				{#snippet child({ props })}
+					<Button {...props} variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
+				{/snippet}
 			</Dialog.Close>
 			<Button type="submit" form="reassign-lead-form" loading={form.isSubmitting}>Reassign</Button>
 		</Dialog.Footer>

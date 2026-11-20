@@ -104,7 +104,7 @@
 			<header class="stack stack-tight">
 				<div class="cluster cluster-tight">
 					<h1 class="h1">Permission request</h1>
-					<Badge variant={badge.variant}>{badge.label}</Badge>
+					<Badge variant={badge.variant} size="sm">{badge.label}</Badge>
 				</div>
 				<div class="cluster cluster-tight">
 					<code class="caption text-fg-subtle">{req.id}</code>

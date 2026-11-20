@@ -48,7 +48,7 @@
 					{@const href = item.href as ResolvedPathname}
 					<a
 						{href}
-						class="label-small text-fg-muted hover:text-fg focus-visible:ring-focus-ring inline-flex items-center gap-1 transition-colors focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+						class="label-small text-fg-muted hover:text-fg focus-visible:ring-focus-ring inline-flex items-center gap-1 transition-colors focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-background focus-visible:outline-none"
 					>
 						{#if item.icon}<Icon icon={item.icon} size="xs" />{/if}
 						{item.label}

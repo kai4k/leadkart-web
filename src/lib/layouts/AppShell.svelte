@@ -67,6 +67,17 @@
 	function closeDrawer() {
 		sidebarOpen = false;
 	}
+
+	// The mobile sheet's panel is `lg:hidden`, its scrim and scroll lock are not: resizing across the
+	// breakpoint with it open would leave a dimmed, locked page behind a hidden panel. Close it.
+	$effect(() => {
+		const query = window.matchMedia('(min-width: 64rem)');
+		const onChange = (event: MediaQueryListEvent) => {
+			if (event.matches) sidebarOpen = false;
+		};
+		query.addEventListener('change', onChange);
+		return () => query.removeEventListener('change', onChange);
+	});
 </script>
 
 <div class="lk-app">

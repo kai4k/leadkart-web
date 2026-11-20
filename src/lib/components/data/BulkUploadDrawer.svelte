@@ -187,15 +187,22 @@
 	<Drawer.Content>
 		<Drawer.Header>
 			<div class="stack stack-tight">
-				<h2 class="h4">{title}</h2>
+				<Drawer.Title class="h4">{title}</Drawer.Title>
 				{#if description}
 					<p class="caption text-fg-muted">{description}</p>
 				{/if}
 			</div>
 			<Drawer.Close>
-				<button type="button" class="hover:bg-bg-muted rounded-md p-1.5" aria-label="Close">
-					<Icon icon={X} size="sm" />
-				</button>
+				{#snippet child({ props })}
+					<button
+						{...props}
+						type="button"
+						class="hover:bg-bg-muted rounded-md p-1.5"
+						aria-label="Close"
+					>
+						<Icon icon={X} size="sm" />
+					</button>
+				{/snippet}
 			</Drawer.Close>
 		</Drawer.Header>
 
@@ -380,7 +387,9 @@
 		<Drawer.Footer>
 			{#if step === 'upload'}
 				<Drawer.Close>
-					<Button variant="ghost">Cancel</Button>
+					{#snippet child({ props })}
+						<Button {...props} variant="ghost">Cancel</Button>
+					{/snippet}
 				</Drawer.Close>
 				<Button onclick={runPreview} disabled={!file || previewLoading} loading={previewLoading}>
 					Preview

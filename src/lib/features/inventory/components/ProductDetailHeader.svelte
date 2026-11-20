@@ -73,7 +73,7 @@
 			</div>
 
 			<Dropdown.Root>
-				<Dropdown.Trigger variant="ghost" aria-label="More actions">
+				<Dropdown.Trigger variant="ghost" size="icon" aria-label="More actions">
 					<Icon icon={MoreVertical} size="sm" />
 				</Dropdown.Trigger>
 				<Dropdown.Menu>

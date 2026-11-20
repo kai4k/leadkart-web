@@ -19,7 +19,12 @@ describe('import-specifiers', () => {
 		["export { Calendar } from 'bits-ui';", 'bits-ui'],
 		["import 'bits-ui';", 'bits-ui'],
 		["const m = await import('bits-ui');", 'bits-ui'],
-		["import {\n a,\n b\n} from 'bits-ui';", 'bits-ui']
+		["import {\n a,\n b\n} from 'bits-ui';", 'bits-ui'],
+		// on the same line as the opening <script> tag (nothing but `>` before the import)
+		['<script lang="ts">import { Dialog } from \'bits-ui\';</script>', 'bits-ui'],
+		["<script>import 'bits-ui';</script>", 'bits-ui'],
+		// a dynamic import written with a template literal
+		['const m = await import(`bits-ui`);', 'bits-ui']
 	])('reads %j', (src, specifier) => {
 		expect(importSpecifiers(src).map((i) => i.specifier)).toEqual([specifier]);
 	});
@@ -75,12 +80,15 @@ describe('check-bits-ui-boundary', () => {
 });
 
 describe('check-banned-packages', () => {
-	it.each(['vaul-svelte', 'lucide-svelte', 'mode-watcher', 'lucide-svelte/icons/x'])(
-		'refuses an import of %s',
-		(pkg) => {
-			expect(findImportViolations(`import x from '${pkg}';`)).toHaveLength(1);
-		}
-	);
+	it.each([
+		'vaul-svelte',
+		'lucide-svelte',
+		'mode-watcher',
+		'lucide-svelte/icons/x',
+		'tailwind-variants'
+	])('refuses an import of %s', (pkg) => {
+		expect(findImportViolations(`import x from '${pkg}';`)).toHaveLength(1);
+	});
 
 	it('allows the replacements and look-alikes', () => {
 		expect(findImportViolations("import { Check } from '@lucide/svelte';")).toEqual([]);

@@ -29,7 +29,7 @@
 	<title>{$_('auth.mustChange.title')} · LeadKart</title>
 </svelte:head>
 
-<div class="stack stack-relaxed mx-auto max-w-lg">
+<div class="stack stack-relaxed mx-auto max-w-5xl">
 	<header class="stack stack-tight">
 		<h1 class="h1">{$_('auth.mustChange.title')}</h1>
 		<p class="body-base text-fg-muted">{$_('auth.mustChange.subtitle')}</p>

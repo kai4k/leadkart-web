@@ -80,7 +80,7 @@
 </script>
 
 <Dialog.Root bind:open busy={loading} {onOpenChange}>
-	<Dialog.Content>
+	<Dialog.Content size="xl">
 		<Dialog.Header>
 			<div class="cluster cluster-tight items-start gap-3">
 				{#if vc.icon}
@@ -92,7 +92,7 @@
 					</span>
 				{/if}
 				<div class="stack stack-tight">
-					<h2 class="h5">{title}</h2>
+					<Dialog.Title class="h5 text-base">{title}</Dialog.Title>
 					{#if description}<p class="body-sm text-fg-muted">{description}</p>{/if}
 				</div>
 			</div>
@@ -102,7 +102,9 @@
 		{/if}
 		<Dialog.Footer>
 			<Dialog.Close>
-				<Button variant="ghost" disabled={loading}>{cancelLabel}</Button>
+				{#snippet child({ props })}
+					<Button {...props} variant="ghost" disabled={loading}>{cancelLabel}</Button>
+				{/snippet}
 			</Dialog.Close>
 			<Button variant={buttonVariant} {loading} onclick={onConfirmClick}>
 				{confirmLabel}

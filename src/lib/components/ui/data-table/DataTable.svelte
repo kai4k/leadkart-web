@@ -239,7 +239,7 @@
 									{#if sort?.column === col.sortBy}
 										<Icon icon={sort.order === 'asc' ? ChevronUp : ChevronDown} size="xs" />
 									{:else}
-										<Icon icon={ChevronsUpDown} size="xs" class="opacity-30" />
+										<Icon icon={ChevronsUpDown} size="xs" class="text-muted-foreground" />
 									{/if}
 								</button>
 							{:else}

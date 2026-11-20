@@ -91,16 +91,23 @@
 	<Drawer.Content>
 		<Drawer.Header>
 			<div class="stack stack-tight">
-				<h2 class="h4">Permission overrides for {user ? displayName(user) : 'user'}</h2>
+				<Drawer.Title class="h4"
+					>Permission overrides for {user ? displayName(user) : 'user'}</Drawer.Title
+				>
 				<p class="caption text-fg-muted">
 					Atomic replace: this exact set of grants and revokes overlays on top of role-default
 					permissions. Empty arrays clear the overlay.
 				</p>
 			</div>
 			<Drawer.Close>
-				<button type="button" class="hover:bg-bg-muted rounded-md p-1.5" aria-label="Close"
-					>×</button
-				>
+				{#snippet child({ props })}
+					<button
+						{...props}
+						type="button"
+						class="hover:bg-bg-muted rounded-md p-1.5"
+						aria-label="Close">×</button
+					>
+				{/snippet}
 			</Drawer.Close>
 		</Drawer.Header>
 		<Drawer.Body>
@@ -120,7 +127,7 @@
 					<ul class="cluster" aria-label="Granted permissions">
 						{#each granted as p (p)}
 							<li>
-								<Badge variant="success"
+								<Badge variant="success" size="sm"
 									>{p}
 									<button
 										type="button"
@@ -150,7 +157,7 @@
 					<ul class="cluster" aria-label="Revoked permissions">
 						{#each revoked as p (p)}
 							<li>
-								<Badge variant="danger"
+								<Badge variant="danger" size="sm"
 									>{p}
 									<button
 										type="button"
@@ -168,7 +175,9 @@
 		</Drawer.Body>
 		<Drawer.Footer>
 			<Drawer.Close>
-				<Button variant="ghost" disabled={isPending}>Cancel</Button>
+				{#snippet child({ props })}
+					<Button {...props} variant="ghost" disabled={isPending}>Cancel</Button>
+				{/snippet}
 			</Drawer.Close>
 			<Button loading={isPending} onclick={onSave}>Apply overrides</Button>
 		</Drawer.Footer>

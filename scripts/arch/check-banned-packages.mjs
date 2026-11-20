@@ -6,6 +6,7 @@
  *   - `vaul-svelte`   → `ui/sheet` (the Drawer is a shim over it)
  *   - `lucide-svelte` → `@lucide/svelte`, only through the `#lib/icons` registry
  *   - `mode-watcher`  → the preferences store (`<html data-mode>`)
+ *   - `tailwind-variants` → `class-variance-authority` (CLAUDE.md: cva is the one variants library)
  * It is a violation to import any of them under `src/` or `tests/`, or to list one in
  * `package.json` (dependencies, devDependencies, peerDependencies, optionalDependencies).
  *
@@ -17,7 +18,7 @@ import { fileURLToPath } from 'node:url';
 import { importSpecifiers, isPackage } from './lib/import-specifiers.mjs';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
-export const BANNED = ['vaul-svelte', 'lucide-svelte', 'mode-watcher'];
+export const BANNED = ['vaul-svelte', 'lucide-svelte', 'mode-watcher', 'tailwind-variants'];
 const DEP_FIELDS = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'];
 
 /** @returns {Array<{ line: number, specifier: string }>} */

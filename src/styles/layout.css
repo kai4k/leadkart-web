@@ -48,7 +48,7 @@
 	/* ═══ Center — max-width container ═══ */
 	.center {
 		box-sizing: content-box;
-		max-width: var(--center-width, var(--container-lg));
+		max-width: var(--center-width, var(--page-width-lg));
 		margin-inline: auto;
 		padding-inline: var(--spacing-4);
 	}

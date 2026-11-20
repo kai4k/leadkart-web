@@ -10,7 +10,7 @@
 		[
 			'group/button inline-flex shrink-0 items-center justify-center gap-2 rounded-md border border-transparent text-sm font-medium whitespace-nowrap',
 			'transition-colors outline-none select-none',
-			'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+			'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
 			'active:not-aria-[haspopup]:translate-y-px',
 			'disabled:pointer-events-none disabled:opacity-60 aria-disabled:pointer-events-none aria-disabled:opacity-60',
 			'motion-reduce:transition-none motion-reduce:active:translate-y-0',
@@ -24,7 +24,7 @@
 					outline:
 						'border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted dark:border-input dark:bg-input-fill',
 					secondary:
-						'bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary',
+						'bg-secondary text-secondary-foreground hover:bg-secondary-hover aria-expanded:bg-secondary',
 					ghost: 'hover:bg-muted hover:text-foreground aria-expanded:bg-muted',
 					link: 'text-primary underline-offset-4 hover:text-primary-hover hover:underline',
 					tonal: 'border-border bg-muted text-foreground hover:bg-secondary'

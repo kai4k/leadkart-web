@@ -42,9 +42,9 @@
 </script>
 
 <Dialog.Root bind:open busy={form.isSubmitting} {onOpenChange}>
-	<Dialog.Content>
+	<Dialog.Content size="xl">
 		<Dialog.Header>
-			<h2 class="h5">Dispatch order</h2>
+			<Dialog.Title class="h5 text-base">Dispatch order</Dialog.Title>
 			<p class="body-sm text-fg-muted">
 				Creates a consignment note in Dispatch and flips the order to dispatched.
 			</p>
@@ -73,7 +73,9 @@
 			</Dialog.Body>
 			<Dialog.Footer>
 				<Dialog.Close>
-					<Button variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
+					{#snippet child({ props })}
+						<Button {...props} variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
+					{/snippet}
 				</Dialog.Close>
 				<Button
 					type="submit"

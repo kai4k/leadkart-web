@@ -67,15 +67,22 @@
 	<Drawer.Content>
 		<Drawer.Header>
 			<div class="stack stack-tight">
-				<h2 class="h4">Add batch</h2>
+				<Drawer.Title class="h4">Add batch</Drawer.Title>
 				<p class="caption text-fg-muted">
 					Record an inward batch with quantity, expiry, and supplier info.
 				</p>
 			</div>
 			<Drawer.Close>
-				<button type="button" class="hover:bg-bg-muted rounded-md p-1.5" aria-label="Close">
-					<Icon icon={X} size="sm" />
-				</button>
+				{#snippet child({ props })}
+					<button
+						{...props}
+						type="button"
+						class="hover:bg-bg-muted rounded-md p-1.5"
+						aria-label="Close"
+					>
+						<Icon icon={X} size="sm" />
+					</button>
+				{/snippet}
 			</Drawer.Close>
 		</Drawer.Header>
 
@@ -167,7 +174,9 @@
 
 		<Drawer.Footer>
 			<Drawer.Close>
-				<Button variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
+				{#snippet child({ props })}
+					<Button {...props} variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
+				{/snippet}
 			</Drawer.Close>
 			<Button type="submit" form="add-batch-form" loading={form.isSubmitting}>Add batch</Button>
 		</Drawer.Footer>

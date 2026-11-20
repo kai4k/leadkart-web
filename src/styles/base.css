@@ -114,7 +114,7 @@
 
 	/* Page content max-width — soft cap so wide screens don't sprawl.
 	   No user toggle (Vercel / Linear ship a single width). */
-	--lk-content-max-width: var(--container-2xl);
+	--lk-content-max-width: var(--page-width-2xl);
 
 	/* ── Layout-mode shell vars (Apple / Notion canon) ───────────
 	   In every mode the sidebar runs FULL-HEIGHT from top:0 and the

@@ -68,7 +68,7 @@
 						aria-current={active ? 'page' : undefined}
 						class={cn(
 							'label -mb-px inline-block border-b-2 px-4 py-2 transition-colors',
-							'focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
+							'focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none',
 							'focus-visible:ring-focus-ring',
 							active
 								? 'border-primary text-primary'

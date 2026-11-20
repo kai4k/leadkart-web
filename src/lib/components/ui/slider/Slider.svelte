@@ -70,7 +70,7 @@
 			'bg-primary block size-4 rounded-full shadow-md',
 			'border-2 border-[var(--color-bg-elevated)]',
 			'transition-transform duration-[var(--duration-fast)]',
-			'focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
+			'focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none',
 			'hover:scale-110 active:scale-95',
 			'data-[disabled]:pointer-events-none data-[disabled]:opacity-50'
 		)}

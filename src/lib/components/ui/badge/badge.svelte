@@ -26,14 +26,21 @@
 					warning: 'bg-warning-soft text-warning',
 					danger: 'bg-destructive-soft text-destructive',
 					brand: 'bg-primary-soft text-primary'
+				},
+				// `sm` is the compact badge of dense lists, status columns and card corners (what
+				// `size="sm"` was before Phase 2): the 2xs type step and tighter inline padding.
+				size: {
+					default: '',
+					sm: 'px-1.5 text-2xs'
 				}
 			},
-			defaultVariants: { variant: 'neutral' }
+			defaultVariants: { variant: 'neutral', size: 'default' }
 		}
 	);
 
 	export type BadgeVariants = VariantProps<typeof badgeVariants>;
 	export type BadgeVariant = NonNullable<BadgeVariants['variant']>;
+	export type BadgeSize = NonNullable<BadgeVariants['size']>;
 	export type BadgeProps = WithElementRef<HTMLAttributes<HTMLSpanElement>> &
 		WithElementRef<HTMLAnchorAttributes> &
 		BadgeVariants;
@@ -45,6 +52,7 @@
 		href,
 		class: className,
 		variant = 'neutral',
+		size = 'default',
 		children,
 		...restProps
 	}: BadgeProps = $props();
@@ -55,7 +63,7 @@
 	bind:this={ref}
 	data-slot="badge"
 	{href}
-	class={cn(badgeVariants({ variant }), className)}
+	class={cn(badgeVariants({ variant, size }), className)}
 	{...restProps}
 >
 	{@render children?.()}

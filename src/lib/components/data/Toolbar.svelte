@@ -32,7 +32,7 @@
 			<div class="min-w-0 flex-1">{@render title()}</div>
 		{/if}
 		{#if search}
-			<div class="max-w-md min-w-0 flex-1">{@render search()}</div>
+			<div class="max-w-3xl min-w-0 flex-1">{@render search()}</div>
 		{/if}
 		{#if actions}
 			<div class="cluster cluster-tight shrink-0">{@render actions()}</div>

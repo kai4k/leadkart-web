@@ -82,7 +82,7 @@
 
 {#snippet statusCell(p: PersonDto)}
 	{@const badge = personLifecycle(personLifecycleKey(p))}
-	<Badge variant={badge.variant}>{badge.label}</Badge>
+	<Badge variant={badge.variant} size="sm">{badge.label}</Badge>
 {/snippet}
 
 {#snippet dateCell(p: PersonDto)}
