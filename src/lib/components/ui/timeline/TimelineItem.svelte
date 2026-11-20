@@ -63,11 +63,11 @@
 					class={cn(
 						'block h-2 w-2 rounded-full',
 						iconAccent === 'primary' && 'bg-primary',
-						iconAccent === 'success' && 'bg-success',
-						iconAccent === 'warning' && 'bg-warning',
-						iconAccent === 'danger' && 'bg-destructive',
-						iconAccent === 'info' && 'bg-info',
-						iconAccent === 'neutral' && 'bg-muted-foreground'
+						iconAccent === 'success' && 'bg-success-indicator',
+						iconAccent === 'warning' && 'bg-warning-indicator',
+						iconAccent === 'danger' && 'bg-destructive-indicator',
+						iconAccent === 'info' && 'bg-info-indicator',
+						iconAccent === 'neutral' && 'bg-subtle-foreground'
 					)}
 				></span>
 			{/if}

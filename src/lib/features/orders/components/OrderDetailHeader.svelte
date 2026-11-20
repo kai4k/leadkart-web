@@ -46,7 +46,7 @@
 				{#if order.customer_gst_number}
 					<span class="caption text-muted-foreground">· GSTIN {order.customer_gst_number}</span>
 				{/if}
-				<code class="caption text-muted-foreground">{order.id}</code>
+				<code class="caption text-subtle-foreground">{order.id}</code>
 				<CopyButton value={order.id} label="Copy order ID" />
 			</div>
 		</div>

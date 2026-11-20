@@ -76,7 +76,7 @@
 						max={PERMISSION_REQUEST_MAX_DAYS}
 						class="bg-card border border-border rounded-md rounded-md px-3 py-2 text-sm"
 					/>
-					<span class="caption text-muted-foreground">Leave blank for the tenant default.</span>
+					<span class="caption text-subtle-foreground">Leave blank for the tenant default.</span>
 				</label>
 				<label class="stack stack-tight">
 					<span class="label">Reason</span>

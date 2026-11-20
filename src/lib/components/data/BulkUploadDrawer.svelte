@@ -246,7 +246,7 @@
 									onclick={() => fileInput?.click()}>browse</button
 								>
 							</p>
-							<p class="caption text-muted-foreground">{accept}</p>
+							<p class="caption text-subtle-foreground">{accept}</p>
 							<input
 								bind:this={fileInput}
 								type="file"

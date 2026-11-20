@@ -117,3 +117,27 @@ describe('check-token-contrast: the real tokens', () => {
 			expect(labels).toContain(needed);
 	});
 });
+
+describe('check-token-contrast: fix round B tokens', () => {
+	const pairLabels = PAIRS.map((p: { label: string }) => p.label);
+	it('gates the tertiary text, status text on muted, the indicators and the toast description', () => {
+		for (const needed of [
+			'subtle-foreground on background [tertiary text]',
+			'subtle-foreground on muted [tertiary text]',
+			'subtle-foreground on popover [tertiary text]',
+			'warning on muted [status text]',
+			'success on background [status text]',
+			'info on card [status text]',
+			'success-indicator on muted [dot, bar or icon mark]',
+			'destructive-indicator on background [dot, bar or icon mark]',
+			'muted-foreground on warning-soft [toast description]'
+		])
+			expect(pairLabels).toContain(needed);
+	});
+	it('indicator pairs are held to 3:1, text pairs to 4.5', () => {
+		const get = (l: string) =>
+			PAIRS.find((p: { label: string }) => p.label === l) as { min: number };
+		expect(get('info-indicator on card [dot, bar or icon mark]').min).toBe(3);
+		expect(get('subtle-foreground on card [tertiary text]').min).toBe(4.5);
+	});
+});

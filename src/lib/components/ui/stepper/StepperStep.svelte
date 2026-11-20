@@ -93,7 +93,7 @@
 	<div class="stack stack-tight mt-2 max-w-full text-center">
 		<span class={cn('body-sm truncate-1', labelClass)}>{label}</span>
 		{#if optional}
-			<span class="caption text-muted-foreground">Optional</span>
+			<span class="caption text-subtle-foreground">Optional</span>
 		{/if}
 	</div>
 </li>

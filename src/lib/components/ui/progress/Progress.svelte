@@ -27,9 +27,9 @@
 			variants: {
 				variant: {
 					primary: 'bg-primary',
-					success: 'bg-success',
-					warning: 'bg-warning',
-					danger: 'bg-destructive'
+					success: 'bg-success-indicator',
+					warning: 'bg-warning-indicator',
+					danger: 'bg-destructive-indicator'
 				}
 			},
 			defaultVariants: { variant: 'primary' }

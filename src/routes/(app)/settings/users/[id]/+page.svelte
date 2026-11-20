@@ -83,7 +83,7 @@
 					<div class="stack stack-tight">
 						<p class="body-sm text-muted-foreground">{user.email}</p>
 						{#if user.designation || user.department}
-							<p class="caption text-muted-foreground">
+							<p class="caption text-subtle-foreground">
 								{user.designation || '—'} · {user.department || '—'}
 							</p>
 						{/if}

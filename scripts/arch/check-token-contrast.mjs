@@ -137,7 +137,22 @@ const RAW_PAIRS = [
 	],
 	['foreground', 'card', TEXT, { note: 'current section tab' }],
 	['foreground', 'muted', TEXT, { note: 'section tab on hover' }],
-	['destructive', 'destructive-soft', TEXT, { note: 'route error alert' }]
+	['destructive', 'destructive-soft', TEXT, { note: 'route error alert' }],
+	// fix round B: the third text level, the status text on the surfaces it sits on, the indicator
+	// (non-text) tokens, and the toast description on each soft fill
+	...[...SURFACES, 'popover'].map((s) => ['subtle-foreground', s, TEXT, { note: 'tertiary text' }]),
+	['subtle-foreground', 'primary-soft', TEXT, { note: 'tertiary text' }],
+	['subtle-foreground', 'row-hover', TEXT, { note: 'tertiary text in a hovered row' }],
+	...STATUS.flatMap((s) => SURFACES.map((b) => [s, b, TEXT, { note: 'status text' }])),
+	...[...STATUS, 'destructive'].map((s) => [
+		'muted-foreground',
+		`${s}-soft`,
+		TEXT,
+		{ note: 'toast description' }
+	]),
+	...[...STATUS, 'destructive'].flatMap((s) =>
+		SURFACES.map((b) => [`${s}-indicator`, b, UI, { note: 'dot, bar or icon mark' }])
+	)
 ];
 
 /** @type {Pair[]} */

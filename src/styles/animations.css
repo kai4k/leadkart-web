@@ -267,9 +267,20 @@
 
 	/* Shimmer for loading skeletons. Pair with bg-gradient-to-r. */
 	.animate-shimmer {
-		background: linear-gradient(90deg, var(--muted) 0%, var(--muted) 50%, var(--muted) 100%);
+		background: linear-gradient(
+			90deg,
+			var(--muted) 0%,
+			var(--skeleton-highlight) 50%,
+			var(--muted) 100%
+		);
 		background-size: 200% 100%;
 		animation: shimmer 2s var(--ease-linear) infinite;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.animate-shimmer {
+			background: var(--muted);
+			animation: none;
+		}
 	}
 
 	.animate-pop-in {

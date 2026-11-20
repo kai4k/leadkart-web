@@ -91,7 +91,7 @@
 		font-size: var(--text-lg);
 		line-height: var(--leading-relaxed);
 		letter-spacing: var(--tracking-body);
-		color: var(--muted-foreground);
+		color: var(--subtle-foreground);
 	}
 
 	.body-lg {
@@ -122,7 +122,7 @@
 	   Color stays SEPARATE (Apple HIG splits typographic style from
 	   color hierarchy — .primaryLabel vs .secondaryLabel use the same
 	   text-style + different tokens). Compose with text-muted-foreground /
-	   text-muted-foreground utilities for hierarchy.
+	   text-subtle-foreground utilities for hierarchy.
 
 	   Two tiers:
 	     .label        text-sm  + medium 500 + body tracking

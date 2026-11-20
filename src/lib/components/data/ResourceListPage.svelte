@@ -116,7 +116,7 @@
 						>
 							{v.label}
 							{#if count !== null}
-								<span class="caption text-muted-foreground">{count}</span>
+								<span class="caption text-subtle-foreground">{count}</span>
 							{/if}
 						</button>
 					</li>

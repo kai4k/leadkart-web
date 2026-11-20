@@ -103,7 +103,7 @@
 						<div class="cluster cluster-spread">
 							<span class="caption text-muted-foreground">Tenant ID</span>
 							<div class="cluster cluster-tight">
-								<code class="caption text-muted-foreground">{credentials.tenantId}</code>
+								<code class="caption text-subtle-foreground">{credentials.tenantId}</code>
 								<Button
 									variant="ghost"
 									size="sm"

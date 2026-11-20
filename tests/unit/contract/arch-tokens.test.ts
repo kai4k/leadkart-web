@@ -47,7 +47,7 @@ describe('check-tokens: alpha modifiers in ui/', () => {
 		expect(flagged('<div class="bg-black/80"></div>')).toEqual(['bg-black/80']);
 		expect(flagged('<div class="dark:bg-black/50"></div>')).toEqual(['dark:bg-black/50']);
 	});
-	it('applies to src/lib/components/ui/** only', () => {
+	it('applies to src/lib/components/ui/** only (a border alpha is also held outside, see below)', () => {
 		const cls = '<i class="hover:bg-primary/90"></i>';
 		expect(flagged(cls, 'src/lib/features/x/X.svelte')).toEqual([]);
 		expect(flagged(cls, 'src/lib/components/form/X.svelte')).toEqual([]);
@@ -119,5 +119,27 @@ describe('check-tokens: Tailwind scheme-* utilities', () => {
 		expect(findColorScheme('src/lib/x/X.svelte', '<div class="scheme-foo scheme"></div>')).toEqual(
 			[]
 		);
+	});
+});
+
+describe('check-tokens: alpha on a border colour outside ui/ (fix round B)', () => {
+	const NAMES = colourNames(
+		'@theme { --color-destructive: x; --color-border: x; --color-ring: x; }'
+	);
+	const out = (src: string, rel = 'src/lib/features/leads/components/LeadsKanban.svelte') =>
+		(findAlphaModifiers(rel, src, NAMES) as Array<{ utility: string }>).map((f) => f.utility);
+	it.each(['border-destructive/40', 'border-s-destructive/40', 'hover:border-destructive/40'])(
+		'flags %s in a feature file',
+		(cls) => {
+			expect(out(`<div class="x ${cls}"></div>`)).toEqual([cls]);
+		}
+	);
+	it('still lets a feature file use other alpha forms (those are Task 16 rules)', () => {
+		expect(out('<div class="bg-destructive/40"></div>')).toEqual([]);
+	});
+	it('does not flag a width or an opaque border token', () => {
+		expect(
+			out('<div class="border-s-4 border-destructive-indicator border-border"></div>')
+		).toEqual([]);
 	});
 });

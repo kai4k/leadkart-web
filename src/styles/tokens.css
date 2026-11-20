@@ -577,6 +577,16 @@
 	--color-secondary-foreground: var(--secondary-foreground);
 	--color-muted: var(--muted);
 	--color-muted-foreground: var(--muted-foreground);
+	--color-subtle-foreground: var(--subtle-foreground);
+	--color-skeleton-highlight: var(--skeleton-highlight);
+	--color-success-indicator: var(--success-indicator);
+	--color-warning-indicator: var(--warning-indicator);
+	--color-info-indicator: var(--info-indicator);
+	--color-destructive-indicator: var(--destructive-indicator);
+	--color-success-border: var(--success-border);
+	--color-warning-border: var(--warning-border);
+	--color-info-border: var(--info-border);
+	--color-destructive-border: var(--destructive-border);
 	--color-accent: var(--accent);
 	--color-accent-foreground: var(--accent-foreground);
 	--color-destructive: var(--destructive);

@@ -226,9 +226,9 @@
 	{#if listQuery.isFetchingNextPage}
 		<p class="caption text-muted-foreground py-4 text-center" aria-live="polite">Loading more…</p>
 	{:else if stoppedEarly(listQuery.data?.pages.at(-1), listQuery.hasNextPage)}
-		<p class="caption text-muted-foreground py-4 text-center">Couldn't load more results.</p>
+		<p class="caption text-subtle-foreground py-4 text-center">Couldn't load more results.</p>
 	{:else if !listQuery.hasNextPage && orders.length > 0}
-		<p class="caption text-muted-foreground py-4 text-center">End of results</p>
+		<p class="caption text-subtle-foreground py-4 text-center">End of results</p>
 	{/if}
 {/snippet}
 

@@ -74,8 +74,8 @@
 					</div>
 				</Card.Header>
 				<Card.Content>
-					<p class="display-2 text-muted-foreground tabular-nums">—</p>
-					<p class="caption text-muted-foreground mt-1">{tile.hint}</p>
+					<p class="display-2 text-subtle-foreground tabular-nums">—</p>
+					<p class="caption text-subtle-foreground mt-1">{tile.hint}</p>
 				</Card.Content>
 			</Card.Root>
 		{/each}

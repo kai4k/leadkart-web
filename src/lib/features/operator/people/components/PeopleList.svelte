@@ -100,7 +100,7 @@
 	<div class="flex flex-col gap-3 md:flex-row md:items-center">
 		<div class="relative flex-1">
 			<span class="pointer-events-none absolute inset-y-0 start-3 flex items-center">
-				<Icon icon={Search} size="sm" class="text-muted-foreground" />
+				<Icon icon={Search} size="sm" class="text-subtle-foreground" />
 			</span>
 			<input
 				type="search"

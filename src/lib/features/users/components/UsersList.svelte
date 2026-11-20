@@ -255,7 +255,7 @@
 {#snippet workCell(user: UserDto)}
 	<div class="stack stack-tight">
 		<span class="caption text-muted-foreground">{user.designation || '—'}</span>
-		<span class="caption text-muted-foreground">{user.department || '—'}</span>
+		<span class="caption text-subtle-foreground">{user.department || '—'}</span>
 	</div>
 {/snippet}
 

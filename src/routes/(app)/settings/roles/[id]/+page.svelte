@@ -181,7 +181,7 @@
 				<div class="stack stack-tight">
 					<p class="caption text-muted-foreground">Hierarchy level {role.hierarchy_level}</p>
 					<div class="cluster cluster-tight">
-						<code class="caption text-muted-foreground">{role.id}</code>
+						<code class="caption text-subtle-foreground">{role.id}</code>
 						<CopyButton value={role.id} label="Copy role ID" />
 					</div>
 				</div>

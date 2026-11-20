@@ -67,7 +67,7 @@
 	</header>
 
 	{#if query.isError}
-		<div class="border-destructive/40 text-destructive rounded-md border p-4">
+		<div class="border-destructive-border text-destructive rounded-md border p-4">
 			Couldn't load batches. {errorCopy}
 		</div>
 	{:else if isEmpty}
@@ -151,7 +151,7 @@
 									{#if expiry}
 										<Badge variant={expiry.variant} size="sm">{expiry.label}</Badge>
 									{:else}
-										<span class="caption text-muted-foreground">—</span>
+										<span class="caption text-subtle-foreground">—</span>
 									{/if}
 								</td>
 								<td class="caption text-muted-foreground hidden px-3 py-3 md:table-cell">

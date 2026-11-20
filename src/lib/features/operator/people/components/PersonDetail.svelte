@@ -109,7 +109,7 @@
 								<CopyButton value={p.email} label="Copy email" />
 							</div>
 							<div class="cluster cluster-tight flex-wrap">
-								<p class="caption text-muted-foreground">
+								<p class="caption text-subtle-foreground">
 									ID <code class="break-all">{p.id}</code>
 								</p>
 								<CopyButton value={p.id} label="Copy person ID" />

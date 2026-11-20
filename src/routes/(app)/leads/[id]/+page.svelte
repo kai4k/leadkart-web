@@ -75,7 +75,7 @@
 		</div>
 	{:else if detail.isError}
 		<div
-			class="bg-destructive-soft text-destructive border-destructive/40 rounded-md border-s-4 p-4"
+			class="bg-destructive-soft text-destructive border-destructive-indicator rounded-md border-s-4 p-4"
 		>
 			<p class="label">Couldn't load lead. {detailErrorCopy}</p>
 		</div>

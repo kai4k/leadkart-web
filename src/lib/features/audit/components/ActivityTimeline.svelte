@@ -138,7 +138,7 @@
 								</p>
 								<time
 									datetime={ev.occurred_at}
-									class="caption text-muted-foreground flex-shrink-0"
+									class="caption text-subtle-foreground flex-shrink-0"
 									title={new Date(ev.occurred_at).toLocaleString()}
 								>
 									{relativeTime(ev.occurred_at)}
@@ -147,7 +147,7 @@
 
 							<!-- Trace ID chip -->
 							{#if ev.trace_id}
-								<p class="caption text-muted-foreground font-mono">
+								<p class="caption text-subtle-foreground font-mono">
 									ref: {ev.trace_id}
 								</p>
 							{/if}

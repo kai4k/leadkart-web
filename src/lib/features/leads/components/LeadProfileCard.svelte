@@ -50,7 +50,7 @@
 					{#each lead.product_ranges as range (range)}
 						<Badge variant="brand" size="sm">{range}</Badge>
 					{:else}
-						<span class="caption text-muted-foreground">—</span>
+						<span class="caption text-subtle-foreground">—</span>
 					{/each}
 				</dd>
 			</div>
@@ -61,7 +61,7 @@
 					{#each lead.dosage_forms as form (form)}
 						<Badge variant="neutral" size="sm">{form}</Badge>
 					{:else}
-						<span class="caption text-muted-foreground">—</span>
+						<span class="caption text-subtle-foreground">—</span>
 					{/each}
 				</dd>
 			</div>

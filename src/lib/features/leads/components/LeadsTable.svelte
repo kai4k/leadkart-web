@@ -76,7 +76,9 @@
 		{/each}
 	</div>
 {:else if list.state === 'error'}
-	<div class="bg-destructive-soft text-destructive border-destructive/40 rounded-md border-s-4 p-4">
+	<div
+		class="bg-destructive-soft text-destructive border-destructive-indicator rounded-md border-s-4 p-4"
+	>
 		<p class="label">Couldn't load leads. {list.error ?? ''}</p>
 	</div>
 {:else if list.state === 'empty'}
@@ -176,7 +178,7 @@
 									<span class="label text-foreground">{lead.contact_name}</span>
 									{#if stale}
 										<span
-											class="bg-warning inline-block h-2 w-2 rounded-full"
+											class="bg-warning-indicator inline-block h-2 w-2 rounded-full"
 											aria-label="Stale lead"
 											title="No contact in 7+ days"
 										></span>

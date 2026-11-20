@@ -51,7 +51,9 @@
 		{/each}
 	</div>
 {:else if state === 'error'}
-	<div class="bg-destructive-soft text-destructive border-destructive/40 rounded-md border-s-4 p-4">
+	<div
+		class="bg-destructive-soft text-destructive border-destructive-indicator rounded-md border-s-4 p-4"
+	>
 		<p class="label">Couldn't load leads. {error ?? ''}</p>
 	</div>
 {:else if state === 'empty'}
@@ -70,7 +72,7 @@
 					</Kanban.Card>
 				{/each}
 				{#if col.cards.length === 0}
-					<li class="caption text-muted-foreground px-2 py-6 text-center">No leads</li>
+					<li class="caption text-subtle-foreground px-2 py-6 text-center">No leads</li>
 				{/if}
 			</Kanban.Column>
 		{/each}

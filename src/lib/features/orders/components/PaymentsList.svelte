@@ -60,7 +60,7 @@
 							{#if p.reference}
 								<code class="caption">{p.reference}</code>
 							{:else}
-								<span class="text-muted-foreground">—</span>
+								<span class="text-subtle-foreground">—</span>
 							{/if}
 						</td>
 						<td class="text-muted-foreground caption px-2 py-2">{longDate(p.received_at)}</td>

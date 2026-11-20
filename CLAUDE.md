@@ -212,7 +212,7 @@ the spec. We don't "improve" — we match.
 6. **Hierarchy via whitespace + tokenized colour.** Proximity
    = relationship; whitespace = separation. Tokenized colour
    conveys hierarchy: `text-fg` → primary, `text-fg-muted` →
-   secondary, `text-fg-subtle` → tertiary. NEVER use raw shades
+   secondary, `text-fg-subtle` → tertiary. (Phase 2 names: `text-foreground`, `text-muted-foreground`, `text-subtle-foreground`; CLAUDE.md is rewritten in plan Task 31.) NEVER use raw shades
    (`text-slate-500`) for hierarchy — that breaks on theme switch.
 
 7. **Tunnel vision check before merge.** Before opening a PR, take a

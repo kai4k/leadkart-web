@@ -80,7 +80,7 @@
 						</label>
 						<Tooltip.Root>
 							<Tooltip.Trigger
-								class="text-muted-foreground hover:text-muted-foreground"
+								class="text-subtle-foreground hover:text-muted-foreground"
 								aria-label="About {entry.name}"
 							>
 								<Icon icon={Info} size="sm" />

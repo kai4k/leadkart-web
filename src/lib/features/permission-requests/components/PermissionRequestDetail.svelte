@@ -110,7 +110,7 @@
 			</PageHeader>
 			<header class="stack stack-tight">
 				<div class="cluster cluster-tight">
-					<code class="caption text-muted-foreground">{req.id}</code>
+					<code class="caption text-subtle-foreground">{req.id}</code>
 					<CopyButton value={req.id} label="Copy request ID" />
 				</div>
 			</header>

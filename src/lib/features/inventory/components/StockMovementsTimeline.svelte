@@ -40,7 +40,7 @@
 	</header>
 
 	{#if query.isError}
-		<div class="border-destructive/40 text-destructive rounded-md border p-4">
+		<div class="border-destructive-border text-destructive rounded-md border p-4">
 			Couldn't load movements. {errorCopy}
 		</div>
 	{:else if query.isPending}

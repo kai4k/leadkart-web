@@ -31,7 +31,8 @@
  *   page, muted and primary-soft surfaces, so the gate checks it there, not only under white
  *   text. Dark steps did not need to move.
  *
- *   status (light): destructive, success, warning, info 700. Dark: step 400.
+ *   status (light): destructive 700; success, warning, info 800 (700 reached only 3.8-4.4 on muted). Dark: step 400.
+ *   Indicators (non-text marks, 3:1): light 700 (destructive 600), dark 400.
  *   (destructive was 600: its text reached only 3.84:1 on `muted`, which the field error text
  *   sits on in a muted section; 700 passes on background, card, popover and muted. A default
  *   pending the owner's confirmation: it darkens every destructive button and error by one step.)
@@ -87,8 +88,15 @@
 	--popover-foreground: var(--foreground);
 	--muted: light-dark(oklch(0.9 0.008 268), var(--dark-850));
 	--muted-foreground: light-dark(oklch(0.42 0.02 250), var(--dark-400));
+	/* the third text level (captions, ids, "none" dashes): one step quieter than muted-foreground */
+	--subtle-foreground: light-dark(
+		oklch(0.49 0.02 250),
+		color-mix(in oklch, var(--dark-400) 85%, var(--dark-500))
+	);
 	--accent: var(--muted);
 	--accent-foreground: var(--foreground);
+	/* loading skeleton: the moving highlight against the --muted base, visible in both modes */
+	--skeleton-highlight: color-mix(in oklch, var(--muted), var(--foreground) 10%);
 	--secondary: light-dark(var(--primary-50), var(--dark-800));
 	--secondary-foreground: light-dark(var(--primary-800), var(--dark-100));
 	/* OPAQUE hover fill of a secondary button (was `bg-[color-mix(...)]` in the class, which no gate can see) */
@@ -132,19 +140,41 @@
 		var(--palette-danger-50),
 		color-mix(in oklch, var(--palette-danger-400) 15%, var(--dark-900))
 	);
-	--success: light-dark(var(--palette-success-700), var(--palette-success-400));
+	/* NON-text marks (dots, bars, timeline icons): lighter than the text step, 3:1 on the surfaces.
+	   Borders: opaque hairlines around a soft fill (never an alpha modifier). */
+	--success-indicator: light-dark(var(--palette-success-700), var(--palette-success-400));
+	--warning-indicator: light-dark(var(--palette-warning-700), var(--palette-warning-400));
+	--info-indicator: light-dark(var(--palette-info-700), var(--palette-info-400));
+	--destructive-indicator: light-dark(var(--palette-danger-600), var(--palette-danger-400));
+	--success-border: light-dark(
+		var(--palette-success-200),
+		color-mix(in oklch, var(--palette-success-400) 35%, var(--dark-900))
+	);
+	--warning-border: light-dark(
+		var(--palette-warning-200),
+		color-mix(in oklch, var(--palette-warning-400) 35%, var(--dark-900))
+	);
+	--info-border: light-dark(
+		var(--palette-info-200),
+		color-mix(in oklch, var(--palette-info-400) 35%, var(--dark-900))
+	);
+	--destructive-border: light-dark(
+		var(--palette-danger-200),
+		color-mix(in oklch, var(--palette-danger-400) 35%, var(--dark-900))
+	);
+	--success: light-dark(var(--palette-success-800), var(--palette-success-400));
 	--success-foreground: light-dark(oklch(1 0 0), var(--palette-success-950));
 	--success-soft: light-dark(
 		var(--palette-success-50),
 		color-mix(in oklch, var(--palette-success-400) 15%, var(--dark-900))
 	);
-	--warning: light-dark(var(--palette-warning-700), var(--palette-warning-400));
+	--warning: light-dark(var(--palette-warning-800), var(--palette-warning-400));
 	--warning-foreground: light-dark(oklch(1 0 0), var(--palette-warning-950));
 	--warning-soft: light-dark(
 		var(--palette-warning-50),
 		color-mix(in oklch, var(--palette-warning-400) 15%, var(--dark-900))
 	);
-	--info: light-dark(var(--palette-info-700), var(--palette-info-400));
+	--info: light-dark(var(--palette-info-800), var(--palette-info-400));
 	--info-foreground: light-dark(oklch(1 0 0), var(--palette-info-950));
 	--info-soft: light-dark(
 		var(--palette-info-50),

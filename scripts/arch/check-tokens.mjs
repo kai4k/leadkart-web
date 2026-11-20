@@ -33,7 +33,7 @@ export const ALLOWED_ALPHA = new Set(['bg-black/50']);
 /** Hand-written primitives still carrying an alpha, pending regeneration. Empty since Task 5. */
 export const PENDING_REGENERATION = new Set();
 const COLOUR_UTILITY =
-	/(?<![\w-])((?:[\w[\]&>*=.-]+:)*)(bg|text|ring|ring-offset|border|border-[xytblrse]|outline|fill|stroke|divide|decoration|from|via|to|shadow|placeholder|caret|accent)-([a-z][a-z0-9-]*)\/(\d{1,3}|\[[^\]\s]+\])(?![\w/])/g;
+	/(?<![\w-])((?:[\w[\]&>*=.-]+:)*)(bg|text|ring|ring-offset|border-[xytblrse]|border|outline|fill|stroke|divide|decoration|from|via|to|shadow|placeholder|caret|accent)-([a-z][a-z0-9-]*)\/(\d{1,3}|\[[^\]\s]+\])(?![\w/])/g;
 
 // The forms the plain `utility-name/NN` pattern above cannot see, all of which paint a colour the
 // contrast gate never checked:
@@ -42,7 +42,7 @@ const COLOUR_UTILITY =
 //   bg-primary/${n}                                    a dynamic alpha in a template literal
 //   opacity-70 on a text-bearing element               alpha by another name (disabled: is exempt)
 const COLOUR_PREFIX =
-	'bg|text|ring|ring-offset|border|border-[xytblrse]|outline|fill|stroke|divide|decoration|from|via|to|shadow|placeholder|caret|accent';
+	'bg|text|ring|ring-offset|border-[xytblrse]|border|outline|fill|stroke|divide|decoration|from|via|to|shadow|placeholder|caret|accent';
 const VARIANTS = '((?:[\\w[\\]&>*=.-]+:)*)';
 const ARBITRARY_MIX = new RegExp(
 	`(?<![\\w-])${VARIANTS}((?:${COLOUR_PREFIX})-\\[color-mix\\([^\\]]*\\])`,
@@ -70,15 +70,20 @@ export function colourNames(tokensCss) {
 /** @returns {Array<{ line: number, utility: string }>} */
 export function findAlphaModifiers(rel, src, names) {
 	const norm = rel.replaceAll('\\', '/');
-	if (!norm.startsWith(UI_DIR) || PENDING_REGENERATION.has(norm)) return [];
+	const inUi = norm.startsWith(UI_DIR);
+	if (PENDING_REGENERATION.has(norm)) return [];
 	const found = [];
 	for (const m of src.matchAll(COLOUR_UTILITY)) {
 		const [, variants, prefix, colour, alpha] = m;
 		if (!names.has(colour)) continue; // text-sm/6, w-1/2, ...: a size, not a colour
+		// outside ui/ only a border colour is held to the rule: a status accent or hairline is an
+		// opaque token (border-destructive-indicator / -border), not a faded alpha
+		if (!inUi && !prefix.startsWith('border')) continue;
 		const utility = `${prefix}-${colour}/${alpha}`;
 		if (ALLOWED_ALPHA.has(utility) && variants === '') continue;
 		found.push({ line: src.slice(0, m.index).split('\n').length, utility: variants + utility });
 	}
+	if (!inUi) return found;
 	for (const re of [ARBITRARY_MIX, VAR_ALPHA, DYNAMIC_ALPHA]) {
 		for (const m of src.matchAll(re)) {
 			found.push({ line: src.slice(0, m.index).split('\n').length, utility: m[1] + m[2] });

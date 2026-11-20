@@ -80,7 +80,7 @@
 		</form>
 
 		<div
-			class="border-border text-muted-foreground flex flex-col items-center gap-2 border-t pt-4 sm:flex-row sm:justify-center"
+			class="border-border text-subtle-foreground flex flex-col items-center gap-2 border-t pt-4 sm:flex-row sm:justify-center"
 		>
 			<Icon icon={Lock} size="xs" />
 			<span class="caption">

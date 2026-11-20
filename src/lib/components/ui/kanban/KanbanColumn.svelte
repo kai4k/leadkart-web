@@ -7,11 +7,11 @@
 			variants: {
 				accent: {
 					primary: 'bg-primary',
-					success: 'bg-success',
-					warning: 'bg-warning',
-					danger: 'bg-destructive',
-					info: 'bg-info',
-					neutral: 'bg-muted-foreground'
+					success: 'bg-success-indicator',
+					warning: 'bg-warning-indicator',
+					danger: 'bg-destructive-indicator',
+					info: 'bg-info-indicator',
+					neutral: 'bg-subtle-foreground'
 				}
 			},
 			defaultVariants: { accent: 'neutral' }

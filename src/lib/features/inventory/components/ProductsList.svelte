@@ -315,7 +315,7 @@
 	{#if expiry}
 		<Badge variant={expiry.variant} size="sm">{expiry.label}</Badge>
 	{:else}
-		<span class="caption text-muted-foreground">—</span>
+		<span class="caption text-subtle-foreground">—</span>
 	{/if}
 {/snippet}
 
@@ -363,7 +363,7 @@
 >
 	{#if query.isError}
 		<div
-			class="border-destructive/40 text-destructive rounded-md border p-4"
+			class="border-destructive-border text-destructive rounded-md border p-4"
 			data-testid="products-error"
 		>
 			Couldn't load products. {errorCopy}

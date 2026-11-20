@@ -120,7 +120,7 @@
 						error={form.errors.password}
 						onblur={() => form.validateField('password')}
 					/>
-					<p class="caption text-muted-foreground">
+					<p class="caption text-subtle-foreground">
 						The user will be prompted to change this on first sign-in.
 					</p>
 					{#if form.bannerError}<Alert variant="destructive">{form.bannerError}</Alert>{/if}
