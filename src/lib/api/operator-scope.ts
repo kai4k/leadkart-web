@@ -135,7 +135,7 @@ export function scopeChangedElsewhere(
 /**
  * What the (app) layout last committed as the tab's context. `observe` takes the fingerprint of
  * every commit: the first is remembered; the same one is nothing; the one this tab's own enter /
- * exit was told to expect is absorbed (the in-place flow); ANY other value is somebody else's
+ * exit was told to expect is absorbed while its window is open (the in-place flow); ANY other value is somebody else's
  * change (the layout clearing the cookie on lost permission, a sign-in elsewhere, a foreign enter
  * landing inside our own window) and hard-resets the tab, reported as moved. Cookie changes
  * nothing announced re-run the layout in place through a capabilities refresh or any navigation;
@@ -154,7 +154,13 @@ export function createCommittedContext(qc: Pick<QueryClient, 'clear'>): {
 				committed = fingerprint;
 				return false;
 			}
-			if (fingerprint !== undefined && fingerprint === expected?.fingerprint) {
+			// Only inside the window: an expectation nothing committed in time must not absorb a
+			// foreign move to exactly that value later.
+			if (
+				fingerprint !== undefined &&
+				fingerprint === expected?.fingerprint &&
+				Date.now() < expected.until
+			) {
 				expected = undefined;
 				committed = fingerprint;
 				return false;

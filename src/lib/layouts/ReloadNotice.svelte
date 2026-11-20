@@ -6,7 +6,8 @@
 	 *   `sessionStorage`). A toast posted before the reset would die with the old document.
 	 *   Instead of a reset: a banner when it could not happen. Offline (a reload would land on the
 	 *   offline page) it offers Reload, and reloads by itself once the connection is back; in a loop
-	 *   (the page that just loaded was itself a reset) it offers signing in again. Until then the
+	 *   (the page that just loaded was itself a reset) it offers signing in again; when the reset
+	 *   started but the document is still here (cancelled, or a very slow reload) it offers Reload. Until then the
 	 *   page is stale and the BFF keeps refusing its calls.
 	 *
 	 * Mounted by the (app) layout and the (auth) layout (a sign-out elsewhere lands on /signin).
@@ -58,13 +59,13 @@
 		>
 			<p>{$_(`reload.${resetBlock.kind}.body`)}</p>
 			<div class="mt-3">
-				{#if resetBlock.kind === 'offline'}
-					<Button size="sm" onclick={() => replaceLocation(location.pathname + location.search)}
-						>{$_('reload.offline.action')}</Button
-					>
-				{:else}
+				{#if resetBlock.kind === 'loop'}
 					<Button size="sm" onclick={() => replaceLocation('/signin')}
 						>{$_('reload.loop.action')}</Button
+					>
+				{:else}
+					<Button size="sm" onclick={() => replaceLocation(location.pathname + location.search)}
+						>{$_(`reload.${resetBlock.kind}.action`)}</Button
 					>
 				{/if}
 			</div>

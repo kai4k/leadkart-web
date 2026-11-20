@@ -236,26 +236,31 @@ describe('a refusal this tab did not cause', () => {
 		});
 	});
 
-	it('a reset that is cancelled does not swallow later refusals for ever', async () => {
+	it('a reset that is cancelled stays latched (no time release): the stalled block takes over until a document is shown again', async () => {
 		vi.useFakeTimers();
 		try {
 			const { scope } = await tab();
 			expect(scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(true);
 			expect(scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(false);
 			vi.advanceTimersByTime(6_000);
-			// The flag is NOT cleared by the release (a slow navigation would land without its toast):
+			// The flag is NOT cleared by the stall (a slow navigation would land without its toast):
 			// it expires by its own timestamp, and it is not evidence that THIS document came from a reset.
 			expect(sessionStorage.getItem('lk_reload_reason')).not.toBeNull();
-			expect(scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(true);
-			vi.advanceTimersByTime(61_000);
 			const hard = await import('#lib/api/hard-reset.ts');
+			expect(hard.resetPending()).toBe(true);
+			expect(scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(false);
+			vi.advanceTimersByTime(61_000);
+			expect(scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(false);
 			expect(hard.takeReloadReason()).toBeNull();
+			const block = await import('#lib/api/reset-block.svelte.ts');
+			block.resetBlock.clear();
+			window.dispatchEvent(new Event('pageshow'));
 		} finally {
 			vi.useRealTimers();
 		}
 	});
 
-	it('pageshow (back-forward restore after a cancelled reset) releases it too', async () => {
+	it('pageshow (back-forward restore after a cancelled reset) releases it', async () => {
 		const { scope } = await tab();
 		expect(scope.scopeChangedElsewhere(qc() as never, 'refusal')).toBe(true);
 		window.dispatchEvent(new Event('pageshow'));
@@ -497,6 +502,37 @@ describe("this tab's own change is recognised by the fingerprint the BFF answere
 		await scope.leaveTenantContext(qc() as never); // answered, not yet committed
 		expect(watch.observe('fp-b')).toBe(true);
 		expect(reload).toHaveBeenCalledTimes(1);
+	});
+
+	it('an expectation nothing committed in time absorbs nothing later: a foreign move to exactly that value resets', async () => {
+		vi.useFakeTimers({ toFake: ['Date'] });
+		try {
+			const { scope } = await tab();
+			del.mockResolvedValue({ scope_context: 'fp-a' });
+			nav.invalidate.mockResolvedValue(undefined);
+			const watch = scope.createCommittedContext(qc() as never);
+			watch.observe('fp-none');
+			await scope.leaveTenantContext(qc() as never); // answered fp-a, never committed
+			vi.setSystemTime(Date.now() + 6_000); // the window is over
+			expect(watch.observe('fp-a')).toBe(true);
+			expect(reload).toHaveBeenCalledTimes(1);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('an announcement between the BFF answer and the layout commit is not lost (it waits for nothing: the call has answered)', async () => {
+		const { scope } = await tab();
+		const client = qc();
+		del.mockResolvedValue({ scope_context: 'fp-a' });
+		nav.invalidate.mockImplementation(() => {
+			// the call has answered; the layout has not committed yet: another tab announces a change
+			expect(scope.scopeChangedElsewhere(client as never, 'announcement')).toBe(true);
+			return Promise.resolve();
+		});
+		await scope.leaveTenantContext(client as never);
+		expect(reload).toHaveBeenCalledTimes(1);
+		expect(client.clear).toHaveBeenCalledTimes(1);
 	});
 
 	it("a refusal inside the window after the answer is this tab's own change; after the window it is foreign", async () => {

@@ -173,6 +173,11 @@
 			"title": "This page keeps reloading",
 			"body": "The page had to reload again right after the last reload. Sign in again to stop it.",
 			"action": "Sign in again"
+		},
+		"stalled": {
+			"title": "This page is out of date",
+			"body": "Your company or account changed, but this page did not reload. Nothing you do here will be saved.",
+			"action": "Reload"
 		}
 	},
 	"orders": {

@@ -15,16 +15,20 @@
  *     tab always resets and never counts towards the loop: a tab never hears its own announcement,
  *     so announcements cannot loop, and two legitimate changes made in another tab seconds apart
  *     must both be followed.
- *   - `reloading` swallows the burst of refusals that follows the first one. A reset the browser
- *     cancels (a `beforeunload` prompt, Stop) must not leave it set for ever: it is released on
- *     `pageshow` and after a short timeout. The reason flag is NOT cleared by the timeout (a slow
- *     navigation would then land without its toast); it expires by its own timestamp.
+ *   - `reloading` swallows the burst of refusals that follows the first one and is the LATCH that
+ *     keeps the page from sending: it is released only by `pageshow` (a new or restored document),
+ *     never by a timeout. A reset still pending after a few seconds (the browser cancelled it with a
+ *     `beforeunload` prompt or Stop, or the reload is very slow) shows the `stalled` block banner
+ *     instead: the page's children are removed, Reload is offered, the latch stays closed. The reason
+ *     flag is not cleared either (a slow navigation would land without its toast); it expires by its
+ *     own timestamp. Live toasts (and their Undo actions) are dismissed when a reset starts.
  *   - `resetPending()` is true while a reset is under way or a declined one has a banner up: the API
  *     client sends nothing then, so no code outside the page's removed children (a toast's Undo)
  *     can write under the new context.
  *
  * Storage can be unavailable (privacy mode): the reset then works without the reason.
  */
+import { toast } from 'svelte-sonner';
 import { resetBlock } from './reset-block.svelte.ts';
 
 export type ResetReason = 'context' | 'session' | 'scope';
@@ -33,8 +37,8 @@ export const RELOAD_REASON_KEY = 'lk_reload_reason';
 
 /** A page that loads from a reset younger than this must not start another one. */
 const LOOP_WINDOW_MS = 10_000;
-/** A reset still not navigated away after this long was cancelled. */
-const RELEASE_AFTER_MS = 5_000;
+/** A reset whose document is still here after this long stalled (cancelled, or a very slow reload). */
+const STALL_AFTER_MS = 5_000;
 /** A reason older than this is a leftover, not the reason for this load. */
 const REASON_MAX_AGE_MS = 60_000;
 
@@ -127,13 +131,23 @@ export function replaceLocation(url: string): void {
 	location.replace(url);
 }
 
-function armRelease(): void {
+/**
+ * The latch stays closed until the document is replaced or restored (`pageshow`). It is NOT reopened
+ * by a timeout: for a reset the committed-context check started, `page.data` already holds the NEW
+ * fingerprint and code outside the removed children (a toast's Undo, the command palette, the user
+ * menu) would send under it, accepted by the BFF. A reset still pending after `STALL_AFTER_MS` was
+ * cancelled or is very slow: the block banner takes over (children removed, a Reload button).
+ */
+function armRelease(reason: ResetReason, source: ResetSource): void {
+	const timer = setTimeout(() => {
+		if (reloading) resetBlock.show('stalled', { reason, source });
+	}, STALL_AFTER_MS);
 	const release = () => {
 		reloading = false;
 		window.removeEventListener('pageshow', release);
+		clearTimeout(timer);
 	};
 	window.addEventListener('pageshow', release);
-	setTimeout(release, RELEASE_AFTER_MS);
 }
 
 /**
@@ -166,8 +180,10 @@ export function navigateHard(
 	}
 	reloading = true;
 	qc?.clear();
+	// Nothing actionable from the old context stays on screen (a toast's Undo would send from it).
+	toast.dismiss();
 	writeFlag(reason, source);
-	armRelease();
+	armRelease(reason, source);
 	replaceLocation(url);
 	return true;
 }

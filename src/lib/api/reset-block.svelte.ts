@@ -1,10 +1,11 @@
 /**
  * Why a hard reset did NOT happen, for the banner that stands in for it (`ReloadNotice.svelte`):
  * the tab is offline (a reload would land on the offline page and lose more than it saves) or the
- * page that just loaded was itself the result of a reset (reloading again would loop). While a
+ * page that just loaded was itself the result of a reset (reloading again would loop), or the reset
+ * started but the document is still here (cancelled or very slow). While a
  * block is showing the page is stale: the BFF keeps refusing its calls, and the banner says so.
  */
-type ResetBlockKind = 'offline' | 'loop';
+type ResetBlockKind = 'offline' | 'loop' | 'stalled';
 
 /** What the declined reset was for, so a retry (back online) is the SAME reset. */
 interface ResetRetry {

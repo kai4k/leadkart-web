@@ -10,6 +10,7 @@ vi.mock('#lib/api/capabilities-refresh.ts', () => ({ refreshCapabilities: vi.fn(
 
 import { api } from '#lib/api/client.ts';
 import { ScopeChangedError } from '#lib/api/errors.ts';
+import { toast } from 'svelte-sonner';
 import { hardReset, resetPending } from '#lib/api/hard-reset.ts';
 import { resetBlock } from '#lib/api/reset-block.svelte.ts';
 
@@ -24,8 +25,8 @@ beforeEach(() => {
 	vi.stubGlobal('navigator', { onLine: true });
 });
 afterEach(() => {
-	// a reset the test started is released like the browser does (pageshow / timeout)
-	vi.advanceTimersByTime(6_000);
+	// a reset the test started is released like the browser does: by a new or restored document
+	window.dispatchEvent(new Event('pageshow'));
 	vi.useRealTimers();
 	vi.unstubAllGlobals();
 	vi.clearAllMocks();
@@ -54,12 +55,42 @@ describe('resetPending', () => {
 		expect(fetchSpy).not.toHaveBeenCalled();
 	});
 
-	it('is released when the browser cancelled the reset (the timeout), and the client sends again', async () => {
+	it('is NOT released by time: after 5 s and after 60 s it still refuses, and the stalled block is showing', async () => {
+		expect(hardReset('context')).toBe(true);
+		vi.advanceTimersByTime(5_000);
+		expect(resetPending()).toBe(true);
+		expect(resetBlock.kind).toBe('stalled');
+		vi.advanceTimersByTime(55_000);
+		expect(resetPending()).toBe(true);
+		await expect(api.post('/v1/x', {})).rejects.toBeInstanceOf(ScopeChangedError);
+		expect(fetchSpy).not.toHaveBeenCalled();
+		// a second reset is swallowed too: the latch is still closed
+		expect(hardReset('context')).toBe(false);
+	});
+
+	it('a new or restored document (pageshow) releases the latch; the block (children removed) stays until the page is replaced', async () => {
 		hardReset('context');
-		vi.advanceTimersByTime(6_000);
+		vi.advanceTimersByTime(5_000);
+		window.dispatchEvent(new Event('pageshow'));
+		expect(resetBlock.kind).toBe('stalled');
+		expect(resetPending()).toBe(true); // the banner keeps the stale page from sending
+		resetBlock.clear();
 		expect(resetPending()).toBe(false);
 		await api.get('/v1/x', z.unknown());
 		expect(fetchSpy).toHaveBeenCalledTimes(1);
+	});
+
+	it('a reset released before the timeout does not show a stalled block later', () => {
+		hardReset('context');
+		window.dispatchEvent(new Event('pageshow'));
+		vi.advanceTimersByTime(10_000);
+		expect(resetBlock.kind).toBeNull();
+	});
+
+	it('starting a reset dismisses live toasts (an Undo from the old context must not stay on screen)', () => {
+		const dismiss = vi.spyOn(toast, 'dismiss');
+		hardReset('context');
+		expect(dismiss).toHaveBeenCalledTimes(1);
 	});
 
 	it('stays true while a declined reset has its banner up (offline), and is released with the banner', async () => {
