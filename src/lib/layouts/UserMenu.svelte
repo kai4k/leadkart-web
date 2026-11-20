@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { LogOut, User, Icon } from '$icons';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -7,11 +8,9 @@
 	import { session } from '$features/auth';
 
 	/**
-	 * UserMenu — avatar trigger + menu popover. Composes the canonical
-	 * `<Dropdown.Root>` primitive (bits-ui DropdownMenu) — focus
-	 * management, outside-click, ESC, portal mounting and ARIA menu
-	 * semantics come from the primitive; this file owns only content
-	 * and the avatar visual treatment.
+	 * UserMenu — avatar trigger + menu. Composes the `Dropdown` primitive (bits-ui DropdownMenu):
+	 * focus management, outside-click, Escape, portal and ARIA menu semantics come from it; this file
+	 * owns the content and the avatar look.
 	 */
 
 	async function handleSignOut() {
@@ -24,11 +23,7 @@
 	}
 
 	/**
-	 * Initials from the email's local part — falls back to the first
-	 * letter of the local part if the email lacks separators (e.g.
-	 * "ravi@acme.test" → "R", "ravi.kumar@acme.test" → "RK"). Mirrors
-	 * the .NET LeadKart UserAvatar logic + Stripe / Linear / Vercel
-	 * canon for missing-display-name avatars.
+	 * Initials from the email's local part: "ravi@acme.test" -> "R", "ravi.kumar@acme.test" -> "RK".
 	 */
 	const monogram = $derived.by(() => {
 		const local = session.principal?.email?.split('@')[0] ?? '';
@@ -37,72 +32,26 @@
 </script>
 
 <Dropdown.Root>
-	<Dropdown.Trigger class="lk-avatar-btn" aria-label="User menu">
-		<span class="caption font-semibold">{monogram}</span>
+	<Dropdown.Trigger
+		class="bg-primary-soft text-primary focus-visible:ring-ring inline-flex size-9 items-center justify-center rounded-full text-sm font-semibold outline-none focus-visible:ring-2 pointer-coarse:size-11"
+		aria-label={$_('shell.userMenu.label')}
+	>
+		<span>{monogram}</span>
 	</Dropdown.Trigger>
-	<Dropdown.Menu align="end" class="lk-user-popover w-56">
-		<div class="lk-user-popover-header">
-			<p class="caption">Signed in as</p>
-			<p class="label truncate-1">{session.principal?.email ?? '—'}</p>
+	<Dropdown.Menu align="end" class="w-56">
+		<div class="border-border mb-1 border-b px-3 py-2.5">
+			<p class="text-muted-foreground text-xs">{$_('shell.userMenu.signedInAs')}</p>
+			<p class="truncate text-sm font-medium">{session.principal?.email ?? '—'}</p>
 		</div>
 
-		<Dropdown.Item onSelect={() => goto(resolve('settings/account/security'))}
-			><Icon icon={User} size="sm" /> Account & Security</Dropdown.Item
-		>
+		<Dropdown.Item onSelect={() => goto(resolve('settings/account/security'))}>
+			<Icon icon={User} size="sm" />
+			{$_('shell.userMenu.account')}
+		</Dropdown.Item>
 
-		<Dropdown.Item variant="danger" onSelect={handleSignOut}
-			><Icon icon={LogOut} size="sm" /> Sign out</Dropdown.Item
-		>
+		<Dropdown.Item variant="danger" onSelect={handleSignOut}>
+			<Icon icon={LogOut} size="sm" />
+			{$_('shell.userMenu.signOut')}
+		</Dropdown.Item>
 	</Dropdown.Menu>
 </Dropdown.Root>
-
-<style>
-	/* ─── Avatar trigger — glass-tinted circle ────────────────────
-	   Brand-tinted glass pill: brand-100 base fades to bg-bg-muted on
-	   hover with a top-edge specular. Matches the Topbar icon button
-	   visual language (rounded glass pill on hover + tap). */
-	:global(.lk-avatar-btn) {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		inline-size: 2.25rem;
-		block-size: 2.25rem;
-		border-radius: 9999px;
-		/* Brand gradient — diagonal from brand-100 to brand-200 (pale
-		   logo purples) with a secondary (logo neon green) splash in
-		   the bottom-right corner. Matches the LeadKart logo's purple-
-		   violet + neon green identity in miniature on every avatar. */
-		background:
-			radial-gradient(at 70% 80%, var(--color-secondary-200), transparent 60%),
-			linear-gradient(135deg, var(--color-brand-100), var(--color-brand-200));
-		color: var(--color-primary);
-		box-shadow: var(--glass-specular);
-		transition:
-			background 0.15s,
-			box-shadow 0.15s,
-			transform 0.15s;
-	}
-	:global(.lk-avatar-btn:active) {
-		transform: scale(0.96);
-	}
-	@media (hover: hover) and (pointer: fine) {
-		:global(.lk-avatar-btn:hover) {
-			background: var(--color-brand-200);
-		}
-	}
-	@media (pointer: coarse) {
-		:global(.lk-avatar-btn) {
-			inline-size: var(--lk-touch-target-min);
-			block-size: var(--lk-touch-target-min);
-		}
-	}
-
-	/* Popover header — sits inside Dropdown.Menu (portalled) so the
-	   selector is global-scoped via :global() since svelte-scoped
-	   classes don't reach portalled content. */
-	:global(.lk-user-popover .lk-user-popover-header) {
-		padding: 0.625rem 0.875rem;
-		border-block-end: var(--glass-border-subtle);
-		margin-block-end: 0.25rem;
-	}
-</style>

@@ -5,7 +5,12 @@
  */
 import { flushSync, mount, tick, unmount } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { NEW_TENANT_ADMIN, SALES_EXECUTIVE, SUPER_USER } from '../../support/go-personas.ts';
+import {
+	NEW_TENANT_ADMIN,
+	OPERATOR_PLATFORM_ADMIN,
+	SALES_EXECUTIVE,
+	SUPER_USER
+} from '../../support/go-personas.ts';
 import type { Capabilities } from '#lib/features/auth/capabilities.ts';
 
 const pageUrl = vi.hoisted(() => ({ value: new URL('http://localhost/settings/users') }));
@@ -113,5 +118,37 @@ describe('the horizontal nav', () => {
 				'/settings/roles'
 			);
 		}
+	});
+
+	it('marks the direct Dashboard link aria-current="page" on the dashboard, and only then', async () => {
+		pageUrl.value = new URL('http://localhost/dashboard');
+		await render(NEW_TENANT_ADMIN);
+		const link = document.querySelector('nav > ul > li > a[href="/dashboard"]')!;
+		expect(link.getAttribute('aria-current')).toBe('page');
+		if (component) unmount(component);
+		component = undefined;
+		document.body.innerHTML = '';
+		target = document.body.appendChild(document.createElement('div'));
+		pageUrl.value = new URL('http://localhost/settings/users');
+		await render(NEW_TENANT_ADMIN);
+		expect(
+			document.querySelector('nav > ul > li > a[href="/dashboard"]')!.hasAttribute('aria-current')
+		).toBe(false);
+	});
+
+	it('in a tenant context the own-tenant entries are not offered (the same rule as the sidebar)', async () => {
+		pageUrl.value = new URL('http://localhost/operator/scope/profile');
+		await render(OPERATOR_PLATFORM_ADMIN, true);
+		const hrefs: Array<string | null> = [];
+		for (const t of triggers()) {
+			await open(t);
+			for (const a of document.querySelectorAll('[data-slot="dropdown-menu-content"] a'))
+				hrefs.push(a.getAttribute('href'));
+			t.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+			flushSync();
+			await tick();
+		}
+		for (const own of ['/settings/users', '/settings/tenant', '/permission-requests'])
+			expect(hrefs).not.toContain(own);
 	});
 });

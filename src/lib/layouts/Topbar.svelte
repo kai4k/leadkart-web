@@ -1,32 +1,23 @@
 <script lang="ts">
-	import { page } from '$app/state';
+	/**
+	 * Topbar (Domiex): sidebar toggle, the brand where the sidebar does not carry it, the search
+	 * trigger, then the mode switch, the theme-settings button and the user menu. No heading and no
+	 * breadcrumb (the page's PageHeader owns both) and no notifications (nothing feeds them).
+	 * Placement is `styles/theme/layouts.css` (`[data-shell='topbar']`); this file is the look, in
+	 * semantic tokens only. In the `pattern` nav type layouts.css re-declares the tokens it reads.
+	 */
 	import { _ } from 'svelte-i18n';
 	import { resolve } from '$app/paths';
-	import { Bell, Command, PanelLeft, Search, Settings, Icon, ChevronRight } from '$icons';
-	import { Sidebar } from '$ui';
-	import { routeContext } from '#lib/utils/routeTitle.ts';
+	import { Command, Moon, Search, Settings, Sun, Icon } from '$icons';
+	import { BrandMark, Button, Sidebar } from '$ui';
+	import { getPreferences } from '$features/preferences';
 	import UserMenu from './UserMenu.svelte';
 	import { CommandPalette } from '$features/search';
 	import { session } from '$features/auth';
 
-	/**
-	 * Topbar — Linear/Vercel-minimal shape:
-	 *   left   : sidebar toggle + breadcrumb / page title
-	 *   centre : Cmd+K search trigger (omni-search palette behind it)
-	 *   right  : notifications + settings drawer + user menu
-	 *
-	 * Active-tenant context (scope routes) is surfaced by the scope
-	 * layout's own header — no separate topbar chip needed.
-	 */
+	let { onOpenCustomizer }: { onOpenCustomizer?: () => void } = $props();
 
-	let { onOpenSettings }: { onOpenSettings?: () => void } = $props();
-
-	// Below lg this opens the navigation sheet, from lg up it switches the sidebar between large and
-	// small (the `sidebar` preference). The shell's Sidebar.Provider is the parent of this component.
-	const sidebar = Sidebar.useSidebar();
-	const sidebarExpanded = $derived(sidebar.isMobile ? sidebar.openMobile : sidebar.open);
-
-	const route = $derived(routeContext(page.url.pathname));
+	const prefs = getPreferences();
 
 	// The palette is for every signed-in user (pages from the nav config); operators
 	// additionally get tenant / people search inside it.
@@ -41,325 +32,76 @@
 			paletteOpen = !paletteOpen;
 		}
 	}
+
+	// light <-> dark; from `auto` it goes to the opposite of what the OS shows now.
+	function toggleMode() {
+		const resolvedDark =
+			prefs.mode === 'dark' ||
+			(prefs.mode === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+		prefs.set({ mode: resolvedDark ? 'light' : 'dark' });
+	}
+
+	const iconButton = 'size-9 pointer-coarse:size-11';
 </script>
 
 <svelte:window onkeydown={onKeydown} />
 
 <header
 	data-shell="topbar"
-	class="lk-topbar bg-bg-elevated border border-border rounded-xl shadow-card"
-	aria-label="Application bar"
+	class="bg-card text-foreground border-border flex items-center justify-between gap-3 border-b px-5"
 >
-	<!-- Left: toggle + route badge (icon + title in a glass pill).
-	     Matches the Liquid-Glass language of the surface and gives
-	     the current location a visual anchor (Apple Music / Notion
-	     pattern: icon + name as a single readable unit). -->
-	<div class="lk-topbar-left">
+	<div class="flex min-w-0 items-center gap-2">
 		<!-- The brand: here for vertical, boxed and horizontal; modern and semibox show it in the sidebar. -->
-		<a class="lk-topbar-brand" href={resolve('dashboard')} aria-label={$_('shell.brandHome')}>
-			<img src="/images/favicon/favicon_128x128.png" alt="" class="lk-topbar-brand-img" />
-		</a>
-		<button
-			type="button"
-			class="lk-topbar-iconbtn lk-topbar-toggle"
-			aria-label={$_('shell.toggleSidebar')}
-			aria-expanded={sidebarExpanded}
-			onclick={() => sidebar.toggle()}
+		<a
+			href={resolve('dashboard')}
+			aria-label={$_('shell.brandHome')}
+			class="focus-visible:ring-ring flex shrink-0 items-center rounded-md outline-none focus-visible:ring-2 [:root[data-layout=modern]_&]:lg:hidden [:root[data-layout=semibox]_&]:lg:hidden"
 		>
-			<Icon icon={PanelLeft} size="md" />
-		</button>
-		<nav class="lk-topbar-crumbs" aria-label="Breadcrumb">
-			<ol class="lk-topbar-crumb-list">
-				{#each route.crumbs as crumb, i (crumb.href)}
-					{@const isLast = i === route.crumbs.length - 1}
-					<li class="lk-topbar-crumb">
-						{#if isLast}
-							<h1 class="lk-topbar-title" aria-current="page">{crumb.label}</h1>
-						{:else}
-							<a class="lk-topbar-crumb-link" href={crumb.href}>{crumb.label}</a>
-							<Icon icon={ChevronRight} size="xs" class="lk-topbar-crumb-sep" />
-						{/if}
-					</li>
-				{/each}
-			</ol>
-		</nav>
+			<BrandMark wordmark decorative class="max-sm:[&>span:last-child]:hidden" />
+		</a>
+		<Sidebar.Trigger class="{iconButton} [:root[data-layout=horizontal]_&]:lg:hidden" />
+		{#if canSearch}
+			<button
+				type="button"
+				class="border-border bg-muted text-muted-foreground focus-visible:ring-ring ms-2 hidden h-9 w-72 items-center gap-2 rounded-md border px-3 text-sm outline-none focus-visible:ring-2 md:inline-flex"
+				aria-label="Search (Cmd+K)"
+				title="Search · Cmd+K"
+				onclick={() => (paletteOpen = true)}
+			>
+				<Icon icon={Search} size="sm" />
+				<span class="flex-1 text-start">{$_('shell.searchPlaceholder')}</span>
+				<kbd
+					class="border-border text-muted-foreground inline-flex items-center gap-0.5 rounded-sm border px-1.5 font-mono text-xs"
+				>
+					<Icon icon={Command} size="xs" />K
+				</kbd>
+			</button>
+		{/if}
 	</div>
 
-	<!-- Centre: Cmd+K trigger — opens the omni-search palette -->
-	{#if canSearch}
-		<button
-			type="button"
-			class="lk-topbar-search-trigger bg-bg-muted"
-			aria-label="Search (Cmd+K)"
-			title="Search · Cmd+K"
-			onclick={() => (paletteOpen = true)}
+	<div class="flex items-center gap-2">
+		<Button
+			variant="ghost"
+			size="icon"
+			class={iconButton}
+			aria-label={$_('shell.toggleMode')}
+			onclick={toggleMode}
 		>
-			<Icon icon={Search} size="sm" />
-			<span class="lk-topbar-search-placeholder">Search…</span>
-			<kbd class="lk-topbar-kbd">
-				<Icon icon={Command} size="xs" />K
-			</kbd>
-		</button>
-	{:else}
-		<div></div>
-	{/if}
-
-	<!-- Right: actions -->
-	<div class="lk-topbar-actions">
-		<button type="button" class="lk-topbar-iconbtn" aria-label="Notifications">
-			<Icon icon={Bell} size="md" />
-			<span class="lk-topbar-dot" aria-hidden="true"></span>
-		</button>
-		<button
-			type="button"
-			class="lk-topbar-iconbtn"
-			aria-label="Open theme settings"
-			onclick={() => onOpenSettings?.()}
+			<!-- CSS picks the icon (the mode is an <html> attribute): right at first paint, no JS -->
+			<Icon icon={Moon} size="md" class="dark:hidden" />
+			<Icon icon={Sun} size="md" class="hidden dark:block" />
+		</Button>
+		<Button
+			variant="ghost"
+			size="icon"
+			class={iconButton}
+			aria-label={$_('shell.openCustomizer')}
+			onclick={() => onOpenCustomizer?.()}
 		>
 			<Icon icon={Settings} size="md" />
-		</button>
+		</Button>
 		<UserMenu />
 	</div>
 </header>
 
 <CommandPalette bind:open={paletteOpen} onOpenChange={(o) => (paletteOpen = o)} />
-
-<style>
-	/* ─── Topbar layout + chrome geometry ──────────────────────────
-	   Composes the universal `.bg-bg-elevated border border-border rounded-xl shadow-card` material; this block only
-	   handles topbar-specific GEOMETRY: full-width edge-anchored strip
-	   with bottom-edge border and zero corner radius (the 1.5rem
-	   default from .bg-bg-elevated border border-border rounded-xl shadow-card would round the viewport-top corners
-	   which makes no sense on a flush chrome bar). Semibox layout
-	   restores the radius for floating-pane mode. */
-	/* Placement (position, insets, height, z-index, the semibox / boxed border and radius) is
-	   `styles/theme/layouts.css` (`[data-shell='topbar']`); this block is the look. */
-	.lk-topbar {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-		align-items: center;
-		padding-inline: clamp(0.75rem, 1.5vw, 1.25rem);
-		/* Override .bg-bg-elevated border border-border rounded-xl shadow-card defaults for edge-anchored chrome */
-		border: 0;
-		border-block-end: var(--glass-border-subtle);
-		border-radius: 0;
-		contain: layout style;
-	}
-
-	/* The brand shows beside the sidebar's own only where the sidebar has none (see layouts.css). */
-	.lk-topbar-brand {
-		display: inline-flex;
-		align-items: center;
-		flex-shrink: 0;
-	}
-	.lk-topbar-brand-img {
-		inline-size: 2rem;
-		block-size: 2rem;
-		border-radius: 0.5rem;
-		object-fit: contain;
-	}
-	@media (min-width: 64rem) {
-		:global(:root[data-layout='modern']) .lk-topbar-brand,
-		:global(:root[data-layout='semibox']) .lk-topbar-brand,
-		:global(:root[data-layout='horizontal']) .lk-topbar-toggle {
-			display: none;
-		}
-	}
-
-	/* ─── Left cluster (toggle + breadcrumb) ─────────────────────── */
-	.lk-topbar-left {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		min-inline-size: 0; /* allow text-overflow inside grid 1fr */
-	}
-	/* ─── Breadcrumb trail ────────────────────────────────────────
-	   Multi-segment crumb path; intermediate crumbs are subtle
-	   clickable text muted by `--color-fg-muted`, separated by a
-	   chevron glyph. The trailing (current) crumb gets the icon
-	   badge + the page <h1> in semibold so screen readers + visual
-	   readers find the title at the end. Apple Music / Notion /
-	   Vercel pattern: location reads as one progressive unit. */
-	.lk-topbar-crumbs {
-		display: flex;
-		align-items: center;
-		min-inline-size: 0;
-		padding-inline-start: 0.25rem;
-	}
-	.lk-topbar-crumb-list {
-		display: flex;
-		align-items: center;
-		gap: 0.375rem;
-		min-inline-size: 0;
-		list-style: none;
-		margin: 0;
-		padding: 0;
-	}
-	.lk-topbar-crumb {
-		display: flex;
-		align-items: center;
-		gap: 0.375rem;
-		min-inline-size: 0;
-	}
-	.lk-topbar-crumb-link {
-		font-size: var(--text-sm);
-		font-weight: 500;
-		letter-spacing: var(--tracking-body);
-		color: var(--color-fg-muted);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		max-inline-size: 8rem;
-		transition: color 0.15s;
-	}
-	/* Focus ring handled by global :focus-visible in base.css */
-	@media (hover: hover) and (pointer: fine) {
-		.lk-topbar-crumb-link:hover {
-			color: var(--color-fg);
-		}
-	}
-	.lk-topbar-crumb :global(.lk-topbar-crumb-sep) {
-		color: var(--color-fg-subtle);
-		flex-shrink: 0;
-	}
-	/* On phones, hide all intermediate crumbs — keep only the last one
-	   so the topbar doesn't crowd. Linear / Notion canon. */
-	@media (max-width: 47.99rem) {
-		.lk-topbar-crumb:not(:last-child) {
-			display: none;
-		}
-	}
-	.lk-topbar-title {
-		font-size: var(--text-base);
-		font-weight: 600;
-		letter-spacing: var(--tracking-heading);
-		color: var(--color-fg);
-		margin: 0;
-		min-inline-size: 0;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	@media (min-width: 48rem) {
-		.lk-topbar-title {
-			font-size: var(--text-lg);
-		}
-	}
-
-	/* ─── Cmd-K trigger ───────────────────────────────────────────
-	   Hidden by default (mobile + small tablets); reveals at 48rem
-	   (768px) so phones + small tablets get the full title width
-	   without ugly truncation. */
-	/* Layout only — visual is .bg-bg-muted (added via class binding) */
-	.lk-topbar-search-trigger {
-		display: none;
-		align-items: center;
-		gap: 0.5rem;
-		inline-size: clamp(16rem, 28vw, 22rem);
-		padding-inline: 0.75rem;
-		padding-block: 0.4375rem;
-		border: var(--glass-border-subtle);
-		color: var(--color-fg-muted);
-		font-size: var(--text-sm);
-		letter-spacing: var(--tracking-body);
-		transition:
-			border-color 0.15s,
-			background 0.15s,
-			box-shadow 0.15s;
-	}
-	.lk-topbar-search-trigger:active {
-		background: var(--color-bg-muted);
-	}
-	.lk-topbar-search-placeholder {
-		flex: 1;
-		text-align: start;
-	}
-	.lk-topbar-kbd {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.125rem;
-		padding: 0.125rem 0.375rem;
-		border-radius: 0.25rem;
-		background: var(--color-bg-muted);
-		color: var(--color-fg-muted);
-		font-family: var(--font-mono);
-		font-size: var(--text-xs);
-		font-weight: 500;
-		letter-spacing: var(--tracking-caption);
-	}
-	@media (min-width: 48rem) {
-		.lk-topbar-search-trigger {
-			display: inline-flex;
-		}
-	}
-	/* Hover only on hover-capable + fine pointers — prevents the
-	   sticky-hover anti-pattern on touch screens (Vercel / Linear
-	   canon since 2022). */
-	@media (hover: hover) and (pointer: fine) {
-		.lk-topbar-search-trigger:hover {
-			border-color: var(--color-fg-subtle);
-			background: var(--color-bg-elevated);
-		}
-	}
-
-	/* ─── Right cluster (actions) ───────────────────────────────── */
-	.lk-topbar-actions {
-		display: flex;
-		align-items: center;
-		gap: 0.25rem;
-		justify-content: flex-end;
-		min-inline-size: 0;
-	}
-
-	/* ─── Icon button — 36px desktop / 44px touch ────────────────
-	   Desktop default keeps the bar compact; coarse-pointer media
-	   query bumps to WCAG AAA 2.5.5 minimum target (44px). */
-	.lk-topbar-iconbtn {
-		position: relative;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		inline-size: 2.25rem;
-		block-size: 2.25rem;
-		border-radius: 0.5rem;
-		color: var(--color-fg-muted);
-		transition:
-			background 0.15s,
-			color 0.15s;
-	}
-	.lk-topbar-iconbtn:active {
-		background: var(--lk-muted-tint);
-		box-shadow: var(--glass-specular);
-		color: var(--color-primary-active);
-	}
-	@media (hover: hover) and (pointer: fine) {
-		.lk-topbar-iconbtn:hover {
-			background: var(--lk-muted-tint);
-			box-shadow: var(--glass-specular);
-			color: var(--color-primary-hover);
-		}
-	}
-	@media (pointer: coarse) {
-		.lk-topbar-iconbtn {
-			inline-size: var(--lk-touch-target-min);
-			block-size: var(--lk-touch-target-min);
-		}
-	}
-
-	.lk-topbar-dot {
-		position: absolute;
-		top: 0.5rem;
-		inset-inline-end: 0.5rem;
-		inline-size: 0.5rem;
-		block-size: 0.5rem;
-		background: var(--color-success-500, var(--color-secondary-500));
-		border-radius: 9999px;
-		border: 2px solid var(--color-bg-elevated);
-	}
-	@media (pointer: coarse) {
-		.lk-topbar-dot {
-			top: 0.625rem;
-			inset-inline-end: 0.625rem;
-		}
-	}
-</style>

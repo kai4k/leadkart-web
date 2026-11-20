@@ -1,9 +1,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { page } from '$app/state';
-	import { Badge, Breadcrumbs, Button, type BreadcrumbItem } from '$ui';
-	import { Building2, Icon, Shield, LogOut } from '$icons';
-	import { exitScopeMutation } from '$features/operator/scope';
+	import { Badge, Breadcrumbs, type BreadcrumbItem } from '$ui';
+	import { Building2, Icon, Shield } from '$icons';
 	import { session } from '$features/auth';
 	import { isNavActive, visibleNav } from '#lib/config/nav.ts';
 	import { NAV_ICONS } from '#lib/config/nav-icons.ts';
@@ -22,9 +21,6 @@
 	const tabs = $derived(
 		visibleNav(session.capabilities, true).find((s) => s.id === 'tenantContext')?.items ?? []
 	);
-
-	// The one exit flow: cookie, cache, layout reload, navigate (shared with the session guard's BFF half).
-	const exit = exitScopeMutation();
 </script>
 
 <div class="stack stack-relaxed">
@@ -42,9 +38,6 @@
 				<Badge variant="brand" size="sm">Platform</Badge>
 			{/if}
 		</div>
-		<Button variant="ghost" size="sm" onclick={() => exit.mutate()} loading={exit.isPending}>
-			<Icon icon={LogOut} size="sm" /> Exit context
-		</Button>
 	</header>
 
 	<nav aria-label="Tenant sections">

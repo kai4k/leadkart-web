@@ -245,7 +245,7 @@ const UNGUARDED_LOCAL_IMPORTS: Record<string, Record<string, string>> = {
 const UNGUARDED_REVIEWED: Record<string, string> = {
 	'+layout.server.ts': 'a3aa6cf586cade7fa9c7c830',
 	'+page.server.ts': 'd584880de3ad98cfcd66b155',
-	'(app)/+layout.server.ts': '93a6ed11812ad24b97dcb985',
+	'(app)/+layout.server.ts': 'c348bde0597e9584bdde65b1',
 	'(auth)/signin/+page.server.ts': '790ecc9ce9c495203e9e71ef',
 	'(auth)/forgot-password/+page.server.ts': '234d7157d19409c9ddf6ad3b',
 	'(auth)/reset-password/+page.server.ts': '3e7321dc0a8fc0387c411bbd',

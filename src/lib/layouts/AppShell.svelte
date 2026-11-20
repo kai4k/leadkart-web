@@ -9,22 +9,26 @@
 	 *     Sidebar | HorizontalNav
 	 *     Topbar            placed by layouts.css
 	 *     content column    offset by `--shell-content-start`
+	 *       banners         tenant context + impersonation, sticky under the topbar
 	 *       main#main-content > PageContainer > page
 	 *       Footer          at the end of the column, not fixed
 	 */
-	import type { Component } from 'svelte';
+	import type { Component, Snippet } from 'svelte';
 	import Topbar from './Topbar.svelte';
+	import TenantContextBanner from './TenantContextBanner.svelte';
 	import Sidebar from './Sidebar.svelte';
 	import HorizontalNav from './HorizontalNav.svelte';
 	import PageContainer from './PageContainer.svelte';
 	import Footer from './Footer.svelte';
+	import { createSidebarSizing } from './sidebar-sizing.ts';
 	import { Sidebar as SidebarBlock } from '$ui';
 	import { getPreferences } from '$features/preferences';
 	import { createIsMobile } from '#lib/hooks/is-mobile.svelte.ts';
 
-	let { children } = $props();
+	let { children, banner }: { children: Snippet; banner?: Snippet } = $props();
 	const prefs = getPreferences();
 	const isMobile = createIsMobile();
+	const sizing = createSidebarSizing(prefs);
 	const horizontal = $derived(prefs.layout === 'horizontal');
 	let settingsOpen = $state(false);
 
@@ -48,8 +52,9 @@
 </script>
 
 <SidebarBlock.Provider
-	open={prefs.sidebar !== 'small'}
-	onOpenChange={(open) => prefs.set({ sidebar: open ? 'large' : 'small' })}
+	open={sizing.open}
+	onOpenChange={sizing.setOpen}
+	shortcutEnabled={!horizontal || isMobile.current}
 	class="block min-h-dvh"
 >
 	<div data-shell="root" class="relative min-h-dvh">
@@ -57,10 +62,16 @@
 		<!-- Horizontal on a phone: the same sheet as every other layout. -->
 		{#if !horizontal || isMobile.current}<Sidebar />{/if}
 
-		<Topbar onOpenSettings={() => void openSettings()} />
+		<Topbar onOpenCustomizer={() => void openSettings()} />
 
 		<div data-shell="content">
-			<main id="main-content" class="flex-1 pt-(--shell-page-pad-top) outline-none" tabindex="-1">
+			<!-- The context banners (acting in a tenant, impersonating): under the topbar, not scrolled
+			     away, never hidden by a layout; they read committed page data. layouts.css places them. -->
+			<div data-shell="banners">
+				<TenantContextBanner />
+				{@render banner?.()}
+			</div>
+			<main id="main-content" class="flex-1 pt-(--shell-main-pad-top) outline-none" tabindex="-1">
 				<PageContainer>
 					{@render children()}
 				</PageContainer>

@@ -51,6 +51,15 @@
 
 	/* page */
 	--shell-page-pad-top: calc(var(--shell-topbar-height) * 1.2);
+	/* what the page starts below: the topbar clearance, or just a gap when a context banner sits there */
+	--shell-main-pad-top: var(--shell-page-pad-top);
+
+	/* the context banners: where they start in the flow (from the top of the content column) and
+	   where they stick (from the top of the viewport) */
+	--shell-banner-flow: calc(
+		var(--shell-topbar-top) + var(--shell-topbar-height) + 2 * var(--shell-topbar-inset)
+	);
+	--shell-banner-stick: var(--shell-banner-flow);
 	--shell-page-pad-x: var(--spacing-5);
 	--shell-content-max: none;
 }
@@ -116,12 +125,18 @@
 		--shell-topbar-end: var(--shell-boxed-margin);
 		--shell-content-start: calc(var(--shell-boxed-margin) + var(--shell-sidebar-w));
 		--shell-content-end: var(--shell-boxed-margin);
+		/* the content panel itself starts at the margin, level with the topbar */
+		--shell-banner-flow: calc(var(--shell-topbar-height) + 2 * var(--shell-topbar-inset));
 	}
 
 	/* horizontal: a nav bar under the topbar instead of a sidebar */
 	:root[data-layout='horizontal'] {
 		--shell-content-start: 0rem;
 		--shell-page-pad-top: calc(var(--shell-topbar-height) * 1.9);
+		--shell-banner-flow: calc(
+			var(--shell-topbar-top) + var(--shell-topbar-height) + var(--shell-hnav-height)
+		);
+		--shell-banner-stick: var(--shell-banner-flow);
 	}
 
 	/* nav types (not in horizontal, where the nav bar is the second row) */
@@ -180,6 +195,13 @@
 :root[data-nav-type='floating']:not([data-layout='horizontal']) [data-shell='topbar'] {
 	position: absolute;
 }
+/* an absolute topbar is placed from the shell root, which the boxed layout has already moved down by
+   the margin (the content panel's top margin collapses through it): do not add the margin twice */
+@media (min-width: 64rem) {
+	:root[data-layout='boxed'][data-nav-type='floating'] [data-shell='topbar'] {
+		inset-block-start: var(--shell-topbar-inset);
+	}
+}
 
 /* the page: offset by the sidebar, on its own panel in the boxed layout */
 [data-shell='content'] {
@@ -211,36 +233,43 @@
 	z-index: var(--z-sticky);
 }
 
-/* pattern nav type: a primary band with a dot overlay behind the topbar, the topbar transparent and its
-   text in the primary's foreground. The topbar's colours are re-declared on the topbar only (its
-   semantic tokens and, until the Topbar is rebuilt on them, the legacy aliases it still reads), so
-   every token stays opaque and the page below keeps its own surface. */
-:root[data-nav-type='pattern']:not([data-layout='horizontal']) [data-shell='root']::before {
-	content: '';
-	position: absolute;
-	inset-block-start: 0;
-	inset-inline: 0;
-	block-size: calc(var(--shell-topbar-height) + var(--shell-topbar-top));
-	z-index: 0;
+/* pattern nav type: the topbar itself is a primary band with a dot overlay. The fill is the topbar's own
+   (opaque, so it stays readable over the page however far it has scrolled), and the tokens its
+   content reads are re-declared on the topbar only: text and icons are the primary's foreground,
+   the search fill and hover are `primary-hover` (all opaque, all in the contrast gate). */
+:root[data-nav-type='pattern']:not([data-layout='horizontal']) [data-shell='topbar'] {
+	--foreground: var(--primary-foreground);
+	--muted-foreground: var(--primary-foreground);
+	--accent-foreground: var(--primary-foreground);
+	--muted: var(--primary-hover);
+	--accent: var(--primary-hover);
+	--border: var(--primary-hover);
+	--ring: var(--primary-foreground);
 	background-color: var(--primary);
 	background-image: radial-gradient(
 		color-mix(in oklch, var(--primary-foreground) 25%, transparent) 1px,
 		transparent 1px
 	);
 	background-size: 1rem 1rem;
-}
-:root[data-nav-type='pattern']:not([data-layout='horizontal']) [data-shell='topbar'] {
-	--foreground: var(--primary-foreground);
-	--muted-foreground: var(--primary-foreground);
-	--color-fg: var(--primary-foreground);
-	--color-fg-muted: var(--primary-foreground);
-	--color-fg-subtle: var(--primary-foreground);
-	--color-primary-hover: var(--primary-foreground);
-	--color-primary-active: var(--primary-foreground);
-	--color-bg-muted: color-mix(in oklch, var(--primary-foreground) 15%, transparent);
-	--lk-muted-tint: color-mix(in oklch, var(--primary-foreground) 15%, transparent);
-	--glass-border-subtle: 1px solid transparent;
-	background: transparent;
-	border-color: transparent;
+	border-color: var(--primary);
 	color: var(--primary-foreground);
+}
+
+/* the context banners (tenant context, impersonation): first in the content column, below the
+   topbar (and the horizontal nav bar), stuck there while the page scrolls. The margin and the
+   shorter page padding apply only while a banner is there. */
+[data-shell='banners'] {
+	position: sticky;
+	inset-block-start: var(--shell-banner-stick);
+	z-index: 1;
+}
+[data-shell='banners']:has([data-shell='banner']) {
+	margin-block-start: var(--shell-banner-flow);
+}
+[data-shell='content']:has([data-shell='banner']) {
+	--shell-main-pad-top: var(--spacing-5);
+}
+/* a floating topbar scrolls away with the page: the banner then sticks to the top edge */
+:root[data-nav-type='floating']:not([data-layout='horizontal']) {
+	--shell-banner-stick: var(--safe-top, 0px);
 }

@@ -15,10 +15,23 @@ function limit(text: string, key: 'min' | 'max'): number | null {
 	return m[2] === 'rem' ? Number(m[1]) * 16 : Number(m[1]);
 }
 
-export function installMatchMedia(initialWidth: number): { setViewportWidth: (w: number) => void } {
+export function installMatchMedia(initialWidth: number): {
+	setViewportWidth: (w: number) => void;
+	/** every query string `matchMedia` was asked for */
+	queries: string[];
+} {
 	let width = initialWidth;
 	const queries = new Map<string, Query>();
 	const evaluate = (text: string): boolean => {
+		// range syntax: (width < 64rem), (width >= 40rem)
+		const range = /\(width\s*(<=|>=|<|>)\s*([\d.]+)(px|rem)\)/.exec(text);
+		if (range) {
+			const bound = range[3] === 'rem' ? Number(range[2]) * 16 : Number(range[2]);
+			const op = range[1];
+			if (op === '<') return width < bound;
+			if (op === '<=') return width <= bound;
+			return op === '>' ? width > bound : width >= bound;
+		}
 		const min = limit(text, 'min');
 		const max = limit(text, 'max');
 		return (min === null || width >= min) && (max === null || width <= max);
@@ -40,6 +53,9 @@ export function installMatchMedia(initialWidth: number): { setViewportWidth: (w:
 		}
 	});
 	return {
+		get queries() {
+			return [...queries.keys()];
+		},
 		setViewportWidth(w) {
 			width = w;
 			for (const q of queries.values()) {

@@ -8,6 +8,7 @@
 		ref = $bindable(null),
 		open = $bindable(true),
 		onOpenChange = () => {},
+		shortcutEnabled = true,
 		class: className,
 		style,
 		children,
@@ -15,6 +16,8 @@
 	}: WithElementRef<HTMLAttributes<HTMLDivElement>> & {
 		open?: boolean;
 		onOpenChange?: (open: boolean) => void;
+		/** Ctrl/Cmd+B toggles the sidebar; false where there is none to toggle. */
+		shortcutEnabled?: boolean;
 	} = $props();
 
 	// The open state is the `sidebar` preference (`lk_ui`), which the caller maps through
@@ -22,6 +25,7 @@
 	// come from `styles/theme/layouts.css`, not an inline style.
 	const sidebar = setSidebar({
 		open: () => open,
+		shortcutEnabled: () => shortcutEnabled,
 		setOpen: (value: boolean) => {
 			open = value;
 			onOpenChange(value);

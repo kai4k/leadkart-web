@@ -111,6 +111,7 @@
 		"save": "सेव करें",
 		"navigation": "नेविगेशन",
 		"close": "बंद करें",
+		"brandName": "LeadKart",
 		"pagination": {
 			"label": "पृष्ठ क्रम",
 			"previous": "पिछला",
@@ -184,6 +185,29 @@
 		"toggleSidebar": "साइडबार खोलें या बंद करें",
 		"mainNavigation": "मुख्य नेविगेशन",
 		"brandHome": "LeadKart होम",
+		"toggleMode": "Switch between light and dark mode",
+		"openCustomizer": "Open theme settings",
+		"searchPlaceholder": "Search…",
+		"userMenu": {
+			"label": "User menu",
+			"signedInAs": "Signed in as",
+			"account": "Account & Security",
+			"signOut": "Sign out"
+		},
+		"tenantContext": {
+			"region": "Tenant context",
+			"actingIn": "You are acting in {tenant}",
+			"platform": "Platform",
+			"exit": "Exit context"
+		},
+		"impersonation": {
+			"region": "Impersonation session",
+			"impersonating": "Impersonating {tenant}",
+			"impersonatingCompany": "Impersonating a company",
+			"details": "{reason} · Expires {expires}",
+			"end": "End impersonation",
+			"endLabel": "End impersonation session"
+		},
 		"footer": {
 			"label": "ऐप का फ़ुटर",
 			"copyright": "© {year} LeadKart · फ़ार्मा SaaS"
@@ -192,6 +216,36 @@
 	"orders": {
 		"quotation": {
 			"revisionLineSummary": "{lineCount, plural, one {# पंक्ति} other {# पंक्तियाँ}} · उप-योग {subtotal} · GST {gstTotal}"
+		}
+	},
+	"nav": {
+		"sections": {
+			"operator": "Operator",
+			"tenantContext": "Tenant context",
+			"administration": "Administration",
+			"crm": "CRM",
+			"account": "Account"
+		},
+		"items": {
+			"dashboard": "Dashboard",
+			"tenants": "Tenants",
+			"persons": "People",
+			"scopeProfile": "Profile",
+			"scopeMembers": "Members",
+			"scopeRoles": "Roles",
+			"scopeActivity": "Activity",
+			"scopeSettings": "Settings",
+			"tenantSettings": "Tenant Settings",
+			"team": "Team",
+			"roles": "Roles",
+			"leads": "Leads",
+			"orders": "Orders",
+			"inventory": "Inventory",
+			"permissionRequests": "Permission requests",
+			"account": "Account",
+			"scope": "Tenant context",
+			"roleNew": "New role",
+			"quotations": "Quotations"
 		}
 	},
 	"errors": {

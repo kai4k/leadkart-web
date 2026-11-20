@@ -54,7 +54,8 @@ describe('(app) layout: sign-in only for a real auth failure', () => {
 		await expect(run()).resolves.toEqual({
 			capabilities: { person_id: 'p' },
 			inTenantContext: false,
-			scopeContext: 'none'
+			scopeContext: 'none',
+			tenantContext: null
 		});
 	});
 
@@ -63,7 +64,10 @@ describe('(app) layout: sign-in only for a real auth failure', () => {
 			person_id: 'p',
 			effective_permissions: ['platform.tenants.view']
 		});
-		readOperatorScope.mockReturnValueOnce({ state: 'valid' });
+		readOperatorScope.mockReturnValueOnce({
+			state: 'valid',
+			scope: { id: 'u', slug: 'acme', display_name: 'Acme' }
+		} as never);
 		await expect(run()).resolves.toMatchObject({ inTenantContext: true });
 		readOperatorScope.mockReturnValueOnce({ state: 'invalid' });
 		await expect(run()).resolves.toMatchObject({ inTenantContext: false });

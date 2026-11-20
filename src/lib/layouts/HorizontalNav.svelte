@@ -10,16 +10,12 @@
 	import { page } from '$app/state';
 	import { DropdownMenu } from '$ui';
 	import { ChevronDown } from '#lib/icons/index.ts';
-	import { isNavActive, visibleNav } from '#lib/config/nav.ts';
+	import { isNavActive, shellNav } from '#lib/config/nav.ts';
 	import { NAV_ICONS } from '#lib/config/nav-icons.ts';
 	import { session } from '$features/auth';
 	import NavItem from './NavItem.svelte';
 
-	const sections = $derived(
-		visibleNav(session.capabilities, session.inTenantContext).filter(
-			(s) => s.id !== 'tenantContext'
-		)
-	);
+	const sections = $derived(shellNav(session.capabilities, session.inTenantContext));
 
 	const item =
 		'flex items-center gap-2 rounded-md px-3 py-2 text-sm text-sidebar-foreground outline-none transition-colors hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring aria-[current]:text-sidebar-accent-foreground data-[state=open]:text-sidebar-accent-foreground';
@@ -37,7 +33,7 @@
 				<li>
 					<DropdownMenu.Root>
 						<DropdownMenu.Trigger class={item} aria-current={holdsPage ? 'true' : undefined}>
-							{section.title}
+							{$_(`nav.sections.${section.id}`)}
 							<ChevronDown class="size-4" aria-hidden="true" />
 						</DropdownMenu.Trigger>
 						<DropdownMenu.Content align="start" class="min-w-48">
@@ -58,7 +54,7 @@
 					<li>
 						<a href={entry.href} aria-current={active ? 'page' : undefined} class={item}>
 							<Icon class="size-4" aria-hidden="true" />
-							{entry.label}
+							{$_(`nav.items.${entry.key}`)}
 						</a>
 					</li>
 				{/each}

@@ -9,10 +9,15 @@ export interface Impersonation {
 	readonly active: ImpersonationSessionDto | null;
 	readonly status: ImpersonationStatus;
 	readonly error: string | null;
+	/**
+	 * The company's name, for the banner. Kept in memory only (the session DTO carries just an id and
+	 * sign-out must leave nothing of it behind), so after a reload the banner says "a company".
+	 */
+	readonly targetName: string | null;
 	/** Read the persisted ID + sync with server. Called once on app shell mount. */
 	reconcile(): Promise<void>;
 	/** POST a new session, persist the ID, then reconcile to populate active DTO. */
-	start(req: CreateImpersonationSessionRequest): Promise<void>;
+	start(req: CreateImpersonationSessionRequest, targetName?: string): Promise<void>;
 	/** DELETE the active session + clear localStorage. */
 	end(): Promise<void>;
 }
@@ -39,6 +44,7 @@ function createImpersonation(): Impersonation {
 	let active = $state<ImpersonationSessionDto | null>(null);
 	let status = $state<ImpersonationStatus>('idle');
 	let error = $state<string | null>(null);
+	let targetName = $state<string | null>(null);
 
 	async function reconcile(): Promise<void> {
 		if (typeof window === 'undefined') return;
@@ -65,12 +71,13 @@ function createImpersonation(): Impersonation {
 		}
 	}
 
-	async function start(req: CreateImpersonationSessionRequest): Promise<void> {
+	async function start(req: CreateImpersonationSessionRequest, name?: string): Promise<void> {
 		status = 'mutating';
 		error = null;
 		try {
 			const { session_id } = await startImpersonation(req);
 			window.localStorage.setItem(ACTIVE_SESSION_KEY, session_id);
+			targetName = name ?? null;
 			// Server doesn't return the full DTO on POST; refetch to populate.
 			await reconcile();
 		} catch (e) {
@@ -87,6 +94,7 @@ function createImpersonation(): Impersonation {
 			await endImpersonation(active.session_id);
 			window.localStorage.removeItem(ACTIVE_SESSION_KEY);
 			active = null;
+			targetName = null;
 			status = 'idle';
 		} catch (e) {
 			status = 'error';
@@ -104,6 +112,9 @@ function createImpersonation(): Impersonation {
 		},
 		get error() {
 			return error;
+		},
+		get targetName() {
+			return targetName;
 		},
 		reconcile,
 		start,

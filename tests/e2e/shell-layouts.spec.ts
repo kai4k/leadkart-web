@@ -62,12 +62,15 @@ test.describe('shell layouts', () => {
 		await resetMock();
 	});
 
-	for (const layout of PREFERENCE_VALUES.layout) {
-		test(`${layout}: the page does not overlap the sidebar or the topbar (1280x800)`, async ({
+	const COMBOS = PREFERENCE_VALUES.layout.flatMap((layout) =>
+		PREFERENCE_VALUES.navType.map((navType) => [layout, navType] as const)
+	);
+	for (const [layout, navType] of COMBOS) {
+		test(`${layout} / nav ${navType}: the page does not overlap the sidebar or the topbar (1280x800)`, async ({
 			page
 		}) => {
 			await page.setViewportSize({ width: 1280, height: 800 });
-			await open(page, layout);
+			await open(page, layout, { navType });
 			await expect(page.locator('html')).toHaveAttribute('data-layout', layout);
 
 			// the page's content (main's own padding clears the bars, so main itself starts higher)
@@ -97,6 +100,49 @@ test.describe('shell layouts', () => {
 			}
 		});
 	}
+
+	test('rtl: the page still clears the topbar and sits beside the sidebar', async ({ page }) => {
+		await page.setViewportSize({ width: 1280, height: 800 });
+		await open(page, 'vertical');
+		await page.evaluate(() => document.documentElement.setAttribute('dir', 'rtl'));
+		const main = await box(page, 'main#main-content > div');
+		const topbar = await box(page, '[data-shell="topbar"]');
+		const sidebar = await box(page, '[data-slot="sidebar-container"]');
+		expect(main.y + 1).toBeGreaterThanOrEqual(topbar.y + topbar.height - 1);
+		// mirrored: the sidebar is at the inline start, now the right edge
+		expect(sidebar.x).toBeGreaterThan(640);
+		expect(main.x + main.width, 'main ends before the sidebar starts').toBeLessThanOrEqual(
+			sidebar.x + 1
+		);
+	});
+
+	test('pattern nav type: after a scroll the topbar still has its own opaque fill, not the page background', async ({
+		page
+	}) => {
+		await page.setViewportSize({ width: 1280, height: 800 });
+		await open(page, 'vertical', { navType: 'pattern' });
+		await page.evaluate(() => {
+			const filler = document.createElement('div');
+			filler.style.height = '3000px';
+			document.querySelector('#main-content')!.append(filler);
+		});
+		await page.evaluate(() => window.scrollTo(0, 1500));
+		await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+		const fills = await page.evaluate(() => {
+			const top = getComputedStyle(document.querySelector('[data-shell="topbar"]')!);
+			return {
+				topbar: top.backgroundColor,
+				page: getComputedStyle(document.body).backgroundColor,
+				scrollY: window.scrollY
+			};
+		});
+		expect(fills.scrollY).toBeGreaterThan(100);
+		expect(fills.topbar).not.toBe('rgba(0, 0, 0, 0)');
+		expect(fills.topbar).not.toBe('transparent');
+		expect(fills.topbar).not.toBe(fills.page);
+		// opaque: no alpha channel below 1
+		expect(fills.topbar).not.toMatch(/rgba\(.*,\s*0?\.\d+\)/);
+	});
 
 	test('the small sidebar is icon-only and every link keeps its name (a tooltip names it)', async ({
 		page

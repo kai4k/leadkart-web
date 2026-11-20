@@ -11,6 +11,7 @@
 	 *
 	 * `aria-current="page"` marks the active entry in both shapes.
 	 */
+	import { _ } from 'svelte-i18n';
 	import { DropdownMenu, Sidebar } from '$ui';
 	import { NAV_ICONS } from '#lib/config/nav-icons.ts';
 	import type { VisibleNavItem } from '#lib/config/nav.ts';
@@ -28,6 +29,7 @@
 	} = $props();
 
 	const NavIcon = $derived(NAV_ICONS[item.key]);
+	const label = $derived($_(`nav.items.${item.key}`));
 </script>
 
 {#if variant === 'sidebar'}
@@ -36,7 +38,7 @@
 	>
 		<Sidebar.MenuButton
 			isActive={active}
-			tooltipContent={item.label}
+			tooltipContent={label}
 			class="h-auto min-h-10 gap-3 px-4 py-2.5 hover:bg-transparent active:bg-transparent data-active:bg-transparent data-active:font-normal data-active:text-sidebar-accent-foreground [:root[data-sidebar=medium]_&]:mx-3 [:root[data-sidebar=medium]_&]:w-auto [:root[data-sidebar=medium]_&]:flex-col [:root[data-sidebar=medium]_&]:gap-1.5 [:root[data-sidebar=medium]_&]:py-3 [:root[data-sidebar=medium]_&]:text-center [:root[data-sidebar=medium]_&]:text-xs [:root[data-sidebar=medium]_&]:hover:bg-sidebar-accent [:root[data-sidebar=medium]_&]:data-active:bg-sidebar-accent group-data-[collapsible=icon]:size-11! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:hover:bg-sidebar-accent group-data-[collapsible=icon]:data-active:bg-sidebar-accent [:root:not([data-sidebar=large])_&_svg]:size-5!"
 		>
 			{#snippet child({ props })}
@@ -47,7 +49,7 @@
 					onclick={() => onNavigate?.()}
 				>
 					<NavIcon aria-hidden="true" />
-					<span class="group-data-[collapsible=icon]:sr-only">{item.label}</span>
+					<span class="group-data-[collapsible=icon]:sr-only">{label}</span>
 				</a>
 			{/snippet}
 		</Sidebar.MenuButton>
@@ -67,7 +69,7 @@
 				]}
 			>
 				<NavIcon class="size-4 shrink-0" aria-hidden="true" />
-				<span>{item.label}</span>
+				<span>{label}</span>
 			</a>
 		{/snippet}
 	</DropdownMenu.Item>

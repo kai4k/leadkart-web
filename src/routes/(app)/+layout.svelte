@@ -55,10 +55,12 @@
 
 <QueryClientProvider {client}>
 	<NavProgressBar />
-	<ImpersonationBanner />
 	<PwaStatusBar />
 	<ReloadNotice />
 	<AppShell>
+		{#snippet banner()}
+			<ImpersonationBanner />
+		{/snippet}
 		{#if !contextMoved}
 			{@render children()}
 		{/if}

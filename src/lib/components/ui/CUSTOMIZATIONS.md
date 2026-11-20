@@ -49,9 +49,11 @@ bottom-right`, `richColors`, `closeButton`, token classes only; icons via `#lib/
   `ring-foreground/10` is `ring-border`; the dropdown's destructive hover is `bg-destructive-soft`.
 - Duplicate imports from one module are merged (eslint `no-duplicate-imports`).
 
+- `sidebar/context.svelte.ts` + `sidebar-provider.svelte`: `shortcutEnabled` (false in the horizontal layout), and Ctrl/Cmd+B is ignored when typed into a field or while a dialog/sheet is open. The mobile query is `width < 64rem` (rem, like the CSS).
+
 ## Not generated (LeadKart composites, plan L16)
 
-`AuthCard`, `ConfirmDialog`, `CopyButton`, `DescriptionList`, `EmptyState`, `Logo`, `StatCard`,
+`AuthCard`, `BrandMark` (icon + live-text wordmark; the icon is a fixed-colour raster until a vector logo source exists), `ConfirmDialog`, `CopyButton`, `DescriptionList`, `EmptyState`, `Logo`, `StatCard`,
 `StatusPill`, `kanban/`, `stepper/`, `timeline/`, `spinner/`, and the legacy `data-table/`.
 
 ## Stacking

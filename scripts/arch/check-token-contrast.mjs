@@ -114,7 +114,16 @@ const RAW_PAIRS = [
 	['primary-hover', 'card', TEXT, { note: 'link hover' }],
 	// toasts: text and icon on the soft status fills
 	...STATUS.map((s) => ['foreground', `${s}-soft`, TEXT, { note: 'toast text' }]),
-	['foreground', 'destructive-soft', TEXT, { note: 'toast text' }]
+	['foreground', 'destructive-soft', TEXT, { note: 'toast text' }],
+	// Tasks 12-14: the topbar, the context banners and the pages' headers. Most re-check a pair above on
+	// purpose, so each use is on record; the pattern topbar's fills are opaque tokens (never a mix with
+	// transparent) so they resolve here: `--muted`/`--accent`/`--border` are `primary-hover` on that
+	// topbar, its text and focus ring are `primary-foreground`, painted on the `primary` band.
+	['foreground', 'warning-soft', TEXT, { note: 'tenant context banner text' }],
+	['foreground', 'destructive-soft', TEXT, { note: 'impersonation banner text' }],
+	['primary-foreground', 'primary', TEXT, { note: 'pattern topbar: text and icons on the band' }],
+	['primary-foreground', 'primary-hover', TEXT, { note: 'pattern topbar: search fill, hover' }],
+	['primary-foreground', 'primary', UI, { note: 'pattern topbar: focus ring on the band' }]
 ];
 
 /** @type {Pair[]} */

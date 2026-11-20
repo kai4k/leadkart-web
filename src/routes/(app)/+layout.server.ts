@@ -95,9 +95,15 @@ export const load: LayoutServerLoad = async ({ cookies, url, locals, depends, ro
 	// fingerprint of that context (a keyed hash, never the tenant itself): the page sends it with
 	// every API call and form post, and the BFF refuses a call whose page shows another context
 	// than the cookie names now (another tab entered or left one).
+	// `tenantContext` is DISPLAY text for the context banner (the company's name, and whether it is the
+	// platform's own): the id and the slug stay on the server.
 	return {
 		capabilities,
 		inTenantContext: scope.state === 'valid',
-		scopeContext: scopeFingerprint(scope, cookies)
+		scopeContext: scopeFingerprint(scope, cookies),
+		tenantContext:
+			scope.state === 'valid'
+				? { displayName: scope.scope.display_name, isPlatform: scope.scope.slug === 'platform' }
+				: null
 	};
 };

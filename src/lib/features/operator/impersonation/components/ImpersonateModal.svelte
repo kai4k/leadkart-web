@@ -38,11 +38,14 @@
 		// it in a callback".
 		const target = tenant;
 		await form.submit(e, async (values, current) => {
-			await impersonation.start({
-				target_tenant_id: target.id,
-				reason: values.reason,
-				duration_minutes: values.duration_minutes
-			});
+			await impersonation.start(
+				{
+					target_tenant_id: target.id,
+					reason: values.reason,
+					duration_minutes: values.duration_minutes
+				},
+				target.display_name
+			);
 			if (!current()) return;
 			form.reset();
 			onOpenChange(false);

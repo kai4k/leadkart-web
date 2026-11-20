@@ -111,6 +111,7 @@
 		"save": "Save",
 		"navigation": "Navigation",
 		"close": "Close",
+		"brandName": "LeadKart",
 		"pagination": {
 			"label": "Pagination",
 			"previous": "Previous",
@@ -184,6 +185,29 @@
 		"toggleSidebar": "Toggle sidebar",
 		"mainNavigation": "Main navigation",
 		"brandHome": "LeadKart home",
+		"toggleMode": "Switch between light and dark mode",
+		"openCustomizer": "Open theme settings",
+		"searchPlaceholder": "Search…",
+		"userMenu": {
+			"label": "User menu",
+			"signedInAs": "Signed in as",
+			"account": "Account & Security",
+			"signOut": "Sign out"
+		},
+		"tenantContext": {
+			"region": "Tenant context",
+			"actingIn": "You are acting in {tenant}",
+			"platform": "Platform",
+			"exit": "Exit context"
+		},
+		"impersonation": {
+			"region": "Impersonation session",
+			"impersonating": "Impersonating {tenant}",
+			"impersonatingCompany": "Impersonating a company",
+			"details": "{reason} · Expires {expires}",
+			"end": "End impersonation",
+			"endLabel": "End impersonation session"
+		},
 		"footer": {
 			"label": "Application footer",
 			"copyright": "© {year} LeadKart · Pharma SaaS"
@@ -192,6 +216,36 @@
 	"orders": {
 		"quotation": {
 			"revisionLineSummary": "{lineCount, plural, one {# line} other {# lines}} · subtotal {subtotal} · GST {gstTotal}"
+		}
+	},
+	"nav": {
+		"sections": {
+			"operator": "Operator",
+			"tenantContext": "Tenant context",
+			"administration": "Administration",
+			"crm": "CRM",
+			"account": "Account"
+		},
+		"items": {
+			"dashboard": "Dashboard",
+			"tenants": "Tenants",
+			"persons": "People",
+			"scopeProfile": "Profile",
+			"scopeMembers": "Members",
+			"scopeRoles": "Roles",
+			"scopeActivity": "Activity",
+			"scopeSettings": "Settings",
+			"tenantSettings": "Tenant Settings",
+			"team": "Team",
+			"roles": "Roles",
+			"leads": "Leads",
+			"orders": "Orders",
+			"inventory": "Inventory",
+			"permissionRequests": "Permission requests",
+			"account": "Account",
+			"scope": "Tenant context",
+			"roleNew": "New role",
+			"quotations": "Quotations"
 		}
 	},
 	"errors": {

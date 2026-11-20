@@ -258,6 +258,15 @@ export function visibleNav(caps: Caps, inTenantContext = false): VisibleNavSecti
 }
 
 /**
+ * The navigation the SHELL renders (the sidebar and the horizontal nav both call this, so they cannot
+ * disagree): everything the caller may see, except the operator scope tree, which the scope layout
+ * shows as its own tabs (listing it here too would duplicate every link).
+ */
+export function shellNav(caps: Caps, inTenantContext = false): VisibleNavSection[] {
+	return visibleNav(caps, inTenantContext).filter((s) => s.id !== 'tenantContext');
+}
+
+/**
  * Is `href` the current page or an ancestor of it? An exact match or a `${href}/` prefix, so `/leads`
  * is active for `/leads/1` but not for `/leads-archive` (the one matcher the sidebar, the horizontal
  * nav and the operator scope tabs share).

@@ -13,8 +13,8 @@
 	import { _ } from 'svelte-i18n';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { Sidebar } from '$ui';
-	import { isNavActive, visibleNav } from '#lib/config/nav.ts';
+	import { BrandMark, Sidebar } from '$ui';
+	import { isNavActive, shellNav } from '#lib/config/nav.ts';
 	import { session } from '$features/auth';
 	import NavItem from './NavItem.svelte';
 
@@ -27,11 +27,7 @@
 		onNavigateProp?.();
 	}
 
-	const sections = $derived(
-		visibleNav(session.capabilities, session.inTenantContext).filter(
-			(s) => s.id !== 'tenantContext'
-		)
-	);
+	const sections = $derived(shellNav(session.capabilities, session.inTenantContext));
 </script>
 
 <Sidebar.Root collapsible="icon">
@@ -46,16 +42,12 @@
 			aria-label={$_('shell.brandHome')}
 			onclick={() => onNavigate?.()}
 		>
-			<img
-				src="/images/favicon/favicon_512x512.png"
-				alt=""
-				class="block h-full max-w-full object-contain group-data-[collapsible=icon]:hidden"
+			<BrandMark
+				wordmark
+				decorative
+				class="text-sidebar-foreground group-data-[collapsible=icon]:hidden"
 			/>
-			<img
-				src="/images/favicon/favicon_128x128.png"
-				alt=""
-				class="hidden size-10 rounded-md object-contain group-data-[collapsible=icon]:block"
-			/>
+			<BrandMark decorative class="hidden group-data-[collapsible=icon]:inline-flex" />
 		</a>
 	</Sidebar.Header>
 
@@ -68,7 +60,7 @@
 							<Sidebar.GroupLabel
 								class="h-auto px-4 py-2 text-xs uppercase tracking-wide [:root[data-sidebar=medium]_&]:justify-center"
 							>
-								{section.title}
+								{$_(`nav.sections.${section.id}`)}
 							</Sidebar.GroupLabel>
 						{/if}
 						<Sidebar.GroupContent>

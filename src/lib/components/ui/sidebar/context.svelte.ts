@@ -13,6 +13,9 @@ export type SidebarStateProps = {
 
 	/** Sets the open state: the one source of truth for changing it. */
 	setOpen: (open: boolean) => void;
+
+	/** Is Ctrl/Cmd+B active? False where there is no sidebar to toggle (the horizontal layout). */
+	shortcutEnabled?: Getter<boolean>;
 };
 
 export interface SidebarState {
@@ -28,6 +31,16 @@ export interface SidebarState {
 	toggle: () => void;
 	/** Event handler to apply to `<svelte:window onkeydown>`. */
 	handleShortcutKeydown: (e: KeyboardEvent) => void;
+}
+
+/** An element the user types into. */
+function isEditable(target: EventTarget | null): boolean {
+	if (!(target instanceof HTMLElement)) return false;
+	return (
+		target.isContentEditable ||
+		target.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]') !==
+			null
+	);
 }
 
 /**
@@ -70,10 +83,13 @@ function createSidebarState(props: SidebarStateProps): SidebarState {
 		},
 		toggle,
 		handleShortcutKeydown(e) {
-			if (e.key === SIDEBAR_KEYBOARD_SHORTCUT && (e.metaKey || e.ctrlKey)) {
-				e.preventDefault();
-				toggle();
-			}
+			if (e.key !== SIDEBAR_KEYBOARD_SHORTCUT || !(e.metaKey || e.ctrlKey)) return;
+			if (props.shortcutEnabled && !props.shortcutEnabled()) return;
+			// Not ours when it is meant for a field (bold in an editor), or while a dialog or sheet is open.
+			if (isEditable(e.target) || document.querySelector('[role="dialog"], [role="alertdialog"]'))
+				return;
+			e.preventDefault();
+			toggle();
 		}
 	};
 }

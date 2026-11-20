@@ -109,6 +109,15 @@ describe('the sidebar (desktop)', () => {
 	});
 });
 
+describe('the sidebar in a tenant context', () => {
+	it('offers none of the own-tenant entries (the same rule as the horizontal nav)', async () => {
+		pageUrl.value = new URL('http://localhost/operator/scope/profile');
+		await render({}, OPERATOR_PLATFORM_ADMIN, true);
+		for (const own of ['/settings/users', '/settings/tenant', '/permission-requests'])
+			expect(hrefs()).not.toContain(own);
+	});
+});
+
 describe('the icon-only size', () => {
 	it('is collapsed, and every link keeps its accessible name as screen-reader text', async () => {
 		await render({ sidebar: 'small' });
