@@ -63,7 +63,12 @@
 	bind:this={ref}
 	data-slot="alert"
 	{role}
-	class={cn(alertVariants({ variant }), className)}
+	tabindex={role === 'alert' ? -1 : undefined}
+	class={cn(
+		alertVariants({ variant }),
+		'focus-visible:ring-ring outline-none focus-visible:ring-2',
+		className
+	)}
 	{...rest}
 >
 	<div class="flex items-start gap-3">

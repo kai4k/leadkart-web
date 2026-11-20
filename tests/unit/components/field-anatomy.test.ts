@@ -166,6 +166,67 @@ describe('NumberInput parsing', () => {
 	});
 });
 
+describe('NumberInput commits on submit and reads strictly (fix round B)', () => {
+	function typeInto(text: string, props: Record<string, unknown> = {}) {
+		render(NumberInput, { label: 'Amount', value: 5, locale: 'en-IN', ...props });
+		const input = target.querySelector<HTMLInputElement>('input')!;
+		input.focus();
+		input.value = text;
+		input.dispatchEvent(new Event('input', { bubbles: true }));
+		return input;
+	}
+	const press = (input: HTMLInputElement, key: string) => {
+		const e = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+		input.dispatchEvent(e);
+		return e;
+	};
+
+	it('Enter commits the shown text to the model and to the DOM value a native submit reads', () => {
+		const input = typeInto('1,00,000');
+		const e = press(input, 'Enter');
+		// no flushSync: a native form submit reads the field right after keydown
+		expect(input.value).toBe('100000');
+		flushSync();
+		expect(input.getAttribute('aria-valuenow')).toBe('100000');
+		expect(e.defaultPrevented).toBe(false);
+	});
+	it('Enter on unreadable text does not submit, restores the value and marks the field invalid', () => {
+		const input = typeInto('1,5');
+		const e = press(input, 'Enter');
+		flushSync();
+		expect(e.defaultPrevented).toBe(true);
+		expect(input.value).toBe('5');
+		expect(input.getAttribute('aria-invalid')).toBe('true');
+	});
+	it('a group separator in the wrong place is refused, not read as another number', () => {
+		for (const bad of ['1,5', '1,,2', '1,']) {
+			const input = typeInto(bad);
+			input.blur();
+			flushSync();
+			expect(input.getAttribute('aria-invalid')).toBe('true');
+			expect(input.value).toBe('5');
+			unmount(component!);
+			target.remove();
+		}
+	});
+	it('a decimal-comma locale re-reads its own output after a nudge', () => {
+		const input = typeInto('1.234,5', { locale: 'de', precision: 1 });
+		input.blur();
+		flushSync();
+		expect(input.value).toBe('1234,5');
+		input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+		flushSync();
+		expect(input.value).toBe('1235,5');
+		expect(input.getAttribute('aria-invalid')).toBeNull();
+	});
+	it('reads Devanagari digits in hi', () => {
+		const input = typeInto('१,२३,४५६', { locale: 'hi' });
+		input.blur();
+		flushSync();
+		expect(input.value).toBe('123456');
+	});
+});
+
 describe('Switch', () => {
 	it('is a labelled switch described by its hint, toggled by click', () => {
 		render(Switch, { label: 'Email alerts', hint: 'Daily digest' });

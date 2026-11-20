@@ -8,9 +8,13 @@
 	 * Behaviour:
 	 *   - +/− buttons step by `step`; disabled at min/max.
 	 *   - ArrowUp / ArrowDown step by `step`; Shift+Arrow steps by step×10.
-	 *   - Blur parses the text in the active locale ("1,00,000" in en-IN is 100000), clamps to
-	 *     [min, max] and rounds to `precision` decimals. Text that is not a number keeps the previous
-	 *     value, restores it in the field and marks the field invalid; it is never silently cleared.
+	 *   - Blur and Enter parse the text in the active locale ("1,00,000" in en-IN is 100000; a group
+	 *     separator in the wrong place, "1,5", is refused), clamp to [min, max] and round to
+	 *     `precision` decimals. Text that is not a number keeps the previous value, restores it in the
+	 *     field and marks the field invalid; it is never silently cleared. Enter commits first, so the
+	 *     submit that follows reads what is shown, and an unreadable text does not submit.
+	 *   - What the field shows after a commit is the locale's plain form (decimal comma in de, no
+	 *     grouping), which the parser reads back to the same number.
 	 *   - Empty string preserved as null in `value`.
 	 *   - prefix / suffix render inside the field at the inline edges.
 	 */
@@ -18,7 +22,7 @@
 
 <script lang="ts">
 	import { _, locale as i18nLocale } from 'svelte-i18n';
-	import { parseLocaleNumber } from '#lib/utils/parse-number.ts';
+	import { formatPlainNumber, parseLocaleNumber } from '#lib/utils/parse-number.ts';
 	import { Icon, Minus, Plus } from '#lib/icons/index.ts';
 	import * as Field from '#lib/components/ui/field/index.ts';
 	import { Button } from '#lib/components/ui/button/index.ts';
@@ -80,11 +84,14 @@
 		[shownError ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined
 	);
 
-	let displayValue = $state(value === null || Number.isNaN(value) ? '' : String(value));
+	const show = (n: number | null) =>
+		n === null || Number.isNaN(n) ? '' : formatPlainNumber(n, activeLocale);
+
+	let displayValue = $state(show(value));
 
 	$effect(() => {
 		// Sync external value → display when caller mutates value directly
-		const next = value === null || Number.isNaN(value) ? '' : String(value);
+		const next = show(value);
 		if (next !== displayValue && document.activeElement?.id !== fieldId) {
 			displayValue = next;
 		}
@@ -102,35 +109,37 @@
 		return Math.round(n * factor) / factor;
 	}
 
-	function commit(raw: string) {
+	/** Returns false when the text could not be read (the previous value is shown again). */
+	function commit(raw: string): boolean {
 		if (raw.trim() === '') {
 			unreadable = false;
 			value = null;
 			displayValue = '';
-			return;
+			return true;
 		}
 		const parsed = parseLocaleNumber(raw, activeLocale);
 		if (parsed === null) {
 			// Keep what was there; show it again so the field and the value agree.
 			unreadable = true;
-			displayValue = value === null || Number.isNaN(value) ? '' : String(value);
-			return;
+			displayValue = show(value);
+			return false;
 		}
 		unreadable = false;
 		const next = round(clamp(parsed));
 		value = next;
-		displayValue = String(next);
+		displayValue = show(next);
+		return true;
 	}
 
 	function nudge(delta: number) {
 		const base = value ?? min ?? 0;
-		commit(String(round(base + delta)));
+		commit(formatPlainNumber(round(base + delta), activeLocale));
 	}
 
 	const isAtMin = $derived(value !== null && min !== undefined && value <= min);
 	const isAtMax = $derived(value !== null && max !== undefined && value >= max);
 
-	function onKeyDown(e: KeyboardEvent) {
+	function onKeyDown(e: KeyboardEvent & { currentTarget: HTMLInputElement }) {
 		const multiplier = e.shiftKey ? 10 : 1;
 		if (e.key === 'ArrowUp') {
 			e.preventDefault();
@@ -138,6 +147,12 @@
 		} else if (e.key === 'ArrowDown') {
 			e.preventDefault();
 			nudge(-step * multiplier);
+		} else if (e.key === 'Enter' && !e.isComposing) {
+			// commit BEFORE the implicit submit reads the field (the DOM value is written now: the
+			// re-render that would show it comes after the submit)
+			const ok = commit(displayValue);
+			e.currentTarget.value = displayValue;
+			if (!ok) e.preventDefault();
 		}
 	}
 </script>

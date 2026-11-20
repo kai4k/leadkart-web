@@ -172,6 +172,8 @@ export function useForm<TSchema extends AnyObjectSchema>(
 				void focusFirstInvalid(formEl);
 			} else {
 				bannerError = describeError(err, { fallback: 'An unexpected error occurred' });
+				// nothing is invalid and the submit button was busy: focus goes to the form's alert
+				void focusFirstInvalid(formEl);
 			}
 		} finally {
 			if (busyGeneration === mine) busyGeneration = null;

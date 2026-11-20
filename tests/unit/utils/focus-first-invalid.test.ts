@@ -71,3 +71,47 @@ describe('withFocusOnFailure (server-action forms)', () => {
 		expect(document.activeElement?.id).toBe('x');
 	});
 });
+
+describe('a failure that is not a field (fix round B)', () => {
+	it('focuses the form-level alert when nothing is invalid, and keeps its role', async () => {
+		const form = html(
+			'<div role="alert" id="banner">Too many attempts</div><button disabled>Save</button>'
+		);
+		expect(await focusFirstInvalid(form)).toBe(true);
+		const banner = document.getElementById('banner')!;
+		expect(document.activeElement).toBe(banner);
+		expect(banner.getAttribute('role')).toBe('alert');
+		expect(banner.getAttribute('tabindex')).toBe('-1');
+	});
+
+	it('prefers an invalid field over the alert', async () => {
+		const form = html('<div role="alert"></div><input id="f" aria-invalid="true" />');
+		await focusFirstInvalid(form);
+		expect(document.activeElement?.id).toBe('f');
+	});
+
+	it('inside a dialog, finds the alert in the overlay when it sits outside the form', async () => {
+		const dialog = document.createElement('div');
+		dialog.setAttribute('role', 'dialog');
+		dialog.innerHTML =
+			'<div role="alert" id="ob">Session expired</div><form id="fm"><button disabled>Go</button></form>';
+		document.body.append(dialog);
+		document.body.insertAdjacentHTML('beforeend', '<div role="alert" id="elsewhere">page</div>');
+		expect(await focusFirstInvalid(dialog.querySelector('form'))).toBe(true);
+		expect(document.activeElement?.id).toBe('ob');
+	});
+
+	it('returns false and moves nothing when there is neither', async () => {
+		expect(await focusFirstInvalid(html('<input />'))).toBe(false);
+	});
+
+	it('withFocusOnFailure falls back to the alert after a failed result with no field error', async () => {
+		const form = html('<div role="alert" id="b2">Server said no</div>');
+		const update = vi.fn().mockResolvedValue(undefined);
+		const callback = (await withFocusOnFailure()({ formElement: form } as never)) as (
+			o: unknown
+		) => Promise<void>;
+		await callback({ result: { type: 'failure' }, update });
+		expect(document.activeElement?.id).toBe('b2');
+	});
+});

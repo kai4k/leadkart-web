@@ -9,6 +9,12 @@ import type { SubmitFunction } from '$app/forms';
  * Invalid means `aria-invalid="true"`, which every field in `components/form` sets. A control that
  * is not itself focusable (a radio group) hands focus to its first focusable descendant. Returns
  * whether something was focused. Waits one tick so the errors have rendered.
+ *
+ * A failure that is NOT a field's (409 scope refusal, 429, expired session, 5xx) marks nothing
+ * invalid, and the submit button was disabled while loading, so focus would fall to <body>. Then the
+ * form-level `role="alert"` takes it (tabindex="-1": programmatically focusable, not a tab stop),
+ * looked up in the form first and then in the dialog or sheet around it, so focus stays inside the
+ * overlay.
  */
 const FOCUSABLE = 'input, select, textarea, button, [tabindex]:not([tabindex="-1"])';
 
@@ -21,6 +27,19 @@ export async function focusFirstInvalid(root: ParentNode | null | undefined): Pr
 			: invalid.querySelector<HTMLElement>(FOCUSABLE);
 		if (!target || target.hasAttribute('disabled')) continue;
 		target.focus();
+		return true;
+	}
+	return focusFormAlert(root);
+}
+
+function focusFormAlert(root: ParentNode): boolean {
+	const overlay =
+		root instanceof Element ? root.closest('[role="dialog"], [role="alertdialog"]') : null;
+	for (const scope of [root, overlay]) {
+		const alert = scope?.querySelector<HTMLElement>('[role="alert"]');
+		if (!alert) continue;
+		if (!alert.hasAttribute('tabindex')) alert.setAttribute('tabindex', '-1');
+		alert.focus();
 		return true;
 	}
 	return false;
