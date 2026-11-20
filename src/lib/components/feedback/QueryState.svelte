@@ -40,17 +40,8 @@
 	const canRetry = $derived(!missing && !forbidden && query.refetch !== undefined);
 </script>
 
-{#if query.isPending}
-	<div class="stack stack-relaxed" aria-busy="true" aria-label="Loading {noun}">
-		{#if skeleton}
-			{@render skeleton()}
-		{:else}
-			<Skeleton class="h-7 w-1/2" />
-			<Skeleton class="h-32 w-full rounded-md" />
-		{/if}
-	</div>
-{:else if query.isError}
-	<Alert variant={missing || forbidden ? 'warning' : 'danger'} {title}>
+{#snippet failure(heading: string)}
+	<Alert variant={missing || forbidden ? 'warning' : 'danger'} title={heading}>
 		<div class="stack stack-tight">
 			<p>{message}</p>
 			{#if canRetry}
@@ -60,7 +51,28 @@
 			{/if}
 		</div>
 	</Alert>
-{:else if query.data !== undefined}
+{/snippet}
+
+{#if query.isPending}
+	<!-- A div with aria-label and no role is ignored by screen readers: a status region with real text. -->
+	<div class="stack stack-relaxed" role="status" aria-busy="true">
+		<span class="sr-only">Loading {noun}</span>
+		{#if skeleton}
+			{@render skeleton()}
+		{:else}
+			<Skeleton class="h-7 w-1/2" />
+			<Skeleton class="h-32 w-full rounded-md" />
+		{/if}
+	</div>
+{:else if query.data === undefined}
+	{#if query.isError}
+		{@render failure(title)}
+	{/if}
+{:else}
+	<!-- A failed refetch keeps the data on screen (it is still the last good answer) with a notice. -->
+	{#if query.isError}
+		{@render failure(`Couldn't refresh ${noun}`)}
+	{/if}
 	{#if isEmpty?.(query.data)}
 		{#if empty}
 			{@render empty()}

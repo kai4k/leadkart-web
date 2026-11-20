@@ -20,6 +20,7 @@
  * the navigation settles. Dependencies are injected so the guard is
  * unit-testable without a router.
  */
+import { codeCopy } from './code-copy.ts';
 import { SCOPE_CHANGED_MESSAGE, SCOPE_EXPIRED_MESSAGE } from './scope-header.ts';
 import { AuthError, ScopeChangedError, ScopeInvalidError, SESSION_EXPIRED_CODE } from './errors';
 
@@ -89,7 +90,7 @@ export function createSessionGuard(deps: SessionGuardDeps): SessionGuard {
 						() => {
 							// The exit already followed the change (cache reset, layout re-run),
 							// so no scoped data survives and active queries run unscoped.
-							deps.notify(SCOPE_EXPIRED_MESSAGE);
+							deps.notify(codeCopy('scope_invalid') ?? SCOPE_EXPIRED_MESSAGE);
 							return deps.goto('/operator/tenants');
 						},
 						() => {
@@ -104,7 +105,7 @@ export function createSessionGuard(deps: SessionGuardDeps): SessionGuard {
 			if (error instanceof ScopeChangedError) {
 				if (redirecting) return true;
 				redirecting = true;
-				deps.notify(SCOPE_CHANGED_MESSAGE);
+				deps.notify(codeCopy('scope_changed') ?? SCOPE_CHANGED_MESSAGE);
 				// Whatever the refresh does (a guard may redirect), a failure here is not worth a second toast.
 				settle(deps.followContext().catch(() => undefined));
 				return true;

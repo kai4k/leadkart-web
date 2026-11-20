@@ -4,15 +4,18 @@
  * (`goFailureKey`), so a form posting through a server action says the same thing as one posting
  * through the API client. English and Hindi live in the locale files under `errors.code.<code>`.
  * A code not listed here gets the generic line of its status class; Go's own text is never shown.
- * Adding a code is one entry here plus its two lines.
+ * Adding a code is one entry here plus its two lines. The locale files load lazily (see
+ * `i18n/index.ts`), so this module never imports one: before a locale is ready the answer is a
+ * short built-in line, never the key and never Go's text.
  */
 import { _ } from 'svelte-i18n';
 import { get } from 'svelte/store';
-import en from '../i18n/locales/en.json';
 
 const CODES = [
 	// BFF
 	'csrf_mismatch',
+	'scope_changed',
+	'scope_invalid',
 	// An operator acting inside another tenant
 	'tenant_scope_not_supported',
 	'tenant_scope_read_only',
@@ -40,9 +43,19 @@ const CODES = [
 	'role_system_default',
 	'role_parent_not_eligible',
 	'role_level_breaks_reporting',
+	'role_hierarchy_cycle',
+	'role_hierarchy_self_reference',
+	'role_hierarchy_edge_already_exists',
+	'email_already_taken',
+	'email_has_active_membership',
+	'person_active_elsewhere',
+	'concurrency_conflict',
+	'platform_tenant_undeletable',
 	// Permission requests
 	'permission_not_requestable',
 	'permission_request_requester_inactive',
+	'permission_request_pending_exists',
+	'permission_request_not_pending',
 	// Account and search
 	'incorrect_current_password',
 	'search_category_forbidden',
@@ -58,17 +71,10 @@ export function goCodeKey(code: string | undefined): string | undefined {
 	return code === undefined ? undefined : GO_CODE_KEYS.get(code);
 }
 
-function lookup(tree: unknown, key: string): string | undefined {
-	const hit = key
-		.split('.')
-		.reduce<unknown>((node, part) => (node as Record<string, unknown> | undefined)?.[part], tree);
-	return typeof hit === 'string' ? hit : undefined;
-}
+/** What the user reads when the locale is not ready yet (a unit test, an error before i18n started). */
+export const UNREADY_COPY = 'Something went wrong. Please try again.';
 
-/**
- * The user's text for a code in the active locale. Before a locale is ready (a unit test, an error
- * before i18n started) the English line from the same file answers: never the key, never Go's text.
- */
+/** The user's text for a code in the active locale (undefined when the table does not know the code). */
 export function codeCopy(code: string | undefined): string | undefined {
 	const key = goCodeKey(code);
 	if (key === undefined) return undefined;
@@ -78,5 +84,5 @@ export function codeCopy(code: string | undefined): string | undefined {
 	} catch {
 		// no locale yet
 	}
-	return lookup(en, key);
+	return UNREADY_COPY;
 }

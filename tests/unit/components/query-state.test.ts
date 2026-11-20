@@ -44,11 +44,15 @@ const q = (over: Partial<FakeQuery>): FakeQuery => ({ ...base, ...over });
 const text = () => target.textContent ?? '';
 
 describe('QueryState', () => {
-	it('shows the default skeleton while pending, announced as busy', () => {
+	it('shows the default skeleton while pending, announced as a status with visually hidden text', () => {
 		render(q({ isPending: true }));
 		const busy = target.querySelector('[aria-busy="true"]');
 		expect(busy).not.toBeNull();
-		expect(busy?.getAttribute('aria-label')).toBe('Loading lead');
+		// aria-label on a div with no role is ignored by screen readers: the region is a status
+		// and the words are real (visually hidden) text.
+		expect(busy?.getAttribute('role')).toBe('status');
+		expect(busy?.hasAttribute('aria-label')).toBe(false);
+		expect(busy?.querySelector('.sr-only')?.textContent).toBe('Loading lead');
 		expect(target.querySelectorAll('[data-slot="skeleton"]').length).toBe(2);
 		expect(target.querySelector('[data-testid="content"]')).toBeNull();
 	});
@@ -110,6 +114,31 @@ describe('QueryState', () => {
 		expect(text()).toContain("Couldn't load lead");
 		expect(text()).toContain('Something went wrong. Please try again.');
 		expect(text()).not.toContain('RAW boom');
+	});
+
+	it('a failed REFETCH keeps showing the data, with an inline notice and a working Try again', () => {
+		const refetch = vi.fn();
+		render(
+			q({
+				isError: true,
+				error: new NetworkError(new TypeError('x')),
+				data: { name: 'Asha' },
+				refetch
+			})
+		);
+		expect(target.querySelector('[data-testid="content"]')?.textContent).toBe('Hello Asha');
+		const alert = target.querySelector('[role="alert"]');
+		expect(alert?.textContent).toContain("Couldn't refresh lead");
+		[...target.querySelectorAll('button')]
+			.find((b) => b.textContent?.includes('Try again'))
+			?.click();
+		expect(refetch).toHaveBeenCalledTimes(1);
+	});
+
+	it('an error with no data yet still replaces the content with the alert', () => {
+		render(q({ isError: true, error: new NetworkError(new TypeError('x')), refetch: vi.fn() }));
+		expect(target.querySelector('[data-testid="content"]')).toBeNull();
+		expect(target.querySelector('[role="alert"]')?.textContent).toContain("Couldn't load lead");
 	});
 
 	it('shows no Try again when the query cannot refetch', () => {

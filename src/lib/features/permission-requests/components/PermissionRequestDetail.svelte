@@ -27,9 +27,10 @@
 	const callerMembershipId = $derived(session.principal?.membershipId ?? '');
 
 	const query = permissionRequestDetailQuery(() => id);
-	// Go decides per request by its authority policy and says so in the approver queue: a request is
-	// listed there exactly when the caller may deny it, with `can_approve` for approving it as asked.
-	// The controls follow that answer; the browser holds no permission or rank rule for it.
+	// Go shows this detail only to the requester or to someone who may deny it, so a pending request
+	// someone else submitted may be denied as soon as it loads. Approving is what needs the queue:
+	// `can_approve` (whether approving it as asked would pass) is sent only there. The browser holds
+	// no permission or rank rule for either.
 	const queueItem = permissionRequestQueueItemQuery(
 		() => id,
 		() => query.data !== undefined && canDecide(query.data, callerMembershipId)

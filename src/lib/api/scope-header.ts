@@ -10,7 +10,10 @@ export const SCOPE_CONTEXT_HEADER = 'x-lk-scope-context';
 export const SCOPE_CONTEXT_FIELD = 'scope_context';
 /** 409 code (BFF) for a call whose page shows another context than the cookie names. */
 export const SCOPE_CHANGED_CODE = 'scope_changed';
-/** The one user-facing line for it (toast, and the form banner's English). */
+/**
+ * The BFF's own English text for the 409 body (`message`). The browser does NOT show it: the user's
+ * line is the locale copy under `errors.code.scope_changed` (`api/code-copy.ts`), English and Hindi.
+ */
 export const SCOPE_CHANGED_MESSAGE = 'Your tenant context changed in another tab. Reloading.';
 
 /** BroadcastChannel name the tabs of one browser use to tell each other the context changed. */
@@ -27,7 +30,10 @@ export function isOperatorScopePath(pathname: string): boolean {
 	return pathname === '/operator/scope' || pathname.startsWith('/operator/scope/');
 }
 
-/** The one user-facing line for a dead operator scope (BFF 409, Go invalid/unknown scope, session guard toast). */
+/**
+ * The BFF's own English text for a dead operator scope (409 body `message`, and the last-resort line
+ * before a locale is ready). The user's line is `errors.code.scope_invalid`.
+ */
 export const SCOPE_EXPIRED_MESSAGE = 'Operator scope expired — select the tenant again';
 
 /**

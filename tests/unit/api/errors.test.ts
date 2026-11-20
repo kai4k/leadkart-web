@@ -463,7 +463,7 @@ describe('code to copy map (Go codes with fixed user copy)', () => {
 			"This tenant still has members or data, so it can't be deleted yet."
 		],
 		[422, 'permission_not_requestable', "This permission can't be requested."],
-		[403, 'insufficient_rank', 'You can only make this change for people below your level.'],
+		[403, 'insufficient_rank', 'You can only do this for people and roles below your own level.'],
 		[409, 'last_owner_protected', 'A company must keep at least one active owner.'],
 		[409, 'owner_protected', "An owner's administrator access can't be removed."],
 		[409, 'role_system_default', "Built-in roles can't be changed or deleted."],
@@ -479,7 +479,7 @@ describe('code to copy map (Go codes with fixed user copy)', () => {
 		[
 			422,
 			'role_level_breaks_reporting',
-			'That level would put someone at or above their manager. Pick a different level.'
+			'That level would break a reporting line — a manager must stay above the people who report to them.'
 		],
 		[
 			409,

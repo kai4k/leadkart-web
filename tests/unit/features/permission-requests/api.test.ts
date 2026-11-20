@@ -53,6 +53,25 @@ describe('findInApproverQueue (the detail page learns can_approve from the queue
 		expect(fetchMock).toHaveBeenCalledTimes(2);
 	});
 
+	it('stops on a repeated cursor instead of looping (the shared cursor rule)', async () => {
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValueOnce(pageBody([item('00000000-0000-4000-8000-0000000000a1', true)], 'c2'))
+			.mockResolvedValueOnce(pageBody([item('00000000-0000-4000-8000-0000000000a2', true)], 'c2'));
+		vi.stubGlobal('fetch', fetchMock);
+		expect(await findInApproverQueue('00000000-0000-4000-8000-0000000000b1')).toBeNull();
+		expect(fetchMock).toHaveBeenCalledTimes(2);
+	});
+
+	it('stops reading as soon as the request is found (no further page is fetched)', async () => {
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValueOnce(pageBody([item('00000000-0000-4000-8000-0000000000b1', true)], 'c2'));
+		vi.stubGlobal('fetch', fetchMock);
+		await findInApproverQueue('00000000-0000-4000-8000-0000000000b1');
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+	});
+
 	it('is null when the queue does not list it (the caller has no say, so no decision controls)', async () => {
 		vi.stubGlobal(
 			'fetch',

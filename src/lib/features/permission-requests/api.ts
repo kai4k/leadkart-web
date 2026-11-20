@@ -3,7 +3,13 @@
  * approve / deny / cancel with 204 and create with 201 + ids.
  */
 import { api } from '#lib/api/client.ts';
-import { cursorQuery, toPage, type CursorParams, type Page } from '#lib/api/pagination.ts';
+import {
+	cursorQuery,
+	nextPage,
+	toPage,
+	type CursorParams,
+	type Page
+} from '#lib/api/pagination.ts';
 import {
 	listPermissionRequestsResponseSchema,
 	permissionRequestDtoSchema,
@@ -37,19 +43,24 @@ const MAX_QUEUE_PAGES = 10;
 
 /**
  * The request as the caller's approver queue lists it, or null when it is not listed. `can_approve`
- * is present only on the queue, so this is how the detail page learns what Go says the caller may do.
+ * is present only on the queue, so this is how the detail page learns whether APPROVING is offered
+ * (denying needs no scan). Stops at the first page that holds it; the paging follows the shared
+ * cursor rule (`nextPage`: a cursor that repeats ends the search).
  */
 export async function findInApproverQueue(
 	id: string,
 	signal?: AbortSignal
 ): Promise<PermissionRequestDto | null> {
 	let cursor: string | undefined;
+	const seen = new Set<string>();
 	for (let i = 0; i < MAX_QUEUE_PAGES; i += 1) {
 		const page = await listPermissionRequests({ role: 'approver', cursor, page_size: 100 }, signal);
 		const hit = page.items.find((r) => r.id === id);
 		if (hit) return hit;
-		if (!page.has_more || !page.next_cursor) return null;
-		cursor = page.next_cursor;
+		const next = nextPage(page, seen);
+		if (next.cursor === undefined) return null;
+		seen.add(next.cursor);
+		cursor = next.cursor;
 	}
 	return null;
 }

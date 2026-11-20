@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import en from '#lib/i18n/locales/en.json';
 import hi from '#lib/i18n/locales/hi.json';
 import { ApiError, describeError } from '#lib/api/errors.ts';
-import { GO_CODE_KEYS, goCodeKey } from '#lib/api/code-copy.ts';
+import { codeCopy, GO_CODE_KEYS, goCodeKey } from '#lib/api/code-copy.ts';
 import { goFailureKey } from '#lib/server/form-action.ts';
 
 const dig = (tree: unknown, key: string): unknown =>
@@ -29,6 +29,59 @@ describe('the code table', () => {
 				expect((text as string).trim().length, `${name} ${code}`).toBeGreaterThan(0);
 			}
 		}
+	});
+
+	it('covers every code the web can receive that used to fall back to generic copy', () => {
+		for (const code of [
+			'email_already_taken',
+			'email_has_active_membership',
+			'permission_request_pending_exists',
+			'permission_request_not_pending',
+			'platform_tenant_undeletable',
+			'role_hierarchy_cycle',
+			'role_hierarchy_self_reference',
+			'role_hierarchy_edge_already_exists',
+			'concurrency_conflict',
+			'person_active_elsewhere',
+			'scope_changed',
+			'scope_invalid'
+		]) {
+			expect(goCodeKey(code), code).toBe(`errors.code.${code}`);
+		}
+		expect(codeCopy('email_has_active_membership')).toBe(
+			'This email already belongs to an active member of another company.'
+		);
+	});
+
+	it('the corrected lines: insufficient_rank covers roles, role_level_breaks_reporting both directions', () => {
+		expect(codeCopy('insufficient_rank')).toBe(
+			'You can only do this for people and roles below your own level.'
+		);
+		expect(codeCopy('role_level_breaks_reporting')).toBe(
+			'That level would break a reporting line — a manager must stay above the people who report to them.'
+		);
+	});
+
+	it('user copy says "company", not "tenant", except the operator-facing tenant-context lines', () => {
+		const operatorFacing = new Set([
+			'tenant_scope_not_supported',
+			'tenant_scope_read_only',
+			'tenant_scope_forbidden',
+			'tenant_scope_conflict',
+			'tenant_not_active',
+			'tenant_has_dependents',
+			'scope_changed',
+			'scope_invalid'
+		]);
+		for (const [code, key] of GO_CODE_KEYS) {
+			if (operatorFacing.has(code)) continue;
+			expect(String(dig(en, key)).toLowerCase(), code).not.toContain('tenant');
+		}
+	});
+
+	it('before a locale is ready the answer is the short built-in line, never the key', () => {
+		expect(codeCopy('role_name_taken')).toBeDefined();
+		expect(codeCopy('not_a_code')).toBeUndefined();
 	});
 
 	it('knows the codes this round brings and role_name_taken', () => {

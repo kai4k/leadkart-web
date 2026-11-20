@@ -27,7 +27,7 @@ describe("decisionControls (from the server's answer; no client-side rank logic)
 		({ id: 'r1', state: 'pending', requester_membership_id: 'someone-else', ...over }) as never;
 	const queued = (can_approve: boolean) => ({ id: 'r1', can_approve }) as never;
 
-	it('Deny for every listed pending request, Approve only when the queue says can_approve', () => {
+	it('Deny for every pending request the caller did not submit (Go shows the detail only to the requester or someone who may deny); Approve only when the queue says can_approve', () => {
 		expect(decisionControls(req(), 'me', queued(true))).toEqual({
 			canDeny: true,
 			canApprove: true
@@ -38,9 +38,9 @@ describe("decisionControls (from the server's answer; no client-side rank logic)
 		});
 	});
 
-	it('nothing for a request the queue does not list (no say), or while the queue is unknown', () => {
-		expect(decisionControls(req(), 'me', null)).toEqual({ canDeny: false, canApprove: false });
-		expect(decisionControls(req(), 'me', undefined)).toEqual({ canDeny: false, canApprove: false });
+	it('Deny needs no queue scan: the queue being unknown or not listing it removes Approve only', () => {
+		expect(decisionControls(req(), 'me', null)).toEqual({ canDeny: true, canApprove: false });
+		expect(decisionControls(req(), 'me', undefined)).toEqual({ canDeny: true, canApprove: false });
 	});
 
 	it("nothing for a settled request or the caller's own", () => {

@@ -336,7 +336,7 @@ export class ScopeInvalidError extends ApiError {
 	) {
 		super(status, traceId, SCOPE_INVALID_CODE);
 		this.name = 'ScopeInvalidError';
-		this.message = SCOPE_EXPIRED_MESSAGE;
+		this.message = codeCopy(SCOPE_INVALID_CODE) ?? SCOPE_EXPIRED_MESSAGE;
 	}
 }
 
@@ -354,7 +354,7 @@ export class ScopeChangedError extends ApiError {
 		super(409, traceId, SCOPE_CHANGED_CODE);
 		this.name = 'ScopeChangedError';
 		this.detail = detail;
-		this.message = SCOPE_CHANGED_MESSAGE;
+		this.message = codeCopy(SCOPE_CHANGED_CODE) ?? SCOPE_CHANGED_MESSAGE;
 	}
 }
 
