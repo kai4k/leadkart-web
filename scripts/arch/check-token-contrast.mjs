@@ -11,8 +11,14 @@
  *   - a rule is `:root` or `:root[data-x='y']...`; anything else fails the gate
  *   - a rule applies when every attribute condition holds for the combination; higher attribute
  *     count wins, then source order (CSS specificity)
- *   - var(), light-dark(a, b) and color-mix(in <space>, ...) are resolved; `transparent` in a mix
- *     is composited over --card
+ *   - var(), light-dark(a, b) and color-mix(in <space>, ...) are resolved
+ *   - `transparent`, and a mix toward `transparent`, is ALPHA-COMPOSITED in sRGB over the backdrop of
+ *     the pair being checked (pair.over, default --card), the way the browser paints it
+ *   - a pair may carry `alpha` (+ `alphaOn`, `over`): the colour on that side is painted at that
+ *     opacity over the backdrop. The regenerated shadcn files must not use such modifiers on
+ *     contrast-bearing colours (check-tokens.mjs), so this exists to keep the gate honest and
+ *     to prove what the opaque tokens replace.
+ *   - a pair that resolves to a missing variable is a failure, never a skip
  *
  * Exit code: 0 on clean, 1 on any sub-threshold pair or a file the resolver cannot read.
  */
@@ -40,28 +46,57 @@ const ATTRIBUTE_FOR = {
 const TEXT = 4.5;
 const UI = 3;
 const STATUS = ['success', 'warning', 'info'];
+const SURFACES = ['background', 'card', 'muted'];
 
-/** [foreground, background, minimum ratio, label] */
-export const PAIRS = [
-	['foreground', 'background', TEXT],
-	['foreground', 'card', TEXT],
-	['muted-foreground', 'background', TEXT],
-	['muted-foreground', 'card', TEXT],
-	['muted-foreground', 'muted', TEXT],
+/**
+ * @typedef {{ fg: string, bg: string, min: number, label: string, alpha?: number,
+ *   alphaOn?: 'fg' | 'bg', over?: string }} Pair
+ * `over` names the token transparent colours and alpha are composited onto (default `card`).
+ */
+/** [foreground, background, minimum ratio, options] */
+const RAW_PAIRS = [
+	// text on the surfaces
+	...SURFACES.map((s) => ['foreground', s, TEXT]),
+	...SURFACES.map((s) => ['muted-foreground', s, TEXT]),
+	// primary: as a fill and as text/links on every surface it is used on
 	['primary-foreground', 'primary', TEXT],
+	['primary-foreground', 'primary-hover', TEXT],
+	...SURFACES.map((s) => ['primary', s, TEXT]),
+	['primary', 'primary-soft', TEXT],
+	// LEGACY: text-brand-600 on bg-brand-50 (Combobox, DatePicker, DateRangePicker) until Task 7
+	['brand-600', 'primary-50', TEXT, { legacy: true }],
 	['secondary-foreground', 'secondary', TEXT],
 	['destructive-foreground', 'destructive', TEXT],
+	['destructive-foreground', 'destructive-hover', TEXT],
 	...STATUS.map((s) => [`${s}-foreground`, s, TEXT]),
 	['destructive', 'destructive-soft', TEXT],
 	...STATUS.map((s) => [s, `${s}-soft`, TEXT]),
-	['primary', 'card', TEXT],
-	['ring', 'background', UI],
-	['ring', 'card', UI],
-	['input', 'card', UI],
+	// form fields: text on the (opaque in dark) input fill, over each surface the field sits on
+	['foreground', 'input-fill', TEXT, { over: 'card' }],
+	['muted-foreground', 'input-fill', TEXT, { over: 'card' }],
+	['foreground', 'input-fill', TEXT, { over: 'muted' }],
+	['muted-foreground', 'input-fill', TEXT, { over: 'muted' }],
+	// non-text indicators: focus ring, form-control border (WCAG 1.4.11)
+	...[...SURFACES, 'popover'].map((s) => ['ring', s, UI]),
+	...SURFACES.map((s) => ['input', s, UI]),
+	// sidebar
 	['sidebar-foreground', 'sidebar', TEXT],
+	['sidebar-muted-foreground', 'sidebar', TEXT],
 	['sidebar-accent-foreground', 'sidebar', TEXT],
-	['sidebar-primary-foreground', 'sidebar-primary', TEXT]
-].map(([fg, bg, min]) => ({ fg, bg, min, label: `${fg} on ${bg}` }));
+	// the active-link tint is `color-mix(accent-fg 10%, transparent)`: composited over the sidebar
+	['sidebar-accent-foreground', 'sidebar-accent', TEXT, { over: 'sidebar' }],
+	['sidebar-primary-foreground', 'sidebar-primary', TEXT],
+	['sidebar-ring', 'sidebar', UI]
+];
+
+/** @type {Pair[]} */
+export const PAIRS = RAW_PAIRS.map(([fg, bg, min, opts = {}]) => ({
+	fg,
+	bg,
+	min,
+	...opts,
+	label: `${fg} on ${bg}${opts.over && opts.over !== 'card' ? ` (over ${opts.over})` : ''}${opts.alpha ? ` @${opts.alpha}` : ''}`
+}));
 
 const toRgb = converter('rgb');
 
@@ -169,6 +204,18 @@ function pickLightDark(value, mode) {
 	return out;
 }
 
+/** `fg` painted at `alpha` over `bg`, composited in sRGB (what the browser does). */
+export function composite(fg, alpha, bg) {
+	const f = toRgb(fg);
+	const b = toRgb(bg);
+	return {
+		mode: 'rgb',
+		r: f.r * alpha + b.r * (1 - alpha),
+		g: f.g * alpha + b.g * (1 - alpha),
+		b: f.b * alpha + b.b * (1 - alpha)
+	};
+}
+
 /** culori colour for a fully substituted value. `over` is what `transparent` composites onto. */
 function toColor(value, over) {
 	const v = value.trim();
@@ -183,17 +230,16 @@ function toColor(value, over) {
 				: { color: pm[2], pct: Number(pm[1]) };
 		});
 		if (parsed.length !== 2) throw new Error(`color-mix needs two colours: ${v}`);
-		const [first, b] = parsed;
-		let a = first;
-		if (a.pct === null && b.pct === null) a = { ...a, pct: 50 };
-		const pa = a.pct ?? 100 - b.pct;
+		const [a, b] = parsed;
+		const pa = a.pct ?? (b.pct === null ? 50 : 100 - b.pct);
+		const pb = b.pct ?? 100 - pa;
+		const aClear = a.color.trim() === 'transparent';
+		const bClear = b.color.trim() === 'transparent';
+		// A mix toward `transparent` is the colour at that share as ALPHA, painted over the backdrop.
+		if (bClear) return composite(toColor(a.color, over), pa / 100, over);
+		if (aClear) return composite(toColor(b.color, over), pb / 100, over);
 		const mode = spaceName === 'srgb' ? 'rgb' : spaceName;
-		const ca = toColor(a.color, over);
-		const transparentB = b.color.trim() === 'transparent';
-		const cb = transparentB ? over : toColor(b.color, over);
-		// Mixing toward `transparent` is the colour at pa% alpha over the surface.
-		const mixed = interpolate([cb, ca], mode)(pa / 100);
-		return mixed;
+		return interpolate([toColor(b.color, over), toColor(a.color, over)], mode)(pa / 100);
 	}
 	if (v === 'transparent') return over;
 	const c = parse(v);
@@ -201,65 +247,89 @@ function toColor(value, over) {
 	return c;
 }
 
-export function resolveColor(name, props, mode) {
+/** One token, resolved for a combination. `over` is the backdrop transparent parts land on. */
+export function resolveColor(name, props, mode, over = { mode: 'rgb', r: 1, g: 1, b: 1 }) {
 	const raw = props.get(`--${name}`);
 	if (raw === undefined) throw new Error(`--${name} is not defined`);
-	const flat = pickLightDark(substituteVars(raw, props), mode);
-	const card = props.get('--card');
-	const over =
-		card && name !== 'card' ? resolveColor('card', props, mode) : { mode: 'rgb', r: 1, g: 1, b: 1 };
-	return toColor(flat, over);
+	return toColor(pickLightDark(substituteVars(raw, props), mode), over);
 }
 
 function ratio(a, b) {
 	return wcagContrast(clampRgb(toRgb(a)), clampRgb(toRgb(b)));
 }
 
+/** The contrast of one pair for one combination's properties. */
+export function pairRatio(pair, props, mode) {
+	const over = resolveColor(pair.over ?? 'card', props, mode);
+	let fg = resolveColor(pair.fg, props, mode, over);
+	let bg = resolveColor(pair.bg, props, mode, over);
+	if (pair.alpha !== undefined) {
+		if (pair.alphaOn === 'bg') bg = composite(bg, pair.alpha, over);
+		else fg = composite(fg, pair.alpha, bg);
+	}
+	return ratio(fg, bg);
+}
+
 // ── gate ───────────────────────────────────────────────────────────────────
 
-export function check() {
+/**
+ * @param {Array<[string, string]>} files [name, css]
+ * @param {{ pairs?: Pair[], axes?: typeof AXES }} [options]
+ */
+export function checkCss(files, { pairs = PAIRS, axes = AXES } = {}) {
 	const problems = [];
 	let all = [];
-	for (const file of FILES) {
-		const path = join(ROOT, file);
-		if (!existsSync(path)) {
-			problems.push(`${file} not found`);
-			continue;
-		}
-		const { rules, errors } = parseRules(readFileSync(path, 'utf8'), file);
+	for (const [file, css] of files) {
+		const { rules, errors } = parseRules(css, file);
 		problems.push(...errors);
 		all = all.concat(rules.map((r, i) => ({ ...r, order: all.length + i })));
 	}
-	if (problems.length) return { problems, combinations: 0, checked: 0 };
+	if (problems.length) return { problems, combinations: 0, checked: 0, pairs: pairs.length };
 
 	let combinations = 0;
 	let checked = 0;
-	for (const colors of AXES.colors)
-		for (const mode of AXES.mode)
-			for (const darkPalette of AXES.darkPalette)
-				for (const sidebarColors of AXES.sidebarColors) {
+	for (const colors of axes.colors)
+		for (const mode of axes.mode)
+			for (const darkPalette of axes.darkPalette)
+				for (const sidebarColors of axes.sidebarColors) {
 					combinations++;
 					const combo = { colors, mode, darkPalette, sidebarColors };
 					const props = propertiesFor(all, combo);
 					const label = `${colors}/${mode}/${darkPalette}/${sidebarColors}`;
-					for (const { fg, bg, min, label: pair } of PAIRS) {
+					for (const pair of pairs) {
 						try {
-							const r = ratio(resolveColor(fg, props, mode), resolveColor(bg, props, mode));
+							const r = pairRatio(pair, props, mode);
 							checked++;
-							if (r < min) problems.push(`${label} · ${pair} · ${r.toFixed(2)} < ${min}`);
+							if (r < pair.min)
+								problems.push(`${label} · ${pair.label} · ${r.toFixed(2)} < ${pair.min}`);
 						} catch (e) {
-							problems.push(`${label} · ${pair} · ${e.message}`);
+							problems.push(`${label} · ${pair.label} · ${e.message}`);
 						}
 					}
 				}
-	return { problems, combinations, checked };
+	// never pass vacuously
+	if (pairs.length === 0 || combinations === 0)
+		problems.push('no pairs or no combinations checked');
+	return { problems, combinations, checked, pairs: pairs.length };
+}
+
+export function check() {
+	const files = [];
+	const problems = [];
+	for (const file of FILES) {
+		const path = join(ROOT, file);
+		if (!existsSync(path)) problems.push(`${file} not found`);
+		else files.push([file, readFileSync(path, 'utf8')]);
+	}
+	if (problems.length) return { problems, combinations: 0, checked: 0, pairs: 0 };
+	return checkCss(files);
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-	const { problems, combinations, checked } = check();
+	const { problems, combinations, checked, pairs } = check();
 	if (problems.length === 0) {
 		console.log(
-			`✓ check-token-contrast: ${combinations} combination(s), ${checked} pair check(s) meet WCAG AA.`
+			`✓ check-token-contrast: ${pairs} pair(s) x ${combinations} combination(s) = ${checked} check(s) meet WCAG AA.`
 		);
 		process.exit(0);
 	}

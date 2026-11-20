@@ -36,6 +36,15 @@ describe('preferences codec', () => {
 		'falls back to defaults for %s',
 		(raw) => expect(decodePreferences(raw as string)).toEqual(DEFAULT_PREFERENCES)
 	);
+	it('returns a fresh object for every bad cookie, so one request cannot change the next', () => {
+		const a = decodePreferences(b64('[1,2]'));
+		const b = decodePreferences(b64('[1,2]'));
+		expect(a).not.toBe(b);
+		expect(a).not.toBe(DEFAULT_PREFERENCES);
+		(a as { mode: string }).mode = 'dark';
+		expect(decodePreferences(b64('[1,2]'))).toEqual(DEFAULT_PREFERENCES);
+		expect(DEFAULT_PREFERENCES.mode).toBe('light');
+	});
 	it('falls back per field and ignores unknown keys', () => {
 		const raw = b64(
 			JSON.stringify({ v: 1, mode: 'dark', colors: 'blue', layout: '"><script>', extra: 1 })

@@ -48,14 +48,13 @@
 	--color-brand-300: var(--primary-300);
 	--color-brand-400: var(--primary-400);
 	--color-brand-500: var(--primary-500);
-	--color-brand-600: var(--primary-600);
+	--color-brand-600: var(--brand-600);
 	--color-brand-700: var(--primary-700);
 	--color-brand-800: var(--primary-800);
 	--color-brand-900: var(--primary-900);
 	--color-brand-950: var(--primary-950);
 	--color-brand: var(--color-brand-600);
 
-	--color-primary-hover: color-mix(in srgb, var(--primary) 90%, var(--foreground));
 	--color-primary-active: color-mix(in srgb, var(--primary) 80%, var(--foreground));
 	--color-primary-fg: var(--primary-foreground);
 	--color-focus-ring: var(--ring);
@@ -583,6 +582,10 @@
 	--color-border: var(--border);
 	--color-input: var(--input);
 	--color-ring: var(--ring);
+	--color-primary-hover: var(--primary-hover);
+	--color-destructive-hover: var(--destructive-hover);
+	--color-input-fill: var(--input-fill);
+	--color-sidebar-muted-foreground: var(--sidebar-muted-foreground);
 	--color-primary-soft: var(--primary-soft);
 	--color-destructive-soft: var(--destructive-soft);
 	--color-success: var(--success);

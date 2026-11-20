@@ -17,19 +17,25 @@
  * the lightest step whose white foreground still reaches 4.5:1; the gate is
  * the judge. Final steps, per colour:
  *
- *   colour     primary-solid    ring (light)   primary (dark)
- *   leadkart   logo purple*     500            300
- *   green      700              700            400
- *   violet     600              500            400
- *   orange     700              500            400
- *   teal       700              600            400
- *   fuchsia    600              500            400
- *   lime       700              700            400
- *   amber      700              700            400
+ *   colour     primary-solid   ring (light)   primary (dark)
+ *   leadkart   logo purple*    500            300
+ *   green      800             700            400
+ *   violet     700             500            400
+ *   orange     700             600            400
+ *   teal       800             700            400
+ *   fuchsia    700             600            400
+ *   lime       800             700            400
+ *   amber      800             700            400
  *   (*) oklch(0.34 0.14 296): what the app rendered as primary before this layer.
+ *   The solid is also the TEXT colour (text-primary, links, the sidebar's active link) on the
+ *   page, muted and primary-soft surfaces, so the gate checks it there, not only under white
+ *   text. Dark steps did not need to move.
  *
  *   status (light): destructive 600; success, warning, info 700. Dark: step 400.
- *   input (dark): neutral step 500 (600 reaches only 2.3:1 on the card).
+ *   input (dark): neutral step 400 (500-600 reach only 2.3-2.8:1 on the card / muted).
+ *   Opaque hover (--primary-hover, --destructive-hover), the full-strength ring, --input-fill,
+ *   --sidebar-ring and --sidebar-muted-foreground exist so no component needs an alpha
+ *   modifier (`/90`, `/50`, `/70`, `/30`) on a colour that carries contrast.
  *   sidebar purple/sky text: Domiex #b98fd7 passes; its sky grey #8ea2b5 (3.6:1) became sky-300.
  * ───────────────────────────────────────────────────────────────────── */
 :root {
@@ -50,6 +56,10 @@
 	--primary-solid: oklch(0.34 0.14 296);
 	--primary-ring: var(--primary-500);
 	--primary-on-dark: var(--primary-300);
+	/* LEGACY: what `text-brand-600` / `bg-brand-600` render until Task 16 deletes the aliases.
+	   The raw 600 step fails AA on brand-50 for green, lime, amber; those blocks point it at
+	   --primary-solid. */
+	--brand-600: var(--primary-600);
 
 	/* selected dark surface ramp (default) */
 	--dark-50: var(--neutral-default-50);
@@ -81,12 +91,22 @@
 
 	/* lines + focus (input meets 3:1 against the card, WCAG 1.4.11) */
 	--border: light-dark(oklch(0.92 0.01 296), var(--dark-800));
-	--input: light-dark(oklch(0.55 0.015 245), var(--dark-500));
+	--input: light-dark(oklch(0.55 0.015 245), var(--dark-400));
 	--ring: light-dark(var(--primary-ring), var(--primary-on-dark));
+	/* the fill of a form field: transparent in light (it sits on the surface), one opaque step in
+	   dark. Replaces shadcn's `dark:bg-input/30`, whose result depends on the surface behind it. */
+	--input-fill: light-dark(transparent, var(--dark-800));
 
 	/* primary */
 	--primary: light-dark(var(--primary-solid), var(--primary-on-dark));
 	--primary-foreground: light-dark(oklch(1 0 0), var(--primary-950));
+	/* OPAQUE hover/active fills (replace `hover:bg-primary/90`, whose alpha lets the surface
+	   through and drops the label to 3.9:1): light darkens toward black, dark lightens toward white,
+	   the direction that raises the contrast of primary-foreground. */
+	--primary-hover: light-dark(
+		color-mix(in oklch, var(--primary) 85%, black),
+		color-mix(in oklch, var(--primary) 85%, white)
+	);
 	--primary-soft: light-dark(
 		var(--primary-50),
 		color-mix(in oklch, var(--primary-400) 15%, var(--dark-900))
@@ -95,6 +115,10 @@
 	/* status */
 	--destructive: light-dark(var(--palette-danger-600), var(--palette-danger-400));
 	--destructive-foreground: light-dark(oklch(1 0 0), var(--palette-danger-950));
+	--destructive-hover: light-dark(
+		color-mix(in oklch, var(--destructive) 85%, black),
+		color-mix(in oklch, var(--destructive) 85%, white)
+	);
 	--destructive-soft: light-dark(
 		var(--palette-danger-50),
 		color-mix(in oklch, var(--palette-danger-400) 15%, var(--dark-900))
@@ -132,7 +156,11 @@
 	--sidebar-accent-foreground: light-dark(var(--primary-solid), var(--primary-on-dark));
 	--sidebar-accent: color-mix(in oklch, var(--sidebar-accent-foreground) 10%, transparent);
 	--sidebar-border: light-dark(oklch(0.928 0.006 264.531), var(--dark-800));
-	--sidebar-ring: var(--ring);
+	/* the ring and the group labels follow the sidebar colour: they are re-pointed by the
+	   data-sidebar-colors blocks below through --sidebar-accent-foreground, which is always
+	   readable on that sidebar (shadcn's `ring-sidebar-ring/50` and `/70` labels were not). */
+	--sidebar-ring: var(--sidebar-accent-foreground);
+	--sidebar-muted-foreground: var(--sidebar-foreground);
 }
 
 /* ── mode ─────────────────────────────────────────────────────────── */
@@ -162,9 +190,10 @@
 	--primary-800: var(--palette-green-800);
 	--primary-900: var(--palette-green-900);
 	--primary-950: var(--palette-green-950);
-	--primary-solid: var(--primary-700);
+	--primary-solid: var(--primary-800);
 	--primary-on-dark: var(--primary-400);
 	--primary-ring: var(--primary-700);
+	--brand-600: var(--primary-solid);
 }
 :root[data-colors='violet'] {
 	--primary-50: var(--palette-violet-50);
@@ -178,9 +207,10 @@
 	--primary-800: var(--palette-violet-800);
 	--primary-900: var(--palette-violet-900);
 	--primary-950: var(--palette-violet-950);
-	--primary-solid: var(--primary-600);
+	--primary-solid: var(--primary-700);
 	--primary-on-dark: var(--primary-400);
 	--primary-ring: var(--primary-500);
+	--brand-600: var(--primary-solid);
 }
 :root[data-colors='orange'] {
 	--primary-50: var(--palette-orange-50);
@@ -196,7 +226,8 @@
 	--primary-950: var(--palette-orange-950);
 	--primary-solid: var(--primary-700);
 	--primary-on-dark: var(--primary-400);
-	--primary-ring: var(--primary-500);
+	--primary-ring: var(--primary-600);
+	--brand-600: var(--primary-solid);
 }
 :root[data-colors='teal'] {
 	--primary-50: var(--palette-teal-50);
@@ -210,9 +241,10 @@
 	--primary-800: var(--palette-teal-800);
 	--primary-900: var(--palette-teal-900);
 	--primary-950: var(--palette-teal-950);
-	--primary-solid: var(--primary-700);
+	--primary-solid: var(--primary-800);
 	--primary-on-dark: var(--primary-400);
-	--primary-ring: var(--primary-600);
+	--primary-ring: var(--primary-700);
+	--brand-600: var(--primary-solid);
 }
 :root[data-colors='fuchsia'] {
 	--primary-50: var(--palette-fuchsia-50);
@@ -226,9 +258,10 @@
 	--primary-800: var(--palette-fuchsia-800);
 	--primary-900: var(--palette-fuchsia-900);
 	--primary-950: var(--palette-fuchsia-950);
-	--primary-solid: var(--primary-600);
+	--primary-solid: var(--primary-700);
 	--primary-on-dark: var(--primary-400);
-	--primary-ring: var(--primary-500);
+	--primary-ring: var(--primary-600);
+	--brand-600: var(--primary-solid);
 }
 :root[data-colors='lime'] {
 	--primary-50: var(--palette-lime-50);
@@ -242,9 +275,10 @@
 	--primary-800: var(--palette-lime-800);
 	--primary-900: var(--palette-lime-900);
 	--primary-950: var(--palette-lime-950);
-	--primary-solid: var(--primary-700);
+	--primary-solid: var(--primary-800);
 	--primary-on-dark: var(--primary-400);
 	--primary-ring: var(--primary-700);
+	--brand-600: var(--primary-solid);
 }
 :root[data-colors='amber'] {
 	--primary-50: var(--palette-amber-50);
@@ -258,9 +292,10 @@
 	--primary-800: var(--palette-amber-800);
 	--primary-900: var(--palette-amber-900);
 	--primary-950: var(--palette-amber-950);
-	--primary-solid: var(--primary-700);
+	--primary-solid: var(--primary-800);
 	--primary-on-dark: var(--primary-400);
 	--primary-ring: var(--primary-700);
+	--brand-600: var(--primary-solid);
 }
 
 /* ── dark surface palette ─────────────────────────────────────────── */

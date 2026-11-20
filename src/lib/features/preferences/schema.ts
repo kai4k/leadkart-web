@@ -70,4 +70,4 @@ export const preferencesSchema = z
 		sidebarColors: axis('sidebarColors'),
 		darkPalette: axis('darkPalette')
 	})
-	.catch({ ...DEFAULT_PREFERENCES }) as unknown as z.ZodType<Preferences>;
+	.catch(() => ({ ...DEFAULT_PREFERENCES })) as unknown as z.ZodType<Preferences>;
