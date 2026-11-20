@@ -266,7 +266,7 @@ export const ListRolesResponse = z.object({ roles: z.array(RoleDto) }).passthrou
 export const CreateRoleRequest = z
 	.object({
 		name: z.string().min(2).max(100),
-		hierarchy_level: z.number().int().gte(0).lte(99),
+		hierarchy_level: z.number().int().gte(1).lte(99),
 		parent_role_id: z.string().uuid().optional()
 	})
 	.passthrough();
@@ -274,7 +274,7 @@ export const CreateRoleResponse = z.object({ role_id: z.string().uuid() }).passt
 export const UpdateRoleRequest = z
 	.object({
 		name: z.string().min(2).max(100),
-		hierarchy_level: z.number().int().gte(0).lte(99).nullable()
+		hierarchy_level: z.number().int().gte(1).lte(99).nullable()
 	})
 	.partial()
 	.passthrough();
@@ -4785,8 +4785,11 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 		alias: 'postApiv1permissionRequests',
 		description: `Caller (the requester) asks for a time-bound elevated permission.
 The named approver is the requester&#x27;s current manager
-(&#x60;tenant_memberships.reports_to&#x60;). If the requester has no
-manager, only an operator holding operator authority can approve.
+(&#x60;tenant_memberships.reports_to&#x60;); a requester with no manager is decided by anyone of
+Administrator rank or above who outranks them (ADR 0069). Requires
+&#x60;identity.meta.request_permission_elevation&#x60; (every seeded non-owner role holds it;
+&#x60;tenant.admin&#x60; implies it): without it the route is 403 &#x60;forbidden&#x60;. An impersonation session
+cannot submit (403 &#x60;impersonation_not_allowed&#x60;).
 At most one pending request per (membership, permission) tuple.
 &#x60;tenant.admin&#x60;, platform-reserved permissions and names outside the catalogue are not
 requestable: they are conferred by role only, and the request is refused with 422
@@ -4814,9 +4817,8 @@ requestable: they are conferred by role only, and the request is refused with 42
 		errors: [
 			{
 				status: 403,
-				description: `The route does not support the &#x60;X-Tenant-Id&#x60; operator scope (it acts on the
-caller&#x27;s own tenant only) and the header selected a different tenant
-(&#x60;tenant_scope_not_supported&#x60;, ADR 0039).
+				description: `&#x60;forbidden&#x60; (the caller lacks &#x60;identity.meta.request_permission_elevation&#x60;),
+&#x60;impersonation_not_allowed&#x60;, or &#x60;X-Tenant-Id&#x60; selected a foreign tenant (&#x60;tenant_scope_not_supported&#x60;)
 `,
 				schema: ErrorResponse
 			},
@@ -4837,8 +4839,12 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 		path: '/api/v1/permission-requests',
 		alias: 'getApiv1permissionRequests',
 		description: `Default &#x60;role&#x3D;requester&#x60; returns the caller&#x27;s own history (all states).
-&#x60;role&#x3D;approver&#x60; returns the Pending queue waiting on the caller&#x27;s
-decision. Keyset-paginated per ADR 0038.
+&#x60;role&#x3D;approver&#x60; returns the Pending requests the caller may DECIDE under the authority policy
+(ADR 0069): exactly those a deny by the caller would not refuse, so none of them answers 403
+for authority reasons. One call examines a bounded window of the tenant&#x27;s pending requests
+(at most &#x60;page_size&#x60;, capped at 100); a page may therefore hold fewer items than &#x60;page_size&#x60;
+while &#x60;has_more&#x60; is true, and &#x60;next_cursor&#x60; continues after the last request examined.
+Keyset-paginated per ADR 0038.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -4884,9 +4890,9 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 		method: 'get',
 		path: '/api/v1/permission-requests/:requestId',
 		alias: 'getApiv1permissionRequestsRequestId',
-		description: `Returns the request if the caller is either the requester, the
-named approver, OR a Platform operator. Cross-caller reads
-collapse to 404 per ADR 0044 enumeration-safety canon.
+		description: `Returns the request to the requester and to anyone who may decide it (the same eligibility
+as deny, ADR 0069); every other caller, and a missing id, get the same 404 per ADR 0044
+enumeration-safety canon.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -4922,13 +4928,21 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 		method: 'post',
 		path: '/api/v1/permission-requests/:requestId/approve',
 		alias: 'postApiv1permissionRequestsRequestIdapprove',
-		description: `Transitions Pending → Approved AND lands a time-bound grant on
-the requester&#x27;s membership overlay (single transaction). Caller
-MUST be either the requester&#x27;s manager OR hold operator authority (a super user, or a
-platform operator holding &#x60;platform.tenants.view&#x60;; membership of the platform tenant alone
-does not count). A stored request whose permission is not requestable (for example one
-submitted before that rule existed) is refused with 422 (&#x60;permission_not_requestable&#x60;) and
-stays pending; the approver can deny it and the requester can cancel it.
+		description: `Transitions Pending → Approved AND confers exactly the STORED request&#x27;s permission on the
+requester for the stored duration (single transaction under the tenant authority lock).
+Decided by the authority policy (ADR 0069), never by the body: the requester&#x27;s manager who
+holds &#x60;identity.roles.approve&#x60; AND the permission; or anyone of Administrator rank or above who
+strictly outranks the requester (an Administrator may approve any requestable permission
+without holding it, except user/role management, tenant settings, marketplace purchase and
+payment recording, which the Administrator must hold); or a super user / exempt operator
+acting in ANOTHER tenant (in the platform tenant an operator follows rank like anyone else).
+Never an impersonation session and never the requester.
+
+Check order: unknown request (404) → authority (403, whatever the request&#x27;s state) → state
+(409 &#x60;permission_request_not_pending&#x60;) → requestability (422 &#x60;permission_not_requestable&#x60;: a
+stored request whose permission is not requestable, for example one submitted before that rule
+existed, stays pending; the approver can deny it and the requester can cancel it) → requester
+still active (409 &#x60;permission_request_requester_inactive&#x60;; the request stays pending).
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -4961,7 +4975,11 @@ stays pending; the approver can deny it and the requester can cancel it.
 		errors: [
 			{
 				status: 403,
-				description: `Caller is not the manager and holds no operator authority, OR &#x60;X-Tenant-Id&#x60; selected a foreign tenant (&#x60;tenant_scope_not_supported&#x60;)`,
+				description: `&#x60;not_approver&#x60; (not the requester&#x27;s manager, or lacks &#x60;identity.roles.approve&#x60;),
+&#x60;insufficient_rank&#x60;, &#x60;grant_exceeds_authority&#x60; (the approver does not hold the permission, or an
+Administrator lacks a must-hold one), &#x60;self_modification_forbidden&#x60; (own request),
+&#x60;impersonation_not_allowed&#x60;, &#x60;forbidden&#x60;, or &#x60;tenant_scope_not_supported&#x60; (&#x60;X-Tenant-Id&#x60; selected a foreign tenant)
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -4971,7 +4989,7 @@ stays pending; the approver can deny it and the requester can cancel it.
 			},
 			{
 				status: 409,
-				description: `Request is not in pending state`,
+				description: `Request is not in pending state (&#x60;permission_request_not_pending&#x60;), or the requester can no longer receive the grant (&#x60;permission_request_requester_inactive&#x60;)`,
 				schema: ErrorResponse
 			},
 			{
@@ -5034,8 +5052,8 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 		path: '/api/v1/permission-requests/:requestId/deny',
 		alias: 'postApiv1permissionRequestsRequestIddeny',
 		description: `Transitions Pending → Denied. &#x60;decision_reason&#x60; is REQUIRED on
-Deny per ADR 0055 audit canon. Same caller-authorization as Approve (the requester&#x27;s
-manager, or operator authority; platform-tenant membership alone does not count).
+Deny per ADR 0055 audit canon. Same eligibility and check order as Approve, except that the
+denier need not hold the requested permission (nor &#x60;identity.roles.approve&#x60; as an Administrator).
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -5064,7 +5082,9 @@ manager, or operator authority; platform-tenant membership alone does not count)
 		errors: [
 			{
 				status: 403,
-				description: `Caller is not the manager and holds no operator authority, OR &#x60;X-Tenant-Id&#x60; selected a foreign tenant (&#x60;tenant_scope_not_supported&#x60;)`,
+				description: `&#x60;not_approver&#x60;, &#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;, &#x60;impersonation_not_allowed&#x60;,
+&#x60;forbidden&#x60;, or &#x60;tenant_scope_not_supported&#x60; (&#x60;X-Tenant-Id&#x60; selected a foreign tenant)
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -5499,12 +5519,23 @@ An operator cannot change their own Person: the caller&#x27;s own &#x60;personId
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
+the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
+TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
+&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
+ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
+`,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `&#x60;last_owner_protected&#x60; — the person is the only active owner of a tenant; nothing was changed`,
 				schema: ErrorResponse
 			},
 			{
@@ -5545,12 +5576,23 @@ An operator cannot change their own Person: the caller&#x27;s own &#x60;personId
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
+the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
+TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
+&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
+ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
+`,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `&#x60;last_owner_protected&#x60; — the person is the only active owner of a tenant; nothing was changed`,
 				schema: ErrorResponse
 			},
 			{
@@ -6066,16 +6108,30 @@ be used to probe which tenants exist.
 		response: z.object({ role_id: z.string().uuid() }).passthrough(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
-				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
-effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
-and the caller is neither a super user nor a platform operator holding
-&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
-the lifecycle routes) a header equal to the path tenant is not a scope request, so
-&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
-decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
-lookup and is identical for existing, unknown and suspended tenants, so it cannot
-be used to probe which tenants exist.
+				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
+the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
+TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
+&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
+ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `Role name already taken in this tenant (&#x60;role_name_taken&#x60;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `&#x60;role_invalid&#x60; (name length, &#x60;hierarchy_level&#x60; outside 1-99) or &#x60;role_parent_not_eligible&#x60;
+(the parent is missing, deleted, or not strictly more senior than the new role&#x27;s level).
 `,
 				schema: ErrorResponse
 			}
@@ -6154,15 +6210,12 @@ Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60
 		errors: [
 			{
 				status: 403,
-				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
-effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
-and the caller is neither a super user nor a platform operator holding
-&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
-the lifecycle routes) a header equal to the path tenant is not a scope request, so
-&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
-decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
-lookup and is identical for existing, unknown and suspended tenants, so it cannot
-be used to probe which tenants exist.
+				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
+the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
+TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
+&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
+ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
 `,
 				schema: ErrorResponse
 			},
@@ -6173,7 +6226,9 @@ be used to probe which tenants exist.
 			},
 			{
 				status: 409,
-				description: `Role name already taken in this tenant`,
+				description: `&#x60;role_name_taken&#x60;, or &#x60;role_system_default&#x60; (a system-default role, Company Owner among them, cannot be
+renamed or re-levelled by anyone, super users included).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -6188,6 +6243,10 @@ be used to probe which tenants exist.
 		path: '/api/v1/roles/:roleId',
 		alias: 'deleteApiv1rolesRoleId',
 		description: `Requires &#x60;identity.roles.delete&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+The caller must hold every permission the role carries (deleting removes them from every holder).
+A role still held by an ACTIVE member is refused with 409 &#x60;role_in_use&#x60; (&#x60;errors.active_holders&#x60; is the
+count); a role held only by inactive members is deleted and their assignments are removed in the same
+transaction.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -6206,16 +6265,23 @@ be used to probe which tenants exist.
 		errors: [
 			{
 				status: 403,
-				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
-effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
-and the caller is neither a super user nor a platform operator holding
-&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
-the lifecycle routes) a header equal to the path tenant is not a scope request, so
-&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
-decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
-lookup and is identical for existing, unknown and suspended tenants, so it cannot
-be used to probe which tenants exist.
+				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
+the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
+TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
+&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
+ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
 `,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `&#x60;role_in_use&#x60; (an active member holds the role) or &#x60;role_system_default&#x60; (system-default roles cannot be deleted)`,
 				schema: ErrorResponse
 			}
 		]
@@ -6230,7 +6296,8 @@ organizational hierarchy backed by a dedicated
 resolution stays flat per role; the hierarchy is consumed by
 approval workflows + reporting.
 
-Pass &#x60;{&quot;parent_role_id&quot;: null}&#x60; (or omit / empty string) to
+The &#x60;parent_role_id&#x60; key is REQUIRED (a body without it is 400
+&#x60;invalid_body&#x60;): pass &#x60;{&quot;parent_role_id&quot;: null}&#x60; (or an empty string) to
 clear the parent (role becomes a root). Pass a UUID referencing
 a role in the SAME tenant to set / re-point the parent.
 
@@ -6276,15 +6343,12 @@ Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60
 			},
 			{
 				status: 403,
-				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
-effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
-and the caller is neither a super user nor a platform operator holding
-&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
-the lifecycle routes) a header equal to the path tenant is not a scope request, so
-&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
-decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
-lookup and is identical for existing, unknown and suspended tenants, so it cannot
-be used to probe which tenants exist.
+				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
+the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
+TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
+&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
+ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
 `,
 				schema: ErrorResponse
 			},
@@ -6295,7 +6359,7 @@ be used to probe which tenants exist.
 			},
 			{
 				status: 409,
-				description: `Role already has an active parent edge (single-parent
+				description: `&#x60;role_system_default&#x60; (a system-default role&#x27;s parent cannot change), or role already has an active parent edge (single-parent
 invariant: at most one active edge per child). Caller
 should reload to discover the existing edge before
 retrying.
@@ -6304,7 +6368,9 @@ retrying.
 			},
 			{
 				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				description: `&#x60;role_parent_not_eligible&#x60; (the parent is missing, deleted, in another tenant, or not strictly more
+senior than the child), or a cycle / cross-tenant refusal.
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -6313,7 +6379,10 @@ retrying.
 		method: 'put',
 		path: '/api/v1/roles/:roleId/permissions',
 		alias: 'putApiv1rolesRoleIdpermissions',
-		description: `Permission names MUST match the closed
+		description: `The &#x60;permissions&#x60; key is REQUIRED and may not be &#x60;null&#x60;: &#x60;{}&#x60; and &#x60;{&quot;permissions&quot;: null}&#x60; are 400
+&#x60;invalid_body&#x60;; an explicit &#x60;[]&#x60; clears the role. Changing the set requires the caller to hold every
+permission added AND every permission removed.
+Permission names MUST match the closed
 &#x60;permission.IdentityPermissions&#x60; catalogue; unknown names surface
 as 422 (&#x60;permission_unknown&#x60;).
 Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Conferring a permission the caller does not hold is rejected with &#x60;grant_exceeds_authority&#x60;.
@@ -6344,22 +6413,29 @@ Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60
 		response: z.void(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
-				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
-effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
-and the caller is neither a super user nor a platform operator holding
-&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
-the lifecycle routes) a header equal to the path tenant is not a scope request, so
-&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
-decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
-lookup and is identical for existing, unknown and suspended tenants, so it cannot
-be used to probe which tenants exist.
+				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
+the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
+TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
+&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
+ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `&#x60;role_system_default&#x60; (system-default roles, Company Owner among them, cannot be changed by anyone)`,
 				schema: ErrorResponse
 			},
 			{
@@ -6402,21 +6478,23 @@ be used to probe which tenants exist.
 		errors: [
 			{
 				status: 403,
-				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
-effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
-and the caller is neither a super user nor a platform operator holding
-&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
-the lifecycle routes) a header equal to the path tenant is not a scope request, so
-&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
-decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
-lookup and is identical for existing, unknown and suspended tenants, so it cannot
-be used to probe which tenants exist.
+				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
+the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
+TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
+&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
+ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `&#x60;role_system_default&#x60; (system-default roles cannot be changed by anyone)`,
 				schema: ErrorResponse
 			},
 			{
@@ -6459,21 +6537,23 @@ be used to probe which tenants exist.
 		errors: [
 			{
 				status: 403,
-				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
-effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
-and the caller is neither a super user nor a platform operator holding
-&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
-the lifecycle routes) a header equal to the path tenant is not a scope request, so
-&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
-decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
-lookup and is identical for existing, unknown and suspended tenants, so it cannot
-be used to probe which tenants exist.
+				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
+the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
+TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
+&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
+ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `&#x60;role_system_default&#x60; (system-default roles cannot be changed by anyone)`,
 				schema: ErrorResponse
 			},
 			{
@@ -7956,21 +8036,23 @@ Requires &#x60;identity.users.anonymise&#x60; held by a platform-tenant operator
 		errors: [
 			{
 				status: 403,
-				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
-effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
-and the caller is neither a super user nor a platform operator holding
-&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
-the lifecycle routes) a header equal to the path tenant is not a scope request, so
-&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
-decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
-lookup and is identical for existing, unknown and suspended tenants, so it cannot
-be used to probe which tenants exist.
+				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
+the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
+TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
+&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
+ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `&#x60;last_owner_protected&#x60; — the person is the only active owner of a tenant; nothing was changed`,
 				schema: ErrorResponse
 			},
 			{
@@ -7984,7 +8066,7 @@ be used to probe which tenants exist.
 		method: 'post',
 		path: '/api/v1/users/:userId/deactivate',
 		alias: 'postApiv1usersUserIddeactivate',
-		description: `Requires &#x60;identity.users.deactivate&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;).
+		description: `Requires &#x60;identity.users.deactivate&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;). The caller must strictly outrank the target member (&#x60;insufficient_rank&#x60;; owners may act on owners; super users and exempt platform operators are exempt), decided inside the transaction that holds the tenant&#x27;s authority lock (ADR 0069).
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -8013,16 +8095,23 @@ be used to probe which tenants exist.
 		errors: [
 			{
 				status: 403,
-				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
-effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
-and the caller is neither a super user nor a platform operator holding
-&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
-the lifecycle routes) a header equal to the path tenant is not a scope request, so
-&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
-decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
-lookup and is identical for existing, unknown and suspended tenants, so it cannot
-be used to probe which tenants exist.
+				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
+the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
+TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
+&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
+ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
 `,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `&#x60;last_owner_protected&#x60; — the change would leave the tenant without an active owner; &#x60;member_roles_inconsistent&#x60; — the member&#x27;s assigned roles cannot be loaded as this tenant&#x27;s roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant)`,
 				schema: ErrorResponse
 			}
 		]
@@ -8033,7 +8122,7 @@ be used to probe which tenants exist.
 		alias: 'putApiv1usersUserIdmanager',
 		description: `ManagerID MUST be a Membership in the same tenant — composite FK
 at the schema layer enforces this; cross-tenant ID surfaces as 422.
-Requires &#x60;identity.users.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;).
+Requires &#x60;identity.users.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;). The caller must strictly outrank the target member (&#x60;insufficient_rank&#x60;; owners may act on owners; super users and exempt platform operators are exempt), decided inside the transaction that holds the tenant&#x27;s authority lock (ADR 0069).
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -8062,15 +8151,12 @@ Requires &#x60;identity.users.update&#x60; (satisfied by &#x60;tenant.admin&#x60
 		errors: [
 			{
 				status: 403,
-				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
-effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
-and the caller is neither a super user nor a platform operator holding
-&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
-the lifecycle routes) a header equal to the path tenant is not a scope request, so
-&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
-decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
-lookup and is identical for existing, unknown and suspended tenants, so it cannot
-be used to probe which tenants exist.
+				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
+the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
+TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
+&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
+ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
 `,
 				schema: ErrorResponse
 			},
@@ -8080,8 +8166,13 @@ be used to probe which tenants exist.
 				schema: ErrorResponse
 			},
 			{
+				status: 409,
+				description: `&#x60;member_roles_inconsistent&#x60; — the member&#x27;s assigned roles cannot be loaded as this tenant&#x27;s roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				description: `&#x60;manager_not_eligible&#x60; — the manager is not an active member of this tenant more senior than the member, or the link would close a reporting cycle; otherwise validation (&#x60;user_invalid&#x60;)`,
 				schema: ErrorResponse
 			}
 		]
@@ -8090,7 +8181,7 @@ be used to probe which tenants exist.
 		method: 'delete',
 		path: '/api/v1/users/:userId/manager',
 		alias: 'deleteApiv1usersUserIdmanager',
-		description: `Requires &#x60;identity.users.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;).
+		description: `Requires &#x60;identity.users.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;). The caller must strictly outrank the target member (&#x60;insufficient_rank&#x60;; owners may act on owners; super users and exempt platform operators are exempt), decided inside the transaction that holds the tenant&#x27;s authority lock (ADR 0069).
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -8109,21 +8200,23 @@ be used to probe which tenants exist.
 		errors: [
 			{
 				status: 403,
-				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
-effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
-and the caller is neither a super user nor a platform operator holding
-&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
-the lifecycle routes) a header equal to the path tenant is not a scope request, so
-&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
-decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
-lookup and is identical for existing, unknown and suspended tenants, so it cannot
-be used to probe which tenants exist.
+				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
+the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
+TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
+&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
+ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `&#x60;member_roles_inconsistent&#x60; — the member&#x27;s assigned roles cannot be loaded as this tenant&#x27;s roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant)`,
 				schema: ErrorResponse
 			}
 		]
@@ -8134,8 +8227,8 @@ be used to probe which tenants exist.
 		alias: 'patchApiv1usersUserIdpermissionOverrides',
 		description: `Both arrays are required; empty arrays clear the corresponding overlay. Permission names
 MUST match the closed &#x60;permission.IdentityPermissions&#x60; catalogue;
-unknown names surface as 422 (&#x60;permission_unknown&#x60;).
-Requires &#x60;identity.users.update_permissions&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;). Conferring a permission the caller does not hold is rejected with &#x60;grant_exceeds_authority&#x60;.
+unknown names surface as 422 (&#x60;permission_unknown&#x60;). A name listed twice in one array is stored once; a name present in BOTH arrays is a 422 &#x60;validation_failed&#x60; with the names under &#x60;errors.revoked&#x60;.
+Requires &#x60;identity.users.update_permissions&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;). The caller must strictly outrank the target member (&#x60;insufficient_rank&#x60;; owners may act on owners; super users and exempt platform operators are exempt), decided inside the transaction that holds the tenant&#x27;s authority lock (ADR 0069). Conferring a permission the caller does not hold is rejected with &#x60;grant_exceeds_authority&#x60;.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -8169,21 +8262,23 @@ Requires &#x60;identity.users.update_permissions&#x60; (satisfied by &#x60;tenan
 			},
 			{
 				status: 403,
-				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
-effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
-and the caller is neither a super user nor a platform operator holding
-&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
-the lifecycle routes) a header equal to the path tenant is not a scope request, so
-&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
-decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
-lookup and is identical for existing, unknown and suspended tenants, so it cannot
-be used to probe which tenants exist.
+				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
+the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
+TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
+&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
+ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `&#x60;owner_protected&#x60; — tenant.admin cannot be revoked from an owner; &#x60;member_roles_inconsistent&#x60; — the member&#x27;s assigned roles cannot be loaded as this tenant&#x27;s roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant)`,
 				schema: ErrorResponse
 			},
 			{
@@ -8254,7 +8349,7 @@ be used to probe which tenants exist.
 		method: 'post',
 		path: '/api/v1/users/:userId/reactivate',
 		alias: 'postApiv1usersUserIdreactivate',
-		description: `Requires &#x60;identity.users.reactivate&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;).
+		description: `Requires &#x60;identity.users.reactivate&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;). The caller must strictly outrank the target member (&#x60;insufficient_rank&#x60;; owners may act on owners; super users and exempt platform operators are exempt), decided inside the transaction that holds the tenant&#x27;s authority lock (ADR 0069).
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -8278,16 +8373,23 @@ be used to probe which tenants exist.
 		errors: [
 			{
 				status: 403,
-				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
-effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
-and the caller is neither a super user nor a platform operator holding
-&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
-the lifecycle routes) a header equal to the path tenant is not a scope request, so
-&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
-decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
-lookup and is identical for existing, unknown and suspended tenants, so it cannot
-be used to probe which tenants exist.
+				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
+the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
+TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
+&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
+ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
 `,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `&#x60;member_roles_inconsistent&#x60; — the member&#x27;s assigned roles cannot be loaded as this tenant&#x27;s roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant)`,
 				schema: ErrorResponse
 			}
 		]
@@ -8296,7 +8398,7 @@ be used to probe which tenants exist.
 		method: 'post',
 		path: '/api/v1/users/:userId/roles',
 		alias: 'postApiv1usersUserIdroles',
-		description: `Requires &#x60;identity.roles.assign&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;). Conferring a permission the caller does not hold is rejected with &#x60;grant_exceeds_authority&#x60;. Only a super user may assign a super-admin role.
+		description: `Requires &#x60;identity.roles.assign&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;). The caller must strictly outrank the target member (&#x60;insufficient_rank&#x60;; owners may act on owners; super users and exempt platform operators are exempt), decided inside the transaction that holds the tenant&#x27;s authority lock (ADR 0069). Conferring a permission the caller does not hold is rejected with &#x60;grant_exceeds_authority&#x60;. Only a super user may assign a super-admin role. The role&#x27;s level must be below the caller&#x27;s rank (owners: any tenant role). A deleted or unknown role is &#x60;role_not_found&#x60;.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -8330,21 +8432,23 @@ be used to probe which tenants exist.
 			},
 			{
 				status: 403,
-				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
-effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
-and the caller is neither a super user nor a platform operator holding
-&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
-the lifecycle routes) a header equal to the path tenant is not a scope request, so
-&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
-decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
-lookup and is identical for existing, unknown and suspended tenants, so it cannot
-be used to probe which tenants exist.
+				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
+the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
+TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
+&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
+ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `&#x60;role_not_found&#x60; — no live role with that id in the target tenant (or the user does not exist)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `&#x60;member_roles_inconsistent&#x60; — the member&#x27;s assigned roles cannot be loaded as this tenant&#x27;s roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant)`,
 				schema: ErrorResponse
 			}
 		]
@@ -8353,7 +8457,7 @@ be used to probe which tenants exist.
 		method: 'delete',
 		path: '/api/v1/users/:userId/roles/:roleId',
 		alias: 'deleteApiv1usersUserIdrolesRoleId',
-		description: `Requires &#x60;identity.roles.revoke&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;).
+		description: `Requires &#x60;identity.roles.revoke&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;). The caller must strictly outrank the target member (&#x60;insufficient_rank&#x60;; owners may act on owners; super users and exempt platform operators are exempt), decided inside the transaction that holds the tenant&#x27;s authority lock (ADR 0069).
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -8377,21 +8481,23 @@ be used to probe which tenants exist.
 		errors: [
 			{
 				status: 403,
-				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
-effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
-and the caller is neither a super user nor a platform operator holding
-&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
-the lifecycle routes) a header equal to the path tenant is not a scope request, so
-&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
-decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
-lookup and is identical for existing, unknown and suspended tenants, so it cannot
-be used to probe which tenants exist.
+				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
+the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
+TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
+&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
+ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner).
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `&#x60;last_owner_protected&#x60; — the change would leave the tenant without an active owner; &#x60;member_roles_inconsistent&#x60; — the member&#x27;s assigned roles cannot be loaded as this tenant&#x27;s roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant)`,
 				schema: ErrorResponse
 			},
 			{

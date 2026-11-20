@@ -2317,7 +2317,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Deactivate a user (reason required)
-		 * @description Requires `identity.users.deactivate` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`).
+		 * @description Requires `identity.users.deactivate` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`). The caller must strictly outrank the target member (`insufficient_rank`; owners may act on owners; super users and exempt platform operators are exempt), decided inside the transaction that holds the tenant's authority lock (ADR 0069).
 		 */
 		post: {
 			parameters: {
@@ -2401,7 +2401,17 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['TenantScopeForbidden'];
+				403: components['responses']['AuthorityForbidden'];
+				404: components['responses']['NotFound'];
+				/** @description `last_owner_protected` — the change would leave the tenant without an active owner; `member_roles_inconsistent` — the member's assigned roles cannot be loaded as this tenant's roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 			};
 		};
 		delete?: never;
@@ -2421,7 +2431,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Reactivate a deactivated user
-		 * @description Requires `identity.users.reactivate` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`).
+		 * @description Requires `identity.users.reactivate` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`). The caller must strictly outrank the target member (`insufficient_rank`; owners may act on owners; super users and exempt platform operators are exempt), decided inside the transaction that holds the tenant's authority lock (ADR 0069).
 		 */
 		post: {
 			parameters: {
@@ -2501,7 +2511,17 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['TenantScopeForbidden'];
+				403: components['responses']['AuthorityForbidden'];
+				404: components['responses']['NotFound'];
+				/** @description `member_roles_inconsistent` — the member's assigned roles cannot be loaded as this tenant's roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 			};
 		};
 		delete?: never;
@@ -2521,7 +2541,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Assign a role to a user
-		 * @description Requires `identity.roles.assign` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`). Conferring a permission the caller does not hold is rejected with `grant_exceeds_authority`. Only a super user may assign a super-admin role.
+		 * @description Requires `identity.roles.assign` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`). The caller must strictly outrank the target member (`insufficient_rank`; owners may act on owners; super users and exempt platform operators are exempt), decided inside the transaction that holds the tenant's authority lock (ADR 0069). Conferring a permission the caller does not hold is rejected with `grant_exceeds_authority`. Only a super user may assign a super-admin role. The role's level must be below the caller's rank (owners: any tenant role). A deleted or unknown role is `role_not_found`.
 		 */
 		post: {
 			parameters: {
@@ -2614,9 +2634,18 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
-				403: components['responses']['TenantScopeForbidden'];
+				403: components['responses']['AuthorityForbidden'];
 				/** @description `role_not_found` — no live role with that id in the target tenant (or the user does not exist) */
 				404: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				/** @description `member_roles_inconsistent` — the member's assigned roles cannot be loaded as this tenant's roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant) */
+				409: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -2644,7 +2673,7 @@ export interface paths {
 		post?: never;
 		/**
 		 * Revoke a role from a user
-		 * @description Requires `identity.roles.revoke` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`).
+		 * @description Requires `identity.roles.revoke` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`). The caller must strictly outrank the target member (`insufficient_rank`; owners may act on owners; super users and exempt platform operators are exempt), decided inside the transaction that holds the tenant's authority lock (ADR 0069).
 		 */
 		delete: {
 			parameters: {
@@ -2716,8 +2745,17 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['TenantScopeForbidden'];
+				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
+				/** @description `last_owner_protected` — the change would leave the tenant without an active owner; `member_roles_inconsistent` — the member's assigned roles cannot be loaded as this tenant's roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				422: components['responses']['Unprocessable'];
 			};
 		};
@@ -2743,8 +2781,8 @@ export interface paths {
 		 * Replace user's granted + revoked permission overlays atomically
 		 * @description Both arrays are required; empty arrays clear the corresponding overlay. Permission names
 		 *     MUST match the closed `permission.IdentityPermissions` catalogue;
-		 *     unknown names surface as 422 (`permission_unknown`).
-		 *     Requires `identity.users.update_permissions` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`). Conferring a permission the caller does not hold is rejected with `grant_exceeds_authority`.
+		 *     unknown names surface as 422 (`permission_unknown`). A name listed twice in one array is stored once; a name present in BOTH arrays is a 422 `validation_failed` with the names under `errors.revoked`.
+		 *     Requires `identity.users.update_permissions` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`). The caller must strictly outrank the target member (`insufficient_rank`; owners may act on owners; super users and exempt platform operators are exempt), decided inside the transaction that holds the tenant's authority lock (ADR 0069). Conferring a permission the caller does not hold is rejected with `grant_exceeds_authority`.
 		 */
 		patch: {
 			parameters: {
@@ -2829,8 +2867,17 @@ export interface paths {
 					content?: never;
 				};
 				400: components['responses']['BadRequest'];
-				403: components['responses']['TenantScopeForbidden'];
+				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
+				/** @description `owner_protected` — tenant.admin cannot be revoked from an owner; `member_roles_inconsistent` — the member's assigned roles cannot be loaded as this tenant's roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				422: components['responses']['Unprocessable'];
 			};
 		};
@@ -2848,7 +2895,7 @@ export interface paths {
 		 * Assign user's reporting manager
 		 * @description ManagerID MUST be a Membership in the same tenant — composite FK
 		 *     at the schema layer enforces this; cross-tenant ID surfaces as 422.
-		 *     Requires `identity.users.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`).
+		 *     Requires `identity.users.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`). The caller must strictly outrank the target member (`insufficient_rank`; owners may act on owners; super users and exempt platform operators are exempt), decided inside the transaction that holds the tenant's authority lock (ADR 0069).
 		 */
 		put: {
 			parameters: {
@@ -2932,15 +2979,32 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['TenantScopeForbidden'];
+				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
-				422: components['responses']['Unprocessable'];
+				/** @description `member_roles_inconsistent` — the member's assigned roles cannot be loaded as this tenant's roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				/** @description `manager_not_eligible` — the manager is not an active member of this tenant more senior than the member, or the link would close a reporting cycle; otherwise validation (`user_invalid`) */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 			};
 		};
 		post?: never;
 		/**
 		 * Remove user's reporting manager
-		 * @description Requires `identity.users.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`).
+		 * @description Requires `identity.users.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`). The caller must strictly outrank the target member (`insufficient_rank`; owners may act on owners; super users and exempt platform operators are exempt), decided inside the transaction that holds the tenant's authority lock (ADR 0069).
 		 */
 		delete: {
 			parameters: {
@@ -3011,8 +3075,17 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['TenantScopeForbidden'];
+				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
+				/** @description `member_roles_inconsistent` — the member's assigned roles cannot be loaded as this tenant's roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 			};
 		};
 		options?: never;
@@ -3115,8 +3188,17 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['TenantScopeForbidden'];
+				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
+				/** @description `last_owner_protected` — the person is the only active owner of a tenant; nothing was changed */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				422: components['responses']['Unprocessable'];
 			};
 		};
@@ -3296,7 +3378,29 @@ export interface paths {
 						'application/json': components['schemas']['CreateRoleResponse'];
 					};
 				};
-				403: components['responses']['TenantScopeForbidden'];
+				400: components['responses']['BadRequest'];
+				403: components['responses']['AuthorityForbidden'];
+				/** @description Role name already taken in this tenant (`role_name_taken`) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				/**
+				 * @description `role_invalid` (name length, `hierarchy_level` outside 1-99) or `role_parent_not_eligible`
+				 *     (the parent is missing, deleted, or not strictly more senior than the new role's level).
+				 */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 			};
 		};
 		delete?: never;
@@ -3395,6 +3499,10 @@ export interface paths {
 		/**
 		 * Soft-delete a role
 		 * @description Requires `identity.roles.delete` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 *     The caller must hold every permission the role carries (deleting removes them from every holder).
+		 *     A role still held by an ACTIVE member is refused with 409 `role_in_use` (`errors.active_holders` is the
+		 *     count); a role held only by inactive members is deleted and their assignments are removed in the same
+		 *     transaction.
 		 */
 		delete: {
 			parameters: {
@@ -3465,7 +3573,17 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['TenantScopeForbidden'];
+				403: components['responses']['AuthorityForbidden'];
+				404: components['responses']['NotFound'];
+				/** @description `role_in_use` (an active member holds the role) or `role_system_default` (system-default roles cannot be deleted) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 			};
 		};
 		options?: never;
@@ -3559,9 +3677,12 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['TenantScopeForbidden'];
+				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
-				/** @description Role name already taken in this tenant */
+				/**
+				 * @description `role_name_taken`, or `role_system_default` (a system-default role, Company Owner among them, cannot be
+				 *     renamed or re-levelled by anyone, super users included).
+				 */
 				409: {
 					headers: {
 						[name: string]: unknown;
@@ -3596,7 +3717,8 @@ export interface paths {
 		 *     resolution stays flat per role; the hierarchy is consumed by
 		 *     approval workflows + reporting.
 		 *
-		 *     Pass `{"parent_role_id": null}` (or omit / empty string) to
+		 *     The `parent_role_id` key is REQUIRED (a body without it is 400
+		 *     `invalid_body`): pass `{"parent_role_id": null}` (or an empty string) to
 		 *     clear the parent (role becomes a root). Pass a UUID referencing
 		 *     a role in the SAME tenant to set / re-point the parent.
 		 *
@@ -3693,10 +3815,10 @@ export interface paths {
 					content?: never;
 				};
 				400: components['responses']['BadRequest'];
-				403: components['responses']['TenantScopeForbidden'];
+				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
 				/**
-				 * @description Role already has an active parent edge (single-parent
+				 * @description `role_system_default` (a system-default role's parent cannot change), or role already has an active parent edge (single-parent
 				 *     invariant: at most one active edge per child). Caller
 				 *     should reload to discover the existing edge before
 				 *     retrying.
@@ -3709,7 +3831,18 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
-				422: components['responses']['Unprocessable'];
+				/**
+				 * @description `role_parent_not_eligible` (the parent is missing, deleted, in another tenant, or not strictly more
+				 *     senior than the child), or a cycle / cross-tenant refusal.
+				 */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 			};
 		};
 		trace?: never;
@@ -3724,7 +3857,10 @@ export interface paths {
 		get?: never;
 		/**
 		 * Replace the role's permission set atomically
-		 * @description Permission names MUST match the closed
+		 * @description The `permissions` key is REQUIRED and may not be `null`: `{}` and `{"permissions": null}` are 400
+		 *     `invalid_body`; an explicit `[]` clears the role. Changing the set requires the caller to hold every
+		 *     permission added AND every permission removed.
+		 *     Permission names MUST match the closed
 		 *     `permission.IdentityPermissions` catalogue; unknown names surface
 		 *     as 422 (`permission_unknown`).
 		 *     Requires `identity.roles.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Conferring a permission the caller does not hold is rejected with `grant_exceeds_authority`.
@@ -3811,8 +3947,18 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['TenantScopeForbidden'];
+				400: components['responses']['BadRequest'];
+				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
+				/** @description `role_system_default` (system-default roles, Company Owner among them, cannot be changed by anyone) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				422: components['responses']['Unprocessable'];
 			};
 		};
@@ -3918,8 +4064,17 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['TenantScopeForbidden'];
+				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
+				/** @description `role_system_default` (system-default roles cannot be changed by anyone) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				422: components['responses']['Unprocessable'];
 			};
 		};
@@ -4024,8 +4179,17 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['TenantScopeForbidden'];
+				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
+				/** @description `role_system_default` (system-default roles cannot be changed by anyone) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				422: components['responses']['Unprocessable'];
 			};
 		};
@@ -4386,8 +4550,17 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
+				/** @description `last_owner_protected` — the person is the only active owner of a tenant; nothing was changed */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				422: components['responses']['Unprocessable'];
 			};
 		};
@@ -4492,8 +4665,17 @@ export interface paths {
 					};
 					content?: never;
 				};
-				403: components['responses']['Forbidden'];
+				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
+				/** @description `last_owner_protected` — the person is the only active owner of a tenant; nothing was changed */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				422: components['responses']['Unprocessable'];
 			};
 		};
@@ -4811,8 +4993,12 @@ export interface paths {
 		/**
 		 * List the caller's requests (?role=requester|approver)
 		 * @description Default `role=requester` returns the caller's own history (all states).
-		 *     `role=approver` returns the Pending queue waiting on the caller's
-		 *     decision. Keyset-paginated per ADR 0038.
+		 *     `role=approver` returns the Pending requests the caller may DECIDE under the authority policy
+		 *     (ADR 0069): exactly those a deny by the caller would not refuse, so none of them answers 403
+		 *     for authority reasons. One call examines a bounded window of the tenant's pending requests
+		 *     (at most `page_size`, capped at 100); a page may therefore hold fewer items than `page_size`
+		 *     while `has_more` is true, and `next_cursor` continues after the last request examined.
+		 *     Keyset-paginated per ADR 0038.
 		 */
 		get: {
 			parameters: {
@@ -4897,8 +5083,11 @@ export interface paths {
 		 * Submit a permission-elevation request
 		 * @description Caller (the requester) asks for a time-bound elevated permission.
 		 *     The named approver is the requester's current manager
-		 *     (`tenant_memberships.reports_to`). If the requester has no
-		 *     manager, only an operator holding operator authority can approve.
+		 *     (`tenant_memberships.reports_to`); a requester with no manager is decided by anyone of
+		 *     Administrator rank or above who outranks them (ADR 0069). Requires
+		 *     `identity.meta.request_permission_elevation` (every seeded non-owner role holds it;
+		 *     `tenant.admin` implies it): without it the route is 403 `forbidden`. An impersonation session
+		 *     cannot submit (403 `impersonation_not_allowed`).
 		 *     At most one pending request per (membership, permission) tuple.
 		 *     `tenant.admin`, platform-reserved permissions and names outside the catalogue are not
 		 *     requestable: they are conferred by role only, and the request is refused with 422
@@ -4986,7 +5175,18 @@ export interface paths {
 						'application/json': components['schemas']['CreatePermissionRequestResponse'];
 					};
 				};
-				403: components['responses']['TenantScopeNotSupported'];
+				/**
+				 * @description `forbidden` (the caller lacks `identity.meta.request_permission_elevation`),
+				 *     `impersonation_not_allowed`, or `X-Tenant-Id` selected a foreign tenant (`tenant_scope_not_supported`)
+				 */
+				403: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				/** @description Another pending request already exists for this (membership, permission) tuple */
 				409: {
 					headers: {
@@ -5014,9 +5214,9 @@ export interface paths {
 		};
 		/**
 		 * Get a single permission request
-		 * @description Returns the request if the caller is either the requester, the
-		 *     named approver, OR a Platform operator. Cross-caller reads
-		 *     collapse to 404 per ADR 0044 enumeration-safety canon.
+		 * @description Returns the request to the requester and to anyone who may decide it (the same eligibility
+		 *     as deny, ADR 0069); every other caller, and a missing id, get the same 404 per ADR 0044
+		 *     enumeration-safety canon.
 		 */
 		get: {
 			parameters: {
@@ -5111,14 +5311,22 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/**
-		 * Approve a pending request (manager or platform operator)
-		 * @description Transitions Pending → Approved AND lands a time-bound grant on
-		 *     the requester's membership overlay (single transaction). Caller
-		 *     MUST be either the requester's manager OR hold operator authority (a super user, or a
-		 *     platform operator holding `platform.tenants.view`; membership of the platform tenant alone
-		 *     does not count). A stored request whose permission is not requestable (for example one
-		 *     submitted before that rule existed) is refused with 422 (`permission_not_requestable`) and
-		 *     stays pending; the approver can deny it and the requester can cancel it.
+		 * Approve a pending request (decided by the authority policy)
+		 * @description Transitions Pending → Approved AND confers exactly the STORED request's permission on the
+		 *     requester for the stored duration (single transaction under the tenant authority lock).
+		 *     Decided by the authority policy (ADR 0069), never by the body: the requester's manager who
+		 *     holds `identity.roles.approve` AND the permission; or anyone of Administrator rank or above who
+		 *     strictly outranks the requester (an Administrator may approve any requestable permission
+		 *     without holding it, except user/role management, tenant settings, marketplace purchase and
+		 *     payment recording, which the Administrator must hold); or a super user / exempt operator
+		 *     acting in ANOTHER tenant (in the platform tenant an operator follows rank like anyone else).
+		 *     Never an impersonation session and never the requester.
+		 *
+		 *     Check order: unknown request (404) → authority (403, whatever the request's state) → state
+		 *     (409 `permission_request_not_pending`) → requestability (422 `permission_not_requestable`: a
+		 *     stored request whose permission is not requestable, for example one submitted before that rule
+		 *     existed, stays pending; the approver can deny it and the requester can cancel it) → requester
+		 *     still active (409 `permission_request_requester_inactive`; the request stays pending).
 		 */
 		post: {
 			parameters: {
@@ -5202,7 +5410,12 @@ export interface paths {
 					};
 					content?: never;
 				};
-				/** @description Caller is not the manager and holds no operator authority, OR `X-Tenant-Id` selected a foreign tenant (`tenant_scope_not_supported`) */
+				/**
+				 * @description `not_approver` (not the requester's manager, or lacks `identity.roles.approve`),
+				 *     `insufficient_rank`, `grant_exceeds_authority` (the approver does not hold the permission, or an
+				 *     Administrator lacks a must-hold one), `self_modification_forbidden` (own request),
+				 *     `impersonation_not_allowed`, `forbidden`, or `tenant_scope_not_supported` (`X-Tenant-Id` selected a foreign tenant)
+				 */
 				403: {
 					headers: {
 						[name: string]: unknown;
@@ -5212,7 +5425,7 @@ export interface paths {
 					};
 				};
 				404: components['responses']['NotFound'];
-				/** @description Request is not in pending state */
+				/** @description Request is not in pending state (`permission_request_not_pending`), or the requester can no longer receive the grant (`permission_request_requester_inactive`) */
 				409: {
 					headers: {
 						[name: string]: unknown;
@@ -5240,10 +5453,10 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/**
-		 * Deny a pending request (manager or platform operator)
+		 * Deny a pending request (decided by the authority policy)
 		 * @description Transitions Pending → Denied. `decision_reason` is REQUIRED on
-		 *     Deny per ADR 0055 audit canon. Same caller-authorization as Approve (the requester's
-		 *     manager, or operator authority; platform-tenant membership alone does not count).
+		 *     Deny per ADR 0055 audit canon. Same eligibility and check order as Approve, except that the
+		 *     denier need not hold the requested permission (nor `identity.roles.approve` as an Administrator).
 		 */
 		post: {
 			parameters: {
@@ -5327,7 +5540,10 @@ export interface paths {
 					};
 					content?: never;
 				};
-				/** @description Caller is not the manager and holds no operator authority, OR `X-Tenant-Id` selected a foreign tenant (`tenant_scope_not_supported`) */
+				/**
+				 * @description `not_approver`, `insufficient_rank`, `self_modification_forbidden`, `impersonation_not_allowed`,
+				 *     `forbidden`, or `tenant_scope_not_supported` (`X-Tenant-Id` selected a foreign tenant)
+				 */
 				403: {
 					headers: {
 						[name: string]: unknown;
@@ -12482,6 +12698,7 @@ export interface components {
 		};
 		CreateRoleRequest: {
 			name: string;
+			/** @description REQUIRED (an omitted level is 400). 0 is the Owner tier, reserved to system roles. Must be strictly below the caller rank. */
 			hierarchy_level: number;
 			/**
 			 * Format: uuid
@@ -12520,7 +12737,10 @@ export interface components {
 		 *     tenant to atomically replace any existing edge.
 		 */
 		SetRoleParentRequest: {
-			/** Format: uuid */
+			/**
+			 * Format: uuid
+			 * @description The key is required; an explicit null clears the parent.
+			 */
 			parent_role_id: string | null;
 			/**
 			 * @description Optional audit text recorded on the new edge (when setting)
@@ -13579,6 +13799,22 @@ export interface components {
 		 *     (`tenant_scope_not_supported`, ADR 0039).
 		 */
 		TenantScopeNotSupported: {
+			headers: {
+				[name: string]: unknown;
+			};
+			content: {
+				'application/json': components['schemas']['ErrorResponse'];
+			};
+		};
+		/**
+		 * @description Forbidden. `error` is one of: `forbidden` (the caller lacks the route's permission in
+		 *     the effective tenant, or is not a valid actor), `tenant_scope_forbidden` (see
+		 *     TenantScopeForbidden), `self_modification_forbidden` (the caller targeted themself),
+		 *     `insufficient_rank` (the caller does not strictly outrank the target member or role,
+		 *     ADR 0069), `grant_exceeds_authority` (the change confers or removes a permission the
+		 *     caller does not hold, or `tenant.admin` as a non-owner).
+		 */
+		AuthorityForbidden: {
 			headers: {
 				[name: string]: unknown;
 			};
