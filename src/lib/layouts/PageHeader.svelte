@@ -31,6 +31,12 @@
 	const nested = inNestedPageHeaders();
 
 	const trail = $derived.by<Crumb[]>(() => {
+		const full = fullTrail();
+		// One crumb that only repeats the h1 says nothing: no trail.
+		return full.length === 1 && full[0]?.label === title ? [] : full;
+	});
+
+	function fullTrail(): Crumb[] {
 		if (nested) return [];
 		if (crumbs) return crumbs;
 		const route = routeContext(page.url.pathname).crumbs;
@@ -41,7 +47,7 @@
 					? { label: $_(`nav.items.${c.key}`), href: c.href }
 					: { label: c.label }
 		);
-	});
+	}
 </script>
 
 <!-- eslint-disable svelte/no-navigation-without-resolve -- hrefs are nav-config paths or resolved by the caller -->

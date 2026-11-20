@@ -75,6 +75,23 @@ describe('PageHeader', () => {
 		expect(document.querySelector('nav a')!.getAttribute('href')).toBe('/operator/tenants');
 	});
 
+	it('a trail of one crumb that repeats the title is not rendered', () => {
+		pageUrl.value = new URL('http://localhost/dashboard');
+		render({ title: 'Dashboard' });
+		expect(document.querySelector('nav')).toBeNull();
+		expect(document.querySelectorAll('h1')).toHaveLength(1);
+	});
+
+	it('an explicit single crumb equal to the title is not rendered either', () => {
+		render({ title: 'Acme', crumbs: [{ label: 'Acme' }] });
+		expect(document.querySelector('nav')).toBeNull();
+	});
+
+	it('a single crumb that differs from the title is kept', () => {
+		render({ title: 'Acme', crumbs: [{ label: 'Tenants' }] });
+		expect(document.querySelector('nav')!.textContent).toContain('Tenants');
+	});
+
 	it('crumbs=[] renders no navigation at all', () => {
 		render({ title: 'Team', crumbs: [] });
 		expect(document.querySelector('nav')).toBeNull();
