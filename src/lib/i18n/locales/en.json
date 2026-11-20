@@ -124,6 +124,16 @@
 		"brandName": "LeadKart",
 		"skipToContent": "Skip to main content",
 		"loadingNextPage": "Loading next page",
+		"pwa": {
+			"updateTitle": "Update available",
+			"updateBody": "A newer version of LeadKart is ready.",
+			"reload": "Reload",
+			"offlineTitle": "You're offline",
+			"offlineBody": "Changes will fail until you reconnect — read-only browsing still works.",
+			"installTitle": "Install LeadKart",
+			"installBody": "Use it like a native app, offline-capable.",
+			"install": "Install"
+		},
 		"pagination": {
 			"label": "Pagination",
 			"previous": "Previous",
@@ -200,6 +210,8 @@
 		"toggleMode": "Switch between light and dark mode",
 		"openCustomizer": "Open theme settings",
 		"searchPlaceholder": "Search…",
+		"searchLabel": "Search (Cmd+K)",
+		"searchTitle": "Search · Cmd+K",
 		"userMenu": {
 			"label": "User menu",
 			"signedInAs": "Signed in as",

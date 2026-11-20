@@ -14,6 +14,7 @@
 	 * authenticated pages. Each bar uses the same card material (bg-card, border, shadow-md)
 	 * as toasts so the visual language is consistent.
 	 */
+	import { _ } from 'svelte-i18n';
 	import { createPwa } from '#lib/hooks/index.ts';
 	import { Button } from '$ui';
 	import { CloudOff, Download, RefreshCw, Icon } from '$icons';
@@ -34,10 +35,10 @@
 		>
 			<Icon icon={RefreshCw} size="sm" class="text-primary" />
 			<div class="stack stack-tight flex-1">
-				<p class="label text-foreground font-semibold">Update available</p>
-				<p class="caption text-muted-foreground">A newer version of LeadKart is ready.</p>
+				<p class="label text-foreground font-semibold">{$_('common.pwa.updateTitle')}</p>
+				<p class="caption text-muted-foreground">{$_('common.pwa.updateBody')}</p>
 			</div>
-			<Button size="sm" onclick={() => pwa.applyUpdate()}>Reload</Button>
+			<Button size="sm" onclick={() => pwa.applyUpdate()}>{$_('common.pwa.reload')}</Button>
 		</div>
 	{/if}
 
@@ -48,10 +49,8 @@
 		>
 			<Icon icon={CloudOff} size="sm" class="text-warning" />
 			<div class="stack stack-tight flex-1">
-				<p class="label text-foreground font-semibold">You're offline</p>
-				<p class="caption text-muted-foreground">
-					Changes will fail until you reconnect — read-only browsing still works.
-				</p>
+				<p class="label text-foreground font-semibold">{$_('common.pwa.offlineTitle')}</p>
+				<p class="caption text-muted-foreground">{$_('common.pwa.offlineBody')}</p>
 			</div>
 		</div>
 	{/if}
@@ -63,10 +62,12 @@
 		>
 			<Icon icon={Download} size="sm" class="text-muted-foreground" />
 			<div class="stack stack-tight flex-1">
-				<p class="label text-foreground font-semibold">Install LeadKart</p>
-				<p class="caption text-muted-foreground">Use it like a native app, offline-capable.</p>
+				<p class="label text-foreground font-semibold">{$_('common.pwa.installTitle')}</p>
+				<p class="caption text-muted-foreground">{$_('common.pwa.installBody')}</p>
 			</div>
-			<Button size="sm" variant="tonal" onclick={() => pwa.install()}>Install</Button>
+			<Button size="sm" variant="tonal" onclick={() => pwa.install()}
+				>{$_('common.pwa.install')}</Button
+			>
 		</div>
 	{/if}
 </div>

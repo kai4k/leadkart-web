@@ -44,12 +44,12 @@ describe('check-i18n-coverage: hard-coded labels in the shared layers', () => {
 		expect(found('<i aria-label="Members"></i> <!-- i18n-allow -->')).toEqual([]);
 	});
 
-	it('covers ui, form, data and feedback only; skips stories and the legacy data-table', () => {
+	it('covers ui, form, data, feedback and the layouts only; skips stories and the legacy data-table', () => {
 		const src = '<i aria-label="Members"></i>';
 		for (const dir of ['ui', 'form', 'data', 'feedback'])
 			expect(found(src, `src/lib/components/${dir}/X.svelte`)).toEqual(['Members']);
+		expect(found(src, 'src/lib/layouts/X.svelte')).toEqual(['Members']);
 		expect(found(src, 'src/lib/features/x/X.svelte')).toEqual([]);
-		expect(found(src, 'src/lib/layouts/X.svelte')).toEqual([]);
 		expect(found(src, 'src/lib/components/form/X.stories.svelte')).toEqual([]);
 		expect(found(src, 'src/lib/components/ui/data-table/DataTable.svelte')).toEqual([]);
 		expect(found(src, 'src\\lib\\components\\ui\\a\\a.svelte')).toEqual(['Members']);

@@ -64,8 +64,8 @@
 			<button
 				type="button"
 				class="border-border bg-muted text-muted-foreground focus-visible:ring-ring ms-2 hidden h-9 w-72 items-center gap-2 rounded-md border px-3 text-sm outline-none focus-visible:ring-2 md:inline-flex"
-				aria-label="Search (Cmd+K)"
-				title="Search · Cmd+K"
+				aria-label={$_('shell.searchLabel')}
+				title={$_('shell.searchTitle')}
 				onclick={() => (paletteOpen = true)}
 			>
 				<Icon icon={Search} size="sm" />

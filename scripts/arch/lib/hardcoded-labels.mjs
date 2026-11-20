@@ -12,7 +12,10 @@
  * carrying `i18n-allow` is skipped.
  */
 
-export const LABEL_DIRS = ['ui', 'form', 'data', 'feedback'].map((d) => `src/lib/components/${d}/`);
+export const LABEL_DIRS = [
+	...['ui', 'form', 'data', 'feedback'].map((d) => `src/lib/components/${d}/`),
+	'src/lib/layouts/'
+];
 
 /**
  * Flip to true in the commit that rebuilds the last user of the legacy table (plan Task 23,
