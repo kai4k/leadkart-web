@@ -7,6 +7,7 @@
 	 */
 	import { Button, Command, Dialog, DropdownMenu, Sheet, Tabs, toast } from '$ui';
 	import * as Table from '#lib/components/ui/table/index.ts';
+	import { DatePicker } from '$form';
 
 	let sheetOpen = $state(false);
 	let dialogOpen = $state(false);
@@ -38,6 +39,11 @@
 		<Sheet.Content title="Demo sheet">
 			<Sheet.Body>
 				<p class="body-base">A sheet with a form-like body.</p>
+				<DatePicker
+					label="Follow-up date"
+					name="followup"
+					hint="Typed or picked; opened over the sheet."
+				/>
 				<Button onclick={() => (dialogOpen = true)}>Open confirm over the sheet</Button>
 			</Sheet.Body>
 		</Sheet.Content>

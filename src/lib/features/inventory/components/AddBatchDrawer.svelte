@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { getLocalTimeZone, today } from '@internationalized/date';
+	import { toDateOnly } from '#lib/utils/date-only.ts';
 	import { Drawer, Button, Alert } from '$ui';
 	import { TextField, NumberInput } from '$form';
 	import { useForm } from '#lib/hooks/use-form.svelte.ts';
@@ -27,9 +29,9 @@
 	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
 	useResetOnChange(() => open, mutation);
 
+	// today's CALENDAR date in the browser's zone: `Date#toISOString().slice(0, 10)` is the UTC date and is a day early east of UTC
 	function todayIsoDate(): string {
-		const d = new Date();
-		return d.toISOString().slice(0, 10);
+		return toDateOnly(today(getLocalTimeZone()));
 	}
 
 	const initial: CreateBatchRequest = {

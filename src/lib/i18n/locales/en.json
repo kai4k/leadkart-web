@@ -357,10 +357,15 @@
 			"empty": "No results"
 		},
 		"datePicker": {
-			"placeholder": "Pick a date"
+			"openCalendar": "Open calendar, {label}",
+			"incomplete": "Enter a complete date"
 		},
 		"dateRangePicker": {
-			"placeholder": "Pick a date range"
+			"openCalendar": "Open calendar, {label}",
+			"start": "{label}, start date",
+			"end": "{label}, end date",
+			"incomplete": "Enter a complete start and end date",
+			"order": "The end date is before the start date"
 		},
 		"password": {
 			"show": "Show password",
