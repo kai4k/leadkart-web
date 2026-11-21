@@ -152,6 +152,27 @@ describe('materials-fallbacks.css', () => {
 		for (const [name, value] of off) expect(b.decls.get(name), `${needle} ${name}`).toBe(value);
 	});
 
+	it('a fallback block may add only the pinned extras: its keys are a subset of the off keys plus edge, highlight and shadows', () => {
+		const PINNED = [
+			'--material-edge',
+			'--material-highlight',
+			'--material-bar-shadow',
+			'--material-pane-shadow'
+		];
+		const allowed = new Set([...off.keys(), ...PINNED]);
+		for (const needle of [
+			'@supports not',
+			'prefers-reduced-transparency',
+			'prefers-contrast',
+			'forced-colors',
+			'@media print'
+		])
+			for (const key of named(needle).decls.keys())
+				expect(allowed.has(key), `${needle} declares ${key}, which the gate never reads`).toBe(
+					true
+				);
+	});
+
 	it('increased contrast also swaps the edge for the 3:1 border and drops the highlight', () => {
 		const b = named('prefers-contrast');
 		expect(b.decls.get('--material-edge')).toBe('var(--input)');
@@ -183,11 +204,12 @@ describe('materials-fallbacks.css', () => {
 describe('the material utilities', () => {
 	const declared = new Set([...root.keys(), ...reduced.keys(), ...off.keys()]);
 
-	it('defines the three utilities, each reading its own fill and filter', () => {
+	it('defines the four utilities, each reading its own fill and filter', () => {
 		for (const [name, fill, filter] of [
 			['material-bar', 'bar-fill', 'bar-filter'],
 			['material-pane', 'pane-fill', 'pane-filter'],
-			['material-sidebar', 'sidebar-fill', 'pane-filter']
+			['material-sidebar', 'sidebar-fill', 'pane-filter'],
+			['material-sidebar-bar', 'sidebar-fill', 'bar-filter']
 		]) {
 			const m = new RegExp(`@utility ${name} \\{([\\s\\S]*?)\\n\\}`).exec(UTILITIES);
 			expect(m, name).not.toBeNull();
@@ -205,11 +227,21 @@ describe('the material utilities', () => {
 		for (const u of used) expect(declared, u).toContain(u);
 	});
 
-	it('a float opened over an open modal surface is opaque (no glass on glass)', () => {
-		expect(UTILITIES).toMatch(/\[data-slot='dialog-content'\]/);
-		expect(UTILITIES).toMatch(/\[data-slot='dropdown-menu-content'\]/);
-		expect(UTILITIES).toMatch(
+	it('no glass on glass is ONE structural rule: a material in a material, or over an open modal surface, is opaque', () => {
+		const m = /\n(:is\(\.material-bar[^{]*)\{([^}]*)\}/.exec(UTILITIES);
+		expect(m).not.toBeNull();
+		const [, selector, body] = m!;
+		// (a) a material element inside another material element, whatever the pair
+		expect(selector).toMatch(
+			/^:is\(\.material-bar, \.material-pane, \.material-sidebar, \.material-sidebar-bar\)\s+:is\(\.material-bar, \.material-pane, \.material-sidebar, \.material-sidebar-bar\)/
+		);
+		// (b) a portalled material (menu, popover, toast) over an open modal surface, never the modal itself
+		expect(selector).toMatch(/\[data-slot='dialog-content'\][\s\S]*\[data-state='open'\]/);
+		expect(selector).toMatch(/\.material-pane:not\(/);
+		expect(body).toMatch(
 			/background-color: var\(--popover\);\s*-webkit-backdrop-filter: none;\s*backdrop-filter: none;/
 		);
+		// the float slots are not listed by name any more: any material qualifies
+		expect(selector).not.toContain('dropdown-menu-content');
 	});
 });

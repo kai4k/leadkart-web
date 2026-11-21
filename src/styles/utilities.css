@@ -152,13 +152,16 @@
 }
 
 /* ═══ Materials (plan G2): the ONE source of glass ═════════════════════════════════════════════
- * No component and no SVG draws glass; a surface says `material-bar`, `material-pane` or
- * `material-sidebar`. Fill, filter, edge and shadow come from theme/materials.css (gated, with its
+ * No component and no SVG draws glass; a surface says `material-bar`, `material-pane`, `material-sidebar`
+ * or `material-sidebar-bar`. Fill, filter, edge and shadow come from theme/materials.css (gated, with its
  * opaque fallbacks). The scoped re-declarations make everything INSIDE the material read the
- * tokens readable on the material (the way the pattern topbar re-declares tokens in layouts.css): the third text
- * level collapses into the muted one, the ring is the readable one, and `bg-muted` / `bg-accent`
- * become the translucent control fills. A material is never nested in another (a `:has()` rule
- * below makes a float opened over an open modal surface opaque). */
+ * tokens readable on the material (the way the pattern topbar re-declares tokens in layouts.css): on a
+ * bar or a pane the third text level collapses into the muted one, the ring is the readable one, and
+ * `bg-muted` / `bg-accent` become the translucent control fills; on a SIDEBAR material they are the sidebar's
+ * own tokens (the sidebar colour axis is independent of the page mode, so the neutral material values
+ * would be invisible on a dark, brand, purple or sky sidebar). Every re-declared token appears in the
+ * gate's layer for that utility (tests/unit/contract/arch-token-contrast-materials.test.ts proves it).
+ * A material is never nested in another: the last rule of this file makes the inner one opaque. */
 @utility material-bar {
 	background-color: var(--material-bar-fill);
 	-webkit-backdrop-filter: var(--material-bar-filter);
@@ -206,19 +209,45 @@
 		inset 0 1px 0 0 var(--material-highlight),
 		0 0 0 1px var(--material-edge),
 		var(--material-pane-shadow);
-	--muted-foreground: var(--material-muted-foreground);
-	--subtle-foreground: var(--material-muted-foreground);
-	--ring: var(--material-ring);
-	--muted: var(--material-control);
-	--accent: var(--material-control-hover);
-	--input-fill: var(--material-input-fill);
+	--muted-foreground: var(--sidebar-muted-foreground);
+	--subtle-foreground: var(--sidebar-muted-foreground);
+	--ring: var(--sidebar-ring);
+	--muted: var(--sidebar-accent);
+	--accent: var(--sidebar-accent);
+	--accent-foreground: var(--sidebar-accent-foreground);
+	@media (forced-colors: active) {
+		/* stylelint-disable-next-line no-invalid-position-declaration -- a nested @media inside @utility is valid (Tailwind 4) */
+		border: 1px solid CanvasText;
+	}
+}
+/* the horizontal nav (GD17): the sidebar colour as a bar, so it follows the sidebar colour axis */
+@utility material-sidebar-bar {
+	background-color: var(--material-sidebar-fill);
+	-webkit-backdrop-filter: var(--material-bar-filter);
+	backdrop-filter: var(--material-bar-filter);
+	box-shadow:
+		inset 0 1px 0 0 var(--material-highlight),
+		0 0 0 1px var(--material-edge),
+		var(--material-bar-shadow);
+	--muted-foreground: var(--sidebar-muted-foreground);
+	--subtle-foreground: var(--sidebar-muted-foreground);
+	--ring: var(--sidebar-ring);
+	--muted: var(--sidebar-accent);
+	--accent: var(--sidebar-accent);
+	--accent-foreground: var(--sidebar-accent-foreground);
 	@media (forced-colors: active) {
 		/* stylelint-disable-next-line no-invalid-position-declaration -- a nested @media inside @utility is valid (Tailwind 4) */
 		border: 1px solid CanvasText;
 	}
 }
 
-/* no glass on glass: a float opened over an open modal surface is opaque */
+/* No glass on glass, structurally. Two cases, one rule: (a) a material element INSIDE another material
+ * element; (b) a material opened over an open modal surface (a menu, a popover or a toast is portalled to
+ * <body>, so it is not a DOM descendant of the dialog it is above). The inner one is an opaque popover surface
+ * with no filter (the `off` look); the control fills inside it stay translucent over that opaque fill, which
+ * is the easy case of the gate (a pane at alpha 1). */
+:is(.material-bar, .material-pane, .material-sidebar, .material-sidebar-bar)
+	:is(.material-bar, .material-pane, .material-sidebar, .material-sidebar-bar),
 body:has(
 		:is(
 			[data-slot='dialog-content'],
@@ -226,11 +255,12 @@ body:has(
 			[data-slot='alert-dialog-content']
 		)[data-state='open']
 	)
-	:is(
-		[data-slot='popover-content'],
-		[data-slot='dropdown-menu-content'],
-		[data-slot='select-content'],
-		[data-slot='dropdown-menu-sub-content']
+	.material-pane:not(
+		:is(
+			[data-slot='dialog-content'],
+			[data-slot='sheet-content'],
+			[data-slot='alert-dialog-content']
+		)
 	) {
 	background-color: var(--popover);
 	-webkit-backdrop-filter: none;

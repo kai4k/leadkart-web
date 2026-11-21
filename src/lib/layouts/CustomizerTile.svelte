@@ -32,7 +32,7 @@
 <RadioGroup.Tile {value} {disabled}>
 	{#if kind === 'wireframe'}
 		<span
-			class="cz-preview border-border group-aria-checked/tile:border-primary group-aria-checked/tile:ring-primary group-aria-checked/tile:ring-offset-popover block h-28 w-full overflow-hidden rounded-lg border group-aria-checked/tile:ring-2 group-aria-checked/tile:ring-offset-2"
+			class="cz-preview border-border group-aria-checked/tile:border-primary-indicator group-aria-checked/tile:ring-primary-indicator group-aria-checked/tile:ring-offset-popover block h-28 w-full overflow-hidden rounded-lg border group-aria-checked/tile:ring-2 group-aria-checked/tile:ring-offset-2"
 			data-preview={id}
 			aria-hidden="true"
 		>
@@ -50,7 +50,7 @@
 		</span>
 	{:else}
 		<span
-			class="cz-swatch border-border group-aria-checked/tile:ring-primary group-aria-checked/tile:ring-offset-popover mx-auto block size-10 rounded-full border group-aria-checked/tile:ring-2 group-aria-checked/tile:ring-offset-2"
+			class="cz-swatch border-border group-aria-checked/tile:ring-primary-indicator group-aria-checked/tile:ring-offset-popover mx-auto block size-10 rounded-full border group-aria-checked/tile:ring-2 group-aria-checked/tile:ring-offset-2"
 			data-swatch={id}
 			aria-hidden="true"
 		></span>

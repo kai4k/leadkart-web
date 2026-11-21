@@ -35,8 +35,8 @@
 		contrast(var(--material-pane-contrast));
 
 	--material-muted-foreground: light-dark(
-		var(--muted-foreground),
-		color-mix(in oklch, var(--dark-300) 75%, var(--dark-400))
+		color-mix(in oklch, var(--muted-foreground) 85%, var(--foreground)),
+		var(--dark-300)
 	);
 	--material-ring: light-dark(var(--primary-text), var(--ring));
 	/* a mark in the primary colour on a BAR (the hnav's active underline): the dark text step, not the vivid

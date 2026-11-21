@@ -149,7 +149,7 @@
 						class={[
 							'border-border hover:bg-muted cursor-pointer border-b transition-colors',
 							focused && 'bg-muted',
-							focused && 'border-l-primary border-s-4'
+							focused && 'border-l-primary-indicator border-s-4'
 						]}
 						onclick={() => openDetail(lead)}
 						tabindex={nav.tabindexFor(i)}

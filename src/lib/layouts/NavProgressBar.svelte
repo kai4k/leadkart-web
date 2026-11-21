@@ -89,11 +89,11 @@
 	.lk-nav-progress-bar {
 		block-size: 100%;
 		inline-size: 100%;
-		background: var(--primary);
+		background: var(--primary-indicator);
 		transform-origin: left;
 		transform: scaleX(0);
 		transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-		box-shadow: 0 0 8px var(--primary);
+		box-shadow: 0 0 8px var(--primary-indicator);
 	}
 	@media (prefers-reduced-motion: reduce) {
 		.lk-nav-progress {

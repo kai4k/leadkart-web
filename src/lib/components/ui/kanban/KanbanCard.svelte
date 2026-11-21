@@ -114,7 +114,7 @@
 		'hover:ring-input hover:ring-1',
 		'focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
 		draggable && 'cursor-grab active:cursor-grabbing',
-		isDragging && 'bg-muted ring-primary shadow-md ring-2',
+		isDragging && 'bg-muted ring-primary-indicator shadow-md ring-2',
 		className
 	)}
 	ondragstart={onDragStart}

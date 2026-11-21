@@ -209,7 +209,7 @@
 				error || localError
 					? 'border-destructive bg-card'
 					: isDragOver
-						? 'border-primary bg-primary-soft'
+						? 'border-primary-indicator bg-primary-soft'
 						: 'border-input bg-card hover:bg-muted'
 			)}
 			onclick={() => inputEl?.click()}

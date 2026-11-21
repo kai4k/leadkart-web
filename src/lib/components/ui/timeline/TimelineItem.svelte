@@ -9,7 +9,7 @@
 		{
 			variants: {
 				accent: {
-					primary: 'bg-primary-soft text-primary-text border border-primary',
+					primary: 'bg-primary-soft text-primary-text border border-primary-indicator',
 					success: 'bg-success-soft text-success border border-success',
 					warning: 'bg-warning-soft text-warning border border-warning',
 					danger: 'bg-destructive-soft text-destructive border border-destructive',
@@ -62,7 +62,7 @@
 				<span
 					class={cn(
 						'block h-2 w-2 rounded-full',
-						iconAccent === 'primary' && 'bg-primary',
+						iconAccent === 'primary' && 'bg-primary-indicator',
 						iconAccent === 'success' && 'bg-success-indicator',
 						iconAccent === 'warning' && 'bg-warning-indicator',
 						iconAccent === 'danger' && 'bg-destructive-indicator',

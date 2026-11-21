@@ -174,6 +174,20 @@ const RAW_PAIRS = [
 	['ring', 'primary', UI, { scope: PATTERN_TOPBAR, note: 'focus ring' }],
 	['brand-frame', 'primary', UI, { scope: PATTERN_TOPBAR, note: 'logo frame on the band' }],
 	['brand-capsule', 'primary', UI, { scope: PATTERN_TOPBAR, note: 'logo capsule on the band' }],
+	// the tokens a material bar would leak into the opaque band are re-declared for it (layouts.css)
+	[
+		'subtle-foreground',
+		'primary',
+		TEXT,
+		{ scope: PATTERN_TOPBAR, note: 'tertiary text on the band' }
+	],
+	[
+		'primary-indicator',
+		'primary',
+		UI,
+		{ scope: PATTERN_TOPBAR, note: 'indicator mark on the band' }
+	],
+	['foreground', 'input-fill', TEXT, { scope: PATTERN_TOPBAR, note: 'field fill on the band' }],
 	// the auth frame, the page header and the section nav (Tasks 13-14): their text/surface pairs, on record
 	['foreground', 'background', TEXT, { note: 'auth frame, page title' }],
 	['primary-text', 'card', TEXT, { note: 'auth brand headline' }],
@@ -443,6 +457,16 @@ const BAR_BACKDROPS = [
 	'#fff'
 ];
 const FLOAT_BACKDROPS = ['background', 'card', 'muted', 'primary', 'foreground', '#000', '#fff'];
+const INPUT_WELL = { control: 'material-input-fill', text: ['foreground'] };
+/** What sits on a control fill inside a bar: the search field's text and kbd hint (muted), the hover chip. */
+const BAR_CONTROLS = [
+	{ control: 'material-control', text: ['foreground', 'material-muted-foreground'] },
+	{
+		control: 'material-control-hover',
+		text: ['foreground', 'accent-foreground', 'material-muted-foreground']
+	},
+	INPUT_WELL
+];
 const BAR = {
 	fill: 'material-bar-fill',
 	surface: 'card',
@@ -451,7 +475,23 @@ const BAR = {
 	backdrops: BAR_BACKDROPS,
 	text: ['foreground', 'material-muted-foreground'],
 	marks: ['material-ring', 'material-indicator', 'brand-frame', 'brand-capsule'],
-	onControl: [{ control: 'material-control', text: ['foreground'] }]
+	onControl: BAR_CONTROLS
+};
+/**
+ * The horizontal nav (GD17): a bar-recipe filter over the SIDEBAR colour (`material-sidebar-bar`), so its
+ * text and marks are the sidebar's, per sidebar colour. The sidebar colour axis is independent of the page mode.
+ */
+const SIDEBAR_BAR = {
+	fill: 'material-sidebar-fill',
+	surface: 'sidebar',
+	saturate: 'material-bar-saturate',
+	contrast: 'material-bar-contrast',
+	backdrops: BAR_BACKDROPS,
+	text: ['sidebar-foreground', 'sidebar-muted-foreground', 'sidebar-accent-foreground'],
+	marks: ['sidebar-ring', 'sidebar-icon'],
+	onControl: [
+		{ control: 'sidebar-accent', text: ['sidebar-accent-foreground', 'sidebar-foreground'] }
+	]
 };
 const PANE = {
 	fill: 'material-pane-fill',
@@ -466,7 +506,12 @@ const SIDEBAR = {
 	contrast: 'material-pane-contrast',
 	text: ['sidebar-foreground', 'sidebar-muted-foreground'],
 	marks: ['sidebar-ring', 'sidebar-icon', 'sidebar-brand-frame', 'sidebar-brand-capsule'],
-	onControl: [{ control: 'sidebar-accent', text: ['sidebar-accent-foreground'] }]
+	onControl: [
+		{
+			control: 'sidebar-accent',
+			text: ['sidebar-accent-foreground', 'sidebar-foreground', 'sidebar-muted-foreground']
+		}
+	]
 };
 const OVERLAY_TEXT = [
 	'foreground',
@@ -477,13 +522,24 @@ const OVERLAY_TEXT = [
 	'warning',
 	'info'
 ];
-const INPUT_WELL = { control: 'material-input-fill', text: ['foreground'] };
+/**
+ * Text that sits on the highlighted / hovered control fill of a pane (menu items, list rows, chips).
+ * `primary-text` and `destructive` are NOT here: on a control fill they reach 2.8-4.3 (dark destructive, violet
+ * primary text) and no component needs them there (a destructive menu item highlights with its own opaque
+ * `destructive-soft`). check-tokens rule m6 refuses the class combination in the material families instead.
+ */
+const PANE_CONTROL_TEXT = ['foreground', 'material-muted-foreground', 'accent-foreground'];
+const PANE_CONTROLS = [
+	{ control: 'material-control', text: PANE_CONTROL_TEXT },
+	{ control: 'material-control-hover', text: PANE_CONTROL_TEXT },
+	INPUT_WELL
+];
 
 /** Every layer a material is used on (plan 3.2). A material utility with no layer here fails the gate's test. */
 /** @type {MaterialLayer[]} */
 export const MATERIAL_LAYERS = [
 	{ layer: 'topbar', ...BAR },
-	{ layer: 'hnav', ...BAR },
+	{ layer: 'hnav', ...SIDEBAR_BAR },
 	{ layer: 'bulk-bar', ...BAR },
 	{
 		layer: 'sidebar-desktop',
@@ -498,7 +554,7 @@ export const MATERIAL_LAYERS = [
 		under: 'scrim',
 		text: OVERLAY_TEXT,
 		marks: ['material-ring', 'input', 'primary-indicator'],
-		onControl: [INPUT_WELL]
+		onControl: PANE_CONTROLS
 	},
 	{
 		layer: 'float',
@@ -506,10 +562,7 @@ export const MATERIAL_LAYERS = [
 		backdrops: FLOAT_BACKDROPS,
 		text: OVERLAY_TEXT,
 		marks: ['material-ring', 'primary-indicator'],
-		onControl: [
-			{ control: 'material-control-hover', text: ['foreground', 'material-muted-foreground'] },
-			INPUT_WELL
-		]
+		onControl: PANE_CONTROLS
 	},
 	{
 		layer: 'auth-card',
@@ -526,7 +579,7 @@ export const MATERIAL_LAYERS = [
 		],
 		text: ['foreground', 'material-muted-foreground', 'primary-text', 'destructive'],
 		marks: ['material-ring', 'input'],
-		onControl: [INPUT_WELL]
+		onControl: PANE_CONTROLS
 	}
 ];
 
@@ -570,6 +623,13 @@ const ratioIn = (fg, bg, mode) =>
 		? ratio(grayscale(clampRgb(toRgb(fg))), grayscale(clampRgb(toRgb(bg))))
 		: ratio(fg, bg);
 
+/** Relative luminance of a colour as the page paints it (on the grayscale in black-white mode). */
+function lumaIn(c, mode) {
+	const x = clampRgb(toRgb(mode === 'black-white' ? grayscale(clampRgb(toRgb(c))) : c));
+	const l = (v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+	return 0.2126 * l(x.r) + 0.7152 * l(x.g) + 0.0722 * l(x.b);
+}
+
 /** The opacity (0..1) a fill token paints at: composite over black and over white and compare. */
 export function fillAlpha(resolve, fillName) {
 	const w = clampRgb(toRgb(resolve(fillName, WHITE)));
@@ -579,7 +639,7 @@ export function fillAlpha(resolve, fillName) {
 
 /**
  * The backdrop corners of a layer, after the filter, with the layer's `under` scrim applied first.
- * @returns {Array<{ space: string, side: string, color: object }>}
+ * @returns {Array<{ side: string, color: object }>}
  */
 export function layerCorners(props, mode, layer) {
 	const resolve = makeResolver(props, mode);
@@ -614,15 +674,20 @@ export function checkMaterials(props, mode, label, transparency, layers = MATERI
 					);
 			}
 
-			for (const { space, side, color } of cs) {
-				const corner = `${side}/${space}`;
+			// the bound needs the text OUTSIDE the interval its background spans (see below)
+			const spans = new Map();
+			for (const { side, color } of cs) {
+				const corner = side;
 				const composite = resolve(layer.fill, color);
 				const record = (kind, token, on, fg, bg, min) => {
 					const r = ratioIn(fg, bg, mode);
 					results.push({ layer: layer.layer, kind, token, on, corner, ratio: r, min });
+					const span = spans.get(`${token}|${on}`) ?? { token, on, fg, ys: [] };
+					span.ys.push(lumaIn(bg, mode));
+					spans.set(`${token}|${on}`, span);
 					if (r < min)
 						problems.push(
-							`${label} · ${layer.layer}: ${token} on ${on} over the ${side === 'lo' ? 'darkest' : 'lightest'} backdrop (${space}) · ${r.toFixed(2)} < ${min}`
+							`${label} · ${layer.layer}: ${token} on ${on} over the ${side === 'lo' ? 'darkest' : 'lightest'} backdrop · ${r.toFixed(2)} < ${min}`
 						);
 				};
 				for (const t of layer.text ?? [])
@@ -641,6 +706,18 @@ export function checkMaterials(props, mode, label, transparency, layers = MATERI
 							oc.min ?? TEXT
 						);
 				}
+			}
+			// Soundness of the two-corner bound: contrast against a background that spans [lo, hi] is
+			// minimal at an end ONLY when the text's luminance is outside that interval. A text token
+			// inside it would pass at both ends and still reach 1:1 between them.
+			for (const { token, on, fg, ys } of spans.values()) {
+				const lo = Math.min(...ys);
+				const hi = Math.max(...ys);
+				const y = lumaIn(fg, mode);
+				if (y > lo + 1e-9 && y < hi - 1e-9)
+					problems.push(
+						`${label} · ${layer.layer}: ${token} on ${on} has luminance ${y.toFixed(3)} inside the backdrop's range [${lo.toFixed(3)}, ${hi.toFixed(3)}], so the two-corner bound does not hold and the pair can reach 1:1 · 1.00 < 1.01`
+					);
 			}
 		} catch (e) {
 			problems.push(`${label} · ${layer.layer} · ${e.message}`);
@@ -817,7 +894,7 @@ export function needsReport() {
 			lines.push(
 				`\n[${layer.layer}] fill ${layer.fill} alpha ${alpha.toFixed(2)}, saturate(${sat}) contrast(${con})${layer.under ? `, under ${layer.under}` : ''}`
 			);
-			const cs = layerCorners(props, mode, layer).filter((c) => c.space === 'srgb');
+			const cs = layerCorners(props, mode, layer);
 			for (const { side, color } of cs) {
 				const composite = resolve(layer.fill, color);
 				lines.push(

@@ -21,7 +21,7 @@
 <li class="relative">
 	<a
 		href={resolve('/(app)/settings/users/[id]', { id: node.user.membership_id })}
-		class="border-border bg-card hover:border-primary focus-visible:ring-ring flex items-center gap-3 rounded-md border px-3 py-2 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+		class="border-border bg-card hover:border-primary-indicator focus-visible:ring-ring flex items-center gap-3 rounded-md border px-3 py-2 transition-colors focus-visible:ring-2 focus-visible:outline-none"
 		aria-label={`${displayName(node.user)}${node.cycleBroken ? ' (cycle detected — review reporting line)' : ''}`}
 	>
 		<Avatar initials={initials(displayName(node.user))} size="sm" />

@@ -30,7 +30,7 @@
 >
 	{#if pwa.updateReady}
 		<div
-			class="bg-card border-border border-s-primary pointer-events-auto rounded-xl border flex max-w-3xl items-center gap-3 border-s-4 px-4 py-3 shadow-md"
+			class="bg-card border-border border-s-primary-indicator pointer-events-auto rounded-xl border flex max-w-3xl items-center gap-3 border-s-4 px-4 py-3 shadow-md"
 			role="status"
 		>
 			<Icon icon={RefreshCw} size="sm" class="text-primary-text" />

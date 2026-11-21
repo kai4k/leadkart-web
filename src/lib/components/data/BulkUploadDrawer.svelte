@@ -232,7 +232,7 @@
 						class={[
 							'border-border rounded-lg border-2 border-dashed px-6 py-12 text-center',
 							'transition-colors duration-[var(--duration-fast)]',
-							dragOver ? 'border-primary bg-primary-soft' : 'bg-muted'
+							dragOver ? 'border-primary-indicator bg-primary-soft' : 'bg-muted'
 						]}
 						data-testid="bulk-upload-dropzone"
 					>

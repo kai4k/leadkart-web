@@ -266,7 +266,7 @@
 						class={cn(
 							'border-border hover:bg-muted border-b transition-colors',
 							onRowClick && 'cursor-pointer',
-							focused && 'bg-muted border-l-primary border-s-4'
+							focused && 'bg-muted border-l-primary-indicator border-s-4'
 						)}
 						onclick={onRowClick ? () => onRowClick(row) : undefined}
 						tabindex={nav ? navTabIndex : onRowClick ? 0 : undefined}

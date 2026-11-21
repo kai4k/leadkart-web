@@ -20,6 +20,11 @@ export function findBareTextPrimary(
 	rel: string,
 	src: string
 ): Array<{ line: number; name: string }>;
+export const PRIMARY_MARK_ALLOWLIST: string[];
+export const PRIMARY_FILL_FILES: RegExp[];
+export function findPrimaryMarks(rel: string, src: string): Array<{ line: number; name: string }>;
+export const MATERIAL_SURFACE_FILES: RegExp[];
+export function findTextOnControl(rel: string, src: string): Array<{ line: number; name: string }>;
 export const FILE_RULES: Array<{
 	id: string;
 	title: string;

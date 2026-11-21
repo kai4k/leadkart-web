@@ -6,7 +6,7 @@
 		{
 			variants: {
 				accent: {
-					primary: 'bg-primary',
+					primary: 'bg-primary-indicator',
 					success: 'bg-success-indicator',
 					warning: 'bg-warning-indicator',
 					danger: 'bg-destructive-indicator',

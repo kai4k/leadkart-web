@@ -11,61 +11,21 @@ import {
 	checkCss,
 	checkMaterials,
 	minAlpha,
-	pairRatio,
-	parseRules,
-	propertiesFor
+	pairRatio
 } from '../../../scripts/arch/check-token-contrast.mjs';
+import { base, gate, layer, pair, propsFor } from './material-fixtures.ts';
 import {
 	applySaturate,
 	contrastChannel,
 	corners
 } from '../../../scripts/arch/lib/material-bound.mjs';
 
-const pair = (over: object = {}) => ({ fg: 'fg', bg: 'bg', min: 4.5, label: 'p', ...over });
-
-const FIXED_AXES = { colors: ['leadkart'], darkPalette: ['default'], sidebarColors: ['light'] };
-const base = (
-	extra = '',
-	fill = 72
-) => `:root { --card: light-dark(#ffffff, #0f172b); --popover: var(--card);
-	--bg: #ffffff; --fg: #000000;
-	--text: light-dark(#0b121a, #f1f5f9); --mfg: light-dark(#454e58, #cbd5e1); --weak: #656565;
-	--bar-fill: color-mix(in srgb, var(--card) ${fill}%, transparent);
-	--bar-sat: 1; --bar-con: 1;
-	--scrim: light-dark(color-mix(in srgb, black 35%, transparent), color-mix(in srgb, black 55%, transparent));
-	${extra} }`;
-const layer = (over: object = {}) => ({
-	layer: 'bar',
-	fill: 'bar-fill',
-	surface: 'card',
-	saturate: 'bar-sat',
-	contrast: 'bar-con',
-	backdrops: ['#000', '#fff'],
-	text: ['text'],
-	marks: [] as string[],
-	...over
-});
-const gate = (css: string, l: object, mode = 'light', transparency = 'glass') =>
-	checkCss([['f.css', css]], {
-		pairs: [pair()] as never,
-		axes: { ...FIXED_AXES, mode: [mode], transparency: [transparency] } as never,
-		layers: [l] as never
-	});
-const propsFor = (css: string, transparency: string, mode = 'light') =>
-	propertiesFor(parseRules(css, 'f.css').rules, {
-		colors: 'leadkart',
-		mode,
-		darkPalette: 'default',
-		sidebarColors: 'light',
-		transparency
-	});
-
 describe('check-token-contrast: the legibility bound of a material (plan G3)', () => {
 	it('1. a fill that is too transparent fails, naming the layer, the mode and the ratio', () => {
 		const text = gate(base('', 40), layer({ text: ['mfg'] })).problems.join('\n');
 		expect(text).toContain('leadkart/light');
 		expect(text).toContain('bar: mfg');
-		expect(text).toMatch(/darkest backdrop .* · \d+\.\d\d < 4\.5/);
+		expect(text).toMatch(/darkest backdrop · \d+\.\d\d < 4\.5/);
 	});
 
 	it('2. a fill at 92% is not glass, even though every ratio passes', () => {
@@ -80,11 +40,9 @@ describe('check-token-contrast: the legibility bound of a material (plan G3)', (
 	});
 
 	it('3. the saturate bound bites: a corner moves with saturate(2), and a pair that passes at 1 fails at 2', () => {
-		type Corner = { space: string; side: string; color: { r: number; g: number; b: number } };
+		type Corner = { side: string; color: { r: number; g: number; b: number } };
 		const lo = (s: number) =>
-			(corners(['#ff8844', '#ffffff'], s, 1) as Corner[]).find(
-				(c) => c.space === 'srgb' && c.side === 'lo'
-			)!.color;
+			(corners(['#ff8844', '#ffffff'], s, 1) as Corner[]).find((c) => c.side === 'lo')!.color;
 		expect(lo(2)).not.toEqual(lo(1));
 		const l = layer({ backdrops: ['#ff8844', '#ffffff'], text: ['weak'] });
 		expect(gate(base(), l).problems).toEqual([]);
@@ -251,7 +209,7 @@ describe('material-bound: the pure bound', () => {
 			side: string;
 			color: { r: number };
 		}>;
-		expect(cs).toHaveLength(4);
+		expect(cs).toHaveLength(2); // sRGB only: CSS filter functions have no linearRGB variant (GD19)
 		for (const c of cs) expect(c.color.r).toBeCloseTo(c.side === 'lo' ? 0.2 : 0.8, 6);
 	});
 });

@@ -224,6 +224,85 @@ const scan = (src, re) => {
 	return found;
 };
 
+// (m5, fix round D) The vivid primary is a FILL, so a non-text MARK in the primary colour (a border, a ring,
+// an outline, a divider, an svg fill or stroke, a caret, a decoration) is `*-primary-indicator`, the token
+// that is 3:1 on every surface (lime, green, amber and teal fills reach only 1.4-2.4:1). The rule:
+//   - a bare `border|ring|outline|divide|fill|stroke|caret|decoration|accent[-side]-primary` is refused
+//     anywhere under src/ (the allowlist below is exact and empty);
+//   - `bg-primary` is allowed only when the SAME LINE carries `text-primary-foreground` (a label on a
+//     fill, in any variant), or in the Button / Badge / Checkbox family files; otherwise it is a mark
+//     (`bg-primary-indicator`). Same line, not same element: a class list split across lines needs the
+//     label on the `bg-primary` line, or the fill moved to a variant that names its label.
+const PRIMARY_MARK =
+	/(?<![\w-])(?:border|ring|outline|divide|fill|stroke|caret|decoration|accent)(?:-[tblrxyse])?-primary(?![\w-])/g;
+const PRIMARY_FILL = /(?<![\w-])bg-primary(?![\w-])/g;
+export const PRIMARY_MARK_ALLOWLIST = /** @type {string[]} */ ([]);
+export const PRIMARY_FILL_FILES = [/^src\/lib\/components\/ui\/(?:button|badge|checkbox)\//];
+
+export function findPrimaryMarks(rel, src) {
+	const norm = rel.replaceAll('\\', '/');
+	if (!/\.(svelte|ts|html)$/.test(norm) || !norm.startsWith('src/')) return [];
+	if (PRIMARY_MARK_ALLOWLIST.includes(norm)) return [];
+	const text = code(src);
+	const found = scan(text, PRIMARY_MARK);
+	if (!PRIMARY_FILL_FILES.some((re) => re.test(norm))) {
+		const lines = text.split('\n');
+		for (const f of scan(text, PRIMARY_FILL))
+			if (
+				!/(?<![\w-])(?:[\w[\]=:()&>*./-]*:)?text-primary-foreground(?![\w-])/.test(
+					lines[f.line - 1]
+				)
+			)
+				found.push(f);
+	}
+	return found;
+}
+
+// (m6, fix round D) On a material, `bg-muted` / `bg-accent` are the translucent control fills. The gate proves
+// foreground, muted and accent-foreground text on them; `text-primary-text` and `text-destructive` do NOT
+// reach 4.5 there (dark destructive 2.8-4.3, violet primary text 2.9-4.5) and no component needs them, so
+// the class combination is refused in the files that render on a material. The pair must share a variant
+// chain (`focus:bg-accent` with `focus:text-destructive`; `data-[variant=destructive]:text-destructive`
+// with `focus:bg-accent` is a different state and is fine). Per line, like m5.
+export const MATERIAL_SURFACE_FILES = [
+	/^src\/lib\/components\/ui\/(?:dialog|alert-dialog|sheet|popover|dropdown-menu|select|command|sonner|sidebar|AuthCard)[\w./-]*$/,
+	/^src\/lib\/layouts\/(?:Topbar|HorizontalNav|UserMenu|NavItem)\.svelte$/,
+	/^src\/lib\/components\/data\/BulkActionBar\.svelte$/,
+	/^src\/lib\/features\/search\/[\w./-]*\.svelte$/
+];
+const CONTROL_BG = new Set(['bg-muted', 'bg-accent']);
+const CONTROL_TEXT = new Set(['text-primary-text', 'text-destructive']);
+
+/** `a:b:util` -> `{ chain: 'a:b:', base: 'util' }` (a `:` inside `[...]` does not split). */
+function splitVariant(token) {
+	let depth = 0;
+	let cut = -1;
+	for (let i = 0; i < token.length; i++) {
+		if (token[i] === '[' || token[i] === '(') depth++;
+		else if (token[i] === ']' || token[i] === ')') depth--;
+		else if (token[i] === ':' && depth === 0) cut = i;
+	}
+	return { chain: token.slice(0, cut + 1), base: token.slice(cut + 1) };
+}
+
+export function findTextOnControl(rel, src) {
+	const norm = rel.replaceAll('\\', '/');
+	if (!/\.svelte$/.test(norm) || !MATERIAL_SURFACE_FILES.some((re) => re.test(norm))) return [];
+	const found = [];
+	code(src)
+		.split('\n')
+		.forEach((line, i) => {
+			const tokens = line
+				.split(/[\s"'`{}]+/)
+				.filter(Boolean)
+				.map(splitVariant);
+			for (const bg of tokens.filter((t) => CONTROL_BG.has(t.base)))
+				for (const text of tokens.filter((t) => CONTROL_TEXT.has(t.base) && t.chain === bg.chain))
+					found.push({ line: i + 1, name: `${bg.chain}${bg.base} with ${text.chain}${text.base}` });
+		});
+	return found;
+}
+
 // (m1, plan G2) `backdrop-*` utilities and the CSS properties `backdrop-filter` / `-webkit-backdrop-filter`
 // are legal only where a material is DEFINED: theme/materials*.css, the `@utility material-*` blocks of
 // utilities.css, and the pattern band's `backdrop-filter: none` in layouts.css. Glass is never drawn
@@ -267,9 +346,15 @@ export function findWillChange(rel, src) {
 export const FILE_RULES = [
 	{
 		id: 'm5',
-		title: 'bare text-primary',
-		find: findBareTextPrimary,
-		fix: 'use text-primary-text (links, active labels) or text-primary-foreground (a label on a primary fill).'
+		title: 'bare text-primary, or the vivid primary used as a mark',
+		find: (rel, src) => [...findBareTextPrimary(rel, src), ...findPrimaryMarks(rel, src)],
+		fix: 'use text-primary-text (links, active labels), text-primary-foreground (a label on a primary fill), or *-primary-indicator (a border, ring, outline, divider, fill, stroke or bar in the primary colour).'
+	},
+	{
+		id: 'm6',
+		title: 'text-primary-text / text-destructive on bg-muted / bg-accent in a material surface',
+		find: findTextOnControl,
+		fix: 'a control fill on glass does not reach 4.5:1 for these two text colours; use text-foreground, text-muted-foreground or text-accent-foreground there, or the destructive-soft fill for a destructive highlight.'
 	},
 	{
 		id: 'm1',

@@ -68,6 +68,11 @@ export interface MaterialLayer {
 	onControl?: Array<{ control: string; text: string[]; min?: number }>;
 }
 export const MATERIAL_LAYERS: MaterialLayer[];
+export function layerCorners(
+	props: Map<string, string>,
+	mode: string,
+	layer: MaterialLayer
+): Array<{ side: 'lo' | 'hi'; color: { mode: 'rgb'; r: number; g: number; b: number } }>;
 export function checkMaterials(
 	props: Map<string, string>,
 	mode: string,

@@ -1,5 +1,17 @@
 import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { extendTailwindMerge } from 'tailwind-merge';
+
+/**
+ * The four material utilities (styles/utilities.css) are ONE class group: a component can carry only one of
+ * them, and it conflicts with `bg-*` (a material IS the background), in both directions. Without this a
+ * later `bg-card` would silently sit next to `material-pane` and the cascade would pick one by source order.
+ */
+const twMerge = extendTailwindMerge<'material'>({
+	extend: {
+		classGroups: { material: [{ material: ['bar', 'pane', 'sidebar', 'sidebar-bar'] }] },
+		conflictingClassGroups: { material: ['bg-color'], 'bg-color': ['material'] }
+	}
+});
 
 /**
  * `cn` — class-name utility that merges Tailwind classes intelligently

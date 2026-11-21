@@ -28,9 +28,9 @@
 	const indicatorClass = $derived.by(() => {
 		switch (state) {
 			case 'complete':
-				return 'bg-primary text-primary-foreground border-primary';
+				return 'bg-primary text-primary-foreground border-primary-indicator';
 			case 'current':
-				return 'bg-primary-soft text-primary-text border-primary';
+				return 'bg-primary-soft text-primary-text border-primary-indicator';
 			case 'error':
 				return 'bg-destructive-soft text-destructive border-destructive';
 			case 'pending':
@@ -55,7 +55,7 @@
 
 	const connectorClass = $derived.by(() => {
 		// Connector segment painted to the right of this step; shows progress.
-		if (state === 'complete') return 'bg-primary';
+		if (state === 'complete') return 'bg-primary-indicator';
 		return 'bg-border';
 	});
 </script>
