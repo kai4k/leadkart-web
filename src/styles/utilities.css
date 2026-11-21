@@ -176,6 +176,7 @@
 	--muted: var(--material-control);
 	--accent: var(--material-control-hover);
 	--input-fill: var(--material-input-fill);
+	--primary-text: var(--material-primary-text);
 	--primary-indicator: var(--material-indicator);
 	/* the logo on a translucent bar: a deeper capsule and frame (semantic.css), gated on the topbar layer */
 	--brand-frame: var(--brand-frame-bar);
@@ -199,6 +200,7 @@
 	--muted: var(--material-control);
 	--accent: var(--material-control-hover);
 	--input-fill: var(--material-input-fill);
+	--primary-text: var(--material-primary-text);
 	@media (forced-colors: active) {
 		/* stylelint-disable-next-line no-invalid-position-declaration -- a nested @media inside @utility is valid (Tailwind 4) */
 		border: 1px solid CanvasText;
@@ -218,6 +220,7 @@
 	--muted: var(--sidebar-accent);
 	--accent: var(--sidebar-accent);
 	--accent-foreground: var(--sidebar-accent-foreground);
+	--primary-text: var(--sidebar-accent-foreground);
 	@media (forced-colors: active) {
 		/* stylelint-disable-next-line no-invalid-position-declaration -- a nested @media inside @utility is valid (Tailwind 4) */
 		border: 1px solid CanvasText;
@@ -238,19 +241,25 @@
 	--muted: var(--sidebar-accent);
 	--accent: var(--sidebar-accent);
 	--accent-foreground: var(--sidebar-accent-foreground);
+	--primary-text: var(--sidebar-accent-foreground);
 	@media (forced-colors: active) {
 		/* stylelint-disable-next-line no-invalid-position-declaration -- a nested @media inside @utility is valid (Tailwind 4) */
 		border: 1px solid CanvasText;
 	}
 }
 
-/* No glass on glass, structurally. Two cases, one rule: (a) a material element INSIDE another material
- * element; (b) a material opened over an open modal surface (a menu, a popover or a toast is portalled to
- * <body>, so it is not a DOM descendant of the dialog it is above). The inner one is an opaque popover surface
- * with no filter (the `off` look); the control fills inside it stay translucent over that opaque fill, which
- * is the easy case of the gate (a pane at alpha 1). */
-:is(.material-bar, .material-pane, .material-sidebar, .material-sidebar-bar)
-	:is(.material-bar, .material-pane, .material-sidebar, .material-sidebar-bar),
+/* No glass on glass, structurally. Two cases: (a) a material element INSIDE another material element; (b) a
+ * material opened over an open modal surface (a menu, a popover or a toast is portalled to <body>, so it is not
+ * a DOM descendant of the dialog it is above). The inner one is OPAQUE and has no filter (the `off` look), and
+ * each falls back to ITS OWN opaque surface (the values its transparency-off fallback uses): a nested sidebar
+ * material would otherwise show light sidebar text on a light popover. The control fills inside stay translucent
+ * over that opaque fill, which is the easy case of the gate (a pane at alpha 1). */
+:is(.material-bar, .material-pane, .material-sidebar, .material-sidebar-bar) .material-bar {
+	background-color: var(--card);
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
+}
+:is(.material-bar, .material-pane, .material-sidebar, .material-sidebar-bar) .material-pane,
 body:has(
 		:is(
 			[data-slot='dialog-content'],
@@ -269,21 +278,32 @@ body:has(
 	-webkit-backdrop-filter: none;
 	backdrop-filter: none;
 }
+:is(.material-bar, .material-pane, .material-sidebar, .material-sidebar-bar) .material-sidebar,
+:is(.material-bar, .material-pane, .material-sidebar, .material-sidebar-bar) .material-sidebar-bar {
+	background-color: var(--sidebar);
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
+}
 
 /* The neutral toast is `not-data-[type]:material-pane!` (sonner paints its own background unlayered, so the
- * material is `!important`), which the class-based rule above cannot reach; over an open modal it is opaque too. */
-body:has(
-		:is(
-			[data-slot='dialog-content'],
-			[data-slot='sheet-content'],
-			[data-slot='alert-dialog-content']
-		)[data-state='open']
-	)
-	[data-sonner-toast]:not([data-type]) {
-	/* stylelint-disable-next-line declaration-no-important -- must beat the toast's own `!important` material */
-	background-color: var(--popover) !important;
-	/* stylelint-disable-next-line declaration-no-important -- same */
-	-webkit-backdrop-filter: none !important;
-	/* stylelint-disable-next-line declaration-no-important -- same */
-	backdrop-filter: none !important;
+ * material is `!important`), which the class-based rules above cannot reach; over an open modal it is opaque too.
+ * It MUST be inside `@layer utilities`: the toast's material is important inside that layer, and for
+ * `!important` declarations a layered one beats an unlayered one whatever the specificity, so an unlayered
+ * override never wins. In the same layer it wins on specificity (0,4,1 against 0,2,0). */
+@layer utilities {
+	body:has(
+			:is(
+				[data-slot='dialog-content'],
+				[data-slot='sheet-content'],
+				[data-slot='alert-dialog-content']
+			)[data-state='open']
+		)
+		[data-sonner-toast]:not([data-type]) {
+		/* stylelint-disable-next-line declaration-no-important -- must beat the toast's own `!important` material */
+		background-color: var(--popover) !important;
+		/* stylelint-disable-next-line declaration-no-important -- same */
+		-webkit-backdrop-filter: none !important;
+		/* stylelint-disable-next-line declaration-no-important -- same */
+		backdrop-filter: none !important;
+	}
 }

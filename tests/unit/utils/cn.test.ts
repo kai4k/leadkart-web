@@ -14,3 +14,22 @@ describe('cn: the material utilities are one class group', () => {
 		expect(cn('material-pane', 'hover:bg-accent')).toBe('material-pane hover:bg-accent');
 	});
 });
+
+describe('cn: background IMAGE utilities do not drop a material', () => {
+	it.each([
+		'bg-gradient-to-r',
+		'bg-gradient-to-bl',
+		'bg-linear-to-r',
+		'bg-radial',
+		'bg-conic-180',
+		'bg-none',
+		'bg-[url(/x.png)]'
+	])('%s sits next to the material, in both orders', (img) => {
+		expect(cn('material-pane', img)).toBe(`material-pane ${img}`);
+		expect(cn(img, 'material-pane')).toBe(`${img} material-pane`);
+	});
+	it('a colour utility still replaces the material, and the other way round', () => {
+		expect(cn('material-bar', 'bg-card')).toBe('bg-card');
+		expect(cn('bg-gradient-to-r bg-card', 'material-bar')).toBe('bg-gradient-to-r material-bar');
+	});
+});

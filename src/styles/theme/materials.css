@@ -38,6 +38,13 @@
 		color-mix(in oklch, var(--muted-foreground) 85%, var(--foreground)),
 		var(--dark-300)
 	);
+	/* the primary colour as TEXT inside a bar or a pane (utilities re-declare --primary-text to it): a step toward the
+	   foreground (light) or toward white (dark) so a link passes on the material, on the control fill and on its hover fill.
+	   --primary-text itself stays the surface step; the fills use --primary-fill. */
+	--material-primary-text: light-dark(
+		color-mix(in oklch, var(--primary-text) 60%, var(--foreground)),
+		color-mix(in oklch, var(--primary-on-dark) 40%, white)
+	);
 	--material-ring: light-dark(var(--primary-text), var(--ring));
 	/* a mark in the primary colour on a BAR (the hnav's active underline): the dark text step, not the vivid
 	   indicator. Over the darkest backdrop a bar can have, the indicators of violet, orange, fuchsia and the

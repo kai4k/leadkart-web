@@ -89,8 +89,9 @@
 		--material-control-hover: var(--accent);
 		--brand-plate-glass: 0;
 		--brand-plate-solid: 1;
-		--material-bar-shadow: none;
-		--material-pane-shadow: none;
+		/* a transparent shadow, never `none`: `none` inside the comma list invalidates the whole box-shadow and the 1px edge goes with it */
+		--material-bar-shadow: 0 0 transparent;
+		--material-pane-shadow: 0 0 transparent;
 	}
 }
 /* Mid-range Android budget (plan section 5): large panes are opaque on touch-first devices; bars keep

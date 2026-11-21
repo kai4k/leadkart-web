@@ -9,6 +9,7 @@ import {
 	AXES,
 	MATERIAL_LAYERS,
 	PAIRS,
+	check,
 	checkCss,
 	checkMaterials,
 	layerCorners,
@@ -339,5 +340,24 @@ describe('fix round D (GD21): the logo keeps its own colours, with its own floor
 		expect(surfaces.has('background')).toBe(false);
 		expect(surfaces.has('popover')).toBe(false);
 		expect(surfaces.has('card') && surfaces.has('primary-soft')).toBe(true);
+	});
+});
+
+describe('fix round E: a link in the primary colour is readable on every material and its control fills', () => {
+	it('material-primary-text is checked on the bar and pane layers, on the fill and on both control fills', () => {
+		for (const n of ['topbar', 'bulk-bar', 'overlay', 'float', 'auth-card']) {
+			expect(by(n).text, n).toContain('material-primary-text');
+			expect(by(n).text, n).not.toContain('primary-text');
+			for (const c of ['material-control', 'material-control-hover'])
+				expect(control(n, c).text, `${n} ${c}`).toContain('material-primary-text');
+		}
+	});
+	it('the sidebar layers check the active nav text on the bare sidebar fill, not only on the chip', () => {
+		for (const n of ['sidebar-desktop', 'sidebar-mobile', 'hnav'])
+			expect(by(n).text, n).toContain('sidebar-accent-foreground');
+	});
+	it('the gate result names the step: the worst ratios are above 4.5 for every combination', () => {
+		const { problems } = (check as unknown as () => { problems: string[] })();
+		expect(problems.filter((p) => p.includes('material-primary-text'))).toEqual([]);
 	});
 });

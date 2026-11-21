@@ -4,6 +4,7 @@
  * read only declared tokens.
  */
 import { readFileSync } from 'node:fs';
+import postcss from 'postcss';
 import { describe, expect, it } from 'vitest';
 
 const read = (p: string) => readFileSync(p, 'utf8');
@@ -179,10 +180,13 @@ describe('materials-fallbacks.css', () => {
 		expect(b.decls.get('--material-highlight')).toBe('transparent');
 	});
 
-	it('print drops the shadows', () => {
+	it('print drops the shadows but never to `none` (that would invalidate the box-shadow list and the edge with it)', () => {
 		const b = named('@media print');
-		expect(b.decls.get('--material-bar-shadow')).toBe('none');
-		expect(b.decls.get('--material-pane-shadow')).toBe('none');
+		expect(b.decls.get('--material-bar-shadow')).toBe('0 0 transparent');
+		expect(b.decls.get('--material-pane-shadow')).toBe('0 0 transparent');
+		for (const css of [MATERIALS, FALLBACKS])
+			for (const m of strip(css).matchAll(/(--material-(?:bar|pane)-shadow):\s*none/g))
+				expect.fail(`${m[1]} is none`);
 	});
 
 	it('coarse pointer: panes and sidebar opaque, bars keep glass at a 12px blur, and `off` is untouched', () => {
@@ -227,27 +231,80 @@ describe('the material utilities', () => {
 		for (const u of used) expect(declared, u).toContain(u);
 	});
 
-	it('the neutral toast (a !important material) is made opaque over an open modal by its own rule', () => {
-		expect(UTILITIES).toMatch(
-			/\[data-sonner-toast\]:not\(\[data-type\]\)\s*\{[^}]*background-color: var\(--popover\) !important/
-		);
+	it('the neutral toast override is INSIDE @layer utilities (a layered !important beats an unlayered one)', () => {
+		const root = postcss.parse(UTILITIES);
+		const hits: postcss.Rule[] = [];
+		root.walkRules((r) => {
+			if (r.selector.includes('[data-sonner-toast]')) hits.push(r);
+		});
+		expect(hits).toHaveLength(1);
+		const parent = hits[0].parent as postcss.AtRule;
+		expect(parent.type).toBe('atrule');
+		expect(parent.name).toBe('layer');
+		expect(parent.params).toBe('utilities');
+		const bg = hits[0].nodes.find(
+			(n) => n.type === 'decl' && n.prop === 'background-color'
+		) as postcss.Declaration;
+		expect(bg.value).toBe('var(--popover)');
+		expect(bg.important).toBe(true);
+		// no other unlayered !important rule in the styles folder (it would lose to a layered one)
+		for (const f of ['utilities', 'tokens', 'base', 'layout', 'typography', 'animations']) {
+			postcss.parse(read(`src/styles/${f}.css`)).walkDecls((d) => {
+				if (!d.important) return;
+				let p: postcss.Container | postcss.Document | undefined = d.parent;
+				let layered = false;
+				while (p) {
+					if ((p as postcss.AtRule).type === 'atrule' && (p as postcss.AtRule).name === 'layer')
+						layered = true;
+					p = (p as postcss.Node).parent;
+				}
+				expect(layered, `${f}.css: !important ${d.prop} outside a layer`).toBe(true);
+			});
+		}
 	});
 
-	it('no glass on glass is ONE structural rule: a material in a material, or over an open modal surface, is opaque', () => {
-		const m = /\n(:is\(\.material-bar[^{]*)\{([^}]*)\}/.exec(UTILITIES);
-		expect(m).not.toBeNull();
-		const [, selector, body] = m!;
-		// (a) a material element inside another material element, whatever the pair
-		expect(selector).toMatch(
-			/^:is\(\.material-bar, \.material-pane, \.material-sidebar, \.material-sidebar-bar\)\s+:is\(\.material-bar, \.material-pane, \.material-sidebar, \.material-sidebar-bar\)/
-		);
-		// (b) a portalled material (menu, popover, toast) over an open modal surface, never the modal itself
-		expect(selector).toMatch(/\[data-slot='dialog-content'\][\s\S]*\[data-state='open'\]/);
-		expect(selector).toMatch(/\.material-pane:not\(/);
-		expect(body).toMatch(
-			/background-color: var\(--popover\);\s*-webkit-backdrop-filter: none;\s*backdrop-filter: none;/
-		);
-		// the float slots are not listed by name any more: any material qualifies
-		expect(selector).not.toContain('dropdown-menu-content');
+	it('no glass on glass: a material in a material, or over an open modal surface, is opaque and falls back to ITS OWN surface', () => {
+		const rules2: Array<{ selector: string; body: string }> = [];
+		postcss.parse(UTILITIES).walkRules((r) => {
+			if (r.selector.includes('.material-') && r.selector.includes(':is(.material-bar'))
+				rules2.push({
+					selector: r.selector.replace(/\s+/g, ' '),
+					body: r.nodes.map(String).join(';')
+				});
+		});
+		const by = (inner: string) =>
+			rules2.find((r) => r.selector.includes(`) .${inner}`) || r.selector.endsWith(`.${inner}`));
+		const OUTER = ':is(.material-bar, .material-pane, .material-sidebar, .material-sidebar-bar)';
+		for (const [inner, fill] of [
+			['material-bar', '--card'],
+			['material-pane', '--popover'],
+			['material-sidebar', '--sidebar'],
+			['material-sidebar-bar', '--sidebar']
+		] as const) {
+			const r = by(inner)!;
+			expect(r, inner).toBeTruthy();
+			expect(r.selector, inner).toContain(`${OUTER} .${inner}`);
+			expect(r.body).toContain(`background-color: var(${fill})`);
+			expect(r.body).toContain('backdrop-filter: none');
+		}
+		// (b) a portalled pane (menu, popover, toast) over an open modal surface, never the modal itself
+		const b = rules2.find((r) => r.selector.includes("[data-slot='dialog-content']"))!;
+		expect(b.selector).toMatch(/\[data-state='open'\]/);
+		expect(b.selector).toMatch(/\.material-pane:not\(/);
+		expect(b.body).toContain('var(--popover)');
+		expect(b.selector).not.toContain('dropdown-menu-content');
+	});
+
+	it('every material utility that paints text re-declares --primary-text to a step gated on it', () => {
+		for (const [name, token] of [
+			['material-bar', '--material-primary-text'],
+			['material-pane', '--material-primary-text'],
+			['material-sidebar', '--sidebar-accent-foreground'],
+			['material-sidebar-bar', '--sidebar-accent-foreground']
+		] as const) {
+			const m = new RegExp(`@utility ${name} \\{([\\s\\S]*?)\\n\\}`).exec(UTILITIES)!;
+			expect(m[1], name).toContain(`--primary-text: var(${token})`);
+		}
+		expect(root.has('--material-primary-text')).toBe(true);
 	});
 });

@@ -495,10 +495,13 @@ const FLOAT_BACKDROPS = ['background', 'card', 'muted', 'primary', 'foreground',
 const INPUT_WELL = { control: 'material-input-fill', text: ['foreground'] };
 /** What sits on a control fill inside a bar: the search field's text and kbd hint (muted), the hover chip. */
 const BAR_CONTROLS = [
-	{ control: 'material-control', text: ['foreground', 'material-muted-foreground'] },
+	{
+		control: 'material-control',
+		text: ['foreground', 'material-muted-foreground', 'material-primary-text']
+	},
 	{
 		control: 'material-control-hover',
-		text: ['foreground', 'accent-foreground', 'material-muted-foreground']
+		text: ['foreground', 'accent-foreground', 'material-muted-foreground', 'material-primary-text']
 	},
 	INPUT_WELL
 ];
@@ -508,7 +511,7 @@ const BAR = {
 	saturate: 'material-bar-saturate',
 	contrast: 'material-bar-contrast',
 	backdrops: BAR_BACKDROPS,
-	text: ['foreground', 'material-muted-foreground'],
+	text: ['foreground', 'material-muted-foreground', 'material-primary-text'],
 	marks: ['material-ring', 'material-indicator'],
 	onControl: BAR_CONTROLS
 };
@@ -548,7 +551,7 @@ const SIDEBAR = {
 	surface: 'sidebar',
 	saturate: 'material-pane-saturate',
 	contrast: 'material-pane-contrast',
-	text: ['sidebar-foreground', 'sidebar-muted-foreground'],
+	text: ['sidebar-foreground', 'sidebar-muted-foreground', 'sidebar-accent-foreground'],
 	marks: [
 		'sidebar-ring',
 		'sidebar-icon',
@@ -566,7 +569,7 @@ const OVERLAY_TEXT = [
 	'foreground',
 	'material-muted-foreground',
 	'destructive',
-	'primary-text',
+	'material-primary-text',
 	'success',
 	'warning',
 	'info'
@@ -577,7 +580,12 @@ const OVERLAY_TEXT = [
  * primary text) and no component needs them there (a destructive menu item highlights with its own opaque
  * `destructive-soft`). check-tokens rule m6 refuses the class combination in the material families instead.
  */
-const PANE_CONTROL_TEXT = ['foreground', 'material-muted-foreground', 'accent-foreground'];
+const PANE_CONTROL_TEXT = [
+	'foreground',
+	'material-muted-foreground',
+	'accent-foreground',
+	'material-primary-text'
+];
 const PANE_CONTROLS = [
 	{ control: 'material-control', text: PANE_CONTROL_TEXT },
 	{ control: 'material-control-hover', text: PANE_CONTROL_TEXT },
@@ -626,7 +634,7 @@ export const MATERIAL_LAYERS = [
 			'primary-600',
 			'foreground'
 		],
-		text: ['foreground', 'material-muted-foreground', 'primary-text', 'destructive'],
+		text: ['foreground', 'material-muted-foreground', 'material-primary-text', 'destructive'],
 		marks: ['material-ring', 'input'],
 		onControl: PANE_CONTROLS
 	}

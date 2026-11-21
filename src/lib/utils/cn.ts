@@ -3,12 +3,17 @@ import { extendTailwindMerge } from 'tailwind-merge';
 
 /**
  * The four material utilities (styles/utilities.css) are ONE class group: a component can carry only one of
- * them, and it conflicts with `bg-*` (a material IS the background), in both directions. Without this a
+ * them, and it conflicts with background-COLOUR utilities (a material IS the fill), in both directions; background
+ * IMAGE utilities (gradients, `bg-none`, `bg-[url()]`) and the other `bg-*` properties are not in conflict. Without this a
  * later `bg-card` would silently sit next to `material-pane` and the cascade would pick one by source order.
  */
 const twMerge = extendTailwindMerge<'material'>({
 	extend: {
-		classGroups: { material: [{ material: ['bar', 'pane', 'sidebar', 'sidebar-bar'] }] },
+		classGroups: {
+			material: [{ material: ['bar', 'pane', 'sidebar', 'sidebar-bar'] }],
+			// the legacy `bg-gradient-to-*` names are background IMAGES; tailwind-merge would take them for a colour
+			'bg-image': [{ bg: [{ 'gradient-to': ['t', 'tr', 'r', 'br', 'b', 'bl', 'l', 'tl'] }] }]
+		},
 		conflictingClassGroups: { material: ['bg-color'], 'bg-color': ['material'] }
 	}
 });

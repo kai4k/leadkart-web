@@ -223,7 +223,7 @@
 	}
 	.lk-dash-tile-icon--brand {
 		background: var(--primary-soft);
-		color: var(--primary);
+		color: var(--primary-indicator);
 	}
 	.lk-dash-tile-icon--success {
 		background: var(--success-soft);
