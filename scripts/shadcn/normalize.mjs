@@ -288,7 +288,11 @@ function rewriteToken(token, z = Z_FLOATING, family, role) {
 
 /** Rewrites every class-like token in `text` (the inside of a class string). */
 export function normalizeClasses(text, { z = Z_FLOATING, family, role } = {}) {
-	return text.replace(/[^\s"'`{}]+/g, (token) => rewriteToken(token, z, family, role));
+	const out = text.replace(/[^\s"'`{}]+/g, (token) => rewriteToken(token, z, family, role));
+	// plan G7: an item label on glass is at least weight 500 (composited text loses subpixel antialiasing). Added once.
+	if (role === 'item' && !/(?:^|\s)font-medium(?=\s|$)/.test(out))
+		return out.replace(/(^|\s)text-sm(?=\s|$)/, '$1text-sm font-medium');
+	return out;
 }
 
 const STRING = /'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g;

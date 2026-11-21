@@ -270,6 +270,16 @@ test.describe('materials: computed styles on the built app', () => {
 		opaque(await paint(page.locator('#probe-over')), 'pane over an open sheet');
 	});
 
+	test('the active nav item is a visible capsule, also while hovered', async ({ page }) => {
+		await leads(page, {});
+		const active = page.locator('[data-slot="sidebar-inner"] a[aria-current="page"]').first();
+		const bg = () => active.evaluate((a) => getComputedStyle(a).backgroundColor);
+		expect(await bg()).not.toBe('rgba(0, 0, 0, 0)');
+		await active.hover();
+		expect(await bg()).not.toBe('rgba(0, 0, 0, 0)');
+		expect(await active.evaluate((a) => getComputedStyle(a).borderRadius)).toBe('9999px');
+	});
+
 	test('the user menu: every item carries an icon (all or none per group)', async ({ page }) => {
 		await leads(page, {});
 		const menu = await overlay(page, 'menu');

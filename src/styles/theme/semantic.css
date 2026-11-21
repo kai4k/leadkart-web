@@ -520,6 +520,7 @@
 	--sidebar-icon: var(--primary-indicator);
 }
 :root[data-sidebar-colors='dark'] {
+	--sidebar-accent: color-mix(in oklab, var(--sidebar-accent-foreground) 22%, var(--sidebar));
 	--sidebar-brand-frame: var(--brand-frame-dark);
 	--sidebar-brand-capsule: var(--brand-capsule-dark);
 	--sidebar: var(--swatch-sidebar-dark);
@@ -528,6 +529,7 @@
 	--sidebar-border: var(--swatch-sidebar-dark);
 }
 :root[data-sidebar-colors='brand'] {
+	--sidebar-accent: color-mix(in oklab, var(--sidebar-accent-foreground) 22%, var(--sidebar));
 	--sidebar-brand-frame: var(--brand-frame-dark);
 	--sidebar-brand-capsule: var(--brand-capsule-dark);
 	--sidebar: var(--primary-900);
@@ -536,6 +538,7 @@
 	--sidebar-border: var(--primary-900);
 }
 :root[data-sidebar-colors='purple'] {
+	--sidebar-accent: color-mix(in oklab, var(--sidebar-accent-foreground) 22%, var(--sidebar));
 	--sidebar-brand-frame: var(--brand-frame-dark);
 	--sidebar-brand-capsule: var(--brand-capsule-dark);
 	--sidebar: var(--swatch-sidebar-purple);

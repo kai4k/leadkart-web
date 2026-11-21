@@ -433,3 +433,30 @@ describe('shadcn normaliser: the pane material (plan G5)', () => {
 		expect(cls(once, file)).toBe(once);
 	});
 });
+
+describe('shadcn normaliser: item labels on glass are medium weight (plan G7)', () => {
+	const file = (f: string, n: string) => `src/lib/components/ui/${f}/${n}`;
+	const run2 = (src: string, f: string) =>
+		(normalizeSource(src, { icons: ICONS, file: f }) as { out: string }).out;
+	const ITEMS = [
+		['dropdown-menu', 'dropdown-menu-item.svelte'],
+		['dropdown-menu', 'dropdown-menu-checkbox-item.svelte'],
+		['dropdown-menu', 'dropdown-menu-radio-item.svelte'],
+		['dropdown-menu', 'dropdown-menu-sub-trigger.svelte'],
+		['select', 'select-item.svelte'],
+		['command', 'command-item.svelte']
+	];
+	it.each(ITEMS)('%s/%s: text-sm gains font-medium, once', (f, n) => {
+		const once = run2('<i class="gap-1 text-sm px-2"></i>', file(f, n));
+		expect(once).toBe('<i class="gap-1 text-sm font-medium px-2"></i>');
+		expect(run2(once, file(f, n))).toBe(once);
+	});
+	it('does not touch a content file or a file outside the families', () => {
+		expect(
+			run2('<i class="text-sm"></i>', file('dropdown-menu', 'dropdown-menu-content.svelte'))
+		).toBe('<i class="text-sm"></i>');
+		expect(run2('<i class="text-sm"></i>', file('card', 'card.svelte'))).toBe(
+			'<i class="text-sm"></i>'
+		);
+	});
+});

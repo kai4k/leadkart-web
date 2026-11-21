@@ -81,10 +81,25 @@ describe('b. the active nav item is a visible capsule', () => {
 			'sidebar-accent-foreground on sidebar-accent (over sidebar)'
 		);
 	});
+	it('the dark, brand and purple sidebars get a stronger chip (22%) than the light and sky ones (15%)', () => {
+		const css = src('src/styles/theme/semantic.css');
+		for (const c of ['dark', 'brand', 'purple'])
+			expect(css).toMatch(
+				new RegExp(
+					`:root\\[data-sidebar-colors='${c}'\\] \\{\\s*--sidebar-accent: color-mix\\(in oklab, var\\(--sidebar-accent-foreground\\) 22%`
+				)
+			);
+		expect(css).toContain(
+			'--sidebar-accent: color-mix(in oklab, var(--sidebar-accent-foreground) 15%, var(--sidebar));'
+		);
+	});
 	it('the sidebar item paints the chip when active, as a capsule, at every size', () => {
 		const s = src('src/lib/layouts/NavItem.svelte');
 		const cls = /isActive=\{active\}[\s\S]*?class="([^"]*)"/.exec(s)![1].split(/\s+/);
 		expect(cls).toContain('data-active:bg-sidebar-accent');
+		// hovering or pressing the active item keeps the chip (hover:bg-transparent would otherwise win)
+		expect(cls).toContain('data-active:hover:bg-sidebar-accent');
+		expect(cls).toContain('data-active:active:bg-sidebar-accent');
 		expect(cls).not.toContain('data-active:bg-transparent');
 		expect(cls).toContain('rounded-full');
 		expect(cls).toContain('data-active:font-medium');

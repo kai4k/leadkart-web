@@ -272,3 +272,9 @@ Hand edit, recorded: `sonner/sonner.svelte`. The neutral toast is `not-data-[typ
 Hand edit, recorded: `sidebar/sidebar.svelte`. The desktop `[data-slot=sidebar-inner]` and the mobile `Sheet.Content` are `material-sidebar` (the sidebar colour as glass; five sidebar colours are five tinted glasses). The inner element lost `bg-sidebar` and its `border-e` / `border-s` / semibox `border` classes (the material's edge replaces them); the floating variant keeps its radius. The mobile sheet's `material-sidebar` replaces the `material-pane` the sheet content carries (`cn()` treats the four material utilities as one class group). `collapsible="none"` keeps its opaque `bg-sidebar`.
 
 `sidebar/sidebar-menu-button.svelte` is unchanged: the active and hover fill is already the opaque `sidebar-accent` with `sidebar-accent-foreground` and `font-medium`.
+
+## Shape language (plan G7)
+
+- `button/button.svelte` (hand edit, recorded): every variant except `link` is a capsule (`rounded-full`), at every size including the icon sizes; the base class carries no radius, so `link` has none. Inputs stay `rounded-md` rectangles, as Apple's text fields do.
+- `card/card.svelte`: the `surface="glass"` variant (it was an opaque card all along) is deleted; the dashboard tiles use the default surface. Cards stay opaque content (`shadow-card`).
+- Items: the normaliser (`normalizeClasses`, role `item`) adds `font-medium` to the `text-sm` of `*-item`, `*-checkbox-item`, `*-radio-item`, `*-sub-trigger` and `command-item` (a composited layer loses subpixel antialiasing, so a label on glass is weight 500 at least). Added once; idempotent. Items are `rounded-lg` inside the `rounded-xl` pane (concentric: 1rem outer, 0.75rem inner, `p-1` on the list). Tests: `tests/unit/scripts/shadcn-normalize.test.ts`, `tests/unit/components/{button,shape-language}.test.ts`.

@@ -66,7 +66,7 @@ const EXPECTED: Record<string, Measured> = {
 			// Blue (step 600, #2563EB; it was the old logo purple), and the card border lost its purple tint
 			backgroundColor: 'rgb(37, 99, 235)',
 			color: 'oklch(1 0 0)',
-			borderRadius: '10px'
+			borderRadius: '9999px' // capsule (plan G7, Q1)
 		},
 		card: {
 			backgroundColor: 'oklch(1 0 0)',
@@ -83,7 +83,7 @@ const EXPECTED: Record<string, Measured> = {
 			// the sign-in card is the pane material (plan G6): its secondary text is the glass-safe muted step
 			// (--material-muted-foreground, one step darker than --muted-foreground in light)
 			color: 'oklch(0.384 0.02 250)',
-			borderRadius: '10px'
+			borderRadius: '9999px' // capsule (plan G7, Q1)
 		},
 		card: {
 			// ... and its fill is the popover surface at 84% (glass), no longer opaque white

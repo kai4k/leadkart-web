@@ -112,7 +112,7 @@
 				</Card.Content>
 			</Card.Root>
 
-			<Card.Root padding="md" surface="glass">
+			<Card.Root padding="md">
 				<Card.Header>
 					<Card.Title>Glass</Card.Title>
 					<Card.Description>Frosted iOS-style surface</Card.Description>

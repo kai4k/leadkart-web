@@ -4,11 +4,11 @@
 	/**
 	 * shadcn-svelte `button` (nova) with LeadKart edits: `cva` instead of tailwind-variants, the
 	 * Domiex sizes (h-10 px-6 default, h-8 sm, h-12 lg), opaque hover tokens (L37: never `/90`),
-	 * a solid `destructive`, a `tonal` variant, and `loading`. See ui/CUSTOMIZATIONS.md.
+	 * a solid `destructive`, a `tonal` variant, and `loading`. Capsule (`rounded-full`) on every variant but `link` (plan G7, Q1). See ui/CUSTOMIZATIONS.md.
 	 */
 	export const buttonVariants = cva(
 		[
-			'group/button inline-flex shrink-0 items-center justify-center gap-2 rounded-md border border-transparent text-sm font-medium whitespace-nowrap',
+			'group/button inline-flex shrink-0 items-center justify-center gap-2 border border-transparent text-sm font-medium whitespace-nowrap',
 			'transition-colors outline-none select-none',
 			'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
 			'active:not-aria-[haspopup]:translate-y-px',
@@ -19,15 +19,16 @@
 		{
 			variants: {
 				variant: {
-					default: 'bg-primary text-primary-foreground hover:bg-primary-hover',
-					destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive-hover',
+					default: 'rounded-full bg-primary text-primary-foreground hover:bg-primary-hover',
+					destructive:
+						'rounded-full bg-destructive text-destructive-foreground hover:bg-destructive-hover',
 					outline:
-						'border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted dark:border-input dark:bg-input-fill',
+						'rounded-full border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted dark:border-input dark:bg-input-fill',
 					secondary:
-						'bg-secondary text-secondary-foreground hover:bg-secondary-hover aria-expanded:bg-secondary',
-					ghost: 'hover:bg-muted hover:text-foreground aria-expanded:bg-muted',
+						'rounded-full bg-secondary text-secondary-foreground hover:bg-secondary-hover aria-expanded:bg-secondary',
+					ghost: 'rounded-full hover:bg-muted hover:text-foreground aria-expanded:bg-muted',
 					link: 'text-primary-text underline-offset-4 hover:underline',
-					tonal: 'border-border bg-muted text-foreground hover:bg-secondary'
+					tonal: 'rounded-full border-border bg-muted text-foreground hover:bg-secondary'
 				},
 				size: {
 					default: 'h-10 px-6',

@@ -79,3 +79,27 @@ describe('Button', () => {
 		expect(cls).toContain('hover:bg-destructive-hover');
 	});
 });
+
+describe('Button shape (plan G7, Q1)', () => {
+	const classesOf = (props: Record<string, unknown>) => {
+		render(props);
+		return (target.querySelector('[data-slot="button"]') as HTMLElement).className.split(/\s+/);
+	};
+	it('every variant but link is a capsule, at every size', () => {
+		for (const variant of ['default', 'destructive', 'outline', 'secondary', 'ghost', 'tonal'])
+			for (const size of ['default', 'sm', 'lg', 'icon', 'icon-sm'] as const) {
+				expect(classesOf({ variant, size }), `${variant}/${size}`).toContain('rounded-full');
+				expect(classesOf({ variant, size })).not.toContain('rounded-md');
+				if (component) unmount(component);
+				component = undefined;
+				target.remove();
+			}
+	});
+	it('the default size is a capsule and the link variant has no radius class', () => {
+		expect(classesOf({})).toContain('rounded-full');
+		if (component) unmount(component);
+		target.remove();
+		const link = classesOf({ variant: 'link' });
+		expect(link.filter((c) => c.startsWith('rounded'))).toEqual([]);
+	});
+});
