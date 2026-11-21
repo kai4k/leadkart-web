@@ -65,6 +65,39 @@ describe('check-i18n-keys', () => {
 		expect(run({ 'c.ts': 'throw new Error(`config.${key} read`)' })).toEqual([]);
 	});
 
+	it('fails a namespace prefix used as a message (it renders as the literal key)', () => {
+		const p = run({ 'a.svelte': `<p>{$_('nav.items')}</p>` });
+		expect(p).toHaveLength(1);
+		expect(p[0]).toContain('is a namespace, not a message');
+		expect(run({ 'config.ts': `const T = { labelKey: 'common' };` })).toEqual([]);
+	});
+
+	it("fails a key built by concatenation ('ns.' + k): the gate cannot see it", () => {
+		const p = run({ 'a.ts': `const k = 'nav.items.' + name;` });
+		expect(p).toHaveLength(1);
+		expect(p[0]).toContain('builds a key the gate cannot see');
+		expect(run({ 'a.ts': `const s = 'plain text ' + name;` })).toEqual([]);
+	});
+
+	it('fails when a registry entry`s own cross-check disagrees (an entry the extraction missed)', () => {
+		const registry = [
+			{
+				template: 'nav.items.${}',
+				expand: () => ['nav.items.team'],
+				verify: () => 'registry nav.items.*: extracted 1 entries but the table has 2 href: lines'
+			}
+		];
+		const p = run({ 'n.svelte': '{$_(`nav.items.${item.key}`)}' }, registry as never);
+		expect(p.some((x) => x.includes('table has 2 href'))).toBe(true);
+	});
+
+	it('the real nav registry entry cross-checks its extraction against the href count', () => {
+		const entry = REGISTRY.find((r) => r.template === 'nav.items.${}') as {
+			verify?: unknown;
+		};
+		expect(typeof entry.verify).toBe('function');
+	});
+
 	it('reports unused keys without failing', () => {
 		const r = checkI18nKeys({ files: new Map(), en, read });
 		expect(r.problems).toEqual([]);

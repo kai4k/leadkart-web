@@ -67,26 +67,14 @@
 		/* Canvas + a static ambient wash in the primary ramp. This is the CONTENT-LAYER colour
 		   (plan G, HIG Branding: brand colour belongs in the content layer, where it scrolls
 		   beneath the control layer and is picked up by the materials, which have no colour of
-		   their own). Three soft radial gradients (primary-200 top-start, primary-soft bottom-end,
-		   primary-100 top-centre); the contrast gate lists them in the backdrop sets of the
-		   sidebar and the auth card. No animation. background-attachment: fixed anchors the
+		   their own). Three soft radial gradients (--page-wash-start top-start, -end bottom-end, -top top-centre,
+		   semantic.css, dark steps in dark mode); the contrast gate checks page text on each at its peak and
+		   lists the ramp in the backdrop sets of the sidebar and the auth card. No animation. background-attachment: fixed anchors the
 		   wash so it does not shift with content scroll. */
 		background:
-			radial-gradient(
-				ellipse 80% 60% at 0% 0%,
-				color-mix(in srgb, var(--primary-200) 90%, transparent),
-				transparent 65%
-			),
-			radial-gradient(
-				ellipse 70% 70% at 100% 100%,
-				color-mix(in srgb, var(--primary-soft) 85%, transparent),
-				transparent 70%
-			),
-			radial-gradient(
-				ellipse 60% 50% at 50% 0%,
-				color-mix(in srgb, var(--primary-100) 60%, transparent),
-				transparent 60%
-			),
+			radial-gradient(ellipse 80% 60% at 0% 0%, var(--page-wash-start), transparent 65%),
+			radial-gradient(ellipse 70% 70% at 100% 100%, var(--page-wash-end), transparent 70%),
+			radial-gradient(ellipse 60% 50% at 50% 0%, var(--page-wash-top), transparent 60%),
 			var(--background);
 		background-attachment: fixed;
 		color: var(--foreground);

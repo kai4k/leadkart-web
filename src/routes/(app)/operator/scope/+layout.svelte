@@ -15,7 +15,7 @@
 	const tenant = $derived(data.tenant);
 	const crumbs = $derived([
 		{ href: '/operator/tenants', label: $_('nav.items.tenants') },
-		{ label: tenant.display_name }
+		{ label: tenant.display_name, isolate: true }
 	]);
 
 	// The tabs are the nav config's "Tenant context" section, filtered by the operator's own
@@ -28,7 +28,7 @@
 </script>
 
 <div class="stack stack-relaxed">
-	<PageHeader title={tenant.display_name} {crumbs}>
+	<PageHeader title={tenant.display_name} isolated {crumbs}>
 		{#snippet meta()}
 			{#if tenant.slug === 'platform'}
 				<Badge variant="brand" size="sm">{$_('shell.tenantContext.platform')}</Badge>

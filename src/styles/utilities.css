@@ -177,6 +177,9 @@
 	--accent: var(--material-control-hover);
 	--input-fill: var(--material-input-fill);
 	--primary-indicator: var(--material-indicator);
+	/* the logo on a translucent bar: a deeper capsule and frame (semantic.css), gated on the topbar layer */
+	--brand-frame: var(--brand-frame-bar);
+	--brand-capsule: var(--brand-capsule-bar);
 	@media (forced-colors: active) {
 		/* stylelint-disable-next-line no-invalid-position-declaration -- a nested @media inside @utility is valid (Tailwind 4) */
 		border: 1px solid CanvasText;

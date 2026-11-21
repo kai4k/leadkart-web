@@ -4,10 +4,12 @@
  * fixture), and the tie between the `material-*` utilities' scoped re-declarations and the gate's layers.
  */
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
+	AXES,
 	MATERIAL_LAYERS,
 	PAIRS,
+	checkCss,
 	checkMaterials,
 	layerCorners,
 	pairRatio
@@ -18,6 +20,9 @@ import {
 	corners
 } from '../../../scripts/arch/lib/material-bound.mjs';
 import { base, gate, layer, pair, propsFor } from './material-fixtures.ts';
+
+// the real gate resolves 1,320 combinations: slow on a loaded runner
+vi.setConfig({ testTimeout: 30_000 });
 
 type Corner = { side: string; color: { r: number; g: number; b: number } };
 type Result = {
@@ -35,7 +40,7 @@ type Layer = {
 	contrast: string;
 	backdrops: string[];
 	text: string[];
-	marks: string[];
+	marks: Array<string | { token: string; min: number }>;
 	onControl?: Array<{ control: string; text: string[] }>;
 };
 
@@ -79,7 +84,7 @@ describe('fix round D: what each layer checks', () => {
 			expect.arrayContaining(['sidebar-foreground', 'sidebar-accent-foreground'])
 		);
 		expect(h.marks).toEqual(expect.arrayContaining(['sidebar-ring']));
-		expect(h.text.concat(h.marks).some((t) => !t.startsWith('sidebar-'))).toBe(false);
+		expect(h.text.concat(h.marks as string[]).some((t) => !t.startsWith('sidebar-'))).toBe(false);
 	});
 
 	it('7. the overlay and float layers check foreground, muted and accent text on both control fills', () => {
@@ -175,7 +180,10 @@ describe('fix round D: the utilities and the gate describe the same surfaces (it
 			return l.fill === 'material-sidebar-fill' && (u === 'material-sidebar-bar' ? bar : !bar);
 		});
 	/** custom properties that carry no contrast pair of their own: none today (a new one needs a reason here) */
-	const NO_CONTRAST: Record<string, string> = {};
+	const NO_CONTRAST: Record<string, string> = {
+		'--brand-frame': 'the logo is drawn only in the topbar; gated on that layer (next test)',
+		'--brand-capsule': 'the logo is drawn only in the topbar; gated on that layer (next test)'
+	};
 
 	it('there are four utilities and each has at least one layer', () => {
 		expect(utilities.map((m) => m[1]).sort()).toEqual([
@@ -198,7 +206,7 @@ describe('fix round D: the utilities and the gate describe the same surfaces (it
 				for (const l of layersOf(name)) {
 					const checked = new Set([
 						...l.text,
-						...l.marks,
+						...l.marks.map((m) => (typeof m === 'string' ? m : m.token)),
 						...(l.onControl ?? []).flatMap((o) => [o.control, ...o.text])
 					]);
 					expect(checked.has(token), `${name}: ${prop} -> ${token} not gated on ${l.layer}`).toBe(
@@ -208,6 +216,21 @@ describe('fix round D: the utilities and the gate describe the same surfaces (it
 			}
 		}
 	);
+
+	it('the logo tokens the bar re-declares are gated on the topbar layer, and nowhere else (bulk bar and hnav draw no logo)', () => {
+		const marks = (n: string) => by(n).marks.map((m) => (typeof m === 'string' ? m : m.token));
+		expect(marks('topbar')).toEqual(
+			expect.arrayContaining(['brand-frame-bar', 'brand-capsule-bar'])
+		);
+		for (const n of ['bulk-bar', 'hnav'])
+			expect(
+				marks(n).some((m) => m.includes('brand')),
+				n
+			).toBe(false);
+		const bar = utilities.find((m) => m[1] === 'material-bar')![2];
+		expect(bar).toContain('--brand-frame: var(--brand-frame-bar)');
+		expect(bar).toContain('--brand-capsule: var(--brand-capsule-bar)');
+	});
 
 	it('the sidebar utilities read the SIDEBAR tokens, never the neutral material ones (item 3)', () => {
 		for (const name of ['material-sidebar', 'material-sidebar-bar']) {
@@ -246,5 +269,75 @@ describe('fix round D: the utilities and the gate describe the same surfaces (it
 			'--input-fill'
 		])
 			expect(band, d).toContain(d);
+	});
+});
+
+describe('fix round D (GD21): the logo keeps its own colours, with its own floors', () => {
+	const real = () =>
+		(['palettes', 'semantic', 'materials', 'layouts'] as const).map(
+			(n) =>
+				[`src/styles/theme/${n}.css`, readFileSync(`src/styles/theme/${n}.css`, 'utf8')] as [
+					string,
+					string
+				]
+		);
+	const mutate = (from: string, to: string) =>
+		real().map(([n, css]) => [
+			n,
+			n.endsWith('semantic.css') ? css.replace(from, to) : css
+		]) as Array<[string, string]>;
+	const run = (files: Array<[string, string]>) =>
+		checkCss(files, {
+			pairs: (PAIRS as Array<{ note?: string; fg: string }>).filter(
+				(p) => /logo/.test(p.note ?? '') || /brand/.test(p.fg)
+			) as never,
+			layers: MATERIAL_LAYERS as never,
+			axes: {
+				...AXES,
+				colors: ['leadkart'],
+				sidebarColors: ['light'],
+				darkPalette: ['default']
+			} as never
+		}).problems as string[];
+
+	it('the real tokens pass', () => {
+		expect(run(real())).toEqual([]);
+	});
+
+	it('a capsule equal to the frame fails the two-tone floor (on the real resolved tokens)', () => {
+		const p = run(
+			mutate(
+				'--brand-capsule-light: var(--palette-capsule-500);',
+				'--brand-capsule-light: var(--brand-frame-light);'
+			)
+		);
+		expect(p.some((x) => x.includes('logo: two tones'))).toBe(true);
+	});
+
+	it('a capsule at ~1.2:1 on its surface fails the accent floor', () => {
+		const p = run(
+			mutate(
+				'--brand-capsule-light: var(--palette-capsule-500);',
+				'--brand-capsule-light: var(--palette-capsule-300);'
+			)
+		);
+		expect(p.some((x) => x.includes('logo accent'))).toBe(true);
+	});
+
+	it('the frame keeps 3:1: a pale frame fails', () => {
+		const p = run(
+			mutate('--brand-frame-light: var(--primary-600);', '--brand-frame-light: var(--primary-300);')
+		);
+		expect(p.some((x) => x.includes('logo frame'))).toBe(true);
+	});
+
+	it('the logo is gated where it is drawn: card, primary-soft, the sidebar, the topbar (not background or popover)', () => {
+		const logo = (PAIRS as Array<{ fg: string; bg: string; scope?: unknown }>).filter(
+			(x) => /brand/.test(x.fg) && !x.scope
+		);
+		const surfaces = new Set(logo.map((x) => x.bg));
+		expect(surfaces.has('background')).toBe(false);
+		expect(surfaces.has('popover')).toBe(false);
+		expect(surfaces.has('card') && surfaces.has('primary-soft')).toBe(true);
 	});
 });

@@ -57,3 +57,35 @@ describe('the logo follows the palette', () => {
 		expect(root).toContain('--brand-capsule-light: var(--palette-capsule-');
 	});
 });
+
+describe('logo accent tokens (GD21)', () => {
+	it('every palette declares its dark frame, and the bar frame and capsule, beside the light steps', () => {
+		for (const colour of COLOURS) {
+			const start = SEMANTIC.indexOf(`:root[data-colors='${colour}'] {`);
+			const block = SEMANTIC.slice(start, SEMANTIC.indexOf('}', start));
+			for (const token of [
+				'--brand-frame-dark',
+				'--brand-capsule-bar-light',
+				'--brand-frame-bar-light'
+			])
+				expect(block, `${colour} ${token}`).toContain(`${token}: var(--`);
+		}
+	});
+
+	it('the default light capsule is Capsule Teal 500 on opaque surfaces and 600 on the bar', () => {
+		expect(SEMANTIC).toContain('--brand-capsule-light: var(--palette-capsule-500);');
+		expect(SEMANTIC).toContain('--brand-capsule-bar-light: var(--palette-capsule-600);');
+		expect(SEMANTIC).toContain('--brand-capsule-dark: var(--palette-capsule-300);');
+	});
+
+	it('dark sidebars use the dark frame, not primary-200', () => {
+		expect(SEMANTIC).not.toContain('--sidebar-brand-frame: var(--primary-200);');
+		expect(SEMANTIC.match(/--sidebar-brand-frame: var\(--brand-frame-dark\);/g)).toHaveLength(4);
+	});
+
+	it('the page colour wash is three tokens with dark steps in dark mode', () => {
+		for (const t of ['--page-wash-start', '--page-wash-end', '--page-wash-top'])
+			expect(SEMANTIC, t).toContain(`${t}: light-dark(`);
+		expect(SEMANTIC).toContain('color-mix(in srgb, var(--primary-900) 55%, transparent)');
+	});
+});

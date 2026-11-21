@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { plainTitle } from '#lib/utils/page-title.ts';
 	import { Badge, Button, Card, CopyButton, DescriptionList } from '$ui';
 	import { Eye, Icon } from '$icons';
 	import { ImpersonateModal } from '$features/operator/impersonation';
@@ -15,7 +16,7 @@
 	const badge = $derived(tenantStatus(tenant.status));
 </script>
 
-<svelte:head><title>Profile · {tenant.display_name} · LeadKart</title></svelte:head>
+<svelte:head><title>Profile · {plainTitle(tenant.display_name)} · LeadKart</title></svelte:head>
 
 {#snippet slug()}
 	<span class="cluster cluster-tight">

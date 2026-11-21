@@ -9,7 +9,7 @@ import { flushSync, mount, unmount } from 'svelte';
 import { afterEach, describe, expect, it } from 'vitest';
 import BrandMark from '$ui/BrandMark.svelte';
 import BrandWordmark from '$ui/BrandWordmark.svelte';
-import BrandIcon from '$layouts/BrandIcon.svelte';
+import BrandIcon from '$ui/BrandIcon.svelte';
 import en from '../../../src/lib/i18n/locales/en.json';
 
 const mounted: Array<ReturnType<typeof mount>> = [];
@@ -158,11 +158,11 @@ describe('BrandIcon', () => {
 	});
 
 	it('has no raster, no colour literal in its style, and an opaque plate for reduced transparency', () => {
-		const source = readFileSync('src/lib/layouts/BrandIcon.svelte', 'utf8');
+		const source = readFileSync('src/lib/components/ui/BrandIcon.svelte', 'utf8');
 		const style = source.slice(source.indexOf('<style>'));
 		expect(style).not.toMatch(/#[0-9a-fA-F]{3,8}\b|oklch\(|rgb\(/);
-		expect(style).toContain('var(--material-plate-solid)');
-		expect(style).toContain('var(--material-plate-glass)');
+		expect(style).toContain('var(--brand-plate-solid)');
+		expect(style).toContain('var(--brand-plate-glass)');
 		expect(render(BrandIcon).innerHTML).not.toContain('<img');
 	});
 });

@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { isPrecached } from '../../../src/service-worker/precache-filter.ts';
 
 const sw = resolve(__dirname, '../../../build/client/service-worker.js');
 
@@ -46,11 +47,48 @@ describe('findFilesystemUrls (self-test)', () => {
 });
 
 const assets = resolve(__dirname, '../../../build/client/_app/immutable/assets');
-describe.skipIf(!existsSync(assets))('built CSS', () => {
-	it('contains no absolute filesystem path in any url()', () => {
-		const bad = readdirSync(assets)
-			.filter((f) => f.endsWith('.css'))
-			.flatMap((f) => findFilesystemUrls(readFileSync(resolve(assets, f), 'utf8')));
-		expect(bad).toEqual([]);
+// same rule as the service-worker block above: locally a missing build skips, CI throws
+if (!existsSync(assets) && process.env.CI) {
+	describe('built CSS', () => {
+		it('requires a build before this test', () => {
+			throw new Error('build/client/_app/immutable/assets missing — run npm run build first');
+		});
+	});
+} else {
+	describe.skipIf(!existsSync(assets))('built CSS', () => {
+		it('contains no absolute filesystem path in any url()', () => {
+			const bad = readdirSync(assets)
+				.filter((f) => f.endsWith('.css'))
+				.flatMap((f) => findFilesystemUrls(readFileSync(resolve(assets, f), 'utf8')));
+			expect(bad).toEqual([]);
+		});
+	});
+}
+
+describe('the precache list leaves out what offline never needs', () => {
+	it.each([
+		'og-image-light.png',
+		'/og-image-dark.png',
+		'mstile-150x150.png',
+		'mstile-310x310.png',
+		'android-chrome-512x512.png',
+		'maskable-512x512.png'
+	])('%s is not precached', (f) => expect(isPrecached(f)).toBe(false));
+	it.each([
+		'favicon.ico',
+		'favicon.svg',
+		'manifest.webmanifest',
+		'android-chrome-192x192.png',
+		'apple-touch-icon.png',
+		'offline.html'
+	])('%s is precached', (f) => expect(isPrecached(f)).toBe(true));
+	it('the service worker filters its asset list with it, and nothing else about it changed', () => {
+		const src = readFileSync(resolve(__dirname, '../../../src/service-worker/index.ts'), 'utf8');
+		expect(src).toContain('assets.filter(({ path }) => isPrecached(path))');
+	});
+	it('static/ still holds every file the head and the manifest link, and none of the removed ones', () => {
+		const statics = readdirSync(resolve(__dirname, '../../../static'));
+		expect(statics).toContain('mstile-310x310.png');
+		expect(statics).not.toContain('favicon-48x48.png');
 	});
 });

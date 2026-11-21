@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { plainTitle } from '#lib/utils/page-title.ts';
 	import { RolesList } from '$features/roles';
 	import { UsersTruncatedAlert, usersListQuery } from '$features/users';
 	import { ACTION, session } from '$features/auth';
@@ -12,7 +13,7 @@
 	const roster = $derived(mayListUsers ? (usersQuery.data ?? []) : null);
 </script>
 
-<svelte:head><title>Roles · {data.tenant.display_name} · LeadKart</title></svelte:head>
+<svelte:head><title>Roles · {plainTitle(data.tenant.display_name)} · LeadKart</title></svelte:head>
 
 <div class="stack stack-relaxed">
 	{#if roster}<UsersTruncatedAlert count={roster.length} />{/if}

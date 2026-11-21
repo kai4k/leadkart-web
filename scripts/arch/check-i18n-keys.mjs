@@ -64,12 +64,15 @@ export const REGISTRY = [
 	},
 	{
 		template: 'nav.items.${}',
-		expand: (read) => {
-			const src = read('src/lib/config/nav.ts');
-			const start = src.indexOf('export const NAV_ROUTES = {');
-			const end = src.indexOf('} as const', start);
-			const body = start < 0 ? '' : src.slice(start, end < 0 ? undefined : end);
-			return [...body.matchAll(/^\t(\w+): \{/gm)].map((m) => `nav.items.${m[1]}`);
+		expand: (read) => navRoutesBody(read).keys.map((k) => `nav.items.${k}`),
+		// a second, independent parse: every entry of the table has exactly one `href:`; an entry the key
+		// regex does not see (another formatting) would otherwise be silently unchecked
+		verify: (read, expanded) => {
+			const { body } = navRoutesBody(read);
+			const hrefs = (body.match(/(?<![\w-])href:/g) ?? []).length;
+			return hrefs === expanded.length
+				? null
+				: `registry nav.items.*: extracted ${expanded.length} entries but the table has ${hrefs} href: lines (an entry is formatted in a way the extraction misses)`;
 		}
 	},
 	{
@@ -94,6 +97,14 @@ export const REGISTRY = [
 			preferenceAxes(read).flatMap(([k, vs]) => vs.map((v) => `customizer.${k}.${v}`))
 	}
 ];
+
+function navRoutesBody(read) {
+	const src = read('src/lib/config/nav.ts');
+	const start = src.indexOf('export const NAV_ROUTES = {');
+	const end = src.indexOf('} as const', start);
+	const body = start < 0 ? '' : src.slice(start, end < 0 ? undefined : end);
+	return { body, keys: [...body.matchAll(/^\t(\w+): \{/gm)].map((m) => m[1]) };
+}
 
 function reloadKinds(read) {
 	const m = /type ResetBlockKind\s*=\s*([^;]+);/.exec(read('src/lib/api/reset-block.svelte.ts'));
@@ -144,6 +155,8 @@ export const NOT_KEYS = {
 const KEY_SHAPE = /^[a-z][A-Za-z0-9]*(\.[A-Za-z0-9_-]+)+$/;
 const LITERAL_CALL = /(?<![\w.$])(?:\$_|\$t|_|get\(_\))\(\s*(['"])([^'"\n]+)\1/g;
 const STRING_LITERAL = /(['"])((?:(?!\1)[^\\\n])*)\1/g;
+/** `'ns.' + k` or `'ns.x' + k`: a key assembled by concatenation (an unregistered dynamic key) */
+const CONCAT = /(['"])([a-z][A-Za-z0-9]*\.[A-Za-z0-9_.-]*)\1\s*\+/g;
 const TEMPLATE = /`([a-z][A-Za-z0-9]*\.[^`\n]*\$\{[^`\n]*)`/g;
 
 /**
@@ -161,7 +174,13 @@ export function checkI18nKeys({ files, en, read, registry = REGISTRY }) {
 	const need = (key, where) => {
 		checked++;
 		used.add(key);
-		if (!keys.has(key) && !hasChildren(keys, key)) problems.push(`${where}: missing key "${key}"`);
+		if (keys.has(key)) return;
+		// a namespace prefix is not a string: it would render as the literal key
+		problems.push(
+			hasChildren(keys, key)
+				? `${where}: "${key}" is a namespace, not a message (it needs a leaf key)`
+				: `${where}: missing key "${key}"`
+		);
 	};
 
 	for (const [path, raw] of files) {
@@ -182,9 +201,14 @@ export function checkI18nKeys({ files, en, read, registry = REGISTRY }) {
 				continue;
 			}
 			// already reported as a literal call at the same place? (the call regex starts earlier)
-			if (problems.some((p) => p.endsWith(`missing key "${text}"`) && p.startsWith(`${path}:`)))
-				continue;
+			if (problems.some((p) => p.startsWith(`${path}:`) && p.includes(`"${text}"`))) continue;
 			need(text, `${path}:${lineOf(m.index)}`);
+		}
+		for (const m of src.matchAll(CONCAT)) {
+			if (NOT_KEYS.files.includes(path) || !namespaces.has(m[2].split('.')[0])) continue;
+			problems.push(
+				`${path}:${lineOf(m.index)}: "${m[2]}" + ... builds a key the gate cannot see; use a template literal and register it (REGISTRY)`
+			);
 		}
 		for (const m of src.matchAll(TEMPLATE)) {
 			const template = m[1].replace(/\$\{[^}]*\}/g, '${}');
@@ -203,6 +227,8 @@ export function checkI18nKeys({ files, en, read, registry = REGISTRY }) {
 	for (const entry of registry) {
 		if (!registered.has(entry)) continue;
 		const expanded = entry.expand(read);
+		const bad = entry.verify?.(read, expanded);
+		if (bad) problems.push(bad);
 		if (expanded.length === 0)
 			problems.push(`registry "${entry.template}" enumerated no keys (its source table moved?)`);
 		for (const key of expanded) need(key, `registry ${entry.template}`);

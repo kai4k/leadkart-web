@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { plainTitle } from '#lib/utils/page-title.ts';
 	import { _ } from 'svelte-i18n';
 	import PageHeader from '$layouts/PageHeader.svelte';
 	import { PersonDetail, personDetailQuery, personDisplayName } from '$features/operator/people';
@@ -17,7 +18,7 @@
 	]);
 </script>
 
-<svelte:head><title>{title} · LeadKart</title></svelte:head>
+<svelte:head><title>{plainTitle(title)} · LeadKart</title></svelte:head>
 
 <div class="stack stack-relaxed">
 	<PageHeader title={personName} {crumbs} />

@@ -78,6 +78,15 @@ const ATTRIBUTE_FOR = {
 
 const TEXT = 4.5;
 const UI = 3;
+/**
+ * The logo (GD21). A logo is a logotype: WCAG 1.4.11 exempts it, but an invisible logo is still a defect, so it
+ * has its own floors. The FRAME (the L-cart, the part that identifies the mark) meets 3:1 on every surface it
+ * sits on (UI). The CAPSULE is an accent inside the logo: LOGO_CAPSULE on the surface, and LOGO_TWO_TONE against
+ * the frame, so the mark reads as two tones. Only where a logo is drawn: a card (RouteError), primary-soft (the
+ * auth mobile row), the sidebar layers, the topbar layer, and the pattern band.
+ */
+const LOGO_CAPSULE = 1.6;
+const LOGO_TWO_TONE = 1.5;
 const STATUS = ['success', 'warning', 'info'];
 const SURFACES = ['background', 'card', 'muted'];
 
@@ -126,11 +135,13 @@ const RAW_PAIRS = [
 	// non-text indicators: focus ring, form-control border (WCAG 1.4.11)
 	...[...SURFACES, 'popover'].map((s) => ['ring', s, UI]),
 	...SURFACES.map((s) => ['input', s, UI]),
-	// the logo (BrandMark) is a non-text graphic (WCAG 1.4.11): frame + wheels and capsule on every
-	// surface it sits on: the page, a card (route error), a popover, the auth mobile row (primary-soft)
-	...['brand-frame', 'brand-capsule'].flatMap((m) =>
-		['background', 'card', 'popover', 'primary-soft'].map((s) => [m, s, UI, { note: 'logo' }])
-	),
+	// the logo (BrandMark), where it is drawn on an opaque surface: a card (route error) and the auth mobile row
+	...['card', 'primary-soft'].flatMap((s) => [
+		['brand-frame', s, UI, { note: 'logo frame' }],
+		['brand-capsule', s, LOGO_CAPSULE, { note: 'logo accent' }]
+	]),
+	['brand-capsule', 'brand-frame', LOGO_TWO_TONE, { note: 'logo: two tones' }],
+	['brand-capsule-bar', 'brand-frame-bar', LOGO_TWO_TONE, { note: 'logo: two tones on the bar' }],
 	// sidebar
 	['sidebar-foreground', 'sidebar', TEXT],
 	['sidebar-muted-foreground', 'sidebar', TEXT],
@@ -141,7 +152,8 @@ const RAW_PAIRS = [
 	['sidebar-ring', 'sidebar', UI],
 	['sidebar-icon', 'sidebar', UI, { note: 'nav icons (accent on the light sidebar)' }],
 	['sidebar-brand-frame', 'sidebar', UI, { note: 'logo frame on the sidebar' }],
-	['sidebar-brand-capsule', 'sidebar', UI, { note: 'logo capsule on the sidebar' }],
+	['sidebar-brand-capsule', 'sidebar', LOGO_CAPSULE, { note: 'logo accent on the sidebar' }],
+	['sidebar-brand-capsule', 'sidebar-brand-frame', LOGO_TWO_TONE, { note: 'logo: two tones' }],
 	// fix round A: the indicators and fills the review found ungated. `note` names the use; several
 	// of these re-check a value another pair already covers, on purpose, so the use is on record.
 	['ring', 'popover', UI, { note: 'highlighted list item bar' }],
@@ -173,7 +185,14 @@ const RAW_PAIRS = [
 	['accent-foreground', 'accent', TEXT, { scope: PATTERN_TOPBAR, note: 'hover chip' }],
 	['ring', 'primary', UI, { scope: PATTERN_TOPBAR, note: 'focus ring' }],
 	['brand-frame', 'primary', UI, { scope: PATTERN_TOPBAR, note: 'logo frame on the band' }],
-	['brand-capsule', 'primary', UI, { scope: PATTERN_TOPBAR, note: 'logo capsule on the band' }],
+	// the band is one-colour by design (a monochrome logo on a brand fill): the capsule floor against the band
+	// holds, the two-tone floor does not apply there (decision GD21, named)
+	[
+		'brand-capsule',
+		'primary',
+		LOGO_CAPSULE,
+		{ scope: PATTERN_TOPBAR, note: 'logo accent on the band' }
+	],
 	// the tokens a material bar would leak into the opaque band are re-declared for it (layouts.css)
 	[
 		'subtle-foreground',
@@ -202,6 +221,16 @@ const RAW_PAIRS = [
 	['foreground', 'card', TEXT, { note: 'current section tab' }],
 	['foreground', 'muted', TEXT, { note: 'section tab on hover' }],
 	['destructive', 'destructive-soft', TEXT, { note: 'route error alert' }],
+	// fix round D: the page's colour wash (base.css body) at the peak of each of its three gradients; the page title,
+	// breadcrumb, description and links sit directly on it
+	...['page-wash-start', 'page-wash-end', 'page-wash-top'].flatMap((w) =>
+		['foreground', 'muted-foreground', 'subtle-foreground', 'primary-text'].map((fg) => [
+			fg,
+			w,
+			TEXT,
+			{ over: 'background', note: 'page text on the colour wash at its peak' }
+		])
+	),
 	// fix round B: the third text level, the status text on the surfaces it sits on, the indicator
 	// (non-text) tokens, and the toast description on each soft fill
 	...[...SURFACES, 'popover'].map((s) => ['subtle-foreground', s, TEXT, { note: 'tertiary text' }]),
@@ -438,7 +467,7 @@ const WHITE = { mode: 'rgb', r: 1, g: 1, b: 1 };
 /**
  * @typedef {{ control: string, text: string[], min?: number }} OnControl
  * @typedef {{ layer: string, fill: string, surface: string, saturate: string, contrast: string,
- *   backdrops: string[], under?: string, text: string[], marks: string[], onControl?: OnControl[] }} MaterialLayer
+ *   backdrops: string[], under?: string, text: string[], marks: Array<string | { token: string, min: number }>, onControl?: OnControl[] }} MaterialLayer
  * `surface` is the opaque token the fill is `N%` of (the `--needs` table solves for N).
  * `backdrops` are tokens (resolved for the combination) and the literals '#000' / '#fff': any image,
  * avatar, logo or the auth particles count as black and white. `under` is a token (the scrim)
@@ -474,8 +503,17 @@ const BAR = {
 	contrast: 'material-bar-contrast',
 	backdrops: BAR_BACKDROPS,
 	text: ['foreground', 'material-muted-foreground'],
-	marks: ['material-ring', 'material-indicator', 'brand-frame', 'brand-capsule'],
+	marks: ['material-ring', 'material-indicator'],
 	onControl: BAR_CONTROLS
+};
+/** the topbar is the one bar that draws the logo: material-bar re-declares the capsule for it (utilities.css) */
+const TOPBAR = {
+	...BAR,
+	marks: [
+		...BAR.marks,
+		{ token: 'brand-frame-bar', min: UI },
+		{ token: 'brand-capsule-bar', min: LOGO_CAPSULE }
+	]
 };
 /**
  * The horizontal nav (GD17): a bar-recipe filter over the SIDEBAR colour (`material-sidebar-bar`), so its
@@ -505,7 +543,12 @@ const SIDEBAR = {
 	saturate: 'material-pane-saturate',
 	contrast: 'material-pane-contrast',
 	text: ['sidebar-foreground', 'sidebar-muted-foreground'],
-	marks: ['sidebar-ring', 'sidebar-icon', 'sidebar-brand-frame', 'sidebar-brand-capsule'],
+	marks: [
+		'sidebar-ring',
+		'sidebar-icon',
+		{ token: 'sidebar-brand-frame', min: UI },
+		{ token: 'sidebar-brand-capsule', min: LOGO_CAPSULE }
+	],
 	onControl: [
 		{
 			control: 'sidebar-accent',
@@ -538,7 +581,7 @@ const PANE_CONTROLS = [
 /** Every layer a material is used on (plan 3.2). A material utility with no layer here fails the gate's test. */
 /** @type {MaterialLayer[]} */
 export const MATERIAL_LAYERS = [
-	{ layer: 'topbar', ...BAR },
+	{ layer: 'topbar', ...TOPBAR },
 	{ layer: 'hnav', ...SIDEBAR_BAR },
 	{ layer: 'bulk-bar', ...BAR },
 	{
@@ -692,8 +735,10 @@ export function checkMaterials(props, mode, label, transparency, layers = MATERI
 				};
 				for (const t of layer.text ?? [])
 					record('text', t, layer.fill, resolve(t, composite), composite, TEXT);
-				for (const m of layer.marks ?? [])
-					record('mark', m, layer.fill, resolve(m, composite), composite, UI);
+				for (const m of layer.marks ?? []) {
+					const token = typeof m === 'string' ? m : m.token;
+					record('mark', token, layer.fill, resolve(token, composite), composite, m.min ?? UI);
+				}
 				for (const oc of layer.onControl ?? []) {
 					const control = resolve(oc.control, composite);
 					for (const t of oc.text)
@@ -914,7 +959,8 @@ export function needsReport() {
 					`  ${token.padEnd(28)} Y ${fgY}  darkest ${ratios[0]}  lightest ${ratios[1]}  min alpha ${need === null ? 'n/a (fails opaque)' : need.toFixed(3)}  worst over all combinations ${w?.toFixed(2)}`
 				);
 			}
-			for (const mark of layer.marks ?? []) {
+			for (const markSpec of layer.marks ?? []) {
+				const mark = typeof markSpec === 'string' ? markSpec : markSpec.token;
 				const w = worst.get(`${mode}|${layer.layer}|${mark}`);
 				lines.push(
 					`  mark ${mark.padEnd(23)} worst over all combinations ${w?.toFixed(2)} (needs 3)`

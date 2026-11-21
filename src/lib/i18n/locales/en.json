@@ -499,7 +499,7 @@
 		},
 		"transparency": {
 			"title": "Transparency",
-			"hint": "How see-through bars and panels are. Web pages can't read your iPhone's Liquid Glass setting, so choose here. Your system's Reduce transparency setting applies where the browser supports it.",
+			"hint": "How see-through bars and panels are. In Chrome and Edge, your system's Reduce transparency setting also applies.",
 			"glass": "Glass",
 			"reduced": "Tinted",
 			"off": "Solid"

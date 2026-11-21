@@ -18,6 +18,22 @@
 		}
 	});
 
+	// Another tab may have started or ended a session: a tab that comes back to the front, or gets focus,
+	// reconciles again (the mount effect above covers only the first load).
+	$effect(() => {
+		if (!session.capabilities) return;
+		const again = () => {
+			if (document.visibilityState !== 'visible' || impersonation.status === 'loading') return;
+			impersonation.reconcile().catch(() => {});
+		};
+		document.addEventListener('visibilitychange', again);
+		window.addEventListener('focus', again);
+		return () => {
+			document.removeEventListener('visibilitychange', again);
+			window.removeEventListener('focus', again);
+		};
+	});
+
 	const ending = $derived(impersonation.status === 'mutating');
 
 	// a reset can start between the last render and this click: re-check, like Exit does

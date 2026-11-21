@@ -1,6 +1,7 @@
 export const REGISTRY: Array<{
 	template: string;
 	expand: (read: (p: string) => string) => string[];
+	verify?: (read: (p: string) => string, expanded: string[]) => string | null;
 }>;
 export const NOT_KEYS: { files: string[]; strings: string[] };
 export function stripComments(src: string): string;

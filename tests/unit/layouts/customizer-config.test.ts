@@ -42,15 +42,16 @@ describe('the customizer config is the preference schema', () => {
 		}
 	});
 
-	it('the transparency group is labelled Glass, Tinted, Solid and says the iPhone slider does not reach web pages', () => {
+	it('the transparency group is labelled Glass, Tinted, Solid and the hint names only Chrome and Edge for the system setting', () => {
 		const g = CUSTOMIZER_GROUPS.find((x) => x.key === 'transparency')!;
 		expect(g.kind).toBe('wireframe');
 		expect(g.options.map((o) => o.value)).toEqual(['glass', 'reduced', 'off']);
 		expect(g.options.map((o) => dig(o.labelKey))).toEqual(['Glass', 'Tinted', 'Solid']);
 		expect(dig(g.titleKey)).toBe('Transparency');
 		expect(g.hintKey).toBe('customizer.transparency.hint');
-		expect(dig(g.hintKey!)).toMatch(/iPhone/);
+		expect(dig(g.hintKey!)).toMatch(/Chrome and Edge/);
 		expect(dig(g.hintKey!)).toMatch(/Reduce transparency/);
+		expect(dig(g.hintKey!)).not.toMatch(/iPhone|iOS|Safari/);
 	});
 
 	it('hides the layouts that need room below lg, and only those', () => {

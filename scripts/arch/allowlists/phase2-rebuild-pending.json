@@ -103,10 +103,6 @@
 			"src/lib/features/users/components/UsersList.svelte": 2
 		}
 	},
-	"ceiling": {
-		"entries": 45,
-		"total": 62
-	},
 	"notes": {
 		"src/lib/components/data/BulkUploadDrawer.svelte": "// removed by the leads/orders/inventory rebuild (plan section 9)",
 		"src/lib/features/inventory/components/AddBatchDrawer.svelte": "// removed by the leads/orders/inventory rebuild (plan section 9)",

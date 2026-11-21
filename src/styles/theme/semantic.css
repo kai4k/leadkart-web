@@ -72,7 +72,9 @@
 	   every surface the mark sits on, a translucent bar over the darkest backdrop included (the gate
 	   proves it); dark values are the on-dark steps. The default is Kart Blue with Capsule Teal. */
 	--brand-frame-light: var(--primary-600);
-	--brand-capsule-light: var(--palette-capsule-700);
+	--brand-capsule-light: var(--palette-capsule-500);
+	--brand-capsule-bar-light: var(--palette-capsule-600);
+	--brand-frame-bar-light: var(--primary-700);
 	--brand-capsule-dark: var(--palette-capsule-300);
 	/* the large icon (BrandIcon) paints the capsule as a gradient between these */
 	--brand-capsule-from: light-dark(var(--palette-capsule-400), var(--palette-capsule-300));
@@ -142,11 +144,30 @@
 		color-mix(in oklch, var(--primary) 85%, var(--primary-hover-toward)),
 		color-mix(in oklch, var(--primary) 85%, white)
 	);
-	--brand-frame: light-dark(var(--brand-frame-light), var(--primary-on-dark));
+	--brand-frame-dark: var(--primary-on-dark);
+	--brand-frame: light-dark(var(--brand-frame-light), var(--brand-frame-dark));
 	--brand-capsule: light-dark(var(--brand-capsule-light), var(--brand-capsule-dark));
+	/* the capsule on a translucent bar (material-bar re-declares --brand-capsule to this): a step deeper in light */
+	--brand-capsule-bar: light-dark(var(--brand-capsule-bar-light), var(--brand-capsule-dark));
+	--brand-frame-bar: light-dark(var(--brand-frame-bar-light), var(--brand-frame-dark));
 	--primary-soft: light-dark(
 		var(--primary-50),
 		color-mix(in oklch, var(--primary-400) 15%, var(--dark-900))
+	);
+	/* the page colour wash (base.css body): the three gradients at their PEAK opacity, as tokens so the contrast
+	   gate can read them. Light keeps the light steps; dark uses the dark steps of the ramp (the light steps
+	   under dark page text dropped it to 1.4:1). Page text is gated on each at its peak. */
+	--page-wash-start: light-dark(
+		color-mix(in srgb, var(--primary-200) 60%, transparent),
+		color-mix(in srgb, var(--primary-900) 55%, transparent)
+	);
+	--page-wash-end: light-dark(
+		color-mix(in srgb, var(--primary-soft) 85%, transparent),
+		color-mix(in srgb, var(--primary-900) 40%, transparent)
+	);
+	--page-wash-top: light-dark(
+		color-mix(in srgb, var(--primary-100) 60%, transparent),
+		color-mix(in srgb, var(--primary-800) 35%, transparent)
 	);
 
 	/* status */
@@ -263,9 +284,12 @@
 	--primary-text-light: var(--primary-800);
 	--primary-on-dark: var(--primary-400);
 	--primary-ring: var(--primary-700);
-	--brand-frame-light: var(--primary-900);
-	--brand-capsule-light: var(--primary-800);
-	--brand-capsule-dark: var(--primary-300);
+	--brand-frame-light: var(--primary-800);
+	--brand-frame-dark: var(--primary-400);
+	--brand-frame-bar-light: var(--brand-frame-light);
+	--brand-capsule-light: var(--primary-600);
+	--brand-capsule-bar-light: var(--primary-600);
+	--brand-capsule-dark: var(--primary-600);
 	--brand-capsule-from: light-dark(var(--primary-300), var(--primary-200));
 	--brand-capsule-to: light-dark(var(--primary-500), var(--primary-400));
 }
@@ -287,9 +311,12 @@
 	--primary-text-light: var(--primary-700);
 	--primary-on-dark: var(--primary-400);
 	--primary-ring: var(--primary-500);
-	--brand-frame-light: var(--primary-700);
-	--brand-capsule-light: var(--primary-600);
-	--brand-capsule-dark: var(--primary-300);
+	--brand-frame-light: var(--primary-600);
+	--brand-frame-dark: var(--primary-300);
+	--brand-frame-bar-light: var(--brand-frame-light);
+	--brand-capsule-light: var(--primary-400);
+	--brand-capsule-bar-light: var(--primary-400);
+	--brand-capsule-dark: var(--primary-100);
 	--brand-capsule-from: light-dark(var(--primary-300), var(--primary-200));
 	--brand-capsule-to: light-dark(var(--primary-500), var(--primary-400));
 }
@@ -312,9 +339,12 @@
 	--primary-text-light: var(--primary-700);
 	--primary-on-dark: var(--primary-400);
 	--primary-ring: var(--primary-600);
-	--brand-frame-light: var(--primary-800);
-	--brand-capsule-light: var(--primary-700);
-	--brand-capsule-dark: var(--primary-300);
+	--brand-frame-light: var(--primary-700);
+	--brand-frame-dark: var(--primary-300);
+	--brand-frame-bar-light: var(--brand-frame-light);
+	--brand-capsule-light: var(--primary-500);
+	--brand-capsule-bar-light: var(--primary-500);
+	--brand-capsule-dark: var(--primary-100);
 	--brand-capsule-from: light-dark(var(--primary-300), var(--primary-200));
 	--brand-capsule-to: light-dark(var(--primary-500), var(--primary-400));
 }
@@ -337,8 +367,11 @@
 	--primary-on-dark: var(--primary-400);
 	--primary-ring: var(--primary-700);
 	--brand-frame-light: var(--primary-800);
-	--brand-capsule-light: var(--primary-700);
-	--brand-capsule-dark: var(--primary-300);
+	--brand-frame-dark: var(--primary-400);
+	--brand-frame-bar-light: var(--brand-frame-light);
+	--brand-capsule-light: var(--primary-500);
+	--brand-capsule-bar-light: var(--primary-600);
+	--brand-capsule-dark: var(--primary-100);
 	--brand-capsule-from: light-dark(var(--primary-300), var(--primary-200));
 	--brand-capsule-to: light-dark(var(--primary-500), var(--primary-400));
 }
@@ -360,9 +393,12 @@
 	--primary-text-light: var(--primary-700);
 	--primary-on-dark: var(--primary-400);
 	--primary-ring: var(--primary-600);
-	--brand-frame-light: var(--primary-800);
-	--brand-capsule-light: var(--primary-700);
-	--brand-capsule-dark: var(--primary-300);
+	--brand-frame-light: var(--primary-700);
+	--brand-frame-dark: var(--primary-300);
+	--brand-frame-bar-light: var(--brand-frame-light);
+	--brand-capsule-light: var(--primary-500);
+	--brand-capsule-bar-light: var(--primary-500);
+	--brand-capsule-dark: var(--primary-100);
 	--brand-capsule-from: light-dark(var(--primary-300), var(--primary-200));
 	--brand-capsule-to: light-dark(var(--primary-500), var(--primary-400));
 }
@@ -384,9 +420,12 @@
 	--primary-text-light: var(--primary-800);
 	--primary-on-dark: var(--primary-400);
 	--primary-ring: var(--primary-700);
-	--brand-frame-light: var(--primary-900);
-	--brand-capsule-light: var(--primary-800);
-	--brand-capsule-dark: var(--primary-300);
+	--brand-frame-light: var(--primary-800);
+	--brand-frame-dark: var(--primary-400);
+	--brand-frame-bar-light: var(--brand-frame-light);
+	--brand-capsule-light: var(--primary-600);
+	--brand-capsule-bar-light: var(--primary-600);
+	--brand-capsule-dark: var(--primary-600);
 	--brand-capsule-from: light-dark(var(--primary-300), var(--primary-200));
 	--brand-capsule-to: light-dark(var(--primary-500), var(--primary-400));
 }
@@ -408,9 +447,12 @@
 	--primary-text-light: var(--primary-800);
 	--primary-on-dark: var(--primary-400);
 	--primary-ring: var(--primary-700);
-	--brand-frame-light: var(--primary-900);
-	--brand-capsule-light: var(--primary-800);
-	--brand-capsule-dark: var(--primary-300);
+	--brand-frame-light: var(--primary-800);
+	--brand-frame-dark: var(--primary-400);
+	--brand-frame-bar-light: var(--brand-frame-light);
+	--brand-capsule-light: var(--primary-500);
+	--brand-capsule-bar-light: var(--primary-600);
+	--brand-capsule-dark: var(--primary-100);
 	--brand-capsule-from: light-dark(var(--primary-300), var(--primary-200));
 	--brand-capsule-to: light-dark(var(--primary-500), var(--primary-400));
 }
@@ -478,7 +520,7 @@
 	--sidebar-icon: var(--primary-indicator);
 }
 :root[data-sidebar-colors='dark'] {
-	--sidebar-brand-frame: var(--primary-200);
+	--sidebar-brand-frame: var(--brand-frame-dark);
 	--sidebar-brand-capsule: var(--brand-capsule-dark);
 	--sidebar: var(--swatch-sidebar-dark);
 	--sidebar-foreground: oklch(0.82 0.02 261);
@@ -486,7 +528,7 @@
 	--sidebar-border: var(--swatch-sidebar-dark);
 }
 :root[data-sidebar-colors='brand'] {
-	--sidebar-brand-frame: var(--primary-200);
+	--sidebar-brand-frame: var(--brand-frame-dark);
 	--sidebar-brand-capsule: var(--brand-capsule-dark);
 	--sidebar: var(--primary-900);
 	--sidebar-foreground: var(--primary-100);
@@ -494,7 +536,7 @@
 	--sidebar-border: var(--primary-900);
 }
 :root[data-sidebar-colors='purple'] {
-	--sidebar-brand-frame: var(--primary-200);
+	--sidebar-brand-frame: var(--brand-frame-dark);
 	--sidebar-brand-capsule: var(--brand-capsule-dark);
 	--sidebar: var(--swatch-sidebar-purple);
 	--sidebar-foreground: oklch(0.8 0.09 305);
@@ -502,7 +544,7 @@
 	--sidebar-border: var(--swatch-sidebar-purple);
 }
 :root[data-sidebar-colors='sky'] {
-	--sidebar-brand-frame: var(--primary-200);
+	--sidebar-brand-frame: var(--brand-frame-dark);
 	--sidebar-brand-capsule: var(--brand-capsule-dark);
 	--sidebar: var(--swatch-sidebar-sky);
 	--sidebar-foreground: oklch(0.88 0.07 230);

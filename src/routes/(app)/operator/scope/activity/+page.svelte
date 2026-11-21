@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { plainTitle } from '#lib/utils/page-title.ts';
 	import { tenantActivityQuery } from '#lib/features/audit/queries.ts';
 	import { ActivityTimeline } from '$features/audit';
 	import { describeError } from '$api/errors';
@@ -9,7 +10,9 @@
 	const activityQuery = $derived(tenantActivityQuery(data.tenant.id));
 </script>
 
-<svelte:head><title>Activity · {data.tenant.display_name} · LeadKart</title></svelte:head>
+<svelte:head
+	><title>Activity · {plainTitle(data.tenant.display_name)} · LeadKart</title></svelte:head
+>
 
 <ActivityTimeline
 	data={activityQuery.data ?? null}

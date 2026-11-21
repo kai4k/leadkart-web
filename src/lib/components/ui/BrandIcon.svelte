@@ -12,7 +12,7 @@
 	 *
 	 * The glass plate is the one place an icon draws a translucent surface; with transparency
 	 * reduced or off (the preference, the OS settings) the glass layers are hidden and the plate is the
-	 * opaque card colour (--material-plate-glass / --material-plate-solid, theme/materials.css).
+	 * opaque card colour (--brand-plate-glass / --brand-plate-solid, theme/materials.css; not --material-* tokens, so the icon lives with the other brand primitives).
 	 */
 	import { cn } from '#lib/utils/cn.ts';
 
@@ -304,15 +304,15 @@
 	/* the plate: glass layers, or (transparency reduced / off) the opaque card colour with a hairline */
 	.plate-solid {
 		fill: var(--card);
-		opacity: var(--material-plate-solid);
+		opacity: var(--brand-plate-solid);
 	}
 	.plate-glass {
-		opacity: var(--material-plate-glass);
+		opacity: var(--brand-plate-glass);
 	}
 	.plate-edge {
 		fill: none;
 		stroke: var(--border);
 		stroke-width: 3;
-		opacity: var(--material-plate-solid);
+		opacity: var(--brand-plate-solid);
 	}
 </style>

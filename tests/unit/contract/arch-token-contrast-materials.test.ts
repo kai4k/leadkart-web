@@ -3,7 +3,7 @@
  * The method is scripts/arch/lib/material-bound.mjs + checkMaterials in check-token-contrast.mjs.
  */
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
 	AXES,
 	MATERIAL_LAYERS,
@@ -19,6 +19,9 @@ import {
 	contrastChannel,
 	corners
 } from '../../../scripts/arch/lib/material-bound.mjs';
+
+// the real gate resolves 1,320 combinations: slow on a loaded runner
+vi.setConfig({ testTimeout: 30_000 });
 
 describe('check-token-contrast: the legibility bound of a material (plan G3)', () => {
 	it('1. a fill that is too transparent fails, naming the layer, the mode and the ratio', () => {

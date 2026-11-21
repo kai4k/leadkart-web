@@ -266,7 +266,6 @@ describe('the rebuild-pending allowlist', () => {
 
 	it('has the planned shape, sorted, with a note for every entry naming its task', () => {
 		expect(Object.keys(list).sort()).toEqual([
-			'ceiling',
 			'counts',
 			'drawer',
 			'legacyDataTable',
@@ -300,7 +299,6 @@ describe('the rebuild-pending allowlist only shrinks', () => {
 		readFileSync('scripts/arch/allowlists/phase2-rebuild-pending.json', 'utf8')
 	) as Record<Lists, string[]> & {
 		counts: Record<Lists, Record<string, number>>;
-		ceiling: { entries: number; total: number };
 	};
 	const names: Lists[] = ['rawElements', 'drawer', 'legacyDataTable'];
 
@@ -311,20 +309,22 @@ describe('the rebuild-pending allowlist only shrinks', () => {
 		}
 	});
 
+	/**
+	 * The ceiling is pinned HERE, as literals, not in the JSON: raising a count in the allowlist and the ceiling
+	 * together cannot pass any more, because the number below is in the test. When a task migrates a file,
+	 * lower these two (entries, then occurrences); never raise them.
+	 */
+	const PINNED = { entries: 45, total: 62 };
+
 	it('the ceiling is exact: lower it when a task migrates a file (ratchet down)', () => {
 		const entries = names.reduce((a, n) => a + list[n].length, 0);
 		const total = names.reduce(
 			(a, n) => a + Object.values(list.counts[n]).reduce((x, y) => x + y, 0),
 			0
 		);
-		expect(
-			entries,
-			`${entries} entries, ceiling.entries is ${list.ceiling.entries}: ratchet ceiling.entries down to ${entries}`
-		).toBe(list.ceiling.entries);
-		expect(
-			total,
-			`${total} occurrences, ceiling.total is ${list.ceiling.total}: ratchet ceiling.total down to ${total}`
-		).toBe(list.ceiling.total);
+		expect(entries, `${entries} entries: lower PINNED.entries to ${entries}`).toBe(PINNED.entries);
+		expect(total, `${total} occurrences: lower PINNED.total to ${total}`).toBe(PINNED.total);
+		expect(list).not.toHaveProperty('ceiling');
 	});
 
 	it('a listed file that gains a raw element fails, one at its recorded count passes', () => {

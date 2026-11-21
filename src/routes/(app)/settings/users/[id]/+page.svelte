@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { plainTitle } from '#lib/utils/page-title.ts';
 	import { _ } from 'svelte-i18n';
 	import PageHeader from '$layouts/PageHeader.svelte';
 	import { page } from '$app/state';
@@ -57,7 +58,7 @@
 </script>
 
 <svelte:head>
-	<title>{user ? displayName(user) : 'Member'} · Team · LeadKart</title>
+	<title>{user ? plainTitle(displayName(user)) : 'Member'} · Team · LeadKart</title>
 </svelte:head>
 
 <div class="stack stack-relaxed">

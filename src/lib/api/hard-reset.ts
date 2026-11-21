@@ -170,7 +170,14 @@ export function onResetPendingChange(listener: () => void): () => void {
 }
 
 function notifyPendingChange(): void {
-	for (const listener of pendingListeners) listener();
+	// a throwing listener must not strand the tab: it is isolated, and the latch is already decided
+	for (const listener of pendingListeners) {
+		try {
+			listener();
+		} catch {
+			/* observers only */
+		}
+	}
 }
 
 /**
@@ -194,13 +201,14 @@ export function navigateHard(
 		return false;
 	}
 	reloading = true;
-	notifyPendingChange();
 	qc?.clear();
 	// Nothing actionable from the old context stays on screen (a toast's Undo would send from it).
 	toast.dismiss();
 	writeFlag(reason, source);
 	armRelease(reason, source);
 	replaceLocation(url);
+	// observers run last: a throwing one can no longer keep the navigation from being requested
+	notifyPendingChange();
 	return true;
 }
 

@@ -144,3 +144,23 @@ describe('PageHeader leading slot (a back link above the title)', () => {
 		expect(document.querySelector('[data-page-heading] .mb-1')).toBeNull();
 	});
 });
+
+describe('PageHeader: a title that is a name somebody else typed', () => {
+	it('`isolated` wraps the title in <bdi>, and a crumb marked `isolate` too; otherwise neither', () => {
+		render({
+			title: 'Acme‮',
+			isolated: true,
+			crumbs: [
+				{ label: 'Tenants', href: '/operator/tenants' },
+				{ label: 'Acme‮', isolate: true }
+			]
+		});
+		expect(document.querySelector('h1 bdi')!.textContent).toBe('Acme‮');
+		expect(document.querySelectorAll('nav li bdi')).toHaveLength(1);
+		expect(document.querySelector('nav li a bdi')).toBeNull();
+	});
+	it('a plain title has no <bdi>', () => {
+		render({ title: 'Team' });
+		expect(document.querySelector('bdi')).toBeNull();
+	});
+});

@@ -98,7 +98,7 @@ test.describe('theme customizer', () => {
 		const navigations: string[] = [];
 		page.on('framenavigated', (f) => f === page.mainFrame() && navigations.push(f.url()));
 		await expect(page.getByRole('radiogroup', { name: 'Transparency' })).toBeVisible();
-		await expect(page.getByText(/iPhone/)).toBeVisible();
+		await expect(page.getByText(/Chrome and Edge/)).toBeVisible();
 		await pick(page, 'Transparency', 'Solid');
 		expect(await attr(page, 'data-transparency')).toBe('off');
 		expect(navigations).toEqual([]);
@@ -113,7 +113,7 @@ test.describe('theme customizer', () => {
 			const cs = getComputedStyle(document.documentElement);
 			return {
 				filter: cs.getPropertyValue('--material-bar-filter').trim(),
-				plate: cs.getPropertyValue('--material-plate-solid').trim()
+				plate: cs.getPropertyValue('--brand-plate-solid').trim()
 			};
 		});
 		expect(tokens).toEqual({ filter: 'none', plate: '1' });

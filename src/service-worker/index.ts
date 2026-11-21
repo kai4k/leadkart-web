@@ -45,6 +45,7 @@ import { self } from '$app/service-worker';
 import { version } from '$app/env';
 import { assets, immutable } from '$app/manifest';
 import { asset, resolve } from '$app/paths';
+import { isPrecached } from './precache-filter.ts';
 
 /**
  * Part of every cache name the worker owns. Bump it whenever what the worker may store gets
@@ -69,7 +70,7 @@ const resolveBuildPath = resolve as (path: string) => string;
 /** Files to precache on install — built assets + bundled statics. */
 const APP_SHELL: string[] = [
 	...immutable.map(({ path }) => resolveBuildPath(path)),
-	...assets.map(({ path }) => asset(path))
+	...assets.filter(({ path }) => isPrecached(path)).map(({ path }) => asset(path))
 ];
 
 /**

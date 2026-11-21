@@ -28,10 +28,28 @@ test.describe('brand wiring', () => {
 		expect(hrefs.some((h) => h.endsWith('.svg'))).toBe(true);
 		expect(hrefs.some((h) => h.includes('apple-touch-icon'))).toBe(true);
 		expect(html).toMatch(/<meta name="theme-color" content="#2563EB"/);
-		const og = /<meta property="og:image" content="([^"]+)"/.exec(html)?.[1];
-		expect(og).toBeTruthy();
-		expect((await page.request.get(og!)).status()).toBe(200);
 		expect(html).toContain('name="twitter:card"');
+	});
+
+	// (auth) routes are client-rendered (ssr = false), so their HTML is the app.html shell with no <svelte:head>; any
+	// server-rendered route carries the tags the root layout writes. A 404 is one that needs no session.
+	test('server-rendered pages carry an absolute og:image, og:url and twitter:image on the request origin', async ({
+		page
+	}) => {
+		const res = await page.request.get('/no-such-page-xyz');
+		const html = await res.text();
+		expect(html).toContain(
+			'<meta property="og:image" content="http://localhost:4173/og-image-light.png"'
+		);
+		expect(html).toContain(
+			'<meta name="twitter:image" content="http://localhost:4173/og-image-light.png"'
+		);
+		expect(html).toContain(
+			'<meta property="og:url" content="http://localhost:4173/no-such-page-xyz"'
+		);
+		// and no relative duplicate is left in the shell
+		expect(html.match(/property="og:image"/g)).toHaveLength(1);
+		expect((await page.request.get('/og-image-light.png')).status()).toBe(200);
 	});
 
 	test('the manifest is valid JSON and lists the three icons, each served', async ({ page }) => {
@@ -57,8 +75,17 @@ test.describe('brand wiring', () => {
 				.locator('header [data-brand-mark] svg path')
 				.first()
 				.evaluate((el) => getComputedStyle(el).stroke);
+		const capsuleStroke = (p: Page) =>
+			p
+				.locator('header [data-brand-mark] svg path')
+				.nth(1)
+				.evaluate((el) => getComputedStyle(el).stroke);
 		const before = await frameStroke(page);
 		expect(before).not.toBe('none');
+		// the capsule is a second tone, not the frame colour again, and it follows the palette too
+		const capsuleBefore = await capsuleStroke(page);
+		expect(capsuleBefore).not.toBe('none');
+		expect(capsuleBefore).not.toBe(before);
 
 		await page.getByRole('button', { name: 'Open theme settings' }).click();
 		await page
@@ -68,5 +95,8 @@ test.describe('brand wiring', () => {
 		await expect(page.locator('html')).toHaveAttribute('data-colors', 'teal');
 		const after = await frameStroke(page);
 		expect(after).not.toBe(before);
+		const capsuleAfter = await capsuleStroke(page);
+		expect(capsuleAfter).not.toBe(after);
+		expect(capsuleAfter).not.toBe(capsuleBefore);
 	});
 });

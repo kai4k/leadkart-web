@@ -162,7 +162,7 @@
 			</p>
 			<button
 				type="button"
-				class="label-small text-primary-text hover:underline mt-3 underline"
+				class="label-small text-primary-text mt-3 underline hover:no-underline"
 				onclick={() => statsQuery.refetch()}
 			>
 				Retry

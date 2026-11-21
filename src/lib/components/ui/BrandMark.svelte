@@ -64,7 +64,8 @@
 	const capsule = $derived(mono ? 'stroke-current' : 'stroke-(--mark-capsule)');
 </script>
 
-<span class={cn(brandMarkVariants({ tone }), className)} data-brand-mark>
+<!-- dir="ltr": the lockup (mark, then wordmark) is a logotype and never mirrors in a right-to-left page -->
+<span class={cn(brandMarkVariants({ tone }), className)} data-brand-mark dir="ltr">
 	<svg
 		viewBox="0 0 512 512"
 		class={cn('shrink-0', MARK_SIZE[size])}

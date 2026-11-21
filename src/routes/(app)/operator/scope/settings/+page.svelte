@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { plainTitle } from '#lib/utils/page-title.ts';
 	import {
 		TenantActionPanel,
 		SuspendDialog,
@@ -22,7 +23,7 @@
 	}
 </script>
 
-<svelte:head><title>Settings · {tenant.display_name} · LeadKart</title></svelte:head>
+<svelte:head><title>Settings · {plainTitle(tenant.display_name)} · LeadKart</title></svelte:head>
 
 <TenantActionPanel {tenant} {onAction} />
 

@@ -2,6 +2,8 @@
 	import '../app.css';
 	import { onMount } from 'svelte';
 	import { browser } from '$app/env';
+	import { page } from '$app/state';
+	import { asset } from '$app/paths';
 	import { _, locale } from 'svelte-i18n';
 	import { Toaster, Tooltip } from '$ui';
 	import {
@@ -39,6 +41,13 @@
 	// The old localStorage customiser keys are dead weight now that preferences live in the lk_ui cookie.
 	onMount(removeLegacyThemeKeys);
 </script>
+
+<svelte:head>
+	<!-- absolute URLs on the request origin (adapter-node: ORIGIN): a link-preview crawler ignores a relative image -->
+	<meta property="og:url" content={page.url.origin + page.url.pathname} />
+	<meta property="og:image" content={new URL(asset('og-image-light.png'), page.url.origin).href} />
+	<meta name="twitter:image" content={new URL(asset('og-image-light.png'), page.url.origin).href} />
+</svelte:head>
 
 <a href="#main-content" class="skip-link">{$_('common.skipToContent')}</a>
 

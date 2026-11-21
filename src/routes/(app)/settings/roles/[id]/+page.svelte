@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { plainTitle } from '#lib/utils/page-title.ts';
 	import { _ } from 'svelte-i18n';
 	import PageHeader from '$layouts/PageHeader.svelte';
 	import { Alert, Badge, Button, Card, CopyButton, Skeleton } from '$ui';
@@ -148,7 +149,7 @@
 </script>
 
 <svelte:head>
-	<title>{role?.name ?? 'Role'} · LeadKart</title>
+	<title>{plainTitle(role?.name) || 'Role'} · LeadKart</title>
 </svelte:head>
 
 <div class="stack stack-relaxed">
