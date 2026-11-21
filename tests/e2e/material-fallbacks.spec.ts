@@ -116,21 +116,12 @@ test.describe('glass degrades to opaque', () => {
 
 const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
-/**
- * KNOWN, pre-existing and not caused by the materials: the command palette's search input is `role="combobox"
- * aria-expanded="true"` with no `aria-controls` (bits-ui Command). It is the one finding pinned here, by rule AND by
- * element; any other finding, or the same rule on any other element, fails. Reported for the owner.
- */
-const KNOWN = (v: { id: string; nodes: Array<{ html: string }> }) =>
-	v.id === 'aria-required-attr' &&
-	v.nodes.every((n) => n.html.includes('data-slot="command-input"'));
-
 async function axeClean(page: Page, label: string) {
 	await page.emulateMedia({ reducedMotion: 'reduce' }); // axe reads painted colours: settle every animation first
 	await page.waitForTimeout(400);
 	const results = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
 	const blocking = results.violations.filter(
-		(v) => (v.impact === 'serious' || v.impact === 'critical') && !KNOWN(v)
+		(v) => v.impact === 'serious' || v.impact === 'critical'
 	);
 	expect(
 		blocking.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`),
@@ -158,6 +149,19 @@ test.describe('axe on glass and solid, light and dark', () => {
 	test.beforeEach(async () => {
 		await resetMock();
 	});
+	// The table with ROWS (a stale lead carries a status dot) and the command palette (a combobox naming its listbox):
+	// no known finding is pinned any more.
+	for (const mode of ['light', 'dark'])
+		for (const transparency of ['glass', 'off'])
+			test(`/leads with rows: at rest, then the command palette open (${mode}, ${transparency})`, async ({
+				page
+			}) => {
+				await leads(page, { mode, transparency });
+				await expect(page.getByRole('img', { name: 'Stale lead' }).first()).toBeVisible();
+				await axeClean(page, `/leads ${mode}/${transparency} at rest`);
+				await overlay(page, 'dialog');
+				await axeClean(page, `/leads ${mode}/${transparency} command palette`);
+			});
 	for (const mode of ['light', 'dark'])
 		for (const transparency of ['glass', 'off']) {
 			test(`/dashboard: at rest, with the customizer open, then with a dialog open (${mode}, ${transparency})`, async ({

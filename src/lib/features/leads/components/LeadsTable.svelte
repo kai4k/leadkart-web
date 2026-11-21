@@ -179,6 +179,7 @@
 									{#if stale}
 										<span
 											class="bg-warning-indicator inline-block h-2 w-2 rounded-full"
+											role="img"
 											aria-label="Stale lead"
 											title="No contact in 7+ days"
 										></span>

@@ -77,10 +77,10 @@ describe('AuthShell styles', () => {
 		expect(src).not.toMatch(/--color-|--lk-|text-fg|bg-bg|glass/);
 	});
 
-	it('the backdrop removes its motion under prefers-reduced-motion and skips the pointer script', () => {
+	it('the backdrop removes its pointer motion under prefers-reduced-motion and skips the pointer script', () => {
 		const backdrop = readFileSync('src/lib/layouts/AuthBackdrop.svelte', 'utf8');
 		expect(backdrop).toContain('prefers-reduced-motion: reduce');
-		expect(backdrop).toMatch(/animation:\s*none/);
+		expect(backdrop).toMatch(/transition:\s*none/);
 		expect(backdrop).toContain("matchMedia('(prefers-reduced-motion: reduce)')");
 	});
 

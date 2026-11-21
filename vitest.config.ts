@@ -21,6 +21,7 @@ export default defineConfig({
 			// that without affecting test behaviour.
 			'$app/forms': resolve(__dirname, 'tests/unit/stubs/app-forms.ts'),
 			'$app/env/private': resolve(__dirname, 'tests/unit/stubs/app-env-private.ts'),
+			'$app/env/public': resolve(__dirname, 'tests/unit/stubs/app-env-public.ts'),
 			'$app/env': resolve(__dirname, 'tests/unit/stubs/app-env.ts'),
 			'$app/navigation': resolve(__dirname, 'tests/unit/stubs/app-navigation.ts'),
 			'$app/paths': resolve(__dirname, 'tests/unit/stubs/app-paths.ts'),

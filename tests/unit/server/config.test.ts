@@ -4,7 +4,10 @@ import { configSchema, createConfigSchema } from '#lib/server/config.ts';
 const base = { GO_API_URL: 'http://localhost:8080' };
 const withSecret = { ...base, SCOPE_COOKIE_SECRET: 'x'.repeat(32) };
 // Production also needs a way to know its public origin.
-const prodOrigin = { ORIGIN: 'https://app.example.com' };
+const prodOrigin = {
+	ORIGIN: 'https://app.example.com',
+	PUBLIC_SITE_URL: 'https://app.example.com'
+};
 const issuesOf = (r: { success: boolean; error?: { issues: Array<{ message: string }> } }) =>
 	r.success ? [] : (r.error?.issues.map((i) => i.message) ?? []);
 
@@ -63,9 +66,13 @@ describe('configSchema', () => {
 		expect(
 			configSchema.safeParse({ ...prod, ORIGIN: 'https://app.example.com/path' }).success
 		).toBe(false);
-		expect(configSchema.safeParse({ ...prod, ORIGIN: 'https://app.example.com' }).success).toBe(
-			true
-		);
+		expect(
+			configSchema.safeParse({
+				...prod,
+				ORIGIN: 'https://app.example.com',
+				PUBLIC_SITE_URL: 'https://app.example.com'
+			}).success
+		).toBe(true);
 	});
 
 	it('rejects a non-https ORIGIN in production', () => {
@@ -125,7 +132,11 @@ describe('configSchema: production origin', () => {
 	});
 
 	it('accepts PROTOCOL_HEADER + HOST_HEADER together, not one of them', () => {
-		const headers = { PROTOCOL_HEADER: 'x-forwarded-proto', HOST_HEADER: 'x-forwarded-host' };
+		const headers = {
+			PROTOCOL_HEADER: 'x-forwarded-proto',
+			HOST_HEADER: 'x-forwarded-host',
+			PUBLIC_SITE_URL: 'https://app.example.com'
+		};
 		expect(configSchema.safeParse({ ...prod, ...headers }).success).toBe(true);
 		expect(configSchema.safeParse({ ...prod, PROTOCOL_HEADER: 'x-forwarded-proto' }).success).toBe(
 			false
@@ -167,5 +178,65 @@ describe('configSchema: no test or dev secret in production', () => {
 			SCOPE_COOKIE_SECRET: 'e2e-only-scope-cookie-secret-0123456789abcdef'
 		});
 		expect(out.success).toBe(true);
+	});
+});
+
+describe('configSchema: PUBLIC_SITE_URL (the link-preview origin written into src/app.html)', () => {
+	const dev = { ...withSecret, NODE_ENV: 'development' };
+	const prod = { ...withSecret, NODE_ENV: 'production', ORIGIN: 'https://app.example.com' };
+	const ok = (env: Record<string, unknown>) => configSchema.safeParse(env).success;
+
+	it('is REQUIRED in production, with the same clear error style as GO_API_URL', () => {
+		for (const value of [undefined, '']) {
+			const out = configSchema.safeParse({ ...prod, PUBLIC_SITE_URL: value });
+			expect(out.success).toBe(false);
+			expect(!out.success && out.error.issues.map((i) => i.path.join('.'))).toContain(
+				'PUBLIC_SITE_URL'
+			);
+			expect(issuesOf(out).join()).toMatch(
+				/PUBLIC_SITE_URL is required in production \(a bare https origin, e\.g\. https:\/\/app\.example\.com\)/
+			);
+		}
+	});
+
+	it('may be empty or unset outside production', () => {
+		for (const NODE_ENV of ['development', 'test']) {
+			expect(ok({ ...dev, NODE_ENV })).toBe(true);
+			expect(ok({ ...dev, NODE_ENV, PUBLIC_SITE_URL: '' })).toBe(true);
+		}
+	});
+
+	it('accepts exactly a bare origin', () => {
+		expect(ok({ ...prod, PUBLIC_SITE_URL: 'https://app.example.com' })).toBe(true);
+		expect(ok({ ...prod, PUBLIC_SITE_URL: 'https://app.example.com:8443' })).toBe(true);
+		expect(ok({ ...dev, PUBLIC_SITE_URL: 'https://app.example.com' })).toBe(true);
+	});
+
+	it.each([
+		['a trailing slash', 'https://app.example.com/'],
+		['a path', 'https://app.example.com/app'],
+		['a query', 'https://app.example.com?x=1'],
+		['a fragment', 'https://app.example.com#top'],
+		['credentials', 'https://user:pw@app.example.com'],
+		['no scheme', 'app.example.com'],
+		['a relative path', '/og'],
+		['a different scheme', 'ftp://app.example.com'],
+		['whitespace', ' https://app.example.com'],
+		['an upper-case host that does not round-trip', 'https://APP.example.com']
+	])('refuses %s, in production and outside it', (_name, value) => {
+		const out = configSchema.safeParse({ ...dev, PUBLIC_SITE_URL: value });
+		expect(out.success).toBe(false);
+		expect(issuesOf(out).join()).toMatch(/PUBLIC_SITE_URL must be/);
+		expect(ok({ ...prod, PUBLIC_SITE_URL: value })).toBe(false);
+	});
+
+	it('allows http only when NODE_ENV is not production', () => {
+		expect(ok({ ...dev, PUBLIC_SITE_URL: 'http://localhost:4173' })).toBe(true);
+		expect(ok({ ...withSecret, NODE_ENV: 'test', PUBLIC_SITE_URL: 'http://localhost:4173' })).toBe(
+			true
+		);
+		const out = configSchema.safeParse({ ...prod, PUBLIC_SITE_URL: 'http://app.example.com' });
+		expect(out.success).toBe(false);
+		expect(issuesOf(out).join()).toMatch(/PUBLIC_SITE_URL must be https in production/);
 	});
 });

@@ -10,10 +10,10 @@
 		{
 			variants: {
 				size: {
-					xs: 'inline-size-5 block-size-5 text-[var(--text-2xs)]',
-					sm: 'inline-size-7 block-size-7 text-[var(--text-2xs)]',
-					md: 'inline-size-9 block-size-9 text-xs',
-					lg: 'inline-size-12 block-size-12 text-sm'
+					xs: 'size-5 text-[var(--text-2xs)]',
+					sm: 'size-7 text-[var(--text-2xs)]',
+					md: 'size-9 text-xs',
+					lg: 'size-12 text-sm'
 				}
 			},
 			defaultVariants: { size: 'sm' }
@@ -63,11 +63,7 @@
 			aria-label={member.name}
 		>
 			{#if member.image}
-				<img
-					src={member.image}
-					alt=""
-					class="block-size-full inline-size-full rounded-full object-cover"
-				/>
+				<img src={member.image} alt="" class="size-full rounded-full object-cover" />
 			{:else}
 				{initials(member.name)}
 			{/if}

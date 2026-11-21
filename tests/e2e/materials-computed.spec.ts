@@ -88,13 +88,13 @@ test.describe('materials: computed styles on the built app', () => {
 		opaque(await paint(dialog), 'forced dialog');
 	});
 
-	test('the auth card: opaque while the backdrop drifts, glass under reduced motion, opaque in Solid (plan section 5)', async ({
+	test('the auth card is glass in every motion setting, opaque in Solid (GD22: the backdrop is static, so the card is the signature glass)', async ({
 		page
 	}) => {
 		for (const [transparency, motion, expectation] of [
-			['glass', 'no-preference', opaque],
+			['glass', 'no-preference', glass],
 			['glass', 'reduce', glass],
-			['off', 'reduce', opaque]
+			['off', 'no-preference', opaque]
 		] as const) {
 			await page.emulateMedia({ reducedMotion: motion });
 			await setPrefs(page, { transparency });
@@ -105,6 +105,23 @@ test.describe('materials: computed styles on the built app', () => {
 				`auth card ${transparency} / motion ${motion}`
 			);
 		}
+	});
+
+	test('nothing on the sign-in backdrop animates (a moving backdrop would make the glass card re-blur every frame)', async ({
+		page
+	}) => {
+		await page.emulateMedia({ reducedMotion: 'no-preference' });
+		await setPrefs(page, { transparency: 'glass' });
+		await page.goto('/signin');
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
+		const running = await page.evaluate(
+			() =>
+				document
+					.querySelector('[data-auth-backdrop]')!
+					.getAnimations({ subtree: true })
+					.filter((a) => a.playState === 'running' && (a as CSSAnimation).animationName).length
+		);
+		expect(running).toBe(0);
 	});
 
 	test('a neutral toast over an open dialog is opaque (it is glass when nothing is open)', async ({

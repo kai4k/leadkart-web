@@ -86,8 +86,8 @@ const EXPECTED: Record<string, Measured> = {
 			borderRadius: '9999px' // capsule (plan G7, Q1)
 		},
 		card: {
-			// ... its fill is the popover surface: glass only under reduced motion, opaque while the backdrop drifts (plan G8)
-			backgroundColor: 'oklch(1 0 0)',
+			// ... its fill is the pane material (popover at 84%): the card is glass in every motion setting (GD22)
+			backgroundColor: 'color(srgb 0.99987 1.00005 1.00007 / 0.84)',
 			borderColor: 'oklch(0.92 0.01 268)',
 			borderRadius: '16px'
 		}

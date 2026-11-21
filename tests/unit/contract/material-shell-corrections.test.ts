@@ -81,14 +81,18 @@ describe('b. the active nav item is a visible capsule', () => {
 			'sidebar-accent-foreground on sidebar-accent (over sidebar)'
 		);
 	});
-	it('the dark, brand and purple sidebars get a stronger chip (22%) than the light and sky ones (15%)', () => {
+	it('the dark sidebar gets the strongest chip (28%, with a lifted label), brand and purple 22%, light and sky 15%', () => {
 		const css = src('src/styles/theme/semantic.css');
-		for (const c of ['dark', 'brand', 'purple'])
-			expect(css).toMatch(
-				new RegExp(
-					`:root\\[data-sidebar-colors='${c}'\\] \\{\\s*--sidebar-accent: color-mix\\(in oklab, var\\(--sidebar-accent-foreground\\) 22%`
-				)
+		const mix = (c: string, pct: number) =>
+			new RegExp(
+				`:root\\[data-sidebar-colors='${c}'\\] \\{\\s*--sidebar-accent: color-mix\\(in oklab, var\\(--sidebar-accent-foreground\\) ${pct}%`
 			);
+		expect(css).toMatch(mix('dark', 28));
+		for (const c of ['brand', 'purple']) expect(css).toMatch(mix(c, 22));
+		// the lifted label is what lets the dark chip go to 28% while its label stays at 4.5:1 (gate-proven)
+		expect(css).toMatch(
+			/:root\[data-sidebar-colors='dark'\] \{[^}]*--sidebar-foreground: oklch\(0\.88 0\.02 261\)/
+		);
 		expect(css).toContain(
 			'--sidebar-accent: color-mix(in oklab, var(--sidebar-accent-foreground) 15%, var(--sidebar));'
 		);

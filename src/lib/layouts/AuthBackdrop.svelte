@@ -1,10 +1,12 @@
 <script lang="ts">
 	/**
 	 * The auth pages' decoration: soft primary-coloured washes and a field of pharma shapes (capsules,
-	 * tablets, crosses) that drift and step aside from the pointer. Purely decorative: `aria-hidden`,
+	 * tablets, crosses) that step aside from the pointer. Purely decorative: `aria-hidden`,
 	 * `pointer-events: none`. Colours come only from the `--primary-*` ramp, so the
-	 * field follows the user's primary and mode. Under `prefers-reduced-motion` every animation is
-	 * removed and the pointer script is not even attached: the field is static.
+	 * field follows the user's primary and mode. The marks are STATIC (nothing drifts): the sign-in card is a frosted pane over
+	 * them, and an animated backdrop would make its blur repaint every frame (plan G8, GD22). The only motion is the
+	 * marks stepping aside from the pointer; under `prefers-reduced-motion` that is removed too, and the script is not
+	 * attached.
 	 *
 	 * The seeded generator makes the server render and the client's hydration byte-identical.
 	 */
@@ -76,7 +78,7 @@
 		{#each list as p (`${p.x}-${p.y}`)}
 			<span
 				class="lk-particle lk-particle--{p.kind}"
-				style="--x:{p.x}%;--y:{p.y}%;--len:{p.length}px;--rot:{p.rotation}deg;--delay:{p.delay}s;--c1:var({p.c1});--c2:var({p.c2});"
+				style="--x:{p.x}%;--y:{p.y}%;--len:{p.length}px;--rot:{p.rotation}deg;--c1:var({p.c1});--c2:var({p.c2});"
 			></span>
 		{/each}
 	</div>
@@ -128,7 +130,6 @@
 		inset-block-start: -10%;
 		inset-inline-start: -8%;
 		background: var(--primary-400);
-		animation: lk-drift-a 30s ease-in-out infinite;
 	}
 	.lk-blob--b {
 		inline-size: 32rem;
@@ -137,7 +138,6 @@
 		inset-inline-end: -14%;
 		background: var(--primary-600);
 		opacity: 0.25;
-		animation: lk-drift-b 36s ease-in-out infinite;
 	}
 	.lk-blob--c {
 		inline-size: 26rem;
@@ -145,22 +145,6 @@
 		inset-block-end: -10%;
 		inset-inline-start: 18%;
 		background: var(--primary-300);
-		animation: lk-drift-c 32s ease-in-out infinite;
-	}
-	@keyframes lk-drift-a {
-		50% {
-			translate: 5rem 4rem;
-		}
-	}
-	@keyframes lk-drift-b {
-		50% {
-			translate: -5rem 6rem;
-		}
-	}
-	@keyframes lk-drift-c {
-		50% {
-			translate: 5rem -4rem;
-		}
 	}
 
 	.lk-particle {
@@ -176,8 +160,6 @@
 		transform: rotate(var(--rot)) translate(var(--push-x), var(--push-y)) scale(var(--scale));
 		transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
 		opacity: 0.55;
-		animation: lk-particle-drift 5s ease-in-out infinite;
-		animation-delay: var(--delay);
 	}
 	.lk-particles--far .lk-particle {
 		--scale: 0.85;
@@ -248,18 +230,8 @@
 		block-size: 10px;
 	}
 
-	@keyframes lk-particle-drift {
-		50% {
-			translate: 0 -6px;
-		}
-	}
-
-	/* reduced motion: a static field */
+	/* reduced motion: the marks do not even step aside from the pointer */
 	@media (prefers-reduced-motion: reduce) {
-		.lk-particle,
-		.lk-blob {
-			animation: none;
-		}
 		.lk-particle {
 			transition: none;
 		}

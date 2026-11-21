@@ -146,7 +146,8 @@
 		},
 		"commandPalette": {
 			"title": "Command Palette",
-			"description": "Search for a command to run…"
+			"description": "Search for a command to run…",
+			"results": "Results"
 		},
 		"dismiss": "Dismiss",
 		"search": "Search",

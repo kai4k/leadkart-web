@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './helpers/test';
 import { resetMock } from './helpers/mock';
-import { countFilteredLayers, hasFixedDescendant, leads } from './helpers/materials';
+import { countFilteredLayers, hasFixedDescendant, leads, setPrefs } from './helpers/materials';
 
 /**
  * The layer budget (plan section 5), a HARD gate: elements with a computed `backdrop-filter` are counted in each state
@@ -12,6 +12,9 @@ import { countFilteredLayers, hasFixedDescendant, leads } from './helpers/materi
  * No material has a `position: fixed` descendant (a backdrop filter makes its element the containing block of fixed
  * descendants: everything floating is portalled to <body>, and this pins it). The counts are printed in the test
  * annotations so a regression shows its number.
+ *
+ * /signin (GD22): the card is glass in every motion setting. Its cost is held at the source: the backdrop is static, and
+ * the card is the ONLY filtered layer on the page (1 on a fine pointer, 0 on touch where panes are opaque).
  */
 
 const FINE = { width: 1280, height: 800 };
@@ -139,5 +142,48 @@ test.describe('filtered-layer budget, coarse pointer 390 x 844', () => {
 			.evaluate((el) => getComputedStyle(el).backdropFilter);
 		expect(sheetFilter).toBe('none');
 		expect(withSheet.total).toBeLessThanOrEqual(4);
+	});
+});
+
+test.describe('filtered-layer budget, /signin', () => {
+	test.beforeEach(async () => {
+		await resetMock();
+	});
+
+	test('fine pointer: the card is the only filtered layer, under 35% of the viewport', async ({
+		page
+	}) => {
+		await page.setViewportSize(FINE);
+		await setPrefs(page, { transparency: 'glass' });
+		await page.goto('/signin');
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
+		await page.waitForTimeout(900); // the entrance animation is 0.7 s
+		const c = await countFilteredLayers(page);
+		await note(page, 'signin', c);
+		expect(c.total).toBe(1);
+		await expect(page.locator('.lk-auth-card')).toHaveCSS('backdrop-filter', /blur/);
+		expect(c.area).toBeLessThanOrEqual(0.35);
+	});
+
+	test('Solid: no filtered layer at all', async ({ page }) => {
+		await page.setViewportSize(FINE);
+		await setPrefs(page, { transparency: 'off' });
+		await page.goto('/signin');
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
+		const c = await countFilteredLayers(page);
+		await note(page, 'signin solid', c);
+		expect(c.total).toBe(0);
+	});
+
+	test.describe('touch', () => {
+		test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+		test('the card is opaque on a coarse pointer: no filtered layer', async ({ page }) => {
+			await setPrefs(page, { transparency: 'glass' });
+			await page.goto('/signin');
+			await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
+			const c = await countFilteredLayers(page);
+			await note(page, 'signin touch', c);
+			expect(c.total).toBe(0);
+		});
 	});
 });

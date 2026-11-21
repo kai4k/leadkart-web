@@ -11,8 +11,8 @@ import { LEAD, setPrefs } from './helpers/materials';
  * <= solid's + 5 points).
  *
  * The plan names /data-table-bench (Task 24); that route does not exist yet, so the bench is the real /leads table
- * with 300 rows, the heaviest scrolling list in the app today. /signin measures the auth card over the drifting
- * particles (no scroll: the frames are the animation's).
+ * with 300 rows, the heaviest scrolling list in the app today. /signin measures the glass auth card over the STATIC
+ * particles (GD22), idle and while the pointer sweeps across the marks (the only motion left on that page).
  */
 
 test.skip(({ browserName }) => browserName !== 'chromium', 'CDP throttling is Chromium only');
@@ -96,22 +96,40 @@ test.describe('scroll bench, 4x CPU throttle (annotation)', () => {
 		});
 	});
 
-	test('the sign-in card over the drifting particles: glass vs solid', async ({ page }) => {
+	test('the sign-in card over the static particles: glass vs solid, idle and pointer sweep', async ({
+		page
+	}) => {
 		await resetMock();
 		await page.setViewportSize({ width: 1280, height: 800 });
-		const run = async (transparency: string) => {
+		const run = async (transparency: string, sweep: boolean) => {
 			await setPrefs(page, { transparency });
 			await page.goto('/signin');
 			await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
-			await page.waitForTimeout(500);
-			return measure(page, false);
+			await page.waitForTimeout(900); // the card's entrance animation is 0.7 s
+			if (!sweep) return measure(page, false);
+			let go = true;
+			const mover = (async () => {
+				let i = 0;
+				while (go) {
+					await page.mouse.move(100 + ((i * 37) % 1000), 100 + ((i * 53) % 600));
+					i++;
+				}
+			})();
+			const f = await measure(page, false);
+			go = false;
+			await mover;
+			return f;
 		};
-		const glass = await run('glass');
-		const solid = await run('off');
-		note('signin glass', glass);
-		note('signin solid', solid);
-		// the auth card is opaque while the backdrop drifts (utilities.css), so the two runs are the same material: the
-		// share must be within the plan's +5 points
-		expect(glass.slowShare, 'glass slow-frame share').toBeLessThanOrEqual(solid.slowShare + 5);
+		for (const sweep of [false, true]) {
+			const glass = await run('glass', sweep);
+			const solid = await run('off', sweep);
+			note(`signin ${sweep ? 'sweep' : 'idle'} glass`, glass);
+			note(`signin ${sweep ? 'sweep' : 'idle'} solid`, solid);
+			// the same card, glass vs opaque, over a backdrop that does not drift: within the plan's +5 points
+			expect(
+				glass.slowShare,
+				`glass slow-frame share (${sweep ? 'sweep' : 'idle'})`
+			).toBeLessThanOrEqual(solid.slowShare + 5);
+		}
 	});
 });

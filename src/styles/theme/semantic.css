@@ -522,11 +522,11 @@
 	--sidebar-icon: var(--primary-indicator);
 }
 :root[data-sidebar-colors='dark'] {
-	--sidebar-accent: color-mix(in oklab, var(--sidebar-accent-foreground) 22%, var(--sidebar));
+	--sidebar-accent: color-mix(in oklab, var(--sidebar-accent-foreground) 28%, var(--sidebar));
 	--sidebar-brand-frame: var(--brand-frame-dark);
 	--sidebar-brand-capsule: var(--brand-capsule-dark);
 	--sidebar: var(--swatch-sidebar-dark);
-	--sidebar-foreground: oklch(0.82 0.02 261);
+	--sidebar-foreground: oklch(0.88 0.02 261);
 	--sidebar-accent-foreground: oklch(0.985 0.002 247.839);
 	--sidebar-border: var(--swatch-sidebar-dark);
 }

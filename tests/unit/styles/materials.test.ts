@@ -308,17 +308,12 @@ describe('the material utilities', () => {
 		expect(root.has('--material-primary-text')).toBe(true);
 	});
 
-	it('the auth card is opaque while the backdrop drifts and glass under reduced motion (the G8 bench rule)', () => {
-		let found: postcss.Rule | undefined;
-		postcss.parse(UTILITIES).walkAtRules('media', (m) => {
-			if (m.params.replace(/\s+/g, ' ') !== '(prefers-reduced-motion: no-preference)') return;
-			m.walkRules((r) => {
-				if (r.selector === '.lk-auth-card.material-pane') found = r;
-			});
+	it('the auth card is glass always: no override turns it opaque (GD22); the backdrop is static instead', () => {
+		let override = false;
+		postcss.parse(UTILITIES).walkRules((r) => {
+			if (r.selector.includes('lk-auth-card')) override = true;
 		});
-		expect(found).toBeTruthy();
-		const body = found!.nodes.map(String).join(';');
-		expect(body).toContain('background-color: var(--popover)');
-		expect(body).toContain('backdrop-filter: none');
+		expect(override).toBe(false);
+		expect(UTILITIES).not.toMatch(/prefers-reduced-motion: no-preference/);
 	});
 });

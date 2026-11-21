@@ -31,6 +31,7 @@ import {
 	UPSTREAM_TIMEOUT_MS
 } from '$app/env/private';
 
+import { PUBLIC_SITE_URL } from '$app/env/public';
 import { building, dev } from '$app/env';
 import { z } from 'zod';
 import {
@@ -42,6 +43,16 @@ import {
 const DEV_SCOPE_SECRET = 'dev-only-scope-cookie-secret-not-for-production';
 /** Prefix of the published e2e secret (`preview:e2e`, playwright.config.ts). */
 const E2E_SECRET_PREFIX = 'e2e-only';
+
+/** True when `v` is exactly the origin of the URL it parses to. */
+function isBareOrigin(v: string): boolean {
+	try {
+		const u = new URL(v);
+		return (u.protocol === 'https:' || u.protocol === 'http:') && u.origin === v;
+	} catch {
+		return false;
+	}
+}
 
 /** Empty env values (`KEY=` in a copied .env file) mean "unset". */
 const emptyToUndefined = (v: unknown) => (v === '' ? undefined : v);
@@ -86,6 +97,22 @@ export function createConfigSchema({ allowDevSecret }: { allowDevSecret: boolean
 			),
 
 			/**
+			 * Public origin written into the link-preview tags of src/app.html (og:url, og:image, twitter:image).
+			 * Empty or exactly a bare origin: `new URL(v).origin === v` (no path, no trailing slash, no credentials,
+			 * no query or fragment). https, or http outside production. Required in production (superRefine).
+			 */
+			PUBLIC_SITE_URL: z.preprocess(
+				emptyToUndefined,
+				z
+					.string()
+					.refine(
+						isBareOrigin,
+						'PUBLIC_SITE_URL must be a bare origin (e.g. https://app.example.com): no path, trailing slash, credentials, query or fragment'
+					)
+					.optional()
+			),
+
+			/**
 			 * adapter-node reads these to build the request origin behind a
 			 * TLS-terminating proxy. Validated here only for presence: production
 			 * needs ORIGIN or both, or Kit's origin check rejects every form action.
@@ -124,6 +151,20 @@ export function createConfigSchema({ allowDevSecret }: { allowDevSecret: boolean
 				});
 			}
 			if (v.NODE_ENV !== 'production') return;
+			if (!v.PUBLIC_SITE_URL) {
+				ctx.addIssue({
+					code: 'custom',
+					path: ['PUBLIC_SITE_URL'],
+					message:
+						'PUBLIC_SITE_URL is required in production (a bare https origin, e.g. https://app.example.com)'
+				});
+			} else if (!v.PUBLIC_SITE_URL.startsWith('https://')) {
+				ctx.addIssue({
+					code: 'custom',
+					path: ['PUBLIC_SITE_URL'],
+					message: 'PUBLIC_SITE_URL must be https in production'
+				});
+			}
 			if (v.ORIGIN && !v.ORIGIN.startsWith('https://')) {
 				ctx.addIssue({
 					code: 'custom',
@@ -175,6 +216,7 @@ function load(): Config {
 		NODE_ENV: NODE_ENV || (dev ? 'development' : undefined),
 		SCOPE_COOKIE_SECRET,
 		ORIGIN,
+		PUBLIC_SITE_URL,
 		PROTOCOL_HEADER,
 		HOST_HEADER,
 		UPSTREAM_TIMEOUT_MS

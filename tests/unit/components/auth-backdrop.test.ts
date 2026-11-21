@@ -26,9 +26,15 @@ describe('auth backdrop', () => {
 			/\.lk-backdrop,[\s\S]*?position: absolute;[\s\S]*?pointer-events: none;/
 		);
 	});
-	it('prefers-reduced-motion removes every animation and transition, and the pointer script', () => {
+	it('is STATIC: no keyframes, no animation property, so the glass card never re-blurs a moving backdrop (GD22)', () => {
+		const style = svelte.slice(svelte.indexOf('<style>'));
+		expect(style).not.toMatch(/@keyframes/);
+		expect(style).not.toMatch(/\banimation(-[a-z]+)?\s*:/);
+		expect(svelte).not.toContain('--delay');
+	});
+	it('prefers-reduced-motion removes the pointer transition and the pointer script', () => {
 		expect(svelte).toMatch(
-			/@media \(prefers-reduced-motion: reduce\)\s*\{[\s\S]*?\.lk-particle,\s*\.lk-blob\s*\{\s*animation: none;[\s\S]*?transition: none;/
+			/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.lk-particle\s*\{\s*transition: none;/
 		);
 		expect(svelte).toContain("matchMedia('(prefers-reduced-motion: reduce)').matches");
 	});
