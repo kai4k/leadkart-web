@@ -85,6 +85,7 @@ describe('the customizer sheet', () => {
 			'Content width',
 			'Sidebar size',
 			'Mode',
+			'Transparency',
 			'Sidebar colour',
 			'Primary colour'
 		]);

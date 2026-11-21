@@ -45,6 +45,30 @@ test.describe('preferences at SSR', () => {
 		const tag = htmlTag(await res.text());
 		expect(tag).toContain('data-layout="semibox"');
 		expect(tag).toContain('data-mode="dark"');
+		// a cookie written before the Transparency axis existed decodes to the default level
+		expect(tag).toContain('data-transparency="glass"');
+	});
+
+	test('transparency "off" in the cookie is rendered onto <html>', async ({ page }) => {
+		const off = b64url(
+			JSON.stringify({ v: 1, layout: 'vertical', mode: 'light', transparency: 'off' })
+		);
+		await page.context().addCookies([{ name: 'lk_ui', value: off, url: 'http://localhost:4173' }]);
+		const tag = htmlTag(await (await page.request.get('/signin')).text());
+		expect(tag).toContain('data-transparency="off"');
+		expect(
+			(await (await page.request.get('/signin')).text()).match(/data-transparency=/g)
+		).toHaveLength(1);
+	});
+
+	test('a hostile transparency value renders glass and injects no markup', async ({ page }) => {
+		const hostile = b64url(JSON.stringify({ v: 1, transparency: '"><script>alert(2)</script>' }));
+		await page
+			.context()
+			.addCookies([{ name: 'lk_ui', value: hostile, url: 'http://localhost:4173' }]);
+		const body = await (await page.request.get('/signin')).text();
+		expect(htmlTag(body)).toContain('data-transparency="glass"');
+		expect(body).not.toContain('alert(2)');
 	});
 
 	test('a hostile cookie renders the defaults and injects no markup', async ({ page }) => {

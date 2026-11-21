@@ -44,6 +44,19 @@ describe('htmlShellHandle', () => {
 		expect(out).toContain('data-mode="dark"');
 		expect(out).not.toContain('%lk.html.attrs%');
 	});
+	it('writes data-transparency from the validated enum, and glass for anything else', async () => {
+		for (const transparency of ['glass', 'reduced', 'off'] as const) {
+			const { html } = await run(encodePreferences({ ...DEFAULT_PREFERENCES, transparency }));
+			expect(await html(TEMPLATE)).toContain(`data-transparency="${transparency}"`);
+		}
+		const hostile = btoa(JSON.stringify({ v: 1, transparency: '"><script>alert(1)</script>' }))
+			.replaceAll('+', '-')
+			.replaceAll('/', '_')
+			.replace(/=+$/, '');
+		const out = (await (await run(hostile)).html(TEMPLATE)) ?? '';
+		expect(out).toContain('data-transparency="glass"');
+		expect(out).not.toContain('<script');
+	});
 	it('renders defaults and no markup for a hostile cookie', async () => {
 		const { event, html } = await run('"><script>alert(1)</script>');
 		expect(event.locals.preferences).toEqual(DEFAULT_PREFERENCES);

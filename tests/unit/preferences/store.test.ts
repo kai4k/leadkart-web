@@ -25,7 +25,7 @@ describe('createPreferences', () => {
 		expect(storage.write).toHaveBeenCalledWith({ ...DEFAULT_PREFERENCES, mode: 'dark' });
 		expect(el.getAttribute('data-mode')).toBe('dark');
 	});
-	it('reset() writes the defaults and restores all 8 attributes', () => {
+	it('reset() writes the defaults and restores all 9 attributes', () => {
 		const { store, storage, el } = setup();
 		store.set({ mode: 'dark', colors: 'teal' });
 		storage.write.mockClear();
@@ -33,7 +33,7 @@ describe('createPreferences', () => {
 		expect(storage.write).toHaveBeenCalledWith(DEFAULT_PREFERENCES);
 		expect(el.getAttribute('data-mode')).toBe('light');
 		expect(el.getAttribute('data-colors')).toBe('leadkart');
-		expect(el.getAttributeNames().filter((n) => n.startsWith('data-'))).toHaveLength(8);
+		expect(el.getAttributeNames().filter((n) => n.startsWith('data-'))).toHaveLength(9);
 	});
 	it('ignores a value outside the enum', () => {
 		const { store, storage, el } = setup();

@@ -33,6 +33,7 @@ const KIND: Record<PreferenceKey, TileKind> = {
 	contentWidth: 'wireframe',
 	sidebar: 'wireframe',
 	mode: 'wireframe',
+	transparency: 'wireframe',
 	darkPalette: 'swatch',
 	sidebarColors: 'swatch',
 	colors: 'swatch'
@@ -45,6 +46,7 @@ const ORDER: readonly PreferenceKey[] = [
 	'contentWidth',
 	'sidebar',
 	'mode',
+	'transparency',
 	'darkPalette',
 	'sidebarColors',
 	'colors'
@@ -58,9 +60,10 @@ const VISIBLE: Partial<Record<PreferenceKey, (p: Preferences) => boolean>> = {
 	darkPalette: (p) => p.mode === 'dark' || p.mode === 'auto'
 };
 
-/** The sidebar group says where Ctrl/Cmd+B works; the dark palette group says when it applies. */
+/** The sidebar group says where Ctrl/Cmd+B works; the dark palette group says when it applies; the transparency group says what the page cannot read. */
 const HINT: Partial<Record<PreferenceKey, string>> = {
 	sidebar: 'customizer.sidebar.hint',
+	transparency: 'customizer.transparency.hint',
 	darkPalette: 'customizer.darkPalette.hint'
 };
 

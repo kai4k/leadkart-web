@@ -17,7 +17,8 @@ const DEFAULTS = {
 	'data-mode': 'light',
 	'data-colors': 'leadkart',
 	'data-sidebar-colors': 'light',
-	'data-dark-palette': 'default'
+	'data-dark-palette': 'default',
+	'data-transparency': 'glass'
 } as const;
 
 const attr = (page: Page, name: string) => page.locator('html').getAttribute(name);
@@ -79,6 +80,8 @@ test.describe('theme customizer', () => {
 			['Sidebar size', 'Medium', 'data-sidebar', 'medium'],
 			['Sidebar colour', 'Brand', 'data-sidebar-colors', 'brand'],
 			['Mode', 'Dark', 'data-mode', 'dark'],
+			['Transparency', 'Tinted', 'data-transparency', 'reduced'],
+			['Transparency', 'Solid', 'data-transparency', 'off'],
 			['Dark surfaces', 'Zinc', 'data-dark-palette', 'zinc'],
 			['Mode', 'Black and white', 'data-mode', 'black-white']
 		] as const;
@@ -86,6 +89,36 @@ test.describe('theme customizer', () => {
 			await pick(page, group, option);
 			expect(await attr(page, name), `${group}: ${option}`).toBe(value);
 		}
+	});
+
+	test('Transparency: Solid updates <html> with no reload, the next server render has it, and the hint is on screen', async ({
+		page
+	}) => {
+		await open(page);
+		const navigations: string[] = [];
+		page.on('framenavigated', (f) => f === page.mainFrame() && navigations.push(f.url()));
+		await expect(page.getByRole('radiogroup', { name: 'Transparency' })).toBeVisible();
+		await expect(page.getByText(/iPhone/)).toBeVisible();
+		await pick(page, 'Transparency', 'Solid');
+		expect(await attr(page, 'data-transparency')).toBe('off');
+		expect(navigations).toEqual([]);
+		await expect(
+			page.getByRole('radiogroup', { name: 'Transparency' }).getByRole('radio', { name: 'Solid' })
+		).toHaveAttribute('aria-checked', 'true');
+		expect(htmlTag(await (await page.request.get('/dashboard')).text())).toContain(
+			'data-transparency="off"'
+		);
+		// the material tokens follow the level: opaque fills, no backdrop filter (the shell consumes them from G6)
+		const tokens = await page.evaluate(() => {
+			const cs = getComputedStyle(document.documentElement);
+			return {
+				filter: cs.getPropertyValue('--material-bar-filter').trim(),
+				plate: cs.getPropertyValue('--material-plate-solid').trim()
+			};
+		});
+		expect(tokens).toEqual({ filter: 'none', plate: '1' });
+		await page.getByRole('button', { name: 'Reset to defaults' }).click();
+		expect(await attr(page, 'data-transparency')).toBe('glass');
 	});
 
 	test('the horizontal layout drops the groups that do not apply', async ({ page }) => {

@@ -40,7 +40,7 @@ export function decodePreferences(raw: string | null | undefined): Preferences {
 	}
 }
 
-/** The eight `data-*` pairs in schema order. Every value comes from the enum, never from input. */
+/** The nine `data-*` pairs in schema order. Every value comes from the enum, never from input. */
 export function htmlAttributes(p: Preferences): string {
 	return PREFERENCE_KEYS.map((key) => `${PREFERENCE_ATTRIBUTES[key]}="${p[key]}"`).join(' ');
 }

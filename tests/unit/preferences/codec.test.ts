@@ -28,7 +28,8 @@ describe('preferences codec', () => {
 			mode: 'black-white',
 			colors: 'leadkart',
 			sidebarColors: 'purple',
-			darkPalette: 'neutral'
+			darkPalette: 'neutral',
+			transparency: 'reduced'
 		} as const;
 		expect(`lk_ui=${encodePreferences(p)}`.length).toBeLessThanOrEqual(300);
 	});
@@ -62,12 +63,66 @@ describe('preferences codec', () => {
 		expect(long.length).toBeGreaterThan(400);
 		expect(decodePreferences(long)).toEqual(DEFAULT_PREFERENCES);
 	});
-	it('writes exactly the 8 attributes from the enum', () => {
+	it('writes exactly the 9 attributes from the enum', () => {
 		expect(htmlAttributes(DEFAULT_PREFERENCES)).toBe(
 			'data-layout="vertical" data-nav-type="default" data-content-width="default" data-sidebar="large" ' +
-				'data-mode="light" data-colors="leadkart" data-sidebar-colors="light" data-dark-palette="default"'
+				'data-mode="light" data-colors="leadkart" data-sidebar-colors="light" data-dark-palette="default" ' +
+				'data-transparency="glass"'
 		);
 	});
+	it('transparency round-trips for each value, and the default is glass', () => {
+		for (const transparency of ['glass', 'reduced', 'off'] as const)
+			expect(
+				decodePreferences(encodePreferences({ ...DEFAULT_PREFERENCES, transparency }))
+			).toEqual({
+				...DEFAULT_PREFERENCES,
+				transparency
+			});
+		expect(DEFAULT_PREFERENCES.transparency).toBe('glass');
+	});
+	it('an old cookie written before the field existed decodes to glass', () => {
+		const old = b64(
+			JSON.stringify({
+				v: 1,
+				layout: 'semibox',
+				navType: 'default',
+				contentWidth: 'default',
+				sidebar: 'large',
+				mode: 'dark',
+				colors: 'teal',
+				sidebarColors: 'light',
+				darkPalette: 'default'
+			})
+		);
+		expect(decodePreferences(old)).toEqual({
+			...DEFAULT_PREFERENCES,
+			layout: 'semibox',
+			mode: 'dark',
+			colors: 'teal',
+			transparency: 'glass'
+		});
+	});
+	it.each([
+		'<script>',
+		'"><img src=x onerror=1>',
+		'OFF',
+		'solid',
+		'tinted',
+		' glass',
+		'',
+		null,
+		1,
+		['off'],
+		{ a: 1 }
+	])(
+		'a hostile or unknown transparency %j falls back to glass and nothing else changes',
+		(value) => {
+			const raw = b64(JSON.stringify({ v: 1, mode: 'dark', transparency: value }));
+			const decoded = decodePreferences(raw);
+			expect(decoded).toEqual({ ...DEFAULT_PREFERENCES, mode: 'dark' });
+			expect(htmlAttributes(decoded)).toContain('data-transparency="glass"');
+		}
+	);
 	it('emits only enum members whatever hostile text every field carried', () => {
 		const hostile = ['"><script>alert(1)</script>', 'a b', "x' onload='1", '\u0000', 'DARK '];
 		for (const h of hostile) {
@@ -80,14 +135,15 @@ describe('preferences codec', () => {
 					mode: h,
 					colors: h,
 					sidebarColors: h,
-					darkPalette: h
+					darkPalette: h,
+					transparency: h
 				})
 			);
 			const decoded = decodePreferences(raw);
 			expect(decoded).toEqual(DEFAULT_PREFERENCES);
 			const attrs = htmlAttributes(decoded);
 			expect(attrs).not.toMatch(/[<>']/);
-			expect(attrs.match(/="/g)).toHaveLength(8);
+			expect(attrs.match(/="/g)).toHaveLength(9);
 		}
 	});
 });

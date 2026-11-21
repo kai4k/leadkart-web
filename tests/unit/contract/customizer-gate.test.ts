@@ -10,6 +10,8 @@ describe('the customizer never offers a value outside the contrast gate (server 
 		for (const v of offered('colors')) expect(AXES.colors).toContain(v);
 		for (const v of offered('darkPalette')) expect(AXES.darkPalette).toContain(v);
 		for (const v of offered('sidebarColors')) expect(AXES.sidebarColors).toContain(v);
+		// every Transparency level offered is a level the gate runs (glass, reduced, off)
+		expect(offered('transparency').sort()).toEqual([...AXES.transparency].sort());
 		// `auto` is the OS choosing light or dark, which the gate covers as those two
 		for (const v of offered('mode')) expect([...AXES.mode, 'auto']).toContain(v);
 	});

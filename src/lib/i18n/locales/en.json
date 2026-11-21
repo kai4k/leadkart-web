@@ -497,6 +497,13 @@
 			"auto": "Auto (follows your device)",
 			"black-white": "Black and white"
 		},
+		"transparency": {
+			"title": "Transparency",
+			"hint": "How see-through bars and panels are. Web pages can't read your iPhone's Liquid Glass setting, so choose here. Your system's Reduce transparency setting applies where the browser supports it.",
+			"glass": "Glass",
+			"reduced": "Tinted",
+			"off": "Solid"
+		},
 		"darkPalette": {
 			"title": "Dark surfaces",
 			"hint": "Used in dark and auto mode.",

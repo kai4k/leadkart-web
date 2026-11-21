@@ -258,6 +258,24 @@
 		inline-size: var(--spacing-1);
 	}
 
+	/* transparency: a striped page under the bar and the sidebar, which are drawn as flat colours at
+	   a level of see-through (NOT a backdrop filter: eight tiles would be eight filtered layers) */
+	[data-preview^='transparency-'] {
+		--cz-page: repeating-linear-gradient(
+			135deg,
+			var(--muted) 0 var(--spacing-1),
+			var(--primary-soft) var(--spacing-1) var(--spacing-2)
+		);
+	}
+	[data-preview='transparency-glass'] .cz-top,
+	[data-preview='transparency-glass'] .cz-side {
+		opacity: 0.55;
+	}
+	[data-preview='transparency-reduced'] .cz-top,
+	[data-preview='transparency-reduced'] .cz-side {
+		opacity: 0.85;
+	}
+
 	/* mode: what the mode looks like, whatever mode the page is in */
 	[data-preview='mode-light'],
 	[data-preview='mode-black-white'] {

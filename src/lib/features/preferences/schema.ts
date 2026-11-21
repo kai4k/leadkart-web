@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * The eight customiser axes, one list per axis. This is the only place that knows the legal
+ * The nine customiser axes, one list per axis. This is the only place that knows the legal
  * values: the cookie decoder, the store, the `<html data-*>` writer and the customiser UI all read
  * it, so nothing that reaches the document can be anything but a member of these lists.
  */
@@ -13,7 +13,9 @@ export const PREFERENCE_VALUES = {
 	mode: ['light', 'dark', 'auto', 'black-white'],
 	colors: ['leadkart', 'green', 'violet', 'orange', 'teal', 'fuchsia', 'lime', 'amber'],
 	sidebarColors: ['light', 'dark', 'brand', 'purple', 'sky'],
-	darkPalette: ['default', 'zinc', 'stone', 'neutral', 'gray']
+	darkPalette: ['default', 'zinc', 'stone', 'neutral', 'gray'],
+	/** how see-through bars and panels are: glass (the default), reduced ("Tinted"), off ("Solid") */
+	transparency: ['glass', 'reduced', 'off']
 } as const;
 
 export type PreferenceKey = keyof typeof PREFERENCE_VALUES;
@@ -29,7 +31,8 @@ export const DEFAULT_PREFERENCES: Readonly<Preferences> = Object.freeze({
 	mode: 'light',
 	colors: 'leadkart',
 	sidebarColors: 'light',
-	darkPalette: 'default'
+	darkPalette: 'default',
+	transparency: 'glass'
 });
 
 /** The `<html>` attribute each axis is written to. CSS selects on these. */
@@ -41,7 +44,8 @@ export const PREFERENCE_ATTRIBUTES: Readonly<Record<PreferenceKey, string>> = Ob
 	mode: 'data-mode',
 	colors: 'data-colors',
 	sidebarColors: 'data-sidebar-colors',
-	darkPalette: 'data-dark-palette'
+	darkPalette: 'data-dark-palette',
+	transparency: 'data-transparency'
 });
 
 /** Is `value` a legal value for `key`? The one membership test the store and the codec share. */
@@ -68,6 +72,7 @@ export const preferencesSchema = z
 		mode: axis('mode'),
 		colors: axis('colors'),
 		sidebarColors: axis('sidebarColors'),
-		darkPalette: axis('darkPalette')
+		darkPalette: axis('darkPalette'),
+		transparency: axis('transparency')
 	})
 	.catch(() => ({ ...DEFAULT_PREFERENCES })) as unknown as z.ZodType<Preferences>;
