@@ -19,11 +19,11 @@
 	data-slot="dropdown-menu-sub-trigger"
 	data-inset={inset}
 	class={cn(
-		"item-highlight focus:bg-accent focus:text-accent-foreground data-open:bg-accent data-open:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground gap-1.5 rounded-md px-1.5 py-1 text-sm data-inset:ps-7 [&_svg:not([class*='size-'])]:size-4 flex cursor-default items-center outline-hidden select-none [&_svg]:pointer-events-none [&_svg]:shrink-0",
+		"item-highlight focus:bg-accent focus:text-accent-foreground data-open:bg-accent data-open:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground gap-1.5 rounded-lg px-1.5 py-1 text-sm data-inset:ps-7 [&_svg:not([class*='size-'])]:size-4 flex cursor-default items-center outline-hidden select-none [&_svg]:pointer-events-none [&_svg]:shrink-0",
 		className
 	)}
 	{...restProps}
 >
 	{@render children?.()}
-	<ChevronRightIcon class="cn-rtl-flip ms-auto" />
+	<ChevronRightIcon class="rtl:rotate-180 ms-auto" />
 </DropdownMenuPrimitive.SubTrigger>

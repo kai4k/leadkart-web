@@ -227,6 +227,12 @@ describe('the material utilities', () => {
 		for (const u of used) expect(declared, u).toContain(u);
 	});
 
+	it('the neutral toast (a !important material) is made opaque over an open modal by its own rule', () => {
+		expect(UTILITIES).toMatch(
+			/[data-sonner-toast]:not([data-type])s*{[^}]*background-color: var(--popover) !important/
+		);
+	});
+
 	it('no glass on glass is ONE structural rule: a material in a material, or over an open modal surface, is opaque', () => {
 		const m = /\n(:is\(\.material-bar[^{]*)\{([^}]*)\}/.exec(UTILITIES);
 		expect(m).not.toBeNull();

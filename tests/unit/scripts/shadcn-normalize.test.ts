@@ -360,3 +360,76 @@ describe('shadcn normaliser: the scrim (plan G2)', () => {
 		expect(normalizeClasses(once)).toBe(once);
 	});
 });
+
+describe('shadcn normaliser: the pane material (plan G5)', () => {
+	const ui = (family: string, file: string) => `src/lib/components/ui/${family}/${file}`;
+	const cls = (src: string, file: string) =>
+		(normalizeSource(src, { icons: ICONS, file }) as { out: string }).out;
+	const CONTENT =
+		'<i class="bg-popover text-popover-foreground ring-border rounded-lg p-1 shadow-md ring-1 duration-100"></i>';
+
+	it.each([
+		['dialog', 'dialog-content.svelte'],
+		['alert-dialog', 'alert-dialog-content.svelte'],
+		['sheet', 'sheet-content.svelte'],
+		['popover', 'popover-content.svelte'],
+		['dropdown-menu', 'dropdown-menu-content.svelte'],
+		['dropdown-menu', 'dropdown-menu-sub-content.svelte'],
+		['select', 'select-content.svelte']
+	])(
+		'%s content: bg-popover becomes material-pane; shadow, ring and ring colour go; rounded-xl',
+		(f, file) => {
+			const out = cls(CONTENT, ui(f, file));
+			expect(out).toContain('material-pane');
+			expect(out).toContain('text-popover-foreground');
+			expect(out).toContain('rounded-xl');
+			for (const gone of ['bg-popover', 'shadow-md', 'ring-1', 'ring-border', 'rounded-lg'])
+				expect(out).not.toContain(gone);
+		}
+	);
+
+	it('shadow-lg goes too, and the sheet drops its side borders (the material edge replaces them)', () => {
+		const out = cls(
+			'<i class="bg-popover shadow-lg data-[side=bottom]:border-t data-[side=left]:border-s data-[side=right]:border-e data-[side=top]:border-b data-[side=left]:w-3/4"></i>',
+			ui('sheet', 'sheet-content.svelte')
+		);
+		expect(out).toContain('material-pane');
+		expect(out).toContain('data-[side=left]:w-3/4');
+		expect(out).not.toMatch(/shadow-lg|border-[tseb]\b/);
+	});
+
+	it('items: rounded-sm and rounded-md become rounded-lg', () => {
+		for (const [f, file] of [
+			['dropdown-menu', 'dropdown-menu-item.svelte'],
+			['dropdown-menu', 'dropdown-menu-checkbox-item.svelte'],
+			['dropdown-menu', 'dropdown-menu-sub-trigger.svelte'],
+			['select', 'select-item.svelte'],
+			['command', 'command-item.svelte']
+		])
+			for (const r of ['rounded-sm', 'rounded-md'])
+				expect(cls(`<i class="${r} px-2"></i>`, ui(f, file))).toBe(
+					'<i class="rounded-lg px-2"></i>'
+				);
+	});
+
+	it('the command root is transparent (the dialog or popover around it is the material)', () => {
+		expect(cls('<i class="bg-popover rounded-xl! p-1"></i>', ui('command', 'command.svelte'))).toBe(
+			'<i class="bg-transparent rounded-xl! p-1"></i>'
+		);
+	});
+
+	it('does not touch bg-popover outside the material families or outside content files', () => {
+		expect(cls('<i class="bg-popover"></i>', ui('card', 'card.svelte'))).toBe(
+			'<i class="bg-popover"></i>'
+		);
+		expect(cls('<i class="bg-popover"></i>', ui('select', 'select-scroll-up-button.svelte'))).toBe(
+			'<i class="bg-popover"></i>'
+		);
+	});
+
+	it('is idempotent', () => {
+		const file = ui('popover', 'popover-content.svelte');
+		const once = cls(CONTENT, file);
+		expect(cls(once, file)).toBe(once);
+	});
+});

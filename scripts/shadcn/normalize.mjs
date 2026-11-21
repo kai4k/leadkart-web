@@ -20,7 +20,11 @@
  *      sheet, alert-dialog) `--z-modal` for panel AND scrim, so a modal opened later covers an
  *      earlier one; sidebar and sticky parts `--z-sticky`; floating content (popover, select,
  *      dropdown, calendar popups) `--z-popover`
- *   8. FAILS on any `/<alpha>` modifier left on a text, ring, border-input or solid-fill colour
+ *   8. the pane material (plan G5, `MATERIAL_BY_FAMILY`): the content of a dialog, alert dialog, sheet, popover,
+ *      dropdown menu and select is `material-pane` (its `bg-popover`, shadow, ring and ring colour go, the radius
+ *      is `rounded-xl`; a sheet's side borders go, the material's edge replaces them); the items are `rounded-lg`;
+ *      the command root is transparent (the dialog or popover around it is the material)
+ *   9. FAILS on any `/<alpha>` modifier left on a text, ring, border-input or solid-fill colour
  *      (the same rule as the `check-tokens` arch gate; no alpha is allowed: the scrim is `bg-scrim`)
  *
  * Only class strings are rewritten: `class="…"`, `class={…}` and the arguments of `cn(…)` / `cva(…)`,
@@ -120,6 +124,52 @@ const INDICATOR = [
 	[/^bg-primary-foreground$/, 'bg-primary-indicator-foreground']
 ];
 
+/**
+ * Plan G5: which ui folders sit on the pane material, and what the content file and the item files of each become.
+ * `content` files are `*-content.svelte`; `item` files are the rows inside it. The rules apply to class tokens only
+ * (`rewriteToken`), with the variant chain kept.
+ */
+const MATERIAL_BY_FAMILY = {
+	dialog: 'pane',
+	'alert-dialog': 'pane',
+	sheet: 'pane',
+	popover: 'pane',
+	'dropdown-menu': 'pane',
+	select: 'pane',
+	command: 'root'
+};
+const CONTENT_FILE = /-content\.svelte$/;
+const ITEM_FILE = /(?:-item|-checkbox-item|-radio-item|-sub-trigger)\.svelte$/;
+const MATERIAL_CONTENT = [
+	[/^bg-popover$/, 'material-pane'],
+	[/^rounded-(?:lg|md)$/, 'rounded-xl']
+];
+/** Dropped from a material's content: the material draws its own shadow and edge. */
+const MATERIAL_DROP = [
+	{ variants: /^$/, utility: /^(?:shadow-md|shadow-lg|ring-1|ring-border)$/ },
+	// a sheet's side border: the material's edge replaces it
+	{ variants: /^data-\[side=(?:top|bottom|left|right)\]$/, utility: /^border-(?:t|b|s|e)$/ }
+];
+const MATERIAL_ITEM = [[/^rounded-(?:sm|md)$/, 'rounded-lg']];
+const MATERIAL_ROOT = [[/^bg-popover$/, 'bg-transparent']];
+
+/** The role of a file inside a material family: `content`, `item`, `root`, or undefined. */
+export function materialRole(file = '') {
+	const family = familyOf(file);
+	const kind = family && MATERIAL_BY_FAMILY[family];
+	if (!kind) return undefined;
+	const base = file.replaceAll('\\', '/').split('/').pop() ?? '';
+	if (kind === 'root')
+		return base === 'command.svelte'
+			? 'root'
+			: ITEM_FILE.test(base) || /^command-(?:link-)?item\.svelte$/.test(base)
+				? 'item'
+				: undefined;
+	if (CONTENT_FILE.test(base)) return 'content';
+	if (ITEM_FILE.test(base)) return 'item';
+	return undefined;
+}
+
 /** Invalid-state ring/border alphas on a control: dropped (the control shows `aria-invalid` through its own border token). */
 const DROP = [
 	{ variants: /aria-invalid/, utility: /^(?:ring|border)-destructive\/\d+$/ },
@@ -188,10 +238,30 @@ function splitVariants(token) {
 	return cut < 0 ? ['', token] : [token.slice(0, cut), token.slice(cut + 1)];
 }
 
-function rewriteToken(token, z = Z_FLOATING, family) {
+function rewriteToken(token, z = Z_FLOATING, family, role) {
 	const [variants, utility] = splitVariants(token);
 	if (DROP.some((d) => d.variants.test(variants) && d.utility.test(utility))) return '';
+	if (
+		role === 'content' &&
+		MATERIAL_DROP.some((d) => d.variants.test(variants) && d.utility.test(utility))
+	)
+		return '';
 	let next = utility;
+	if (!variants || role === 'item') {
+		const table =
+			role === 'content'
+				? MATERIAL_CONTENT
+				: role === 'item'
+					? MATERIAL_ITEM
+					: role === 'root'
+						? MATERIAL_ROOT
+						: [];
+		for (const [re, to] of table)
+			if (re.test(next)) {
+				next = to;
+				break;
+			}
+	}
 	if (next === 'z-50') next = z;
 	for (const [re, to, when] of OPAQUE) {
 		if (re.test(next) && (!when || when.test(variants))) {
@@ -217,8 +287,8 @@ function rewriteToken(token, z = Z_FLOATING, family) {
 }
 
 /** Rewrites every class-like token in `text` (the inside of a class string). */
-export function normalizeClasses(text, { z = Z_FLOATING, family } = {}) {
-	return text.replace(/[^\s"'`{}]+/g, (token) => rewriteToken(token, z, family));
+export function normalizeClasses(text, { z = Z_FLOATING, family, role } = {}) {
+	return text.replace(/[^\s"'`{}]+/g, (token) => rewriteToken(token, z, family, role));
 }
 
 const STRING = /'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g;
@@ -371,7 +441,11 @@ export function normalizeSource(src, { icons = iconExports(), file = '' } = {}) 
 		);
 	out = tvToCva(out, problems);
 	out = mergeImports(out);
-	out = normalizeClassStrings(out, { z: zLayerFor(file), family: familyOf(file) });
+	out = normalizeClassStrings(out, {
+		z: zLayerFor(file),
+		family: familyOf(file),
+		role: materialRole(file)
+	});
 	for (const f of remainingAlpha(out))
 		problems.push(
 			`line ${f.line}: ${f.utility} (alpha on a contrast colour; use an opaque token, only ${[...ALLOWED_ALPHA].join(', ')} may carry alpha)`

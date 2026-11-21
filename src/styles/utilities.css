@@ -269,3 +269,21 @@ body:has(
 	-webkit-backdrop-filter: none;
 	backdrop-filter: none;
 }
+
+/* The neutral toast is `not-data-[type]:material-pane!` (sonner paints its own background unlayered, so the
+ * material is `!important`), which the class-based rule above cannot reach; over an open modal it is opaque too. */
+body:has(
+		:is(
+			[data-slot='dialog-content'],
+			[data-slot='sheet-content'],
+			[data-slot='alert-dialog-content']
+		)[data-state='open']
+	)
+	[data-sonner-toast]:not([data-type]) {
+	/* stylelint-disable-next-line declaration-no-important -- must beat the toast's own `!important` material */
+	background-color: var(--popover) !important;
+	/* stylelint-disable-next-line declaration-no-important -- same */
+	-webkit-backdrop-filter: none !important;
+	/* stylelint-disable-next-line declaration-no-important -- same */
+	backdrop-filter: none !important;
+}

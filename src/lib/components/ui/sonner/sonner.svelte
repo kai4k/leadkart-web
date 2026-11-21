@@ -15,11 +15,13 @@
 	class="toaster group"
 	position="bottom-right"
 	closeButton
-	style="--normal-bg: var(--popover); --normal-text: var(--popover-foreground); --normal-border: var(--border);"
+	style="--normal-text: var(--popover-foreground); --normal-border: transparent;"
 	toastOptions={{
 		classes: {
 			toast:
-				'bg-popover text-popover-foreground border border-border rounded-md shadow-lg group toast',
+				// the neutral toast is the pane material (sonner paints its own background unlayered, so the `!`); a typed
+				// toast (it has data-type) keeps its opaque soft fill below
+				'not-data-[type]:material-pane! text-popover-foreground rounded-xl group toast',
 			description: 'group-[.toast]:text-muted-foreground',
 			actionButton: 'group-[.toast]:bg-primary group-[.toast]:text-primary-foreground',
 			cancelButton: 'group-[.toast]:bg-muted group-[.toast]:text-muted-foreground',
