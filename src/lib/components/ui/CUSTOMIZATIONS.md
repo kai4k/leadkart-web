@@ -247,3 +247,10 @@ The primary colour has three roles and the normaliser (`scripts/shadcn/normalize
   `progress/Progress.svelte` and `slider/Slider.svelte` are normalised files.
 - The hand-written `radio-group/radio-group-tile.svelte` keeps `border-primary` (a selected tile is a fill
   boundary, gated through `primary` on the surfaces by the labelled-fill pairs).
+
+## Materials (plan G2)
+
+`dialog/dialog-overlay`, `alert-dialog/alert-dialog-overlay` and `sheet/sheet-overlay` read `bg-scrim`
+(the `--scrim` token: 35% light, 55% dark, never blurred) instead of shadcn's
+`bg-black/50 supports-backdrop-filter:backdrop-blur-xs`. The normaliser rewrites both classes
+(`bg-black/10|50` -> `bg-scrim`; the blur class is dropped). The panels move to `material-pane` in G5.

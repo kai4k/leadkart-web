@@ -6,10 +6,8 @@
  * animations belong here. Keep small — most one-off needs go inline
  * via Tailwind utility classes.
  *
- * Phase B (bits-ui-refactor): the `.glass-*` utility CSS layer was
- * dropped. Liquid Glass material comes from Svelte Bits GlassSurface
- * composed inside surface compounds (Dialog/Sheet/Popover/Card) on
- * demand. Plain surfaces use `bg-card border border-border
+ * Glass is the three `material-*` utilities at the bottom of this file (plan G2): the ONE source of
+ * the control layer's translucent surfaces. Plain content surfaces use `bg-card border border-border
  * rounded-* shadow-*` Tailwind utilities directly.
  * ───────────────────────────────────────────────────────────────────── */
 
@@ -151,4 +149,89 @@
 		background: var(--border);
 		z-index: 0;
 	}
+}
+
+/* ═══ Materials (plan G2): the ONE source of glass ═════════════════════════════════════════════
+ * No component and no SVG draws glass; a surface says `material-bar`, `material-pane` or
+ * `material-sidebar`. Fill, filter, edge and shadow come from theme/materials.css (gated, with its
+ * opaque fallbacks). The scoped re-declarations make everything INSIDE the material read the
+ * tokens readable on the material (the way the pattern topbar re-declares tokens in layouts.css): the third text
+ * level collapses into the muted one, the ring is the readable one, and `bg-muted` / `bg-accent`
+ * become the translucent control fills. A material is never nested in another (a `:has()` rule
+ * below makes a float opened over an open modal surface opaque). */
+@utility material-bar {
+	background-color: var(--material-bar-fill);
+	-webkit-backdrop-filter: var(--material-bar-filter);
+	backdrop-filter: var(--material-bar-filter);
+	box-shadow:
+		inset 0 1px 0 0 var(--material-highlight),
+		0 0 0 1px var(--material-edge),
+		var(--material-bar-shadow);
+	--muted-foreground: var(--material-muted-foreground);
+	--subtle-foreground: var(--material-muted-foreground);
+	--ring: var(--material-ring);
+	--muted: var(--material-control);
+	--accent: var(--material-control-hover);
+	--input-fill: var(--material-input-fill);
+	@media (forced-colors: active) {
+		/* stylelint-disable-next-line no-invalid-position-declaration -- a nested @media inside @utility is valid (Tailwind 4) */
+		border: 1px solid CanvasText;
+	}
+}
+@utility material-pane {
+	background-color: var(--material-pane-fill);
+	-webkit-backdrop-filter: var(--material-pane-filter);
+	backdrop-filter: var(--material-pane-filter);
+	box-shadow:
+		inset 0 1px 0 0 var(--material-highlight),
+		0 0 0 1px var(--material-edge),
+		var(--material-pane-shadow);
+	--muted-foreground: var(--material-muted-foreground);
+	--subtle-foreground: var(--material-muted-foreground);
+	--ring: var(--material-ring);
+	--muted: var(--material-control);
+	--accent: var(--material-control-hover);
+	--input-fill: var(--material-input-fill);
+	@media (forced-colors: active) {
+		/* stylelint-disable-next-line no-invalid-position-declaration -- a nested @media inside @utility is valid (Tailwind 4) */
+		border: 1px solid CanvasText;
+	}
+}
+@utility material-sidebar {
+	background-color: var(--material-sidebar-fill);
+	-webkit-backdrop-filter: var(--material-pane-filter);
+	backdrop-filter: var(--material-pane-filter);
+	box-shadow:
+		inset 0 1px 0 0 var(--material-highlight),
+		0 0 0 1px var(--material-edge),
+		var(--material-pane-shadow);
+	--muted-foreground: var(--material-muted-foreground);
+	--subtle-foreground: var(--material-muted-foreground);
+	--ring: var(--material-ring);
+	--muted: var(--material-control);
+	--accent: var(--material-control-hover);
+	--input-fill: var(--material-input-fill);
+	@media (forced-colors: active) {
+		/* stylelint-disable-next-line no-invalid-position-declaration -- a nested @media inside @utility is valid (Tailwind 4) */
+		border: 1px solid CanvasText;
+	}
+}
+
+/* no glass on glass: a float opened over an open modal surface is opaque */
+body:has(
+		:is(
+			[data-slot='dialog-content'],
+			[data-slot='sheet-content'],
+			[data-slot='alert-dialog-content']
+		)[data-state='open']
+	)
+	:is(
+		[data-slot='popover-content'],
+		[data-slot='dropdown-menu-content'],
+		[data-slot='select-content'],
+		[data-slot='dropdown-menu-sub-content']
+	) {
+	background-color: var(--popover);
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
 }

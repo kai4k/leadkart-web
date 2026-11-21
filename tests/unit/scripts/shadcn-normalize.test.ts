@@ -140,7 +140,8 @@ describe('shadcn normaliser: opaque tokens (L37)', () => {
 		['border-input/30', 'border-input'],
 		['ring-foreground/10', 'ring-border'],
 		['bg-muted/50', 'bg-muted'],
-		['bg-black/10', 'bg-black/50'],
+		['bg-black/10', 'bg-scrim'],
+		['bg-black/50', 'bg-scrim'],
 		['text-foreground/60', 'text-muted-foreground'],
 		['cn-rtl-flip', 'rtl:rotate-180'],
 		['z-50', 'z-(--z-popover)'],
@@ -183,10 +184,10 @@ describe('shadcn normaliser: opaque tokens (L37)', () => {
 			const { problems } = run(`<i class="${bad}"></i>`);
 			expect(problems.join('\n'), bad).toContain(bad);
 		}
-		expect(remainingAlpha('<i class="bg-black/50"></i>')).toEqual([]);
+		expect(remainingAlpha('<i class="bg-scrim"></i>')).toEqual([]);
 	});
-	it('does not flag sizes, fractions or the pinned scrim', () => {
-		const { problems } = run(`<i class="text-sm/6 w-1/2 h-2/3 bg-black/50 top-1/3"></i>`);
+	it('does not flag sizes, fractions or the scrim token', () => {
+		const { problems } = run(`<i class="text-sm/6 w-1/2 h-2/3 bg-scrim top-1/3"></i>`);
 		expect(problems).toEqual([]);
 	});
 });
@@ -340,5 +341,22 @@ describe('shadcn normaliser: primary roles (plan G1)', () => {
 			'src/lib/components/ui/checkbox/x.svelte'
 		);
 		expect(cls(once, 'src/lib/components/ui/checkbox/x.svelte')).toBe(once);
+	});
+});
+
+describe('shadcn normaliser: the scrim (plan G2)', () => {
+	it('turns the overlay default into bg-scrim and drops the blur', () => {
+		expect(
+			normalizeClasses(
+				'bg-black/50 duration-100 supports-backdrop-filter:backdrop-blur-xs fixed inset-0'
+			)
+		).toBe('bg-scrim duration-100  fixed inset-0');
+	});
+	it('maps the nova bg-black/10 overlay to bg-scrim too', () => {
+		expect(normalizeClasses('bg-black/10')).toBe('bg-scrim');
+	});
+	it('is idempotent', () => {
+		const once = normalizeClasses('bg-black/50 supports-backdrop-filter:backdrop-blur-xs');
+		expect(normalizeClasses(once)).toBe(once);
 	});
 });

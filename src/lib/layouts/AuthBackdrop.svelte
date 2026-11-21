@@ -121,7 +121,6 @@
 		border-radius: 50%;
 		filter: blur(80px);
 		opacity: 0.35;
-		will-change: transform;
 	}
 	.lk-blob--a {
 		inline-size: 28rem;

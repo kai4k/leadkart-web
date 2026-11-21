@@ -5,7 +5,10 @@ import {
 	colourNames,
 	findAlphaModifiers,
 	findColorScheme,
-	findBareTextPrimary
+	findBareTextPrimary,
+	findBackdrop,
+	findMaterialTokens,
+	findWillChange
 } from '../../../scripts/arch/check-tokens.mjs';
 
 /** Self-test of the token gate rules: fixtures, not the repository. */
@@ -42,9 +45,10 @@ describe('check-tokens: alpha modifiers in ui/', () => {
 	it('does not mistake sizes and fractions for colours', () => {
 		expect(flagged('<p class="text-sm/6 w-1/2 h-2/3 basis-1/3 text-lg/7"></p>')).toEqual([]);
 	});
-	it('allows exactly the pinned scrims, and only unprefixed', () => {
-		expect([...ALLOWED_ALPHA]).toEqual(['bg-black/50']);
-		expect(flagged('<div class="bg-black/50"></div>')).toEqual([]);
+	it('allows no alpha at all (m2): the scrim is the bg-scrim token', () => {
+		expect([...ALLOWED_ALPHA]).toEqual([]);
+		expect(flagged('<div class="bg-black/50"></div>')).toEqual(['bg-black/50']);
+		expect(flagged('<div class="bg-scrim"></div>')).toEqual([]);
 		expect(flagged('<div class="bg-black/80"></div>')).toEqual(['bg-black/80']);
 		expect(flagged('<div class="dark:bg-black/50"></div>')).toEqual(['dark:bg-black/50']);
 	});
@@ -160,5 +164,90 @@ describe('check-tokens (m5): a bare text-primary', () => {
 	});
 	it('does not read the token layer', () => {
 		expect(find('.x { color: red }', 'src/styles/base.css')).toBe(0);
+	});
+});
+
+describe('check-tokens (m1, m3, m4): where a material may be written', () => {
+	const f = (fn: (rel: string, src: string) => unknown[], rel: string, src: string) =>
+		fn(rel, src).length;
+	it('m1: a backdrop utility in a component fails', () => {
+		expect(f(findBackdrop, 'src/lib/x/X.svelte', '<div class="backdrop-blur-sm"></div>')).toBe(1);
+		expect(
+			f(findBackdrop, 'src/lib/x/X.svelte', '<div class="supports-backdrop-filter:bg-card"></div>')
+		).toBe(1);
+		expect(
+			f(findBackdrop, 'src/lib/x/X.svelte', '<div class="hover:backdrop-saturate-150"></div>')
+		).toBe(1);
+	});
+	it('m1: the CSS property fails in a layout <style>, and passes in utilities.css and the material files', () => {
+		const css = '.a { backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }';
+		expect(f(findBackdrop, 'src/lib/layouts/X.svelte', `<style>${css}</style>`)).toBe(2);
+		expect(f(findBackdrop, 'src/styles/utilities.css', css)).toBe(0);
+		expect(f(findBackdrop, 'src/styles/theme/materials.css', css)).toBe(0);
+		expect(f(findBackdrop, 'src/styles/theme/materials-fallbacks.css', css)).toBe(0);
+		expect(f(findBackdrop, 'src/styles/theme/layouts.css', css)).toBe(0);
+		expect(f(findBackdrop, 'src/styles/base.css', css)).toBe(2);
+	});
+	it('m1: a comment that names backdrop-filter is not a use', () => {
+		expect(
+			f(
+				findBackdrop,
+				'src/lib/x/X.svelte',
+				'<!-- backdrop-filter -->\n// backdrop-blur-sm\n/* backdrop-filter */'
+			)
+		).toBe(0);
+	});
+	it('m2: bg-black/50 is refused now that no alpha is allowed (the scrim is bg-scrim)', () => {
+		expect(
+			(
+				findAlphaModifiers(
+					'src/lib/components/ui/dialog/x.svelte',
+					'<i class="bg-black/50"></i>',
+					names
+				) as unknown[]
+			).length
+		).toBe(1);
+	});
+	it('m3: a --material-* or --scrim declaration outside theme/materials*.css fails', () => {
+		expect(
+			f(findMaterialTokens, 'src/lib/x/X.svelte', '<div style="--material-bar-fill: red"></div>')
+		).toBe(1);
+		expect(f(findMaterialTokens, 'src/styles/base.css', ':root { --scrim: red; }')).toBe(1);
+		expect(
+			f(
+				findMaterialTokens,
+				'src/styles/theme/materials.css',
+				':root { --scrim: red; --material-bar-fill: red; }'
+			)
+		).toBe(0);
+	});
+	it('m3: var(--material-*) is legal in src/styles and in a layout <style> block, nowhere else', () => {
+		const ref = 'background: var(--material-bar-fill);';
+		expect(f(findMaterialTokens, 'src/styles/utilities.css', ref)).toBe(0);
+		expect(f(findMaterialTokens, 'src/lib/layouts/X.svelte', `<style>.a { ${ref} }</style>`)).toBe(
+			0
+		);
+		expect(
+			f(
+				findMaterialTokens,
+				'src/lib/layouts/X.svelte',
+				'<div class="bg-(--material-bar-fill)" style="background: var(--material-bar-fill)"></div>'
+			)
+		).toBe(1);
+		expect(
+			f(findMaterialTokens, 'src/lib/features/x/X.svelte', `<style>.a { ${ref} }</style>`)
+		).toBe(1);
+	});
+	it('m4: will-change fails everywhere but animations.css', () => {
+		expect(
+			f(findWillChange, 'src/lib/layouts/X.svelte', '<style>.a { will-change: transform; }</style>')
+		).toBe(1);
+		expect(
+			f(findWillChange, 'src/lib/x/X.svelte', '<div class="will-change-transform"></div>')
+		).toBe(1);
+		expect(f(findWillChange, 'src/styles/animations.css', '.a { will-change: transform; }')).toBe(
+			0
+		);
+		expect(f(findWillChange, 'src/lib/x/X.svelte', '// will-change is banned')).toBe(0);
 	});
 });

@@ -29,7 +29,9 @@ const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 //
 // Allowed, exactly: decorative scrims that sit BEHIND content and carry no text or indicator.
 export const UI_DIR = 'src/lib/components/ui/';
-export const ALLOWED_ALPHA = new Set(['bg-black/50']);
+// (m2, plan G2) Empty: the one pinned decorative alpha (`bg-black/50`) became `bg-scrim`, a token. The
+// only legal alpha in a component is now a material utility (its composite is proved by the gate).
+export const ALLOWED_ALPHA = new Set();
 /** Hand-written primitives still carrying an alpha, pending regeneration. Empty since Task 5. */
 export const PENDING_REGENERATION = new Set();
 const COLOUR_UTILITY =
@@ -158,15 +160,10 @@ export function findLegacyTokens(rel, src) {
 // not follow the theme. The semantic utilities (`text-muted-foreground`, `bg-destructive-soft`,
 // `text-primary-foreground`, `bg-foreground/10`) replace them. Exempt, exactly:
 //   - src/styles/**                  the token layer itself
-//   - GENERATED_UI_FILES             an exact list of files that are unedited CLI output and keep
-//                                    shadcn's own `bg-black/50` overlay class (plan G5 replaces them
-//                                    with `bg-scrim`; the list then empties)
+//   - GENERATED_UI_FILES             an exact list of unedited CLI output that keeps a shadcn palette class.
+//                                    EMPTY since plan G2: the overlays' `bg-black/50` became `bg-scrim`.
 // Every other file under ui/ is scanned, including the files LeadKart edited inside generated folders.
-export const GENERATED_UI_FILES = [
-	'src/lib/components/ui/alert-dialog/alert-dialog-overlay.svelte',
-	'src/lib/components/ui/dialog/dialog-overlay.svelte',
-	'src/lib/components/ui/sheet/sheet-overlay.svelte'
-];
+export const GENERATED_UI_FILES = [];
 
 const PALETTE_UTILITY = new RegExp(
 	'(?<![\\w-])((?:[\\w[\\]&>*=.()/_-]+:)*)' +
@@ -211,12 +208,86 @@ export function findBareTextPrimary(rel, src) {
 	return found;
 }
 
+/** Source with comments blanked (newlines kept): a rule is about code, not about what a comment names. */
+function code(src) {
+	const blank = (m) => m.replace(/[^\n]/g, ' ');
+	return src
+		.replace(/<!--[\s\S]*?-->/g, blank)
+		.replace(/\/\*[\s\S]*?\*\//g, blank)
+		.replace(/(^|[\s;{}(,])\/\/[^\n]*/g, (m, p) => p + blank(m.slice(p.length)));
+}
+
+const scan = (src, re) => {
+	const found = [];
+	for (const m of src.matchAll(re))
+		found.push({ line: src.slice(0, m.index).split('\n').length, name: m[0].trim() });
+	return found;
+};
+
+// (m1, plan G2) `backdrop-*` utilities and the CSS properties `backdrop-filter` / `-webkit-backdrop-filter`
+// are legal only where a material is DEFINED: theme/materials*.css, the `@utility material-*` blocks of
+// utilities.css, and the pattern band's `backdrop-filter: none` in layouts.css. Glass is never drawn
+// by a component.
+export const BACKDROP_FILES = [
+	/^src\/styles\/theme\/materials[\w-]*\.css$/,
+	/^src\/styles\/utilities\.css$/,
+	/^src\/styles\/theme\/layouts\.css$/
+];
+const BACKDROP =
+	/(?<![\w-])(?:supports-backdrop-filter|(?:-webkit-)?backdrop-(?:blur|saturate|brightness|contrast|filter|grayscale|hue-rotate|invert|opacity|sepia)(?![\w]))/g;
+export function findBackdrop(rel, src) {
+	const norm = rel.replaceAll('\\', '/');
+	if (!norm.startsWith('src/') || BACKDROP_FILES.some((re) => re.test(norm))) return [];
+	return scan(code(src), BACKDROP);
+}
+
+// (m3) A `--material-*` or `--scrim` DECLARATION outside theme/materials*.css fails; a `var(--material-*)`
+// REFERENCE is legal in src/styles/** and in the <style> blocks of src/lib/layouts/**, nowhere else.
+export function findMaterialTokens(rel, src) {
+	const norm = rel.replaceAll('\\', '/');
+	if (!norm.startsWith('src/') || /^src\/styles\/theme\/materials[\w-]*\.css$/.test(norm))
+		return [];
+	const text = code(src);
+	const found = scan(text, /(?<![\w-])--(?:material-[\w-]+|scrim)\s*:/g);
+	if (norm.startsWith('src/styles/')) return found;
+	const outsideStyle = norm.startsWith('src/lib/layouts/')
+		? text.replace(/<style\b[\s\S]*?<\/style>/g, (m) => m.replace(/[^\n]/g, ' '))
+		: text;
+	return found.concat(scan(outsideStyle, /var\(\s*--material-[\w-]+/g));
+}
+
+// (m4) `will-change` pins a compositor layer and multiplies the cost of every blurred layer behind or
+// above it. Legal only in src/styles/animations.css.
+export function findWillChange(rel, src) {
+	const norm = rel.replaceAll('\\', '/');
+	if (!norm.startsWith('src/') || norm === 'src/styles/animations.css') return [];
+	return scan(code(src), /(?<![\w-])will-change(?!\w)/g);
+}
+
 export const FILE_RULES = [
 	{
 		id: 'm5',
 		title: 'bare text-primary',
 		find: findBareTextPrimary,
 		fix: 'use text-primary-text (links, active labels) or text-primary-foreground (a label on a primary fill).'
+	},
+	{
+		id: 'm1',
+		title: 'backdrop-* outside a material definition',
+		find: findBackdrop,
+		fix: 'use material-bar / material-pane / material-sidebar (utilities.css); only theme/materials*.css, utilities.css and layouts.css may touch a backdrop filter.'
+	},
+	{
+		id: 'm3',
+		title: '--material-* / --scrim declared or read outside the material layer',
+		find: findMaterialTokens,
+		fix: 'declare it in src/styles/theme/materials*.css; read it only in src/styles/** or a <style> block of src/lib/layouts/**.'
+	},
+	{
+		id: 'm4',
+		title: 'will-change',
+		find: findWillChange,
+		fix: 'remove it (a pinned layer multiplies the cost of blurred layers); animations.css is the one exception.'
 	}
 ];
 

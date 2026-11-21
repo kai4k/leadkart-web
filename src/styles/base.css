@@ -64,15 +64,13 @@
 
 	body {
 		min-height: 100dvh;
-		/* Canvas + a barely-perceptible static ambient wash. Two soft
-		   radial gradients (~6% peak alpha) — brand-200 top-start,
-		   bg-subtle bottom-end — give the backdrop-filter on glass
-		   surfaces something to refract so they read as glass and not
-		   flat tinted paint. No animation, no decoration; this is
-		   purely "depth substrate" — the kind of subtle canvas-tint
-		   variation Apple ships on every surface that hosts material.
-		   background-attachment: fixed anchors the wash so it doesn't
-		   shift with content scroll. */
+		/* Canvas + a static ambient wash in the primary ramp. This is the CONTENT-LAYER colour
+		   (plan G, HIG Branding: brand colour belongs in the content layer, where it scrolls
+		   beneath the control layer and is picked up by the materials, which have no colour of
+		   their own). Three soft radial gradients (primary-200 top-start, primary-soft bottom-end,
+		   primary-100 top-centre); the contrast gate lists them in the backdrop sets of the
+		   sidebar and the auth card. No animation. background-attachment: fixed anchors the
+		   wash so it does not shift with content scroll. */
 		background:
 			radial-gradient(
 				ellipse 80% 60% at 0% 0%,

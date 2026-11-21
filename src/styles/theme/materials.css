@@ -1,0 +1,97 @@
+/* MATERIALS — Liquid Glass for the control layer (plan G2). Flat rules only: the contrast gate
+ * (scripts/arch/check-token-contrast.mjs) resolves this file for every combination. The fills are
+ * neutral surfaces at an alpha; the numbers are mode-independent (light-dark() takes colours only).
+ *
+ * Where a material is used: the topbar, the horizontal nav and the bulk bar (bar); dialogs, sheets,
+ * popovers, menus, the customizer and the command palette (pane); the sidebar (sidebar). Text on a
+ * material is always opaque: the only legal alpha in the product lives in this file and in --scrim.
+ * The filter is `blur() saturate() contrast()`; contrast < 1 is the luminosity compression that
+ * keeps text legible over the darkest and lightest backdrop (proved by the gate, plan 3.1).
+ * The fallbacks (reduced transparency, increased contrast, forced colours, print, no support, coarse
+ * pointer) live in materials-fallbacks.css and resolve to the `off` block below. */
+:root {
+	--material-bar-blur: 16px;
+	--material-bar-saturate: 1.8;
+	--material-bar-contrast: 0.6;
+	--material-bar-fill: light-dark(
+		color-mix(in srgb, var(--card) 72%, transparent),
+		color-mix(in srgb, var(--card) 80%, transparent)
+	);
+	--material-bar-filter: blur(var(--material-bar-blur)) saturate(var(--material-bar-saturate))
+		contrast(var(--material-bar-contrast));
+
+	--material-pane-blur: 24px;
+	--material-pane-saturate: 1.5;
+	--material-pane-contrast: 0.6;
+	--material-pane-fill: light-dark(
+		color-mix(in srgb, var(--popover) 84%, transparent),
+		color-mix(in srgb, var(--popover) 88%, transparent)
+	);
+	--material-sidebar-fill: light-dark(
+		color-mix(in srgb, var(--sidebar) 84%, transparent),
+		color-mix(in srgb, var(--sidebar) 88%, transparent)
+	);
+	--material-pane-filter: blur(var(--material-pane-blur)) saturate(var(--material-pane-saturate))
+		contrast(var(--material-pane-contrast));
+
+	--material-muted-foreground: light-dark(
+		var(--muted-foreground),
+		color-mix(in oklch, var(--dark-300) 50%, var(--dark-400))
+	);
+	--material-ring: light-dark(var(--primary-text), var(--ring));
+	--material-input-fill: light-dark(var(--card), var(--dark-800));
+	--material-control: light-dark(
+		color-mix(in srgb, var(--foreground) 6%, transparent),
+		color-mix(in srgb, var(--foreground) 10%, transparent)
+	);
+	--material-control-hover: light-dark(
+		color-mix(in srgb, var(--foreground) 10%, transparent),
+		color-mix(in srgb, var(--foreground) 16%, transparent)
+	);
+	--material-highlight: light-dark(
+		color-mix(in srgb, white 75%, transparent),
+		color-mix(in srgb, white 14%, transparent)
+	);
+	--material-edge: light-dark(
+		color-mix(in srgb, var(--foreground) 12%, transparent),
+		color-mix(in srgb, black 55%, transparent)
+	);
+	--material-shadow-color: light-dark(oklch(0.2 0.02 256 / 0.16), oklch(0 0 0 / 0.5));
+	--material-bar-shadow: 0 8px 24px -16px var(--material-shadow-color);
+	--material-pane-shadow:
+		0 24px 56px -16px var(--material-shadow-color), 0 4px 12px -4px var(--material-shadow-color);
+	/* no scroll-edge fade token: the bar is the scroll edge effect itself (plan GD14) */
+	--scrim: light-dark(
+		color-mix(in srgb, black 35%, transparent),
+		color-mix(in srgb, black 55%, transparent)
+	);
+}
+:root[data-transparency='reduced'] {
+	--material-bar-fill: light-dark(
+		color-mix(in srgb, var(--card) 92%, transparent),
+		color-mix(in srgb, var(--card) 94%, transparent)
+	);
+	--material-pane-fill: light-dark(
+		color-mix(in srgb, var(--popover) 94%, transparent),
+		color-mix(in srgb, var(--popover) 95%, transparent)
+	);
+	--material-sidebar-fill: light-dark(
+		color-mix(in srgb, var(--sidebar) 94%, transparent),
+		color-mix(in srgb, var(--sidebar) 95%, transparent)
+	);
+}
+/* OFF: the opaque equivalent. Every fallback block in materials-fallbacks.css repeats exactly
+   these declarations (a unit test compares them). */
+:root[data-transparency='off'] {
+	--material-bar-fill: var(--card);
+	--material-pane-fill: var(--popover);
+	--material-sidebar-fill: var(--sidebar);
+	--material-bar-filter: none;
+	--material-pane-filter: none;
+	--material-bar-saturate: 1;
+	--material-bar-contrast: 1;
+	--material-pane-saturate: 1;
+	--material-pane-contrast: 1;
+	--material-control: var(--muted);
+	--material-control-hover: var(--accent);
+}

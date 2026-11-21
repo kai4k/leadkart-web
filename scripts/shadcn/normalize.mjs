@@ -21,7 +21,7 @@
  *      earlier one; sidebar and sticky parts `--z-sticky`; floating content (popover, select,
  *      dropdown, calendar popups) `--z-popover`
  *   8. FAILS on any `/<alpha>` modifier left on a text, ring, border-input or solid-fill colour
- *      (the same rule as the `check-tokens` arch gate; the only alpha allowed is `bg-black/50`)
+ *      (the same rule as the `check-tokens` arch gate; no alpha is allowed: the scrim is `bg-scrim`)
  *
  * Only class strings are rewritten: `class="…"`, `class={…}` and the arguments of `cn(…)` / `cva(…)`,
  * and inside those only string literals. A comment, a JS string or a placement such as `left-start`
@@ -88,8 +88,9 @@ const OPAQUE = [
 	// calendar day hover and range-middle hover: the accent fill, or none over the accent cell
 	[/^bg-accent\/50$/, 'bg-accent'],
 	[/^bg-accent\/0$/, 'bg-transparent'],
-	// the overlay scrim: the one pinned decorative alpha
-	[/^bg-black\/10$/, 'bg-black/50'],
+	// the overlay scrim: the `--scrim` token (35% light, 55% dark, no blur); the shadcn default
+	// `bg-black/50 supports-backdrop-filter:backdrop-blur-xs` and the nova `bg-black/10` both become it
+	[/^bg-black\/(?:10|50)$/, 'bg-scrim'],
 	// secondary text: the muted token, not the foreground at 60%
 	[/^text-foreground\/60$/, 'text-muted-foreground'],
 	// nova style hook (no CSS behind it in this repo): flip the chevron in RTL
@@ -127,7 +128,10 @@ const DROP = [
 	{ variants: /aria-invalid/, utility: /^ring-3$/ },
 	// the switch thumb in dark: `bg-foreground` on the dark `input` track is 2.4:1 in the gray dark
 	// palette (gate pair background on input holds in all 400), so the thumb stays `bg-background`
-	{ variants: /^dark:data-unchecked$/, utility: /^bg-foreground$/ }
+	{ variants: /^dark:data-unchecked$/, utility: /^bg-foreground$/ },
+	// the scrim dims, it never blurs (a full-viewport blur is the most expensive layer there is)
+	{ variants: /^supports-backdrop-filter$/, utility: /^backdrop-blur-/ },
+	{ variants: /^$/, utility: /^backdrop-blur-/ }
 ];
 
 /** Layer of a generated `z-50`, by the ui folder the file lives in. Anything else is floating content. */

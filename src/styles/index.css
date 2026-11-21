@@ -17,6 +17,8 @@
  * ───────────────────────────────────────────────────────────────────── */
 @import './theme/palettes.css';
 @import './theme/semantic.css';
+@import './theme/materials.css';
+@import './theme/materials-fallbacks.css';
 @import './theme/layouts.css';
 @import './tokens.css';
 @import './base.css';

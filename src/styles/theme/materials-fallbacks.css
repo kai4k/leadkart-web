@@ -1,0 +1,97 @@
+/* MATERIAL FALLBACKS — every condition under which glass must degrade to an opaque surface (plan G2).
+ * Not gated: each block only resolves to the gated `off` values of materials.css (a unit test,
+ * tests/unit/styles/materials.test.ts, proves every block repeats the `off` declarations exactly).
+ *
+ * `:root:root` has the same specificity as `:root[data-transparency]` (0,2,0) and comes later, so the
+ * OS setting wins over the customizer. That is deliberate: Apple's system settings apply across the board. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+	:root:root {
+		--material-bar-fill: var(--card);
+		--material-pane-fill: var(--popover);
+		--material-sidebar-fill: var(--sidebar);
+		--material-bar-filter: none;
+		--material-pane-filter: none;
+		--material-bar-saturate: 1;
+		--material-bar-contrast: 1;
+		--material-pane-saturate: 1;
+		--material-pane-contrast: 1;
+		--material-control: var(--muted);
+		--material-control-hover: var(--accent);
+	}
+}
+@media (prefers-reduced-transparency: reduce) {
+	:root:root {
+		--material-bar-fill: var(--card);
+		--material-pane-fill: var(--popover);
+		--material-sidebar-fill: var(--sidebar);
+		--material-bar-filter: none;
+		--material-pane-filter: none;
+		--material-bar-saturate: 1;
+		--material-bar-contrast: 1;
+		--material-pane-saturate: 1;
+		--material-pane-contrast: 1;
+		--material-control: var(--muted);
+		--material-control-hover: var(--accent);
+	}
+}
+@media (prefers-contrast: more) {
+	:root:root {
+		--material-bar-fill: var(--card);
+		--material-pane-fill: var(--popover);
+		--material-sidebar-fill: var(--sidebar);
+		--material-bar-filter: none;
+		--material-pane-filter: none;
+		--material-bar-saturate: 1;
+		--material-bar-contrast: 1;
+		--material-pane-saturate: 1;
+		--material-pane-contrast: 1;
+		--material-control: var(--muted);
+		--material-control-hover: var(--accent);
+		--material-edge: var(--input);
+		--material-highlight: transparent;
+	}
+}
+@media (forced-colors: active) {
+	:root:root {
+		--material-bar-fill: var(--card);
+		--material-pane-fill: var(--popover);
+		--material-sidebar-fill: var(--sidebar);
+		--material-bar-filter: none;
+		--material-pane-filter: none;
+		--material-bar-saturate: 1;
+		--material-bar-contrast: 1;
+		--material-pane-saturate: 1;
+		--material-pane-contrast: 1;
+		--material-control: var(--muted);
+		--material-control-hover: var(--accent);
+	}
+}
+@media print {
+	:root:root {
+		--material-bar-fill: var(--card);
+		--material-pane-fill: var(--popover);
+		--material-sidebar-fill: var(--sidebar);
+		--material-bar-filter: none;
+		--material-pane-filter: none;
+		--material-bar-saturate: 1;
+		--material-bar-contrast: 1;
+		--material-pane-saturate: 1;
+		--material-pane-contrast: 1;
+		--material-control: var(--muted);
+		--material-control-hover: var(--accent);
+		--material-bar-shadow: none;
+		--material-pane-shadow: none;
+	}
+}
+/* Mid-range Android budget (plan section 5): large panes are opaque on touch-first devices; bars keep
+   glass with a smaller blur. Only the pane subset of the `off` block. */
+@media (pointer: coarse) {
+	:root:root:not([data-transparency='off']) {
+		--material-pane-fill: var(--popover);
+		--material-sidebar-fill: var(--sidebar);
+		--material-pane-filter: none;
+		--material-pane-saturate: 1;
+		--material-pane-contrast: 1;
+		--material-bar-blur: 12px;
+	}
+}

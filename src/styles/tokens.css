@@ -276,6 +276,7 @@
 	--color-popover-foreground: var(--popover-foreground);
 	--color-primary: var(--primary);
 	--color-primary-foreground: var(--primary-foreground);
+	--color-scrim: var(--scrim);
 	--color-primary-text: var(--primary-text);
 	--color-primary-indicator: var(--primary-indicator);
 	--color-primary-indicator-foreground: var(--primary-indicator-foreground);
