@@ -1,8 +1,9 @@
 import { expect, test, type Page } from './helpers/test';
 import type { Locator } from '@playwright/test';
 import { signInAsTier } from './helpers/sign-in';
-import { resetMock, registerMock, registerMocks } from './helpers/mock';
+import { resetMock, registerMocks } from './helpers/mock';
 import { fakeTenantDto, TEST_TENANT_ID, TEST_TENANT_SLUG } from './helpers/fake-jwt';
+import { leads, setPrefs } from './helpers/materials';
 
 /**
  * The materials, read from COMPUTED styles on the built app (fix round E). The unit tests read source text; this
@@ -18,91 +19,6 @@ import { fakeTenantDto, TEST_TENANT_ID, TEST_TENANT_SLUG } from './helpers/fake-
  * is `not-data-[type]:material-pane!` on a `[data-sonner-toast]`, as in ui/sonner/sonner.svelte): the cascade being
  * tested is the real one, and firing a neutral toast needs no feature flow.
  */
-
-const b64url = (s: string) =>
-	Buffer.from(s, 'utf8')
-		.toString('base64')
-		.replaceAll('+', '-')
-		.replaceAll('/', '_')
-		.replace(/=+$/, '');
-
-const prefs = (extra: Record<string, string>) =>
-	b64url(
-		JSON.stringify({
-			v: 1,
-			layout: 'vertical',
-			navType: 'default',
-			contentWidth: 'default',
-			sidebar: 'large',
-			mode: 'light',
-			colors: 'leadkart',
-			sidebarColors: 'light',
-			darkPalette: 'default',
-			transparency: 'glass',
-			...extra
-		})
-	);
-
-const LEAD = (id: string, name: string) => ({
-	id,
-	tenant_id: TEST_TENANT_ID,
-	platform_lead_id: '00000000-0000-4000-8000-0000000000ff',
-	purchased_at: '2026-05-01T10:00:00Z',
-	contact_name: name,
-	mobile_number: '+919876543210',
-	email: 'c@example.in',
-	address: { pin_code: '400001', city: 'Mumbai', district: 'Mumbai', state: 'MH', street: 'x' },
-	has_drug_licence: true,
-	has_gst: true,
-	gst_number: '27AAAAA0000A1Z5',
-	gst_verified: true,
-	has_pan: true,
-	pan_number: 'AAAAA1234A',
-	business_type: 'pcd',
-	medicine_system: 'allopathic',
-	product_ranges: ['Antibiotics'],
-	dosage_forms: ['Tablet'],
-	order_value_band: 'upto_25000',
-	buy_timeline: 'within_15_days',
-	stage: 'new',
-	temperature: 'warm',
-	last_contacted_at: '2026-05-20T10:00:00Z',
-	next_followup_at: null,
-	owner_membership_id: '00000000-0000-4000-8000-0000000000b1',
-	notes: null,
-	created_at: '2026-05-01T10:00:00Z',
-	updated_at: '2026-05-20T10:00:00Z'
-});
-
-async function setPrefs(page: Page, extra: Record<string, string>) {
-	await page
-		.context()
-		.addCookies([{ name: 'lk_ui', value: prefs(extra), url: 'http://localhost:4173' }]);
-}
-
-async function leads(page: Page, extra: Record<string, string>) {
-	await setPrefs(page, extra);
-	await signInAsTier(page, {
-		tier: 'tenant-admin',
-		permissions: ['tenant.admin', 'crm.leads.view', 'crm.leads.update']
-	});
-	await registerMock({
-		method: 'GET',
-		path: '/api/v1/crm/leads',
-		status: 200,
-		body: {
-			items: [
-				LEAD('00000000-0000-4000-8000-0000000000c1', 'Lead A'),
-				LEAD('00000000-0000-4000-8000-0000000000c2', 'Lead B')
-			],
-			has_more: false
-		}
-	});
-	await page.setViewportSize({ width: 1280, height: 800 });
-	await page.goto('/leads?view=table');
-	await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
-	await expect(page.getByTestId('leads-table').getByText('Lead A')).toBeVisible();
-}
 
 type Paint = { filter: string; alpha: number };
 
@@ -221,15 +137,22 @@ test.describe('materials: computed styles on the built app', () => {
 		opaque(await paint(dialog), 'forced dialog');
 	});
 
-	test('the auth card is glass in Glass and opaque in Solid', async ({ page }) => {
-		for (const [transparency, expectation] of [
-			['glass', glass],
-			['off', opaque]
+	test('the auth card: opaque while the backdrop drifts, glass under reduced motion, opaque in Solid (plan section 5)', async ({
+		page
+	}) => {
+		for (const [transparency, motion, expectation] of [
+			['glass', 'no-preference', opaque],
+			['glass', 'reduce', glass],
+			['off', 'reduce', opaque]
 		] as const) {
+			await page.emulateMedia({ reducedMotion: motion });
 			await setPrefs(page, { transparency });
 			await page.goto('/signin');
 			await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
-			expectation(await paint(page.locator('.lk-auth-card')), `auth card ${transparency}`);
+			expectation(
+				await paint(page.locator('.lk-auth-card')),
+				`auth card ${transparency} / motion ${motion}`
+			);
 		}
 	});
 

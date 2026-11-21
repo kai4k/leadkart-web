@@ -1,0 +1,155 @@
+import { expect, type Page } from '@playwright/test';
+import { signInAsTier } from './sign-in';
+import { registerMock } from './mock';
+import { TEST_TENANT_ID } from './fake-jwt';
+
+/**
+ * Filtered layers of the page (plan section 5): every element whose computed `backdrop-filter` is not `none`.
+ * `overScroll` counts the bars (`material-bar`, `material-sidebar-bar`), the only layers that sit over content that
+ * moves: a fixed or sticky box that intersects the viewport. `area` is the share of the viewport the filtered boxes
+ * cover (overlaps counted twice: the budget is a ceiling, not a measurement of unique pixels).
+ */
+export async function countFilteredLayers(
+	page: Page
+): Promise<{ total: number; overScroll: number; area: number; names: string[] }> {
+	return page.evaluate(() => {
+		const filtered: Element[] = [];
+		for (const el of document.querySelectorAll('*')) {
+			const cs = getComputedStyle(el);
+			const f = cs.backdropFilter || (cs as unknown as Record<string, string>).webkitBackdropFilter;
+			if (f && f !== 'none') filtered.push(el);
+		}
+		const vw = window.innerWidth;
+		const vh = window.innerHeight;
+		let area = 0;
+		let overScroll = 0;
+		for (const el of filtered) {
+			const r = el.getBoundingClientRect();
+			const w = Math.max(0, Math.min(r.right, vw) - Math.max(r.left, 0));
+			const h = Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0));
+			area += w * h;
+			const pos = getComputedStyle(el).position;
+			const isBar =
+				el.classList.contains('material-bar') || el.classList.contains('material-sidebar-bar');
+			if (isBar && (pos === 'fixed' || pos === 'sticky') && w * h > 0) overScroll++;
+		}
+		return {
+			total: filtered.length,
+			overScroll,
+			area: area / (vw * vh),
+			names: filtered.map(
+				(e) =>
+					e.getAttribute('data-slot') ?? e.getAttribute('data-shell') ?? e.tagName.toLowerCase()
+			)
+		};
+	});
+}
+
+/**
+ * Material elements that contain a `position: fixed` descendant (Filter Effects 2 section 2: a backdrop filter makes
+ * the element the containing block of fixed descendants, so a fixed child would stop being fixed to the viewport).
+ * Returns a description of each offender; the budget asserts it is empty.
+ */
+export async function hasFixedDescendant(page: Page): Promise<string[]> {
+	return page.evaluate(() => {
+		const bad: string[] = [];
+		const material = document.querySelectorAll(
+			'.material-bar, .material-pane, .material-sidebar, .material-sidebar-bar'
+		);
+		for (const m of material) {
+			for (const d of m.querySelectorAll('*')) {
+				if (getComputedStyle(d).position === 'fixed')
+					bad.push(
+						`${m.getAttribute('data-slot') ?? m.className.toString().slice(0, 40)} > ${d.tagName.toLowerCase()}`
+					);
+			}
+		}
+		return bad;
+	});
+}
+
+/** Shared by the material specs: the lk_ui cookie value for a set of preference overrides, and a signed-in /leads table with two rows. */
+const b64url = (s: string) =>
+	Buffer.from(s, 'utf8')
+		.toString('base64')
+		.replaceAll('+', '-')
+		.replaceAll('/', '_')
+		.replace(/=+$/, '');
+
+export const prefs = (extra: Record<string, string>) =>
+	b64url(
+		JSON.stringify({
+			v: 1,
+			layout: 'vertical',
+			navType: 'default',
+			contentWidth: 'default',
+			sidebar: 'large',
+			mode: 'light',
+			colors: 'leadkart',
+			sidebarColors: 'light',
+			darkPalette: 'default',
+			transparency: 'glass',
+			...extra
+		})
+	);
+
+export const LEAD = (id: string, name: string) => ({
+	id,
+	tenant_id: TEST_TENANT_ID,
+	platform_lead_id: '00000000-0000-4000-8000-0000000000ff',
+	purchased_at: '2026-05-01T10:00:00Z',
+	contact_name: name,
+	mobile_number: '+919876543210',
+	email: 'c@example.in',
+	address: { pin_code: '400001', city: 'Mumbai', district: 'Mumbai', state: 'MH', street: 'x' },
+	has_drug_licence: true,
+	has_gst: true,
+	gst_number: '27AAAAA0000A1Z5',
+	gst_verified: true,
+	has_pan: true,
+	pan_number: 'AAAAA1234A',
+	business_type: 'pcd',
+	medicine_system: 'allopathic',
+	product_ranges: ['Antibiotics'],
+	dosage_forms: ['Tablet'],
+	order_value_band: 'upto_25000',
+	buy_timeline: 'within_15_days',
+	stage: 'new',
+	temperature: 'warm',
+	last_contacted_at: '2026-05-20T10:00:00Z',
+	next_followup_at: null,
+	owner_membership_id: '00000000-0000-4000-8000-0000000000b1',
+	notes: null,
+	created_at: '2026-05-01T10:00:00Z',
+	updated_at: '2026-05-20T10:00:00Z'
+});
+
+export async function setPrefs(page: Page, extra: Record<string, string>) {
+	await page
+		.context()
+		.addCookies([{ name: 'lk_ui', value: prefs(extra), url: 'http://localhost:4173' }]);
+}
+
+export async function leads(page: Page, extra: Record<string, string>) {
+	await setPrefs(page, extra);
+	await signInAsTier(page, {
+		tier: 'tenant-admin',
+		permissions: ['tenant.admin', 'crm.leads.view', 'crm.leads.update', 'crm.leads.manage']
+	});
+	await registerMock({
+		method: 'GET',
+		path: '/api/v1/crm/leads',
+		status: 200,
+		body: {
+			items: [
+				LEAD('00000000-0000-4000-8000-0000000000c1', 'Lead A'),
+				LEAD('00000000-0000-4000-8000-0000000000c2', 'Lead B')
+			],
+			has_more: false
+		}
+	});
+	await page.setViewportSize({ width: 1280, height: 800 });
+	await page.goto('/leads?view=table');
+	await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
+	await expect(page.getByTestId('leads-table').getByText('Lead A')).toBeVisible();
+}

@@ -307,3 +307,15 @@ body:has(
 		backdrop-filter: none !important;
 	}
 }
+
+/* Plan section 5 (G8 bench): the auth card sits over the drifting particles, so its blur repaints every frame. At 4x CPU
+ * throttle that costs 21% of frames over 20 ms against 0% for the opaque card (tests/e2e/material-scroll.perf.spec.ts).
+ * The card is therefore glass only where nothing drifts (reduced motion); otherwise it is the opaque popover surface with
+ * the same edge and shadow (the `off` look). The gate still proves the glass case, and every opaque case is easier. */
+@media (prefers-reduced-motion: no-preference) {
+	.lk-auth-card.material-pane {
+		background-color: var(--popover);
+		-webkit-backdrop-filter: none;
+		backdrop-filter: none;
+	}
+}

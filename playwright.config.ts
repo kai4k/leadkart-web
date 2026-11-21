@@ -55,11 +55,13 @@ export default defineConfig({
 		{
 			name: 'firefox',
 			testDir: './tests/e2e',
+			testIgnore: /[.]perf[.]spec[.]ts$/,
 			use: { ...devices['Desktop Firefox'] }
 		},
 		{
 			name: 'webkit',
 			testDir: './tests/e2e',
+			testIgnore: /[.]perf[.]spec[.]ts$/,
 			use: { ...devices['Desktop Safari'] }
 		},
 		// ── a11y deep (axe-core on every route, chromium only) ───────

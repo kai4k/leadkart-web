@@ -307,4 +307,18 @@ describe('the material utilities', () => {
 		}
 		expect(root.has('--material-primary-text')).toBe(true);
 	});
+
+	it('the auth card is opaque while the backdrop drifts and glass under reduced motion (the G8 bench rule)', () => {
+		let found: postcss.Rule | undefined;
+		postcss.parse(UTILITIES).walkAtRules('media', (m) => {
+			if (m.params.replace(/\s+/g, ' ') !== '(prefers-reduced-motion: no-preference)') return;
+			m.walkRules((r) => {
+				if (r.selector === '.lk-auth-card.material-pane') found = r;
+			});
+		});
+		expect(found).toBeTruthy();
+		const body = found!.nodes.map(String).join(';');
+		expect(body).toContain('background-color: var(--popover)');
+		expect(body).toContain('backdrop-filter: none');
+	});
 });
