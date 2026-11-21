@@ -217,7 +217,7 @@
 		bind:this={frame}
 		class={cn(
 			fieldControlClass,
-			'gap-1 py-0 pe-1 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring',
+			'gap-1 py-0 pe-1 has-[[data-segment]:focus-visible]:border-ring has-[[data-segment]:focus-visible]:ring-3 has-[[data-segment]:focus-visible]:ring-ring',
 			'data-invalid:border-destructive',
 			disabled && 'cursor-not-allowed bg-muted opacity-50'
 		)}
@@ -240,6 +240,7 @@
 			invalid={Boolean(startError) || bothInvalid}
 			ariaLabel={$_('form.dateRangePicker.start', { values: { label } })}
 			onkeydowncapture={handleKeyDownCapture}
+			class="flex-none"
 		/>
 		<span aria-hidden="true" class="px-1 text-muted-foreground">–</span>
 		<DateField.Input
@@ -257,7 +258,7 @@
 			invalid={Boolean(endError) || bothInvalid}
 			ariaLabel={$_('form.dateRangePicker.end', { values: { label } })}
 			onkeydowncapture={handleKeyDownCapture}
-			class="flex-1"
+			class="flex-none"
 		/>
 		<Popover.Root bind:open>
 			<Popover.Trigger disabled={disabled || readonly}>
@@ -267,6 +268,7 @@
 						type="button"
 						variant="ghost"
 						size="icon-sm"
+						class="ms-auto"
 						aria-label={$_('form.dateRangePicker.openCalendar', { values: { label } })}
 					>
 						<Icon icon={CalendarIcon} size="sm" />

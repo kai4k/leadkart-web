@@ -200,30 +200,119 @@ test.describe('typed entry and calendar agree', () => {
 		await expect(page.getByText('The end date does not exist')).toBeVisible();
 	});
 
-	test('the segments read as a typed date: touching 24 x 24 targets, the "/" between them takes no room', async ({
+	// segment boxes and the literal's GLYPH box (a Range over its text), measured in the page
+	const geometry = (scope: ReturnType<Page['locator']>) =>
+		scope.evaluate((root) => {
+			const box = (r: DOMRect) => ({ l: r.left, r: r.right, w: r.width, h: r.height });
+			const segments = [
+				...root.querySelectorAll('[data-segment]:not([data-segment="literal"])')
+			].map((e) => box(e.getBoundingClientRect()));
+			const glyphs = [...root.querySelectorAll('[data-segment="literal"]')].map((e) => {
+				const range = document.createRange();
+				range.selectNodeContents(e);
+				return box(range.getBoundingClientRect());
+			});
+			return { segments, glyphs };
+		});
+	function expectSeparated(g: Awaited<ReturnType<typeof geometry>>, state: string) {
+		expect(g.segments, state).toHaveLength(3);
+		expect(g.glyphs, state).toHaveLength(2);
+		for (const b of g.segments) {
+			expect(b.w, state).toBeGreaterThanOrEqual(24);
+			expect(b.h, state).toBeGreaterThanOrEqual(24);
+		}
+		g.glyphs.forEach((glyph, i) => {
+			expect(glyph.w, `${state}: the separator has a real glyph box`).toBeGreaterThan(0);
+			// no segment box overlaps a separator's glyph box
+			for (const seg of g.segments) {
+				const overlap = Math.min(seg.r, glyph.r) - Math.max(seg.l, glyph.l);
+				expect(overlap, `${state}: separator ${i} against a segment`).toBeLessThanOrEqual(0.5);
+			}
+		});
+	}
+
+	test('the segments never collide with the "/" separators, empty (dd/mm/yyyy) and typed', async ({
 		page
 	}) => {
 		await guide(page);
 		const sheet = await openSheetPicker(page);
-		const boxes = await segs(sheet).evaluateAll((els) =>
-			els.map((e) => {
-				const r = e.getBoundingClientRect();
-				return { l: r.left, r: r.right, w: r.width, h: r.height };
-			})
-		);
-		expect(boxes).toHaveLength(3);
-		for (const b of boxes) {
-			expect(b.w).toBeGreaterThanOrEqual(24);
-			expect(b.h).toBeGreaterThanOrEqual(24);
-		}
-		// adjacent, never overlapping (a target must not cover its neighbour)
-		for (const [a, b] of [
-			[boxes[0]!, boxes[1]!],
-			[boxes[1]!, boxes[2]!]
-		] as const) {
-			expect(b.l - a.r).toBeGreaterThanOrEqual(-0.5);
-			expect(b.l - a.r).toBeLessThanOrEqual(4);
-		}
+		const group = sheet.locator('[data-slot="date-field-input"]').first();
+		expectSeparated(await geometry(group), 'placeholder');
+		await segs(group).first().click();
+		await page.keyboard.type('31102026');
+		expectSeparated(await geometry(group), 'typed');
+		const typed = await geometry(group);
+		await segs(group).first().click();
+		await page.keyboard.press('Backspace');
+		await page.keyboard.press('Backspace');
+		await page.keyboard.type('29');
+		// tabular digits: another two-digit day is the same width, so the date does not jiggle
+		const again = await geometry(group);
+		expect(Math.abs(again.segments[0]!.w - typed.segments[0]!.w)).toBeLessThanOrEqual(0.5);
+	});
+
+	test('the range picker keeps both groups and the dash together at the start; the button is at the end', async ({
+		page
+	}) => {
+		await guide(page);
+		const frame = page
+			.locator('[data-slot="date-field-input"][aria-label^="Period"]')
+			.first()
+			.locator('xpath=..');
+		const groups = frame.locator('[data-slot="date-field-input"]');
+		await segs(groups.first()).first().click();
+		await page.keyboard.type('18112026');
+		await segs(groups.nth(1)).first().click();
+		await page.keyboard.type('24112026');
+		const m = await frame.evaluate((f) => {
+			const gs = [...f.querySelectorAll('[data-slot="date-field-input"]')].map((g) =>
+				g.getBoundingClientRect()
+			);
+			const dash = f
+				.querySelector('span[aria-hidden="true"]:not([data-slot])')!
+				.getBoundingClientRect();
+			const button = f.querySelector('button')!.getBoundingClientRect();
+			const first = f.querySelector('[data-segment]')!.getBoundingClientRect();
+			const last = [...f.querySelectorAll('[data-segment]')].at(-1)!.getBoundingClientRect();
+			return {
+				gs: gs.map((r) => ({ l: r.left, r: r.right })),
+				dash: { l: dash.left, r: dash.right },
+				button: { l: button.left, r: button.right },
+				frameR: f.getBoundingClientRect().right,
+				first: first.left,
+				last: last.right
+			};
+		});
+		// the dash is centred between the two groups with equal gaps, and both sides are small
+		const left = m.dash.l - m.gs[0]!.r;
+		const right = m.gs[1]!.l - m.dash.r;
+		expect(Math.abs(left - right)).toBeLessThanOrEqual(1);
+		expect(left).toBeLessThanOrEqual(12);
+		expect(right).toBeLessThanOrEqual(12);
+		// the end group ends where its last segment ends: nothing stretches between the groups and the button
+		expect(m.gs[1]!.r - m.last).toBeLessThanOrEqual(1);
+		expect(m.button.l - m.gs[1]!.r).toBeGreaterThan(24);
+		expect(m.frameR - m.button.r).toBeLessThanOrEqual(8);
+	});
+
+	test('one focus ring: a segment has the field ring; the calendar button has its own and the field has none', async ({
+		page
+	}) => {
+		await guide(page);
+		const sheet = await openSheetPicker(page);
+		const field = sheet.locator('[data-slot="date-field-input"]').first().locator('xpath=..');
+		// a drawn ring is a shadow with a spread above zero (an unfocused field still reports transparent zero-spread shadows)
+		const ring = (l: ReturnType<Page['locator']>) =>
+			l.evaluate((e) => /\s[1-9][0-9.]*px(,|$)/.test(getComputedStyle(e).boxShadow));
+		await segs(field).first().focus();
+		await page.keyboard.press('ArrowRight'); // keyboard modality: :focus-visible applies
+		expect(await ring(field), 'a segment has focus: the field ring').toBe(true);
+		await segs(field).last().focus();
+		await page.keyboard.press('Tab'); // to the calendar button
+		const button = field.getByRole('button', { name: /Open calendar/ });
+		await expect(button).toBeFocused();
+		expect(await ring(button), 'the button draws its own ring').toBe(true);
+		expect(await ring(field), 'the field draws none while the button has focus').toBe(false);
 	});
 
 	test('the range picker: two named groups; typing both ends; an end before the start is invalid', async ({

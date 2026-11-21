@@ -429,7 +429,7 @@ describe('DatePicker: a half-typed year is not a value', () => {
 		expect(hidden('when')!.value).toBe('');
 		expect(groups()[0]!.getAttribute('aria-invalid')).toBe('true');
 		expect(target.querySelector('[data-slot="field-error"]')!.textContent).toBe(
-			'Enter a year between 1990 and 2030'
+			'Enter a year between 1990 and 2030.'
 		);
 		segments()[2]!.focus();
 		type('2031');
@@ -631,7 +631,7 @@ describe('DateRangePicker: what is posted', () => {
 		expect(hidden('from')!.value).toBe('');
 		expect(groups()[0]!.getAttribute('aria-invalid')).toBe('true');
 		expect(target.querySelector('[data-slot="field-error"]')!.textContent).toBe(
-			'Enter a year between 2000 and 2036'
+			'Enter a year between 2000 and 2036.'
 		);
 	});
 });

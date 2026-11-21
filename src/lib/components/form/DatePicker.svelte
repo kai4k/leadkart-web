@@ -182,7 +182,7 @@
 		bind:this={frame}
 		class={cn(
 			fieldControlClass,
-			'gap-1 py-0 pe-1 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring',
+			'gap-1 py-0 pe-1 has-[[data-segment]:focus-visible]:border-ring has-[[data-segment]:focus-visible]:ring-3 has-[[data-segment]:focus-visible]:ring-ring',
 			'data-invalid:border-destructive',
 			disabled && 'cursor-not-allowed bg-muted opacity-50'
 		)}
