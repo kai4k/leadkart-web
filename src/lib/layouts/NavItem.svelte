@@ -48,7 +48,7 @@
 					aria-current={active ? 'page' : undefined}
 					onclick={() => onNavigate?.()}
 				>
-					<NavIcon aria-hidden="true" />
+					<NavIcon class="text-sidebar-icon" aria-hidden="true" />
 					<span class="group-data-[collapsible=icon]:sr-only">{label}</span>
 				</a>
 			{/snippet}

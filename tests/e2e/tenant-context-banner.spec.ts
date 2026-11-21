@@ -147,24 +147,34 @@ test.describe('tenant context banner on every shell variant', () => {
 		await resetMock();
 	});
 
-	for (const v of VARIANTS) {
-		test(`${v.name}: named, placed, reachable by Tab; Exit lands on the tenants list`, async ({
-			page
-		}) => {
-			await enterAcme(page, v.extra, v.width);
-			await expectPlaced(page);
+	// the banner is a safety signal and stays opaque on every layout: the whole matrix runs on the glass
+	// materials and on Solid (plan GD12), and it never takes a material itself
+	for (const transparency of ['glass', 'off'])
+		for (const v of VARIANTS) {
+			test(`${v.name} (transparency ${transparency}): named, placed, reachable by Tab; Exit lands on the tenants list`, async ({
+				page
+			}) => {
+				await enterAcme(page, { ...v.extra, transparency }, v.width);
+				await expectPlaced(page);
+				expect(
+					await page
+						.locator('[data-shell="banner"]')
+						.first()
+						.evaluate((el) => getComputedStyle(el).backdropFilter),
+					'the banner takes no material'
+				).toBe('none');
 
-			// the second page of the tree, a list: still there
-			await page.goto('/operator/scope/members');
-			await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
-			await expectPlaced(page);
+				// the second page of the tree, a list: still there
+				await page.goto('/operator/scope/members');
+				await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
+				await expectPlaced(page);
 
-			await tabToExit(page);
-			await page.keyboard.press('Enter');
-			await page.waitForURL(/\/operator\/tenants$/);
-			await expect(region(page)).toHaveCount(0);
-		});
-	}
+				await tabToExit(page);
+				await page.keyboard.press('Enter');
+				await page.waitForURL(/\/operator\/tenants$/);
+				await expect(region(page)).toHaveCount(0);
+			});
+		}
 
 	test('rtl: the banner is still placed and Exit is still reachable', async ({ page }) => {
 		await enterAcme(page, {}, 1280);

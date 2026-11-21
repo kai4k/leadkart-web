@@ -266,3 +266,9 @@ The primary colour has three roles and the normaliser (`scripts/shadcn/normalize
 Hand edit, recorded: `sonner/sonner.svelte`. The neutral toast is `not-data-[type]:material-pane!` (sonner paints its own background unlayered, so the material needs `!`; a typed toast has `data-type` and keeps its soft status fill). `--normal-bg` is no longer set; `--normal-border` is transparent (the material draws the edge).
 
 `cn()` treats the four material utilities as one class group that conflicts with `bg-*`, so a caller's `class` cannot leave two backgrounds on one element. Tests: `tests/unit/components/material-surfaces.test.ts`, `tests/unit/utils/cn.test.ts`, `tests/unit/scripts/shadcn-normalize.test.ts`.
+
+## Shell on materials (plan G6)
+
+Hand edit, recorded: `sidebar/sidebar.svelte`. The desktop `[data-slot=sidebar-inner]` and the mobile `Sheet.Content` are `material-sidebar` (the sidebar colour as glass; five sidebar colours are five tinted glasses). The inner element lost `bg-sidebar` and its `border-e` / `border-s` / semibox `border` classes (the material's edge replaces them); the floating variant keeps its radius. The mobile sheet's `material-sidebar` replaces the `material-pane` the sheet content carries (`cn()` treats the four material utilities as one class group). `collapsible="none"` keeps its opaque `bg-sidebar`.
+
+`sidebar/sidebar-menu-button.svelte` is unchanged: the active and hover fill is already the opaque `sidebar-accent` with `sidebar-accent-foreground` and `font-medium`.

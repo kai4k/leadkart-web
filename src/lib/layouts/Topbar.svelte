@@ -3,7 +3,8 @@
 	 * Topbar (Domiex): sidebar toggle, the brand where the sidebar does not carry it, the search
 	 * trigger, then the mode switch, the theme-settings button and the user menu. No heading and no
 	 * breadcrumb (the page's PageHeader owns both) and no notifications (nothing feeds them).
-	 * Placement is `styles/theme/layouts.css` (`[data-shell='topbar']`); this file is the look, in
+	 * Placement is `styles/theme/layouts.css` (`[data-shell='topbar']`); this file is the look: the bar
+	 * material (`material-bar`: glass over the scrolling page, opaque under Solid / the OS settings), in
 	 * semantic tokens only. In the `pattern` nav type layouts.css re-declares the tokens it reads.
 	 */
 	import { _ } from 'svelte-i18n';
@@ -41,14 +42,14 @@
 		else onOpenCustomizer?.();
 	}
 
-	const iconButton = 'size-9 pointer-coarse:size-11';
+	const iconButton = 'size-9 rounded-full pointer-coarse:size-11';
 </script>
 
 <svelte:window onkeydown={onKeydown} />
 
 <header
 	data-shell="topbar"
-	class="bg-card text-foreground border-border flex items-center justify-between gap-3 border-b px-5"
+	class="material-bar text-foreground flex items-center justify-between gap-3 px-5"
 >
 	<div class="flex min-w-0 items-center gap-2">
 		<!-- The brand: here for vertical, boxed and horizontal; modern and semibox show it in the sidebar. -->
@@ -63,7 +64,7 @@
 		{#if canSearch}
 			<button
 				type="button"
-				class="border-border bg-muted text-muted-foreground focus-visible:ring-ring ms-2 hidden h-9 w-72 items-center gap-2 rounded-md border px-3 text-sm outline-none focus-visible:ring-2 md:inline-flex"
+				class="bg-muted text-muted-foreground focus-visible:ring-ring ms-2 hidden h-9 w-72 items-center gap-2 rounded-full px-3 text-sm outline-none focus-visible:ring-2 md:inline-flex"
 				aria-label={$_('shell.searchLabel')}
 				title={$_('shell.searchTitle')}
 				onclick={() => (paletteOpen = true)}

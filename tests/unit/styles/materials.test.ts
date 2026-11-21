@@ -229,7 +229,7 @@ describe('the material utilities', () => {
 
 	it('the neutral toast (a !important material) is made opaque over an open modal by its own rule', () => {
 		expect(UTILITIES).toMatch(
-			/[data-sonner-toast]:not([data-type])s*{[^}]*background-color: var(--popover) !important/
+			/\[data-sonner-toast\]:not\(\[data-type\]\)\s*\{[^}]*background-color: var\(--popover\) !important/
 		);
 	});
 

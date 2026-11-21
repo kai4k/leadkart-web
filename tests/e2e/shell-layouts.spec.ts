@@ -197,3 +197,84 @@ test.describe('shell layouts', () => {
 		});
 	}
 });
+
+test.describe('shell on materials (plan G6)', () => {
+	test.beforeEach(async () => {
+		await resetMock();
+	});
+
+	for (const layout of PREFERENCE_VALUES.layout) {
+		test(`${layout} (glass): the topbar is glass, with no ::after fade`, async ({ page }) => {
+			await page.setViewportSize({ width: 1280, height: 800 });
+			await open(page, layout, { transparency: 'glass' });
+			const style = await page.evaluate(() => {
+				const bar = document.querySelector('[data-shell="topbar"]')!;
+				return {
+					filter: getComputedStyle(bar).backdropFilter,
+					after: getComputedStyle(bar, '::after').content
+				};
+			});
+			expect(style.filter).toContain('blur(');
+			expect(['none', 'normal']).toContain(style.after);
+		});
+	}
+
+	test('pattern nav type keeps an opaque band: no backdrop filter, no shadow', async ({ page }) => {
+		await page.setViewportSize({ width: 1280, height: 800 });
+		await open(page, 'vertical', { navType: 'pattern', transparency: 'glass' });
+		const style = await page.evaluate(() => {
+			const s = getComputedStyle(document.querySelector('[data-shell="topbar"]')!);
+			return { filter: s.backdropFilter, shadow: s.boxShadow };
+		});
+		expect(style.filter).toBe('none');
+		expect(style.shadow).toBe('none');
+	});
+
+	test('Solid: every bar and the sidebar are opaque, with no backdrop filter', async ({ page }) => {
+		await page.setViewportSize({ width: 1280, height: 800 });
+		await open(page, 'vertical', { transparency: 'off' });
+		const filters = await page.evaluate(() =>
+			['[data-shell="topbar"]', '[data-slot="sidebar-inner"]'].map((sel) => {
+				const s = getComputedStyle(document.querySelector(sel)!);
+				return [sel, s.backdropFilter, s.backgroundColor];
+			})
+		);
+		for (const [sel, filter, bg] of filters) {
+			expect(filter, sel).toBe('none');
+			expect(bg, sel).not.toMatch(/rgba\(.*,\s*0?\.\d+\)/);
+		}
+	});
+
+	test('horizontal: the topbar has no outer 1px edge, the nav bar has one (one scroll edge)', async ({
+		page
+	}) => {
+		await page.setViewportSize({ width: 1280, height: 800 });
+		await open(page, 'horizontal', { transparency: 'glass' });
+		const shadows = await page.evaluate(() => ({
+			topbar: getComputedStyle(document.querySelector('[data-shell="topbar"]')!).boxShadow,
+			hnav: getComputedStyle(document.querySelector('[data-shell="hnav"]')!).boxShadow,
+			hnavFilter: getComputedStyle(document.querySelector('[data-shell="hnav"]')!).backdropFilter
+		}));
+		const ring = /0px 0px 0px 1px/;
+		expect(shadows.topbar).not.toMatch(ring);
+		expect(shadows.hnav).toMatch(ring);
+		expect(shadows.hnavFilter).toContain('blur(');
+	});
+
+	test('the light sidebar draws its nav icons in the accent (--primary-indicator)', async ({
+		page
+	}) => {
+		await page.setViewportSize({ width: 1280, height: 800 });
+		await open(page, 'vertical', { sidebarColors: 'light' });
+		const colours = await page.evaluate(() => {
+			const icon = document.querySelector('[data-slot="sidebar-menu-button"] svg')!;
+			const probe = document.createElement('i');
+			probe.style.color = 'var(--primary-indicator)';
+			document.body.append(probe);
+			const want = getComputedStyle(probe).color;
+			probe.remove();
+			return { icon: getComputedStyle(icon).color, want };
+		});
+		expect(colours.icon).toBe(colours.want);
+	});
+});

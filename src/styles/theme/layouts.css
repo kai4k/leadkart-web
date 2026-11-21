@@ -189,8 +189,15 @@
 }
 :root[data-layout='semibox'] [data-shell='topbar'],
 :root[data-nav-type='boxed']:not([data-layout='horizontal']) [data-shell='topbar'] {
-	border: var(--border-thin) solid var(--border);
+	/* no border: the bar material's own edge (box-shadow) is the outline */
 	border-radius: var(--shell-radius);
+}
+/* horizontal: the topbar and the nav bar under it are ONE scroll edge effect (GD14): the topbar drops its
+   outer edge (the 1px ring of the material box-shadow) and the nav bar carries it */
+:root[data-layout='horizontal'] [data-shell='topbar'] {
+	box-shadow:
+		inset 0 1px 0 0 var(--material-highlight),
+		var(--material-bar-shadow);
 }
 :root[data-nav-type='boxed']:not([data-layout='horizontal']) {
 	--shell-radius: 0.375rem;

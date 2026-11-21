@@ -3,18 +3,13 @@
 	import { cn } from '#lib/utils/cn.ts';
 
 	/**
-	 * AuthCard — composes the universal `.bg-card border border-border rounded-xl shadow-card` material with
-	 * auth-shell-specific extras: built-in padding + entrance animation
-	 * + slow border-glow pulse. The glass material itself (bg + blur +
-	 * saturate + brightness + specular + inner gradient + 1.5rem radius)
-	 * comes from `.bg-card border border-border rounded-xl shadow-card` in utilities.css — same recipe every
-	 * modal / popover / dashboard tile in the product uses.
+	 * AuthCard: the sign-in card, a sheet over the decorative backdrop, on the pane material (`material-pane`:
+	 * glass over the backdrop, opaque under Solid), with padding and an entrance animation of its own.
 	 *
 	 * API:
-	 *   - children   — required; the form content (rendered inside the
-	 *                  flow z-index from .bg-card border border-border rounded-xl shadow-card).
-	 *   - class      — append-only token classes for caller overrides.
-	 *   - layoutClass — content layout (default `stack stack-relaxed`).
+	 *   - children    required; the form content
+	 *   - class       append-only token classes for caller overrides
+	 *   - layoutClass content layout (default `stack stack-relaxed`)
 	 */
 
 	type Props = {
@@ -27,16 +22,14 @@
 	let { class: className = '', layoutClass = 'stack stack-relaxed', children }: Props = $props();
 </script>
 
-<div class={cn('lk-auth-card bg-card border border-border rounded-xl shadow-card ', className)}>
+<div class={cn('lk-auth-card material-pane rounded-xl', className)}>
 	<div class={cn(layoutClass)}>
 		{@render children()}
 	</div>
 </div>
 
 <style>
-	/* Auth-card-specific extras layered on top of `.bg-card border border-border rounded-xl shadow-card`.
-	   Border-glow pulse comes from the `.` utility
-	   (animations.css). Local concern: the entrance animation only. */
+	/* The entrance animation and the padding are this card's own; the surface is the material. */
 	.lk-auth-card {
 		padding: clamp(1.5rem, 4vw, 2.5rem);
 		animation: lk-auth-card-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;

@@ -43,7 +43,7 @@
 			title={$_('common.navigation')}
 			titleHidden
 			class={cn(
-				'bg-sidebar p-0 text-sidebar-foreground data-[side=left]:w-(--sidebar-width-mobile) data-[side=right]:w-(--sidebar-width-mobile)',
+				'material-sidebar p-0 text-sidebar-foreground data-[side=left]:w-(--sidebar-width-mobile) data-[side=right]:w-(--sidebar-width-mobile)',
 				className
 			)}
 			{side}
@@ -81,7 +81,7 @@
 			<div
 				data-sidebar="sidebar"
 				data-slot="sidebar-inner"
-				class="flex size-full flex-col overflow-hidden border-sidebar-border bg-sidebar group-data-[side=left]:border-e group-data-[side=right]:border-s group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border [:root[data-layout=semibox]_&]:rounded-(--shell-radius) [:root[data-layout=semibox]_&]:border"
+				class="material-sidebar flex size-full flex-col overflow-hidden group-data-[variant=floating]:rounded-lg [:root[data-layout=semibox]_&]:rounded-(--shell-radius)"
 			>
 				{@render children?.()}
 			</div>

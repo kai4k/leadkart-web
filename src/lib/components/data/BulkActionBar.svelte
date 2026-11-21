@@ -51,6 +51,9 @@
 	 * marker, action buttons, and a "Clear selection" link on the
 	 * right.
 	 *
+	 * The bar is a floating toolbar on the bar material (`material-bar`, a capsule): glass over the rows that scroll
+	 * under it, opaque under Solid.
+	 *
 	 * `role="status"` + `aria-live="polite"` so screen readers
 	 * announce the selection count as it changes.
 	 */
@@ -117,7 +120,7 @@
 {#if selection.count > 0}
 	<div
 		class={cn(
-			'bg-card border border-border rounded-xl shadow-card sticky bottom-4 z-10 mx-auto w-full max-w-3xl',
+			'material-bar rounded-full sticky bottom-4 z-10 mx-auto w-full max-w-3xl',
 			'cluster cluster-spread items-center gap-4 px-4 py-3',
 			className
 		)}

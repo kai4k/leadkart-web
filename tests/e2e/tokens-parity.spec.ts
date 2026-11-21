@@ -80,11 +80,14 @@ const EXPECTED: Record<string, Measured> = {
 			// The first <button> on /signin. Phase 2 Tasks 4-7 regenerated Button (radius 10px) and
 			// moved its muted text to the AA-safe muted-foreground: a deliberate change, not drift.
 			backgroundColor: 'rgba(0, 0, 0, 0)',
-			color: 'oklch(0.42 0.02 250)',
+			// the sign-in card is the pane material (plan G6): its secondary text is the glass-safe muted step
+			// (--material-muted-foreground, one step darker than --muted-foreground in light)
+			color: 'oklch(0.384 0.02 250)',
 			borderRadius: '10px'
 		},
 		card: {
-			backgroundColor: 'oklch(1 0 0)',
+			// ... and its fill is the popover surface at 84% (glass), no longer opaque white
+			backgroundColor: 'color(srgb 0.99987 1.00005 1.00007 / 0.84)',
 			borderColor: 'oklch(0.92 0.01 268)',
 			borderRadius: '16px'
 		}
