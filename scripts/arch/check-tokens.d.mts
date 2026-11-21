@@ -35,3 +35,5 @@ export const BACKDROP_FILES: RegExp[];
 export function findBackdrop(rel: string, src: string): Array<{ line: number; name: string }>;
 export function findMaterialTokens(rel: string, src: string): Array<{ line: number; name: string }>;
 export function findWillChange(rel: string, src: string): Array<{ line: number; name: string }>;
+export const DYNAMIC_CLASS_PINNED: Record<string, string>;
+export const PRIMARY_STYLE_PINNED: Record<string, string>;

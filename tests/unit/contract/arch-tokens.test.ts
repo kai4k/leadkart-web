@@ -11,7 +11,9 @@ import {
 	findPrimaryMarks,
 	findTextOnControl,
 	findWillChange,
-	PRIMARY_MARK_ALLOWLIST
+	DYNAMIC_CLASS_PINNED,
+	PRIMARY_MARK_ALLOWLIST,
+	PRIMARY_STYLE_PINNED
 } from '../../../scripts/arch/check-tokens.mjs';
 
 /** Self-test of the token gate rules: fixtures, not the repository. */
@@ -170,7 +172,7 @@ describe('check-tokens (m5): a bare text-primary', () => {
 	});
 });
 
-describe('check-tokens (m5, fix round D): the vivid primary is a fill, a mark is primary-indicator', () => {
+describe('check-tokens (m5, fix round E): the vivid primary is a fill, a mark is primary-indicator (AST)', () => {
 	const marks = (src: string, rel = 'src/lib/features/x/X.svelte') =>
 		(findPrimaryMarks(rel, src) as Array<{ name: string }>).map((m) => m.name);
 	it.each([
@@ -184,70 +186,179 @@ describe('check-tokens (m5, fix round D): the vivid primary is a fill, a mark is
 		'border-s-primary',
 		'hover:border-primary',
 		'group-aria-checked/tile:ring-primary',
-		'dark:has-data-checked:border-primary'
-	])('refuses a bare %s anywhere under src/', (cls) => {
+		'dark:has-data-checked:border-primary',
+		'shadow-primary',
+		'from-primary',
+		'via-primary',
+		'to-primary',
+		'ring-offset-primary',
+		'accent-primary',
+		'placeholder-primary'
+	])('refuses a bare %s on an element, in a .ts file and in a <script> string', (cls) => {
 		expect(marks(`<i class="${cls} x"></i>`)).toHaveLength(1);
 		expect(marks(`const c = '${cls}';`, 'src/lib/x/y.ts')).toHaveLength(1);
+		expect(marks(`<script lang="ts">const c = '${cls}';</script>`)).toHaveLength(1);
 	});
 	it('accepts the indicator role and the other primary tokens', () => {
 		expect(
 			marks(
-				'<i class="border-primary-indicator ring-primary-indicator bg-primary-soft text-primary-text ring-offset-popover border-primary-foreground"></i>'
+				'<i class="border-primary-indicator ring-primary-indicator bg-primary-soft text-primary-text ring-offset-popover border-primary-foreground shadow-primary-hover"></i>'
 			)
 		).toEqual([]);
 	});
-	it('bg-primary needs a label on the same line (text-primary-foreground, any variant), else it is a mark', () => {
+	it('a class list split over several lines, and every string of a cn() call, is one list (false negative fixed)', () => {
+		expect(
+			marks(`<i class={cn('rounded-md p-2',\n\tcond && 'x',\n\t'border-primary')}></i>`)
+		).toEqual(['border-primary']);
+		expect(marks('<i class="rounded\n\tborder-primary\n\tp-2"></i>')).toEqual(['border-primary']);
+		expect(marks(`<i class="a {x ? 'ring-primary' : ''}"></i>`)).toEqual(['ring-primary']);
+		expect(marks('<i class:border-primary={on}></i>')).toEqual(['border-primary']);
+	});
+	it('bg-primary needs its label on the SAME element, or on a descendant with no fill in between', () => {
 		expect(marks('<b class="bg-primary text-primary-foreground"></b>')).toEqual([]);
 		expect(marks('<b class="hover:bg-primary hover:text-primary-foreground"></b>')).toEqual([]);
-		expect(marks("primary: 'bg-primary',")).toEqual(['bg-primary']);
-		expect(marks("iconAccent === 'primary' && 'bg-primary',")).toEqual(['bg-primary']);
+		expect(
+			marks(`<b class={cn('bg-primary',\n\t'px-2',\n\t'text-primary-foreground')}></b>`)
+		).toEqual([]);
+		expect(marks('<div class="bg-primary"><b class="text-primary-foreground">x</b></div>')).toEqual(
+			[]
+		);
+		// same LINE, different element: the review's false negative
+		expect(
+			marks('<span class="bg-primary size-2"></span><b class="text-primary-foreground">x</b>')
+		).toEqual(['bg-primary']);
+		// a fill in between hides the label from the primary one
+		expect(
+			marks(
+				'<div class="bg-primary"><div class="bg-card"><b class="text-primary-foreground">x</b></div></div>'
+			)
+		).toEqual(['bg-primary']);
 		expect(marks('<i class="bg-primary-indicator bg-primary-soft bg-primary-hover"></i>')).toEqual(
 			[]
 		);
 	});
-	it('bg-primary is free in the Button, Badge and Checkbox family files', () => {
-		expect(marks("v: 'bg-primary',", 'src/lib/components/ui/button/button.svelte')).toEqual([]);
-		expect(marks("v: 'bg-primary',", 'src/lib/components/ui/badge/badge.svelte')).toEqual([]);
-		expect(marks("v: 'bg-primary',", 'src/lib/components/ui/checkbox/checkbox.svelte')).toEqual([]);
+	it('a bg-primary string in a <script> needs the label in the same string', () => {
+		expect(marks(`<script lang="ts">const v = 'bg-primary';</script>`)).toEqual(['bg-primary']);
 		expect(
-			marks("v: 'bg-primary',", 'src/lib/components/ui/progress/progress.svelte')
-		).toHaveLength(1);
+			marks(`<script lang="ts">const v = 'bg-primary text-primary-foreground';</script>`)
+		).toEqual([]);
+	});
+	it('bg-primary is free in the Button, Badge and Checkbox family files', () => {
+		const s = `<script lang="ts">const v = 'bg-primary';</script>`;
+		expect(marks(s, 'src/lib/components/ui/button/button.svelte')).toEqual([]);
+		expect(marks(s, 'src/lib/components/ui/badge/badge.svelte')).toEqual([]);
+		expect(marks(s, 'src/lib/components/ui/checkbox/checkbox.svelte')).toEqual([]);
+		expect(marks(s, 'src/lib/components/ui/progress/progress.svelte')).toHaveLength(1);
+	});
+	it('a <style> block: var(--primary) as a mark is refused, as a fill it needs --primary-foreground in the rule', () => {
+		const st = (css: string) => marks(`<div class="a"></div>\n<style>\n${css}\n</style>`);
+		expect(st('.a { color: var(--primary); }')).toHaveLength(1);
+		expect(st('.a { border-color: var(--primary); }')).toHaveLength(1);
+		expect(st('.a { outline: 2px solid var(--primary); }')).toHaveLength(1);
+		expect(st('.a { box-shadow: 0 0 0 2px var(--primary); }')).toHaveLength(1);
+		expect(st('.a { fill: var(--primary); stroke: var(--primary); }')).toHaveLength(2);
+		expect(st('.a { background: var(--primary); }')).toHaveLength(1);
+		expect(st('.a { background: var(--primary); color: var(--primary-foreground); }')).toEqual([]);
+		expect(st('.a { color: var(--primary-indicator); background: var(--primary-soft); }')).toEqual(
+			[]
+		);
+	});
+	it('a class fragment built at run time that can end in a utility prefix is refused', () => {
+		expect(marks('<i class={`bg-${tone} p-2`}></i>')).toHaveLength(1);
+		expect(marks(`<i class={'border-' + tone}></i>`)).toHaveLength(1);
+		expect(marks('<i class={`p-${n} text-sm`}></i>')).toEqual([]);
+		expect(marks('<i class={`bg-card ${open ? "x" : "y"}`}></i>')).toEqual([]);
 	});
 	it('a comment that names the class is not a use, and CSS files are not scanned', () => {
-		expect(marks('<!-- border-primary -->\n// ring-primary\n/* bg-primary */')).toEqual([]);
+		expect(marks('<!-- border-primary -->\n<i class="p-1"></i>')).toEqual([]);
+		expect(marks('// ring-primary\n/* bg-primary */', 'src/lib/x/y.ts')).toEqual([]);
 		expect(marks('.x { border-color: red }', 'src/styles/base.css')).toEqual([]);
 	});
-	it('the allowlist of bare marks is exact and empty', () => {
+	it('the allowlists are exact: bare marks and dynamic fragments empty, <style> pinned to the wireframe tiles only', () => {
 		expect(PRIMARY_MARK_ALLOWLIST).toEqual([]);
+		expect(DYNAMIC_CLASS_PINNED).toEqual({});
+		expect(Object.keys(PRIMARY_STYLE_PINNED)).toEqual(['src/lib/layouts/CustomizerTile.svelte']);
 	});
 });
 
-describe('check-tokens (m6, fix round D): no primary-text / destructive text on a control fill in a material', () => {
-	const hits = (
-		src: string,
-		rel = 'src/lib/components/ui/dropdown-menu/dropdown-menu-item.svelte'
-	) => (findTextOnControl(rel, src) as Array<{ name: string }>).map((m) => m.name);
-	it('refuses the pair in one variant chain, in the files that render on a material', () => {
-		expect(hits('<i class="bg-accent text-destructive"></i>')).toHaveLength(1);
-		expect(hits('<i class="focus:bg-accent focus:text-primary-text"></i>')).toHaveLength(1);
+describe('check-tokens (m6, fix round E): no destructive text on a control fill in a material (AST)', () => {
+	const DLG = `<script lang="ts">import { Dialog } from '$ui';</script>\n`;
+	const hits = (src: string, rel = 'src/lib/features/x/X.svelte') =>
+		(findTextOnControl(rel, src) as Array<{ name: string }>).map((m) => m.name);
+	it('an unprefixed utility applies in every state: text-destructive hover:bg-accent IS destructive on the hover fill', () => {
+		expect(hits(`${DLG}<i class="text-destructive hover:bg-accent"></i>`)).toHaveLength(1);
+		expect(hits(`${DLG}<i class="bg-accent text-destructive"></i>`)).toHaveLength(1);
+		expect(hits(`${DLG}<i class="focus:bg-accent hover:text-destructive"></i>`)).toHaveLength(1);
 		expect(
-			hits('<i class="bg-muted text-primary-text"></i>', 'src/lib/layouts/Topbar.svelte')
+			hits(`${DLG}<i class={cn('bg-accent',\n\t'rounded',\n\t'text-destructive')}></i>`)
 		).toHaveLength(1);
 	});
-	it('a different state chain is a different element state: allowed (the destructive menu item)', () => {
+	it('the destructive menu item is safe because its own gated fill wins in the state that sets the control fill', () => {
 		expect(
 			hits(
-				'<i class="focus:bg-accent data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive-soft"></i>'
+				'<i class="focus:bg-accent data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive-soft"></i>',
+				'src/lib/components/ui/dropdown-menu/dropdown-menu-item.svelte'
 			)
 		).toEqual([]);
+		// without the gated fill the same pair is a destructive label on the focus fill
+		expect(
+			hits(
+				'<i class="focus:bg-accent data-[variant=destructive]:text-destructive"></i>',
+				'src/lib/components/ui/dropdown-menu/dropdown-menu-item.svelte'
+			)
+		).toHaveLength(1);
+		// a gated fill in a state that does NOT cover the control fill's state does not help
+		expect(
+			hits(`${DLG}<i class="text-destructive hover:bg-accent focus:bg-destructive-soft"></i>`)
+		).toHaveLength(1);
 	});
-	it('foreground, muted and accent text on a control fill are fine; content files are not scanned', () => {
-		expect(hits('<i class="bg-accent text-accent-foreground text-muted-foreground"></i>')).toEqual(
+	it('exclusive data-/aria- values cannot co-occur', () => {
+		expect(hits(`${DLG}<i class="data-[v=a]:text-destructive data-[v=b]:bg-accent"></i>`)).toEqual(
 			[]
 		);
 		expect(
-			hits('<i class="bg-muted text-destructive"></i>', 'src/lib/features/x/X.svelte')
+			hits(`${DLG}<i class="data-[v=a]:text-destructive data-[w=b]:bg-accent"></i>`)
+		).toHaveLength(1);
+	});
+	it('an ancestor control fill counts, unless a gated fill sits between', () => {
+		expect(
+			hits(`${DLG}<div class="bg-muted"><p class="text-destructive">x</p></div>`)
+		).toHaveLength(1);
+		expect(
+			hits(`${DLG}<div class="hover:bg-muted"><div><p class="text-destructive">x</p></div></div>`)
+		).toHaveLength(1);
+		expect(
+			hits(
+				`${DLG}<div class="bg-muted"><div class="bg-card"><p class="text-destructive">x</p></div></div>`
+			)
 		).toEqual([]);
+		expect(
+			hits(
+				`${DLG}<div class="bg-muted"><p class="text-destructive bg-destructive-soft">x</p></div>`
+			)
+		).toEqual([]);
+	});
+	it('text-primary-text on a control fill is no longer refused (each material re-declares it to a gated step)', () => {
+		expect(hits(`${DLG}<i class="bg-muted text-primary-text"></i>`)).toEqual([]);
+	});
+	it('foreground, muted and accent text are fine', () => {
+		expect(
+			hits(`${DLG}<i class="bg-accent text-accent-foreground text-muted-foreground"></i>`)
+		).toEqual([]);
+	});
+	it('the file scope is derived, not listed: a material utility, an overlay import, or an overlay primitive file', () => {
+		const pair = '<i class="bg-muted text-destructive"></i>';
+		expect(hits(`<div class="material-pane">${pair}</div>`)).toHaveLength(1);
+		expect(hits(`<script lang="ts">import { Sheet } from '$ui';</script>${pair}`)).toHaveLength(1);
+		expect(
+			hits(
+				`<script lang="ts">import { DropdownMenu } from '#lib/components/ui/index.ts';</script>${pair}`
+			)
+		).toHaveLength(1);
+		expect(hits(pair, 'src/lib/components/ui/popover/popover-content.svelte')).toHaveLength(1);
+		// a content file that renders on no material is not scanned
+		expect(hits(pair)).toEqual([]);
+		expect(hits(`<script lang="ts">import { Button } from '$ui';</script>${pair}`)).toEqual([]);
 	});
 });
 

@@ -15,6 +15,7 @@
  */
 import { readFileSync, globSync } from 'node:fs';
 import { join } from 'node:path';
+import { classElements } from './lib/class-elements.mjs';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
@@ -203,6 +204,13 @@ export function findBareTextPrimary(rel, src) {
 	const norm = rel.replaceAll('\\', '/');
 	if (!/\.(svelte|ts|html)$/.test(norm) || !norm.startsWith('src/')) return [];
 	const found = [];
+	const parsed = norm.endsWith('.svelte') ? classElements(src) : null;
+	if (parsed) {
+		for (const el of [...parsed.elements, ...parsed.scripts])
+			for (const t of el.tokens)
+				if (t.base === 'text-primary') found.push({ line: el.line, name: t.raw });
+		return found;
+	}
 	for (const m of src.matchAll(BARE_TEXT_PRIMARY))
 		found.push({ line: src.slice(0, m.index).split('\n').length, name: m[0] });
 	return found;
@@ -224,82 +232,212 @@ const scan = (src, re) => {
 	return found;
 };
 
-// (m5, fix round D) The vivid primary is a FILL, so a non-text MARK in the primary colour (a border, a ring,
-// an outline, a divider, an svg fill or stroke, a caret, a decoration) is `*-primary-indicator`, the token
-// that is 3:1 on every surface (lime, green, amber and teal fills reach only 1.4-2.4:1). The rule:
-//   - a bare `border|ring|outline|divide|fill|stroke|caret|decoration|accent[-side]-primary` is refused
-//     anywhere under src/ (the allowlist below is exact and empty);
-//   - `bg-primary` is allowed only when the SAME LINE carries `text-primary-foreground` (a label on a
-//     fill, in any variant), or in the Button / Badge / Checkbox family files; otherwise it is a mark
-//     (`bg-primary-indicator`). Same line, not same element: a class list split across lines needs the
-//     label on the `bg-primary` line, or the fill moved to a variant that names its label.
+// (m5, fix round E) The vivid primary is a FILL, so a non-text MARK in the primary colour (a border, a ring,
+// an outline, a divider, an svg fill or stroke, a caret, a decoration, a shadow or gradient stop) is
+// `*-primary-indicator`, the token that is 3:1 on every surface (lime, green, amber and teal fills reach only
+// 1.4-2.4:1). Read from the Svelte AST (scripts/arch/lib/class-elements.mjs): the unit is the ELEMENT.
+//   - a bare `border|ring|ring-offset|outline|divide|fill|stroke|caret|decoration|accent|shadow|from|via|to|
+//     placeholder[-side]-primary` token on any element, or in any string literal of a <script>, is refused
+//     (the allowlist below is exact and empty);
+//   - `bg-primary` must have its label (`text-primary-foreground`, any variant) on the SAME element, or on a
+//     descendant with no fill of its own in between; otherwise it is a mark (`bg-primary-indicator`). In a
+//     <script> string the label must be in the same string. Button / Badge / Checkbox files are free;
+//   - a <style> block: `var(--primary)` used for color, border*, outline*, fill, stroke, box-shadow,
+//     text-decoration*, caret-color or accent-color is refused; as background it needs `--primary-foreground` in the same rule;
+//   - a class fragment built at run time that can end in a utility prefix (`bg-${tone}`, `'bg-' + tone`)
+//     could build a primary mark and is refused unless the file is pinned below with the reason.
+// .ts and .html files keep the per-line check (no elements there).
+// What it cannot see: a class list that arrives through a variable or a child component's prop. It is a lint;
+// the contrast gate proves the tokens.
 const PRIMARY_MARK =
-	/(?<![\w-])(?:border|ring|outline|divide|fill|stroke|caret|decoration|accent)(?:-[tblrxyse])?-primary(?![\w-])/g;
+	/(?<![\w-])(?:border|ring|ring-offset|outline|divide|fill|stroke|caret|decoration|accent|shadow|from|via|to|placeholder)(?:-[tblrxyse])?-primary(?![\w-])/g;
+const PRIMARY_MARK_BASE =
+	/^(?:border|ring|ring-offset|outline|divide|fill|stroke|caret|decoration|accent|shadow|from|via|to|placeholder)(?:-[tblrxyse])?-primary$/;
 const PRIMARY_FILL = /(?<![\w-])bg-primary(?![\w-])/g;
 export const PRIMARY_MARK_ALLOWLIST = /** @type {string[]} */ ([]);
 export const PRIMARY_FILL_FILES = [/^src\/lib\/components\/ui\/(?:button|badge|checkbox)\//];
+/** Files that may build a class fragment at run time, with the reason (each is reviewed: none builds `primary`). */
+export const DYNAMIC_CLASS_PINNED = /** @type {Record<string, string>} */ ({});
+/** <style> uses of the vivid primary that are decoration, not UI: a static wireframe preview, aria-hidden. */
+export const PRIMARY_STYLE_PINNED = /** @type {Record<string, string>} */ ({
+	'src/lib/layouts/CustomizerTile.svelte':
+		'the customizer tiles draw a static wireframe of the layout; the primary there previews the user-chosen colour as a fill, it is not a control'
+});
+const MARK_PROPS =
+	/(?:^|;)\s*(color|border(?:-[a-z-]+)?|outline(?:-[a-z-]+)?|fill|stroke|box-shadow|text-decoration(?:-color)?|caret-color|accent-color)\s*:[^;]*var\(--primary\)(?![\w-])/g;
+
+/** Declarations in a <style> block that use the vivid primary as a mark, or as a fill without its label. */
+function styleMarks(parsed, norm) {
+	const found = [];
+	if (PRIMARY_STYLE_PINNED[norm]) return found;
+	for (const { line, css } of parsed.styles) {
+		for (const rule of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+			const body = rule[2];
+			const at = line + css.slice(0, rule.index).split('\n').length - 1;
+			for (const m of body.matchAll(MARK_PROPS))
+				found.push({ line: at, name: `<style> ${m[1]}: var(--primary)` });
+			if (
+				/(?:^|;)\s*background(?:-color)?\s*:[^;]*var\(--primary\)(?![\w-])/.test(body) &&
+				!body.includes('var(--primary-foreground)')
+			)
+				found.push({
+					line: at,
+					name: '<style> background: var(--primary) without --primary-foreground'
+				});
+		}
+	}
+	return found;
+}
+
+const hasFill = (el) =>
+	el.tokens.some((t) => /^bg-/.test(t.base) && t.base !== 'bg-primary-foreground');
+const labelled = (el) => el.tokens.some((t) => t.base === 'text-primary-foreground');
+
+/** A `bg-primary` element is labelled by itself or by a descendant that is reached without crossing another fill. */
+function labelledBelow(elements, index) {
+	if (labelled(elements[index])) return true;
+	const kids = (i) => elements.map((e, k) => (e.parent === i ? k : -1)).filter((k) => k >= 0);
+	const stack = kids(index);
+	while (stack.length) {
+		const k = stack.pop();
+		if (labelled(elements[k])) return true;
+		if (!hasFill(elements[k])) stack.push(...kids(k));
+	}
+	return false;
+}
 
 export function findPrimaryMarks(rel, src) {
 	const norm = rel.replaceAll('\\', '/');
 	if (!/\.(svelte|ts|html)$/.test(norm) || !norm.startsWith('src/')) return [];
 	if (PRIMARY_MARK_ALLOWLIST.includes(norm)) return [];
-	const text = code(src);
-	const found = scan(text, PRIMARY_MARK);
-	if (!PRIMARY_FILL_FILES.some((re) => re.test(norm))) {
-		const lines = text.split('\n');
-		for (const f of scan(text, PRIMARY_FILL))
-			if (
-				!/(?<![\w-])(?:[\w[\]=:()&>*./-]*:)?text-primary-foreground(?![\w-])/.test(
-					lines[f.line - 1]
+	const fillFree = PRIMARY_FILL_FILES.some((re) => re.test(norm));
+	const parsed = norm.endsWith('.svelte') ? classElements(src) : null;
+	if (!parsed) {
+		const text = code(src);
+		const found = scan(text, PRIMARY_MARK);
+		if (!fillFree) {
+			const lines = text.split('\n');
+			for (const f of scan(text, PRIMARY_FILL))
+				if (
+					!/(?<![\w-])(?:[\w[\]=:()&>*./-]*:)?text-primary-foreground(?![\w-])/.test(
+						lines[f.line - 1]
+					)
 				)
-			)
-				found.push(f);
+					found.push(f);
+		}
+		return found;
 	}
+	const found = [];
+	parsed.elements.forEach((el, i) => {
+		for (const t of el.tokens)
+			if (PRIMARY_MARK_BASE.test(t.base)) found.push({ line: el.line, name: t.raw });
+		if (!fillFree)
+			for (const t of el.tokens)
+				if (t.base === 'bg-primary' && !labelledBelow(parsed.elements, i))
+					found.push({ line: el.line, name: t.raw });
+	});
+	for (const s of parsed.scripts) {
+		for (const t of s.tokens)
+			if (PRIMARY_MARK_BASE.test(t.base)) found.push({ line: s.line, name: t.raw });
+		if (
+			!fillFree &&
+			s.tokens.some((t) => t.base === 'bg-primary') &&
+			!s.tokens.some((t) => t.base === 'text-primary-foreground')
+		)
+			found.push({ line: s.line, name: 'bg-primary' });
+	}
+	found.push(...styleMarks(parsed, norm));
+	if (!DYNAMIC_CLASS_PINNED[norm]) for (const d of parsed.dynamic) found.push(d);
 	return found;
 }
 
-// (m6, fix round D) On a material, `bg-muted` / `bg-accent` are the translucent control fills. The gate proves
-// foreground, muted and accent-foreground text on them; `text-primary-text` and `text-destructive` do NOT
-// reach 4.5 there (dark destructive 2.8-4.3, violet primary text 2.9-4.5) and no component needs them, so
-// the class combination is refused in the files that render on a material. The pair must share a variant
-// chain (`focus:bg-accent` with `focus:text-destructive`; `data-[variant=destructive]:text-destructive`
-// with `focus:bg-accent` is a different state and is fine). Per line, like m5.
+// (m6, fix round E) On a material, `bg-muted` / `bg-accent` are the translucent control fills. `text-primary-text`
+// is solved by construction (each material utility re-declares --primary-text to a step gated on those fills),
+// but `--destructive` is also a FILL token, so destructive TEXT on a control fill (2.79-3.19:1) is refused.
+// Read from the Svelte AST, per element:
+//   - an unprefixed utility applies in EVERY state, so `text-destructive hover:bg-accent` IS destructive text on
+//     the hover fill. The text and the fill co-occur unless their variant chains are provably exclusive: the
+//     same `data-[k=v]` / `aria-[k=v]` key with different values;
+//   - a co-occurrence is safe only when the same element sets a gated fill (`bg-destructive-soft`, `bg-card`,
+//     `bg-background`, `bg-popover`) in a state that includes the control fill's whole state (its variants are a
+//     superset) and that wins: more variants, or the same variants and later in the list. That is the
+//     destructive menu item: `focus:bg-accent` + `data-[variant=destructive]:text-destructive` +
+//     `data-[variant=destructive]:focus:bg-destructive-soft`;
+//   - a `text-destructive` element whose ANCESTOR in the same file carries `bg-muted` / `bg-accent` (any
+//     variant) is on that fill, unless an element between them (or the element itself) sets a gated fill.
+// A file is a material surface when it uses a `material-*` utility, is a ui primitive of an overlay family, or
+// imports an overlay primitive (Dialog, AlertDialog, Sheet, Drawer, Popover, DropdownMenu, Select, Command,
+// Combobox, Sidebar, Toaster). What it cannot see: a label that another component renders into a slot.
 export const MATERIAL_SURFACE_FILES = [
-	/^src\/lib\/components\/ui\/(?:dialog|alert-dialog|sheet|popover|dropdown-menu|select|command|sonner|sidebar|AuthCard)[\w./-]*$/,
-	/^src\/lib\/layouts\/(?:Topbar|HorizontalNav|UserMenu|NavItem)\.svelte$/,
-	/^src\/lib\/components\/data\/BulkActionBar\.svelte$/,
-	/^src\/lib\/features\/search\/[\w./-]*\.svelte$/
+	/^src\/lib\/components\/ui\/(?:dialog|alert-dialog|sheet|drawer|popover|dropdown-menu|select|command|combobox|sonner|sidebar|AuthCard)[\w./-]*$/
 ];
+const OVERLAY_IMPORTS =
+	/\b(?:Dialog|AlertDialog|Sheet|Drawer|Popover|DropdownMenu|Select|Command|Combobox|Sidebar|Toaster)\b/;
+const OVERLAY_FROM =
+	/import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*['"](?:\$ui|#lib\/components\/ui\/index\.ts|#lib\/components\/ui(?:\/(?:dialog|alert-dialog|sheet|drawer|popover|dropdown-menu|select|command|combobox|sonner|sidebar)[^'"]*)?)['"]/g;
 const CONTROL_BG = new Set(['bg-muted', 'bg-accent']);
-const CONTROL_TEXT = new Set(['text-primary-text', 'text-destructive']);
+const GATED_FILL = new Set(['bg-destructive-soft', 'bg-card', 'bg-background', 'bg-popover']);
 
-/** `a:b:util` -> `{ chain: 'a:b:', base: 'util' }` (a `:` inside `[...]` does not split). */
-function splitVariant(token) {
-	let depth = 0;
-	let cut = -1;
-	for (let i = 0; i < token.length; i++) {
-		if (token[i] === '[' || token[i] === '(') depth++;
-		else if (token[i] === ']' || token[i] === ')') depth--;
-		else if (token[i] === ':' && depth === 0) cut = i;
-	}
-	return { chain: token.slice(0, cut + 1), base: token.slice(cut + 1) };
+function isMaterialSurface(norm, parsed) {
+	if (MATERIAL_SURFACE_FILES.some((re) => re.test(norm))) return true;
+	if (parsed.usesMaterial) return true;
+	for (const m of parsed.text.matchAll(OVERLAY_FROM)) if (OVERLAY_IMPORTS.test(m[1])) return true;
+	return false;
 }
+
+/** Two variant chains that cannot both hold: the same data-/aria- attribute selector with different values. */
+function exclusive(a, b) {
+	const key = (v) => /^(data|aria)-\[([\w-]+)=([^\]]+)\]$/.exec(v);
+	for (const x of a) {
+		const kx = key(x);
+		if (!kx) continue;
+		for (const y of b) {
+			const ky = key(y);
+			if (ky && ky[1] === kx[1] && ky[2] === kx[2] && ky[3] !== kx[3]) return true;
+		}
+	}
+	return false;
+}
+const superset = (big, small) => small.every((v) => big.includes(v));
 
 export function findTextOnControl(rel, src) {
 	const norm = rel.replaceAll('\\', '/');
-	if (!/\.svelte$/.test(norm) || !MATERIAL_SURFACE_FILES.some((re) => re.test(norm))) return [];
+	if (!/\.svelte$/.test(norm) || !norm.startsWith('src/')) return [];
+	const parsed = classElements(src);
+	if (!parsed || !isMaterialSurface(norm, parsed)) return [];
 	const found = [];
-	code(src)
-		.split('\n')
-		.forEach((line, i) => {
-			const tokens = line
-				.split(/[\s"'`{}]+/)
-				.filter(Boolean)
-				.map(splitVariant);
-			for (const bg of tokens.filter((t) => CONTROL_BG.has(t.base)))
-				for (const text of tokens.filter((t) => CONTROL_TEXT.has(t.base) && t.chain === bg.chain))
-					found.push({ line: i + 1, name: `${bg.chain}${bg.base} with ${text.chain}${text.base}` });
-		});
+	const gatedHere = (el, vb, bIndex) =>
+		el.tokens.some(
+			(g, gi) =>
+				GATED_FILL.has(g.base) &&
+				superset(g.variants, vb) &&
+				(g.variants.length > vb.length || gi > bIndex)
+		);
+	parsed.elements.forEach((el, i) => {
+		const texts = el.tokens.filter((t) => t.base === 'text-destructive');
+		if (!texts.length) return;
+		for (const t of texts) {
+			el.tokens.forEach((b, bi) => {
+				if (!CONTROL_BG.has(b.base) || exclusive(t.variants, b.variants)) return;
+				if (gatedHere(el, b.variants, bi)) return;
+				found.push({ line: el.line, name: `${b.raw} with ${t.raw}` });
+			});
+			// an ancestor's control fill, unless this element or one between sets a gated fill
+			if (el.tokens.some((g) => GATED_FILL.has(g.base) && g.variants.length === 0)) continue;
+			let up = el.parent;
+			while (up >= 0) {
+				const a = parsed.elements[up];
+				const fill = a.tokens.find((b) => CONTROL_BG.has(b.base));
+				if (fill) {
+					found.push({ line: el.line, name: `${t.raw} inside ${fill.raw} (line ${a.line})` });
+					break;
+				}
+				if (a.tokens.some((g) => GATED_FILL.has(g.base) && g.variants.length === 0)) break;
+				up = a.parent;
+			}
+		}
+		void i;
+	});
 	return found;
 }
 
@@ -352,9 +490,9 @@ export const FILE_RULES = [
 	},
 	{
 		id: 'm6',
-		title: 'text-primary-text / text-destructive on bg-muted / bg-accent in a material surface',
+		title: 'text-destructive on a bg-muted / bg-accent control fill in a material surface',
 		find: findTextOnControl,
-		fix: 'a control fill on glass does not reach 4.5:1 for these two text colours; use text-foreground, text-muted-foreground or text-accent-foreground there, or the destructive-soft fill for a destructive highlight.'
+		fix: 'destructive text on a control fill on glass does not reach 4.5:1; use text-foreground, text-muted-foreground or text-accent-foreground there, put the text on the pane itself, or give the state its own bg-destructive-soft.'
 	},
 	{
 		id: 'm1',

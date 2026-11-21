@@ -92,3 +92,30 @@ describe('the precache list leaves out what offline never needs', () => {
 		expect(statics).not.toContain('favicon-48x48.png');
 	});
 });
+
+describe('the filtered static list, compared with an independently written expected set', () => {
+	it('static/ minus the link-preview image, the Windows tiles and the 512 px icons is exactly what is precached', () => {
+		const statics = readdirSync(resolve(__dirname, '../../../static'), { recursive: true })
+			.map(String)
+			.sort();
+		const precached = statics.filter((f) => isPrecached(f));
+		// written by hand, not derived from NOT_PRECACHED: a file added to static/ must be decided here
+		expect(precached).toEqual([
+			'android-chrome-192x192.png',
+			'apple-touch-icon.png',
+			'favicon-16x16.png',
+			'favicon-32x32.png',
+			'favicon.ico',
+			'favicon.svg',
+			'manifest.webmanifest',
+			'offline.html'
+		]);
+		expect(statics.filter((f) => !isPrecached(f))).toEqual([
+			'android-chrome-512x512.png',
+			'maskable-512x512.png',
+			'mstile-150x150.png',
+			'mstile-310x310.png',
+			'og-image-light.png'
+		]);
+	});
+});
