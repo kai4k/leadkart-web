@@ -57,7 +57,7 @@
 			aria-label={$_('shell.brandHome')}
 			class="focus-visible:ring-ring flex shrink-0 items-center rounded-md outline-none focus-visible:ring-2 [:root[data-layout=modern]_&]:lg:hidden [:root[data-layout=semibox]_&]:lg:hidden"
 		>
-			<BrandMark wordmark decorative class="max-sm:[&>span:last-child]:hidden" />
+			<BrandMark wordmark decorative class="max-sm:[&>svg:last-child]:hidden" />
 		</a>
 		<Sidebar.Trigger class="{iconButton} [:root[data-layout=horizontal]_&]:lg:hidden" />
 		{#if canSearch}

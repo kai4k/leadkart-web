@@ -5,7 +5,8 @@
 	 * the copy is plain paragraphs, not headings, so the page form owns the `<h1>`.
 	 */
 	import { _ } from 'svelte-i18n';
-	import { BrandMark } from '$ui';
+	import { BrandWordmark } from '$ui';
+	import BrandIcon from './BrandIcon.svelte';
 	import { Icon, ShieldCheck, TrendingUp, Truck } from '#lib/icons/index.ts';
 
 	const year = new Date().getFullYear();
@@ -17,7 +18,10 @@
 </script>
 
 <div class="flex min-h-full flex-col justify-center gap-6">
-	<BrandMark wordmark size="lg" class="text-foreground" />
+	<div class="flex items-center gap-4">
+		<BrandIcon class="size-20 shrink-0" />
+		<BrandWordmark decorative class="text-foreground h-8" />
+	</div>
 
 	<div class="bg-card border-border rounded-2xl border px-7 py-6 shadow-sm">
 		<p class="text-primary-text text-4xl leading-tight font-bold tracking-tight">

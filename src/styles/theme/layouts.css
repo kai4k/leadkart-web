@@ -248,6 +248,9 @@
 	--accent: var(--primary-hover);
 	--border: var(--primary-hover);
 	--ring: var(--primary-foreground);
+	/* the logo is one colour on the band: its frame and capsule would vanish into the primary */
+	--brand-frame: var(--primary-foreground);
+	--brand-capsule: var(--primary-foreground);
 	background-color: var(--primary);
 	background-image: radial-gradient(
 		color-mix(in oklch, var(--primary-foreground) 25%, transparent) 1px,

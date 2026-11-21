@@ -45,9 +45,14 @@
 			<BrandMark
 				wordmark
 				decorative
+				tone="sidebar"
 				class="text-sidebar-foreground group-data-[collapsible=icon]:hidden"
 			/>
-			<BrandMark decorative class="hidden group-data-[collapsible=icon]:inline-flex" />
+			<BrandMark
+				decorative
+				tone="sidebar"
+				class="hidden group-data-[collapsible=icon]:inline-flex"
+			/>
 		</a>
 	</Sidebar.Header>
 

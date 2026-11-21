@@ -28,7 +28,7 @@
 		<header
 			class="bg-primary-soft text-primary-text border-border flex items-center justify-between border-b px-4 py-4 sm:px-6 lg:hidden"
 		>
-			<BrandMark wordmark />
+			<BrandMark wordmark class="text-foreground" />
 			<span class="text-sm font-medium">{$_('auth.brand.mobileTag')}</span>
 		</header>
 

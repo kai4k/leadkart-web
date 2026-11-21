@@ -61,6 +61,9 @@
 		color-mix(in srgb, black 55%, transparent)
 	);
 	--material-shadow-color: light-dark(oklch(0.2 0.02 256 / 0.16), oklch(0 0 0 / 0.5));
+	/* the glass plate of the large brand icon (layouts/BrandIcon): glass layers on, opaque card plate off */
+	--material-plate-glass: 1;
+	--material-plate-solid: 0;
 	--material-bar-shadow: 0 8px 24px -16px var(--material-shadow-color);
 	--material-pane-shadow:
 		0 24px 56px -16px var(--material-shadow-color), 0 4px 12px -4px var(--material-shadow-color);
@@ -83,6 +86,8 @@
 		color-mix(in srgb, var(--sidebar) 94%, transparent),
 		color-mix(in srgb, var(--sidebar) 95%, transparent)
 	);
+	--material-plate-glass: 0;
+	--material-plate-solid: 1;
 }
 /* OFF: the opaque equivalent. Every fallback block in materials-fallbacks.css repeats exactly
    these declarations (a unit test compares them). */
@@ -98,4 +103,6 @@
 	--material-pane-contrast: 1;
 	--material-control: var(--muted);
 	--material-control-hover: var(--accent);
+	--material-plate-glass: 0;
+	--material-plate-solid: 1;
 }

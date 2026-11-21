@@ -55,7 +55,7 @@ bottom-right`, `richColors`, `closeButton`, token classes only; icons via `#lib/
 
 ## Not generated (LeadKart composites, plan L16)
 
-`AuthCard`, `BrandMark` (icon + live-text wordmark; the icon is a fixed-colour raster until a vector logo source exists), `ConfirmDialog`, `CopyButton`, `DescriptionList`, `EmptyState`, `Logo`, `StatCard`,
+`AuthCard`, `BrandMark` (the approved logo drawn inline in the brand tokens, optional outlined `BrandWordmark` beside it; the large `BrandIcon` is in `layouts/`), `ConfirmDialog`, `CopyButton`, `DescriptionList`, `EmptyState`, `StatCard`,
 `StatusPill`, `kanban/`, `stepper/`, `timeline/`, `spinner/`, and the legacy `data-table/`.
 
 ## Stacking

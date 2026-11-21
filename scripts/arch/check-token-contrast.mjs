@@ -126,6 +126,11 @@ const RAW_PAIRS = [
 	// non-text indicators: focus ring, form-control border (WCAG 1.4.11)
 	...[...SURFACES, 'popover'].map((s) => ['ring', s, UI]),
 	...SURFACES.map((s) => ['input', s, UI]),
+	// the logo (BrandMark) is a non-text graphic (WCAG 1.4.11): frame + wheels and capsule on every
+	// surface it sits on: the page, a card (route error), a popover, the auth mobile row (primary-soft)
+	...['brand-frame', 'brand-capsule'].flatMap((m) =>
+		['background', 'card', 'popover', 'primary-soft'].map((s) => [m, s, UI, { note: 'logo' }])
+	),
 	// sidebar
 	['sidebar-foreground', 'sidebar', TEXT],
 	['sidebar-muted-foreground', 'sidebar', TEXT],
@@ -135,6 +140,8 @@ const RAW_PAIRS = [
 	['sidebar-primary-foreground', 'sidebar-primary', TEXT],
 	['sidebar-ring', 'sidebar', UI],
 	['sidebar-icon', 'sidebar', UI, { note: 'nav icons (accent on the light sidebar)' }],
+	['sidebar-brand-frame', 'sidebar', UI, { note: 'logo frame on the sidebar' }],
+	['sidebar-brand-capsule', 'sidebar', UI, { note: 'logo capsule on the sidebar' }],
 	// fix round A: the indicators and fills the review found ungated. `note` names the use; several
 	// of these re-check a value another pair already covers, on purpose, so the use is on record.
 	['ring', 'popover', UI, { note: 'highlighted list item bar' }],
@@ -165,6 +172,8 @@ const RAW_PAIRS = [
 	['muted-foreground', 'muted', TEXT, { scope: PATTERN_TOPBAR, note: 'search placeholder' }],
 	['accent-foreground', 'accent', TEXT, { scope: PATTERN_TOPBAR, note: 'hover chip' }],
 	['ring', 'primary', UI, { scope: PATTERN_TOPBAR, note: 'focus ring' }],
+	['brand-frame', 'primary', UI, { scope: PATTERN_TOPBAR, note: 'logo frame on the band' }],
+	['brand-capsule', 'primary', UI, { scope: PATTERN_TOPBAR, note: 'logo capsule on the band' }],
 	// the auth frame, the page header and the section nav (Tasks 13-14): their text/surface pairs, on record
 	['foreground', 'background', TEXT, { note: 'auth frame, page title' }],
 	['primary-text', 'card', TEXT, { note: 'auth brand headline' }],
@@ -441,7 +450,7 @@ const BAR = {
 	contrast: 'material-bar-contrast',
 	backdrops: BAR_BACKDROPS,
 	text: ['foreground', 'material-muted-foreground'],
-	marks: ['material-ring', 'material-indicator'],
+	marks: ['material-ring', 'material-indicator', 'brand-frame', 'brand-capsule'],
 	onControl: [{ control: 'material-control', text: ['foreground'] }]
 };
 const PANE = {
@@ -456,7 +465,7 @@ const SIDEBAR = {
 	saturate: 'material-pane-saturate',
 	contrast: 'material-pane-contrast',
 	text: ['sidebar-foreground', 'sidebar-muted-foreground'],
-	marks: ['sidebar-ring', 'sidebar-icon'],
+	marks: ['sidebar-ring', 'sidebar-icon', 'sidebar-brand-frame', 'sidebar-brand-capsule'],
 	onControl: [{ control: 'sidebar-accent', text: ['sidebar-accent-foreground'] }]
 };
 const OVERLAY_TEXT = [

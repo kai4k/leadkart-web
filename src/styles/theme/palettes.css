@@ -30,6 +30,14 @@
 	--palette-leadkart-900: #1e1043;
 	--palette-leadkart-950: oklch(0.08 0.06 296);
 
+	/* Capsule Teal (logo): solid #14B8A6; #5EEAD4 on dark; 600 / 700 are the darker steps the gate
+	   asks for where the capsule sits on a light surface or a translucent bar */
+	--palette-capsule-300: #5eead4;
+	--palette-capsule-400: #2dd4bf;
+	--palette-capsule-500: #14b8a6;
+	--palette-capsule-600: #0d9488;
+	--palette-capsule-700: #0f766e;
+
 	/* green (Domiex) */
 	--palette-green-50: oklch(98.4% 0.0182 166.4);
 	--palette-green-100: oklch(96.73% 0.0421 168.38);
