@@ -62,15 +62,15 @@ const EXPECTED: Record<string, Measured> = {
 	'/styleguide': {
 		body: { backgroundColor: 'oklch(0.96 0.008 268)', color: 'oklch(0.18 0.02 250)' },
 		button: {
-			// plan G1: the primary button is the vivid fill (step 500, #953fc9) with a white label;
-			// the dark L37 step (oklch 0.34 0.14 296) is now `--primary-text`, for text only
-			backgroundColor: 'rgb(149, 63, 201)',
+			// the primary button is the vivid fill with a white label (plan G1); the default palette is Kart
+			// Blue (step 600, #2563EB; it was the old logo purple), and the card border lost its purple tint
+			backgroundColor: 'rgb(37, 99, 235)',
 			color: 'oklch(1 0 0)',
 			borderRadius: '10px'
 		},
 		card: {
 			backgroundColor: 'oklch(1 0 0)',
-			borderColor: 'oklch(0.92 0.01 296)',
+			borderColor: 'oklch(0.92 0.01 268)',
 			borderRadius: '16px'
 		}
 	},
@@ -85,7 +85,7 @@ const EXPECTED: Record<string, Measured> = {
 		},
 		card: {
 			backgroundColor: 'oklch(1 0 0)',
-			borderColor: 'oklch(0.92 0.01 296)',
+			borderColor: 'oklch(0.92 0.01 268)',
 			borderRadius: '16px'
 		}
 	}

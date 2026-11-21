@@ -10,25 +10,27 @@
  *   --palette-gray-N                                                    neutral gray
  *   --neutral-{default,zinc,stone,neutral,gray}-N (+ -850)              dark surfaces
  *
- * leadkart: anchored to the logo asset (#953fc9 at 500, #502d81 at 600,
- * #1e1043 at 900 are contracts with the SVG fill). The other primaries are
- * copied from the Domiex theme (themes-color/primary-color.css). The
+ * leadkart: Kart Blue, anchored to the approved logo (#60A5FA, #3B82F6, #2563EB, #1D4ED8 at
+ * 400-700 are contracts with the SVG fills); --palette-capsule-* is the logo's teal. The other
+ * primaries are copied from the Domiex theme (themes-color/primary-color.css). The
  * neutrals are Domiex dark-color.css; "default" is Tailwind v4 slate plus
  * Domiex's 850.
  * ───────────────────────────────────────────────────────────────────── */
 :root {
-	/* leadkart (logo) */
-	--palette-leadkart-50: oklch(0.97 0.025 296);
-	--palette-leadkart-100: oklch(0.93 0.06 296);
-	--palette-leadkart-200: oklch(0.86 0.1 296);
-	--palette-leadkart-300: oklch(0.76 0.14 296);
-	--palette-leadkart-400: oklch(0.62 0.17 296);
-	--palette-leadkart-500: #953fc9;
-	--palette-leadkart-600: #502d81;
-	--palette-leadkart-700: oklch(0.3 0.14 296);
-	--palette-leadkart-800: oklch(0.24 0.12 296);
-	--palette-leadkart-900: #1e1043;
-	--palette-leadkart-950: oklch(0.08 0.06 296);
+	/* leadkart = Kart Blue (logo). 400 / 500 / 600 / 700 are the logo's hexes (#60A5FA dark frame,
+	   #3B82F6 gradient start, #2563EB solid, #1D4ED8 gradient end); the other steps are the same
+	   blue family (Tailwind v3 blue hexes) converted to oklch like every other ramp here. */
+	--palette-leadkart-50: oklch(0.97 0.014 254.6);
+	--palette-leadkart-100: oklch(0.932 0.032 255.6);
+	--palette-leadkart-200: oklch(0.882 0.057 254.1);
+	--palette-leadkart-300: oklch(0.809 0.096 251.8);
+	--palette-leadkart-400: #60a5fa;
+	--palette-leadkart-500: #3b82f6;
+	--palette-leadkart-600: #2563eb;
+	--palette-leadkart-700: #1d4ed8;
+	--palette-leadkart-800: oklch(0.424 0.181 265.6);
+	--palette-leadkart-900: oklch(0.379 0.138 265.5);
+	--palette-leadkart-950: oklch(0.282 0.087 267.9);
 
 	/* Capsule Teal (logo): solid #14B8A6; #5EEAD4 on dark; 600 / 700 are the darker steps the gate
 	   asks for where the capsule sits on a light surface or a translucent bar */

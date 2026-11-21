@@ -20,7 +20,7 @@
  *   --primary-indicator (+ -foreground) non-text marks (checkbox, switch track, progress, tab underline), 3:1
  *
  *   colour     fill     label  text (light)   indicator (light)   primary (dark)
- *   leadkart   500      white  oklch 0.34     500                 300
+ *   leadkart   600      white  700           600                 400
  *   green      500      950    800            700                 400
  *   violet     600      white  700            500                 400
  *   orange     600*     white  700            600                 400
@@ -45,7 +45,7 @@
 :root {
 	color-scheme: light;
 
-	/* selected primary ramp (default: leadkart) */
+	/* selected primary ramp (default: leadkart = Kart Blue) */
 	--primary-50: var(--palette-leadkart-50);
 	--primary-100: var(--palette-leadkart-100);
 	--primary-200: var(--palette-leadkart-200);
@@ -61,12 +61,12 @@
 	   4.5:1, else the 950 step: a dark label on a vivid fill). Text: the dark step links and the active
 	   nav label need (4.5:1 on every surface). Indicator: the lightest step that is still 3:1 on the
 	   surfaces (checkbox, switch track, progress, tab underline). The three are one hue, three jobs. */
-	--primary-fill: var(--primary-500);
+	--primary-fill: var(--primary-600);
 	--primary-fill-foreground: oklch(1 0 0);
 	--primary-hover-toward: black;
-	--primary-text-light: oklch(0.34 0.14 296);
-	--primary-ring: var(--primary-500);
-	--primary-on-dark: var(--primary-300);
+	--primary-text-light: var(--primary-700);
+	--primary-ring: var(--primary-600);
+	--primary-on-dark: var(--primary-400);
 	/* the logo (BrandMark): the frame and wheels, and the capsule, by palette (plan: the logo follows the
 	   chosen primary). Light values are the lightest steps that still reach 3:1 as a non-text graphic on
 	   every surface the mark sits on, a translucent bar over the darkest backdrop included (the gate
@@ -120,7 +120,7 @@
 	--row-hover: color-mix(in oklch, var(--muted) 50%, var(--card));
 
 	/* lines + focus (input meets 3:1 against the card, WCAG 1.4.11) */
-	--border: light-dark(oklch(0.92 0.01 296), var(--dark-800));
+	--border: light-dark(oklch(0.92 0.01 268), var(--dark-800));
 	--input: light-dark(oklch(0.55 0.015 245), var(--dark-400));
 	--ring: light-dark(var(--primary-ring), var(--primary-on-dark));
 	/* the fill of a form field: transparent in light (it sits on the surface), one opaque step in
