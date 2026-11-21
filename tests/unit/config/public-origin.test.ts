@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isPublicOrigin, renderablePublicOrigin } from '#lib/config/public-origin.ts';
+import { checkedPublicOrigin, isPublicOrigin } from '#lib/config/public-origin.ts';
 import { variables } from '../../../src/env.ts';
 
 /**
@@ -42,33 +42,66 @@ const HOSTILE: Array<[string, string]> = [
 ];
 
 describe('isPublicOrigin', () => {
-	it.each(GOOD)('accepts %s', (v) => {
-		expect(isPublicOrigin(v)).toBe(true);
-		expect(renderablePublicOrigin(v)).toBe(v);
-	});
-	it.each(HOSTILE)('refuses %s', (_name, v) => {
-		expect(isPublicOrigin(v)).toBe(false);
-		expect(renderablePublicOrigin(v)).toBe('');
-	});
+	it.each(GOOD)('accepts %s', (v) => expect(isPublicOrigin(v)).toBe(true));
+	it.each(HOSTILE)('refuses %s', (_name, v) => expect(isPublicOrigin(v)).toBe(false));
 	it('refuses a non-string', () => {
 		for (const v of [undefined, null, 1, {}, ['https://a.example']])
-			expect(renderablePublicOrigin(v)).toBe('');
+			expect(isPublicOrigin(v)).toBe(false);
 	});
 });
 
-describe('the src/env.ts schema renders only a clean origin', () => {
-	// defineEnvVars wraps the schema function as a standard schema: this is the call kit makes when it renders the value
-	const schema = (input: unknown): string => {
-		const std = (
-			variables.PUBLIC_SITE_URL.schema as unknown as {
-				'~standard': { validate(v: unknown): { value: string } };
-			}
-		)['~standard'];
-		return std.validate(input).value;
-	};
-	it.each(GOOD)('passes %s through', (v) => expect(schema(v)).toBe(v));
-	it.each(HOSTILE)('renders an empty origin for %s, never the raw value', (_name, v) => {
-		expect(schema(v)).toBe('');
+const NOT_EMPTY = HOSTILE.filter(([, v]) => v !== '');
+
+describe('checkedPublicOrigin: an origin or nothing, never a silent drop', () => {
+	it.each(GOOD)('passes %s through', (v) => expect(checkedPublicOrigin(v)).toBe(v));
+	it('unset and empty are allowed (config.ts requires a value in production)', () => {
+		expect(checkedPublicOrigin(undefined)).toBe('');
+		expect(checkedPublicOrigin('')).toBe('');
 	});
-	it('renders an unset variable as empty', () => expect(schema(undefined)).toBe(''));
+	it.each(NOT_EMPTY)('throws for %s, naming the variable and the shape', (_name, v) => {
+		expect(() => checkedPublicOrigin(v)).toThrow(
+			'PUBLIC_SITE_URL must be a bare origin (e.g. https://app.example.com)'
+		);
+	});
+	it('never echoes more than the first 60 characters of the bad value', () => {
+		const long = `https://a.example/${'x'.repeat(500)}`;
+		const msg = (() => {
+			try {
+				checkedPublicOrigin(long);
+			} catch (e) {
+				return (e as Error).message;
+			}
+			return '';
+		})();
+		expect(msg).toContain(long.slice(0, 60));
+		expect(msg).not.toContain(long.slice(0, 61));
+		expect(msg.length).toBeLessThan(400);
+	});
+});
+
+describe('the src/env.ts schema, as the server runs it (defineEnvVars wraps it as a standard schema)', () => {
+	const validate = (input: unknown) =>
+		(
+			variables.PUBLIC_SITE_URL.schema as unknown as {
+				'~standard': {
+					validate(v: unknown): { value?: string; issues?: ReadonlyArray<{ message: string }> };
+				};
+			}
+		)['~standard'].validate(input);
+	it.each(GOOD)('renders %s as is', (v) => expect(validate(v).value).toBe(v));
+	it('renders an unset or empty variable as empty', () => {
+		expect(validate(undefined).value).toBe('');
+		expect(validate('').value).toBe('');
+	});
+	it.each(NOT_EMPTY)(
+		'reports an issue (start-up fails) for %s, never a rendered value',
+		(_name, v) => {
+			const out = validate(v);
+			expect(out.value).toBeUndefined();
+			expect(out.issues?.[0]?.message).toContain('PUBLIC_SITE_URL must be a bare origin');
+		}
+	);
+	it('the public variable is marked public (it is rendered into app.html)', () => {
+		expect(variables.PUBLIC_SITE_URL.public).toBe(true);
+	});
 });

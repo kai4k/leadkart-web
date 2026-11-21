@@ -148,7 +148,7 @@ export function createConfigSchema({ allowDevSecret }: { allowDevSecret: boolean
 					code: 'custom',
 					path: ['PUBLIC_SITE_URL'],
 					message:
-						'PUBLIC_SITE_URL is required in production (a bare https origin, e.g. https://app.example.com); a malformed value is rendered empty by src/env.ts and counts as missing'
+						'PUBLIC_SITE_URL is required in production (a bare https origin, e.g. https://app.example.com)'
 				});
 			} else if (!v.PUBLIC_SITE_URL.startsWith('https://')) {
 				ctx.addIssue({

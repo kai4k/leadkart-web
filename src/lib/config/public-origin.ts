@@ -19,7 +19,21 @@ export function isPublicOrigin(v: unknown): v is string {
 	}
 }
 
-/** The value to render: the origin itself, or `''` for anything that is not exactly one (never the raw value). */
-export function renderablePublicOrigin(v: unknown): string {
-	return isPublicOrigin(v) ? v : '';
+/** A start-up configuration error (not an API error): the value of PUBLIC_SITE_URL is not an origin. */
+class PublicOriginError extends Error {}
+
+/**
+ * The env schema of `PUBLIC_SITE_URL` (src/env.ts): `''` for unset or empty (allowed outside production; config.ts requires
+ * it there), the origin itself when it is exactly one, and a THROW for anything else, so the server refuses to start in
+ * every environment instead of silently rendering nothing. The message names the variable and the expected shape and
+ * echoes at most the first 60 characters of the bad value (JSON-quoted, so control characters show as escapes).
+ */
+export function checkedPublicOrigin(v: unknown): string {
+	if (v === undefined || v === '') return '';
+	if (isPublicOrigin(v)) return v;
+	const shown =
+		typeof v === 'string' ? JSON.stringify(v.length > 60 ? `${v.slice(0, 60)}...` : v) : typeof v;
+	throw new PublicOriginError(
+		`PUBLIC_SITE_URL must be a bare origin (e.g. https://app.example.com): http or https, a lower-case host and an optional port, with no path or trailing slash, credentials, query or fragment. Got ${shown}`
+	);
 }

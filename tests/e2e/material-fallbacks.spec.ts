@@ -82,6 +82,34 @@ test.describe('glass degrades to opaque', () => {
 		expect(border).toBe('1px solid');
 	});
 
+	test('3b. forced colours: the active nav item still has a visible indicator bar, and aria-current', async ({
+		page
+	}) => {
+		await page.setViewportSize({ width: 1280, height: 800 });
+		await leads(page, {});
+		await page.emulateMedia({ forcedColors: 'active' });
+		const active = page.locator('[data-sidebar="menu-button"][data-active="true"]').first();
+		await expect(active).toBeVisible();
+		await expect(page.locator('a[aria-current="page"]').first()).toBeVisible();
+		const bar = await active.evaluate((el) => {
+			const cs = getComputedStyle(el, '::before');
+			return {
+				bg: cs.backgroundColor,
+				item: getComputedStyle(el).backgroundColor,
+				width: cs.width,
+				height: cs.height,
+				content: cs.content
+			};
+		});
+		expect(bar.content, 'the bar is generated').not.toBe('none');
+		expect(bar.bg, 'the bar has a colour that forced colours keep').not.toBe('rgba(0, 0, 0, 0)');
+		expect(bar.bg).not.toBe('transparent');
+		// forced colours paint a background as Canvas: the bar must differ from the item it sits on (Highlight)
+		expect(bar.bg, 'the bar is not painted as the canvas').not.toBe(bar.item);
+		expect(parseFloat(bar.width)).toBeGreaterThanOrEqual(2);
+		expect(parseFloat(bar.height)).toBeGreaterThanOrEqual(12);
+	});
+
 	test('4. print: no backdrop filter on any surface', async ({ page }) => {
 		await leads(page, {});
 		await page.emulateMedia({ media: 'print' });

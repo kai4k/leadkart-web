@@ -15,7 +15,6 @@ export interface Particle {
 	y: number;
 	length: number;
 	rotation: number;
-	delay: number;
 	depth: string;
 	kind: string;
 	c1: string;
@@ -36,12 +35,16 @@ function build(): Particle[] {
 		const kind = k < 0.15 ? 'cross' : k < 0.3 ? 'tablet' : k < 0.45 ? 'tracer' : 'pill';
 		const c1 = pick();
 		const c2 = kind === 'pill' || kind === 'tracer' ? pick() : c1;
+		const x = rand() * 100;
+		const y = rand() * 100;
+		const length = 6 + rand() * 8;
+		const rotation = rand() * 360;
+		rand(); // the drift delay this used to draw is gone; the draw stays so every mark keeps its place
 		return {
-			x: rand() * 100,
-			y: rand() * 100,
-			length: 6 + rand() * 8,
-			rotation: rand() * 360,
-			delay: rand() * 2,
+			x,
+			y,
+			length,
+			rotation,
 			depth: d < 0.4 ? 'far' : d < 0.7 ? 'mid' : 'near',
 			kind,
 			c1,
