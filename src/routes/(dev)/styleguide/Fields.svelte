@@ -236,7 +236,10 @@
 		{/each}
 	</div>
 
-	{@render row('DatePicker')}
+	{@render row(
+		'DatePicker',
+		'Type day / month / year (en-IN) or open the calendar (the button, or Alt+ArrowDown on a segment). The value is a calendar date; the wire format is ISO YYYY-MM-DD.'
+	)}
 	<div class="grid gap-6 md:grid-cols-3">
 		{#each states as s (s)}
 			<DatePicker
@@ -249,7 +252,10 @@
 		{/each}
 	</div>
 
-	{@render row('DateRangePicker')}
+	{@render row(
+		'DateRangePicker',
+		'Two typed groups, start and end, and one range calendar; an end before the start is invalid.'
+	)}
 	<div class="grid gap-6 md:grid-cols-3">
 		{#each states as s (s)}
 			<DateRangePicker
