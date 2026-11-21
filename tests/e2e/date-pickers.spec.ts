@@ -145,6 +145,46 @@ test.describe('typed entry and calendar agree', () => {
 		);
 	});
 
+	test('typed 15/03/2026 then 10 picked in the calendar: the date that is saved is 10/03/2026', async ({
+		page
+	}) => {
+		await guide(page);
+		const sheet = await openSheetPicker(page);
+		const hidden = sheet.locator('input[type="hidden"][name="followup"]');
+		await segs(sheet).first().click();
+		await page.keyboard.type('15032026');
+		await expect(hidden).toHaveValue('2026-03-15');
+		await sheet.getByRole('button', { name: /Open calendar/ }).click();
+		const pop = page.locator('[data-slot="popover-content"]');
+		await pop
+			.locator('[data-bits-day]:not([data-outside-month])')
+			.filter({ hasText: /^10$/ })
+			.click();
+		await expect(pop).toBeHidden();
+		expect(await text(sheet)).toBe('10/03/2026');
+		await expect(hidden).toHaveValue('2026-03-10');
+	});
+
+	test('typed 31/01/2026: month Up is 31/02 (invalid, nothing submitted), Up again is 31/03 (valid)', async ({
+		page
+	}) => {
+		await guide(page);
+		const sheet = await openSheetPicker(page);
+		const hidden = sheet.locator('input[type="hidden"][name="followup"]');
+		const group = sheet.locator('[data-slot="date-field-input"]');
+		await segs(sheet).first().click();
+		await page.keyboard.type('31012026');
+		await segs(sheet).nth(1).click();
+		await page.keyboard.press('ArrowUp');
+		expect(await text(sheet)).toBe('31/02/2026');
+		await expect(hidden).toHaveValue('');
+		await expect(group).toHaveAttribute('aria-invalid', 'true');
+		await page.keyboard.press('ArrowUp');
+		expect(await text(sheet)).toBe('31/03/2026');
+		await expect(hidden).toHaveValue('2026-03-31');
+		await expect(group).not.toHaveAttribute('aria-invalid', 'true');
+	});
+
 	test('the range picker refuses an impossible end on its own side and submits nothing for it', async ({
 		page
 	}) => {

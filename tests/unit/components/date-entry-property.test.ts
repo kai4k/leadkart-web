@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
-import DatePicker from '#lib/components/form/DatePicker.svelte';
+import Host from './date-picker-host.svelte';
 
 /**
  * Displayed === emitted, for any keystroke sequence. After EVERY step, either nothing is emitted (the hidden input is
@@ -38,7 +38,7 @@ const segs = () => [
 	...target.querySelectorAll<HTMLElement>('[data-segment]:not([data-segment="literal"])')
 ];
 const group = () => target.querySelector<HTMLElement>('[data-slot="date-field-input"]')!;
-const hidden = () => target.querySelector<HTMLInputElement>('input[type="hidden"][name="d"]')!;
+const hidden = () => target.querySelector<HTMLInputElement>('input[type="hidden"][name="when"]')!;
 const key = (el: Element, k: string) => {
 	el.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
 	flushSync();
@@ -63,7 +63,9 @@ function assertInvariant(where: string) {
 		if (complete) {
 			// every complete triple that is not a real, in-range date must be marked invalid; a real one must have been emitted
 			const real =
-				realDate(Number(d), Number(m), Number(y)) && Number(y) >= 1900 && Number(y) <= 2100;
+				realDate(Number(d), Number(m), Number(y)) &&
+				Number(y) >= 1900 &&
+				Number(y) <= new Date().getFullYear() + 10;
 			expect(real, `${where}: ${d}/${m}/${y} is a real date but nothing was emitted`).toBe(false);
 			if (!real) expect(invalid, `${where}: ${d}/${m}/${y} must be invalid`).toBe(true);
 		}
@@ -77,10 +79,7 @@ async function run(seed: number, withCalendar: boolean) {
 	const r = rng(seed);
 	const pick = <T>(a: T[]) => a[Math.floor(r() * a.length)]!;
 	target = document.body.appendChild(document.createElement('div'));
-	component = mount(DatePicker as never, {
-		target,
-		props: { label: 'When', name: 'd', minYear: 1900, maxYear: 2100 } as never
-	});
+	component = mount(Host as never, { target, props: {} as never });
 	flushSync();
 	segs()[0]!.focus();
 	const steps = 6 + Math.floor(r() * 14);
@@ -89,7 +88,25 @@ async function run(seed: number, withCalendar: boolean) {
 		const active = document.activeElement as HTMLElement;
 		const onSeg = active?.hasAttribute?.('data-segment');
 		let label: string;
-		if (withCalendar && x < 0.18) {
+		if (x < 0.07) {
+			// a value set from outside (a form reset or a loaded record) replaces whatever was typed
+			// (an outside value equal to the one already held cannot be seen as a change by any bound field: skipped)
+			const set = pick(
+				['2025-08-07', '2024-02-29', '1999-12-31', ''].filter((v) => v !== hidden().value)
+			);
+			target.querySelector<HTMLButtonElement>('[data-testid="set"]')!.dataset.to = set;
+			target.querySelector<HTMLButtonElement>('[data-testid="set"]')!.click();
+			flushSync();
+			label = `outside set ${set}`;
+			// what was set is what is shown and emitted
+			expect(hidden().value, label).toBe(set);
+			expect(
+				segs()
+					.map((e) => e.textContent?.trim())
+					.join('/'),
+				label
+			).toBe(set ? set.split('-').reverse().join('/') : 'dd/mm/yyyy');
+		} else if (withCalendar && x < 0.22) {
 			(target.querySelector('button[aria-label^="Open calendar"]') as HTMLButtonElement).click();
 			flushSync();
 			await vi.waitFor(() => expect(days().length).toBeGreaterThan(27));

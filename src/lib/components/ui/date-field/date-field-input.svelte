@@ -218,6 +218,8 @@
 			aria-disabled={disabled ? 'true' : undefined}
 			aria-readonly={readonly ? 'true' : undefined}
 			aria-required={required ? 'true' : undefined}
+			aria-invalid={invalid ? 'true' : undefined}
+			aria-describedby={describedBy}
 			onkeydown={(e: KeyboardEvent) => onkeydown(e, part)}
 			onbeforeinput={(e: InputEvent) => onbeforeinput(e, part)}
 			onfocusout={() => onfocusout(part)}

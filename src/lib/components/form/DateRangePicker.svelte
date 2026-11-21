@@ -144,6 +144,12 @@
 	// an end before the start, or a caller's error, marks both sides; an impossible date only its own
 	const bothInvalid = $derived(Boolean(error) || reversed || (incomplete && partial));
 
+	// a native post carries a range only when it is sound: no reversed range, no half-typed or impossible side
+	const postable = $derived(
+		!reversed &&
+			![startResolved, endResolved].some((r) => r.status === 'partial' || r.status === 'invalid')
+	);
+
 	const strings = (r: DateRange | undefined): DateRangeString => ({
 		start: toDateOnly(r?.start),
 		end: toDateOnly(r?.end)
@@ -287,10 +293,10 @@
 	</div>
 
 	{#if startName}
-		<input type="hidden" name={startName} value={toDateOnly(value?.start)} />
+		<input type="hidden" name={startName} value={postable ? toDateOnly(value?.start) : ''} />
 	{/if}
 	{#if endName}
-		<input type="hidden" name={endName} value={toDateOnly(value?.end)} />
+		<input type="hidden" name={endName} value={postable ? toDateOnly(value?.end) : ''} />
 	{/if}
 
 	{#if hint}

@@ -332,6 +332,75 @@ describe('DatePicker: a date that does not exist is an error, never a different 
 	});
 });
 
+describe('DatePicker: the date the user picked or set is the date that is saved (review I1)', () => {
+	it('typed 15/03/2026, then 10 picked in the calendar: shown 10/03/2026, emitted 2026-03-10', async () => {
+		const onValueStringChange = vi.fn();
+		render(DatePicker, { name: 'when', onValueStringChange });
+		focusFirstSegment();
+		type('15032026');
+		await openCalendar();
+		day(10).click();
+		flushSync();
+		await vi.waitFor(() => expect(days()).toHaveLength(0));
+		expect(segments().map((s) => s.textContent?.trim())).toEqual(['10', '03', '2026']);
+		expect(hidden('when')!.value).toBe('2026-03-10');
+		expect(onValueStringChange).toHaveBeenLastCalledWith('2026-03-10');
+	});
+
+	it('typed 31/01/2026: month Up shows 31/02/2026 (invalid, nothing emitted), Up again 31/03/2026 (valid, emitted)', () => {
+		render(DatePicker, { name: 'when' });
+		focusFirstSegment();
+		type('31012026');
+		expect(hidden('when')!.value).toBe('2026-01-31');
+		const month = segments()[1]!;
+		month.focus();
+		press(month, 'ArrowUp');
+		expect(segments().map((s) => s.textContent?.trim())).toEqual(['31', '02', '2026']);
+		expect(hidden('when')!.value).toBe('');
+		expect(groups()[0]!.getAttribute('aria-invalid')).toBe('true');
+		press(segments()[1]!, 'ArrowUp');
+		expect(segments().map((s) => s.textContent?.trim())).toEqual(['31', '03', '2026']);
+		expect(hidden('when')!.value).toBe('2026-03-31');
+		expect(groups()[0]!.getAttribute('aria-invalid')).toBeNull();
+	});
+
+	it('a value set from outside (valueString, a form reset) replaces whatever was typed', async () => {
+		const { default: Host } = await import('./date-picker-host.svelte');
+		render(Host, {});
+		focusFirstSegment();
+		type('31022026'); // impossible: shown as typed
+		expect(segments().map((s) => s.textContent?.trim())).toEqual(['31', '02', '2026']);
+		const set = document.querySelector<HTMLButtonElement>('[data-testid="set"]')!;
+		set.click();
+		flushSync();
+		expect(segments().map((s) => s.textContent?.trim())).toEqual(['07', '08', '2025']);
+		expect(hidden('when')!.value).toBe('2025-08-07');
+		document.querySelector<HTMLButtonElement>('[data-testid="reset"]')!.click();
+		flushSync();
+		expect(segments().map((s) => s.textContent?.trim())).toEqual(['dd', 'mm', 'yyyy']);
+		expect(hidden('when')!.value).toBe('');
+	});
+
+	it('the arrows on an empty year start from the current year', () => {
+		render(DatePicker, {});
+		const year = segments()[2]!;
+		year.focus();
+		press(year, 'ArrowUp');
+		expect(segments()[2]!.textContent?.trim()).toBe(String(new Date().getFullYear()));
+	});
+
+	it('each segment carries aria-invalid and aria-describedby, so the focused control announces the message', () => {
+		render(DatePicker, { hint: 'Expiry' });
+		focusFirstSegment();
+		type('31022026');
+		const err = target.querySelector('[data-slot="field-error"]')!;
+		for (const sgm of segments()) {
+			expect(sgm.getAttribute('aria-invalid')).toBe('true');
+			expect((sgm.getAttribute('aria-describedby') ?? '').split(' ')[0]).toBe(err.id);
+		}
+	});
+});
+
 describe('DatePicker: a half-typed year is not a value', () => {
 	it('typing 10 05 26 shows 26, emits nothing, and leaving the field says "Enter a complete date"', async () => {
 		const onValueChange = vi.fn();
@@ -526,6 +595,43 @@ describe('DateRangePicker', () => {
 		await vi.waitFor(() => expect(onIncomplete).toHaveBeenCalled());
 		expect(target.querySelector('[data-slot="field-error"]')!.textContent).toBe(
 			en.form.dateRangePicker.incomplete
+		);
+	});
+});
+
+describe('DateRangePicker: what is posted', () => {
+	it('a reversed range posts nothing on either side', () => {
+		render(DateRangePicker, {
+			value: { start: new CalendarDate(2026, 3, 20), end: new CalendarDate(2026, 3, 5) },
+			startName: 'from',
+			endName: 'to'
+		});
+		expect(hidden('from')!.value).toBe('');
+		expect(hidden('to')!.value).toBe('');
+	});
+
+	it('an impossible or half-typed side makes both inputs empty; a clean range posts both', () => {
+		render(DateRangePicker, { startName: 'from', endName: 'to' });
+		segments(groups()[0]!)[0]!.focus();
+		type('01032026');
+		segments(groups()[1]!)[0]!.focus();
+		type('29022026');
+		expect(hidden('from')!.value).toBe('');
+		expect(hidden('to')!.value).toBe('');
+		segments(groups()[1]!)[0]!.focus();
+		type('10032026');
+		expect(hidden('from')!.value).toBe('2026-03-01');
+		expect(hidden('to')!.value).toBe('2026-03-10');
+	});
+
+	it('minYear / maxYear limit the typed years too', () => {
+		render(DateRangePicker, { minYear: 2000, maxYear: 2036, startName: 'from' });
+		segments(groups()[0]!)[0]!.focus();
+		type('01012099');
+		expect(hidden('from')!.value).toBe('');
+		expect(groups()[0]!.getAttribute('aria-invalid')).toBe('true');
+		expect(target.querySelector('[data-slot="field-error"]')!.textContent).toBe(
+			'Enter a year between 2000 and 2036'
 		);
 	});
 });
