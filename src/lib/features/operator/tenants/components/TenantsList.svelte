@@ -38,7 +38,7 @@
 	import CreateTenantDrawer from './CreateTenantDrawer.svelte';
 	import SuspendDialog from './SuspendDialog.svelte';
 	import MarkForDeletionDialog from './MarkForDeletionDialog.svelte';
-	import { ImpersonateModal } from '../../impersonation';
+	import { ImpersonateModal, impersonation } from '../../impersonation';
 	import type { TenantDto } from '../types';
 	import { createListPagination } from '#lib/hooks/index.ts';
 
@@ -218,7 +218,9 @@
 				<Button
 					variant="ghost"
 					size="sm"
-					disabled={openingScopeSlug !== null}
+					disabled={openingScopeSlug !== null ||
+						impersonation.active !== null ||
+						impersonation.status === 'mutating'}
 					onclick={(e) => {
 						e.stopPropagation();
 						openImpersonate(tenant);

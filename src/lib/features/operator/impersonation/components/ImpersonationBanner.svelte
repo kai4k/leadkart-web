@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { _ } from 'svelte-i18n';
 	import { Button } from '$ui';
 	import { Eye, LogOut, Icon } from '$icons';
@@ -9,12 +10,13 @@
 	import { resetPending } from '#lib/api/hard-reset.ts';
 	import EntityName from '$layouts/EntityName.svelte';
 
-	// Reconcile impersonation state once the session's capabilities are there.
+	// Reconcile impersonation state once the session's capabilities are there. The call is untracked: reconcile() reads
+	// the store's own state, and an effect that tracked it would run again on every settle (a request loop).
 	// Must live here (inside <QueryClientProvider>) not in (app)/+layout.svelte
 	// (the provider) — TanStack Query v6 uses getContext() to find the client.
 	$effect(() => {
 		if (session.capabilities) {
-			impersonation.reconcile().catch(() => {});
+			untrack(() => impersonation.reconcile()).catch(() => {});
 		}
 	});
 

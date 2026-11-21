@@ -71,7 +71,9 @@ describe('impersonation target name', () => {
 		api.listImpersonationSessions.mockResolvedValue({ sessions: [dto('A')] });
 		await impersonation.start({ tenant_id: 't', reason: 'support' } as never, 'Alpha');
 
+		// another tab ended it: the key is gone and the server no longer lists it
 		window.localStorage.removeItem(IMPERSONATION_SESSION_KEY);
+		api.listImpersonationSessions.mockResolvedValue({ sessions: [] });
 		await impersonation.reconcile();
 
 		expect(impersonation.active).toBeNull();
