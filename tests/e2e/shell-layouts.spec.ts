@@ -1,6 +1,7 @@
 import { expect, test, type Page } from './helpers/test';
 import { signInAsTier } from './helpers/sign-in';
 import { resetMock, registerMock } from './helpers/mock';
+import { glass, opaque, paint } from './helpers/materials';
 import { PREFERENCE_VALUES } from '../../src/lib/features/preferences/schema';
 
 /**
@@ -160,6 +161,23 @@ test.describe('shell layouts', () => {
 		await expect(
 			page.locator('[data-slot="tooltip-content"]').filter({ hasText: 'Team' }).first()
 		).toBeVisible();
+	});
+
+	test('the tooltip takes no material: opaque, no backdrop filter, while the surfaces around it are glass (GD12)', async ({
+		page
+	}) => {
+		await page.setViewportSize({ width: 1280, height: 800 });
+		await open(page, 'vertical', { sidebar: 'small', transparency: 'glass' });
+		await page.getByRole('link', { name: 'Team' }).hover();
+		const tip = page.locator('[data-slot="tooltip-content"]').filter({ hasText: 'Team' }).first();
+		await expect(tip).toBeVisible();
+		await page.waitForTimeout(300);
+		opaque(await paint(tip), 'tooltip');
+		// the same prefs do give the sidebar its material, so the check above can fail
+		glass(
+			await paint(page.locator('[data-slot="sidebar-container"] [data-sidebar="sidebar"]')),
+			'sidebar'
+		);
 	});
 
 	test('the toggle has a name and aria-expanded, and collapses and expands the sidebar', async ({

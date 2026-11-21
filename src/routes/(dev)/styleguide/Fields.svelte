@@ -238,7 +238,7 @@
 
 	{@render row(
 		'DatePicker',
-		'Type day / month / year (en-IN) or open the calendar (the button, or Alt+ArrowDown on a segment). The value is a calendar date; the wire format is ISO YYYY-MM-DD.'
+		'Type day / month / year (en-IN) or open the calendar (the button, or Alt+ArrowDown on a segment). The value is a calendar date; the wire format is ISO YYYY-MM-DD. What you type stays as typed: 31 / 02 / 2026 is an error ("This date does not exist") and a half-typed year is not a value; neither is ever turned into another date.'
 	)}
 	<div class="grid gap-6 md:grid-cols-3">
 		{#each states as s (s)}
@@ -254,7 +254,7 @@
 
 	{@render row(
 		'DateRangePicker',
-		'Two typed groups, start and end, and one range calendar; an end before the start is invalid.'
+		'Two typed groups, start and end, and one range calendar; an end before the start is invalid, and an impossible date is an error on its own side.'
 	)}
 	<div class="grid gap-6 md:grid-cols-3">
 		{#each states as s (s)}

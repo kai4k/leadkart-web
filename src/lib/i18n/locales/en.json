@@ -356,15 +356,29 @@
 			"select": "Select…",
 			"empty": "No results"
 		},
+		"dateField": {
+			"day": "day",
+			"month": "month",
+			"year": "year",
+			"empty": "Empty",
+			"dayPlaceholder": "dd",
+			"monthPlaceholder": "mm",
+			"yearPlaceholder": "yyyy"
+		},
 		"datePicker": {
 			"openCalendar": "Open calendar, {label}",
-			"incomplete": "Enter a complete date"
+			"incomplete": "Enter a complete date",
+			"notExist": "This date does not exist",
+			"yearRange": "Enter a year between {min} and {max}",
+			"outOfRange": "This date is outside the allowed range"
 		},
 		"dateRangePicker": {
 			"openCalendar": "Open calendar, {label}",
 			"start": "{label}, start date",
 			"end": "{label}, end date",
 			"incomplete": "Enter a complete start and end date",
+			"notExistStart": "The start date does not exist",
+			"notExistEnd": "The end date does not exist",
 			"order": "The end date is before the start date"
 		},
 		"password": {

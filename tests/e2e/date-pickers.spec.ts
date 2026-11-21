@@ -94,11 +94,103 @@ test.describe('typed entry and calendar agree', () => {
 		);
 	});
 
+	test('an impossible date is an error, never a different date: 31/02/2026 stays as typed, nothing is submitted, then 31/03 is valid', async ({
+		page
+	}) => {
+		await guide(page);
+		const sheet = await openSheetPicker(page);
+		const hidden = sheet.locator('input[type="hidden"][name="followup"]');
+		const group = sheet.locator('[data-slot="date-field-input"]');
+		await segs(sheet).first().click();
+		await page.keyboard.type('31022026');
+		expect(await text(sheet)).toBe('31/02/2026');
+		await expect(hidden).toHaveValue('');
+		await expect(group).toHaveAttribute('aria-invalid', 'true');
+		const err = sheet.getByText('This date does not exist');
+		await expect(err).toBeVisible();
+		expect(await group.getAttribute('aria-describedby')).toContain(await err.getAttribute('id'));
+		// the month becomes 03: the same day is now a real date
+		await segs(sheet).nth(1).click();
+		await page.keyboard.type('03');
+		expect(await text(sheet)).toBe('31/03/2026');
+		await expect(hidden).toHaveValue('2026-03-31');
+		await expect(group).not.toHaveAttribute('aria-invalid', 'true');
+		await expect(err).toBeHidden();
+	});
+
+	test('a half-typed year is not a value; a four-digit year out of range names the allowed years', async ({
+		page
+	}) => {
+		await guide(page);
+		const sheet = await openSheetPicker(page);
+		const hidden = sheet.locator('input[type="hidden"][name="followup"]');
+		await segs(sheet).first().click();
+		await page.keyboard.type('100526');
+		expect(await text(sheet)).toBe('10/05/26');
+		await expect(hidden).toHaveValue('');
+		await page.getByRole('heading', { name: 'Demo sheet' }).click();
+		await expect(sheet.getByText('Enter a complete date')).toBeVisible();
+		await segs(sheet).nth(2).click();
+		await page.keyboard.press('Backspace');
+		await page.keyboard.press('Backspace');
+		await page.keyboard.type('0026');
+		await expect(hidden).toHaveValue('');
+		await expect(sheet.getByText('Enter a year between 1900 and')).toBeVisible();
+		await segs(sheet).nth(2).click();
+		await page.keyboard.type('2026');
+		await expect(hidden).toHaveValue('2026-05-10');
+		await expect(sheet.locator('[data-slot="date-field-input"]')).not.toHaveAttribute(
+			'aria-invalid',
+			'true'
+		);
+	});
+
+	test('the range picker refuses an impossible end on its own side and submits nothing for it', async ({
+		page
+	}) => {
+		await guide(page);
+		const range = page.locator('[data-slot="date-field-input"][aria-label^="Period"]');
+		await segs(range.first()).first().click();
+		await page.keyboard.type('01032026');
+		await segs(range.nth(1)).first().click();
+		await page.keyboard.type('29022026');
+		expect(await text(range.nth(1))).toBe('29/02/2026');
+		await expect(range.nth(1)).toHaveAttribute('aria-invalid', 'true');
+		await expect(range.first()).not.toHaveAttribute('aria-invalid', 'true');
+		await expect(page.getByText('The end date does not exist')).toBeVisible();
+	});
+
+	test('the segments read as a typed date: touching 24 x 24 targets, the "/" between them takes no room', async ({
+		page
+	}) => {
+		await guide(page);
+		const sheet = await openSheetPicker(page);
+		const boxes = await segs(sheet).evaluateAll((els) =>
+			els.map((e) => {
+				const r = e.getBoundingClientRect();
+				return { l: r.left, r: r.right, w: r.width, h: r.height };
+			})
+		);
+		expect(boxes).toHaveLength(3);
+		for (const b of boxes) {
+			expect(b.w).toBeGreaterThanOrEqual(24);
+			expect(b.h).toBeGreaterThanOrEqual(24);
+		}
+		// adjacent, never overlapping (a target must not cover its neighbour)
+		for (const [a, b] of [
+			[boxes[0]!, boxes[1]!],
+			[boxes[1]!, boxes[2]!]
+		] as const) {
+			expect(b.l - a.r).toBeGreaterThanOrEqual(-0.5);
+			expect(b.l - a.r).toBeLessThanOrEqual(4);
+		}
+	});
+
 	test('the range picker: two named groups; typing both ends; an end before the start is invalid', async ({
 		page
 	}) => {
 		await guide(page);
-		const range = page.locator('[data-slot="date-range-field-input"]');
+		const range = page.locator('[data-slot="date-field-input"][aria-label^="Period"]');
 		await expect(range.first()).toHaveAttribute('aria-label', 'Period, start date');
 		await expect(range.nth(1)).toHaveAttribute('aria-label', 'Period, end date');
 		await segs(range.first()).first().click();

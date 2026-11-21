@@ -238,29 +238,145 @@ describe('DatePicker: typed-entry parsing rules (en-IN, day / month / year)', ()
 		expect(r.value).toBeUndefined();
 		expect(r.focus).toBe(focus);
 	});
-	it('a day beyond the month is CONSTRAINED, not refused: 31/02/2026 becomes 28/02/2026 and the field shows it', () => {
-		const r = typed('31022026');
-		expect(r.text).toBe('28/02/2026');
-		expect(r.value).toBe('2026-02-28');
+	it('a second digit that makes the day too big restarts it: 32 waits as 2', () => {
+		expect(typed('32').text).toBe('2/mm/yyyy');
 	});
-	it('29/02 in a common year is the 28th; in a leap year it stays the 29th (the typed day is restored once the year is complete)', () => {
-		expect(typed('29022026').text).toBe('28/02/2026');
+	it('a second digit that makes the month too big restarts it: month 13 restarts as 03', () => {
+		expect(typed('1013').text).toBe('10/03/yyyy');
 	});
-	it('a day or month out of range restarts the segment: 32 reads as 02, month 13 is not entered', () => {
-		expect(typed('32').text).toBe('02/mm/yyyy');
-		expect(typed('1013').text.startsWith('10/')).toBe(true);
+});
+
+describe('DatePicker: a date that does not exist is an error, never a different date', () => {
+	const errorText = () => target.querySelector('[data-slot="field-error"]')?.textContent;
+
+	it.each(['31022026', '29022026', '30022024', '31042026', '31092026'])(
+		'%s keeps what was typed, is invalid with a message, and emits nothing',
+		(digits) => {
+			const onValueChange = vi.fn();
+			const onValueStringChange = vi.fn();
+			render(DatePicker, { onValueChange, onValueStringChange, name: 'when' });
+			focusFirstSegment();
+			type(digits);
+			expect(segments().map((s) => s.textContent?.trim())).toEqual([
+				digits.slice(0, 2),
+				digits.slice(2, 4),
+				digits.slice(4)
+			]);
+			for (const [v] of onValueChange.mock.calls) expect(v).toBeUndefined();
+			for (const [v] of onValueStringChange.mock.calls) expect(v).toBe('');
+			expect(hidden('when')!.value).toBe('');
+			const group = groups()[0]!;
+			expect(group.getAttribute('aria-invalid')).toBe('true');
+			expect(errorText()).toBe(en.form.datePicker.notExist);
+			expect((group.getAttribute('aria-describedby') ?? '').split(' ')[0]).toBe(
+				target.querySelector('[data-slot="field-error"]')!.id
+			);
+		}
+	);
+
+	it('29/02/2024 is a real date (leap year) and is emitted as typed', () => {
+		const onValueChange = vi.fn();
+		render(DatePicker, { onValueChange, name: 'when' });
+		focusFirstSegment();
+		type('29022024');
+		expect(onValueChange.mock.calls.at(-1)![0].toString()).toBe('2024-02-29');
+		expect(hidden('when')!.value).toBe('2024-02-29');
+		expect(groups()[0]!.getAttribute('aria-invalid')).toBeNull();
 	});
-	it('a half-typed year is a value with a small year (0026) and is INCOMPLETE on leaving the field', async () => {
+
+	it('changing the month so the date becomes real makes it valid again (31 / 02 -> 31 / 03)', () => {
+		const onValueChange = vi.fn();
+		render(DatePicker, { onValueChange, name: 'when' });
+		focusFirstSegment();
+		type('31022026');
+		expect(errorText()).toBe(en.form.datePicker.notExist);
+		segments()[1]!.focus();
+		type('03');
+		expect(segments().map((s) => s.textContent?.trim())).toEqual(['31', '03', '2026']);
+		expect(onValueChange.mock.calls.at(-1)![0].toString()).toBe('2026-03-31');
+		expect(hidden('when')!.value).toBe('2026-03-31');
+		expect(errorText()).toBeUndefined();
+		expect(groups()[0]!.getAttribute('aria-invalid')).toBeNull();
+	});
+
+	it('stepping the day with the arrows stays inside the month that is shown', () => {
+		render(DatePicker, { value: new CalendarDate(2026, 2, 28) });
+		const d = segments()[0]!;
+		d.focus();
+		press(d, 'ArrowUp');
+		expect(segments()[0]!.textContent?.trim()).toBe('01');
+	});
+
+	it('the range picker refuses an impossible start or end on its own side', () => {
+		const onValueChange = vi.fn();
+		render(DateRangePicker, { onValueChange, startName: 'from', endName: 'to' });
+		segments(groups()[0]!)[0]!.focus();
+		type('31022026');
+		segments(groups()[1]!)[0]!.focus();
+		type('10032026');
+		const [start, end] = groups();
+		expect(start!.getAttribute('aria-invalid')).toBe('true');
+		expect(end!.getAttribute('aria-invalid')).toBeNull();
+		expect(segments(start!).map((s) => s.textContent?.trim())).toEqual(['31', '02', '2026']);
+		expect(hidden('from')!.value).toBe('');
+		expect(errorText()).toBe(en.form.dateRangePicker.notExistStart);
+		// the end side too
+		segments(groups()[0]!)[0]!.focus();
+		type('01032026');
+		segments(groups()[1]!)[0]!.focus();
+		type('29022026');
+		expect(groups()[1]!.getAttribute('aria-invalid')).toBe('true');
+		expect(groups()[0]!.getAttribute('aria-invalid')).toBeNull();
+		expect(hidden('to')!.value).toBe('');
+		expect(errorText()).toBe(en.form.dateRangePicker.notExistEnd);
+	});
+});
+
+describe('DatePicker: a half-typed year is not a value', () => {
+	it('typing 10 05 26 shows 26, emits nothing, and leaving the field says "Enter a complete date"', async () => {
+		const onValueChange = vi.fn();
 		const onIncomplete = vi.fn();
-		render(DatePicker, { onIncomplete });
+		render(DatePicker, { onValueChange, onIncomplete, name: 'when' });
 		focusFirstSegment();
 		type('100526');
-		expect(segments()[2]!.textContent?.trim()).toBe('0026');
+		expect(segments()[2]!.textContent?.trim()).toBe('26');
+		for (const [v] of onValueChange.mock.calls) expect(v).toBeUndefined();
+		expect(hidden('when')!.value).toBe('');
 		blurAll();
 		await vi.waitFor(() => expect(onIncomplete).toHaveBeenCalled());
 		expect(target.querySelector('[data-slot="field-error"]')!.textContent).toBe(
 			en.form.datePicker.incomplete
 		);
+		expect(groups()[0]!.getAttribute('aria-invalid')).toBe('true');
+	});
+
+	it('a four-digit year outside minYear..maxYear is invalid and the message names the range', () => {
+		const onValueChange = vi.fn();
+		render(DatePicker, { onValueChange, minYear: 1990, maxYear: 2030, name: 'when' });
+		focusFirstSegment();
+		type('10050026');
+		expect(segments()[2]!.textContent?.trim()).toBe('0026');
+		for (const [v] of onValueChange.mock.calls) expect(v).toBeUndefined();
+		expect(hidden('when')!.value).toBe('');
+		expect(groups()[0]!.getAttribute('aria-invalid')).toBe('true');
+		expect(target.querySelector('[data-slot="field-error"]')!.textContent).toBe(
+			'Enter a year between 1990 and 2030'
+		);
+		segments()[2]!.focus();
+		type('2031');
+		expect(hidden('when')!.value).toBe('');
+		type('2030');
+		expect(hidden('when')!.value).toBe('2030-05-10');
+		expect(groups()[0]!.getAttribute('aria-invalid')).toBeNull();
+	});
+
+	it('the range picker: a half-typed year on either side is not a value', () => {
+		const onValueChange = vi.fn();
+		render(DateRangePicker, { onValueChange, startName: 'from' });
+		segments(groups()[0]!)[0]!.focus();
+		type('100526');
+		for (const [v] of onValueChange.mock.calls) expect(v.start).toBeUndefined();
+		expect(hidden('from')!.value).toBe('');
 	});
 });
 

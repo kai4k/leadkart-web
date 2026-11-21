@@ -3,24 +3,29 @@
 	DatePicker — a date you can TYPE or PICK.
 
 	Typed entry: three segments in the business locale's order (en-IN: day / month / year; `BUSINESS_LOCALE`). Digits type
-	and advance on their own, Up / Down step the focused segment, Left / Right move between segments, Backspace clears one;
-	Tab moves on to the calendar button. Alt+ArrowDown on any segment opens the calendar (as a native date input does),
-	Escape closes it. Calendar: `ui/calendar` in a popover with month and year dropdowns (default 1900 to ten years ahead;
-	`minYear` / `maxYear`, or `minValue` / `maxValue`). The ONE `value` and `placeholder` are bound to both, so typing moves
-	the calendar to that month and picking a day fills the segments, closes the popover and returns focus to the button.
+	and advance on their own, Up / Down step the focused segment, Left / Right move between segments, Backspace removes a
+	digit; Tab moves on to the calendar button. Alt+ArrowDown on any segment opens the calendar (as a native date input
+	does), Escape closes it. Calendar: `ui/calendar` in a popover with month and year dropdowns (default 1900 to ten years
+	ahead; `minYear` / `maxYear`, or `minValue` / `maxValue`). The ONE `value` is bound to both: typing a real date moves the
+	calendar to that month and picking a day fills the segments, closes the popover and returns focus to the button.
 	bits-ui's grid handles the arrow keys and Enter / Space; PageUp / PageDown and Home / End are NOT implemented by bits-ui.
+
+	The field never shows or emits a date the user did not type. The segments keep exactly what was typed: `31 / 02 / 2026`
+	stays as typed and the field is INVALID ("This date does not exist"); a year with fewer than four digits is not a year, so
+	nothing is emitted while it is half typed (and "Enter a complete date" shows once focus leaves); a year outside
+	`minYear`..`maxYear` is invalid and the message names the range. An invalid or incomplete entry emits NO value: `value`
+	and `valueString` are empty, the hidden input posts `''`, and the group is `aria-invalid` with the message in
+	`aria-describedby` (the error id, then the hint id). Fixing the day, month or year makes it valid again. A date picked in
+	the calendar is always real.
 
 	The value is a CALENDAR date (`DateValue`, no time, no zone). `valueString` / `onValueStringChange` carry the same date
 	as ISO `YYYY-MM-DD` (`toDateOnly`); a hidden input with `name` posts that string. Nothing converts through `Date`, so a
 	picked date is the same calendar date in every browser zone.
 
-	Validation belongs to the form (Zod on the date-only string). The component reports INCOMPLETE entry itself: when focus
-	leaves the field with some, but not all, segments filled it calls `onIncomplete`, and (when the caller passes no `error`)
-	shows "Enter a complete date" with `aria-invalid` on the segment group. A date outside `minValue` / `maxValue` is marked
-	invalid by bits-ui and shown as `aria-invalid` too. `aria-describedby` on the group is the error id, then the hint id.
+	Cross-field rules (required, not before another date) belong to the form. `onIncomplete` fires when focus leaves the
+	field with a partial entry; a caller's `error` replaces the field's own message.
 -->
 <script lang="ts">
-	import { untrack } from 'svelte';
 	import { _ } from 'svelte-i18n';
 	import type { DateValue } from '@internationalized/date';
 	import { Calendar as CalendarIcon, Icon } from '#lib/icons/index.ts';
@@ -30,10 +35,10 @@
 	import * as Field from '#lib/components/ui/field/index.ts';
 	import * as Popover from '#lib/components/ui/popover/index.ts';
 	import { cn } from '#lib/utils/cn.ts';
-	import { fromDateOnly, toDateOnly, typedFieldPlaceholder } from '#lib/utils/date-only.ts';
+	import { fromDateOnly, toDateOnly } from '#lib/utils/date-only.ts';
+	import { yearBounds, type Resolved } from '#lib/utils/typed-date.ts';
 	import { BUSINESS_LOCALE } from '#lib/utils/format.ts';
 	import { fieldControlClass } from './field-control.ts';
-	import { createTypedDay } from './typed-day.ts';
 
 	type Props = {
 		label: string;
@@ -94,21 +99,30 @@
 	const errorId = $derived(`${fieldId}-error`);
 
 	let open = $state(false);
-	// the typed field's own placeholder (a leap year: see typedFieldPlaceholder); the calendar keeps `placeholder`
-	let fieldPlaceholder = $state(untrack(() => placeholder) ?? typedFieldPlaceholder());
 	let incomplete = $state(false);
 	let frame: HTMLElement | undefined = $state();
+	let resolved = $state<Resolved>({ status: 'empty' });
 
-	const shownError = $derived(error ?? (incomplete ? $_('form.datePicker.incomplete') : null));
+	const bounds = $derived(
+		yearBounds(minYear, maxYear, minValue, maxValue, new Date().getFullYear())
+	);
+	const years = $derived(
+		Array.from({ length: Math.max(bounds.to - bounds.from + 1, 1) }, (_, i) => bounds.from + i)
+	);
+
+	const ownError = $derived.by(() => {
+		if (resolved.status === 'invalid')
+			return resolved.reason === 'yearRange'
+				? $_('form.datePicker.yearRange', { values: { min: bounds.from, max: bounds.to } })
+				: resolved.reason === 'notExist'
+					? $_('form.datePicker.notExist')
+					: $_('form.datePicker.outOfRange');
+		return resolved.status === 'partial' && incomplete ? $_('form.datePicker.incomplete') : null;
+	});
+	const shownError = $derived(error ?? ownError);
 	const describedBy = $derived(
 		[shownError ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined
 	);
-
-	const years = $derived.by(() => {
-		const from = minYear ?? minValue?.year ?? 1900;
-		const to = maxYear ?? maxValue?.year ?? new Date().getFullYear() + 10;
-		return Array.from({ length: Math.max(to - from + 1, 1) }, (_, i) => from + i);
-	});
 
 	// the string side drives `value` when the caller changes it (and only then: no ping-pong with onValueChange)
 	$effect(() => {
@@ -116,12 +130,9 @@
 		if (valueString !== toDateOnly(value)) value = fromDateOnly(valueString);
 	});
 
-	const typedDay = createTypedDay();
-
-	function handleValueChange(typed: DateValue | undefined) {
-		const next = typedDay.restore(typed);
-		if (next !== typed) value = next;
-		if (next && next.year >= 1000) incomplete = false;
+	// the field (typed) or the calendar (picked) changed the value: tell the caller, in both forms
+	function handleValueChange(next: DateValue | undefined) {
+		if (next) incomplete = false;
 		onValueChange?.(next);
 		const s = toDateOnly(next);
 		valueString = s;
@@ -129,6 +140,7 @@
 	}
 
 	function handleCalendarChange(next: DateValue | undefined) {
+		value = next;
 		handleValueChange(next);
 		if (next) open = false;
 	}
@@ -140,27 +152,17 @@
 		];
 	}
 
-	// focus left the whole field (segments + calendar button): some, but not all, segments filled is INCOMPLETE
+	// focus left the whole field (segments + calendar button): a partial entry is INCOMPLETE
 	function handleFocusOut(e: FocusEvent) {
 		if (open || (e.relatedTarget instanceof Node && frame?.contains(e.relatedTarget))) return;
-		// a date with a year before 1000 is a half-typed year ("26" is 0026), not a date
-		if (value && value.year < 1000) {
+		if (resolved.status === 'partial') {
 			incomplete = true;
 			onIncomplete?.();
-			return;
-		}
-		if (value) return;
-		const segs = editableSegments();
-		const filled = segs.filter((s) => s.getAttribute('aria-valuetext') !== 'Empty').length;
-		if (filled > 0 && filled < segs.length) {
-			incomplete = true;
-			onIncomplete?.();
-		} else if (filled === 0) incomplete = false;
+		} else if (resolved.status === 'empty') incomplete = false;
 	}
 
 	// Alt+ArrowDown opens the calendar; captured so the focused segment never steps its value
 	function handleKeyDownCapture(e: KeyboardEvent) {
-		typedDay.capture(e);
 		if (e.altKey && e.key === 'ArrowDown' && !disabled && !readonly) {
 			e.preventDefault();
 			e.stopPropagation();
@@ -170,72 +172,73 @@
 </script>
 
 <Field.Field class={className}>
-	<DateField.Root
-		bind:value
-		bind:placeholder={fieldPlaceholder}
-		onValueChange={handleValueChange}
-		{minValue}
-		{maxValue}
-		{locale}
-		{disabled}
-		{readonly}
-		{required}
-		granularity="day"
-		errorMessageId={shownError ? errorId : undefined}
+	<DateField.Label
+		id={`${fieldId}-label`}
+		class={srLabel ? 'sr-only' : undefined}
+		onclick={() => editableSegments()[0]?.focus()}>{label}</DateField.Label
 	>
-		<DateField.Label class={srLabel ? 'sr-only' : undefined}>{label}</DateField.Label>
 
-		<div
-			bind:this={frame}
-			class={cn(
-				fieldControlClass,
-				'gap-1 py-0 pe-1 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring',
-				'data-invalid:border-destructive',
-				disabled && 'cursor-not-allowed bg-muted opacity-50'
-			)}
-			data-invalid={shownError ? '' : undefined}
-			onfocusout={handleFocusOut}
-		>
-			<DateField.Input
-				id={fieldId}
-				invalid={Boolean(shownError)}
-				{describedBy}
-				onkeydowncapture={handleKeyDownCapture}
-			/>
-			<Popover.Root bind:open>
-				<Popover.Trigger disabled={disabled || readonly}>
-					{#snippet child({ props })}
-						<Button
-							{...props}
-							type="button"
-							variant="ghost"
-							size="icon-sm"
-							aria-label={$_('form.datePicker.openCalendar', { values: { label } })}
-						>
-							<Icon icon={CalendarIcon} size="sm" />
-						</Button>
-					{/snippet}
-				</Popover.Trigger>
-				<Popover.Content align="end" class="w-auto p-0">
-					<Calendar
-						type="single"
-						bind:value
-						bind:placeholder
-						onValueChange={handleCalendarChange}
-						{minValue}
-						{maxValue}
-						{locale}
-						{weekStartsOn}
-						captionLayout="dropdown"
-						{years}
-						{disabled}
-						{readonly}
-						aria-label={label}
-					/>
-				</Popover.Content>
-			</Popover.Root>
-		</div>
-	</DateField.Root>
+	<div
+		bind:this={frame}
+		class={cn(
+			fieldControlClass,
+			'gap-1 py-0 pe-1 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring',
+			'data-invalid:border-destructive',
+			disabled && 'cursor-not-allowed bg-muted opacity-50'
+		)}
+		data-invalid={shownError ? '' : undefined}
+		onfocusout={handleFocusOut}
+	>
+		<DateField.Input
+			id={fieldId}
+			bind:value
+			bind:resolved
+			onChange={handleValueChange}
+			{locale}
+			{bounds}
+			{minValue}
+			{maxValue}
+			{disabled}
+			{readonly}
+			{required}
+			{describedBy}
+			invalid={Boolean(shownError)}
+			labelledBy={`${fieldId}-label`}
+			onkeydowncapture={handleKeyDownCapture}
+		/>
+		<Popover.Root bind:open>
+			<Popover.Trigger disabled={disabled || readonly}>
+				{#snippet child({ props })}
+					<Button
+						{...props}
+						type="button"
+						variant="ghost"
+						size="icon-sm"
+						aria-label={$_('form.datePicker.openCalendar', { values: { label } })}
+					>
+						<Icon icon={CalendarIcon} size="sm" />
+					</Button>
+				{/snippet}
+			</Popover.Trigger>
+			<Popover.Content align="end" class="w-auto p-0">
+				<Calendar
+					type="single"
+					bind:value
+					bind:placeholder
+					onValueChange={handleCalendarChange}
+					{minValue}
+					{maxValue}
+					{locale}
+					{weekStartsOn}
+					captionLayout="dropdown"
+					{years}
+					{disabled}
+					{readonly}
+					aria-label={label}
+				/>
+			</Popover.Content>
+		</Popover.Root>
+	</div>
 
 	{#if name}
 		<input type="hidden" {name} value={toDateOnly(value)} />
