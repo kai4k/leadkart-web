@@ -236,7 +236,7 @@
 	--sidebar-primary-foreground: var(--primary-foreground);
 	--sidebar-accent-foreground: var(--primary-text);
 	/* OPAQUE active-item fill (plan 6.2): a text pair never depends on an unknown backdrop */
-	--sidebar-accent: color-mix(in oklab, var(--sidebar-accent-foreground) 12%, var(--sidebar));
+	--sidebar-accent: color-mix(in oklab, var(--sidebar-accent-foreground) 15%, var(--sidebar));
 	--sidebar-border: light-dark(oklch(0.928 0.006 264.531), var(--dark-800));
 	/* the ring and the group labels follow the sidebar colour: they are re-pointed by the
 	   data-sidebar-colors blocks below through --sidebar-accent-foreground, which is always
@@ -550,4 +550,15 @@
 	--sidebar-foreground: oklch(0.88 0.07 230);
 	--sidebar-accent-foreground: oklch(0.977 0.013 236.62);
 	--sidebar-border: var(--swatch-sidebar-sky);
+}
+
+/* The brand and sky sidebars are the darkest-tinted glasses of the default palette: over a bright page their
+   composite is lighter than the sidebar token, and the logo frame (--brand-frame-dark, blue 400) falls under
+   3:1 at the 84% fill (2.99 / 2.78). They get their own, lighter frame step here instead of a more opaque
+   global sidebar fill; every other palette and sidebar colour passes with the shared step. */
+:root[data-colors='leadkart'][data-sidebar-colors='brand'] {
+	--sidebar-brand-frame: color-mix(in oklab, var(--primary-400) 75%, var(--primary-300));
+}
+:root[data-colors='leadkart'][data-sidebar-colors='sky'] {
+	--sidebar-brand-frame: color-mix(in oklab, var(--primary-400) 75%, var(--primary-300));
 }

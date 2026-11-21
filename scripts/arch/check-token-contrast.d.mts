@@ -46,6 +46,12 @@ export function composite(
 	alpha: number,
 	bg: object
 ): { mode: 'rgb'; r: number; g: number; b: number };
+export function resolveColor(
+	name: string,
+	props: Map<string, string>,
+	mode: string,
+	over?: unknown
+): unknown;
 export function pairRatio(pair: Pair, props: Map<string, string>, mode: string): number;
 export function checkCss(
 	files: Array<[string, string]>,

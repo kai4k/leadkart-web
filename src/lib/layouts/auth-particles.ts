@@ -1,14 +1,13 @@
 /**
  * The auth backdrop's pharma shapes: a seeded field (so the server render and the client's hydration
- * are byte-identical), colours from the primary ramp and the foreground only.
+ * are byte-identical), colours from the primary ramp only (a near-black mark reads as dirt on the light wash).
  */
 const PALETTE = [
 	'--primary-300',
 	'--primary-400',
 	'--primary-500',
 	'--primary-600',
-	'--primary-700',
-	'--foreground'
+	'--primary-700'
 ];
 
 export interface Particle {
@@ -31,7 +30,7 @@ function build(): Particle[] {
 	};
 	const pick = (): string =>
 		PALETTE[Math.floor(rand() * PALETTE.length)] ?? PALETTE[0] ?? '--primary-500';
-	return Array.from({ length: 90 }, () => {
+	return Array.from({ length: 48 }, () => {
 		const d = rand();
 		const k = rand();
 		const kind = k < 0.15 ? 'cross' : k < 0.3 ? 'tablet' : k < 0.45 ? 'tracer' : 'pill';

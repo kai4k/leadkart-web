@@ -108,7 +108,7 @@ describe('check-token-contrast: the legibility bound of a material (plan G3)', (
 		expect(gate(css, l('sidebar-ok')).problems).toEqual([]);
 	});
 
-	it('a material fill 20 points too transparent in the REAL files would fail (mutation)', () => {
+	it('a material fill 26 points too transparent in the REAL files would fail (mutation)', () => {
 		const files = ['palettes', 'semantic', 'materials', 'layouts'].map(
 			(n) =>
 				[`src/styles/theme/${n}.css`, readFileSync(`src/styles/theme/${n}.css`, 'utf8')] as [
@@ -118,8 +118,8 @@ describe('check-token-contrast: the legibility bound of a material (plan G3)', (
 		);
 		const mutate = (css: string) =>
 			css.replace(
-				'color-mix(in srgb, var(--card) 72%, transparent)',
-				'color-mix(in srgb, var(--card) 45%, transparent)'
+				'color-mix(in srgb, var(--card) 86%, transparent)',
+				'color-mix(in srgb, var(--card) 60%, transparent)'
 			);
 		const bad = files.map(([n, css]) => [
 			n,

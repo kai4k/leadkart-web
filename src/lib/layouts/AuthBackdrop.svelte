@@ -2,7 +2,7 @@
 	/**
 	 * The auth pages' decoration: soft primary-coloured washes and a field of pharma shapes (capsules,
 	 * tablets, crosses) that drift and step aside from the pointer. Purely decorative: `aria-hidden`,
-	 * `pointer-events: none`. Colours come only from the `--primary-*` ramp and `--foreground`, so the
+	 * `pointer-events: none`. Colours come only from the `--primary-*` ramp, so the
 	 * field follows the user's primary and mode. Under `prefers-reduced-motion` every animation is
 	 * removed and the pointer script is not even attached: the field is static.
 	 *
@@ -175,17 +175,17 @@
 		border-radius: 9999px;
 		transform: rotate(var(--rot)) translate(var(--push-x), var(--push-y)) scale(var(--scale));
 		transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
-		opacity: 0.7;
+		opacity: 0.55;
 		animation: lk-particle-drift 5s ease-in-out infinite;
 		animation-delay: var(--delay);
 	}
 	.lk-particles--far .lk-particle {
 		--scale: 0.85;
-		opacity: 0.45;
+		opacity: 0.35;
 		block-size: 2.5px;
 	}
 	.lk-particles--near .lk-particle {
-		opacity: 0.9;
+		opacity: 0.7;
 		block-size: 4.5px;
 	}
 

@@ -23,13 +23,17 @@
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 		<meta name="apple-mobile-web-app-title" content="LeadKart" />
-		<!-- Link previews: the image and URL tags are written by the root layout (src/routes/+layout.svelte) with the request
-		     origin, because a preview crawler ignores a relative image URL. -->
+		<!-- Link previews: written here, not by a layout, because the (auth) routes are client-rendered and a crawler
+		     that fetches /signin gets only this shell. PUBLIC_SITE_URL (public origin, no trailing slash) makes the URLs
+		     absolute, which a preview crawler requires; unset (development) they are root-relative. -->
 		<meta property="og:type" content="website" />
 		<meta property="og:title" content="LeadKart" />
+		<meta property="og:url" content="%sveltekit.env.PUBLIC_SITE_URL%/" />
+		<meta property="og:image" content="%sveltekit.env.PUBLIC_SITE_URL%/og-image-light.png" />
 		<meta property="og:image:width" content="1200" />
 		<meta property="og:image:height" content="630" />
 		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:image" content="%sveltekit.env.PUBLIC_SITE_URL%/og-image-light.png" />
 		<title>LeadKart</title>
 		%sveltekit.head%
 	</head>

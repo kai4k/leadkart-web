@@ -31,24 +31,23 @@ test.describe('brand wiring', () => {
 		expect(html).toContain('name="twitter:card"');
 	});
 
-	// (auth) routes are client-rendered (ssr = false), so their HTML is the app.html shell with no <svelte:head>; any
-	// server-rendered route carries the tags the root layout writes. A 404 is one that needs no session.
-	test('server-rendered pages carry an absolute og:image, og:url and twitter:image on the request origin', async ({
+	// The tags live in src/app.html (PUBLIC_SITE_URL), so the client-rendered (auth) routes - the pages a shared link
+	// lands on - carry them too, absolute, exactly once.
+	test('the sign-in shell and server-rendered pages carry an absolute og:image, og:url and twitter:image', async ({
 		page
 	}) => {
-		const res = await page.request.get('/no-such-page-xyz');
-		const html = await res.text();
-		expect(html).toContain(
-			'<meta property="og:image" content="http://localhost:4173/og-image-light.png"'
-		);
-		expect(html).toContain(
-			'<meta name="twitter:image" content="http://localhost:4173/og-image-light.png"'
-		);
-		expect(html).toContain(
-			'<meta property="og:url" content="http://localhost:4173/no-such-page-xyz"'
-		);
-		// and no relative duplicate is left in the shell
-		expect(html.match(/property="og:image"/g)).toHaveLength(1);
+		for (const path of ['/signin', '/forgot-password', '/no-such-page-xyz']) {
+			const html = await (await page.request.get(path)).text();
+			expect(html, path).toContain(
+				'<meta property="og:image" content="http://localhost:4173/og-image-light.png"'
+			);
+			expect(html, path).toContain(
+				'<meta name="twitter:image" content="http://localhost:4173/og-image-light.png"'
+			);
+			expect(html, path).toContain('<meta property="og:url" content="http://localhost:4173/"');
+			expect(html, path).toContain('property="og:image:width"');
+			expect(html.match(/property="og:image"/g), path).toHaveLength(1);
+		}
 		expect((await page.request.get('/og-image-light.png')).status()).toBe(200);
 	});
 

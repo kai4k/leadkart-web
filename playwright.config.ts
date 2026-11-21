@@ -114,6 +114,7 @@ export default defineConfig({
 				NODE_ENV: 'test',
 				SCOPE_COOKIE_SECRET: 'e2e-only-scope-cookie-secret-0123456789abcdef',
 				ORIGIN: 'http://localhost:4173',
+				PUBLIC_SITE_URL: 'http://localhost:4173',
 				PORT: '4173'
 			}
 		}

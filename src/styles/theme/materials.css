@@ -14,7 +14,7 @@
 	--material-bar-saturate: 1.8;
 	--material-bar-contrast: 0.6;
 	--material-bar-fill: light-dark(
-		color-mix(in srgb, var(--card) 72%, transparent),
+		color-mix(in srgb, var(--card) 86%, transparent),
 		color-mix(in srgb, var(--card) 80%, transparent)
 	);
 	--material-bar-filter: blur(var(--material-bar-blur)) saturate(var(--material-bar-saturate))
@@ -28,7 +28,7 @@
 		color-mix(in srgb, var(--popover) 88%, transparent)
 	);
 	--material-sidebar-fill: light-dark(
-		color-mix(in srgb, var(--sidebar) 89%, transparent),
+		color-mix(in srgb, var(--sidebar) 84%, transparent),
 		color-mix(in srgb, var(--sidebar) 88%, transparent)
 	);
 	--material-pane-filter: blur(var(--material-pane-blur)) saturate(var(--material-pane-saturate))
@@ -45,7 +45,7 @@
 	--material-indicator: light-dark(var(--primary-text), var(--primary-indicator));
 	--material-input-fill: light-dark(var(--card), var(--dark-800));
 	--material-control: light-dark(
-		color-mix(in srgb, var(--foreground) 6%, transparent),
+		color-mix(in srgb, var(--foreground) 4%, transparent),
 		color-mix(in srgb, var(--foreground) 10%, transparent)
 	);
 	--material-control-hover: light-dark(

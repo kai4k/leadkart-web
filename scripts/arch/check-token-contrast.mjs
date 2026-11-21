@@ -85,6 +85,8 @@ const UI = 3;
  * the frame, so the mark reads as two tones. Only where a logo is drawn: a card (RouteError), primary-soft (the
  * auth mobile row), the sidebar layers, the topbar layer, and the pattern band.
  */
+/** The active nav item's tinted capsule against the sidebar it sits on: worst case today 1.217 (violet, light sidebar, dark mode). */
+const CHIP_FLOOR = 1.2;
 const LOGO_CAPSULE = 1.6;
 const LOGO_TWO_TONE = 1.5;
 const STATUS = ['success', 'warning', 'info'];
@@ -149,6 +151,10 @@ const RAW_PAIRS = [
 	// the active-link tint is `color-mix(accent-fg 10%, transparent)`: composited over the sidebar
 	['sidebar-accent-foreground', 'sidebar-accent', TEXT, { over: 'sidebar' }],
 	['sidebar-primary-foreground', 'sidebar-primary', TEXT],
+	// the active item's capsule must be SEEN against the sidebar. A fill carries no information alone (aria-current,
+	// the accent label at 4.5 and the 500 weight say the same), so the floor is not the 3:1 of a control boundary,
+	// which would be a loud block: CHIP_FLOOR, perceptible on every sidebar colour.
+	['sidebar-accent', 'sidebar', CHIP_FLOOR, { note: 'active chip vs sidebar (non-text)' }],
 	['sidebar-ring', 'sidebar', UI],
 	['sidebar-icon', 'sidebar', UI, { note: 'nav icons (accent on the light sidebar)' }],
 	['sidebar-brand-frame', 'sidebar', UI, { note: 'logo frame on the sidebar' }],

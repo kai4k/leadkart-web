@@ -13,5 +13,8 @@ export const variables = defineEnvVars({
 	ORIGIN: { schema: (input) => input },
 	PROTOCOL_HEADER: { schema: (input) => input },
 	HOST_HEADER: { schema: (input) => input },
-	UPSTREAM_TIMEOUT_MS: { schema: (input) => input }
+	UPSTREAM_TIMEOUT_MS: { schema: (input) => input },
+	// Public origin for the link-preview tags in src/app.html (%sveltekit.env.PUBLIC_SITE_URL%). Public + dynamic:
+	// read when the server starts; unset gives '' so the URLs degrade to root-relative in development.
+	PUBLIC_SITE_URL: { public: true, schema: (input) => input ?? '' }
 });
