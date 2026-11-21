@@ -200,15 +200,27 @@ export function findPaletteUtilities(rel, src) {
 // pass; the word boundary is "not followed by `-`".
 const BARE_TEXT_PRIMARY = /(?<![\w-])text-primary(?![\w-])/g;
 
+/** A .svelte file the compiler cannot parse is a FINDING for every rule that reads its classes: no silent fallback. */
+const unparsed = (norm) => [
+	{
+		line: 1,
+		name: `${norm} does not parse (Svelte compiler error): the class rules cannot read it`
+	}
+];
+/** `text-(--primary)`, `text-[var(--primary)]`, `text-[color:var(--primary)]`: bare primary text by another name. */
+const BARE_TEXT_ARBITRARY = /^text-(?:\(--primary\)|\[(?:color:)?var\(--primary\)\])$/;
+
 export function findBareTextPrimary(rel, src) {
 	const norm = rel.replaceAll('\\', '/');
 	if (!/\.(svelte|ts|html)$/.test(norm) || !norm.startsWith('src/')) return [];
 	const found = [];
 	const parsed = norm.endsWith('.svelte') ? classElements(src) : null;
+	if (norm.endsWith('.svelte') && !parsed) return unparsed(norm);
 	if (parsed) {
 		for (const el of [...parsed.elements, ...parsed.scripts])
 			for (const t of el.tokens)
-				if (t.base === 'text-primary') found.push({ line: el.line, name: t.raw });
+				if (t.base === 'text-primary' || BARE_TEXT_ARBITRARY.test(t.base))
+					found.push({ line: el.line, name: t.raw });
 		return found;
 	}
 	for (const m of src.matchAll(BARE_TEXT_PRIMARY))
@@ -246,13 +258,30 @@ const scan = (src, re) => {
 //     text-decoration*, caret-color or accent-color is refused; as background it needs `--primary-foreground` in the same rule;
 //   - a class fragment built at run time that can end in a utility prefix (`bg-${tone}`, `'bg-' + tone`)
 //     could build a primary mark and is refused unless the file is pinned below with the reason.
+//   - arbitrary values are the same token: `border-(--primary)`, `border-[var(--primary)]`, `text-[color:var(--primary)]`,
+//     `bg-(--primary)`; Tailwind 4's `inset-ring|inset-shadow|drop-shadow|text-shadow` count as marks;
+//   - Svelte interpolation (`class="border-{tone}"`) is a built fragment, like a template literal;
+//   - `style="…"` and `style:prop` carrying `var(--primary)` for a mark property are refused;
+//   - a `text-primary-foreground` in the OTHER arm of a ternary (`on ? 'bg-primary' : 'text-primary-foreground'`)
+//     is no label for the fill;
+//   - a .svelte file that does not parse is a FINDING naming the file (no silent fallback to a line scan).
 // .ts and .html files keep the per-line check (no elements there).
-// What it cannot see: a class list that arrives through a variable or a child component's prop. It is a lint;
-// the contrast gate proves the tokens.
-const PRIMARY_MARK =
-	/(?<![\w-])(?:border|ring|ring-offset|outline|divide|fill|stroke|caret|decoration|accent|shadow|from|via|to|placeholder)(?:-[tblrxyse])?-primary(?![\w-])/g;
-const PRIMARY_MARK_BASE =
-	/^(?:border|ring|ring-offset|outline|divide|fill|stroke|caret|decoration|accent|shadow|from|via|to|placeholder)(?:-[tblrxyse])?-primary$/;
+// What it cannot see (it is a lint; the contrast gate proves the tokens): a class list that arrives through a
+// variable or a child component's prop; a snippet defined elsewhere and rendered inside a `bg-primary` element
+// (its label is not a descendant in the AST); a colour reached through `@apply`, a CSS variable, a non-literal
+// inline style, or a `:global()` rule in another file; a utility built by a helper function other than `cn()`.
+const MARK_PREFIX =
+	'border|ring|ring-offset|inset-ring|inset-shadow|drop-shadow|text-shadow|outline|divide|fill|stroke|caret|decoration|accent|shadow|from|via|to|placeholder';
+/** `primary`, or the same token written as an arbitrary value: `(--primary)`, `[var(--primary)]`, `[color:var(--primary)]`. */
+const PRIMARY_REF = '(?:primary|\\(--primary\\)|\\[(?:color:)?var\\(--primary\\)\\])';
+const PRIMARY_MARK = new RegExp(
+	`(?<![\\w-])(?:${MARK_PREFIX})(?:-[tblrxyse])?-${PRIMARY_REF}(?![\\w-])`,
+	'g'
+);
+const PRIMARY_MARK_BASE = new RegExp(`^(?:${MARK_PREFIX})(?:-[tblrxyse])?-${PRIMARY_REF}$`);
+const BG_PRIMARY_ARBITRARY = /^bg-(?:\(--primary\)|\[var\(--primary\)\])$/;
+/** `bg-primary` in any spelling is the vivid fill: it needs its label. */
+const isBgPrimary = (base) => base === 'bg-primary' || BG_PRIMARY_ARBITRARY.test(base);
 const PRIMARY_FILL = /(?<![\w-])bg-primary(?![\w-])/g;
 export const PRIMARY_MARK_ALLOWLIST = /** @type {string[]} */ ([]);
 export const PRIMARY_FILL_FILES = [/^src\/lib\/components\/ui\/(?:button|badge|checkbox)\//];
@@ -291,16 +320,27 @@ function styleMarks(parsed, norm) {
 
 const hasFill = (el) =>
 	el.tokens.some((t) => /^bg-/.test(t.base) && t.base !== 'bg-primary-foreground');
-const labelled = (el) => el.tokens.some((t) => t.base === 'text-primary-foreground');
+/** Two ternary branch paths that cannot both hold: the same conditional, different arms. */
+const exclusiveBranches = (a = [], b = []) =>
+	a.some((x) =>
+		b.some((y) => {
+			const [ix, ax] = x.split(':');
+			const [iy, ay] = y.split(':');
+			return ix === iy && ax !== ay;
+		})
+	);
+/** A label counts for a fill unless they sit in the two arms of one ternary (`on ? 'bg-primary' : 'text-primary-foreground'`). */
+const labelled = (el, fill) =>
+	el.tokens.some((t) => t.base === 'text-primary-foreground' && !exclusiveBranches(t.br, fill.br));
 
 /** A `bg-primary` element is labelled by itself or by a descendant that is reached without crossing another fill. */
-function labelledBelow(elements, index) {
-	if (labelled(elements[index])) return true;
+function labelledBelow(elements, index, fill) {
+	if (labelled(elements[index], fill)) return true;
 	const kids = (i) => elements.map((e, k) => (e.parent === i ? k : -1)).filter((k) => k >= 0);
 	const stack = kids(index);
 	while (stack.length) {
 		const k = stack.pop();
-		if (labelled(elements[k])) return true;
+		if (labelled(elements[k], fill)) return true;
 		if (!hasFill(elements[k])) stack.push(...kids(k));
 	}
 	return false;
@@ -312,6 +352,7 @@ export function findPrimaryMarks(rel, src) {
 	if (PRIMARY_MARK_ALLOWLIST.includes(norm)) return [];
 	const fillFree = PRIMARY_FILL_FILES.some((re) => re.test(norm));
 	const parsed = norm.endsWith('.svelte') ? classElements(src) : null;
+	if (norm.endsWith('.svelte') && !parsed) return unparsed(norm);
 	if (!parsed) {
 		const text = code(src);
 		const found = scan(text, PRIMARY_MARK);
@@ -333,15 +374,21 @@ export function findPrimaryMarks(rel, src) {
 			if (PRIMARY_MARK_BASE.test(t.base)) found.push({ line: el.line, name: t.raw });
 		if (!fillFree)
 			for (const t of el.tokens)
-				if (t.base === 'bg-primary' && !labelledBelow(parsed.elements, i))
+				if (isBgPrimary(t.base) && !labelledBelow(parsed.elements, i, t))
 					found.push({ line: el.line, name: t.raw });
 	});
+	// `style="color: var(--primary)"` and `style:color={…}`: the literal text of an inline style
+	for (const { line, css } of parsed.styleAttrs)
+		for (const m of css.matchAll(
+			new RegExp(MARK_PROPS.source.replace('(?:^|;)', '(?:^|;|\\s)'), 'g')
+		))
+			found.push({ line, name: `style ${m[1]}: var(--primary)` });
 	for (const s of parsed.scripts) {
 		for (const t of s.tokens)
 			if (PRIMARY_MARK_BASE.test(t.base)) found.push({ line: s.line, name: t.raw });
 		if (
 			!fillFree &&
-			s.tokens.some((t) => t.base === 'bg-primary') &&
+			s.tokens.some((t) => isBgPrimary(t.base)) &&
 			!s.tokens.some((t) => t.base === 'text-primary-foreground')
 		)
 			found.push({ line: s.line, name: 'bg-primary' });
@@ -360,19 +407,34 @@ export function findPrimaryMarks(rel, src) {
 //     same `data-[k=v]` / `aria-[k=v]` key with different values;
 //   - a co-occurrence is safe only when the same element sets a gated fill (`bg-destructive-soft`, `bg-card`,
 //     `bg-background`, `bg-popover`) in a state that includes the control fill's whole state (its variants are a
-//     superset) and that wins: more variants, or the same variants and later in the list. That is the
-//     destructive menu item: `focus:bg-accent` + `data-[variant=destructive]:text-destructive` +
-//     `data-[variant=destructive]:focus:bg-destructive-soft`;
+//     superset) and that wins: STRICTLY more variants, or the same variants and later in the list INSIDE a
+//     `cn(...)` call (tailwind-merge makes the last one win). In a plain class attribute the stylesheet's own
+//     order decides (Tailwind emits same-variant utilities alphabetically), so list order proves nothing there and
+//     any co-occurrence with the same variants is a hit. That is the destructive menu item: `focus:bg-accent` +
+//     `data-[variant=destructive]:text-destructive` + `data-[variant=destructive]:focus:bg-destructive-soft`;
 //   - a `text-destructive` element whose ANCESTOR in the same file carries `bg-muted` / `bg-accent` (any
 //     variant) is on that fill, unless an element between them (or the element itself) sets a gated fill.
-// A file is a material surface when it uses a `material-*` utility, is a ui primitive of an overlay family, or
-// imports an overlay primitive (Dialog, AlertDialog, Sheet, Drawer, Popover, DropdownMenu, Select, Command,
-// Combobox, Sidebar, Toaster). What it cannot see: a label that another component renders into a slot.
+// A file is a material surface when it uses a `material-*` utility, is a ui primitive of an overlay family,
+// imports an overlay primitive by name from the `$ui` barrel or the ui folders (Dialog, AlertDialog, Sheet, Drawer,
+// Popover, DropdownMenu or its `$ui` alias Dropdown, Select, Command, Combobox, Sidebar, Toaster, and the wrappers
+// ConfirmDialog, FormSheet, FormDialog), imports an overlay FAMILY as a namespace
+// (`import * as Dialog from '#lib/components/ui/dialog/index.ts'`), or default-imports a wrapper file
+// (`ConfirmDialog.svelte`, `FormSheet.svelte`, `FormDialog.svelte`, `*Drawer.svelte`): one level of wrapping. The
+// wrapper's own consumers' wrappers (a file that imports `SuspendDialog`, which imports ConfirmDialog) are NOT
+// followed. A .svelte file that does not parse is a finding. What it cannot see: a label that another component
+// renders into a slot, or a snippet defined elsewhere and rendered inside a control fill.
 export const MATERIAL_SURFACE_FILES = [
 	/^src\/lib\/components\/ui\/(?:dialog|alert-dialog|sheet|drawer|popover|dropdown-menu|select|command|combobox|sonner|sidebar|AuthCard)[\w./-]*$/
 ];
+/** Names of overlay primitives and of the wrappers built on them (`Dropdown` is the `$ui` alias of DropdownMenu). */
 const OVERLAY_IMPORTS =
-	/\b(?:Dialog|AlertDialog|Sheet|Drawer|Popover|DropdownMenu|Select|Command|Combobox|Sidebar|Toaster)\b/;
+	/\b(?:Dialog|AlertDialog|Sheet|Drawer|Popover|DropdownMenu|Dropdown|Select|Command|Combobox|Sidebar|Toaster|ConfirmDialog|FormSheet|FormDialog)\b/;
+/** `import * as Dialog from '#lib/components/ui/dialog/index.ts'`: a namespace import of an overlay family. */
+const OVERLAY_NAMESPACE =
+	/import\s*\*\s*as\s+\w+\s+from\s*['"][^'"]*\/(?:dialog|alert-dialog|sheet|drawer|popover|dropdown-menu|select|command|combobox|sonner|sidebar)\/index\.ts['"]/;
+/** A default import of a wrapper that renders an overlay (one level of wrapping; the wrapper files are material surfaces themselves). */
+const OVERLAY_WRAPPER_FILE =
+	/import\s+(?:type\s+)?\w+\s+from\s*['"][^'"]*\/(?:ConfirmDialog|FormSheet|FormDialog|\w*Drawer)\.svelte['"]/;
 const OVERLAY_FROM =
 	/import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*['"](?:\$ui|#lib\/components\/ui\/index\.ts|#lib\/components\/ui(?:\/(?:dialog|alert-dialog|sheet|drawer|popover|dropdown-menu|select|command|combobox|sonner|sidebar)[^'"]*)?)['"]/g;
 const CONTROL_BG = new Set(['bg-muted', 'bg-accent']);
@@ -382,7 +444,7 @@ function isMaterialSurface(norm, parsed) {
 	if (MATERIAL_SURFACE_FILES.some((re) => re.test(norm))) return true;
 	if (parsed.usesMaterial) return true;
 	for (const m of parsed.text.matchAll(OVERLAY_FROM)) if (OVERLAY_IMPORTS.test(m[1])) return true;
-	return false;
+	return OVERLAY_NAMESPACE.test(parsed.text) || OVERLAY_WRAPPER_FILE.test(parsed.text);
 }
 
 /** Two variant chains that cannot both hold: the same data-/aria- attribute selector with different values. */
@@ -404,14 +466,17 @@ export function findTextOnControl(rel, src) {
 	const norm = rel.replaceAll('\\', '/');
 	if (!/\.svelte$/.test(norm) || !norm.startsWith('src/')) return [];
 	const parsed = classElements(src);
-	if (!parsed || !isMaterialSurface(norm, parsed)) return [];
+	if (!parsed) return unparsed(norm);
+	if (!isMaterialSurface(norm, parsed)) return [];
 	const found = [];
-	const gatedHere = (el, vb, bIndex) =>
+	const gatedHere = (el, vb, bIndex, b) =>
 		el.tokens.some(
 			(g, gi) =>
 				GATED_FILL.has(g.base) &&
 				superset(g.variants, vb) &&
-				(g.variants.length > vb.length || gi > bIndex)
+				// "later wins" is the class-list order inside cn() (tailwind-merge) ONLY; in a plain class attribute the
+				// stylesheet's own order decides, so there only a strictly more specific state is a winner
+				(g.variants.length > vb.length || (g.cn && b.cn && gi > bIndex))
 		);
 	parsed.elements.forEach((el, i) => {
 		const texts = el.tokens.filter((t) => t.base === 'text-destructive');
@@ -419,7 +484,7 @@ export function findTextOnControl(rel, src) {
 		for (const t of texts) {
 			el.tokens.forEach((b, bi) => {
 				if (!CONTROL_BG.has(b.base) || exclusive(t.variants, b.variants)) return;
-				if (gatedHere(el, b.variants, bi)) return;
+				if (gatedHere(el, b.variants, bi, b)) return;
 				found.push({ line: el.line, name: `${b.raw} with ${t.raw}` });
 			});
 			// an ancestor's control fill, unless this element or one between sets a gated fill

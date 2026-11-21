@@ -16,8 +16,10 @@ import { leads, opaque, overlay, paint, setPrefs } from './helpers/materials';
  *   5  hasTouch + isMobile                   an open sheet has no filter, the topbar blurs 12px
  *   6  prefers-reduced-motion: reduce        opening a dialog leaves no running animation
  *
- * Then axe (WCAG 2.2 AA, no serious or critical findings) on /leads (the table with its shell) and /settings/users
- * with the customizer and a dialog open, light and dark, Glass and Solid.
+ * Then axe (WCAG 2.2 AA, no serious or critical findings), light and dark, Glass and Solid, on: /dashboard (at rest, with
+ * the customizer open, with the command palette open), /settings/users (at rest, with the customizer open) and /leads
+ * WITH ROWS (at rest, with the command palette open). Axe does not run under forced colours (the colours are the user
+ * agent's): case 3 asserts the computed border and fill instead.
  */
 
 const inputColour = (page: Page) =>

@@ -4,14 +4,21 @@ import { registerMock } from './mock';
 import { TEST_TENANT_ID } from './fake-jwt';
 
 /**
- * Filtered layers of the page (plan section 5): every element whose computed `backdrop-filter` is not `none`.
- * `overScroll` counts the bars (`material-bar`, `material-sidebar-bar`), the only layers that sit over content that
- * moves: a fixed or sticky box that intersects the viewport. `area` is the share of the viewport the filtered boxes
- * cover (overlaps counted twice: the budget is a ceiling, not a measurement of unique pixels).
+ * Filtered layers of the page (plan section 5): every element whose computed `backdrop-filter` is not `none`, whatever
+ * class gave it. `overScroll` counts the ones that sit OVER MOVING CONTENT: a visible filtered box that is
+ * `position: fixed` or `sticky`, or that overlaps the visible box of a scroll container (the page, or any element with
+ * `overflow: auto|scroll` that really scrolls) which does not contain it. So a glass sticky table header counts even
+ * though it is no `.material-bar`. `area` is the share of the viewport the filtered boxes cover (overlaps counted
+ * twice: the budget is a ceiling, not a measurement of unique pixels). `insideScroller` lists filtered elements that
+ * sit INSIDE a non-page scroll container (the plan forbids them: they repaint on every scroll).
  */
-export async function countFilteredLayers(
-	page: Page
-): Promise<{ total: number; overScroll: number; area: number; names: string[] }> {
+export async function countFilteredLayers(page: Page): Promise<{
+	total: number;
+	overScroll: number;
+	area: number;
+	names: string[];
+	insideScroller: string[];
+}> {
 	return page.evaluate(() => {
 		const filtered: Element[] = [];
 		for (const el of document.querySelectorAll('*')) {
@@ -21,26 +28,42 @@ export async function countFilteredLayers(
 		}
 		const vw = window.innerWidth;
 		const vh = window.innerHeight;
+		const scrollers = [...document.querySelectorAll('*')].filter((e) => {
+			const cs = getComputedStyle(e);
+			return (
+				/(auto|scroll)/.test(cs.overflowY) &&
+				e.scrollHeight > e.clientHeight + 1 &&
+				e !== document.body &&
+				e !== document.documentElement
+			);
+		});
+		const overlap = (a: DOMRect, b: DOMRect) =>
+			Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) *
+			Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
 		let area = 0;
 		let overScroll = 0;
+		const insideScroller: string[] = [];
+		const name = (e: Element) =>
+			e.getAttribute('data-slot') ?? e.getAttribute('data-shell') ?? e.tagName.toLowerCase();
 		for (const el of filtered) {
 			const r = el.getBoundingClientRect();
 			const w = Math.max(0, Math.min(r.right, vw) - Math.max(r.left, 0));
 			const h = Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0));
 			area += w * h;
+			if (w * h <= 0) continue;
 			const pos = getComputedStyle(el).position;
-			const isBar =
-				el.classList.contains('material-bar') || el.classList.contains('material-sidebar-bar');
-			if (isBar && (pos === 'fixed' || pos === 'sticky') && w * h > 0) overScroll++;
+			const overAScroller = scrollers.some(
+				(sc) => !sc.contains(el) && overlap(r, sc.getBoundingClientRect()) > 0
+			);
+			if (pos === 'fixed' || pos === 'sticky' || overAScroller) overScroll++;
+			if (scrollers.some((sc) => sc.contains(el))) insideScroller.push(name(el));
 		}
 		return {
 			total: filtered.length,
 			overScroll,
 			area: area / (vw * vh),
-			names: filtered.map(
-				(e) =>
-					e.getAttribute('data-slot') ?? e.getAttribute('data-shell') ?? e.tagName.toLowerCase()
-			)
+			names: filtered.map(name),
+			insideScroller
 		};
 	});
 }

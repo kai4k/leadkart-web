@@ -89,7 +89,9 @@ const uiCookie = (mode: string, colors: string, transparency: string) =>
 		})
 	);
 // plan G9: mode x transparency. Glass is the default level; Solid (`off`) is every fallback's look, so a pass there covers
-// reduced transparency, increased contrast and forced colours too (the same opaque tokens).
+// reduced transparency and increased contrast too (the same opaque tokens). Forced colours REPLACES the tokens with system
+// colours, so Solid says nothing about it and axe is not run under it (contrast is the user agent's there);
+// material-fallbacks.spec.ts asserts forced colours on computed styles instead (a 1px solid border, an opaque fill).
 const SCHEMES = [
 	{ name: 'light', mode: 'light', colors: 'leadkart', transparency: 'glass' },
 	{ name: 'dark', mode: 'dark', colors: 'leadkart', transparency: 'glass' },

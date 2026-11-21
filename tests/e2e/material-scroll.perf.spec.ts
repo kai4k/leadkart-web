@@ -7,8 +7,10 @@ import { LEAD, setPrefs } from './helpers/materials';
  * @perf  Annotation, Chromium only (CDP CPU throttling is not a GPU model: the owner repeats this on a real
  * mid-range Android at G12). The page is scrolled 40 px per animation frame for 3 s under 4x CPU throttling,
  * with transparency Glass and with Solid, and the frame deltas are recorded: p95 frame time and the share of frames
- * over 20 ms. The numbers go into the test annotations; the one assertion is soft (glass's slow-frame share
- * <= solid's + 5 points).
+ * over 20 ms. The numbers go into the test annotations and NOTHING asserts on them: this runs in the `perf` Playwright
+ * project (`npm run test:perf`), which CI's `--project=chromium` does not include, because two timing samples on a shared
+ * runner can only fail through noise. The plan's target (glass's slow-frame share <= solid's + 5 points) is an annotation.
+ * The hard budget is the LAYER COUNT (material-budget.spec.ts, in chromium).
  *
  * The plan names /data-table-bench (Task 24); that route does not exist yet, so the bench is the real /leads table
  * with 300 rows, the heaviest scrolling list in the app today. /signin measures the glass auth card over the STATIC
@@ -125,11 +127,11 @@ test.describe('scroll bench, 4x CPU throttle (annotation)', () => {
 			const solid = await run('off', sweep);
 			note(`signin ${sweep ? 'sweep' : 'idle'} glass`, glass);
 			note(`signin ${sweep ? 'sweep' : 'idle'} solid`, solid);
-			// the same card, glass vs opaque, over a backdrop that does not drift: within the plan's +5 points
-			expect(
-				glass.slowShare,
-				`glass slow-frame share (${sweep ? 'sweep' : 'idle'})`
-			).toBeLessThanOrEqual(solid.slowShare + 5);
+			// the same card, glass vs opaque, over a backdrop that does not drift: the plan's +5 points, as an annotation
+			test.info().annotations.push({
+				type: 'perf-target',
+				description: `signin ${sweep ? 'sweep' : 'idle'}: glass slow-frame share minus solid ${(glass.slowShare - solid.slowShare).toFixed(1)} points (target <= 5): ${glass.slowShare <= solid.slowShare + 5 ? 'within' : 'OVER'}`
+			});
 		}
 	});
 });

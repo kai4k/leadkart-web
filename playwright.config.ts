@@ -50,6 +50,16 @@ export default defineConfig({
 		{
 			name: 'chromium',
 			testDir: './tests/e2e',
+			// timing benches are annotations on shared hardware: they run in the `perf` project, never in CI's chromium
+			testIgnore: /[.]perf[.]spec[.]ts$/,
+			use: { ...devices['Desktop Chrome'] }
+		},
+		// ── perf (CPU-throttled timing benches, chromium only, on demand: `npm run test:perf`) ──
+		// Numbers go to test annotations; nothing here asserts on a timing comparison, so it cannot fail CI on noise.
+		{
+			name: 'perf',
+			testDir: './tests/e2e',
+			testMatch: /[.]perf[.]spec[.]ts$/,
 			use: { ...devices['Desktop Chrome'] }
 		},
 		{
