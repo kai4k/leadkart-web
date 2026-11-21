@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { createDialogState } from '#lib/hooks/index.ts';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { SvelteMap } from 'svelte/reactivity';
@@ -31,9 +32,8 @@
 	type Props = { personId: string };
 	let { personId }: Props = $props();
 
-	let suspendOpen = $state(false);
-	let anonymiseOpen = $state(false);
-	let target = $state<PersonDto | null>(null);
+	const suspendDialog = createDialogState<PersonDto>();
+	const anonymiseDialog = createDialogState<PersonDto>();
 
 	const query = $derived(personDetailQuery(personId));
 	const membershipsQuery = $derived(personMembershipsQuery(personId));
@@ -237,8 +237,7 @@
 						<Button
 							variant="ghost"
 							onclick={() => {
-								target = p;
-								suspendOpen = true;
+								suspendDialog.show(p);
 							}}
 							disabled={isPending}
 						>
@@ -254,8 +253,7 @@
 						<Button
 							variant="destructive"
 							onclick={() => {
-								target = p;
-								anonymiseOpen = true;
+								anonymiseDialog.show(p);
 							}}
 							disabled={isPending}
 						>
@@ -269,12 +267,12 @@
 </QueryState>
 
 <GlobalSuspendDialog
-	bind:open={suspendOpen}
-	person={target}
-	onOpenChange={(o) => (suspendOpen = o)}
+	bind:open={suspendDialog.open}
+	person={suspendDialog.target}
+	onOpenChange={suspendDialog.onOpenChange}
 />
 <AnonymiseDialog
-	bind:open={anonymiseOpen}
-	person={target}
-	onOpenChange={(o) => (anonymiseOpen = o)}
+	bind:open={anonymiseDialog.open}
+	person={anonymiseDialog.target}
+	onOpenChange={anonymiseDialog.onOpenChange}
 />

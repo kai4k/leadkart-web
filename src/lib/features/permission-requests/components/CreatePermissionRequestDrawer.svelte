@@ -1,13 +1,11 @@
 <script lang="ts">
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
-	import { Drawer, Button, Alert } from '$ui';
-	import { TextField } from '#lib/components/form/index.ts';
+	import { FormSheet, NumberInput, TextareaField, TextField } from '#lib/components/form/index.ts';
 	import { createPermissionRequestMutation } from '$features/permission-requests/queries';
 	import {
 		createPermissionRequestSchema,
 		PERMISSION_REQUEST_MAX_DAYS
 	} from '$features/permission-requests/schemas';
-	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 
 	type Props = { open: boolean; onOpenChange: (open: boolean) => void };
 	let { open = $bindable(false), onOpenChange }: Props = $props();
@@ -15,95 +13,47 @@
 	const mutation = createPermissionRequestMutation();
 	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
 	useResetOnChange(() => open, mutation);
-	const form = useForm(
-		createPermissionRequestSchema,
-		{ permission: '', duration_days: 30, reason: '' },
-		{ open: () => open, validateOn: 'blur' }
-	);
-
-	async function onSubmit(e: SubmitEvent) {
-		await form.submit(e, async (values, current) => {
-			await mutation.mutateAsync(values);
-			if (!current()) return;
-			form.reset();
-			onOpenChange(false);
-		});
-	}
 </script>
 
-<Drawer.Root bind:open busy={form.isSubmitting} {onOpenChange}>
-	<Drawer.Content>
-		<Drawer.Header>
-			<div class="stack stack-tight">
-				<Drawer.Title class="h4">Request permission</Drawer.Title>
-				<p class="caption text-muted-foreground">
-					Time-bound elevation. Routes to your manager (or a Platform operator if you have none).
-				</p>
-			</div>
-			<Drawer.Close>
-				{#snippet child({ props })}
-					<button
-						{...props}
-						type="button"
-						class="hover:bg-muted rounded-md p-1.5"
-						aria-label="Close">×</button
-					>
-				{/snippet}
-			</Drawer.Close>
-		</Drawer.Header>
-		<Drawer.Body>
-			<form
-				id="create-permission-request-form"
-				class="stack stack-relaxed"
-				onsubmit={onSubmit}
-				novalidate
-			>
-				<TextField
-					label="Permission"
-					name="permission"
-					placeholder="e.g. identity.users.create"
-					bind:value={form.values.permission}
-					required
-					error={form.errors.permission}
-					onblur={() => form.validateField('permission')}
-				/>
-				<label class="stack stack-tight">
-					<span class="label">Duration (days)</span>
-					<input
-						type="number"
-						bind:value={form.values.duration_days}
-						min={1}
-						max={PERMISSION_REQUEST_MAX_DAYS}
-						class="bg-card border border-border rounded-md rounded-md px-3 py-2 text-sm"
-					/>
-					<span class="caption text-subtle-foreground">Leave blank for the tenant default.</span>
-				</label>
-				<label class="stack stack-tight">
-					<span class="label">Reason</span>
-					<textarea
-						bind:value={form.values.reason}
-						required
-						minlength={10}
-						maxlength={1024}
-						rows={4}
-						class="bg-card border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
-					></textarea>
-					{#if form.errors.reason}
-						<span class="caption text-destructive">{form.errors.reason}</span>
-					{/if}
-				</label>
-				{#if form.bannerError}<Alert variant="destructive">{form.bannerError}</Alert>{/if}
-			</form>
-		</Drawer.Body>
-		<Drawer.Footer>
-			<Drawer.Close>
-				{#snippet child({ props })}
-					<Button {...props} variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
-				{/snippet}
-			</Drawer.Close>
-			<Button type="submit" form="create-permission-request-form" loading={form.isSubmitting}
-				>Submit request</Button
-			>
-		</Drawer.Footer>
-	</Drawer.Content>
-</Drawer.Root>
+<FormSheet
+	bind:open
+	{onOpenChange}
+	title="Request permission"
+	description="Time-bound elevation. Routes to your manager (or a Platform operator if you have none)."
+	submitLabel="Submit request"
+	schema={createPermissionRequestSchema}
+	initial={() => ({ permission: '', duration_days: 30, reason: '' })}
+	onSubmit={async (values) => void (await mutation.mutateAsync(values))}
+	formId="create-permission-request-form"
+>
+	{#snippet fields(form)}
+		<TextField
+			label="Permission"
+			name="permission"
+			placeholder="e.g. identity.users.create"
+			bind:value={form.values.permission}
+			required
+			error={form.errors.permission}
+		/>
+		<NumberInput
+			label="Duration (days)"
+			name="duration_days"
+			min={1}
+			max={PERMISSION_REQUEST_MAX_DAYS}
+			hint="Leave blank for the tenant default."
+			bind:value={
+				() => form.values.duration_days ?? null, (v) => (form.values.duration_days = v ?? undefined)
+			}
+			error={form.errors.duration_days}
+		/>
+		<TextareaField
+			label="Reason"
+			name="reason"
+			rows={4}
+			maxlength={1024}
+			required
+			bind:value={form.values.reason}
+			error={form.errors.reason}
+		/>
+	{/snippet}
+</FormSheet>

@@ -1,0 +1,66 @@
+<script lang="ts" generics="S extends AnyObjectSchema">
+	import { _ } from 'svelte-i18n';
+	import * as Dialog from '#lib/components/ui/dialog/index.ts';
+	import { Button } from '#lib/components/ui/button/index.ts';
+	import FormSurfaceForm from './FormSurfaceForm.svelte';
+	import {
+		createFormSurface,
+		type AnyObjectSchema,
+		type FormSurfaceProps
+	} from './form-surface.svelte.ts';
+
+	/**
+	 * FormDialog: a short form in a centred dialog (the same behaviour as FormSheet: reset on open, busy veto, one
+	 * banner, leave guard). The dialog is the `material-pane`; header and footer add no surface of their own.
+	 * `size` is the Dialog's named size (`md` 32rem, `lg` 48rem), never a `max-w-*` class.
+	 */
+	let {
+		open = $bindable(false),
+		onOpenChange,
+		title,
+		description,
+		submitLabel,
+		submitVariant = 'default',
+		schema,
+		initial,
+		onSubmit,
+		fields,
+		formId,
+		size = 'md',
+		guardLeave = true
+	}: FormSurfaceProps<S> = $props();
+
+	const surface = createFormSurface<S>(() => ({
+		open,
+		onOpenChange,
+		schema,
+		initial,
+		onSubmit,
+		guardLeave
+	}));
+	const form = $derived(surface.form);
+</script>
+
+<Dialog.Root bind:open busy={form.isSubmitting} {onOpenChange}>
+	<Dialog.Content {size}>
+		<Dialog.Header class="border-b border-border pe-14">
+			<Dialog.Title>{title}</Dialog.Title>
+			{#if description}<Dialog.Description>{description}</Dialog.Description>{/if}
+		</Dialog.Header>
+		<Dialog.Body>
+			<FormSurfaceForm {form} {formId} onsubmit={surface.submit} {fields} />
+		</Dialog.Body>
+		<Dialog.Footer class="border-t border-border">
+			<Dialog.Close>
+				{#snippet child({ props })}
+					<Button {...props} variant="outline" disabled={form.isSubmitting}
+						>{$_('common.cancel')}</Button
+					>
+				{/snippet}
+			</Dialog.Close>
+			<Button type="submit" form={formId} variant={submitVariant} loading={form.isSubmitting}
+				>{submitLabel}</Button
+			>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>

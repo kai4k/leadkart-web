@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { createDialogState } from '#lib/hooks/index.ts';
 	import { plainTitle } from '#lib/utils/page-title.ts';
 	import { Badge, Button, Card, CopyButton, DescriptionList } from '$ui';
 	import { Eye, Icon } from '$icons';
@@ -9,7 +10,7 @@
 
 	let { data }: { data: LayoutData } = $props();
 
-	let impersonateOpen = $state(false);
+	const impersonateDialog = createDialogState();
 
 	const tenant = $derived(data.tenant);
 	const canImpersonate = $derived(session.can(P.platformImpersonationManage));
@@ -29,7 +30,7 @@
 	<header class="cluster cluster-spread">
 		<Badge variant={badge.variant} size="sm">{badge.label}</Badge>
 		{#if canImpersonate}
-			<Button variant="ghost" onclick={() => (impersonateOpen = true)}>
+			<Button variant="ghost" onclick={() => impersonateDialog.show()}>
 				<Icon icon={Eye} size="sm" /> Impersonate this tenant
 			</Button>
 		{/if}
@@ -54,7 +55,7 @@
 </div>
 
 <ImpersonateModal
-	bind:open={impersonateOpen}
+	bind:open={impersonateDialog.open}
 	{tenant}
-	onOpenChange={(o) => (impersonateOpen = o)}
+	onOpenChange={impersonateDialog.onOpenChange}
 />

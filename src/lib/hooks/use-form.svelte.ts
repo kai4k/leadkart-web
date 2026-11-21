@@ -22,6 +22,7 @@
  */
 import { describeError, ValidationError } from '$api/errors';
 import { focusFirstInvalid } from '#lib/utils/focus-first-invalid.ts';
+import { fieldErrorsCopy } from '#lib/utils/field-error-copy.ts';
 import type { z } from 'zod';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- z.ZodObject's generic args are intentionally any-typed at the call-site of useForm
@@ -175,7 +176,8 @@ export function useForm<TSchema extends AnyObjectSchema>(
 		} catch (err) {
 			if (!current()) return;
 			if (err instanceof ValidationError && err.hasFieldErrors) {
-				errors = err.fields as FieldErrors;
+				// the API names a refused field with a code (`too_long`, `invalid_characters`): the field shows its message
+				errors = fieldErrorsCopy(err.fields) as FieldErrors;
 				void focusFirstInvalid(formEl);
 			} else {
 				bannerError = describeError(err, { fallback: 'An unexpected error occurred' });

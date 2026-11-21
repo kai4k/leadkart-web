@@ -6,3 +6,5 @@
  */
 export const goto: (...args: unknown[]) => Promise<void> = async () => {};
 export const invalidate: (...args: unknown[]) => Promise<void> = async () => {};
+/** A leave guard asks for the hook on mount; the stub never navigates, so it never calls back. */
+export const beforeNavigate: (callback: (navigation: unknown) => void) => void = () => {};

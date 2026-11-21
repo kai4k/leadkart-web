@@ -20,7 +20,7 @@
 		roleMemberCount
 	} from '$features/roles/view-models';
 	import { getListErrorMessage } from '$api/error-messages';
-	import { createListPagination } from '#lib/hooks/index.ts';
+	import { createDialogState, createListPagination } from '#lib/hooks/index.ts';
 	import { resolve } from '$app/paths';
 	import DeleteRoleDialog from './DeleteRoleDialog.svelte';
 	import { createRolePermissions } from '../role-permissions.svelte.ts';
@@ -29,9 +29,8 @@
 	let { roster }: { roster: ReadonlyArray<{ role_ids: string[]; status: string }> | null } =
 		$props();
 
-	let deleteOpen = $state(false);
+	const deleteDialog = createDialogState<RoleDto>();
 	const may = createRolePermissions();
-	let targetRole = $state<RoleDto | null>(null);
 
 	const rolesQuery = rolesListQuery();
 
@@ -84,8 +83,7 @@
 	]);
 
 	function onDelete(role: RoleDto) {
-		targetRole = role;
-		deleteOpen = true;
+		deleteDialog.show(role);
 	}
 </script>
 
@@ -170,4 +168,8 @@
 	/>
 </div>
 
-<DeleteRoleDialog bind:open={deleteOpen} role={targetRole} onOpenChange={(o) => (deleteOpen = o)} />
+<DeleteRoleDialog
+	bind:open={deleteDialog.open}
+	role={deleteDialog.target}
+	onOpenChange={deleteDialog.onOpenChange}
+/>

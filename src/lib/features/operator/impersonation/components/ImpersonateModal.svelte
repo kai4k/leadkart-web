@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { z } from 'zod';
-	import { Alert, Button, Dialog } from '$ui';
-	import { useForm } from '#lib/hooks/use-form.svelte.ts';
+	import { Alert } from '$ui';
+	import { FormDialog, NumberInput, TextareaField } from '#lib/components/form/index.ts';
 	import { impersonation } from '../stores/impersonation.svelte';
 	// Type-only; deliberately bypasses the tenants barrel to avoid a cycle
 	// (tenants barrel -> TenantsList -> impersonation -> ImpersonateModal -> tenants).
@@ -12,110 +12,59 @@
 
 	/** Form-local schema — reason min 10 chars, duration 1-240 min. */
 	const impersonateFormSchema = z.object({
-		reason: z.string().min(10, 'Reason must be at least 10 characters').max(500),
+		reason: z.string().min(10, 'Reason must be at least 10 characters.').max(500),
 		duration_minutes: z.number().int().min(1).max(240)
 	});
 
-	const isPending = $derived(impersonation.status === 'mutating');
-
-	const form = useForm(
-		impersonateFormSchema,
-		{
-			reason: '',
-			duration_minutes: 30
-		},
-		{ open: () => open }
-	);
-
-	async function onSubmit(e: SubmitEvent) {
-		if (!tenant) {
-			e.preventDefault();
-			return;
-		}
-		// Capture into a const so the async closure below preserves the
-		// non-null narrowing TypeScript can't track across the await
-		// boundary. Canon TS pattern for "I checked the value, now use
-		// it in a callback".
-		const target = tenant;
-		await form.submit(e, async (values, current) => {
-			await impersonation.start(
-				{
-					target_tenant_id: target.id,
-					reason: values.reason,
-					duration_minutes: values.duration_minutes
-				},
-				target.display_name
-			);
-			if (!current()) return;
-			form.reset();
-			onOpenChange(false);
-		});
+	async function onSubmit(values: z.output<typeof impersonateFormSchema>) {
+		// Opened only with a tenant; a missing one is a no-op, never a request without a target.
+		if (!tenant) return;
+		await impersonation.start(
+			{
+				target_tenant_id: tenant.id,
+				reason: values.reason,
+				duration_minutes: values.duration_minutes
+			},
+			tenant.display_name
+		);
 	}
 </script>
 
-<Dialog.Root bind:open busy={isPending} {onOpenChange}>
-	<Dialog.Content size="xl">
-		<Dialog.Header>
-			<div class="stack stack-tight">
-				<Dialog.Title class="h4">Impersonate {tenant?.display_name ?? 'tenant'}</Dialog.Title>
-				<p class="caption text-muted-foreground">
-					Records an audited session of your activity while acting on this tenant's behalf. All
-					requests are logged with this session ID for the operator audit trail.
-				</p>
-			</div>
-		</Dialog.Header>
-		<Dialog.Body>
-			<Alert variant="warning">
-				Every action is auditable to you, with the reason below. End the session as soon as your
-				task is complete.
-			</Alert>
-			<form id="impersonate-form" class="stack stack-relaxed mt-4" onsubmit={onSubmit}>
-				<label class="stack stack-tight">
-					<span class="label">Reason (required, audited — minimum 10 characters)</span>
-					<textarea
-						bind:value={form.values.reason}
-						required
-						minlength={10}
-						maxlength={500}
-						rows={3}
-						class="bg-card border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
-					></textarea>
-					{#if form.errors.reason}
-						<span class="caption text-danger">{form.errors.reason}</span>
-					{/if}
-				</label>
-				<label class="stack stack-tight">
-					<span class="label">Duration (minutes — max 240)</span>
-					<input
-						type="number"
-						bind:value={form.values.duration_minutes}
-						min={1}
-						max={240}
-						class="bg-card border border-border rounded-md rounded-md px-3 py-2 text-sm"
-					/>
-					{#if form.errors.duration_minutes}
-						<span class="caption text-danger">{form.errors.duration_minutes}</span>
-					{/if}
-				</label>
-				{#if form.bannerError}
-					<Alert variant="destructive">{form.bannerError}</Alert>
-				{/if}
-			</form>
-		</Dialog.Body>
-		<Dialog.Footer class="flex flex-col gap-2 sm:flex-row sm:justify-end">
-			<Dialog.Close>
-				{#snippet child({ props })}
-					<Button {...props} variant="ghost" disabled={isPending}>Cancel</Button>
-				{/snippet}
-			</Dialog.Close>
-			<Button
-				type="submit"
-				form="impersonate-form"
-				disabled={!tenant || form.isSubmitting}
-				loading={isPending}
-			>
-				Start impersonation
-			</Button>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
+<FormDialog
+	bind:open
+	{onOpenChange}
+	size="lg"
+	title={`Impersonate ${tenant?.display_name ?? 'tenant'}`}
+	description="Records an audited session of your activity while acting on this tenant's behalf. All requests are logged with this session ID for the operator audit trail."
+	submitLabel="Start impersonation"
+	schema={impersonateFormSchema}
+	initial={() => ({ reason: '', duration_minutes: 30 })}
+	{onSubmit}
+	formId="impersonate-form"
+>
+	{#snippet fields(form)}
+		<Alert variant="warning">
+			Every action is auditable to you, with the reason below. End the session as soon as your task
+			is complete.
+		</Alert>
+		<TextareaField
+			label="Reason (required, audited — minimum 10 characters)"
+			name="reason"
+			rows={3}
+			maxlength={500}
+			required
+			bind:value={form.values.reason}
+			error={form.errors.reason}
+		/>
+		<NumberInput
+			label="Duration (minutes — max 240)"
+			name="duration_minutes"
+			min={1}
+			max={240}
+			bind:value={
+				() => form.values.duration_minutes ?? null, (v) => (form.values.duration_minutes = v ?? 0)
+			}
+			error={form.errors.duration_minutes}
+		/>
+	{/snippet}
+</FormDialog>

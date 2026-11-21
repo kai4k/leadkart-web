@@ -24,6 +24,7 @@ import { page } from '$app/state';
 import { announceContextChange } from '#lib/api/operator-scope.ts';
 import { clearUserBrowserState } from '#lib/api/query-client.ts';
 import { logout as logoutRequest } from '../api';
+import { releaseLeaveGuards } from '#lib/hooks/use-leave-guard.svelte.ts';
 import { can, canAny, type Capabilities } from '../capabilities.ts';
 import type { SessionPrincipal } from '../types';
 
@@ -89,6 +90,8 @@ function createSession(): Session {
 			// Even when the request fails (offline) the user leaves and everything
 			// user-specific in the browser (query cache, offline caches) is dropped.
 			clearUserBrowserState();
+			// The user chose to leave: an open form with unsaved input must not stop it with a prompt.
+			releaseLeaveGuards();
 
 			// Full page reload — ensures SvelteKit re-runs +layout.server.ts
 			// which will find no access cookie and redirect to /signin. Using

@@ -40,16 +40,14 @@
 	import MarkForDeletionDialog from './MarkForDeletionDialog.svelte';
 	import { ImpersonateModal, impersonation } from '../../impersonation';
 	import type { TenantDto } from '../types';
-	import { createListPagination } from '#lib/hooks/index.ts';
+	import { createDialogState, createListPagination } from '#lib/hooks/index.ts';
 
 	const PAGE_SIZE = 10;
 
-	let createOpen = $state(false);
-	let suspendOpen = $state(false);
-	let markOpen = $state(false);
-	let lifecycleTarget = $state<TenantDto | null>(null);
-	let impersonateOpen = $state(false);
-	let impersonateTarget = $state<TenantDto | null>(null);
+	const createDialog = createDialogState();
+	const suspendDialog = createDialogState<TenantDto>();
+	const markDialog = createDialogState<TenantDto>();
+	const impersonateDialog = createDialogState<TenantDto>();
 	/** Slug of the tenant currently being opened — drives the inline
 	 *  row spinner and disables further row clicks while in flight. */
 	let openingScopeSlug = $state<string | null>(null);
@@ -163,8 +161,7 @@
 	];
 
 	function openImpersonate(tenant: TenantDto) {
-		impersonateTarget = tenant;
-		impersonateOpen = true;
+		impersonateDialog.show(tenant);
 	}
 
 	/**
@@ -243,8 +240,7 @@
 						{#if maySuspend && canSuspend(tenant)}
 							<Dropdown.Item
 								onclick={() => {
-									lifecycleTarget = tenant;
-									suspendOpen = true;
+									suspendDialog.show(tenant);
 								}}
 							>
 								<Icon icon={Pause} size="sm" /> Suspend
@@ -265,8 +261,7 @@
 							<Dropdown.Item
 								variant="danger"
 								onclick={() => {
-									lifecycleTarget = tenant;
-									markOpen = true;
+									markDialog.show(tenant);
 								}}
 							>
 								<Icon icon={Trash2} size="sm" /> Mark for deletion
@@ -283,7 +278,7 @@
 	<PageHeader title={$_('pages.tenants.title')} description={$_('pages.tenants.description')}>
 		{#snippet actions()}
 			{#if canCreate}
-				<Button onclick={() => (createOpen = true)}>
+				<Button onclick={() => createDialog.show()}>
 					<Icon icon={Plus} size="sm" /> Register tenant
 				</Button>
 			{/if}
@@ -356,7 +351,7 @@
 				>
 					{#snippet action()}
 						{#if !search && canCreate}
-							<Button onclick={() => (createOpen = true)}>
+							<Button onclick={() => createDialog.show()}>
 								<Icon icon={Plus} size="sm" /> Register tenant
 							</Button>
 						{/if}
@@ -401,19 +396,19 @@
 	{/if}
 </div>
 
-<CreateTenantDrawer bind:open={createOpen} onOpenChange={(o) => (createOpen = o)} />
+<CreateTenantDrawer bind:open={createDialog.open} onOpenChange={createDialog.onOpenChange} />
 <SuspendDialog
-	bind:open={suspendOpen}
-	tenant={lifecycleTarget}
-	onOpenChange={(o) => (suspendOpen = o)}
+	bind:open={suspendDialog.open}
+	tenant={suspendDialog.target}
+	onOpenChange={suspendDialog.onOpenChange}
 />
 <MarkForDeletionDialog
-	bind:open={markOpen}
-	tenant={lifecycleTarget}
-	onOpenChange={(o) => (markOpen = o)}
+	bind:open={markDialog.open}
+	tenant={markDialog.target}
+	onOpenChange={markDialog.onOpenChange}
 />
 <ImpersonateModal
-	bind:open={impersonateOpen}
-	tenant={impersonateTarget}
-	onOpenChange={(o) => (impersonateOpen = o)}
+	bind:open={impersonateDialog.open}
+	tenant={impersonateDialog.target}
+	onOpenChange={impersonateDialog.onOpenChange}
 />

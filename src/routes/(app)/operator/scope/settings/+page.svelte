@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { createDialogState } from '#lib/hooks/index.ts';
 	import { plainTitle } from '#lib/utils/page-title.ts';
 	import {
 		TenantActionPanel,
@@ -10,16 +11,14 @@
 
 	let { data }: { data: LayoutData } = $props();
 
-	let suspendOpen = $state(false);
-	let markOpen = $state(false);
-	let target = $state<TenantDto | null>(null);
+	const suspendDialog = createDialogState<TenantDto>();
+	const markDialog = createDialogState<TenantDto>();
 
 	const tenant = $derived(data.tenant);
 
 	function onAction(action: 'suspend' | 'mark', t: TenantDto) {
-		target = t;
-		if (action === 'suspend') suspendOpen = true;
-		else markOpen = true;
+		if (action === 'suspend') suspendDialog.show(t);
+		else markDialog.show(t);
 	}
 </script>
 
@@ -27,5 +26,13 @@
 
 <TenantActionPanel {tenant} {onAction} />
 
-<SuspendDialog bind:open={suspendOpen} tenant={target} onOpenChange={(o) => (suspendOpen = o)} />
-<MarkForDeletionDialog bind:open={markOpen} tenant={target} onOpenChange={(o) => (markOpen = o)} />
+<SuspendDialog
+	bind:open={suspendDialog.open}
+	tenant={suspendDialog.target}
+	onOpenChange={suspendDialog.onOpenChange}
+/>
+<MarkForDeletionDialog
+	bind:open={markDialog.open}
+	tenant={markDialog.target}
+	onOpenChange={markDialog.onOpenChange}
+/>

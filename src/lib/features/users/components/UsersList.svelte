@@ -38,7 +38,11 @@
 	import { displayName, initials, userStatus } from '$features/auth';
 	import type { UserDto } from '$features/users/types';
 	import { getListErrorMessage } from '$api/error-messages';
-	import { createBulkSelection, createListPagination } from '#lib/hooks/index.ts';
+	import {
+		createBulkSelection,
+		createDialogState,
+		createListPagination
+	} from '#lib/hooks/index.ts';
 	import { BulkActionBar, type BulkAction } from '#lib/components/data/index.ts';
 	import UsersTruncatedAlert from './UsersTruncatedAlert.svelte';
 	import CreateUserDrawer from './CreateUserDrawer.svelte';
@@ -55,12 +59,11 @@
 	 * the caller's JWT tenant scope applies (tenant-admin /settings/users).
 	 * The frontend never sees, sends, or knows the tenant identifier.
 	 */
-	let createOpen = $state(false);
-	let deactivateOpen = $state(false);
-	let rolesOpen = $state(false);
-	let managerOpen = $state(false);
-	let permsOpen = $state(false);
-	let targetUser = $state<UserDto | null>(null);
+	const createDialog = createDialogState();
+	const deactivateDialog = createDialogState<UserDto>();
+	const rolesDialog = createDialogState<UserDto>();
+	const managerDialog = createDialogState<UserDto>();
+	const permsDialog = createDialogState<UserDto>();
 	// Each action shows when Go's route permission for it is held (one rule, `ACTION`).
 	const may = createMemberPermissions();
 
@@ -221,22 +224,21 @@
 		action: 'deactivate' | 'reactivate' | 'roles' | 'manager' | 'permissions',
 		user: UserDto
 	) {
-		targetUser = user;
 		switch (action) {
 			case 'deactivate':
-				deactivateOpen = true;
+				deactivateDialog.show(user);
 				break;
 			case 'reactivate':
 				reactivate.mutate(user.membership_id);
 				break;
 			case 'roles':
-				rolesOpen = true;
+				rolesDialog.show(user);
 				break;
 			case 'manager':
-				managerOpen = true;
+				managerDialog.show(user);
 				break;
 			case 'permissions':
-				permsOpen = true;
+				permsDialog.show(user);
 				break;
 		}
 	}
@@ -332,7 +334,7 @@
 				>
 
 				{#if may.create}
-					<Button onclick={() => (createOpen = true)}
+					<Button onclick={() => createDialog.show()}
 						><Icon icon={Plus} size="sm" /> Add member</Button
 					>
 				{/if}
@@ -379,7 +381,7 @@
 			>
 				{#snippet action()}
 					{#if !search && may.create}
-						<Button onclick={() => (createOpen = true)}
+						<Button onclick={() => createDialog.show()}
 							><Icon icon={UserPlus} size="sm" /> Add member</Button
 						>
 					{/if}
@@ -397,27 +399,27 @@
 	<BulkActionBar {selection} actions={bulkActions} />
 </div>
 
-<CreateUserDrawer bind:open={createOpen} onOpenChange={(o) => (createOpen = o)} />
+<CreateUserDrawer bind:open={createDialog.open} onOpenChange={createDialog.onOpenChange} />
 
 <DeactivateUserDialog
-	bind:open={deactivateOpen}
-	user={targetUser}
-	onOpenChange={(o) => (deactivateOpen = o)}
+	bind:open={deactivateDialog.open}
+	user={deactivateDialog.target}
+	onOpenChange={deactivateDialog.onOpenChange}
 />
 <RoleAssignmentDrawer
 	{roleList}
-	bind:open={rolesOpen}
-	user={targetUser}
-	onOpenChange={(o) => (rolesOpen = o)}
+	bind:open={rolesDialog.open}
+	user={rolesDialog.target}
+	onOpenChange={rolesDialog.onOpenChange}
 />
 <ManagerSelectorDrawer
 	{userList}
-	bind:open={managerOpen}
-	user={targetUser}
-	onOpenChange={(o) => (managerOpen = o)}
+	bind:open={managerDialog.open}
+	user={managerDialog.target}
+	onOpenChange={managerDialog.onOpenChange}
 />
 <PermissionOverridesPanel
-	bind:open={permsOpen}
-	user={targetUser}
-	onOpenChange={(o) => (permsOpen = o)}
+	bind:open={permsDialog.open}
+	user={permsDialog.target}
+	onOpenChange={permsDialog.onOpenChange}
 />

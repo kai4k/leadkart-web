@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { createDialogState } from '#lib/hooks/index.ts';
 	import PageHeader from '$layouts/PageHeader.svelte';
 	import { _ } from 'svelte-i18n';
 	import { page } from '$app/state';
@@ -32,7 +33,7 @@
 
 	const list = permissionRequestsInfiniteQuery(() => role);
 
-	let createOpen = $state(false);
+	const createDialog = createDialogState();
 	// Go: submitting needs identity.meta.request_permission_elevation.
 	const maySubmit = $derived(session.canAny(...ACTION.requestSubmit));
 
@@ -113,7 +114,7 @@
 	>
 		{#snippet actions()}
 			{#if maySubmit}
-				<Button onclick={() => (createOpen = true)}
+				<Button onclick={() => createDialog.show()}
 					><Icon icon={Plus} size="sm" /> Request permission</Button
 				>
 			{/if}
@@ -163,7 +164,7 @@
 			>
 				{#snippet action()}
 					{#if role === 'requester' && maySubmit}
-						<Button onclick={() => (createOpen = true)}
+						<Button onclick={() => createDialog.show()}
 							><Icon icon={Plus} size="sm" /> Request permission</Button
 						>
 					{/if}
@@ -175,4 +176,7 @@
 	<InfiniteListFooter {list} />
 </div>
 
-<CreatePermissionRequestDrawer bind:open={createOpen} onOpenChange={(o) => (createOpen = o)} />
+<CreatePermissionRequestDrawer
+	bind:open={createDialog.open}
+	onOpenChange={createDialog.onOpenChange}
+/>

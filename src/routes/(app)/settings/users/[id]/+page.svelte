@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { createDialogState } from '#lib/hooks/index.ts';
 	import { plainTitle } from '#lib/utils/page-title.ts';
 	import { _ } from 'svelte-i18n';
 	import PageHeader from '$layouts/PageHeader.svelte';
@@ -38,10 +39,10 @@
 		{ label: user ? displayName(user) : $_('pages.member.fallbackTitle') }
 	]);
 
-	let deactivateOpen = $state(false);
-	let rolesOpen = $state(false);
-	let managerOpen = $state(false);
-	let permsOpen = $state(false);
+	const deactivateDialog = createDialogState();
+	const rolesDialog = createDialogState();
+	const managerDialog = createDialogState();
+	const permsDialog = createDialogState();
 
 	const reactivate = reactivateUserMutation();
 	const may = createMemberPermissions();
@@ -98,17 +99,17 @@
 						</Dropdown.Trigger>
 						<Dropdown.Menu>
 							{#if may.manageRoles}
-								<Dropdown.Item onclick={() => (rolesOpen = true)}
+								<Dropdown.Item onclick={() => rolesDialog.show()}
 									><Icon icon={Shield} size="sm" /> Manage roles</Dropdown.Item
 								>
 							{/if}
 							{#if may.update}
-								<Dropdown.Item onclick={() => (managerOpen = true)}
+								<Dropdown.Item onclick={() => managerDialog.show()}
 									><Icon icon={Users} size="sm" /> Set manager</Dropdown.Item
 								>
 							{/if}
 							{#if may.overrides}
-								<Dropdown.Item onclick={() => (permsOpen = true)}>
+								<Dropdown.Item onclick={() => permsDialog.show()}>
 									<Icon icon={Lock} size="sm" />
 									Permission overrides
 								</Dropdown.Item>
@@ -118,7 +119,7 @@
 								<Dropdown.Separator />
 							{/if}
 							{#if may.deactivate && user.status === 'active'}
-								<Dropdown.Item variant="danger" onclick={() => (deactivateOpen = true)}
+								<Dropdown.Item variant="danger" onclick={() => deactivateDialog.show()}
 									><Icon icon={UserMinus} size="sm" /> Deactivate</Dropdown.Item
 								>
 							{:else if may.reactivate && user.status === 'inactive'}
@@ -137,30 +138,34 @@
 				roles={roleList}
 				{tab}
 				onTabChange={setTab}
-				onManageRoles={() => (rolesOpen = true)}
-				onManageManager={() => (managerOpen = true)}
-				onManagePerms={() => (permsOpen = true)}
+				onManageRoles={() => rolesDialog.show()}
+				onManageManager={() => managerDialog.show()}
+				onManagePerms={() => permsDialog.show()}
 			/>
 		{/snippet}
 	</QueryState>
 </div>
 
 <DeactivateUserDialog
-	bind:open={deactivateOpen}
+	bind:open={deactivateDialog.open}
 	{user}
-	onOpenChange={(o) => (deactivateOpen = o)}
+	onOpenChange={deactivateDialog.onOpenChange}
 />
 <RoleAssignmentDrawer
 	{roleList}
-	bind:open={rolesOpen}
+	bind:open={rolesDialog.open}
 	{user}
-	onOpenChange={(o) => (rolesOpen = o)}
+	onOpenChange={rolesDialog.onOpenChange}
 />
 <ManagerSelectorDrawer
 	{userList}
-	bind:open={managerOpen}
+	bind:open={managerDialog.open}
 	{user}
-	onOpenChange={(o) => (managerOpen = o)}
+	onOpenChange={managerDialog.onOpenChange}
 />
 
-<PermissionOverridesPanel bind:open={permsOpen} {user} onOpenChange={(o) => (permsOpen = o)} />
+<PermissionOverridesPanel
+	bind:open={permsDialog.open}
+	{user}
+	onOpenChange={permsDialog.onOpenChange}
+/>

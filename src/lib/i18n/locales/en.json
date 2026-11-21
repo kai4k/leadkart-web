@@ -337,6 +337,10 @@
 	},
 	"form": {
 		"required": "This field is required.",
+		"tooLong": "This is too long.",
+		"invalidCharacters": "Remove the characters that are not allowed.",
+		"leaveGuard": "You have unsaved changes. Leave without saving?",
+		"reason": "Reason",
 		"calendar": {
 			"previousMonth": "Previous month",
 			"nextMonth": "Next month",

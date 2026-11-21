@@ -66,3 +66,7 @@ export { useResetOnChange } from './use-reset-on-change.svelte';
 export { createPwa, type Pwa } from './use-pwa.svelte';
 
 export { useForm, type Form, type FormOpts, type FieldErrors } from './use-form.svelte';
+
+export { createDialogState, type DialogState } from './use-dialog-state.svelte';
+
+export { useLeaveGuard, releaseLeaveGuards } from './use-leave-guard.svelte';
