@@ -2,46 +2,18 @@
 <html lang="%lk.html.lang%" %lk.html.attrs%>
 	<head>
 		<meta charset="utf-8" />
-		<!-- LeadKart favicon set — multi-size PNG matching the Blazor canon.
-		     Browsers pick the closest size for tab / pinned tab / homescreen. -->
-		<link
-			rel="icon"
-			type="image/png"
-			sizes="16x16"
-			href="%sveltekit.assets%/images/favicon/favicon_16x16.png"
-		/>
-		<link
-			rel="icon"
-			type="image/png"
-			sizes="32x32"
-			href="%sveltekit.assets%/images/favicon/favicon_32x32.png"
-		/>
-		<link
-			rel="icon"
-			type="image/png"
-			sizes="64x64"
-			href="%sveltekit.assets%/images/favicon/favicon_64x64.png"
-		/>
-		<link
-			rel="icon"
-			type="image/png"
-			sizes="128x128"
-			href="%sveltekit.assets%/images/favicon/favicon_128x128.png"
-		/>
-		<link
-			rel="apple-touch-icon"
-			sizes="256x256"
-			href="%sveltekit.assets%/images/favicon/favicon_256x256.png"
-		/>
-		<link
-			rel="apple-touch-icon"
-			sizes="512x512"
-			href="%sveltekit.assets%/images/favicon/favicon_512x512.png"
-		/>
+		<!-- LeadKart icons (the approved logo pack): the vector icon and the .ico for tabs and bookmarks,
+		     the PNG sizes for browsers that want a raster, the touch icon for iOS home screens. -->
+		<link rel="icon" href="%sveltekit.assets%/favicon.ico" sizes="any" />
+		<link rel="icon" href="%sveltekit.assets%/favicon.svg" type="image/svg+xml" />
+		<link rel="icon" type="image/png" sizes="32x32" href="%sveltekit.assets%/favicon-32x32.png" />
+		<link rel="icon" type="image/png" sizes="16x16" href="%sveltekit.assets%/favicon-16x16.png" />
+		<link rel="apple-touch-icon" href="%sveltekit.assets%/apple-touch-icon.png" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-		<!-- Mobile browser chrome — LeadKart logo purple-violet (#502d81
-		     wordmark base). Static. -->
-		<meta name="theme-color" content="#502d81" />
+		<!-- Mobile browser chrome and Windows tiles: Kart Blue (#2563EB, the logo's solid blue). Static. -->
+		<meta name="theme-color" content="#2563EB" />
+		<meta name="msapplication-TileColor" content="#2563EB" />
+		<meta name="msapplication-TileImage" content="%sveltekit.assets%/mstile-150x150.png" />
 		<!-- PWA manifest — installable as standalone app via Add to Home
 		     Screen on iOS/Android + Install via Chromium prompt on
 		     desktop. Service worker registered in src/service-worker.ts. -->
@@ -50,6 +22,14 @@
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 		<meta name="apple-mobile-web-app-title" content="LeadKart" />
+		<!-- Link previews. The image URL is root-relative: a preview crawler wants an absolute one, which needs the
+		     public origin (the server's ORIGIN setting) at build time or in the shell transform. -->
+		<meta property="og:type" content="website" />
+		<meta property="og:title" content="LeadKart" />
+		<meta property="og:image" content="%sveltekit.assets%/og-image-light.png" />
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="630" />
+		<meta name="twitter:card" content="summary_large_image" />
 		<title>LeadKart</title>
 		%sveltekit.head%
 	</head>

@@ -1,1 +1,48 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="#2563eb"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-family="system-ui,-apple-system,'Segoe UI',sans-serif" font-size="16" font-weight="700" fill="#fff">L</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="tileGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#1D4ED8"/>
+    </linearGradient>
+    <linearGradient id="tileRim" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.80"/>
+      <stop offset="0.4" stop-color="#FFFFFF" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.05"/>
+    </linearGradient>
+    <linearGradient id="tileSheen" x1="0" y1="0" x2="0.85" y2="0.85">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.45"/>
+      <stop offset="0.35" stop-color="#FFFFFF" stop-opacity="0.10"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="tileMarkSh" x="-25%" y="-25%" width="150%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="12" flood-color="#0B1220" flood-opacity="0.38"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#tileGrad)"/>
+  <path d="M0 120C0 54 54 0 120 0H392C458 0 512 54 512 120V180L0 340Z" fill="url(#tileSheen)"/>
+  <rect x="2" y="2" width="508" height="508" rx="114" fill="none" stroke="url(#tileRim)" stroke-width="4"/>
+  <g transform="translate(76.8 76.8) scale(0.70)">
+    <g filter="url(#tileMarkSh)">
+      <g transform="translate(-24 -14)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M150 108V316a32 32 0 0 0 32 32H410" stroke="#FFFFFF" stroke-width="68"/>
+  <path d="M272 248L384 136" stroke="#5EEAD4" stroke-width="84"/>
+  <circle cx="204" cy="432" r="34" fill="#FFFFFF"/>
+  <circle cx="366" cy="432" r="34" fill="#FFFFFF"/>
+</g>
+    </g>
+    <g transform="translate(-24 -14)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M150 108V316a32 32 0 0 0 32 32H410" stroke="#FFFFFF" stroke-width="68"/>
+  <path d="M272 248L384 136" stroke="#5EEAD4" stroke-width="84"/>
+  <circle cx="204" cy="432" r="34" fill="#FFFFFF"/>
+  <circle cx="366" cy="432" r="34" fill="#FFFFFF"/>
+</g>
+    <g transform="translate(-24 -14)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M144 114V312a26 26 0 0 0 26 26H404" stroke="#FFFFFF" stroke-width="16" stroke-opacity="0.45"/>
+  <path d="M144 114V312a26 26 0 0 0 26 26H404" stroke="#FFFFFF" stroke-width="5" stroke-opacity="0.85"/>
+  <path d="M275 245L381 139" stroke="#FFFFFF" stroke-width="20" stroke-opacity="0.42"/>
+  <path d="M275 245L381 139" stroke="#FFFFFF" stroke-width="6" stroke-opacity="0.90"/>
+  <circle cx="196" cy="424" r="10" fill="#FFFFFF" fill-opacity="0.70"/>
+  <circle cx="358" cy="424" r="10" fill="#FFFFFF" fill-opacity="0.70"/>
+</g>
+  </g>
+</svg>
