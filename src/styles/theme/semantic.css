@@ -43,7 +43,9 @@
  *   sidebar purple/sky text: Domiex #b98fd7 passes; its sky grey #8ea2b5 (3.6:1) became sky-300.
  * ───────────────────────────────────────────────────────────────────── */
 :root {
-	color-scheme: light;
+	/* `only light`: Safari 27.3's Adaptive Dark Mode may re-colour a page that has not opted out, and the gated light
+	   theme must not be re-coloured (GD15). `auto` keeps `light dark` and `dark` keeps `dark`. */
+	color-scheme: only light;
 
 	/* selected primary ramp (default: leadkart = Kart Blue) */
 	--primary-50: var(--palette-leadkart-50);
@@ -261,7 +263,7 @@
 /* grayscale on the root element: it is the one element whose filter does not create a
    containing block for fixed descendants, so the fixed shell and portalled dialogs keep working */
 :root[data-mode='black-white'] {
-	color-scheme: light;
+	color-scheme: only light;
 	filter: grayscale(1);
 }
 

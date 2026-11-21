@@ -65,7 +65,7 @@ async function expectClean(page: Page, scope?: string): Promise<void> {
 	expect(blocking, JSON.stringify(blocking, null, 2)).toEqual([]);
 }
 
-// Plan Task 17: every route is scanned in light and in dark, and once with a non-default primary.
+// Plan Task 17 + G9: every route is scanned in light and in dark, once with a non-default primary, and in Solid (light and dark).
 // The `lk_ui` cookie makes the SERVER write the preferences onto <html>, as for a returning visitor.
 const b64url = (s: string) =>
 	Buffer.from(s, 'utf8')
@@ -73,7 +73,7 @@ const b64url = (s: string) =>
 		.replaceAll('+', '-')
 		.replaceAll('/', '_')
 		.replace(/=+$/, '');
-const uiCookie = (mode: string, colors: string) =>
+const uiCookie = (mode: string, colors: string, transparency: string) =>
 	b64url(
 		JSON.stringify({
 			v: 1,
@@ -84,13 +84,18 @@ const uiCookie = (mode: string, colors: string) =>
 			mode,
 			colors,
 			sidebarColors: 'light',
-			darkPalette: 'default'
+			darkPalette: 'default',
+			transparency
 		})
 	);
+// plan G9: mode x transparency. Glass is the default level; Solid (`off`) is every fallback's look, so a pass there covers
+// reduced transparency, increased contrast and forced colours too (the same opaque tokens).
 const SCHEMES = [
-	{ name: 'light', mode: 'light', colors: 'leadkart' },
-	{ name: 'dark', mode: 'dark', colors: 'leadkart' },
-	{ name: 'green primary', mode: 'light', colors: 'green' }
+	{ name: 'light', mode: 'light', colors: 'leadkart', transparency: 'glass' },
+	{ name: 'dark', mode: 'dark', colors: 'leadkart', transparency: 'glass' },
+	{ name: 'green primary', mode: 'light', colors: 'green', transparency: 'glass' },
+	{ name: 'light solid', mode: 'light', colors: 'leadkart', transparency: 'off' },
+	{ name: 'dark solid', mode: 'dark', colors: 'leadkart', transparency: 'off' }
 ] as const;
 
 for (const scheme of SCHEMES) {
@@ -99,7 +104,7 @@ for (const scheme of SCHEMES) {
 			await context.addCookies([
 				{
 					name: 'lk_ui',
-					value: uiCookie(scheme.mode, scheme.colors),
+					value: uiCookie(scheme.mode, scheme.colors, scheme.transparency),
 					url: 'http://localhost:4173'
 				}
 			]);

@@ -113,3 +113,34 @@ test.describe('preferences at SSR', () => {
 		expect(htmlTag(body)).toContain('data-content-width="fluid"');
 	});
 });
+
+/**
+ * GD15 / plan G9 step 0: Safari 27.3's Adaptive Dark Mode may re-colour a light page that has not opted out, which would
+ * re-colour the gated light theme. The light and black-white modes declare `color-scheme: only light` (Chrome serializes it `light only`); auto keeps
+ * `light dark` and dark keeps `dark`. The `light-dark()` lowering is unaffected (the build still emits one value
+ * per mode): the page paints the same colours in every mode, which tokens-parity asserts.
+ */
+test.describe('color-scheme opt-out', () => {
+	test.beforeEach(async () => {
+		await resetMock();
+	});
+	for (const [mode, expected] of [
+		['light', 'light only'],
+		['black-white', 'light only'],
+		['auto', 'light dark'],
+		['dark', 'dark']
+	] as const) {
+		test(`mode=${mode} computes color-scheme "${expected}"`, async ({ page }) => {
+			const cookie = b64url(JSON.stringify({ v: 1, layout: 'vertical', mode }));
+			await page
+				.context()
+				.addCookies([{ name: 'lk_ui', value: cookie, url: 'http://localhost:4173' }]);
+			await page.goto('/signin');
+			await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
+			const scheme = await page.evaluate(
+				() => getComputedStyle(document.documentElement).colorScheme
+			);
+			expect(scheme).toBe(expected);
+		});
+	}
+});

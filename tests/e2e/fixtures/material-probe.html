@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Material probe</title>
+		<!-- Device probe for the G12 check (plan G9). Static, under tests/ only, never served by the app: open it from
+		     `npx vite preview` or `python -m http.server` on the LAN. It has no script except the external
+		     material-probe.js next to it. The three numbers are the media features the materials fall back on; the bar is
+		     the light bar recipe of src/styles/theme/materials.css (a unit test keeps the two in step) over the two
+		     worst-case backdrops (black and white), so the colour it paints can be compared with the contrast gate's
+		     predicted corners (the gate header and plan GD19). -->
+		<style>
+			body {
+				margin: 0;
+				font:
+					16px system-ui,
+					sans-serif;
+				color: #0b121a;
+			}
+			.stripes {
+				position: relative;
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				height: 14rem;
+			}
+			.black {
+				background: #000;
+			}
+			.white {
+				background: #fff;
+			}
+			.bar {
+				position: absolute;
+				inset: 4rem 0 auto;
+				height: 4rem;
+				display: flex;
+				align-items: center;
+				padding: 0 1rem;
+				background-color: color-mix(in srgb, #fff 86%, transparent);
+				-webkit-backdrop-filter: blur(16px) saturate(1.8) contrast(0.6);
+				backdrop-filter: blur(16px) saturate(1.8) contrast(0.6);
+			}
+			table {
+				border-collapse: collapse;
+				margin: 1rem;
+			}
+			td,
+			th {
+				border: 1px solid #0b121a;
+				padding: 0.25rem 0.75rem;
+				text-align: start;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="stripes">
+			<div class="black"></div>
+			<div class="white"></div>
+			<div class="bar">LeadKart bar: the colour over each half is what the gate predicts</div>
+		</div>
+		<table id="probe">
+			<caption>
+				Media features reported by this browser
+			</caption>
+			<tbody></tbody>
+		</table>
+		<script src="./material-probe.js"></script>
+	</body>
+</html>

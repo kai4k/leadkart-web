@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { signInAsTier } from './sign-in';
 import { registerMock } from './mock';
 import { TEST_TENANT_ID } from './fake-jwt';
@@ -152,4 +152,53 @@ export async function leads(page: Page, extra: Record<string, string>) {
 	await page.goto('/leads?view=table');
 	await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
 	await expect(page.getByTestId('leads-table').getByText('Lead A')).toBeVisible();
+}
+
+export type Paint = { filter: string; alpha: number };
+
+/** Computed backdrop-filter and the alpha of the computed background colour. */
+export function paint(loc: Locator): Promise<Paint> {
+	return loc.first().evaluate((el) => {
+		const cs = getComputedStyle(el);
+		const filter =
+			cs.backdropFilter || (cs as unknown as Record<string, string>).webkitBackdropFilter || 'none';
+		const bg = cs.backgroundColor;
+		let alpha = 1;
+		const slash = /\/\s*([\d.]+%?)\s*\)$/.exec(bg);
+		const comma = /^rgba?\(([^)]*)\)$/.exec(bg);
+		if (slash) alpha = slash[1].endsWith('%') ? parseFloat(slash[1]) / 100 : parseFloat(slash[1]);
+		else if (comma && comma[1].split(',').length === 4) alpha = parseFloat(comma[1].split(',')[3]);
+		return { filter, alpha };
+	});
+}
+
+export const glass = (p: Paint, what: string) => {
+	expect(p.filter, `${what} backdrop-filter`).not.toBe('none');
+	expect(p.filter, what).toContain('blur(');
+	expect(p.alpha, `${what} fill alpha`).toBeLessThan(0.9);
+	expect(p.alpha, `${what} fill alpha`).toBeGreaterThan(0.5);
+};
+export const opaque = (p: Paint, what: string) => {
+	expect(p.filter, `${what} backdrop-filter`).toBe('none');
+	expect(p.alpha, `${what} fill alpha`).toBe(1);
+};
+
+/** Opens the user menu, the command palette (a dialog) or the customizer (a sheet) and returns its content. */
+export async function overlay(page: Page, kind: 'menu' | 'dialog' | 'sheet') {
+	if (kind === 'menu') {
+		await page.getByRole('button', { name: 'User menu' }).click();
+		const m = page.locator('[data-slot="dropdown-menu-content"]');
+		await expect(m).toBeVisible();
+		return m;
+	}
+	if (kind === 'dialog') {
+		await page.keyboard.press('Control+k');
+		const d = page.locator('[data-slot="dialog-content"]');
+		await expect(d).toBeVisible();
+		return d;
+	}
+	await page.getByRole('button', { name: 'Open theme settings' }).click();
+	const s = page.locator('[data-slot="sheet-content"]');
+	await expect(s).toBeVisible();
+	return s;
 }
