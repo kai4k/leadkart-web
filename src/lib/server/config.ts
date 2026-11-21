@@ -34,6 +34,7 @@ import {
 import { PUBLIC_SITE_URL } from '$app/env/public';
 import { building, dev } from '$app/env';
 import { z } from 'zod';
+import { isPublicOrigin } from '#lib/config/public-origin.ts';
 import {
 	BFF_MAX_UPSTREAM_HOPS,
 	DEFAULT_READ_TIMEOUT_MS,
@@ -43,16 +44,6 @@ import {
 const DEV_SCOPE_SECRET = 'dev-only-scope-cookie-secret-not-for-production';
 /** Prefix of the published e2e secret (`preview:e2e`, playwright.config.ts). */
 const E2E_SECRET_PREFIX = 'e2e-only';
-
-/** True when `v` is exactly the origin of the URL it parses to. */
-function isBareOrigin(v: string): boolean {
-	try {
-		const u = new URL(v);
-		return (u.protocol === 'https:' || u.protocol === 'http:') && u.origin === v;
-	} catch {
-		return false;
-	}
-}
 
 /** Empty env values (`KEY=` in a copied .env file) mean "unset". */
 const emptyToUndefined = (v: unknown) => (v === '' ? undefined : v);
@@ -98,15 +89,16 @@ export function createConfigSchema({ allowDevSecret }: { allowDevSecret: boolean
 
 			/**
 			 * Public origin written into the link-preview tags of src/app.html (og:url, og:image, twitter:image).
-			 * Empty or exactly a bare origin: `new URL(v).origin === v` (no path, no trailing slash, no credentials,
-			 * no query or fragment). https, or http outside production. Required in production (superRefine).
+			 * Empty or exactly a bare origin (the rule is #lib/config/public-origin.ts, shared with src/env.ts, which renders the
+			 * value into app.html): no path, trailing slash, credentials, query, fragment or character outside the origin grammar.
+			 * https, or http outside production. Required in production (superRefine).
 			 */
 			PUBLIC_SITE_URL: z.preprocess(
 				emptyToUndefined,
 				z
 					.string()
 					.refine(
-						isBareOrigin,
+						isPublicOrigin,
 						'PUBLIC_SITE_URL must be a bare origin (e.g. https://app.example.com): no path, trailing slash, credentials, query or fragment'
 					)
 					.optional()
@@ -156,7 +148,7 @@ export function createConfigSchema({ allowDevSecret }: { allowDevSecret: boolean
 					code: 'custom',
 					path: ['PUBLIC_SITE_URL'],
 					message:
-						'PUBLIC_SITE_URL is required in production (a bare https origin, e.g. https://app.example.com)'
+						'PUBLIC_SITE_URL is required in production (a bare https origin, e.g. https://app.example.com); a malformed value is rendered empty by src/env.ts and counts as missing'
 				});
 			} else if (!v.PUBLIC_SITE_URL.startsWith('https://')) {
 				ctx.addIssue({

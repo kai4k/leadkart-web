@@ -47,71 +47,103 @@ function createImpersonation(): Impersonation {
 	// The name belongs to ONE session id: it is shown only while that session is the active one.
 	let named = $state<{ sessionId: string; name: string } | null>(null);
 
-	// A ticket per operation (a reconcile or a mutation). A response is applied ONLY while its ticket is still the
-	// latest: a reconcile that was in flight when End started (or when a newer reconcile started) is stale, and
-	// neither puts an ended session back on the banner nor resets the 'mutating' state mid-DELETE.
-	let ticket = 0;
+	// Ordering, in two counters. READS are numbered (`readSeq`); a read is applied only if it is newer than the last read
+	// that was APPLIED (`appliedSeq`), so an older good answer still beats a newer FAILED one, and a newer good answer
+	// beats an older one that arrives late. MUTATIONS (start, end) bump `epoch`: every read begun before one is dropped,
+	// so neither puts an ended session back on the banner nor resets 'mutating' mid-DELETE. A failed read never clears a
+	// shown session: when in doubt the indicator stays shown.
+	let readSeq = 0;
+	let appliedSeq = 0;
+	let epoch = 0;
+	let readsInFlight = 0;
 
-	async function load(mine: number): Promise<void> {
+	/** 'loading' and 'mutating' are never left behind: every operation ends by settling to what the state really is. */
+	function settle(): void {
+		if (status === 'loading' && readsInFlight === 0) status = active ? 'active' : 'idle';
+	}
+
+	async function load(): Promise<void> {
 		if (typeof window === 'undefined') return;
+		const seq = ++readSeq;
+		const myEpoch = epoch;
 		const persistedId = window.localStorage.getItem(ACTIVE_SESSION_KEY);
 		if (!persistedId) {
+			// the key was removed (another tab ended the session): this is the newest read and it is synchronous
 			active = null;
 			named = null;
+			error = null;
+			appliedSeq = seq;
+			if (status === 'loading' || status === 'active' || status === 'error') status = 'idle';
 			return;
 		}
-		status = 'loading';
+		if (status !== 'mutating') status = 'loading';
+		readsInFlight++;
 		try {
 			const { sessions } = await listImpersonationSessions();
-			if (mine !== ticket) return; // stale: a newer operation owns the state
+			if (myEpoch !== epoch || seq < appliedSeq) return; // stale: a newer operation owns the state
+			appliedSeq = seq;
 			const match = sessions.find((s) => s.session_id === persistedId);
+			error = null;
 			if (match) {
 				if (named && named.sessionId !== match.session_id) named = null;
 				active = match;
 				status = 'active';
 			} else {
-				window.localStorage.removeItem(ACTIVE_SESSION_KEY);
+				if (window.localStorage.getItem(ACTIVE_SESSION_KEY) === persistedId)
+					window.localStorage.removeItem(ACTIVE_SESSION_KEY);
 				active = null;
 				named = null;
 				status = 'idle';
 			}
 		} catch (e) {
-			if (mine !== ticket) return;
-			status = 'error';
+			if (myEpoch !== epoch) return;
+			// a failed read leaves the last known state: a shown session stays shown
 			error = describeError(e, { fallback: 'Failed to load impersonation sessions' });
+			if (status === 'loading' && !active) status = 'error';
+		} finally {
+			readsInFlight--;
+			settle();
 		}
 	}
 
-	/** Never while a start or an end is running (they own the state); otherwise this is the newest operation. */
+	/** Never while a start or an end is running (they own the state); otherwise this is the newest read. */
 	async function reconcile(): Promise<void> {
 		if (status === 'mutating') return;
-		return load(++ticket);
+		return load();
 	}
 
 	async function start(req: CreateImpersonationSessionRequest, name?: string): Promise<void> {
-		const mine = ++ticket;
+		epoch++;
 		status = 'mutating';
 		error = null;
 		try {
 			const { session_id } = await startImpersonation(req);
 			window.localStorage.setItem(ACTIVE_SESSION_KEY, session_id);
 			named = name ? { sessionId: session_id, name } : null;
+			epoch++; // reads begun while the POST ran are older than the session
+			status = 'idle';
 			// Server doesn't return the full DTO on POST; refetch to populate.
-			await load(mine);
+			await load();
 		} catch (e) {
-			status = 'error';
+			status = active ? 'active' : 'error';
 			error = describeError(e, { fallback: 'Failed to start impersonation' });
 			throw e;
+		} finally {
+			if (status === 'mutating') status = active ? 'active' : 'idle';
+			settle();
 		}
 	}
 
 	async function end(): Promise<void> {
 		if (!active || status === 'mutating') return;
-		++ticket; // any reconcile already in flight is now stale
+		const endedId = active.session_id;
+		epoch++; // any read already in flight is now stale
 		status = 'mutating';
 		try {
-			await endImpersonation(active.session_id);
-			window.localStorage.removeItem(ACTIVE_SESSION_KEY);
+			await endImpersonation(endedId);
+			// a session started in another tab during the DELETE has its own id: leave its key alone
+			if (window.localStorage.getItem(ACTIVE_SESSION_KEY) === endedId)
+				window.localStorage.removeItem(ACTIVE_SESSION_KEY);
 			active = null;
 			named = null;
 			status = 'idle';
@@ -119,6 +151,8 @@ function createImpersonation(): Impersonation {
 			status = 'error';
 			error = describeError(e, { fallback: 'Failed to end impersonation' });
 			throw e;
+		} finally {
+			if (status === 'mutating') status = active ? 'active' : 'idle';
 		}
 	}
 
