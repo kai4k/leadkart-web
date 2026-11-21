@@ -285,7 +285,25 @@ body:has(
 	backdrop-filter: none;
 }
 
-/* The neutral toast is `not-data-[type]:material-pane!` (sonner paints its own background unlayered, so the
+/* (c) stacked modals: a modal surface that opens while another modal surface is open is opaque. Modal contents are
+ * portalled as siblings under <body>, in the order they opened, so "a modal content with an open modal content before
+ * it" is the general-sibling selector below (verified on the real DOM: sheet-content, then dialog-content). */
+:is(
+		[data-slot='dialog-content'],
+		[data-slot='sheet-content'],
+		[data-slot='alert-dialog-content']
+	)[data-state='open']
+	~ :is(
+		[data-slot='dialog-content'],
+		[data-slot='sheet-content'],
+		[data-slot='alert-dialog-content']
+	) {
+	background-color: var(--popover);
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
+}
+
+/* The neutral toast (`data-type="default"`, or "loading") is `data-[type=default]:material-pane!` (sonner paints its own background unlayered, so the
  * material is `!important`), which the class-based rules above cannot reach; over an open modal it is opaque too.
  * It MUST be inside `@layer utilities`: the toast's material is important inside that layer, and for
  * `!important` declarations a layered one beats an unlayered one whatever the specificity, so an unlayered
@@ -298,7 +316,7 @@ body:has(
 				[data-slot='alert-dialog-content']
 			)[data-state='open']
 		)
-		[data-sonner-toast]:not([data-type]) {
+		[data-sonner-toast]:is([data-type='default'], [data-type='loading']) {
 		/* stylelint-disable-next-line declaration-no-important -- must beat the toast's own `!important` material */
 		background-color: var(--popover) !important;
 		/* stylelint-disable-next-line declaration-no-important -- same */

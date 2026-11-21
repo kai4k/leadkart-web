@@ -124,41 +124,71 @@ test.describe('materials: computed styles on the built app', () => {
 		expect(running).toBe(0);
 	});
 
-	test('a neutral toast over an open dialog is opaque (it is glass when nothing is open)', async ({
-		page
-	}) => {
-		await leads(page, {});
-		const addToast = () =>
-			page.evaluate(() => {
-				document.querySelector('#probe-toast')?.remove();
-				const li = document.createElement('li');
-				li.id = 'probe-toast';
-				li.setAttribute('data-sonner-toast', '');
-				li.className = 'not-data-[type]:material-pane!';
-				document.body.appendChild(li);
-			});
-		await addToast();
-		glass(await paint(page.locator('#probe-toast')), 'toast with no modal');
-		await overlay(page, 'dialog');
-		await addToast();
-		opaque(await paint(page.locator('#probe-toast')), 'toast over a dialog');
-	});
+	// REAL components, on the styleguide's overlay demo (no screen of the app stacks a confirmation over a sheet yet; the demo
+	// opens the real Sheet, the real Dialog, the real DropdownMenu and fires the real `toast()`).
+	test.describe('real components: toasts and stacked surfaces (/styleguide)', () => {
+		async function guide(page: Page) {
+			await setPrefs(page, { transparency: 'glass' });
+			await page.setViewportSize({ width: 1280, height: 800 });
+			await page.goto('/styleguide');
+			await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
+		}
+		async function stack(page: Page) {
+			await page.getByRole('button', { name: 'Open sheet' }).click();
+			await expect(page.locator('[data-slot="sheet-content"][data-state="open"]')).toBeVisible();
+			await page.getByRole('button', { name: 'Open confirm over the sheet' }).click();
+			await expect(page.locator('[data-slot="dialog-content"][data-state="open"]')).toBeVisible();
+			await page.waitForTimeout(400);
+		}
 
-	test('a pane inside a pane, and a pane over an open sheet, are opaque', async ({ page }) => {
-		await leads(page, {});
-		await overlay(page, 'sheet');
-		await page.evaluate(() => {
-			const inner = document.createElement('div');
-			inner.id = 'probe-inner';
-			inner.className = 'material-pane';
-			document.querySelector('[data-slot="sheet-content"]')!.appendChild(inner);
-			const over = document.createElement('div');
-			over.id = 'probe-over';
-			over.className = 'material-pane';
-			document.body.appendChild(over);
+		test('a real neutral toast (data-type="default") is the pane material; a typed toast keeps its opaque status fill', async ({
+			page
+		}) => {
+			await guide(page);
+			await page.getByRole('button', { name: 'Default', exact: true }).click();
+			const neutral = page.locator('[data-sonner-toast][data-type="default"]');
+			await expect(neutral).toBeVisible();
+			glass(await paint(neutral), 'neutral toast at rest');
+			await page.getByRole('button', { name: 'Success', exact: true }).click();
+			const typed = page.locator('[data-sonner-toast][data-type="success"]');
+			await expect(typed).toBeVisible();
+			opaque(await paint(typed), 'success toast');
 		});
-		opaque(await paint(page.locator('#probe-inner')), 'pane inside a sheet');
-		opaque(await paint(page.locator('#probe-over')), 'pane over an open sheet');
+
+		test('a real neutral toast fired over an open modal is opaque', async ({ page }) => {
+			await guide(page);
+			await stack(page);
+			await page.getByRole('button', { name: 'Toast from the dialog' }).click();
+			const toast = page.locator('[data-sonner-toast][data-type="default"]');
+			await expect(toast).toBeVisible();
+			opaque(await paint(toast), 'neutral toast over a modal');
+		});
+
+		test('a dialog opened over a sheet is opaque while the sheet beneath stays glass', async ({
+			page
+		}) => {
+			await guide(page);
+			await page.getByRole('button', { name: 'Open sheet' }).click();
+			const sheet = page.locator('[data-slot="sheet-content"]');
+			await expect(sheet).toBeVisible();
+			await page.waitForTimeout(400);
+			glass(await paint(sheet), 'sheet on its own');
+			await page.getByRole('button', { name: 'Open confirm over the sheet' }).click();
+			const dialog = page.locator('[data-slot="dialog-content"]');
+			await expect(dialog).toBeVisible();
+			await page.waitForTimeout(400);
+			opaque(await paint(dialog), 'dialog over a sheet');
+			glass(await paint(sheet), 'the sheet beneath keeps its material');
+		});
+
+		test('a real dropdown menu opened inside a dialog is opaque', async ({ page }) => {
+			await guide(page);
+			await stack(page);
+			await page.getByRole('button', { name: 'Open a menu in the dialog' }).click();
+			const menu = page.locator('[data-slot="dropdown-menu-content"]');
+			await expect(menu).toBeVisible();
+			opaque(await paint(menu), 'menu inside a dialog');
+		});
 	});
 
 	test('the active nav item is a visible capsule, also while hovered', async ({ page }) => {

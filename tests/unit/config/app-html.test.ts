@@ -38,8 +38,8 @@ describe('app.html preferences shell', () => {
 describe('app.html link preview', () => {
 	const html = readFileSync('src/app.html', 'utf8');
 	const ORIGIN = '%sveltekit.env.PUBLIC_SITE_URL%';
-	it('writes og:url, og:image (+ size), twitter:card and twitter:image from the public site URL', () => {
-		expect(html).toContain(`<meta property="og:url" content="${ORIGIN}/" />`);
+	it('writes og:image (+ size), twitter:card and twitter:image from the public site URL, and NO og:url (it would be the site root on every deep link)', () => {
+		expect(html).not.toContain('og:url');
 		expect(html).toContain(`<meta property="og:image" content="${ORIGIN}/og-image-light.png" />`);
 		expect(html).toContain('<meta property="og:image:width" content="1200" />');
 		expect(html).toContain('<meta property="og:image:height" content="630" />');

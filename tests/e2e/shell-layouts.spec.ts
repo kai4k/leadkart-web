@@ -261,20 +261,37 @@ test.describe('shell on materials (plan G6)', () => {
 		expect(shadows.hnavFilter).toContain('blur(');
 	});
 
-	test('the light sidebar draws its nav icons in the accent (--primary-indicator)', async ({
+	test('inactive nav icons are the muted sidebar text; the active icon and label are the accent text (colour means something)', async ({
 		page
 	}) => {
 		await page.setViewportSize({ width: 1280, height: 800 });
 		await open(page, 'vertical', { sidebarColors: 'light' });
-		const colours = await page.evaluate(() => {
-			const icon = document.querySelector('[data-slot="sidebar-menu-button"] svg')!;
-			const probe = document.createElement('i');
-			probe.style.color = 'var(--primary-indicator)';
-			document.body.append(probe);
-			const want = getComputedStyle(probe).color;
-			probe.remove();
-			return { icon: getComputedStyle(icon).color, want };
+		const c = await page.evaluate(() => {
+			const colour = (el: Element) => getComputedStyle(el).color;
+			const active = document.querySelector(
+				'[data-slot="sidebar-content"] a[aria-current="page"]'
+			)!;
+			const inactive = [...document.querySelectorAll('[data-slot="sidebar-content"] a')].find(
+				(a) => a !== active
+			)!;
+			const probe = (token: string) => {
+				const i = document.createElement('i');
+				i.style.color = `var(${token})`;
+				document.body.append(i);
+				const v = getComputedStyle(i).color;
+				i.remove();
+				return v;
+			};
+			return {
+				activeIcon: colour(active.querySelector('svg')!),
+				activeLabel: colour(active),
+				inactiveIcon: colour(inactive.querySelector('svg')!),
+				accent: probe('--sidebar-accent-foreground'),
+				muted: probe('--sidebar-muted-foreground')
+			};
 		});
-		expect(colours.icon).toBe(colours.want);
+		expect(c.activeIcon).toBe(c.accent);
+		expect(c.activeLabel).toBe(c.accent);
+		expect(c.inactiveIcon).toBe(c.muted);
 	});
 });

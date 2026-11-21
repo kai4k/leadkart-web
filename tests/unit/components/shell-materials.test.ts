@@ -34,7 +34,7 @@ describe('the shell on materials', () => {
 		expect(classes(nav)).toContain('material-sidebar-bar');
 		expect(classes(nav)).not.toContain('bg-sidebar');
 		expect(classes(nav)).not.toContain('border-b');
-		expect(s).toContain('aria-[current]:after:bg-sidebar-icon');
+		expect(s).toContain('aria-[current]:after:bg-sidebar-indicator');
 	});
 
 	it('the sidebar (desktop inner and the mobile sheet) is material-sidebar, without its own border or fill', () => {
@@ -47,7 +47,9 @@ describe('the shell on materials', () => {
 	});
 
 	it('the nav icons use the sidebar icon token', () => {
-		expect(src('src/lib/layouts/NavItem.svelte')).toContain('<NavIcon class="text-sidebar-icon"');
+		expect(src('src/lib/layouts/NavItem.svelte')).toMatch(
+			/<NavIcon\s+class=\{active \? 'text-sidebar-accent-foreground' : 'text-sidebar-icon'\}/
+		);
 	});
 
 	it('the bulk bar is a floating capsule on the bar material and the auth card is a pane', () => {
@@ -70,7 +72,7 @@ describe('the shell on materials', () => {
 			expect(src(p), p).not.toMatch(/material-(bar|pane|sidebar)/);
 		// the typed toast keeps its soft fill: the neutral toast is the only one the material is applied to
 		expect(src('src/lib/components/ui/sonner/sonner.svelte')).toContain(
-			'not-data-[type]:material-pane!'
+			'data-[type=default]:material-pane!'
 		);
 	});
 });

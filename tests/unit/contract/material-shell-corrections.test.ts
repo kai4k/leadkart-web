@@ -1,7 +1,7 @@
 /**
  * Corrections after looking at the glass shell (controller review of fix round D):
  *  a. the light bar is never duller than the page beneath it;
- *  b. the active nav item is a capsule that is seen against the sidebar (gated, non-text floor);
+ *  b. the active nav item: a 3px indicator bar (shape cue) and a translucent chip, both gated where they are painted;
  *  c. the sidebar fill is 84% again, and the two sidebars that needed more (default palette: brand, sky) get their own
  *     logo-frame step instead of a more opaque global material.
  */
@@ -69,33 +69,69 @@ describe('a. the light bar is a bright frosted sheet', () => {
 	});
 });
 
-describe('b. the active nav item is a visible capsule', () => {
-	it('the gate holds the chip apart from the sidebar (non-text floor 1.2)', () => {
-		const p = (PAIRS as Array<{ label: string; min: number }>).find((x) =>
-			x.label.startsWith('sidebar-accent on sidebar')
-		)!;
-		expect(p.label).toContain('active chip vs sidebar');
-		expect(p.min).toBe(1.2);
-		// and the existing text pair on the chip is still gated
-		expect(PAIRS.map((x: { label: string }) => x.label)).toContain(
-			'sidebar-accent-foreground on sidebar-accent (over sidebar)'
+describe('b. the active nav item: a shape cue and a tint gated where they are painted', () => {
+	it('there is no token-against-token pair for the chip (it is translucent: only the glass composites mean anything)', () => {
+		expect(
+			(PAIRS as Array<{ label: string }>).some((x) =>
+				x.label.startsWith('sidebar-accent on sidebar')
+			)
+		).toBe(false);
+		// the text pair on the chip, over the sidebar, and the indicator pairs are gated
+		const labels = PAIRS.map((x: { label: string }) => x.label);
+		expect(labels).toContain('sidebar-accent-foreground on sidebar-accent (over sidebar)');
+		expect(labels).toContain('sidebar-indicator on sidebar [active item indicator bar]');
+		expect(labels).toContain(
+			'sidebar-indicator on sidebar-accent (over sidebar) [indicator on the chip]'
 		);
 	});
-	it('the dark sidebar gets the strongest chip (28%, with a lifted label), brand and purple 22%, light and sky 15%', () => {
-		const css = src('src/styles/theme/semantic.css');
-		const mix = (c: string, pct: number) =>
-			new RegExp(
-				`:root\\[data-sidebar-colors='${c}'\\] \\{\\s*--sidebar-accent: color-mix\\(in oklab, var\\(--sidebar-accent-foreground\\) ${pct}%`
+	it('every sidebar layer gates the chip as a mark on its glass composite, the indicator as a mark, and text on the chip', () => {
+		for (const name of ['hnav', 'sidebar-desktop', 'sidebar-mobile']) {
+			const layer = MATERIAL_LAYERS.find((l: { layer: string }) => l.layer === name)!;
+			const marks = layer.marks.map((m: string | { token: string }) =>
+				typeof m === 'string' ? m : m.token
 			);
-		expect(css).toMatch(mix('dark', 28));
-		for (const c of ['brand', 'purple']) expect(css).toMatch(mix(c, 22));
-		// the lifted label is what lets the dark chip go to 28% while its label stays at 4.5:1 (gate-proven)
-		expect(css).toMatch(
-			/:root\[data-sidebar-colors='dark'\] \{[^}]*--sidebar-foreground: oklch\(0\.88 0\.02 261\)/
-		);
-		expect(css).toContain(
-			'--sidebar-accent: color-mix(in oklab, var(--sidebar-accent-foreground) 15%, var(--sidebar));'
-		);
+			expect(marks, name).toContain('sidebar-accent');
+			expect(marks, name).toContain('sidebar-indicator');
+			const on = layer.onControl!.find((o: { control: string }) => o.control === 'sidebar-accent')!;
+			expect(on.text, name).toEqual(
+				expect.arrayContaining([
+					'sidebar-accent-foreground',
+					'sidebar-foreground',
+					'sidebar-indicator'
+				])
+			);
+		}
+	});
+	it('the chip is a translucent tint of the accent text in every sidebar colour; the indicator is the accent text', () => {
+		const css = src('src/styles/theme/semantic.css');
+		expect(css).not.toMatch(/--sidebar-accent: color-mix\(in oklab/); // no opaque chip mixed into --sidebar
+		for (const c of ['dark', 'brand', 'purple', 'sky'])
+			expect(css).toMatch(
+				new RegExp(
+					`:root\\[data-sidebar-colors='${c}'\\] \\{[^}]*--sidebar-accent: color-mix\\(in srgb, var\\(--sidebar-accent-foreground\\) \\d+%, transparent\\)`
+				)
+			);
+		expect(css).toContain('--sidebar-indicator: var(--sidebar-accent-foreground);');
+		// inactive icons are the muted sidebar text; no light-sidebar accent-icon override remains
+		expect(css).toContain('--sidebar-icon: var(--sidebar-muted-foreground);');
+		expect(css).not.toMatch(/data-sidebar-colors='light'\] \{\s*--sidebar-icon/);
+	});
+	it('the active item has the 3px inline-start bar (logical, 16px tall, collapsed too) and accent icon', () => {
+		const cls = /isActive=\{active\}[\s\S]*?class="([^"]*)"/.exec(
+			src('src/lib/layouts/NavItem.svelte')
+		)![1];
+		for (const c of [
+			'data-active:before:absolute',
+			'data-active:before:start-1.5',
+			'data-active:before:h-4',
+			'data-active:before:w-0.75',
+			'data-active:before:rounded-full',
+			'data-active:before:bg-sidebar-indicator'
+		])
+			expect(cls.split(/\s+/), c).toContain(c);
+		// never a physical edge, and nothing removes it in the collapsed rail
+		expect(cls).not.toMatch(/before:(left|right)-/);
+		expect(cls).not.toMatch(/collapsible=icon\]:[^\s]*before/);
 	});
 	it('the sidebar item paints the chip when active, as a capsule, at every size', () => {
 		const s = src('src/lib/layouts/NavItem.svelte');

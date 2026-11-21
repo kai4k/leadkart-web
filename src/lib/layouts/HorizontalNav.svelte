@@ -22,7 +22,7 @@
 	const sections = $derived(shellNav(session.capabilities, session.inTenantContext));
 
 	const item =
-		'relative flex items-center gap-2 rounded-full px-3 py-2 text-sm text-sidebar-foreground outline-none transition-colors hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring aria-[current]:bg-sidebar-accent aria-[current]:font-medium aria-[current]:text-sidebar-accent-foreground data-[state=open]:text-sidebar-accent-foreground after:pointer-events-none after:absolute after:inset-x-3 after:-bottom-0.5 after:h-0.5 after:rounded-full aria-[current]:after:bg-sidebar-icon';
+		'relative flex items-center gap-2 rounded-full px-3 py-2 text-sm text-sidebar-foreground outline-none transition-colors hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring aria-[current]:bg-sidebar-accent aria-[current]:font-medium aria-[current]:text-sidebar-accent-foreground data-[state=open]:text-sidebar-accent-foreground after:pointer-events-none after:absolute after:inset-x-3 after:-bottom-0.5 after:h-0.5 after:rounded-full aria-[current]:after:bg-sidebar-indicator';
 </script>
 
 <nav

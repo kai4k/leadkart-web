@@ -49,3 +49,18 @@ describe('lead row status dot', () => {
 		expect(t).toMatch(/role="img"\s+aria-label="Stale lead"/);
 	});
 });
+
+describe('neutral toasts and stacked modals (fix round F)', () => {
+	const sonner = readFileSync('src/lib/components/ui/sonner/sonner.svelte', 'utf8');
+	const css = readFileSync('src/styles/utilities.css', 'utf8');
+	it('the toast material targets the type svelte-sonner really renders (data-type="default" / "loading")', () => {
+		expect(sonner).toContain('data-[type=default]:material-pane!');
+		expect(sonner).toContain('data-[type=loading]:material-pane!');
+		expect(sonner).not.toContain('not-data-[type]');
+		expect(css).toContain("[data-sonner-toast]:is([data-type='default'], [data-type='loading'])");
+		expect(css).not.toContain(':not([data-type])');
+	});
+	it('a modal with an open modal before it among the portals is opaque (general-sibling rule)', () => {
+		expect(css).toMatch(/\)\[data-state='open'\]\s*~\s*:is\(\s*\[data-slot='dialog-content'\]/);
+	});
+});

@@ -5,7 +5,7 @@
 	 * toast of each type, table rows (hover vs selected), a list with a highlighted item, tabs.
 	 * Static demo content, no API calls.
 	 */
-	import { Button, Command, Dialog, Sheet, Tabs, toast } from '$ui';
+	import { Button, Command, Dialog, DropdownMenu, Sheet, Tabs, toast } from '$ui';
 	import * as Table from '#lib/components/ui/table/index.ts';
 
 	let sheetOpen = $state(false);
@@ -46,6 +46,18 @@
 		<Dialog.Content title="Demo confirm" size="sm">
 			<Dialog.Body>
 				<p class="body-base">Opened over the sheet.</p>
+				<div class="cluster">
+					<DropdownMenu.Root>
+						<DropdownMenu.Trigger variant="outline">Open a menu in the dialog</DropdownMenu.Trigger>
+						<DropdownMenu.Content>
+							<DropdownMenu.Item>First choice</DropdownMenu.Item>
+							<DropdownMenu.Item>Second choice</DropdownMenu.Item>
+						</DropdownMenu.Content>
+					</DropdownMenu.Root>
+					<Button variant="outline" onclick={() => toast('Saved to drafts.')}
+						>Toast from the dialog</Button
+					>
+				</div>
 			</Dialog.Body>
 			<Dialog.Footer>
 				<Dialog.Close>
@@ -57,8 +69,9 @@
 		</Dialog.Content>
 	</Dialog.Root>
 
-	{@render row('Toasts', 'One of each type.')}
+	{@render row('Toasts', 'One of each type; the default one is the pane material.')}
 	<div class="cluster">
+		<Button variant="outline" onclick={() => toast('Saved to drafts.')}>Default</Button>
 		<Button variant="outline" onclick={() => toast.success('Saved the demo.')}>Success</Button>
 		<Button variant="outline" onclick={() => toast.error('Could not save the demo.')}>Error</Button>
 		<Button variant="outline" onclick={() => toast.warning('This demo is almost full.')}

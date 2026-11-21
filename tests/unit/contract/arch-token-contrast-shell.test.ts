@@ -85,7 +85,11 @@ describe('fix round D: what each layer checks', () => {
 			expect.arrayContaining(['sidebar-foreground', 'sidebar-accent-foreground'])
 		);
 		expect(h.marks).toEqual(expect.arrayContaining(['sidebar-ring']));
-		expect(h.text.concat(h.marks as string[]).some((t) => !t.startsWith('sidebar-'))).toBe(false);
+		const names = [
+			...h.text,
+			...h.marks.map((m: string | { token: string }) => (typeof m === 'string' ? m : m.token))
+		];
+		expect(names.some((t) => !t.startsWith('sidebar-'))).toBe(false);
 	});
 
 	it('7. the overlay and float layers check foreground, muted and accent text on both control fills', () => {

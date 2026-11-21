@@ -7,26 +7,29 @@ import { setPrefs } from './helpers/materials';
 /**
  * Shell corrections, asserted on the built app's computed styles and DOM (not on the tokens):
  *
- *   a  the active nav item is a capsule that reads as a lighter tint of the sidebar in EVERY sidebar colour, with a
- *      second cue besides the fill (aria-current="page" and weight 500), and its label stays at 4.5:1 on the chip
+ *   a  the active nav item carries a 3px inline-start indicator bar at 3:1, expanded and collapsed, in every sidebar
+ *      colour; its icon and label are the accent text, inactive icons are muted
  *   c  the legacy Drawer's close button sits at the header's inline-end corner, 24 x 24 at least, with a focus ring
  *   d  avatar initials are not clipped; the command palette input names its listbox
  */
 
-/** Relative luminance of any CSS colour the browser can parse (through a canvas, so oklab and color() resolve). */
-async function luminance(page: Page, css: string): Promise<number> {
-	return page.evaluate((c) => {
+/** Relative luminance of the colour a stack of CSS colours paints, bottom first (alpha composited on a canvas). */
+async function luminance(page: Page, ...stack: string[]): Promise<number> {
+	return page.evaluate((layers) => {
 		const ctx = document.createElement('canvas').getContext('2d')!;
 		ctx.fillStyle = '#000';
-		ctx.fillStyle = c;
 		ctx.fillRect(0, 0, 1, 1);
+		for (const c of layers) {
+			ctx.fillStyle = c;
+			ctx.fillRect(0, 0, 1, 1);
+		}
 		const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
 		const lin = (v: number) => {
 			const s = v / 255;
 			return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
 		};
 		return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-	}, css);
+	}, stack);
 }
 const ratio = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 
@@ -48,44 +51,67 @@ async function dashboard(page: Page, extra: Record<string, string>) {
 	await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
 }
 
-// The floor for text on the chip is the gate's 4.5. The fill's own floor (non-text) is the gate's 1.2; each coloured
-// sidebar must clear the number measured on the built app (dark 2.20, brand 1.82, purple 1.68, sky 1.47, light 1.25),
-// so a regression to the faint chip fails here. The dark sidebar was 1.84 before the 28% mix and 0.88 label lift.
-const FLOOR: Record<string, number> = { light: 1.2, dark: 2.0, brand: 1.7, purple: 1.6, sky: 1.4 };
-
-test.describe('a. the active nav capsule', () => {
+/**
+ * The selected item is marked by SHAPE (a 3px inline-start bar, 16px tall, at 3:1 on the chip and on the sidebar) as well
+ * as tint, in the expanded AND the collapsed sidebar, and the active icon and label are the accent text while inactive
+ * icons are muted (fix round F, I1). Solid, so the sidebar and chip composites are exact; the gate proves the glass cases.
+ */
+test.describe('a. the active nav item', () => {
 	for (const sidebarColors of ['light', 'dark', 'brand', 'purple', 'sky'])
 		for (const mode of ['light', 'dark'])
-			test(`${sidebarColors} sidebar, ${mode} page: a visible chip, aria-current and weight 500, label at 4.5:1`, async ({
-				page
-			}) => {
-				await dashboard(page, { sidebarColors, mode });
-				const link = page.locator('a[aria-current="page"]').first();
-				await expect(link).toHaveAttribute('aria-current', 'page');
-				const [chip, label, weight, side] = await link.evaluate((el) => {
-					const btn = (el.closest('[data-active]') ?? el) as HTMLElement;
-					const cs = getComputedStyle(btn);
-					const root = getComputedStyle(document.documentElement);
-					return [
-						cs.backgroundColor,
-						cs.color,
-						cs.fontWeight,
-						root.getPropertyValue('--sidebar').trim()
-					];
+			for (const sidebar of ['large', 'small'])
+				test(`${sidebarColors} sidebar, ${mode} page, ${sidebar === 'small' ? 'collapsed' : 'expanded'}: indicator bar, accent icon, aria-current`, async ({
+					page
+				}) => {
+					await dashboard(page, { sidebarColors, mode, sidebar });
+					const link = page.locator('a[aria-current="page"]').first();
+					await expect(link).toHaveAttribute('aria-current', 'page');
+					const m = await link.evaluate((el) => {
+						const btn = (el.closest('[data-active]') ?? el) as HTMLElement;
+						const bar = getComputedStyle(btn, '::before');
+						const cs = getComputedStyle(btn);
+						const root = getComputedStyle(document.documentElement);
+						const icons = [
+							...(btn.closest('[data-slot="sidebar-content"]') ?? document).querySelectorAll(
+								'a svg'
+							)
+						];
+						const activeIcon = btn.querySelector('svg');
+						const inactiveIcon = icons.find((i) => !btn.contains(i));
+						return {
+							content: bar.content,
+							w: bar.width,
+							h: bar.height,
+							barColour: bar.backgroundColor,
+							chip: cs.backgroundColor,
+							weight: cs.fontWeight,
+							sidebar: root.getPropertyValue('--sidebar').trim(),
+							activeIcon: activeIcon ? getComputedStyle(activeIcon).color : '',
+							activeLabel: cs.color,
+							inactiveIcon: inactiveIcon ? getComputedStyle(inactiveIcon).color : ''
+						};
+					});
+					expect(m.content).not.toBe('none');
+					expect(m.w).toBe('3px');
+					expect(m.h).toBe('16px');
+					const lSide = await luminance(page, m.sidebar);
+					const lChip = await luminance(page, m.sidebar, m.chip);
+					const lBar = await luminance(page, m.barColour);
+					test.info().annotations.push({
+						type: 'ratio',
+						description: `${sidebarColors}/${mode}/${sidebar}: bar on sidebar ${ratio(lBar, lSide).toFixed(2)}, bar on chip ${ratio(lBar, lChip).toFixed(2)}, chip on sidebar ${ratio(lChip, lSide).toFixed(2)}`
+					});
+					expect(ratio(lBar, lSide), 'bar on the sidebar').toBeGreaterThanOrEqual(3);
+					expect(ratio(lBar, lChip), 'bar on the chip').toBeGreaterThanOrEqual(3);
+					// the active icon is the accent text; an inactive icon is a different (muted) colour
+					expect(m.activeIcon).toBe(m.activeLabel);
+					expect(m.inactiveIcon).not.toBe(m.activeIcon);
+					if (sidebar === 'large') expect(Number(m.weight)).toBeGreaterThanOrEqual(500);
+					if (sidebar === 'large')
+						expect(
+							ratio(await luminance(page, m.sidebar, m.chip, m.activeLabel), lChip)
+						).toBeGreaterThanOrEqual(4.5);
 				});
-				expect(Number(weight)).toBeGreaterThanOrEqual(500);
-				// Solid: the sidebar is its opaque token, so the chip-to-sidebar ratio is exact
-				const rChip = ratio(await luminance(page, chip), await luminance(page, side));
-				test.info().annotations.push({
-					type: 'ratio',
-					description: `${sidebarColors}/${mode}: chip ${chip} on sidebar ${side} = ${rChip.toFixed(2)}`
-				});
-				expect(rChip, `chip ${chip} on sidebar ${side}`).toBeGreaterThanOrEqual(
-					FLOOR[sidebarColors]
-				);
-				const rText = ratio(await luminance(page, label), await luminance(page, chip));
-				expect(rText, `label ${label} on chip ${chip}`).toBeGreaterThanOrEqual(4.5);
-			});
 });
 
 test.describe('c. the legacy Drawer close button', () => {

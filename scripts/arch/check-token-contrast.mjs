@@ -85,8 +85,13 @@ const UI = 3;
  * the frame, so the mark reads as two tones. Only where a logo is drawn: a card (RouteError), primary-soft (the
  * auth mobile row), the sidebar layers, the topbar layer, and the pattern band.
  */
-/** The active nav item's tinted capsule against the sidebar it sits on: worst case today 1.217 (violet, light sidebar, dark mode). */
-const CHIP_FLOOR = 1.2;
+/**
+ * The active nav item's tinted capsule is a SUPPORTING cue (the 3px inline-start indicator bar is the shape cue, gated as a
+ * 3:1 mark). The capsule is translucent, so it is gated where it is painted: against each sidebar layer's glass composite,
+ * over every backdrop, never token against token. A tint carries no information alone, so the floor is not a control
+ * boundary's 3:1: CHIP_FLOOR is the smallest value that is plainly visible on every sidebar colour (light and sky included).
+ */
+const CHIP_FLOOR = 1.1;
 const LOGO_CAPSULE = 1.6;
 const LOGO_TWO_TONE = 1.5;
 const STATUS = ['success', 'warning', 'info'];
@@ -151,10 +156,10 @@ const RAW_PAIRS = [
 	// the active-link tint is `color-mix(accent-fg 10%, transparent)`: composited over the sidebar
 	['sidebar-accent-foreground', 'sidebar-accent', TEXT, { over: 'sidebar' }],
 	['sidebar-primary-foreground', 'sidebar-primary', TEXT],
-	// the active item's capsule must be SEEN against the sidebar. A fill carries no information alone (aria-current,
-	// the accent label at 4.5 and the 500 weight say the same), so the floor is not the 3:1 of a control boundary,
-	// which would be a loud block: CHIP_FLOOR, perceptible on every sidebar colour.
-	['sidebar-accent', 'sidebar', CHIP_FLOOR, { note: 'active chip vs sidebar (non-text)' }],
+	// the active item's indicator bar: a mark on the sidebar and on its own chip (the chip itself is gated on the glass
+	// composites in the sidebar layers: a translucent tint has no meaning against the opaque token)
+	['sidebar-indicator', 'sidebar', UI, { note: 'active item indicator bar' }],
+	['sidebar-indicator', 'sidebar-accent', UI, { over: 'sidebar', note: 'indicator on the chip' }],
 	['sidebar-ring', 'sidebar', UI],
 	['sidebar-icon', 'sidebar', UI, { note: 'nav icons (accent on the light sidebar)' }],
 	['sidebar-brand-frame', 'sidebar', UI, { note: 'logo frame on the sidebar' }],
@@ -535,9 +540,22 @@ const SIDEBAR_BAR = {
 	contrast: 'material-bar-contrast',
 	backdrops: BAR_BACKDROPS,
 	text: ['sidebar-foreground', 'sidebar-muted-foreground', 'sidebar-accent-foreground'],
-	marks: ['sidebar-ring', 'sidebar-icon'],
+	marks: [
+		'sidebar-ring',
+		'sidebar-icon',
+		'sidebar-indicator',
+		{ token: 'sidebar-accent', min: CHIP_FLOOR, base: 'sidebar-accent-foreground' }
+	],
 	onControl: [
-		{ control: 'sidebar-accent', text: ['sidebar-accent-foreground', 'sidebar-foreground'] }
+		{
+			control: 'sidebar-accent',
+			text: [
+				'sidebar-accent-foreground',
+				'sidebar-foreground',
+				'sidebar-muted-foreground',
+				'sidebar-indicator'
+			]
+		}
 	]
 };
 const PANE = {
@@ -555,13 +573,20 @@ const SIDEBAR = {
 	marks: [
 		'sidebar-ring',
 		'sidebar-icon',
+		'sidebar-indicator',
+		{ token: 'sidebar-accent', min: CHIP_FLOOR, base: 'sidebar-accent-foreground' },
 		{ token: 'sidebar-brand-frame', min: UI },
 		{ token: 'sidebar-brand-capsule', min: LOGO_CAPSULE }
 	],
 	onControl: [
 		{
 			control: 'sidebar-accent',
-			text: ['sidebar-accent-foreground', 'sidebar-foreground', 'sidebar-muted-foreground']
+			text: [
+				'sidebar-accent-foreground',
+				'sidebar-foreground',
+				'sidebar-muted-foreground',
+				'sidebar-indicator'
+			]
 		}
 	]
 };
@@ -736,10 +761,12 @@ export function checkMaterials(props, mode, label, transparency, layers = MATERI
 			for (const { side, color } of cs) {
 				const corner = side;
 				const composite = resolve(layer.fill, color);
-				const record = (kind, token, on, fg, bg, min) => {
+				// `soundFg`: the colour whose luminance must lie outside the backdrop interval. For a translucent mark (the
+				// active chip) that is its OPAQUE BASE, not the composite it paints at one corner.
+				const record = (kind, token, on, fg, bg, min, soundFg = fg) => {
 					const r = ratioIn(fg, bg, mode);
 					results.push({ layer: layer.layer, kind, token, on, corner, ratio: r, min });
-					const span = spans.get(`${token}|${on}`) ?? { token, on, fg, ys: [] };
+					const span = spans.get(`${token}|${on}`) ?? { token, on, fg: soundFg, ys: [] };
 					span.ys.push(lumaIn(bg, mode));
 					spans.set(`${token}|${on}`, span);
 					if (r < min)
@@ -751,7 +778,15 @@ export function checkMaterials(props, mode, label, transparency, layers = MATERI
 					record('text', t, layer.fill, resolve(t, composite), composite, TEXT);
 				for (const m of layer.marks ?? []) {
 					const token = typeof m === 'string' ? m : m.token;
-					record('mark', token, layer.fill, resolve(token, composite), composite, m.min ?? UI);
+					record(
+						'mark',
+						token,
+						layer.fill,
+						resolve(token, composite),
+						composite,
+						m.min ?? UI,
+						m.base ? resolve(m.base, composite) : undefined
+					);
 				}
 				for (const oc of layer.onControl ?? []) {
 					const control = resolve(oc.control, composite);

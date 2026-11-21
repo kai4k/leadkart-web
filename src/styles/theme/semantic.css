@@ -236,17 +236,28 @@
 	--sidebar-foreground: light-dark(var(--muted-foreground), var(--dark-300));
 	--sidebar-primary: var(--primary);
 	--sidebar-primary-foreground: var(--primary-foreground);
-	--sidebar-accent-foreground: var(--primary-text);
-	/* OPAQUE active-item fill (plan 6.2): a text pair never depends on an unknown backdrop */
-	--sidebar-accent: color-mix(in oklab, var(--sidebar-accent-foreground) 15%, var(--sidebar));
+	/* a notch deeper than a link in light mode: the label sits on the translucent chip, whose tint pulls toward it */
+	--sidebar-accent-foreground: light-dark(
+		color-mix(in oklab, var(--primary-text) 82%, black),
+		color-mix(in oklab, var(--primary-text) 80%, white)
+	);
+	/* The active item's capsule: a TRANSLUCENT tint of the sidebar's own accent text, so it tracks whatever the glass
+	   sidebar sits on (fix round F, I1). It is the SUPPORTING cue; the indicator bar (--sidebar-indicator) is the shape
+	   cue. Both are gated against the sidebar layers' glass composites, not against the opaque --sidebar token. */
+	--sidebar-accent: light-dark(
+		color-mix(in srgb, var(--sidebar-accent-foreground) 12%, transparent),
+		color-mix(in srgb, var(--sidebar-accent-foreground) 8%, transparent)
+	);
+	/* the inline-start bar of the active item (3px): a mark at 3:1 on the chip AND on the sidebar composite */
+	--sidebar-indicator: var(--sidebar-accent-foreground);
 	--sidebar-border: light-dark(oklch(0.928 0.006 264.531), var(--dark-800));
 	/* the ring and the group labels follow the sidebar colour: they are re-pointed by the
 	   data-sidebar-colors blocks below through --sidebar-accent-foreground, which is always
 	   readable on that sidebar (shadcn's `ring-sidebar-ring/50` and `/70` labels were not). */
 	--sidebar-ring: var(--sidebar-accent-foreground);
 	--sidebar-muted-foreground: var(--sidebar-foreground);
-	/* nav icons: the accent on the light sidebar (HIG Sidebars), the sidebar text elsewhere */
-	--sidebar-icon: var(--sidebar-foreground);
+	/* inactive nav icons: the muted sidebar text; the ACTIVE item's icon and label are --sidebar-accent-foreground */
+	--sidebar-icon: var(--sidebar-muted-foreground);
 	/* the logo on the sidebar: the surface logo on a light sidebar (white, or the dark surface in dark mode);
 	   the on-dark logo on the dark / brand / purple / sky sidebars (blocks below) */
 	--sidebar-brand-frame: var(--brand-frame);
@@ -518,11 +529,8 @@
 }
 
 /* ── sidebar colours (Domiex sidebar-color.css; Tailwind references as v4 oklch) ── */
-:root[data-sidebar-colors='light'] {
-	--sidebar-icon: var(--primary-indicator);
-}
 :root[data-sidebar-colors='dark'] {
-	--sidebar-accent: color-mix(in oklab, var(--sidebar-accent-foreground) 28%, var(--sidebar));
+	--sidebar-accent: color-mix(in srgb, var(--sidebar-accent-foreground) 13%, transparent);
 	--sidebar-brand-frame: var(--brand-frame-dark);
 	--sidebar-brand-capsule: var(--brand-capsule-dark);
 	--sidebar: var(--swatch-sidebar-dark);
@@ -531,7 +539,7 @@
 	--sidebar-border: var(--swatch-sidebar-dark);
 }
 :root[data-sidebar-colors='brand'] {
-	--sidebar-accent: color-mix(in oklab, var(--sidebar-accent-foreground) 22%, var(--sidebar));
+	--sidebar-accent: color-mix(in srgb, var(--sidebar-accent-foreground) 10%, transparent);
 	--sidebar-brand-frame: var(--brand-frame-dark);
 	--sidebar-brand-capsule: var(--brand-capsule-dark);
 	--sidebar: var(--primary-900);
@@ -540,7 +548,7 @@
 	--sidebar-border: var(--primary-900);
 }
 :root[data-sidebar-colors='purple'] {
-	--sidebar-accent: color-mix(in oklab, var(--sidebar-accent-foreground) 22%, var(--sidebar));
+	--sidebar-accent: color-mix(in srgb, var(--sidebar-accent-foreground) 11%, transparent);
 	--sidebar-brand-frame: var(--brand-frame-dark);
 	--sidebar-brand-capsule: var(--brand-capsule-dark);
 	--sidebar: var(--swatch-sidebar-purple);
@@ -549,10 +557,11 @@
 	--sidebar-border: var(--swatch-sidebar-purple);
 }
 :root[data-sidebar-colors='sky'] {
+	--sidebar-accent: color-mix(in srgb, var(--sidebar-accent-foreground) 8%, transparent);
 	--sidebar-brand-frame: var(--brand-frame-dark);
 	--sidebar-brand-capsule: var(--brand-capsule-dark);
 	--sidebar: var(--swatch-sidebar-sky);
-	--sidebar-foreground: oklch(0.88 0.07 230);
+	--sidebar-foreground: oklch(0.94 0.04 230);
 	--sidebar-accent-foreground: oklch(0.977 0.013 236.62);
 	--sidebar-border: var(--swatch-sidebar-sky);
 }

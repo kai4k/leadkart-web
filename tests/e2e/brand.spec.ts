@@ -33,7 +33,7 @@ test.describe('brand wiring', () => {
 
 	// The tags live in src/app.html (PUBLIC_SITE_URL), so the client-rendered (auth) routes - the pages a shared link
 	// lands on - carry them too, absolute, exactly once.
-	test('the sign-in shell and server-rendered pages carry an absolute og:image, og:url and twitter:image', async ({
+	test('the sign-in shell and server-rendered pages carry an absolute og:image and twitter:image and no og:url', async ({
 		page
 	}) => {
 		for (const path of ['/signin', '/forgot-password', '/no-such-page-xyz']) {
@@ -44,7 +44,7 @@ test.describe('brand wiring', () => {
 			expect(html, path).toContain(
 				'<meta name="twitter:image" content="http://localhost:4173/og-image-light.png"'
 			);
-			expect(html, path).toContain('<meta property="og:url" content="http://localhost:4173/"');
+			expect(html, path).not.toContain('og:url'); // it would be the site root on every shared deep link
 			expect(html, path).toContain('property="og:image:width"');
 			expect(html.match(/property="og:image"/g), path).toHaveLength(1);
 		}
