@@ -92,7 +92,7 @@
 {#snippet nameCell(role: RoleDto)}
 	<a
 		href={resolve('/(app)/settings/roles/[id]', { id: role.id })}
-		class="text-foreground hover:text-primary font-medium hover:underline">{role.name}</a
+		class="text-foreground hover:text-primary-text font-medium hover:underline">{role.name}</a
 	>
 {/snippet}
 

@@ -32,7 +32,7 @@
 <AuthCard>
 	<div class="flex flex-col items-center gap-6">
 		<div class="stack stack-tight text-center">
-			<h1 class="h1 text-primary">{$_('auth.forgotPassword.title')}</h1>
+			<h1 class="h1 text-primary-text">{$_('auth.forgotPassword.title')}</h1>
 			<p class="body-sm text-muted-foreground">{$_('auth.forgotPassword.subtitle')}</p>
 		</div>
 	</div>
@@ -44,7 +44,7 @@
 		<p class="caption text-muted-foreground text-center">
 			<a
 				href={resolve('signin')}
-				class="text-primary underline underline-offset-2 hover:no-underline"
+				class="text-primary-text underline underline-offset-2 hover:no-underline"
 				>{$_('auth.forgotPassword.backToSignin')}</a
 			>
 		</p>
@@ -88,7 +88,7 @@
 
 				<a
 					href={resolve('signin')}
-					class="text-primary underline underline-offset-2 hover:no-underline"
+					class="text-primary-text underline underline-offset-2 hover:no-underline"
 					>{$_('auth.signin.title')}</a
 				>
 			</span>

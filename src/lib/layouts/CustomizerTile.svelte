@@ -56,7 +56,7 @@
 		></span>
 	{/if}
 	<span
-		class="text-foreground group-aria-checked/tile:text-primary text-center text-sm font-medium"
+		class="text-foreground group-aria-checked/tile:text-primary-text text-center text-sm font-medium"
 	>
 		{label}
 	</span>

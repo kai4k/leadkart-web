@@ -117,7 +117,7 @@
 						</Badge>
 					</span>
 					{#if opt.value === value}
-						<Icon icon={Check} size="xs" class="text-primary" />
+						<Icon icon={Check} size="xs" class="text-primary-text" />
 					{/if}
 				</Dropdown.Item>
 			{/each}

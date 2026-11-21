@@ -5,7 +5,7 @@
 			'relative inline-flex items-center justify-center overflow-hidden rounded-full font-medium uppercase',
 			'',
 			'bg-[linear-gradient(135deg,var(--primary-soft),var(--muted))]',
-			'text-primary',
+			'text-primary-text',
 			'ring-1 ring-card'
 		],
 		{

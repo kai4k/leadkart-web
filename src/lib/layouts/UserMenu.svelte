@@ -33,7 +33,7 @@
 
 <Dropdown.Root>
 	<Dropdown.Trigger
-		class="bg-primary-soft text-primary focus-visible:ring-ring inline-flex size-9 items-center justify-center rounded-full text-sm font-semibold outline-none focus-visible:ring-2 pointer-coarse:size-11"
+		class="bg-primary-soft text-primary-text focus-visible:ring-ring inline-flex size-9 items-center justify-center rounded-full text-sm font-semibold outline-none focus-visible:ring-2 pointer-coarse:size-11"
 		aria-label={$_('shell.userMenu.label')}
 	>
 		<span>{monogram}</span>

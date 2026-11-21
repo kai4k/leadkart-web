@@ -156,7 +156,7 @@
 							{#if hasPayload}
 								<button
 									type="button"
-									class="caption text-primary focus-visible:ring-ring self-start hover:underline focus-visible:ring-2 focus-visible:outline-none"
+									class="caption text-primary-text focus-visible:ring-ring self-start hover:underline focus-visible:ring-2 focus-visible:outline-none"
 									onclick={() => toggle(ev.id)}
 									aria-expanded={isExpanded}
 								>

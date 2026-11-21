@@ -14,7 +14,7 @@
 	bind:ref
 	data-slot="radio-group-item"
 	class={cn(
-		'border-input dark:bg-input-fill data-checked:bg-primary data-checked:text-primary-foreground dark:data-checked:bg-primary data-checked:border-primary aria-invalid:aria-checked:border-primary aria-invalid:border-destructive focus-visible:border-ring focus-visible:ring-ring    flex size-4 rounded-full focus-visible:ring-3  group-has-[:focus-visible]/field-label:ring-0 group-has-[:focus-visible]/field-label:not-data-checked:border-input group-has-[:focus-visible]/field-label:data-checked:border-primary group/radio-group-item peer relative aspect-square shrink-0 border outline-none after:absolute after:-inset-x-3 after:-inset-y-2 disabled:cursor-not-allowed disabled:opacity-50',
+		'border-input dark:bg-input-fill data-checked:bg-primary-indicator data-checked:text-primary-indicator-foreground dark:data-checked:bg-primary-indicator data-checked:border-primary-indicator aria-invalid:aria-checked:border-primary-indicator aria-invalid:border-destructive focus-visible:border-ring focus-visible:ring-ring    flex size-4 rounded-full focus-visible:ring-3  group-has-[:focus-visible]/field-label:ring-0 group-has-[:focus-visible]/field-label:not-data-checked:border-input group-has-[:focus-visible]/field-label:data-checked:border-primary-indicator group/radio-group-item peer relative aspect-square shrink-0 border outline-none after:absolute after:-inset-x-3 after:-inset-y-2 disabled:cursor-not-allowed disabled:opacity-50',
 		className
 	)}
 	{...restProps}
@@ -22,7 +22,9 @@
 	{#snippet children({ checked })}
 		<div data-slot="radio-group-indicator" class="flex size-4 items-center justify-center">
 			{#if checked}
-				<CircleIcon class="bg-primary-foreground absolute inset-0 m-auto size-2 rounded-full" />
+				<CircleIcon
+					class="bg-primary-indicator-foreground absolute inset-0 m-auto size-2 rounded-full"
+				/>
 			{/if}
 		</div>
 	{/snippet}

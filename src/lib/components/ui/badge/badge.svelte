@@ -25,7 +25,7 @@
 					success: 'bg-success-soft text-success',
 					warning: 'bg-warning-soft text-warning',
 					danger: 'bg-destructive-soft text-destructive',
-					brand: 'bg-primary-soft text-primary'
+					brand: 'bg-primary-soft text-primary-text'
 				},
 				// `sm` is the compact badge of dense lists, status columns and card corners (what
 				// `size="sm"` was before Phase 2): the 2xs type step and tighter inline padding.

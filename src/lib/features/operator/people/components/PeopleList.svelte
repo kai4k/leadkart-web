@@ -75,7 +75,8 @@
 		<div class="stack stack-tight min-w-0">
 			<a
 				href={resolve('/(app)/operator/persons/[id]', { id: p.id })}
-				class="text-foreground hover:text-primary truncate font-medium hover:underline">{name}</a
+				class="text-foreground hover:text-primary-text truncate font-medium hover:underline"
+				>{name}</a
 			>
 			<span class="caption text-muted-foreground truncate">{p.email}</span>
 		</div>

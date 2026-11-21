@@ -39,7 +39,7 @@
 			<div class="cluster cluster-tight">
 				<a
 					href={resolve('/(app)/leads/[id]', { id: order.customer_lead_id })}
-					class="body-sm text-primary hover:underline"
+					class="body-sm text-primary-text hover:underline"
 				>
 					{order.customer_name}
 				</a>

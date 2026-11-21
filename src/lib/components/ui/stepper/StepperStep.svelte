@@ -30,7 +30,7 @@
 			case 'complete':
 				return 'bg-primary text-primary-foreground border-primary';
 			case 'current':
-				return 'bg-primary-soft text-primary border-primary';
+				return 'bg-primary-soft text-primary-text border-primary';
 			case 'error':
 				return 'bg-destructive-soft text-destructive border-destructive';
 			case 'pending':

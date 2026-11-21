@@ -194,6 +194,32 @@ export function findPaletteUtilities(rel, src) {
 	return found;
 }
 
+// ── file rules: one finder per rule, run over every src file by main() ──
+//
+// (m5, plan G1) A bare `text-primary` is banned: the primary colour is a vivid FILL now (white or a
+// dark label sits on it), so text in that colour is `text-primary-text`, a token whose only job is
+// 4.5:1 on the surfaces. `text-primary-foreground` (the label ON a fill) and `text-primary-text`
+// pass; the word boundary is "not followed by `-`".
+const BARE_TEXT_PRIMARY = /(?<![\w-])text-primary(?![\w-])/g;
+
+export function findBareTextPrimary(rel, src) {
+	const norm = rel.replaceAll('\\', '/');
+	if (!/\.(svelte|ts|html)$/.test(norm) || !norm.startsWith('src/')) return [];
+	const found = [];
+	for (const m of src.matchAll(BARE_TEXT_PRIMARY))
+		found.push({ line: src.slice(0, m.index).split('\n').length, name: m[0] });
+	return found;
+}
+
+export const FILE_RULES = [
+	{
+		id: 'm5',
+		title: 'bare text-primary',
+		find: findBareTextPrimary,
+		fix: 'use text-primary-text (links, active labels) or text-primary-foreground (a label on a primary fill).'
+	}
+];
+
 function main() {
 	// 1. Collect global tokens from src/styles/*.css and src/styles/theme/*.css.
 	const globalTokens = new Set();
@@ -300,6 +326,7 @@ function main() {
 	const schemeRefs = [];
 	const legacyRefs = [];
 	const paletteRefs = [];
+	const ruleRefs = FILE_RULES.map((rule) => ({ rule, found: [] }));
 	for (const pattern of ['src/**/*.svelte', 'src/**/*.ts', 'src/**/*.css', 'src/**/*.html']) {
 		for (const rel of globSync(pattern, { cwd: ROOT, exclude: ['src/lib/api/generated/**'] })) {
 			const norm = rel.replaceAll('\\', '/');
@@ -309,6 +336,8 @@ function main() {
 			for (const f of findColorScheme(norm, src)) schemeRefs.push({ file: norm, ...f });
 			for (const f of findLegacyTokens(norm, src)) legacyRefs.push({ file: norm, ...f });
 			for (const f of findPaletteUtilities(norm, src)) paletteRefs.push({ file: norm, ...f });
+			for (const r of ruleRefs)
+				for (const f of r.rule.find(norm, src)) r.found.push({ file: norm, ...f });
 		}
 	}
 
@@ -317,11 +346,12 @@ function main() {
 			alphaRefs.length +
 			schemeRefs.length +
 			legacyRefs.length +
-			paletteRefs.length ===
+			paletteRefs.length +
+			ruleRefs.reduce((a, r) => a + r.found.length, 0) ===
 		0
 	) {
 		console.log(
-			`✓ check-tokens: ${globalTokens.size} global token(s) defined, every var(--*) reference resolves; no alpha modifier on a contrast colour in ui/; color-scheme only in theme/semantic.css; no legacy colour name; no raw palette utility.`
+			`✓ check-tokens: ${globalTokens.size} global token(s) defined, every var(--*) reference resolves; no alpha modifier on a contrast colour in ui/; color-scheme only in theme/semantic.css; no legacy colour name; no raw palette utility; ${FILE_RULES.length} file rule(s) (${FILE_RULES.map((r) => r.id).join(', ')}) clean.`
 		);
 		process.exit(0);
 	}
@@ -362,6 +392,12 @@ function main() {
 		console.error(
 			'\nFix: text-muted-foreground, bg-destructive-soft, text-primary-foreground, bg-foreground/10, ... (plan L7). Exempt: src/styles/** and the CLI-generated ui/ folders.'
 		);
+	}
+	for (const { rule, found } of ruleRefs) {
+		if (found.length === 0) continue;
+		console.error(`✗ check-tokens (${rule.id}): ${found.length} ${rule.title}:\n`);
+		for (const r of found) console.error(`  ${r.file}:${r.line}  ${r.name}`);
+		console.error(`\nFix: ${rule.fix}`);
 	}
 	process.exit(1);
 }

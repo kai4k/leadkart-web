@@ -110,7 +110,7 @@
 								'focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none',
 								'focus-visible:ring-ring',
 								active
-									? 'border-primary text-primary'
+									? 'border-primary text-primary-text'
 									: 'text-muted-foreground hover:text-foreground border-transparent'
 							]}
 						>

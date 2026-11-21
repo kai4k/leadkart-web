@@ -93,7 +93,30 @@ const OPAQUE = [
 	// secondary text: the muted token, not the foreground at 60%
 	[/^text-foreground\/60$/, 'text-muted-foreground'],
 	// nova style hook (no CSS behind it in this repo): flip the chevron in RTL
-	[/^cn-rtl-flip$/, 'rtl:rotate-180']
+	[/^cn-rtl-flip$/, 'rtl:rotate-180'],
+	// plan G1: the primary colour is a vivid FILL now; text in it is `primary-text` (4.5:1), and a link
+	// does not change colour on hover (it underlines)
+	[/^text-primary$/, 'text-primary-text'],
+	[/^text-primary-hover$/, 'underline', /(^|:)hover$/]
+];
+
+/**
+ * Plan G1: the marks of these families are non-text (3:1), not fills with a label: they read
+ * `primary-indicator`. Rewritten only inside these ui folders.
+ */
+const INDICATOR_FAMILIES = new Set([
+	'checkbox',
+	'radio-group',
+	'switch',
+	'slider',
+	'progress',
+	'tabs'
+]);
+const INDICATOR = [
+	[/^bg-primary$/, 'bg-primary-indicator'],
+	[/^border-primary$/, 'border-primary-indicator'],
+	[/^text-primary-foreground$/, 'text-primary-indicator-foreground'],
+	[/^bg-primary-foreground$/, 'bg-primary-indicator-foreground']
 ];
 
 /** Invalid-state ring/border alphas on a control: dropped (the control shows `aria-invalid` through its own border token). */
@@ -117,10 +140,15 @@ const Z_BY_FAMILY = {
 };
 const Z_FLOATING = 'z-(--z-popover)';
 
-export function zLayerFor(file = '') {
+/** The ui folder a file lives in (`checkbox`, `dialog`, ...), or undefined. */
+export function familyOf(file = '') {
 	const parts = file.replaceAll('\\', '/').split('/');
 	const i = parts.lastIndexOf('ui');
-	const family = i >= 0 ? parts[i + 1] : undefined;
+	return i >= 0 ? parts[i + 1] : undefined;
+}
+
+export function zLayerFor(file = '') {
+	const family = familyOf(file);
 	return (family && Z_BY_FAMILY[family]) || Z_FLOATING;
 }
 
@@ -156,7 +184,7 @@ function splitVariants(token) {
 	return cut < 0 ? ['', token] : [token.slice(0, cut), token.slice(cut + 1)];
 }
 
-function rewriteToken(token, z = Z_FLOATING) {
+function rewriteToken(token, z = Z_FLOATING, family) {
 	const [variants, utility] = splitVariants(token);
 	if (DROP.some((d) => d.variants.test(variants) && d.utility.test(utility))) return '';
 	let next = utility;
@@ -165,6 +193,14 @@ function rewriteToken(token, z = Z_FLOATING) {
 		if (re.test(next) && (!when || when.test(variants))) {
 			next = to;
 			break;
+		}
+	}
+	if (family && INDICATOR_FAMILIES.has(family)) {
+		for (const [re, to] of INDICATOR) {
+			if (re.test(next)) {
+				next = to;
+				break;
+			}
 		}
 	}
 	for (const [re, to] of PHYSICAL) {
@@ -177,8 +213,8 @@ function rewriteToken(token, z = Z_FLOATING) {
 }
 
 /** Rewrites every class-like token in `text` (the inside of a class string). */
-export function normalizeClasses(text, { z = Z_FLOATING } = {}) {
-	return text.replace(/[^\s"'`{}]+/g, (token) => rewriteToken(token, z));
+export function normalizeClasses(text, { z = Z_FLOATING, family } = {}) {
+	return text.replace(/[^\s"'`{}]+/g, (token) => rewriteToken(token, z, family));
 }
 
 const STRING = /'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g;
@@ -331,7 +367,7 @@ export function normalizeSource(src, { icons = iconExports(), file = '' } = {}) 
 		);
 	out = tvToCva(out, problems);
 	out = mergeImports(out);
-	out = normalizeClassStrings(out, { z: zLayerFor(file) });
+	out = normalizeClassStrings(out, { z: zLayerFor(file), family: familyOf(file) });
 	for (const f of remainingAlpha(out))
 		problems.push(
 			`line ${f.line}: ${f.utility} (alpha on a contrast colour; use an opaque token, only ${[...ALLOWED_ALPHA].join(', ')} may carry alpha)`

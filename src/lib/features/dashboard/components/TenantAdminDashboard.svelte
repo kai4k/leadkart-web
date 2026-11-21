@@ -89,7 +89,7 @@
 	<PageHeader title={$_('dashboard.title.tenantAdmin')}>
 		{#snippet meta()}
 			<span
-				class="label-small bg-primary-soft text-primary inline-flex items-center rounded-full px-2 py-0.5"
+				class="label-small bg-primary-soft text-primary-text inline-flex items-center rounded-full px-2 py-0.5"
 			>
 				Admin
 			</span>

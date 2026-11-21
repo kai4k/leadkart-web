@@ -4,7 +4,8 @@ import {
 	PENDING_REGENERATION,
 	colourNames,
 	findAlphaModifiers,
-	findColorScheme
+	findColorScheme,
+	findBareTextPrimary
 } from '../../../scripts/arch/check-tokens.mjs';
 
 /** Self-test of the token gate rules: fixtures, not the repository. */
@@ -141,5 +142,23 @@ describe('check-tokens: alpha on a border colour outside ui/ (fix round B)', () 
 		expect(
 			out('<div class="border-s-4 border-destructive-indicator border-border"></div>')
 		).toEqual([]);
+	});
+});
+
+describe('check-tokens (m5): a bare text-primary', () => {
+	const find = (src: string, rel = 'src/lib/layouts/X.svelte') =>
+		(findBareTextPrimary(rel, src) as Array<{ name: string }>).length;
+	it('flags text-primary, with variants', () => {
+		expect(find('<a class="text-primary"></a>')).toBe(1);
+		expect(find('<a class="hover:text-primary x"></a>')).toBe(1);
+		expect(find("const c = 'text-primary';", 'src/lib/features/x/y.ts')).toBe(1);
+	});
+	it('accepts text-primary-text, text-primary-foreground and text-primary-indicator-foreground', () => {
+		expect(find('<a class="text-primary-text"></a>')).toBe(0);
+		expect(find('<a class="text-primary-foreground"></a>')).toBe(0);
+		expect(find('<a class="text-primary-indicator-foreground"></a>')).toBe(0);
+	});
+	it('does not read the token layer', () => {
+		expect(find('.x { color: red }', 'src/styles/base.css')).toBe(0);
 	});
 });

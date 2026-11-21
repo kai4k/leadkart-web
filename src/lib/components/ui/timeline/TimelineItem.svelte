@@ -9,7 +9,7 @@
 		{
 			variants: {
 				accent: {
-					primary: 'bg-primary-soft text-primary border border-primary',
+					primary: 'bg-primary-soft text-primary-text border border-primary',
 					success: 'bg-success-soft text-success border border-success',
 					warning: 'bg-warning-soft text-warning border border-warning',
 					danger: 'bg-destructive-soft text-destructive border border-destructive',

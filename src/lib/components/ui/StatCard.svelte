@@ -13,7 +13,7 @@
 	export const statCardAccentVariants = cva('', {
 		variants: {
 			accent: {
-				primary: 'text-primary bg-primary-soft',
+				primary: 'text-primary-text bg-primary-soft',
 				success: 'text-success bg-success-soft',
 				warning: 'text-warning bg-warning-soft',
 				danger: 'text-destructive bg-destructive-soft',

@@ -17,7 +17,7 @@
 <AuthCard>
 	<div class="flex flex-col items-center gap-6">
 		<div class="stack stack-tight text-center">
-			<h1 class="h1 text-primary">{$_('auth.changeEmail.confirm.title')}</h1>
+			<h1 class="h1 text-primary-text">{$_('auth.changeEmail.confirm.title')}</h1>
 			<p class="body-sm text-muted-foreground">{$_('auth.changeEmail.confirm.subtitle')}</p>
 		</div>
 	</div>

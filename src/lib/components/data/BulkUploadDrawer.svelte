@@ -242,7 +242,7 @@
 								Drop a file here, or
 								<button
 									type="button"
-									class="text-primary hover:underline"
+									class="text-primary-text hover:underline"
 									onclick={() => fileInput?.click()}>browse</button
 								>
 							</p>

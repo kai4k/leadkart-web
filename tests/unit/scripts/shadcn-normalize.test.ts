@@ -291,3 +291,54 @@ describe('shadcn normaliser: z-50 takes the layer of its component family', () =
 		expect(z('src/lib/components/ui/select/x.svelte')).toContain('z-(--z-popover)');
 	});
 });
+
+describe('shadcn normaliser: primary roles (plan G1)', () => {
+	const cls = (src: string, file: string) =>
+		(normalizeSource(src, { icons: ICONS, file }) as { out: string }).out;
+
+	it('maps the checked state of a checkbox to the indicator tokens', () => {
+		const out = cls(
+			`<div class="data-checked:bg-primary data-checked:text-primary-foreground data-checked:border-primary"></div>`,
+			'src/lib/components/ui/checkbox/x.svelte'
+		);
+		expect(out).toContain('data-checked:bg-primary-indicator');
+		expect(out).toContain('data-checked:text-primary-indicator-foreground');
+		expect(out).toContain('data-checked:border-primary-indicator');
+	});
+	it.each(['radio-group', 'switch', 'slider', 'progress', 'tabs'])(
+		'rewrites bg-primary to the indicator in %s',
+		(family) => {
+			expect(
+				cls(`<i class="bg-primary"></i>`, `src/lib/components/ui/${family}/x.svelte`)
+			).toContain('bg-primary-indicator');
+		}
+	);
+	it('leaves bg-primary alone in a button (a labelled fill)', () => {
+		const out = cls(
+			`<button class="bg-primary text-primary-foreground"></button>`,
+			'src/lib/components/ui/button/x.svelte'
+		);
+		expect(out).toContain('bg-primary text-primary-foreground');
+		expect(out).not.toContain('indicator');
+	});
+	it('rewrites a bare text-primary everywhere, and never text-primary-foreground', () => {
+		expect(cls(`<a class="text-primary"></a>`, 'src/lib/components/ui/badge/x.svelte')).toContain(
+			'text-primary-text'
+		);
+		expect(
+			cls(`<a class="text-primary-foreground"></a>`, 'src/lib/components/ui/badge/x.svelte')
+		).toContain('text-primary-foreground"');
+	});
+	it('a link underlines on hover instead of changing colour', () => {
+		expect(normalizeClasses('text-primary hover:text-primary-hover')).toBe(
+			'text-primary-text hover:underline'
+		);
+	});
+	it('is idempotent on the new rewrites', () => {
+		const once = cls(
+			`<i class="data-checked:bg-primary text-primary"></i>`,
+			'src/lib/components/ui/checkbox/x.svelte'
+		);
+		expect(cls(once, 'src/lib/components/ui/checkbox/x.svelte')).toBe(once);
+	});
+});

@@ -65,7 +65,7 @@
 				class={[
 					props.class as string | undefined,
 					'flex w-full items-center gap-2 rounded-md px-3 py-2',
-					active && 'font-medium text-primary'
+					active && 'font-medium text-primary-text'
 				]}
 			>
 				<NavIcon class="size-4 shrink-0" aria-hidden="true" />

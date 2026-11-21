@@ -142,7 +142,7 @@
 				</span>
 			{:else}
 				<span
-					class="label-small bg-primary-soft text-primary inline-flex items-center rounded-full px-2 py-0.5"
+					class="label-small bg-primary-soft text-primary-text inline-flex items-center rounded-full px-2 py-0.5"
 				>
 					Platform Staff
 				</span>
@@ -162,7 +162,7 @@
 			</p>
 			<button
 				type="button"
-				class="label-small text-primary hover:text-primary-hover mt-3 underline"
+				class="label-small text-primary-text hover:underline mt-3 underline"
 				onclick={() => statsQuery.refetch()}
 			>
 				Retry

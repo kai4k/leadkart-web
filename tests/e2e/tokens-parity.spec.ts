@@ -62,7 +62,9 @@ const EXPECTED: Record<string, Measured> = {
 	'/styleguide': {
 		body: { backgroundColor: 'oklch(0.96 0.008 268)', color: 'oklch(0.18 0.02 250)' },
 		button: {
-			backgroundColor: 'oklch(0.34 0.14 296)',
+			// plan G1: the primary button is the vivid fill (step 500, #953fc9) with a white label;
+			// the dark L37 step (oklch 0.34 0.14 296) is now `--primary-text`, for text only
+			backgroundColor: 'rgb(149, 63, 201)',
 			color: 'oklch(1 0 0)',
 			borderRadius: '10px'
 		},

@@ -156,7 +156,7 @@
 					<label class="cluster cluster-tight body-sm text-foreground cursor-pointer">
 						<input
 							type="checkbox"
-							class="text-primary focus-visible:ring-ring h-4 w-4 rounded"
+							class="text-primary-text focus-visible:ring-ring h-4 w-4 rounded"
 							checked={valueOf(field.key) === 'true'}
 							onchange={(e) => setBoolean(field.key, (e.currentTarget as HTMLInputElement).checked)}
 						/>

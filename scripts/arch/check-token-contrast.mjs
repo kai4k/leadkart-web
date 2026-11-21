@@ -39,10 +39,16 @@ const INDEX_CSS = 'src/styles/index.css';
  */
 export function themeFiles(root = ROOT) {
 	const barrel = readFileSync(join(root, INDEX_CSS), 'utf8');
-	return [...barrel.matchAll(/@import\s+'\.\/(theme\/[\w.-]+\.css)'/g)].map(
-		(m) => `src/styles/${m[1]}`
-	);
+	return [...barrel.matchAll(/@import\s+'\.\/(theme\/[\w.-]+\.css)'/g)]
+		.map((m) => `src/styles/${m[1]}`)
+		.filter((p) => !UNGATED_THEME_FILES.includes(p));
 }
+
+/**
+ * Theme files that are NOT read: they declare no token of their own, they only repeat the gated `off`
+ * values inside @media / @supports (tests/unit/styles/materials.test.ts compares them). Pinned by name.
+ */
+export const UNGATED_THEME_FILES = ['src/styles/theme/materials-fallbacks.css'];
 
 /** The pattern topbar re-declares tokens on the topbar (layouts.css); its pairs resolve inside that scope. */
 export const PATTERN_TOPBAR = {
@@ -80,11 +86,14 @@ const RAW_PAIRS = [
 	// text on the surfaces
 	...SURFACES.map((s) => ['foreground', s, TEXT]),
 	...SURFACES.map((s) => ['muted-foreground', s, TEXT]),
-	// primary: as a fill and as text/links on every surface it is used on
+	// primary by role (plan G1): the label on its fill; text in the primary colour on every surface it
+	// sits on; the non-text marks and the glyph on them
 	['primary-foreground', 'primary', TEXT],
 	['primary-foreground', 'primary-hover', TEXT],
-	...SURFACES.map((s) => ['primary', s, TEXT]),
-	['primary', 'primary-soft', TEXT],
+	...[...SURFACES, 'popover', 'primary-soft', 'row-hover'].map((s) => ['primary-text', s, TEXT]),
+	...[...SURFACES, 'popover'].map((s) => ['primary-indicator', s, UI]),
+	['primary-indicator-foreground', 'primary-indicator', UI, { note: 'check glyph' }],
+	['background', 'primary-indicator', UI, { note: 'switch thumb on the track' }],
 	['secondary-foreground', 'secondary', TEXT],
 	['destructive-foreground', 'destructive', TEXT],
 	['destructive-foreground', 'destructive-hover', TEXT],
@@ -120,6 +129,7 @@ const RAW_PAIRS = [
 	['sidebar-accent-foreground', 'sidebar-accent', TEXT, { over: 'sidebar' }],
 	['sidebar-primary-foreground', 'sidebar-primary', TEXT],
 	['sidebar-ring', 'sidebar', UI],
+	['sidebar-icon', 'sidebar', UI, { note: 'nav icons (accent on the light sidebar)' }],
 	// fix round A: the indicators and fills the review found ungated. `note` names the use; several
 	// of these re-check a value another pair already covers, on purpose, so the use is on record.
 	['ring', 'popover', UI, { note: 'highlighted list item bar' }],
@@ -127,13 +137,9 @@ const RAW_PAIRS = [
 	['ring', 'card', UI, { note: 'selected table row bar' }],
 	['input', 'muted', UI, { note: 'active tab border on the tab list' }],
 	['background', 'foreground', TEXT, { note: 'tooltip' }],
-	['background', 'primary', UI, { note: 'switch thumb on the checked track (light)' }],
-	['primary-foreground', 'primary', UI, { note: 'switch thumb on the checked track (dark)' }],
 	['secondary-foreground', 'secondary-hover', TEXT],
 	['foreground', 'row-hover', TEXT],
 	['muted-foreground', 'row-hover', TEXT],
-	['primary-hover', 'background', TEXT, { note: 'link hover' }],
-	['primary-hover', 'card', TEXT, { note: 'link hover' }],
 	// toasts: text and icon on the soft status fills
 	...STATUS.map((s) => ['foreground', `${s}-soft`, TEXT, { note: 'toast text' }]),
 	['foreground', 'destructive-soft', TEXT, { note: 'toast text' }],
@@ -156,9 +162,9 @@ const RAW_PAIRS = [
 	['ring', 'primary', UI, { scope: PATTERN_TOPBAR, note: 'focus ring' }],
 	// the auth frame, the page header and the section nav (Tasks 13-14): their text/surface pairs, on record
 	['foreground', 'background', TEXT, { note: 'auth frame, page title' }],
-	['primary', 'card', TEXT, { note: 'auth brand headline' }],
+	['primary-text', 'card', TEXT, { note: 'auth brand headline' }],
 	['muted-foreground', 'card', TEXT, { note: 'auth brand tagline, route error status' }],
-	['primary', 'primary-soft', TEXT, { note: 'auth mobile brand row, feature icons' }],
+	['primary-text', 'primary-soft', TEXT, { note: 'auth mobile brand row, feature icons' }],
 	[
 		'muted-foreground',
 		'background',

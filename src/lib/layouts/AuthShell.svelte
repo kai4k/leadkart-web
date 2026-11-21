@@ -26,7 +26,7 @@
 
 	<div class="relative z-10 grid min-h-dvh grid-cols-1 lg:grid-cols-2">
 		<header
-			class="bg-primary-soft text-primary border-border flex items-center justify-between border-b px-4 py-4 sm:px-6 lg:hidden"
+			class="bg-primary-soft text-primary-text border-border flex items-center justify-between border-b px-4 py-4 sm:px-6 lg:hidden"
 		>
 			<BrandMark wordmark />
 			<span class="text-sm font-medium">{$_('auth.brand.mobileTag')}</span>

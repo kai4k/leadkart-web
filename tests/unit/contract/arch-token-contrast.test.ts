@@ -8,7 +8,8 @@ import {
 	pairRatio,
 	parseRules,
 	propertiesFor,
-	themeFiles
+	themeFiles,
+	UNGATED_THEME_FILES
 } from '../../../scripts/arch/check-token-contrast.mjs';
 
 /** Self-test of the contrast gate: tiny fixtures, then the real token files. */
@@ -105,9 +106,9 @@ describe('check-token-contrast: the real tokens', () => {
 	it('covers the pairs the primitives rely on', () => {
 		const labels = PAIRS.map((p: { label: string }) => p.label);
 		for (const needed of [
-			'primary on background',
-			'primary on muted',
-			'primary on primary-soft',
+			'primary-text on background',
+			'primary-text on muted',
+			'primary-text on primary-soft',
 			'primary-foreground on primary-hover',
 			'destructive-foreground on destructive-hover',
 			'ring on muted',
@@ -227,7 +228,49 @@ describe('check-token-contrast: scoped re-declarations (layouts.css)', () => {
 		);
 	});
 
+	it('skips only the pinned fallback file, which declares no token', () => {
+		expect(UNGATED_THEME_FILES).toEqual(['src/styles/theme/materials-fallbacks.css']);
+		expect(themeFiles()).not.toContain('src/styles/theme/materials-fallbacks.css');
+	});
+
 	it('the real pattern-topbar pairs are in the gate', () => {
 		expect(PAIRS.filter((p: { scope?: unknown }) => p.scope).length).toBeGreaterThanOrEqual(6);
+	});
+});
+
+describe('check-token-contrast: primary roles (plan G1)', () => {
+	const ROLES = `:root { --card: #ffffff; --muted: #e6e6ef; --background: #f4f4f8; --popover: #ffffff;
+		--fill: #7ccf00; --label-white: #ffffff; --label-dark: #1a2e05;
+		--indicator: #7ccf00; --indicator-fg: #ffffff; --thumb: #ffffff; }`;
+	const run = (p: object) =>
+		checkCss([['f.css', ROLES]], { pairs: [pair(p)] as never, axes: ONE }).problems.join('\n');
+
+	it('a vivid lime fill with a white label fails, with the dark label it passes', () => {
+		expect(run({ fg: 'label-white', bg: 'fill' })).toContain('< 4.5');
+		expect(run({ fg: 'label-dark', bg: 'fill' })).toBe('');
+	});
+	it('an indicator under 3:1 on the muted surface fails', () => {
+		expect(run({ fg: 'indicator', bg: 'muted', min: 3 })).toContain('< 3');
+	});
+	it('the glyph on the indicator and the thumb on the track are gated at 3:1', () => {
+		expect(run({ fg: 'indicator-fg', bg: 'indicator', min: 3 })).toContain('< 3');
+		expect(run({ fg: 'thumb', bg: 'indicator', min: 3 })).toContain('< 3');
+	});
+	it('the real gate carries the role pairs for every palette', () => {
+		const labels = PAIRS.map((p: { label: string }) => p.label);
+		for (const needle of [
+			'primary-text on background',
+			'primary-text on primary-soft',
+			'primary-indicator on muted',
+			'primary-indicator-foreground on primary-indicator',
+			'background on primary-indicator',
+			'sidebar-icon on sidebar'
+		])
+			expect(
+				labels.some((l: string) => l.startsWith(needle)),
+				needle
+			).toBe(true);
+		expect(labels.some((l: string) => l.startsWith('primary on '))).toBe(false); // primary is no longer text
+		expect(check().problems).toEqual([]);
 	});
 });

@@ -16,3 +16,13 @@ export function findPaletteUtilities(
 	rel: string,
 	src: string
 ): Array<{ line: number; utility: string }>;
+export function findBareTextPrimary(
+	rel: string,
+	src: string
+): Array<{ line: number; name: string }>;
+export const FILE_RULES: Array<{
+	id: string;
+	title: string;
+	find: (rel: string, src: string) => Array<{ line: number; name: string }>;
+	fix: string;
+}>;

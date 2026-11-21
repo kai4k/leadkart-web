@@ -192,7 +192,7 @@
 {#snippet nameCell(tenant: TenantDto)}
 	<div class="cluster cluster-tight">
 		{#if tenant.slug === 'platform'}
-			<Icon icon={Shield} size="sm" class="text-primary" />
+			<Icon icon={Shield} size="sm" class="text-primary-text" />
 		{/if}
 		<span class="text-foreground font-medium">{tenant.display_name}</span>
 		{#if tenant.slug === 'platform'}

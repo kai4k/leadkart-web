@@ -150,7 +150,7 @@
 				<div class="cluster mt-4">
 					<Button variant="ghost" onclick={reset}>Register another</Button>
 
-					<a href={resolve('operator/tenants')} class="label text-primary hover:underline"
+					<a href={resolve('operator/tenants')} class="label text-primary-text hover:underline"
 						>View tenant →</a
 					>
 

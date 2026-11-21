@@ -12,24 +12,24 @@
  * nesting, no @media) so scripts/arch/check-token-contrast.mjs can resolve
  * them for all 400 combinations. Keep it that way.
  *
- * Light values keep what the app rendered before this layer existed; only
- * the names are standardised. --primary-solid (and the status colours) are
- * the lightest step whose white foreground still reaches 4.5:1; the gate is
- * the judge. Final steps, per colour:
+ * The primary colour has THREE roles (plan G1, supersedes L37 for fills), one hue, three jobs:
+ *   --primary (+ -foreground, -hover)  the vivid FILL a label sits on: step 500, or 600 where white needs
+ *                                       it; the label is white, or step 950 on the light fills (green,
+ *                                       teal, lime, amber, orange: Apple's yellow and green buttons)
+ *   --primary-text                     text in the colour (links, active nav label): the dark step, 4.5:1
+ *   --primary-indicator (+ -foreground) non-text marks (checkbox, switch track, progress, tab underline), 3:1
  *
- *   colour     primary-solid   ring (light)   primary (dark)
- *   leadkart   logo purple*    500            300
- *   green      800             700            400
- *   violet     700             500            400
- *   orange     700             600            400
- *   teal       800             700            400
- *   fuchsia    700             600            400
- *   lime       800             700            400
- *   amber      800             700            400
- *   (*) oklch(0.34 0.14 296): what the app rendered as primary before this layer.
- *   The solid is also the TEXT colour (text-primary, links, the sidebar's active link) on the
- *   page, muted and primary-soft surfaces, so the gate checks it there, not only under white
- *   text. Dark steps did not need to move.
+ *   colour     fill     label  text (light)   indicator (light)   primary (dark)
+ *   leadkart   500      white  oklch 0.34     500                 300
+ *   green      500      950    800            700                 400
+ *   violet     600      white  700            500                 400
+ *   orange     600*     white  700            600                 400
+ *   teal       500      950    800            700                 400
+ *   fuchsia    600      white  700            600                 400
+ *   lime       500      950    800            700                 400
+ *   amber      500      950    800            700                 400
+ *   (*) 96% of step 600 toward black: step 600 under white is 4.4997:1, and 500 + 950 fails black-white.
+ *   The gate is the judge; --primary-text-light is the L37 step (what the app used as primary before).
  *
  *   status (light): destructive 700; success, warning, info 800 (700 reached only 3.8-4.4 on muted). Dark: step 400.
  *   Indicators (non-text marks, 3:1): light 700 (destructive 600), dark 400.
@@ -57,7 +57,14 @@
 	--primary-800: var(--palette-leadkart-800);
 	--primary-900: var(--palette-leadkart-900);
 	--primary-950: var(--palette-leadkart-950);
-	--primary-solid: oklch(0.34 0.14 296);
+	/* the primary colour by ROLE (plan G1). Fill: the vivid step a label sits on (white where it reaches
+	   4.5:1, else the 950 step: a dark label on a vivid fill). Text: the dark step links and the active
+	   nav label need (4.5:1 on every surface). Indicator: the lightest step that is still 3:1 on the
+	   surfaces (checkbox, switch track, progress, tab underline). The three are one hue, three jobs. */
+	--primary-fill: var(--primary-500);
+	--primary-fill-foreground: oklch(1 0 0);
+	--primary-hover-toward: black;
+	--primary-text-light: oklch(0.34 0.14 296);
 	--primary-ring: var(--primary-500);
 	--primary-on-dark: var(--primary-300);
 
@@ -111,13 +118,18 @@
 	--input-fill: light-dark(transparent, var(--dark-800));
 
 	/* primary */
-	--primary: light-dark(var(--primary-solid), var(--primary-on-dark));
-	--primary-foreground: light-dark(oklch(1 0 0), var(--primary-950));
+	--primary: light-dark(var(--primary-fill), var(--primary-on-dark));
+	--primary-foreground: light-dark(var(--primary-fill-foreground), var(--primary-950));
+	/* text in the primary colour (links, active nav label): never a fill */
+	--primary-text: light-dark(var(--primary-text-light), var(--primary-on-dark));
+	/* non-text marks, 3:1 (checkbox box, radio dot, switch track, slider, progress, tab underline) */
+	--primary-indicator: light-dark(var(--primary-ring), var(--primary-on-dark));
+	--primary-indicator-foreground: light-dark(oklch(1 0 0), var(--primary-950));
 	/* OPAQUE hover/active fills (replace `hover:bg-primary/90`, whose alpha lets the surface
 	   through and drops the label to 3.9:1): light darkens toward black, dark lightens toward white,
 	   the direction that raises the contrast of primary-foreground. */
 	--primary-hover: light-dark(
-		color-mix(in oklch, var(--primary) 85%, black),
+		color-mix(in oklch, var(--primary) 85%, var(--primary-hover-toward)),
 		color-mix(in oklch, var(--primary) 85%, white)
 	);
 	--primary-soft: light-dark(
@@ -177,7 +189,7 @@
 		color-mix(in oklch, var(--palette-info-400) 15%, var(--dark-900))
 	);
 
-	--chart-1: var(--primary);
+	--chart-1: var(--primary-indicator);
 	--chart-2: var(--success);
 	--chart-3: var(--warning);
 	--chart-4: var(--info);
@@ -185,17 +197,21 @@
 
 	/* sidebar (light sidebar colours) */
 	--sidebar: light-dark(oklch(1 0 0), var(--dark-900));
-	--sidebar-foreground: light-dark(oklch(0.551 0.027 264.364), var(--dark-400));
+	/* the dark-contrast text of the owner's direction: the muted foreground, not a mid grey (plan 3.4) */
+	--sidebar-foreground: light-dark(var(--muted-foreground), var(--dark-300));
 	--sidebar-primary: var(--primary);
 	--sidebar-primary-foreground: var(--primary-foreground);
-	--sidebar-accent-foreground: light-dark(var(--primary-solid), var(--primary-on-dark));
-	--sidebar-accent: color-mix(in oklch, var(--sidebar-accent-foreground) 10%, transparent);
+	--sidebar-accent-foreground: var(--primary-text);
+	/* OPAQUE active-item fill (plan 6.2): a text pair never depends on an unknown backdrop */
+	--sidebar-accent: color-mix(in oklab, var(--sidebar-accent-foreground) 12%, var(--sidebar));
 	--sidebar-border: light-dark(oklch(0.928 0.006 264.531), var(--dark-800));
 	/* the ring and the group labels follow the sidebar colour: they are re-pointed by the
 	   data-sidebar-colors blocks below through --sidebar-accent-foreground, which is always
 	   readable on that sidebar (shadcn's `ring-sidebar-ring/50` and `/70` labels were not). */
 	--sidebar-ring: var(--sidebar-accent-foreground);
 	--sidebar-muted-foreground: var(--sidebar-foreground);
+	/* nav icons: the accent on the light sidebar (HIG Sidebars), the sidebar text elsewhere */
+	--sidebar-icon: var(--sidebar-foreground);
 }
 
 /* ── mode ─────────────────────────────────────────────────────────── */
@@ -225,7 +241,10 @@
 	--primary-800: var(--palette-green-800);
 	--primary-900: var(--palette-green-900);
 	--primary-950: var(--palette-green-950);
-	--primary-solid: var(--primary-800);
+	--primary-fill: var(--primary-500);
+	--primary-fill-foreground: var(--primary-950);
+	--primary-hover-toward: white;
+	--primary-text-light: var(--primary-800);
 	--primary-on-dark: var(--primary-400);
 	--primary-ring: var(--primary-700);
 }
@@ -241,7 +260,10 @@
 	--primary-800: var(--palette-violet-800);
 	--primary-900: var(--palette-violet-900);
 	--primary-950: var(--palette-violet-950);
-	--primary-solid: var(--primary-700);
+	--primary-fill: var(--primary-600);
+	--primary-fill-foreground: oklch(1 0 0);
+	--primary-hover-toward: black;
+	--primary-text-light: var(--primary-700);
 	--primary-on-dark: var(--primary-400);
 	--primary-ring: var(--primary-500);
 }
@@ -257,7 +279,11 @@
 	--primary-800: var(--palette-orange-800);
 	--primary-900: var(--palette-orange-900);
 	--primary-950: var(--palette-orange-950);
-	--primary-solid: var(--primary-700);
+	/* step 600 reaches 4.4997:1 under white (the gate wants 4.5) and step 500 + 950 fails in black-white (3.4): 4% toward black */
+	--primary-fill: color-mix(in oklch, var(--primary-600) 96%, black);
+	--primary-fill-foreground: oklch(1 0 0);
+	--primary-hover-toward: black;
+	--primary-text-light: var(--primary-700);
 	--primary-on-dark: var(--primary-400);
 	--primary-ring: var(--primary-600);
 }
@@ -273,7 +299,10 @@
 	--primary-800: var(--palette-teal-800);
 	--primary-900: var(--palette-teal-900);
 	--primary-950: var(--palette-teal-950);
-	--primary-solid: var(--primary-800);
+	--primary-fill: var(--primary-500);
+	--primary-fill-foreground: var(--primary-950);
+	--primary-hover-toward: white;
+	--primary-text-light: var(--primary-800);
 	--primary-on-dark: var(--primary-400);
 	--primary-ring: var(--primary-700);
 }
@@ -289,7 +318,10 @@
 	--primary-800: var(--palette-fuchsia-800);
 	--primary-900: var(--palette-fuchsia-900);
 	--primary-950: var(--palette-fuchsia-950);
-	--primary-solid: var(--primary-700);
+	--primary-fill: var(--primary-600);
+	--primary-fill-foreground: oklch(1 0 0);
+	--primary-hover-toward: black;
+	--primary-text-light: var(--primary-700);
 	--primary-on-dark: var(--primary-400);
 	--primary-ring: var(--primary-600);
 }
@@ -305,7 +337,10 @@
 	--primary-800: var(--palette-lime-800);
 	--primary-900: var(--palette-lime-900);
 	--primary-950: var(--palette-lime-950);
-	--primary-solid: var(--primary-800);
+	--primary-fill: var(--primary-500);
+	--primary-fill-foreground: var(--primary-950);
+	--primary-hover-toward: white;
+	--primary-text-light: var(--primary-800);
 	--primary-on-dark: var(--primary-400);
 	--primary-ring: var(--primary-700);
 }
@@ -321,7 +356,10 @@
 	--primary-800: var(--palette-amber-800);
 	--primary-900: var(--palette-amber-900);
 	--primary-950: var(--palette-amber-950);
-	--primary-solid: var(--primary-800);
+	--primary-fill: var(--primary-500);
+	--primary-fill-foreground: var(--primary-950);
+	--primary-hover-toward: white;
+	--primary-text-light: var(--primary-800);
 	--primary-on-dark: var(--primary-400);
 	--primary-ring: var(--primary-700);
 }
@@ -385,9 +423,12 @@
 }
 
 /* ── sidebar colours (Domiex sidebar-color.css; Tailwind references as v4 oklch) ── */
+:root[data-sidebar-colors='light'] {
+	--sidebar-icon: var(--primary-indicator);
+}
 :root[data-sidebar-colors='dark'] {
 	--sidebar: var(--swatch-sidebar-dark);
-	--sidebar-foreground: oklch(0.707 0.022 261.325);
+	--sidebar-foreground: oklch(0.82 0.02 261);
 	--sidebar-accent-foreground: oklch(0.985 0.002 247.839);
 	--sidebar-border: var(--swatch-sidebar-dark);
 }
@@ -399,13 +440,13 @@
 }
 :root[data-sidebar-colors='purple'] {
 	--sidebar: var(--swatch-sidebar-purple);
-	--sidebar-foreground: #b98fd7;
+	--sidebar-foreground: oklch(0.8 0.09 305);
 	--sidebar-accent-foreground: #dfd3eb;
 	--sidebar-border: var(--swatch-sidebar-purple);
 }
 :root[data-sidebar-colors='sky'] {
 	--sidebar: var(--swatch-sidebar-sky);
-	--sidebar-foreground: oklch(0.828 0.111 230.318);
+	--sidebar-foreground: oklch(0.88 0.07 230);
 	--sidebar-accent-foreground: oklch(0.977 0.013 236.62);
 	--sidebar-border: var(--swatch-sidebar-sky);
 }

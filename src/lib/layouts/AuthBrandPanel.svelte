@@ -20,7 +20,7 @@
 	<BrandMark wordmark size="lg" class="text-foreground" />
 
 	<div class="bg-card border-border rounded-2xl border px-7 py-6 shadow-sm">
-		<p class="text-primary text-4xl leading-tight font-bold tracking-tight">
+		<p class="text-primary-text text-4xl leading-tight font-bold tracking-tight">
 			{$_('auth.brand.headline')}
 		</p>
 	</div>
@@ -35,7 +35,7 @@
 				class="bg-card border-border flex items-center gap-3.5 rounded-full border py-2.5 ps-4 pe-3 shadow-sm"
 			>
 				<span
-					class="bg-primary-soft text-primary inline-flex size-9 shrink-0 items-center justify-center rounded-lg"
+					class="bg-primary-soft text-primary-text inline-flex size-9 shrink-0 items-center justify-center rounded-lg"
 				>
 					<Icon icon={feature.icon} size="md" />
 				</span>

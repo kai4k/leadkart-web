@@ -173,7 +173,7 @@
 				(error || localError) && 'border-destructive'
 			)}
 		>
-			<Icon icon={UploadCloud} size="md" class="mt-0.5 shrink-0 text-primary" />
+			<Icon icon={UploadCloud} size="md" class="mt-0.5 shrink-0 text-primary-text" />
 			<div class="flex min-w-0 flex-1 flex-col gap-1">
 				{#each files as f, i (`${f.name}-${i}`)}
 					<div class="min-w-0">
@@ -221,7 +221,7 @@
 			<Icon
 				icon={UploadCloud}
 				size="xl"
-				class={cn(isDragOver ? 'text-primary' : 'text-muted-foreground')}
+				class={cn(isDragOver ? 'text-primary-text' : 'text-muted-foreground')}
 			/>
 			<p class="text-sm font-medium text-foreground">{placeholder ?? $_('form.file.drop')}</p>
 			{#if hint}

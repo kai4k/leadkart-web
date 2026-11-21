@@ -26,7 +26,7 @@
 					secondary:
 						'bg-secondary text-secondary-foreground hover:bg-secondary-hover aria-expanded:bg-secondary',
 					ghost: 'hover:bg-muted hover:text-foreground aria-expanded:bg-muted',
-					link: 'text-primary underline-offset-4 hover:text-primary-hover hover:underline',
+					link: 'text-primary-text underline-offset-4 hover:underline',
 					tonal: 'border-border bg-muted text-foreground hover:bg-secondary'
 				},
 				size: {

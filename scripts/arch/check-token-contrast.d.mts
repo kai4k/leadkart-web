@@ -52,3 +52,4 @@ export function checkCss(
 export function check(): CheckResult;
 export function themeFiles(root?: string): string[];
 export const PATTERN_TOPBAR: { selector: string; attrs: Record<string, string> };
+export const UNGATED_THEME_FILES: string[];

@@ -231,3 +231,19 @@ focus, `aria-checked`, Space/Enter) rendered as a whole tile (a preview plus its
 circle. It carries only the layout and the focus ring; the checked look is the caller's
 (`group-aria-checked/tile:`), because the tile's content decides it. Used by the ThemeCustomizer
 (`layouts/CustomizerTile.svelte`); the regenerated circle `Item` is unchanged.
+
+## Primary roles (plan G1)
+
+The primary colour has three roles and the normaliser (`scripts/shadcn/normalize.mjs`) writes them:
+
+- A bare `text-primary` becomes `text-primary-text` everywhere (a link, an active label: 4.5:1 on every
+  surface); `hover:text-primary-hover` becomes `hover:underline` (a link does not change colour on hover).
+- In the `checkbox`, `radio-group`, `switch`, `slider`, `progress` and `tabs` folders (`INDICATOR_FAMILIES`)
+  `bg-primary`, `border-primary`, `text-primary-foreground` and `bg-primary-foreground` become the
+  `primary-indicator` tokens (non-text marks, 3:1). `button`, `badge` and the other labelled fills keep
+  `bg-primary` + `text-primary-foreground`: the fill is vivid and the label is white or step 950.
+- Hand edits recorded here: `StatCard`, `StatusPill`, `stepper/StepperStep` and `avatar/avatar-group` read
+  `text-primary-text` where they wrote `text-primary` inside a variant map the normaliser does not reach;
+  `progress/Progress.svelte` and `slider/Slider.svelte` are normalised files.
+- The hand-written `radio-group/radio-group-tile.svelte` keeps `border-primary` (a selected tile is a fill
+  boundary, gated through `primary` on the surfaces by the labelled-fill pairs).

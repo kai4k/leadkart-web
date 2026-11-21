@@ -62,12 +62,12 @@
 	)}
 >
 	<BitsSlider.Range
-		class={cn('bg-primary h-full rounded-full', "data-[orientation='vertical']:w-full")}
+		class={cn('bg-primary-indicator h-full rounded-full', "data-[orientation='vertical']:w-full")}
 	/>
 	<BitsSlider.Thumb
 		index={0}
 		class={cn(
-			'bg-primary block size-4 rounded-full shadow-md',
+			'bg-primary-indicator block size-4 rounded-full shadow-md',
 			'border-2 border-[var(--card)]',
 			'transition-transform duration-[var(--duration-fast)]',
 			'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none',
