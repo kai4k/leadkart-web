@@ -99,7 +99,10 @@ describe('check-token-contrast: the real tokens', () => {
 		expect(problems).toEqual([]);
 		// light and dark cross every dark palette; black-white is a light mode, so one palette
 		expect(combinations).toBe(
-			AXES.colors.length * AXES.sidebarColors.length * (2 * AXES.darkPalette.length + 1)
+			AXES.colors.length *
+				AXES.sidebarColors.length *
+				(2 * AXES.darkPalette.length + 1) *
+				AXES.transparency.length
 		);
 		expect(checked).toBe(pairs * combinations);
 	});
@@ -160,7 +163,10 @@ describe('check-token-contrast: black-white mode (the customizer offers it)', ()
 	it('runs one dark palette for it (it is a light mode) and every sidebar colour', () => {
 		const { combinations } = check();
 		expect(combinations).toBe(
-			AXES.colors.length * AXES.sidebarColors.length * (2 * AXES.darkPalette.length + 1)
+			AXES.colors.length *
+				AXES.sidebarColors.length *
+				(2 * AXES.darkPalette.length + 1) *
+				AXES.transparency.length
 		);
 	});
 });

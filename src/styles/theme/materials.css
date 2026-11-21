@@ -36,9 +36,13 @@
 
 	--material-muted-foreground: light-dark(
 		var(--muted-foreground),
-		color-mix(in oklch, var(--dark-300) 50%, var(--dark-400))
+		color-mix(in oklch, var(--dark-300) 75%, var(--dark-400))
 	);
 	--material-ring: light-dark(var(--primary-text), var(--ring));
+	/* a mark in the primary colour on a BAR (the hnav's active underline): the dark text step, not the vivid
+	   indicator. Over the darkest backdrop a bar can have, the indicators of violet, orange, fuchsia and the
+	   light palettes reach only 2.6-2.7:1; the text step is gated at 4.5 on every surface. */
+	--material-indicator: light-dark(var(--primary-text), var(--primary-indicator));
 	--material-input-fill: light-dark(var(--card), var(--dark-800));
 	--material-control: light-dark(
 		color-mix(in srgb, var(--foreground) 6%, transparent),

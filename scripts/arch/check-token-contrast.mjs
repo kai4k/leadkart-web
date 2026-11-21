@@ -28,6 +28,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { clampRgb, converter, interpolate, parse, wcagContrast } from 'culori';
+import { corners, paint } from './lib/material-bound.mjs';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const INDEX_CSS = 'src/styles/index.css';
@@ -62,13 +63,17 @@ export const AXES = {
 	// mode painted through `filter: grayscale(1)` on <html>, measured on the grayscale (pairRatio)
 	mode: ['light', 'dark', 'black-white'],
 	darkPalette: ['default', 'zinc', 'stone', 'neutral', 'gray'],
-	sidebarColors: ['light', 'dark', 'brand', 'purple', 'sky']
+	sidebarColors: ['light', 'dark', 'brand', 'purple', 'sky'],
+	// the Transparency preference: `glass` is the default (no attribute rule), `reduced` and `off` re-declare
+	// the material fills in materials.css
+	transparency: ['glass', 'reduced', 'off']
 };
 const ATTRIBUTE_FOR = {
 	colors: 'data-colors',
 	mode: 'data-mode',
 	darkPalette: 'data-dark-palette',
-	sidebarColors: 'data-sidebar-colors'
+	sidebarColors: 'data-sidebar-colors',
+	transparency: 'data-transparency'
 };
 
 const TEXT = 4.5;
@@ -401,13 +406,268 @@ export function pairRatio(pair, props, mode) {
 	return ratio(fg, bg);
 }
 
+// ── materials (plan G3): the legibility bound of translucent surfaces ───────────────────────────
+
+const GLASS_MAX_ALPHA = 0.9;
+const BLACK = { mode: 'rgb', r: 0, g: 0, b: 0 };
+const WHITE = { mode: 'rgb', r: 1, g: 1, b: 1 };
+
+/**
+ * @typedef {{ control: string, text: string[], min?: number }} OnControl
+ * @typedef {{ layer: string, fill: string, surface: string, saturate: string, contrast: string,
+ *   backdrops: string[], under?: string, text: string[], marks: string[], onControl?: OnControl[] }} MaterialLayer
+ * `surface` is the opaque token the fill is `N%` of (the `--needs` table solves for N).
+ * `backdrops` are tokens (resolved for the combination) and the literals '#000' / '#fff': any image,
+ * avatar, logo or the auth particles count as black and white. `under` is a token (the scrim)
+ * composited over each backdrop first. Text needs 4.5, marks 3.
+ */
+const BAR_BACKDROPS = [
+	'background',
+	'card',
+	'muted',
+	'primary',
+	'primary-soft',
+	'foreground',
+	'destructive-soft',
+	'warning-soft',
+	'#000',
+	'#fff'
+];
+const FLOAT_BACKDROPS = ['background', 'card', 'muted', 'primary', 'foreground', '#000', '#fff'];
+const BAR = {
+	fill: 'material-bar-fill',
+	surface: 'card',
+	saturate: 'material-bar-saturate',
+	contrast: 'material-bar-contrast',
+	backdrops: BAR_BACKDROPS,
+	text: ['foreground', 'material-muted-foreground'],
+	marks: ['material-ring', 'material-indicator'],
+	onControl: [{ control: 'material-control', text: ['foreground'] }]
+};
+const PANE = {
+	fill: 'material-pane-fill',
+	surface: 'popover',
+	saturate: 'material-pane-saturate',
+	contrast: 'material-pane-contrast'
+};
+const SIDEBAR = {
+	fill: 'material-sidebar-fill',
+	surface: 'sidebar',
+	saturate: 'material-pane-saturate',
+	contrast: 'material-pane-contrast',
+	text: ['sidebar-foreground', 'sidebar-muted-foreground'],
+	marks: ['sidebar-ring', 'sidebar-icon'],
+	onControl: [{ control: 'sidebar-accent', text: ['sidebar-accent-foreground'] }]
+};
+const OVERLAY_TEXT = [
+	'foreground',
+	'material-muted-foreground',
+	'destructive',
+	'primary-text',
+	'success',
+	'warning',
+	'info'
+];
+const INPUT_WELL = { control: 'material-input-fill', text: ['foreground'] };
+
+/** Every layer a material is used on (plan 3.2). A material utility with no layer here fails the gate's test. */
+/** @type {MaterialLayer[]} */
+export const MATERIAL_LAYERS = [
+	{ layer: 'topbar', ...BAR },
+	{ layer: 'hnav', ...BAR },
+	{ layer: 'bulk-bar', ...BAR },
+	{
+		layer: 'sidebar-desktop',
+		...SIDEBAR,
+		backdrops: ['background', 'primary-100', 'primary-200', 'primary-soft', 'primary-500']
+	},
+	{ layer: 'sidebar-mobile', ...SIDEBAR, backdrops: ['#000', '#fff'], under: 'scrim' },
+	{
+		layer: 'overlay',
+		...PANE,
+		backdrops: ['#000', '#fff'],
+		under: 'scrim',
+		text: OVERLAY_TEXT,
+		marks: ['material-ring', 'input', 'primary-indicator'],
+		onControl: [INPUT_WELL]
+	},
+	{
+		layer: 'float',
+		...PANE,
+		backdrops: FLOAT_BACKDROPS,
+		text: OVERLAY_TEXT,
+		marks: ['material-ring', 'primary-indicator'],
+		onControl: [
+			{ control: 'material-control-hover', text: ['foreground', 'material-muted-foreground'] },
+			INPUT_WELL
+		]
+	},
+	{
+		layer: 'auth-card',
+		...PANE,
+		backdrops: [
+			'background',
+			'primary-100',
+			'primary-200',
+			'primary-300',
+			'primary-400',
+			'primary-500',
+			'primary-600',
+			'foreground'
+		],
+		text: ['foreground', 'material-muted-foreground', 'primary-text', 'destructive'],
+		marks: ['material-ring', 'input'],
+		onControl: [INPUT_WELL]
+	}
+];
+
+const key = (c) => `${c.r.toFixed(5)},${c.g.toFixed(5)},${c.b.toFixed(5)}`;
+
+/** One combination's resolver: opaque tokens are memoised, a token that mixes toward transparent is not. */
+function makeResolver(props, mode) {
+	const memo = new Map();
+	return (name, over = WHITE) => {
+		const raw = props.get(`--${name}`);
+		if (raw === undefined) throw new Error(`--${name} is not defined`);
+		const clear = substituteVars(raw, props).includes('transparent');
+		const k = clear ? `${name}|${key(clampRgb(toRgb(over)))}` : name;
+		if (!memo.has(k)) memo.set(k, resolveColor(name, props, mode, over));
+		return memo.get(k);
+	};
+}
+
+function numberToken(props, name) {
+	const raw = props.get(`--${name}`);
+	if (raw === undefined) throw new Error(`--${name} is not defined`);
+	const n = Number.parseFloat(substituteVars(raw, props));
+	if (!Number.isFinite(n)) throw new Error(`--${name} is not a number: ${raw}`);
+	return n;
+}
+
+function literalOrToken(resolve, name, over) {
+	if (name === '#000') return BLACK;
+	if (name === '#fff') return WHITE;
+	// any other literal colour (a fixture's, or a future documented backdrop)
+	if (name.startsWith('#')) {
+		const c = parse(name);
+		if (!c) throw new Error(`cannot parse backdrop colour "${name}"`);
+		return c;
+	}
+	return resolve(name, over);
+}
+
+const ratioIn = (fg, bg, mode) =>
+	mode === 'black-white'
+		? ratio(grayscale(clampRgb(toRgb(fg))), grayscale(clampRgb(toRgb(bg))))
+		: ratio(fg, bg);
+
+/** The opacity (0..1) a fill token paints at: composite over black and over white and compare. */
+export function fillAlpha(resolve, fillName) {
+	const w = clampRgb(toRgb(resolve(fillName, WHITE)));
+	const b = clampRgb(toRgb(resolve(fillName, BLACK)));
+	return 1 - (w.r - b.r);
+}
+
+/**
+ * The backdrop corners of a layer, after the filter, with the layer's `under` scrim applied first.
+ * @returns {Array<{ space: string, side: string, color: object }>}
+ */
+export function layerCorners(props, mode, layer) {
+	const resolve = makeResolver(props, mode);
+	if (!Array.isArray(layer.backdrops) || layer.backdrops.length === 0)
+		throw new Error(`layer "${layer.layer}" declares no backdrop set`);
+	const set = layer.backdrops.map((b) => {
+		const base = literalOrToken(resolve, b, WHITE);
+		return layer.under ? resolve(layer.under, base) : base;
+	});
+	return corners(set, numberToken(props, layer.saturate), numberToken(props, layer.contrast));
+}
+
+/**
+ * Every pair of one layer for one combination.
+ * @returns {{ problems: string[], results: Array<{ layer: string, kind: string, token: string, on: string, corner: string, ratio: number, min: number }> }}
+ */
+export function checkMaterials(props, mode, label, transparency, layers = MATERIAL_LAYERS) {
+	const problems = [];
+	const results = [];
+	for (const layer of layers) {
+		try {
+			const resolve = makeResolver(props, mode);
+			if (!layer.text?.length && !layer.marks?.length)
+				throw new Error(`layer "${layer.layer}" declares no text and no marks`);
+			const cs = layerCorners(props, mode, layer);
+
+			if (transparency === 'glass') {
+				const alpha = fillAlpha(resolve, layer.fill);
+				if (alpha >= GLASS_MAX_ALPHA - 1e-9)
+					problems.push(
+						`${label} · ${layer.layer}: ${layer.fill} at ${alpha.toFixed(2)} is not glass: lift the text token (vibrancy), add a dim layer behind the layer, or restrict its backdrop · ${alpha.toFixed(2)} >= ${GLASS_MAX_ALPHA.toFixed(2)}`
+					);
+			}
+
+			for (const { space, side, color } of cs) {
+				const corner = `${side}/${space}`;
+				const composite = resolve(layer.fill, color);
+				const record = (kind, token, on, fg, bg, min) => {
+					const r = ratioIn(fg, bg, mode);
+					results.push({ layer: layer.layer, kind, token, on, corner, ratio: r, min });
+					if (r < min)
+						problems.push(
+							`${label} · ${layer.layer}: ${token} on ${on} over the ${side === 'lo' ? 'darkest' : 'lightest'} backdrop (${space}) · ${r.toFixed(2)} < ${min}`
+						);
+				};
+				for (const t of layer.text ?? [])
+					record('text', t, layer.fill, resolve(t, composite), composite, TEXT);
+				for (const m of layer.marks ?? [])
+					record('mark', m, layer.fill, resolve(m, composite), composite, UI);
+				for (const oc of layer.onControl ?? []) {
+					const control = resolve(oc.control, composite);
+					for (const t of oc.text)
+						record(
+							'text',
+							t,
+							`${oc.control} on ${layer.fill}`,
+							resolve(t, control),
+							control,
+							oc.min ?? TEXT
+						);
+				}
+			}
+		} catch (e) {
+			problems.push(`${label} · ${layer.layer} · ${e.message}`);
+		}
+	}
+	return { problems, results };
+}
+
+/**
+ * The smallest fill opacity (scanning down from 1 in 0.5% steps) at which `token` still reaches `min`
+ * over the layer's worst backdrop corner. `null` when even an opaque surface fails. Informational: the
+ * `--needs` table, and the proof that a dim layer (`under`) lowers it.
+ */
+export function minAlpha(props, mode, layer, token, min = TEXT) {
+	const resolve = makeResolver(props, mode);
+	const surface = resolve(layer.surface);
+	const cs = layerCorners(props, mode, layer);
+	const passes = (alpha) =>
+		cs.every(({ color }) => {
+			const composite = paint(surface, alpha, color);
+			return ratioIn(resolve(token, composite), composite, mode) >= min;
+		});
+	if (!passes(1)) return null;
+	let a = 1;
+	while (a > 0 && passes(a - 0.005)) a -= 0.005;
+	return Math.round(a * 1000) / 1000;
+}
+
 // ── gate ───────────────────────────────────────────────────────────────────
 
 /**
  * @param {Array<[string, string]>} files [name, css]
- * @param {{ pairs?: Pair[], axes?: typeof AXES }} [options]
+ * @param {{ pairs?: Pair[], axes?: typeof AXES, layers?: MaterialLayer[] }} [options] `layers` are the
+ *   material layers to prove (none by default: a fixture without materials has no layer to check)
  */
-export function checkCss(files, { pairs = PAIRS, axes = AXES } = {}) {
+export function checkCss(files, { pairs = PAIRS, axes = AXES, layers = [] } = {}) {
 	const problems = [];
 	let all = [];
 	for (const [file, css] of files) {
@@ -416,40 +676,48 @@ export function checkCss(files, { pairs = PAIRS, axes = AXES } = {}) {
 		problems.push(...errors);
 		all = all.concat(rules.map((r, i) => ({ ...r, order: all.length + i })));
 	}
-	if (problems.length) return { problems, combinations: 0, checked: 0, pairs: pairs.length };
+	if (problems.length)
+		return { problems, combinations: 0, checked: 0, pairs: pairs.length, materialChecks: 0 };
 
 	let combinations = 0;
 	let checked = 0;
+	let materialChecks = 0;
 	for (const colors of axes.colors)
 		for (const mode of axes.mode)
 			// black-white resolves as light: the dark palette cannot change it, so run it once
 			for (const darkPalette of mode === 'black-white'
 				? axes.darkPalette.slice(0, 1)
 				: axes.darkPalette)
-				for (const sidebarColors of axes.sidebarColors) {
-					combinations++;
-					const combo = { colors, mode, darkPalette, sidebarColors };
-					const props = propertiesFor(all, combo);
-					const label = `${colors}/${mode}/${darkPalette}/${sidebarColors}`;
-					for (const pair of pairs) {
-						try {
-							const r = pairRatio(
-								pair,
-								pair.scope ? propertiesFor(all, combo, pair.scope) : props,
-								mode
-							);
-							checked++;
-							if (r < pair.min)
-								problems.push(`${label} · ${pair.label} · ${r.toFixed(2)} < ${pair.min}`);
-						} catch (e) {
-							problems.push(`${label} · ${pair.label} · ${e.message}`);
+				for (const sidebarColors of axes.sidebarColors)
+					for (const transparency of axes.transparency ?? ['glass']) {
+						combinations++;
+						const combo = { colors, mode, darkPalette, sidebarColors, transparency };
+						const props = propertiesFor(all, combo);
+						const label = `${colors}/${mode}/${darkPalette}/${sidebarColors}/${transparency}`;
+						for (const pair of pairs) {
+							try {
+								const r = pairRatio(
+									pair,
+									pair.scope ? propertiesFor(all, combo, pair.scope) : props,
+									mode
+								);
+								checked++;
+								if (r < pair.min)
+									problems.push(`${label} · ${pair.label} · ${r.toFixed(2)} < ${pair.min}`);
+							} catch (e) {
+								problems.push(`${label} · ${pair.label} · ${e.message}`);
+							}
+						}
+						if (layers.length > 0) {
+							const m = checkMaterials(props, mode, label, transparency, layers);
+							materialChecks += m.results.length;
+							problems.push(...m.problems);
 						}
 					}
-				}
 	// never pass vacuously
 	if (pairs.length === 0 || combinations === 0)
 		problems.push('no pairs or no combinations checked');
-	return { problems, combinations, checked, pairs: pairs.length };
+	return { problems, combinations, checked, pairs: pairs.length, materialChecks };
 }
 
 export function check() {
@@ -460,15 +728,126 @@ export function check() {
 		if (!existsSync(path)) problems.push(`${file} not found`);
 		else files.push([file, readFileSync(path, 'utf8')]);
 	}
-	if (problems.length) return { problems, combinations: 0, checked: 0, pairs: 0 };
-	return checkCss(files);
+	if (problems.length)
+		return { problems, combinations: 0, checked: 0, pairs: 0, materialChecks: 0 };
+	return checkCss(files, { layers: MATERIAL_LAYERS });
+}
+
+/** The parsed rules of every theme file the gate reads (for the `--needs` report). */
+function loadRules() {
+	let all = [];
+	for (const file of themeFiles()) {
+		const { rules } = parseRules(readFileSync(join(ROOT, file), 'utf8'), file, {
+			lenient: file.endsWith('/layouts.css')
+		});
+		all = all.concat(rules.map((r, i) => ({ ...r, order: all.length + i })));
+	}
+	return all;
+}
+
+const hex = (c) => {
+	const x = clampRgb(toRgb(c));
+	return `#${[x.r, x.g, x.b]
+		.map((v) =>
+			Math.round(v * 255)
+				.toString(16)
+				.padStart(2, '0')
+		)
+		.join('')}`;
+};
+const luminance = (c) => {
+	const x = clampRgb(toRgb(c));
+	const l = (v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+	return 0.2126 * l(x.r) + 0.7152 * l(x.g) + 0.0722 * l(x.b);
+};
+
+/**
+ * `--needs`: for the default palette, per layer and mode, the arithmetic of the bound (token -> material
+ * -> darkest and lightest backdrop -> contrast), the smallest opacity each text token needs, and the
+ * worst ratio over EVERY combination. Informational: it is how the alphas in materials.css were tuned.
+ */
+export function needsReport() {
+	const all = loadRules();
+	const lines = [];
+	// worst ratio per layer/token over every combination (the margin at the chosen alpha)
+	const worst = new Map();
+	for (const colors of AXES.colors)
+		for (const mode of AXES.mode)
+			for (const darkPalette of mode === 'black-white'
+				? AXES.darkPalette.slice(0, 1)
+				: AXES.darkPalette)
+				for (const sidebarColors of AXES.sidebarColors) {
+					const props = propertiesFor(all, {
+						colors,
+						mode,
+						darkPalette,
+						sidebarColors,
+						transparency: 'glass'
+					});
+					const { results } = checkMaterials(props, mode, '', 'glass');
+					for (const r of results) {
+						const k = `${mode === 'dark' ? 'dark' : 'light'}|${r.layer}|${r.token}`;
+						worst.set(k, Math.min(worst.get(k) ?? Infinity, r.ratio));
+					}
+				}
+	for (const mode of ['light', 'dark']) {
+		const combo = {
+			colors: 'leadkart',
+			mode,
+			darkPalette: 'default',
+			sidebarColors: 'light',
+			transparency: 'glass'
+		};
+		const props = propertiesFor(all, combo);
+		const resolve = makeResolver(props, mode);
+		lines.push(`\n== leadkart / ${mode} / default dark palette / light sidebar / glass ==`);
+		for (const layer of MATERIAL_LAYERS) {
+			const alpha = fillAlpha(resolve, layer.fill);
+			const sat = numberToken(props, layer.saturate);
+			const con = numberToken(props, layer.contrast);
+			lines.push(
+				`\n[${layer.layer}] fill ${layer.fill} alpha ${alpha.toFixed(2)}, saturate(${sat}) contrast(${con})${layer.under ? `, under ${layer.under}` : ''}`
+			);
+			const cs = layerCorners(props, mode, layer).filter((c) => c.space === 'srgb');
+			for (const { side, color } of cs) {
+				const composite = resolve(layer.fill, color);
+				lines.push(
+					`  ${side === 'lo' ? 'darkest' : 'lightest'} backdrop after filter ${hex(color)} -> composite ${hex(composite)} (Y ${luminance(composite).toFixed(3)})`
+				);
+			}
+			for (const token of layer.text ?? []) {
+				const ratios = cs.map(({ color }) => {
+					const composite = resolve(layer.fill, color);
+					const fg = resolve(token, composite);
+					return `${ratioIn(fg, composite, mode).toFixed(2)}`;
+				});
+				const fgY = luminance(resolve(token, WHITE)).toFixed(4);
+				const need = minAlpha(props, mode, layer, token);
+				const w = worst.get(`${mode}|${layer.layer}|${token}`);
+				lines.push(
+					`  ${token.padEnd(28)} Y ${fgY}  darkest ${ratios[0]}  lightest ${ratios[1]}  min alpha ${need === null ? 'n/a (fails opaque)' : need.toFixed(3)}  worst over all combinations ${w?.toFixed(2)}`
+				);
+			}
+			for (const mark of layer.marks ?? []) {
+				const w = worst.get(`${mode}|${layer.layer}|${mark}`);
+				lines.push(
+					`  mark ${mark.padEnd(23)} worst over all combinations ${w?.toFixed(2)} (needs 3)`
+				);
+			}
+		}
+	}
+	return lines.join('\n');
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-	const { problems, combinations, checked, pairs } = check();
+	if (process.argv.includes('--needs')) {
+		console.log(needsReport());
+		process.exit(0);
+	}
+	const { problems, combinations, checked, pairs, materialChecks } = check();
 	if (problems.length === 0) {
 		console.log(
-			`✓ check-token-contrast: ${pairs} pair(s) x ${combinations} combination(s) = ${checked} check(s) meet WCAG AA.`
+			`✓ check-token-contrast: ${pairs} pair(s) x ${combinations} combination(s) = ${checked} check(s), plus ${materialChecks} material check(s) over ${MATERIAL_LAYERS.length} layer(s) and every transparency level, meet WCAG AA.`
 		);
 		process.exit(0);
 	}

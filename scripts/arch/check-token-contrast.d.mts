@@ -14,6 +14,7 @@ export interface Axes {
 	mode: string[];
 	darkPalette: string[];
 	sidebarColors: string[];
+	transparency?: string[];
 }
 export interface Rule {
 	conditions: Record<string, string>;
@@ -26,8 +27,9 @@ export interface CheckResult {
 	combinations: number;
 	checked: number;
 	pairs: number;
+	materialChecks?: number;
 }
-export const AXES: Axes;
+export const AXES: Axes & { transparency: string[] };
 export const PAIRS: Pair[];
 export function parseRules(
 	css: string,
@@ -47,9 +49,48 @@ export function composite(
 export function pairRatio(pair: Pair, props: Map<string, string>, mode: string): number;
 export function checkCss(
 	files: Array<[string, string]>,
-	options?: { pairs?: Pair[]; axes?: Axes }
+	options?: { pairs?: Pair[]; axes?: Axes; layers?: MaterialLayer[] }
 ): CheckResult;
 export function check(): CheckResult;
 export function themeFiles(root?: string): string[];
 export const PATTERN_TOPBAR: { selector: string; attrs: Record<string, string> };
 export const UNGATED_THEME_FILES: string[];
+export interface MaterialLayer {
+	layer: string;
+	fill: string;
+	surface: string;
+	saturate: string;
+	contrast: string;
+	backdrops: string[];
+	under?: string;
+	text: string[];
+	marks: string[];
+	onControl?: Array<{ control: string; text: string[]; min?: number }>;
+}
+export const MATERIAL_LAYERS: MaterialLayer[];
+export function checkMaterials(
+	props: Map<string, string>,
+	mode: string,
+	label: string,
+	transparency: string,
+	layers?: MaterialLayer[]
+): {
+	problems: string[];
+	results: Array<{
+		layer: string;
+		kind: string;
+		token: string;
+		on: string;
+		corner: string;
+		ratio: number;
+		min: number;
+	}>;
+};
+export function minAlpha(
+	props: Map<string, string>,
+	mode: string,
+	layer: MaterialLayer,
+	token: string,
+	min?: number
+): number | null;
+export function needsReport(): string;

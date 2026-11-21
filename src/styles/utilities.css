@@ -173,6 +173,7 @@
 	--muted: var(--material-control);
 	--accent: var(--material-control-hover);
 	--input-fill: var(--material-input-fill);
+	--primary-indicator: var(--material-indicator);
 	@media (forced-colors: active) {
 		/* stylelint-disable-next-line no-invalid-position-declaration -- a nested @media inside @utility is valid (Tailwind 4) */
 		border: 1px solid CanvasText;
