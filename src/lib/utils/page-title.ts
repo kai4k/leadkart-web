@@ -35,7 +35,7 @@ const UNSAFE: ReadonlyArray<readonly [number, number]> = [
 /** ZWNJ and ZWJ shape Persian, Indic and emoji text: allowed INSIDE a word, never at its edges or next to a space */
 const JOINERS = new Set([0x200c, 0x200d]);
 
-export function isUnsafeCodePoint(code: number): boolean {
+function isUnsafeCodePoint(code: number): boolean {
 	return UNSAFE.some(([lo, hi]) => code >= lo && code <= hi);
 }
 
