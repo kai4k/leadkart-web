@@ -23,7 +23,12 @@
 	$effect(() => {
 		if (!session.capabilities) return;
 		const again = () => {
-			if (document.visibilityState !== 'visible' || impersonation.status === 'loading') return;
+			if (
+				document.visibilityState !== 'visible' ||
+				impersonation.status === 'loading' ||
+				impersonation.status === 'mutating'
+			)
+				return;
 			impersonation.reconcile().catch(() => {});
 		};
 		document.addEventListener('visibilitychange', again);

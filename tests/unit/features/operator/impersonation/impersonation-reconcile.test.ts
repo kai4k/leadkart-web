@@ -61,3 +61,12 @@ describe('impersonation reconcile triggers', () => {
 		expect(store.reconcile).toHaveBeenCalledTimes(1);
 	});
 });
+
+describe('impersonation reconcile triggers: never while End is running', () => {
+	it('focus and visibility do not reconcile while the status is mutating', () => {
+		store.status = 'mutating';
+		window.dispatchEvent(new Event('focus'));
+		document.dispatchEvent(new Event('visibilitychange'));
+		expect(store.reconcile).toHaveBeenCalledTimes(1); // the mount one only
+	});
+});

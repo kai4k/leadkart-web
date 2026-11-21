@@ -201,11 +201,22 @@ export function navigateHard(
 		return false;
 	}
 	reloading = true;
-	qc?.clear();
-	// Nothing actionable from the old context stays on screen (a toast's Undo would send from it).
-	toast.dismiss();
-	writeFlag(reason, source);
+	// The release (pageshow, stall timer) is armed FIRST, so nothing below can leave the latch closed with nothing
+	// to open it. The two best-effort steps are isolated: a hard navigation discards the in-memory cache and the
+	// toasts anyway, so carrying on is the safe direction.
 	armRelease(reason, source);
+	try {
+		qc?.clear();
+	} catch {
+		/* best effort */
+	}
+	// Nothing actionable from the old context stays on screen (a toast's Undo would send from it).
+	try {
+		toast.dismiss();
+	} catch {
+		/* best effort */
+	}
+	writeFlag(reason, source);
 	replaceLocation(url);
 	// observers run last: a throwing one can no longer keep the navigation from being requested
 	notifyPendingChange();

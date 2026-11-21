@@ -47,7 +47,12 @@ function createImpersonation(): Impersonation {
 	// The name belongs to ONE session id: it is shown only while that session is the active one.
 	let named = $state<{ sessionId: string; name: string } | null>(null);
 
-	async function reconcile(): Promise<void> {
+	// A ticket per operation (a reconcile or a mutation). A response is applied ONLY while its ticket is still the
+	// latest: a reconcile that was in flight when End started (or when a newer reconcile started) is stale, and
+	// neither puts an ended session back on the banner nor resets the 'mutating' state mid-DELETE.
+	let ticket = 0;
+
+	async function load(mine: number): Promise<void> {
 		if (typeof window === 'undefined') return;
 		const persistedId = window.localStorage.getItem(ACTIVE_SESSION_KEY);
 		if (!persistedId) {
@@ -58,6 +63,7 @@ function createImpersonation(): Impersonation {
 		status = 'loading';
 		try {
 			const { sessions } = await listImpersonationSessions();
+			if (mine !== ticket) return; // stale: a newer operation owns the state
 			const match = sessions.find((s) => s.session_id === persistedId);
 			if (match) {
 				if (named && named.sessionId !== match.session_id) named = null;
@@ -70,12 +76,20 @@ function createImpersonation(): Impersonation {
 				status = 'idle';
 			}
 		} catch (e) {
+			if (mine !== ticket) return;
 			status = 'error';
 			error = describeError(e, { fallback: 'Failed to load impersonation sessions' });
 		}
 	}
 
+	/** Never while a start or an end is running (they own the state); otherwise this is the newest operation. */
+	async function reconcile(): Promise<void> {
+		if (status === 'mutating') return;
+		return load(++ticket);
+	}
+
 	async function start(req: CreateImpersonationSessionRequest, name?: string): Promise<void> {
+		const mine = ++ticket;
 		status = 'mutating';
 		error = null;
 		try {
@@ -83,7 +97,7 @@ function createImpersonation(): Impersonation {
 			window.localStorage.setItem(ACTIVE_SESSION_KEY, session_id);
 			named = name ? { sessionId: session_id, name } : null;
 			// Server doesn't return the full DTO on POST; refetch to populate.
-			await reconcile();
+			await load(mine);
 		} catch (e) {
 			status = 'error';
 			error = describeError(e, { fallback: 'Failed to start impersonation' });
@@ -92,7 +106,8 @@ function createImpersonation(): Impersonation {
 	}
 
 	async function end(): Promise<void> {
-		if (!active) return;
+		if (!active || status === 'mutating') return;
+		++ticket; // any reconcile already in flight is now stale
 		status = 'mutating';
 		try {
 			await endImpersonation(active.session_id);
