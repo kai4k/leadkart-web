@@ -484,7 +484,9 @@ test.describe('Inventory — adjust stock', () => {
 		await expect(page.getByRole('button', { name: /undo/i })).toBeVisible();
 	});
 
-	test('422 with a field code on delta → the field error, never Go words', async ({ page }) => {
+	test('insufficient stock: Go answers 409 insufficient_stock, shown as catalogue copy, never Go words', async ({
+		page
+	}) => {
 		await signInAsTier(page, { tier: 'tenant-admin', permissions: INVENTORY_PERMISSIONS });
 		const small = makeBatch({ quantity_available: 5 });
 		await registerMocks([
@@ -509,13 +511,10 @@ test.describe('Inventory — adjust stock', () => {
 			{
 				method: 'POST',
 				path: `/api/v1/inventory/products/${productIn.id}/movements`,
-				status: 422,
-				body: {
-					// Go's envelope: error + errors: { field: [rule codes] } (a code, never a sentence).
-					error: 'validation_failed',
-					message: 'Adjustment would drive stock below zero',
-					errors: { delta: ['invalid'] }
-				}
+				// inventory/ports/http.go (LogStockMovement): batch.ErrInsufficientStock -> 409 insufficient_stock with
+				// the domain error's text. Go never fills `errors` in the inventory module.
+				status: 409,
+				body: { error: 'insufficient_stock', message: 'batch: insufficient stock' }
 			}
 		]);
 		await page.goto(`/inventory/${productIn.id}`);
@@ -525,9 +524,11 @@ test.describe('Inventory — adjust stock', () => {
 		await page.locator('input[role="spinbutton"]').last().fill('-1000');
 		await page.locator('input[role="spinbutton"]').last().press('Tab');
 		await page.locator('button[type="submit"][form="adjust-stock-form"]').click();
-		// Go's 422 field error (errors.delta) reaches the form as catalogue copy, not as Go's message.
-		await expect(page.getByText('Check this value.').first()).toBeVisible({ timeout: 5000 });
-		await expect(page.getByText(/drive stock below zero/i)).toHaveCount(0);
+		// the typed 409 reaches the dialog as the catalogue line for its code, not as Go's text
+		await expect(page.getByText('There is not enough stock for this change.').first()).toBeVisible({
+			timeout: 5000
+		});
+		await expect(page.getByText(/batch: insufficient stock/i)).toHaveCount(0);
 	});
 });
 
@@ -695,7 +696,7 @@ test.describe('Inventory — create product', () => {
 		});
 	});
 
-	test('409 product_duplicate surfaces banner', async ({ page }) => {
+	test('409 already_exists (a taken SKU) surfaces the catalogue banner', async ({ page }) => {
 		await signInAsTier(page, { tier: 'tenant-admin', permissions: INVENTORY_PERMISSIONS });
 		await registerMocks([
 			{
@@ -708,7 +709,8 @@ test.describe('Inventory — create product', () => {
 				method: 'POST',
 				path: '/api/v1/inventory/products',
 				status: 409,
-				body: { code: 'product_duplicate', message: 'A product with this key already exists' }
+				// inventory/ports/http.go:123 (CreateProduct): a taken SKU answers 409 already_exists
+				body: { error: 'already_exists', message: 'sku already exists in this tenant' }
 			}
 		]);
 		await page.goto('/inventory');
@@ -721,11 +723,12 @@ test.describe('Inventory — create product', () => {
 		await page.locator('input[name="brand_name"]').fill('Dup');
 		await page.locator('input[name="hsn_code"]').fill('30049099');
 		await page.locator('button[type="submit"][form="create-product-form"]').click();
-		// We expect either the banner ("A product with this key already exists")
-		// or a validation message (if comboboxes weren't filled). Accept either.
+		// We expect either the catalogue banner for the code or a validation message (if comboboxes weren't
+		// filled). Accept either; never Go's own text.
 		await expect(
-			page.getByText(/already exists/i).or(page.getByText(/required/i).first())
+			page.getByText('This already exists.').or(page.getByText(/required/i).first())
 		).toBeVisible({ timeout: 5000 });
+		await expect(page.getByText(/sku already exists/i)).toHaveCount(0);
 	});
 });
 
