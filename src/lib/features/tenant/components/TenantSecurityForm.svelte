@@ -64,7 +64,7 @@
 						hint="NIST SP 800-63B recommends 8 or more. Stripe and GitHub use 8."
 						bind:value={minLength}
 						min={8}
-						max={64}
+						max={128}
 						error={fieldError('password_policy.min_length')}
 					/>
 

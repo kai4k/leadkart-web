@@ -322,6 +322,7 @@
 			"platform_tenant_undeletable": "The platform's own company can't be deleted.",
 			"permission_request_pending_exists": "You already have a pending request for this permission.",
 			"permission_request_not_pending": "This request has already been decided or withdrawn.",
+			"permission_request_invalid": "The request could not be accepted. Check the reason and try again.",
 			"tenant_scope_not_supported": "Not available while acting in a tenant. Exit the tenant context first.",
 			"tenant_scope_read_only": "Read-only while acting in a tenant. Exit the tenant context to make this change.",
 			"tenant_scope_forbidden": "You don't have permission to act in another tenant.",
@@ -363,7 +364,10 @@
 		"required": "This field is required.",
 		"invalid": "Check this value.",
 		"tooLong": "This is too long.",
-		"invalidCharacters": "Remove the characters that are not allowed.",
+		"tooShort": "This is too short.",
+		"tooLarge": "This number is too large.",
+		"tooSmall": "This number is too small.",
+		"invalidCharacters": "Remove line breaks, tabs and invisible characters.",
 		"errors": {
 			"reasonRequired": "Reason is required.",
 			"passwordTooShort": "Password is too short.",
@@ -388,6 +392,12 @@
 			"pinInvalid": "Enter a 6-digit PIN code that does not start with 0.",
 			"gstinInvalid": "Enter a valid 15-character GSTIN.",
 			"panInvalid": "Enter a valid PAN, for example AAAAA9999A.",
+			"drugLicenceInvalid": "Use 8 to 30 capital letters, digits, dashes, slashes or spaces, with at least one letter and one digit.",
+			"phoneInvalid": "Enter the number with + and country code, for example +919876543210.",
+			"cityPincodeMismatch": "This pincode does not serve this city. Check the city and the pincode.",
+			"addressInvalid": "Check the street, city, state and pincode.",
+			"alsoGranted": "A permission cannot be both granted and revoked.",
+			"greaterThanZero": "Enter a number greater than 0.",
 			"ownerRequired": "Pick the new owner.",
 			"reasonTooShort": "Give a reason of at least 10 characters.",
 			"slugCharacters": "Use lowercase letters, digits and dashes only.",
@@ -547,6 +557,11 @@
 				"profile": "Profile",
 				"security": "Security",
 				"sessions": "Sessions"
+			}
+		},
+		"users": {
+			"overrides": {
+				"alsoGrantedNames": "Listed as both granted and revoked: {names}."
 			}
 		},
 		"tenant": {

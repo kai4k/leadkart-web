@@ -1,9 +1,20 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
 	import PageHeader from '$layouts/PageHeader.svelte';
-	import { Badge, Button, Card, CopyButton, DescriptionList, type DescriptionItem } from '$ui';
+	import {
+		Alert,
+		Badge,
+		Button,
+		Card,
+		CopyButton,
+		DescriptionList,
+		type DescriptionItem
+	} from '$ui';
 	import { QueryState } from '#lib/components/feedback/index.ts';
 	import { TextareaField } from '$form';
+	import { ValidationError, describeError } from '$api/errors';
+	import { codeCopy } from '$api/code-copy';
+	import { fieldErrorCopy } from '#lib/utils/field-error-copy.ts';
 	import { formatDateTime } from '#lib/utils/format.ts';
 	import { ChevronLeft, CheckCircle2, XCircle, Icon } from '$icons';
 	import {
@@ -46,6 +57,31 @@
 	let approveReason = $state('');
 	let denyReason = $state('');
 	let denyError: string | null = $state(null);
+
+	/**
+	 * A refused decision: Go answers `permission_request_invalid` with `errors.decision_reason`. That goes on the textarea
+	 * the user submitted; anything else is one banner line (never "Check the highlighted fields" with nothing highlighted).
+	 */
+	function decisionFailure(err: unknown): { field: string | null; banner: string | null } {
+		if (!err) return { field: null, banner: null };
+		if (err instanceof ValidationError) {
+			if (err.fields.decision_reason)
+				return { field: fieldErrorCopy(err.fields.decision_reason), banner: null };
+			return { field: null, banner: codeCopy(err.code) ?? $_('auth.errors.validation') };
+		}
+		return {
+			field: null,
+			banner: describeError(err, {
+				status: {
+					403: "You don't have permission to decide this request.",
+					404: "This request doesn't exist or you don't have access.",
+					409: 'This request has already been decided or withdrawn.'
+				}
+			})
+		};
+	}
+	const approveFailure = $derived(decisionFailure(approveMutation.error));
+	const denyFailure = $derived(decisionFailure(denyMutation.error));
 
 	function approve() {
 		approveMutation.mutate({ id, decision_reason: approveReason || undefined });
@@ -145,10 +181,14 @@
 							<TextareaField
 								label="Approval note (optional)"
 								name="approval_note"
+								singleLine
 								bind:value={approveReason}
 								maxlength={1024}
 								rows={2}
+								error={approveFailure.field}
 							/>
+							{#if approveFailure.banner}<Alert variant="destructive">{approveFailure.banner}</Alert
+								>{/if}
 							<div class="cluster">
 								<Button onclick={approve} loading={approveMutation.isPending} disabled={isMutating}>
 									<Icon icon={CheckCircle2} size="sm" /> Approve
@@ -159,12 +199,14 @@
 						<TextareaField
 							label="Deny reason (required)"
 							name="deny_reason"
+							singleLine
 							bind:value={denyReason}
 							maxlength={1024}
 							rows={2}
 							required
-							error={denyError}
+							error={denyError ?? denyFailure.field}
 						/>
+						{#if denyFailure.banner}<Alert variant="destructive">{denyFailure.banner}</Alert>{/if}
 						<div class="cluster">
 							<Button
 								variant="destructive"

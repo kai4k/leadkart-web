@@ -96,8 +96,8 @@ describe('row 54: the company name comes from the server', () => {
 });
 
 describe('the pin', () => {
-	it('SOURCE.json records leadkart-go 6ebcddf (main)', () => {
+	it('SOURCE.json records leadkart-go 44ff2b1 (main)', () => {
 		const pin = JSON.parse(readFileSync('src/lib/api/generated/SOURCE.json', 'utf8'));
-		expect(pin.commit.startsWith('6ebcddf')).toBe(true);
+		expect(pin.commit.startsWith('44ff2b1')).toBe(true);
 	});
 });

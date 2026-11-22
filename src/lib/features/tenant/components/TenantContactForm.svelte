@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
 	import { TextField, type ActionFormResult } from '$form';
+	import * as Field from '#lib/components/ui/field/index.ts';
 	import TenantSectionForm from './TenantSectionForm.svelte';
 	import type { Tenant } from '../types';
 
@@ -22,15 +23,22 @@
 		<TextField
 			label="Admin phone"
 			name="phone"
-			hint="The number drug-control inspectors and platform notifications reach you on."
+			hint="With + and the country code, for example +919876543210."
 			type="tel"
 			autocomplete="tel"
 			value={String(value('phone') ?? tenant.admin_phone ?? '')}
 			error={fieldError('phone')}
 		/>
 
-		<fieldset class="stack stack-tight">
+		<fieldset
+			class="stack stack-tight"
+			aria-describedby={fieldError('address') ? 'tenant-address-error' : undefined}
+		>
 			<legend class="label text-foreground">Postal address</legend>
+			<!-- the whole-address fallback (`invalid_address`): a refusal that names no part has no control to sit under -->
+			{#if fieldError('address')}
+				<Field.Error id="tenant-address-error">{fieldError('address')}</Field.Error>
+			{/if}
 
 			<TextField
 				label="Street"
@@ -69,7 +77,7 @@
 				<TextField
 					label="State code"
 					name="address.state_code"
-					hint="2-digit GST state code"
+					hint="Up to 4 characters, for example MH."
 					autocomplete="off"
 					value={String(value('address.state_code') ?? tenant.admin_address.state_code ?? '')}
 					error={fieldError('address.state_code')}

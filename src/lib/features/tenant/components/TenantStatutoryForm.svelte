@@ -41,7 +41,7 @@
 		<TextField
 			label="Drug licence number"
 			name="drug_licence_number"
-			hint="Issued by the State Drug Controller — required for retail / wholesale pharma operations."
+			hint="Issued by the State Drug Controller. 8 to 30 capital letters, digits, dashes, slashes or spaces (e.g. KA-W-22B-12345)."
 			autocomplete="off"
 			spellcheck={false}
 			value={String(value('drug_licence_number') ?? tenant.drug_licence_number ?? '')}

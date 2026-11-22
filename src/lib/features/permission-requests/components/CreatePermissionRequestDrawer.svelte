@@ -50,6 +50,7 @@
 		<TextareaField
 			label="Reason"
 			name="reason"
+			singleLine
 			rows={4}
 			maxlength={1024}
 			required

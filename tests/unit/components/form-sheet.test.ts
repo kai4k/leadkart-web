@@ -94,7 +94,9 @@ describe.each(['sheet', 'dialog'] as const)('Form surface: %s', (surface) => {
 		onSubmit.mockRejectedValue(new ValidationError({ name: 'invalid_characters' }, 422));
 		submit();
 		await vi.waitFor(() => expect(input().getAttribute('aria-invalid')).toBe('true'));
-		expect(document.body.textContent).toContain('Remove the characters that are not allowed.');
+		expect(document.body.textContent).toContain(
+			'Remove line breaks, tabs and invisible characters.'
+		);
 		expect(document.body.textContent).not.toContain('invalid_characters');
 		await vi.waitFor(() => expect(document.activeElement).toBe(input()));
 	});

@@ -228,6 +228,9 @@ const PASSWORD_RULE_CODES = new Set([
 	'requires_digit',
 	'requires_symbol'
 ]);
+const NAMED_DEFAULT = /^Too (?:big|small): expected (?:string|array|set|number) /;
+/** What still reads "Check this value." after M-9 (printed by the last test, listed in the round report). */
+const collapsed = new Set<string>();
 const ZOD_DEFAULT = /^(Too (small|big)|Invalid (input|string|number|option|value|format))/;
 
 describe('no raw Zod default reaches a user', () => {
@@ -250,9 +253,14 @@ describe('no raw Zod default reaches a user', () => {
 						// Go's own rule code (Register tenant checks the default policy): the mapper turns it into a sentence
 						expect(shown, where).toMatch(/\.$/);
 						expect(shown, where).not.toBe(en.form.invalid);
+					} else if (NAMED_DEFAULT.test(m)) {
+						// a library default that names a length or a numeric floor / ceiling: read as the rule (M-9)
+						expect(shown, where).toMatch(/.$/);
+						expect(shown, where).not.toBe(en.form.invalid);
 					} else {
 						// anything else (a library default for a rule nobody gave a key) reads "Check this value."
 						expect(shown, where).toBe(en.form.invalid);
+						collapsed.add(`${name}.${issue.path.join('.')}: ${m}`);
 					}
 					expect(shown, where).not.toBe(m);
 					expect(shown, where).not.toMatch(ZOD_DEFAULT);
@@ -261,4 +269,13 @@ describe('no raw Zod default reaches a user', () => {
 			expect(issues).toBeGreaterThan(0);
 		});
 	}
+});
+
+describe('what still reads "Check this value."', () => {
+	it('lists the rules that collapse', () => {
+		// only enum / format / type defaults and non-length too_small remain; a length or numeric rule never does
+		for (const line of collapsed)
+			expect(line).not.toMatch(/Too (big|small): expected (string|array|number)/);
+		console.info([...collapsed].sort().join(' | '));
+	});
 });

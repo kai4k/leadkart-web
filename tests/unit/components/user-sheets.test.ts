@@ -288,6 +288,27 @@ describe('PermissionOverridesPanel', () => {
 			expect(document.body.textContent).toContain(en.form.errors.permissionNamesInvalid)
 		);
 	});
+
+	it('errors.revoked = [also_granted] reads as a sentence and names the permissions in both lists', async () => {
+		gw.replacePermissionOverrides.mockRejectedValue(
+			new ValidationError({ revoked: 'also_granted' }, 422)
+		);
+		open();
+		const [grants, revokes] = tags();
+		addTag(grants!, 'crm.leads.reassign');
+		addTag(grants!, 'crm.leads.read');
+		addTag(revokes!, 'crm.leads.reassign');
+		save();
+		await vi.waitFor(() =>
+			expect(document.body.textContent).toContain(
+				'A permission cannot be both granted and revoked.'
+			)
+		);
+		expect(document.body.textContent).toContain(
+			'Listed as both granted and revoked: crm.leads.reassign.'
+		);
+		expect(document.body.textContent).not.toContain('also_granted');
+	});
 });
 
 describe('RoleAssignmentDrawer', () => {

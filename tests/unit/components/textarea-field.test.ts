@@ -108,3 +108,50 @@ describe('TextareaField', () => {
 		expect(ta.id).toBe('my-reason');
 	});
 });
+
+describe('TextareaField singleLine (a reason Go refuses line breaks in)', () => {
+	it('Enter inserts nothing and submits the surrounding form', () => {
+		target = document.body.appendChild(document.createElement('form'));
+		let submitted = 0;
+		target.addEventListener('submit', (e) => {
+			e.preventDefault();
+			submitted++;
+		});
+		component = mount(TextareaField, {
+			target,
+			props: { label: 'Reason', name: 'reason', value: '', singleLine: true } as never
+		});
+		flushSync();
+		const ta = target.querySelector('textarea')!;
+		const ev = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+		ta.dispatchEvent(ev);
+		expect(ev.defaultPrevented).toBe(true);
+		expect(submitted).toBe(1);
+	});
+
+	it('a soft keyboard return (insertLineBreak) is refused', () => {
+		const ta = render({ label: 'Reason', name: 'reason', value: '', singleLine: true });
+		const ev = new InputEvent('beforeinput', {
+			inputType: 'insertLineBreak',
+			bubbles: true,
+			cancelable: true
+		});
+		ta.dispatchEvent(ev);
+		expect(ev.defaultPrevented).toBe(true);
+	});
+
+	it('pasted line breaks and tabs become one space; joiners are kept', () => {
+		const ta = render({ label: 'Reason', name: 'reason', value: '', singleLine: true });
+		type(ta, 'two\r\nlines\tand\n\na क्‍ष');
+		expect(ta.value).toBe('two lines and a क्‍ष');
+	});
+
+	it('without singleLine Enter and breaks are left alone', () => {
+		const ta = render({ label: 'Notes', name: 'notes', value: '' });
+		const ev = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+		ta.dispatchEvent(ev);
+		expect(ev.defaultPrevented).toBe(false);
+		type(ta, 'a\nb');
+		expect(ta.value).toBe('a\nb');
+	});
+});

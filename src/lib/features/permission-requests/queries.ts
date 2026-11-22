@@ -70,7 +70,8 @@ export function approvePermissionRequestMutation() {
 			api.approvePermissionRequest(id, decision_reason ? { decision_reason } : {}),
 		refreshesCapabilities: true,
 		invalidate: () => [permissionRequestsKeys.all],
-		successToast: 'Request approved'
+		successToast: 'Request approved',
+		inlineErrors: true
 	});
 }
 
@@ -79,7 +80,8 @@ export function denyPermissionRequestMutation() {
 		fn: ({ id, decision_reason }: { id: string; decision_reason: string }) =>
 			api.denyPermissionRequest(id, { decision_reason }),
 		invalidate: () => [permissionRequestsKeys.all],
-		successToast: 'Request denied'
+		successToast: 'Request denied',
+		inlineErrors: true
 	});
 }
 

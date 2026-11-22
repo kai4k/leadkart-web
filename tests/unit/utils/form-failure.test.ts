@@ -42,7 +42,7 @@ describe('fieldText: a schema message that is an i18n key is translated, an API 
 			fieldMessages: {
 				email: 'auth.errors.emailRequired',
 				name: 'required',
-				note: 'Too small: expected string to have >=8 characters'
+				note: 'Invalid input: expected string, received undefined'
 			}
 		});
 		expect(fieldText(failure, 'email', t)).toBe('T(auth.errors.emailRequired)');

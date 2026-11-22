@@ -3,6 +3,7 @@
 	import { _ } from 'svelte-i18n';
 	import * as Field from '#lib/components/ui/field/index.ts';
 	import { Textarea } from '#lib/components/ui/textarea/index.ts';
+	import { toSingleLine } from '#lib/utils/single-line.ts';
 
 	/**
 	 * TextareaField — labelled multi-line input on the regenerated `ui/textarea` and the one field
@@ -12,6 +13,9 @@
 	 * `aria-describedby`), and one polite announcement is made when the text reaches 90% of the limit
 	 * and one at the limit, never per keystroke. The id comes from `$props.id()` unless the caller
 	 * passes one.
+	 *
+	 * `singleLine` (a reason Go refuses line breaks in): Enter does what it does in a single-line field (submits the
+	 * surrounding form, else nothing), and pasted or autofilled breaks and tabs become one space as they arrive.
 	 */
 
 	type Props = {
@@ -25,6 +29,7 @@
 		required?: boolean;
 		placeholder?: string;
 		disabled?: boolean;
+		singleLine?: boolean;
 		id?: string;
 		class?: string;
 	};
@@ -40,6 +45,7 @@
 		required = false,
 		placeholder,
 		disabled = false,
+		singleLine = false,
 		id,
 		class: className = ''
 	}: Props = $props();
@@ -72,6 +78,25 @@
 		);
 	});
 
+	function onkeydown(e: KeyboardEvent) {
+		if (!singleLine || e.key !== 'Enter' || e.isComposing) return;
+		e.preventDefault();
+		(e.currentTarget as HTMLTextAreaElement).form?.requestSubmit();
+	}
+	// a soft keyboard's return key arrives as an input type, not a key
+	function onbeforeinput(e: InputEvent) {
+		if (singleLine && (e.inputType === 'insertLineBreak' || e.inputType === 'insertParagraph'))
+			e.preventDefault();
+	}
+	function oninput(e: Event & { currentTarget: HTMLTextAreaElement }) {
+		if (!singleLine) return;
+		const el = e.currentTarget;
+		const clean = toSingleLine(el.value);
+		if (clean === el.value) return;
+		el.value = clean;
+		value = clean;
+	}
+
 	const describedBy = $derived(
 		[error ? errorId : null, hint ? hintId : null, maxlength ? counterId : null]
 			.filter(Boolean)
@@ -91,6 +116,9 @@
 		{required}
 		{placeholder}
 		{disabled}
+		{onkeydown}
+		{onbeforeinput}
+		{oninput}
 		aria-invalid={error ? 'true' : undefined}
 		aria-describedby={describedBy}
 	/>

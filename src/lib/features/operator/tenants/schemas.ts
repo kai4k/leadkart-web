@@ -33,8 +33,8 @@ export const registerTenantRequestSchema = RegisterTenantRequest.extend({
 		.min(2, 'form.errors.slugLength')
 		.max(100, 'form.errors.slugLength')
 		.regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, 'form.errors.slugCharacters'),
-	legal_name: z.string().min(2, 'form.required').max(200, 'form.tooLong'),
-	display_name: z.string().min(2, 'form.required').max(200, 'form.tooLong'),
+	legal_name: z.string().min(1, 'form.required').min(2, 'form.tooShort').max(200, 'form.tooLong'),
+	display_name: z.string().min(1, 'form.required').min(2, 'form.tooShort').max(200, 'form.tooLong'),
 	admin_email: formEmailField,
 	// Go always checks the DEFAULT policy at registration (register_tenant.go), so this form, and only this one,
 	// holds the first admin's password to the default's classes too. Each unmet class is its own issue (the rule code

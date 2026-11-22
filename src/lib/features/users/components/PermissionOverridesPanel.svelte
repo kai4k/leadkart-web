@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { z } from 'zod';
+	import { _ } from 'svelte-i18n';
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	import { FormSheet, TagInput } from '#lib/components/form/index.ts';
 	import { replacePermissionOverridesMutation } from '$features/users/queries';
@@ -21,11 +22,17 @@
 	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
 	useResetOnChange(() => open, mutation);
 
+	// the names Go refused as both granted and revoked (it sends the code only: the form compares its own two lists)
+	let both = $state<string[]>([]);
+
 	async function onSubmit(values: z.output<typeof schema>) {
 		if (!user) return;
+		both = [];
 		try {
 			await mutation.mutateAsync({ id: user.membership_id, body: values });
 		} catch (err) {
+			if (err instanceof ValidationError && err.fields.revoked === 'also_granted')
+				both = values.granted.filter((name) => values.revoked.includes(name));
 			// a refusal with no field named: one line for the whole set
 			if (err instanceof ValidationError && !err.fields.granted && !err.fields.revoked)
 				throw new ValidationError({ granted: 'form.errors.permissionNamesInvalid' }, err.status);
@@ -64,6 +71,9 @@
 			name="revoked"
 			placeholder="e.g. crm.leads.delete"
 			bind:value={form.values.revoked}
+			hint={both.length > 0
+				? $_('pages.users.overrides.alsoGrantedNames', { values: { names: both.join(', ') } })
+				: undefined}
 			error={form.errors.revoked}
 		/>
 	{/snippet}

@@ -23,6 +23,7 @@
 import { get } from 'svelte/store';
 import { _ } from 'svelte-i18n';
 import { describeError, ValidationError, type DescribeErrorOptions } from '$api/errors';
+import { codeCopy } from '$api/code-copy';
 import { focusFirstInvalid } from '#lib/utils/focus-first-invalid.ts';
 import { fieldErrorCopy, fieldErrorsCopy } from '#lib/utils/field-error-copy.ts';
 import type { z } from 'zod';
@@ -187,7 +188,8 @@ export function useForm<TSchema extends AnyObjectSchema>(
 					? [...formEl.querySelectorAll<HTMLElement>('[name]')].map((e) => e.getAttribute('name'))
 					: null;
 				if (rendered && Object.keys(err.fields).some((f) => !rendered.includes(f))) {
-					bannerError = describeError(err, { fallback: get(_)('auth.errors.validation') });
+					// not describeError: a ValidationError with fields reads "Check the highlighted fields.", true only for the rendered ones
+					bannerError = codeCopy(err.code) ?? get(_)('auth.errors.validation');
 					errors = Object.fromEntries(Object.entries(errors).filter(([f]) => rendered.includes(f)));
 				}
 				void focusFirstInvalid(formEl);

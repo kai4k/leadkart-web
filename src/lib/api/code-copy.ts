@@ -56,6 +56,7 @@ const CODES = [
 	'permission_request_requester_inactive',
 	'permission_request_pending_exists',
 	'permission_request_not_pending',
+	'permission_request_invalid',
 	// Inventory (inventory/ports/dto.go: ErrCodeInsufficientStock, ErrCodeBatchExpired, ErrCodeProductHasStock)
 	'already_exists',
 	'insufficient_stock',

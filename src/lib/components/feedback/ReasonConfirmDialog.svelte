@@ -147,6 +147,7 @@
 				<TextareaField
 					label={reasonLabel ?? $_('form.reason')}
 					name="reason"
+					singleLine
 					rows={3}
 					maxlength={reasonMaxLength}
 					required={reasonRequired}

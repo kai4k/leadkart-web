@@ -148,7 +148,9 @@ describe('CreateTenantDrawer is a FormSheet', () => {
 		submit();
 		const field = () => document.querySelector<HTMLInputElement>('input[name="display_name"]')!;
 		await vi.waitFor(() => expect(field().getAttribute('aria-invalid')).toBe('true'));
-		expect(document.body.textContent).toContain('Remove the characters that are not allowed.');
+		expect(document.body.textContent).toContain(
+			'Remove line breaks, tabs and invisible characters.'
+		);
 		await vi.waitFor(() => expect(document.activeElement).toBe(field()));
 	});
 });

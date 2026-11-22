@@ -65,9 +65,12 @@ describe('fieldMessageText', () => {
 		expect(fieldMessageText('auth.errors.emailRequired', t)).toBe('T(auth.errors.emailRequired)');
 		expect(fieldMessageText('required', t)).toBe('T(form.required)');
 		expect(fieldMessageText('too_long', t)).toBe('T(form.tooLong)');
+		// a library default that names a length is read as the rule, not shown
+		expect(fieldMessageText('Too small: expected string to have >=12 characters', t)).toBe(
+			'T(form.tooShort)'
+		);
 		for (const raw of [
 			'Reason must be at least 10 characters.',
-			'Too small: expected string to have >=12 characters',
 			'Invalid input: expected string, received undefined',
 			'',
 			'invalid_type'

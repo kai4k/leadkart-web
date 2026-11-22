@@ -70,6 +70,7 @@
 		<TextareaField
 			label="Reason (required, audited — minimum 10 characters)"
 			name="reason"
+			singleLine
 			rows={3}
 			maxlength={500}
 			required
