@@ -43,6 +43,7 @@
 				{/if}
 				<NumberInput
 					label="Box count"
+					name="box_count"
 					bind:value={form.values.box_count}
 					min={1}
 					step={1}

@@ -156,11 +156,13 @@
 					/>
 					<Select
 						label="Order value band"
+						name="order_value_band"
 						bind:value={form.values.order_value_band}
 						options={orderValueOptions}
 					/>
 					<Select
 						label="Buy timeline"
+						name="buy_timeline"
 						bind:value={form.values.buy_timeline}
 						options={buyTimelineOptions}
 					/>

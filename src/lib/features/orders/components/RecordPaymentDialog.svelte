@@ -86,6 +86,7 @@
 				<div class="stack stack-relaxed">
 					<RadioGroup
 						label="Kind"
+						name="kind"
 						bind:value={form.values.kind}
 						orientation="horizontal"
 						error={form.errors.kind}
@@ -96,6 +97,7 @@
 
 					<NumberInput
 						label="Amount"
+						name="amount"
 						bind:value={form.values.amount}
 						min={0}
 						step={1}
@@ -106,6 +108,7 @@
 
 					<Select
 						label="Method"
+						name="method"
 						bind:value={form.values.method}
 						options={methodOptions}
 						error={form.errors.method}

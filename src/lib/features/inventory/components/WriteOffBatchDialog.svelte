@@ -57,6 +57,7 @@
 				<label class="stack stack-tight">
 					<span class="label text-foreground">Reason</span>
 					<textarea
+						name="reason"
 						bind:value={form.values.reason}
 						maxlength={500}
 						rows={3}

@@ -137,6 +137,7 @@
 				<div class="grid gap-3 sm:grid-cols-2">
 					<NumberInput
 						label="Quantity received"
+						name="quantity_received"
 						bind:value={form.values.quantity_received}
 						min={1}
 						step={1}
@@ -144,6 +145,7 @@
 					/>
 					<NumberInput
 						label="Purchase rate"
+						name="purchase_rate"
 						bind:value={form.values.purchase_rate}
 						min={0}
 						step={0.01}

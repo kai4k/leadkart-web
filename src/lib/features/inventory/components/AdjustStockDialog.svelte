@@ -106,6 +106,7 @@
 					</label>
 					<NumberInput
 						label="Delta"
+						name="delta"
 						bind:value={form.values.delta}
 						step={1}
 						placeholder="+5 or -10"
@@ -115,6 +116,7 @@
 
 				<RadioGroup
 					label="Reason"
+					name="reason"
 					bind:value={form.values.reason}
 					orientation="horizontal"
 					error={form.errors.reason}
@@ -127,6 +129,7 @@
 				<label class="stack stack-tight">
 					<span class="label text-foreground">Note (optional)</span>
 					<textarea
+						name="note"
 						bind:value={form.values.note}
 						maxlength={1000}
 						rows={2}

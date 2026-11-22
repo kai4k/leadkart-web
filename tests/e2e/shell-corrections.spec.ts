@@ -114,7 +114,7 @@ test.describe('a. the active nav item', () => {
 				});
 });
 
-test.describe('c. the legacy Drawer close button', () => {
+test.describe('c. the Add member sheet close button', () => {
 	test('sits at the header inline-end corner, is at least 24 x 24 and shows a focus ring', async ({
 		page
 	}) => {
@@ -126,9 +126,11 @@ test.describe('c. the legacy Drawer close button', () => {
 			.getByRole('button', { name: /add member/i })
 			.first()
 			.click();
-		const header = page.locator('[data-slot="drawer-header"]');
+		const header = page.locator('[data-slot="sheet-header"]');
 		await expect(header).toBeVisible();
-		const close = header.getByRole('button', { name: 'Close' });
+		const close = page
+			.locator('[data-slot="sheet-content"]')
+			.getByRole('button', { name: 'Close' });
 		await page.waitForTimeout(500); // the slide-in
 		const [h, c] = await Promise.all([header.boundingBox(), close.boundingBox()]);
 		expect(c!.width).toBeGreaterThanOrEqual(24);

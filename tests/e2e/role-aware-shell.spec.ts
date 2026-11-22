@@ -130,7 +130,8 @@ test.describe('Auth negative paths', () => {
 					access_token: 'eyJhbGciOiJIUzI1NiJ9.fake.sig',
 					refresh_token: 'eyJhbGciOiJIUzI1NiJ9.fake.sig',
 					access_token_expires_at: new Date(Date.now() + 3_600_000).toISOString(),
-					token_type: 'Bearer'
+					token_type: 'Bearer',
+					must_change_password: false
 				}
 			},
 			{

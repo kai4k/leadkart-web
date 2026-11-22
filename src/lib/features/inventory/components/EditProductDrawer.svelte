@@ -180,6 +180,7 @@
 					/>
 					<RadioGroup
 						label="Drug schedule"
+						name="drug_schedule"
 						bind:value={form.values.drug_schedule}
 						orientation="horizontal"
 					>
@@ -223,6 +224,7 @@
 					<div class="grid gap-3 sm:grid-cols-3">
 						<NumberInput
 							label="MRP"
+							name="mrp"
 							bind:value={form.values.mrp}
 							min={0}
 							step={0.01}
@@ -231,6 +233,7 @@
 						/>
 						<NumberInput
 							label="Sale rate"
+							name="sale_rate"
 							bind:value={form.values.sale_rate}
 							min={0}
 							step={0.01}
@@ -239,6 +242,7 @@
 						/>
 						<NumberInput
 							label="GST %"
+							name="gst_percentage"
 							bind:value={form.values.gst_percentage}
 							min={0}
 							max={100}
