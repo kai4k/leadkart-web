@@ -1,4 +1,4 @@
-<script lang="ts" generics="S extends AnyObjectSchema">
+<script lang="ts" generics="S extends AnyObjectSchema, R = void">
 	import { _ } from 'svelte-i18n';
 	import * as Dialog from '#lib/components/ui/dialog/index.ts';
 	import { Button } from '#lib/components/ui/button/index.ts';
@@ -29,17 +29,21 @@
 		size = 'md',
 		guardLeave = true,
 		closeOnSuccess = true,
+		validateOn,
+		errorLines,
 		done
-	}: FormSurfaceProps<S> = $props();
+	}: FormSurfaceProps<S, R> = $props();
 
-	const surface = createFormSurface<S>(() => ({
+	const surface = createFormSurface<S, R>(() => ({
 		open,
 		onOpenChange,
 		schema,
 		initial,
 		onSubmit,
 		guardLeave,
-		closeOnSuccess
+		closeOnSuccess,
+		validateOn,
+		errorLines
 	}));
 	const form = $derived(surface.form);
 </script>
@@ -51,8 +55,8 @@
 			{#if description}<Dialog.Description>{description}</Dialog.Description>{/if}
 		</Dialog.Header>
 		<Dialog.Body>
-			{#if done}
-				{@render done()}
+			{#if done && surface.result}
+				{@render done(surface.result.value, { again: surface.again })}
 			{:else}
 				<FormSurfaceForm
 					{form}
@@ -63,7 +67,7 @@
 				/>
 			{/if}
 		</Dialog.Body>
-		{#if !done}
+		{#if !(done && surface.result)}
 			<Dialog.Footer class="border-t border-border">
 				<Dialog.Close>
 					{#snippet child({ props })}

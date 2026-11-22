@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { ReasonConfirmDialog } from '#lib/components/feedback/index.ts';
 	import { deleteRoleMutation } from '$features/roles/queries';
 	import type { RoleDto } from '$features/roles/types';
@@ -25,7 +26,11 @@
 	confirmLabel="Delete role"
 	askReason={false}
 	confirmText={role?.name ?? ''}
-	noun="role"
-	conflict="This role is still assigned to users — revoke it everywhere first."
+	messages={{
+		failed: $_('reasonConfirm.deleteRole.failed'),
+		forbidden: $_('reasonConfirm.deleteRole.forbidden'),
+		notFound: $_('reasonConfirm.deleteRole.notFound'),
+		conflict: $_('reasonConfirm.deleteRole.conflict')
+	}}
 	{onConfirm}
 />

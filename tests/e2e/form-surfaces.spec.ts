@@ -75,16 +75,39 @@ test.describe('a reason confirm over a form sheet', () => {
 		await expect(sheet).toBeVisible(); // only the confirm closed
 	});
 
-	test('Escape does not close the sheet while the confirm is open, and a confirmed deletion closes the confirm itself', async ({
+	test('Escape closes only the confirm (the sheet stays), and a confirmed deletion closes the confirm itself', async ({
 		page
 	}) => {
 		await guide(page);
 		const { sheet, confirm } = await openReasonOverSheet(page);
+		await page.keyboard.press('Escape');
+		await expect(confirm).toBeHidden();
+		await expect(sheet).toBeVisible();
+		await sheet.getByRole('button', { name: 'Delete the demo' }).click();
+		await expect(confirm).toBeVisible();
+		await page.waitForTimeout(300);
 		await confirm.getByRole('textbox', { name: 'Reason' }).fill('a demonstration');
 		await confirm.getByRole('textbox', { name: /Type acme to confirm/ }).fill('acme');
 		await confirm.locator('[data-slot="alert-dialog-footer"] button').nth(1).click();
 		await expect(confirm).toBeHidden();
 		await expect(sheet).toBeVisible();
+	});
+
+	test('on a 360x640 phone the confirm fits: header and footer stay in view, a tall body scrolls', async ({
+		page
+	}) => {
+		await guide(page);
+		await page.setViewportSize({ width: 360, height: 640 });
+		const { confirm } = await openReasonOverSheet(page);
+		const footer = confirm.locator('[data-slot="alert-dialog-footer"]');
+		const box = await confirm.boundingBox();
+		const footerBox = await footer.boundingBox();
+		expect(box!.y).toBeGreaterThanOrEqual(0);
+		expect(box!.y + box!.height).toBeLessThanOrEqual(640);
+		expect(footerBox!.y + footerBox!.height).toBeLessThanOrEqual(640);
+		// the dialog is capped at 90% of the viewport; whatever does not fit scrolls INSIDE it
+		expect(box!.height).toBeLessThanOrEqual(640 * 0.9 + 1);
+		await expect(footer.locator('button').first()).toBeFocused();
 	});
 
 	for (const mode of ['light', 'dark'] as const) {

@@ -69,6 +69,7 @@ describe('fieldMessageText', () => {
 			'Reason must be at least 10 characters.'
 		);
 		expect(fieldMessageText('', t)).toBe('');
+		expect(fieldMessageText('invalid_type', t)).toBe('T(form.invalid)');
 	});
 	it('isCopyKey: dotted camelCase paths only', () => {
 		expect(isCopyKey('form.errors.reasonRequired')).toBe(true);

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { ReasonConfirmDialog } from '#lib/components/feedback/index.ts';
 	import { Alert } from '$ui';
 	import { markForDeletionMutation } from '../queries';
@@ -30,8 +31,12 @@
 	confirmLabel="Mark for deletion"
 	reasonLabel="Reason (required, audited)"
 	confirmText={tenant?.slug ?? ''}
-	noun="tenant"
-	conflict="This tenant is already marked for deletion."
+	messages={{
+		failed: $_('reasonConfirm.markForDeletion.failed'),
+		forbidden: $_('reasonConfirm.markForDeletion.forbidden'),
+		notFound: $_('reasonConfirm.markForDeletion.notFound'),
+		conflict: $_('reasonConfirm.markForDeletion.conflict')
+	}}
 	{onConfirm}
 >
 	{#snippet extra()}

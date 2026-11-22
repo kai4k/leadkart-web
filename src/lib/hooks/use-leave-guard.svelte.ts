@@ -3,7 +3,8 @@
  *
  *   useLeaveGuard(() => open && form.dirty);          // call during component initialisation
  *
- * In-app navigation (`beforeNavigate`): `confirm(message)`; declining cancels the navigation. A page UNLOAD
+ * In-app navigation (`beforeNavigate`), only when the USER started it (`navigation.type` `link` / `popstate`):
+ * `confirm(message)`; declining cancels the navigation. Never a programmatic `goto`, never a target in `(auth)`. A page UNLOAD
  * (closing the tab, a reload, an external link) cannot show a `confirm()`, so it is left to the browser's own
  * prompt, which `beforeunload` + `preventDefault()` asks for.
  *
@@ -35,6 +36,11 @@ export function useLeaveGuard(isDirty: () => boolean, message?: string): void {
 		if (silent() || !isDirty()) return;
 		// the page is unloading: confirm() is not allowed there, the beforeunload prompt below speaks for it
 		if (navigation.willUnload) return;
+		// Only what the USER started is questioned: a link, Back / Forward. Code that navigates (the session guard's
+		// redirect to /signin, scope changes, filter and pagination URL updates, a save's redirect) is never asked
+		// about and never cancelled, and neither is any navigation into the (auth) group.
+		if (navigation.type !== 'link' && navigation.type !== 'popstate') return;
+		if (navigation.to?.route.id?.startsWith('/(auth)')) return;
 		// eslint-disable-next-line no-alert -- the platform's own blocking question is the contract of a leave guard
 		if (!confirm(message ?? get(_)('form.leaveGuard'))) navigation.cancel();
 	});

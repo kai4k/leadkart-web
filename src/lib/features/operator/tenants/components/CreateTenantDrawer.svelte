@@ -10,26 +10,23 @@
 	type Props = { open: boolean; onOpenChange: (open: boolean) => void };
 	let { open = $bindable(false), onOpenChange }: Props = $props();
 
-	/** The one-time view of what was registered: the seed admin's credentials are not retrievable afterwards. */
-	let credentials = $state<{
+	/** The one-time view of what was registered: the seed admin's credentials are not retrievable afterwards. The FORM SURFACE holds it (and drops it on close, on open, and when stale). */
+	type Credentials = {
 		email: string;
 		password: string;
 		tenantId: string;
 		slug: string;
 		displayName: string;
-	} | null>(null);
+	};
 
 	const registerMutation = registerTenantMutation();
 	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
 	useResetOnChange(() => open, registerMutation);
-	// the one-time credentials never outlive the sheet
-	$effect(() => {
-		if (!open) credentials = null;
-	});
-
-	async function onSubmit(values: z.output<typeof registerTenantRequestSchema>) {
+	async function onSubmit(
+		values: z.output<typeof registerTenantRequestSchema>
+	): Promise<Credentials> {
 		const resp = await registerMutation.mutateAsync(values);
-		credentials = {
+		return {
 			email: values.admin_email,
 			password: values.admin_password,
 			tenantId: resp.tenant_id,
@@ -57,8 +54,9 @@
 	})}
 	{onSubmit}
 	closeOnSuccess={false}
-	done={credentials ? done : undefined}
+	{done}
 	formId="register-tenant-form"
+	validateOn="blur"
 >
 	{#snippet fields(form)}
 		<TextField
@@ -123,7 +121,7 @@
 	{/snippet}
 </FormSheet>
 
-{#snippet done()}
+{#snippet done(credentials: Credentials, { again }: { again: () => void })}
 	{#if credentials}
 		<Alert variant="success">
 			<strong>{credentials.displayName}</strong> registered (<code>{credentials.slug}</code>). Share
@@ -158,7 +156,7 @@
 			This password forces a change on first sign-in. Share via a secure channel only.
 		</p>
 		<div class="cluster mt-4">
-			<Button variant="ghost" onclick={() => (credentials = null)}>Register another</Button>
+			<Button variant="ghost" onclick={again}>Register another</Button>
 			<a href={resolve('operator/tenants')} class="label text-primary-text hover:underline"
 				>View tenant →</a
 			>

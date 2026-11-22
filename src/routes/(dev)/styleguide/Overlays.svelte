@@ -115,7 +115,11 @@
 		description="This is a demonstration."
 		confirmLabel="Delete demo"
 		confirmText="acme"
-		noun="demo"
+		messages={{
+			failed: 'Could not delete the demo.',
+			forbidden: "You don't have permission to delete the demo.",
+			notFound: 'The demo was deleted or moved.'
+		}}
 		onConfirm={async () => {}}
 	/>
 

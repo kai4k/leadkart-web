@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { ReasonConfirmDialog } from '#lib/components/feedback/index.ts';
 	import { Alert } from '$ui';
 	import { anonymisePersonMutation } from '../queries';
@@ -28,8 +29,12 @@
 	confirmLabel="Anonymise permanently"
 	reasonLabel="Reason (required)"
 	confirmText={person?.email ?? ''}
-	noun="person"
-	conflict="This person is already anonymised."
+	messages={{
+		failed: $_('reasonConfirm.anonymise.failed'),
+		forbidden: $_('reasonConfirm.anonymise.forbidden'),
+		notFound: $_('reasonConfirm.anonymise.notFound'),
+		conflict: $_('reasonConfirm.anonymise.conflict')
+	}}
 	{onConfirm}
 >
 	{#snippet extra()}

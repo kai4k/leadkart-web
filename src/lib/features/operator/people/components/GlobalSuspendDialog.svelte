@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { ReasonConfirmDialog } from '#lib/components/feedback/index.ts';
 	import { globalSuspendMutation } from '../queries';
 	import type { PersonDto } from '../types';
@@ -25,7 +26,11 @@
 	confirmLabel="Suspend globally"
 	variant="warning"
 	reasonLabel="Reason (required, audited)"
-	noun="person"
-	conflict="This person is already globally suspended."
+	messages={{
+		failed: $_('reasonConfirm.globalSuspend.failed'),
+		forbidden: $_('reasonConfirm.globalSuspend.forbidden'),
+		notFound: $_('reasonConfirm.globalSuspend.notFound'),
+		conflict: $_('reasonConfirm.globalSuspend.conflict')
+	}}
 	{onConfirm}
 />

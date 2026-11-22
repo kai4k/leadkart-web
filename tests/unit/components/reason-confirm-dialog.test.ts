@@ -53,6 +53,19 @@ const escape = () => {
 };
 
 describe('ReasonConfirmDialog', () => {
+	it('type-to-confirm ignores a pasted trailing space and Unicode form, but not case; a mismatch says so after blur; the expected text is described', async () => {
+		await open({ confirmText: 'Zoë' });
+		type(reasonBox(), 'because');
+		type(typedBox(), ' Zoë ');
+		expect(confirmBtn().disabled).toBe(false);
+		type(typedBox(), 'zoë');
+		typedBox().dispatchEvent(new FocusEvent('blur'));
+		flushSync();
+		expect(confirmBtn().disabled).toBe(true);
+		expect(document.body.textContent).toContain("The name doesn't match.");
+		expect(typedBox().getAttribute('aria-describedby')).toBeTruthy();
+	});
+
 	it('the confirm button is disabled while the reason is blank (drift C1), enabled once there is one', async () => {
 		await open();
 		expect(confirmBtn().disabled).toBe(true);

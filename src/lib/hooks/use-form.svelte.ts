@@ -20,7 +20,9 @@
  *   //              error={form.errors.field1}
  *   // On submit:   form.submit(e, async (values) => mutation.mutate(values))
  */
-import { describeError, ValidationError } from '$api/errors';
+import { get } from 'svelte/store';
+import { _ } from 'svelte-i18n';
+import { describeError, ValidationError, type DescribeErrorOptions } from '$api/errors';
 import { focusFirstInvalid } from '#lib/utils/focus-first-invalid.ts';
 import { fieldErrorCopy, fieldErrorsCopy } from '#lib/utils/field-error-copy.ts';
 import type { z } from 'zod';
@@ -54,6 +56,8 @@ export type FormOpts = {
 	 * overwrite or close the new session.
 	 */
 	open: () => boolean;
+	/** The caller's own banner line per status (403 / 404 / 409), read when a submit fails. */
+	errorLines?: () => DescribeErrorOptions['status'];
 };
 
 /** Passed to the submit callback: false once the form has moved on (closed, reopened, reset). */
@@ -176,11 +180,22 @@ export function useForm<TSchema extends AnyObjectSchema>(
 		} catch (err) {
 			if (!current()) return;
 			if (err instanceof ValidationError && err.hasFieldErrors) {
-				// the API names a refused field with a code (`too_long`, `invalid_characters`): the field shows its message
+				// the API names a refused field with a code (`too_long`, `invalid_characters`): the field shows its message;
+				// a field this form does not render has nowhere to show it, so the banner says something instead of nothing
 				errors = fieldErrorsCopy(err.fields) as FieldErrors;
+				const rendered = formEl
+					? [...formEl.querySelectorAll<HTMLElement>('[name]')].map((e) => e.getAttribute('name'))
+					: null;
+				if (rendered && Object.keys(err.fields).some((f) => !rendered.includes(f))) {
+					bannerError = describeError(err, { fallback: get(_)('auth.errors.validation') });
+					errors = Object.fromEntries(Object.entries(errors).filter(([f]) => rendered.includes(f)));
+				}
 				void focusFirstInvalid(formEl);
 			} else {
-				bannerError = describeError(err, { fallback: 'An unexpected error occurred' });
+				bannerError = describeError(err, {
+					fallback: 'An unexpected error occurred',
+					status: opts.errorLines?.()
+				});
 				// nothing is invalid and the submit button was busy: focus goes to the form's alert
 				void focusFirstInvalid(formEl);
 			}

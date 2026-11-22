@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { ReasonConfirmDialog } from '#lib/components/feedback/index.ts';
 	import { suspendTenantMutation } from '../queries';
 	import type { TenantDto } from '../types';
@@ -29,7 +30,11 @@
 	confirmLabel="Suspend tenant"
 	variant="warning"
 	reasonLabel="Reason (required, audited)"
-	noun="tenant"
-	conflict="This tenant is already suspended."
+	messages={{
+		failed: $_('reasonConfirm.suspendTenant.failed'),
+		forbidden: $_('reasonConfirm.suspendTenant.forbidden'),
+		notFound: $_('reasonConfirm.suspendTenant.notFound'),
+		conflict: $_('reasonConfirm.suspendTenant.conflict')
+	}}
 	{onConfirm}
 />

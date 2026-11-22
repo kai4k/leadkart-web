@@ -10,7 +10,7 @@ type After = (o: {
 	formElement: HTMLFormElement;
 }) => Promise<void>;
 type Submit = (input: SubmitInput) => After | void | Promise<After | void>;
-type Nav = { cancel: () => void; willUnload: boolean };
+type Nav = { cancel: () => void; willUnload: boolean; type: string; to: null };
 const h = vi.hoisted(() => ({
 	submit: undefined as Submit | undefined,
 	nav: undefined as ((nav: Nav) => void) | undefined
@@ -194,7 +194,7 @@ describe('ActionForm: submitting', () => {
 });
 
 describe('ActionForm: the leave guard (never in the way of a security reset or sign-out)', () => {
-	const nav = (): Nav => ({ cancel: vi.fn(), willUnload: false });
+	const nav = (): Nav => ({ cancel: vi.fn(), willUnload: false, type: 'link', to: null });
 	const type = (value: string) => {
 		const input = target.querySelector<HTMLInputElement>('input[name="name"]')!;
 		input.value = value;

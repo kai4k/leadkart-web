@@ -126,3 +126,47 @@ describe('CreateTenantDrawer is a FormSheet', () => {
 		await vi.waitFor(() => expect(document.activeElement).toBe(field()));
 	});
 });
+
+describe('a result that arrives after the sheet was closed never reappears (one-time credentials)', () => {
+	it('submit, close, the request resolves, reopen: an empty form, no password, no one-time view', async () => {
+		let resolveCall!: (v: unknown) => void;
+		gw.registerTenant.mockReturnValue(new Promise((r) => (resolveCall = r)));
+		fillAll();
+		submit();
+		props.open = false;
+		flushSync();
+		resolveCall({ tenant_id: 't-late' });
+		await new Promise((r) => setTimeout(r, 20));
+		props.open = true;
+		flushSync();
+		await new Promise((r) => setTimeout(r, 20));
+		expect(document.body.textContent).not.toContain('Str0ng-Passw0rd!');
+		expect(document.body.textContent).not.toContain('one-time view');
+		expect(document.querySelector('#register-tenant-form')).not.toBeNull();
+		expect(document.querySelector<HTMLInputElement>('input[name="slug"]')!.value).toBe('');
+	});
+
+	it('what was typed (a password included) is dropped when the sheet closes', () => {
+		fillAll();
+		props.open = false;
+		flushSync();
+		props.open = true;
+		flushSync();
+		expect(document.querySelector<HTMLInputElement>('input[name="admin_password"]')!.value).toBe(
+			''
+		);
+	});
+
+	it('the credentials view is cleared when the sheet is closed and opened again', async () => {
+		gw.registerTenant.mockResolvedValue({ tenant_id: 't-1' });
+		fillAll();
+		submit();
+		await vi.waitFor(() => expect(document.body.textContent).toContain('one-time view'));
+		props.open = false;
+		flushSync();
+		props.open = true;
+		flushSync();
+		expect(document.body.textContent).not.toContain('one-time view');
+		expect(document.querySelector('#register-tenant-form')).not.toBeNull();
+	});
+});

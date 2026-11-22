@@ -1,5 +1,6 @@
 <!-- src/lib/features/users/components/DeactivateUserDialog.svelte -->
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { ReasonConfirmDialog } from '#lib/components/feedback/index.ts';
 	import { deactivateUserMutation } from '$features/users/queries';
 	import type { UserDto } from '$features/users/types';
@@ -31,7 +32,11 @@
 	description="Deactivated users can't sign in until reactivated. All open sessions are revoked. This is reversible."
 	confirmLabel="Deactivate"
 	reasonLabel="Reason (required, audited)"
-	noun="user"
-	conflict="This user is already deactivated."
+	messages={{
+		failed: $_('reasonConfirm.deactivateUser.failed'),
+		forbidden: $_('reasonConfirm.deactivateUser.forbidden'),
+		notFound: $_('reasonConfirm.deactivateUser.notFound'),
+		conflict: $_('reasonConfirm.deactivateUser.conflict')
+	}}
 	{onConfirm}
 />

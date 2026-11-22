@@ -14,18 +14,16 @@
 
 	let { open = $bindable(false), onOpenChange }: Props = $props();
 
-	let success = $state<{ membershipId: string; personExisted: boolean } | null>(null);
+	/** Held by the form surface: dropped on close, on open, and when stale. */
+	type Added = { membershipId: string; personExisted: boolean };
 
 	const mutation = createUserMutation();
 	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
 	useResetOnChange(() => open, mutation);
-	$effect(() => {
-		if (!open) success = null;
-	});
 
-	async function onSubmit(values: z.output<typeof createUserRequestSchema>) {
+	async function onSubmit(values: z.output<typeof createUserRequestSchema>): Promise<Added> {
 		const resp = await mutation.mutateAsync(values);
-		success = { membershipId: resp.membership_id, personExisted: resp.person_existed };
+		return { membershipId: resp.membership_id, personExisted: resp.person_existed };
 	}
 </script>
 
@@ -39,8 +37,9 @@
 	initial={() => ({ email: '', password: '', first_name: '', last_name: '' })}
 	{onSubmit}
 	closeOnSuccess={false}
-	done={success ? done : undefined}
+	{done}
 	formId="create-user-form"
+	validateOn="blur"
 >
 	{#snippet fields(form)}
 		<TextField
@@ -81,7 +80,7 @@
 	{/snippet}
 </FormSheet>
 
-{#snippet done()}
+{#snippet done(success: Added, { again }: { again: () => void })}
 	{#if success}
 		<Alert variant="success">
 			Member added. {success.personExisted
@@ -89,7 +88,7 @@
 				: 'A new identity was created.'}
 		</Alert>
 		<div class="cluster mt-4">
-			<Button variant="ghost" onclick={() => (success = null)}>Add another</Button>
+			<Button variant="ghost" onclick={again}>Add another</Button>
 			<Button onclick={() => onOpenChange(false)}>Done</Button>
 		</div>
 	{/if}

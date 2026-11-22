@@ -21,12 +21,17 @@ const CODE_KEYS: Record<string, string> = {
 /** `namespace.camelCase` path: letters and digits in dotted segments that each start with a letter. */
 const KEY_SHAPE = /^[a-z][A-Za-z0-9]*(?:\.[A-Za-z][A-Za-z0-9]*)+$/;
 
+/** An API code this table does not know (`invalid_type`): lower case words joined by underscores. */
+const UNKNOWN_CODE = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/;
+
 export const isCopyKey = (message: string): boolean => KEY_SHAPE.test(message);
 
 export function fieldMessageText(message: string, t: (key: string) => string): string {
 	const codeKey = CODE_KEYS[message];
 	if (codeKey) return t(codeKey);
-	return isCopyKey(message) ? t(message) : message;
+	if (isCopyKey(message)) return t(message);
+	// never a raw code on screen
+	return UNKNOWN_CODE.test(message) ? t('form.invalid') : message;
 }
 
 export function fieldErrorCopy(message: string): string {

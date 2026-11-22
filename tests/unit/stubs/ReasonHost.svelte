@@ -23,7 +23,11 @@
 	confirmLabel="Suspend"
 	{confirmText}
 	{askReason}
-	noun="tenant"
-	conflict="This tenant is already suspended."
+	messages={{
+		failed: 'Could not suspend this tenant. Please try again.',
+		forbidden: "You don't have permission to suspend this tenant.",
+		notFound: 'This tenant was deleted or moved.',
+		conflict: 'This tenant is already suspended.'
+	}}
 	{onConfirm}
 />

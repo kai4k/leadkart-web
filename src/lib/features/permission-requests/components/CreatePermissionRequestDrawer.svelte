@@ -25,6 +25,7 @@
 	initial={() => ({ permission: '', duration_days: 30, reason: '' })}
 	onSubmit={async (values) => void (await mutation.mutateAsync(values))}
 	formId="create-permission-request-form"
+	validateOn="blur"
 >
 	{#snippet fields(form)}
 		<TextField

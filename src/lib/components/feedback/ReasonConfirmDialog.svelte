@@ -17,7 +17,7 @@
 	 *
 	 *   - Everything (reason, typed text, errors) is reset every time it opens.
 	 *   - The confirm button is disabled while a required reason is blank, or while `confirmText` is set and the typed
-	 *     text is not exactly it.
+	 *     text is not it (trimmed, NFC-normalised, case-sensitive).
 	 *   - A rejection with a field error on `reason` shows under the field (`role="alert"`); anything else is the one
 	 *     banner line from `describeError` (a conflict says `conflict`, a 403 or 404 says what happened to the `noun`).
 	 *   - It closes itself when `onConfirm` resolves, and refuses to close while it runs. A result that lands after it was
@@ -37,10 +37,8 @@
 		reasonMaxLength?: number;
 		/** Type-to-confirm: the button stays disabled until the typed text is exactly this. */
 		confirmText?: string;
-		/** What is being acted on, lower case ("tenant", "user"): the 403 and 404 lines. */
-		noun: string;
-		/** The 409 line ("This tenant is already suspended."). */
-		conflict?: string;
+		/** The banner lines, each a COMPLETE sentence from the catalogue (never built from fragments): 403, 404, 409, anything else. */
+		messages: { failed: string; forbidden: string; notFound: string; conflict?: string };
 		onConfirm: (reason: string) => Promise<void>;
 		/** More content above the reason field (what will happen, a warning). */
 		extra?: Snippet;
@@ -58,14 +56,14 @@
 		reasonRequired = true,
 		reasonMaxLength = 500,
 		confirmText,
-		noun,
-		conflict,
+		messages,
 		onConfirm,
 		extra
 	}: Props = $props();
 
 	let reason = $state('');
 	let typed = $state('');
+	let typedTouched = $state(false);
 	let reasonError = $state<string | null>(null);
 	let banner = $state<string | null>(null);
 	let pending = $state(false);
@@ -78,15 +76,26 @@
 			generation++;
 			reason = '';
 			typed = '';
+			typedTouched = false;
 			reasonError = null;
 			banner = null;
 			pending = false;
 		});
 	});
 
+	/** Trimmed and Unicode-normalised on both sides (a pasted trailing space, a decomposed accent); still case-sensitive. */
+	const sameText = (a: string, b: string) =>
+		a.trim().normalize('NFC') === b.trim().normalize('NFC');
+	const mismatch = $derived(
+		confirmText !== undefined &&
+			typedTouched &&
+			typed.trim() !== '' &&
+			!sameText(typed, confirmText)
+	);
+
 	const blocked = $derived(
 		(askReason && reasonRequired && reason.trim() === '') ||
-			(confirmText !== undefined && typed !== confirmText)
+			(confirmText !== undefined && !sameText(typed, confirmText))
 	);
 
 	async function confirm() {
@@ -103,13 +112,12 @@
 			if (err instanceof ValidationError && err.fields.reason) {
 				reasonError = fieldErrorCopy(err.fields.reason);
 			} else {
-				const verb = confirmLabel.toLowerCase();
 				({ banner } = describeReasonError(err, {
-					fallback: `Failed to ${verb}. Please try again.`,
+					fallback: messages.failed,
 					status: {
-						403: `You don't have permission to ${verb} this ${noun}.`,
-						404: `This ${noun} was deleted or moved.`,
-						409: conflict
+						403: messages.forbidden,
+						404: messages.notFound,
+						409: messages.conflict
 					}
 				}));
 			}
@@ -151,7 +159,10 @@
 					label={$_('form.typeToConfirm', { values: { text: confirmText } })}
 					name="confirm_text"
 					autocomplete="off"
+					hint={$_('form.typeToConfirmHint')}
 					bind:value={typed}
+					onblur={() => (typedTouched = true)}
+					error={mismatch ? $_('form.errors.nameMismatch') : undefined}
 				/>
 			{/if}
 			{#if banner}<Alert variant="destructive">{banner}</Alert>{/if}

@@ -24,7 +24,7 @@ touch `components.json`, `src/app.css` or `package.json` of this repo.
 ## Edits by file
 
 - `alert-dialog/alert-dialog.svelte`: the same busy veto (`busy`), so a confirmation whose action is in flight refuses
-  Escape and Cancel. `alert-dialog-content`: the default width is `sm:max-w-md` (a reason field needs the room);
+  Escape and Cancel. `alert-dialog-content`: the default width is `sm:max-w-md` (a reason field needs the room), `max-h-[90dvh]` and a flex column (header and footer `shrink-0`, the `ConfirmDialog` body `min-h-0 flex-1 overflow-y-auto`) so a tall confirmation scrolls its body on a phone and keeps its footer reachable;
   `alert-dialog-footer`: no `bg-muted` fill, an opaque `border-border` hairline like the Sheet and Dialog footers
   (an inner panel is never a second material). `ConfirmDialog` (the LeadKart composite) sits on this primitive and
   focuses Cancel on open.

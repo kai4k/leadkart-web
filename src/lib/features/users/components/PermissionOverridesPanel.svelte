@@ -47,6 +47,11 @@
 	{onSubmit}
 	initial={() => ({ granted: [], revoked: [] })}
 	formId="permission-overrides-form"
+	errorLines={{
+		403: "You don't have permission to manage permission overrides.",
+		404: 'This user was deleted or moved.',
+		409: 'These overrides conflict with the current role set.'
+	}}
 >
 	{#snippet fields(form)}
 		<!-- V1: no endpoint returns a user's existing overrides, so they are managed blind: grant-only-on-save. -->

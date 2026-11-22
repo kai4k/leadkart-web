@@ -341,6 +341,7 @@
 	},
 	"form": {
 		"required": "This field is required.",
+		"invalid": "Check this value.",
 		"tooLong": "This is too long.",
 		"invalidCharacters": "Remove the characters that are not allowed.",
 		"errors": {
@@ -354,7 +355,8 @@
 			"levelInvalid": "Enter a whole number for the hierarchy level.",
 			"levelOutOfRange": "Hierarchy level is out of range.",
 			"slugLength": "Use between 2 and 100 characters.",
-			"durationOutOfRange": "Enter a whole number of days from 1 to 90."
+			"durationOutOfRange": "Enter a whole number of days from 1 to 90.",
+			"nameMismatch": "The name doesn't match."
 		},
 		"leaveGuard": "You have unsaved changes. Leave without saving?",
 		"reason": "Reason",
@@ -422,7 +424,8 @@
 			"characters": "{n} of {max} characters",
 			"near": "{remaining, plural, one {# character left} other {# characters left}}",
 			"limit": "Character limit reached"
-		}
+		},
+		"typeToConfirmHint": "Type it exactly, including capital letters."
 	},
 	"dashboard": {
 		"title": {
@@ -585,6 +588,44 @@
 			"fuchsia": "Fuchsia",
 			"lime": "Lime",
 			"amber": "Amber"
+		}
+	},
+	"reasonConfirm": {
+		"anonymise": {
+			"failed": "Could not anonymise this person. Please try again.",
+			"forbidden": "You don't have permission to anonymise people.",
+			"notFound": "This person was deleted or moved.",
+			"conflict": "This person is already anonymised."
+		},
+		"globalSuspend": {
+			"failed": "Could not suspend this person. Please try again.",
+			"forbidden": "You don't have permission to suspend people globally.",
+			"notFound": "This person was deleted or moved.",
+			"conflict": "This person is already globally suspended."
+		},
+		"markForDeletion": {
+			"failed": "Could not mark this tenant for deletion. Please try again.",
+			"forbidden": "You don't have permission to mark tenants for deletion.",
+			"notFound": "This tenant was deleted or moved.",
+			"conflict": "This tenant is already marked for deletion."
+		},
+		"suspendTenant": {
+			"failed": "Could not suspend this tenant. Please try again.",
+			"forbidden": "You don't have permission to suspend tenants.",
+			"notFound": "This tenant was deleted or moved.",
+			"conflict": "This tenant is already suspended."
+		},
+		"deactivateUser": {
+			"failed": "Could not deactivate this user. Please try again.",
+			"forbidden": "You don't have permission to deactivate users.",
+			"notFound": "This user was deleted or moved.",
+			"conflict": "This user is already deactivated."
+		},
+		"deleteRole": {
+			"failed": "Could not delete this role. Please try again.",
+			"forbidden": "You don't have permission to delete roles.",
+			"notFound": "This role was deleted or moved.",
+			"conflict": "This role is still assigned to users — revoke it everywhere first."
 		}
 	}
 }

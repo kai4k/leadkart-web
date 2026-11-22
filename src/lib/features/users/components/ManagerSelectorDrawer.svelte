@@ -58,6 +58,11 @@
 	initial={() => ({ manager: user?.reports_to ?? '' })}
 	{onSubmit}
 	formId="manager-form"
+	errorLines={{
+		403: "You don't have permission to change this user's manager.",
+		404: 'This user was deleted or moved.',
+		409: 'This manager assignment conflicts with an existing one.'
+	}}
 >
 	{#snippet fields(form)}
 		<Select

@@ -117,7 +117,7 @@
 			</div>
 		</AlertDialog.Header>
 		{#if body}
-			<div class="stack stack-relaxed">{@render body()}</div>
+			<div class="stack stack-relaxed min-h-0 flex-1 overflow-y-auto">{@render body()}</div>
 		{/if}
 		<AlertDialog.Footer>
 			<AlertDialog.Cancel bind:ref={cancelEl} disabled={loading}>{cancelLabel}</AlertDialog.Cancel>

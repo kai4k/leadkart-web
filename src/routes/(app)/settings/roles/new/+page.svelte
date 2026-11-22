@@ -2,7 +2,6 @@
 	import PageHeader from '$layouts/PageHeader.svelte';
 	import { untrack } from 'svelte';
 	import { _ } from 'svelte-i18n';
-	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { Button, Card } from '$ui';
 	import { ActionForm, NumberInput, TextField } from '$form';
@@ -78,9 +77,7 @@
 					/>
 				{/snippet}
 				{#snippet secondary()}
-					<Button variant="ghost" type="button" onclick={() => goto(resolve('settings/roles'))}
-						>Cancel</Button
-					>
+					<Button variant="ghost" href={resolve('settings/roles')}>Cancel</Button>
 				{/snippet}
 			</ActionForm>
 		</Card.Content>
