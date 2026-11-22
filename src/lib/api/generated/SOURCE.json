@@ -1,6 +1,6 @@
 {
 	"repo": "leadkart-go",
-	"commit": "6ebcddfc7da23b4d8207cfc02becaad986f373e2",
+	"commit": "44ff2b16ce1d98b6101ebd2531c795a7b1d79380",
 	"branch": "main",
 	"spec": "api/openapi.yaml"
 }

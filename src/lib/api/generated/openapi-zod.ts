@@ -9728,7 +9728,11 @@ minute, burst 5, whichever address the requests come from).
 		path: '/api/v1/tenants/:tenantId/admin-contact',
 		alias: 'patchApiv1tenantsTenantIdadminContact',
 		description: `A malformed phone or postal address is 422 &#x60;validation_failed&#x60; with an &#x60;errors&#x60;
-entry under &#x60;phone&#x60; or &#x60;address&#x60;.
+entry: &#x60;phone: [&quot;invalid_phone&quot;]&#x60;, or one entry per refused part of the address under
+&#x60;address.street&#x60;, &#x60;address.city&#x60;, &#x60;address.district&#x60;, &#x60;address.state&#x60;, &#x60;address.state_code&#x60; or
+&#x60;address.pincode&#x60;, whose value is &#x60;required&#x60; (blank), &#x60;too_long&#x60; (over its limit),
+&#x60;invalid_pincode&#x60; (not 6 digits with a leading 1-9) or, for &#x60;address.city&#x60; only, &#x60;invalid_city&#x60;.
+Each value is a stable code, never a sentence.
 Requires &#x60;identity.tenants.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
 `,
 		requestFormat: 'json',
@@ -10291,7 +10295,8 @@ minute, burst 5, whichever address the requests come from).
 accepts a zero Statutory VO for tenants that haven&#x27;t yet
 onboarded their compliance IDs.
 A malformed GST, PAN or drug-licence number is 422 &#x60;validation_failed&#x60; with an
-&#x60;errors&#x60; entry under &#x60;gst_number&#x60;, &#x60;pan_number&#x60; or &#x60;drug_licence_number&#x60;.
+&#x60;errors&#x60; entry under &#x60;gst_number&#x60; (&#x60;[&quot;invalid_gstin&quot;]&#x60;), &#x60;pan_number&#x60; (&#x60;[&quot;invalid_pan&quot;]&#x60;) or
+&#x60;drug_licence_number&#x60; (&#x60;[&quot;invalid_drug_licence&quot;]&#x60;). Each value is a stable code, never a sentence.
 Requires &#x60;identity.tenants.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
 `,
 		requestFormat: 'json',
@@ -11020,7 +11025,7 @@ minute, burst 5, whichever address the requests come from).
 		alias: 'patchApiv1usersUserIdpermissionOverrides',
 		description: `Both arrays are required; empty arrays clear the corresponding overlay. Permission names
 MUST match the closed &#x60;permission.IdentityPermissions&#x60; catalogue;
-unknown names surface as 422 (&#x60;permission_unknown&#x60;). A name listed twice in one array is stored once; a name present in BOTH arrays is a 422 &#x60;validation_failed&#x60; with the names under &#x60;errors.revoked&#x60;.
+unknown names surface as 422 (&#x60;permission_unknown&#x60;). A name listed twice in one array is stored once; a name present in BOTH arrays is a 422 &#x60;validation_failed&#x60; with &#x60;errors{revoked: [&quot;also_granted&quot;]}&#x60; (compare your own two arrays to find the names).
 Requires &#x60;identity.users.update_permissions&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;). The caller must strictly outrank the target member (&#x60;insufficient_rank&#x60;; owners may act on owners; super users and exempt platform operators are exempt), decided inside the transaction that holds the tenant&#x27;s authority lock (ADR 0069). Conferring a permission the caller does not hold is rejected with &#x60;grant_exceeds_authority&#x60;.
 `,
 		requestFormat: 'json',
