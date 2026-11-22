@@ -6,6 +6,7 @@
 	import { Dropdown } from '$ui';
 	import { initials } from '#lib/utils/person-name.ts';
 	import { session } from '$features/auth';
+	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
 
 	/**
 	 * UserMenu — avatar trigger + menu. Composes the `Dropdown` primitive (bits-ui DropdownMenu):
@@ -14,6 +15,9 @@
 	 */
 
 	async function handleSignOut() {
+		// unsaved input is asked about ONCE, before the request; declining changes nothing. After a yes the sign-out
+		// releases every guard itself (it is never blocked again), and a security reset never asks (confirmLeave is silent).
+		if (!confirmLeave()) return;
 		try {
 			await session.logout();
 		} catch {

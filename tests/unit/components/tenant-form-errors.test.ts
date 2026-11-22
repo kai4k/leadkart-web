@@ -113,6 +113,8 @@ describe('the tenant settings forms show a server error on the field it names', 
 				await tick();
 				const invalid = [...target.querySelectorAll('[aria-invalid="true"]')];
 				expect(invalid, 'one control marked invalid').toHaveLength(1);
+				// and it is the control the server named, not a neighbour (a swapped pair of bindings would pass without this)
+				expect(invalid[0].getAttribute('name')).toBe(field.replace(/^password_policy\./, ''));
 				const alert = target.querySelector('[data-slot="field-error"], [role="alert"]');
 				expect(alert?.textContent?.trim()).toBeTruthy();
 				const describedBy = invalid[0].getAttribute('aria-describedby') ?? '';

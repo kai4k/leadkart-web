@@ -255,7 +255,7 @@ describe('no raw Zod default reaches a user', () => {
 						expect(shown, where).not.toBe(en.form.invalid);
 					} else if (NAMED_DEFAULT.test(m)) {
 						// a library default that names a length or a numeric floor / ceiling: read as the rule (M-9)
-						expect(shown, where).toMatch(/.$/);
+						expect(shown, where).toMatch(/\.$/);
 						expect(shown, where).not.toBe(en.form.invalid);
 					} else {
 						// anything else (a library default for a rule nobody gave a key) reads "Check this value."

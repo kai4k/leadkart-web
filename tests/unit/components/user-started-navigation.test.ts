@@ -209,3 +209,46 @@ describe('entering or leaving a company moves the page: a user action, asked abo
 		expect(scope.enter).toHaveBeenCalledOnce();
 	});
 });
+
+describe('signing out from the user menu (M-5)', () => {
+	beforeEach(async () => (await logout()).mockClear());
+	async function signOut() {
+		await openUserMenu();
+		const item = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((e) =>
+			e.textContent?.includes('Sign out')
+		)!;
+		item.click();
+		await settle();
+	}
+	const logout = async () =>
+		(await import('$features/auth')).session.logout as ReturnType<typeof vi.fn>;
+
+	it('dirty form: asks once BEFORE the request; declining changes nothing', async () => {
+		dirty = true;
+		await signOut();
+		expect(ask).toHaveBeenCalledTimes(1);
+		expect(await logout()).not.toHaveBeenCalled();
+	});
+
+	it('dirty form, confirmed: asks once, then signs out', async () => {
+		dirty = true;
+		ask.mockReturnValue(true);
+		await signOut();
+		expect(ask).toHaveBeenCalledTimes(1);
+		expect(await logout()).toHaveBeenCalledTimes(1);
+	});
+
+	it('guards already released (a security reset or a sign-out in flight): never asks', async () => {
+		dirty = true;
+		releaseLeaveGuards(true);
+		await signOut();
+		expect(ask).not.toHaveBeenCalled();
+		expect(await logout()).toHaveBeenCalledTimes(1);
+	});
+
+	it('clean form: signs out without asking', async () => {
+		await signOut();
+		expect(ask).not.toHaveBeenCalled();
+		expect(await logout()).toHaveBeenCalledTimes(1);
+	});
+});

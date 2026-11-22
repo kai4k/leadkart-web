@@ -143,6 +143,19 @@
 	onMount(() => {
 		baseline = snapshot();
 	});
+	// The baseline is read while the fieldset is disabled when the form starts read-only, and `FormData` omits disabled
+	// controls: re-take it when `allowed` changes, so a form that becomes editable is not dirty before anyone typed.
+	let seenAllowed: boolean | undefined;
+	$effect(() => {
+		const now = allowed;
+		if (seenAllowed === undefined) seenAllowed = now; // the first run: onMount takes the baseline
+		if (now === seenAllowed) return;
+		seenAllowed = now;
+		void tick().then(() => {
+			baseline = snapshot();
+			touch();
+		});
+	});
 	$effect(() => {
 		if (result?.success)
 			void tick().then(() => {
@@ -199,7 +212,11 @@
 >
 	{#if scoped}<ScopeContextField />{/if}
 	<!-- A form the caller may not save shows its values and changes none of them (`disabled` reaches every control). -->
-	<fieldset disabled={!allowed} class="m-0 min-w-0 border-0 p-0 contents">
+	<fieldset
+		disabled={!allowed}
+		aria-describedby={!allowed && disallowedReason ? `${id}-readonly` : undefined}
+		class="m-0 min-w-0 border-0 p-0 contents"
+	>
 		{@render children({ submitting, fieldError, value })}
 	</fieldset>
 	<FormOutcome
@@ -217,7 +234,7 @@
 				size={wide ? 'lg' : 'default'}>{submitLabel}</Button
 			>
 		{:else if disallowedReason}
-			<p class="caption text-muted-foreground">{disallowedReason}</p>
+			<p id="{id}-readonly" class="caption text-muted-foreground">{disallowedReason}</p>
 		{/if}
 	</div>
 </form>

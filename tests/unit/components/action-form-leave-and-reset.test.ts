@@ -150,3 +150,43 @@ describe('ActionForm: resetOnSuccess clears a password form', () => {
 		expect(input('new_password').type).toBe('text');
 	});
 });
+
+describe('ActionForm: a form that becomes editable while mounted (M-1, M-4)', () => {
+	it('is not dirty before anyone typed: the baseline is taken again when `allowed` changes', async () => {
+		const { reactiveProps } = await import('../helpers/reactive-props.svelte.ts');
+		const props = reactiveProps<{ guardLeave: boolean; allowed: boolean }>({
+			guardLeave: true,
+			allowed: false
+		});
+		component = mount(Host, { target, props });
+		flushSync();
+		await tick();
+		const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+		props.allowed = true;
+		flushSync();
+		await tick();
+		await tick();
+		const n = { cancel: vi.fn(), willUnload: false, type: 'link', to: null };
+		h.nav!(n);
+		expect(confirmSpy, 'nothing typed: nothing to lose').not.toHaveBeenCalled();
+		expect(n.cancel).not.toHaveBeenCalled();
+		// and typing after that is still caught
+		typeInto('name', 'Changed');
+		await tick();
+		h.nav!(n);
+		expect(confirmSpy).toHaveBeenCalledTimes(1);
+	});
+
+	it('the read-only reason is tied to the fieldset by aria-describedby', async () => {
+		await render({ allowed: false });
+		const fieldset = target.querySelector('fieldset')!;
+		const reason = target.querySelector('#pw-readonly');
+		expect(reason?.textContent).toBe('No access.');
+		expect(fieldset.getAttribute('aria-describedby')).toBe('pw-readonly');
+	});
+
+	it('an editable form has no such link', async () => {
+		await render({ allowed: true });
+		expect(target.querySelector('fieldset')!.hasAttribute('aria-describedby')).toBe(false);
+	});
+});
