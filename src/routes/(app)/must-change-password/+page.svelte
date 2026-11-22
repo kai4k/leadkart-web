@@ -2,6 +2,8 @@
 	import { _ } from 'svelte-i18n';
 	import { AuthCard } from '$ui';
 	import { ActionForm, PasswordField } from '#lib/components/form/index.ts';
+	import { session } from '$features/auth';
+	import { passwordPolicyHint } from '#lib/features/auth/password-policy.ts';
 	import type { ActionData } from './$types';
 
 	/**
@@ -11,6 +13,7 @@
 	 * redirect, so nothing typed stays on screen.
 	 */
 	let { form }: { form: ActionData } = $props();
+	const hint = $derived(passwordPolicyHint(session.capabilities?.password_policy, $_));
 </script>
 
 <svelte:head>
@@ -37,7 +40,7 @@
 				<PasswordField
 					label={$_('account.security.changePassword.newPassword')}
 					name="new_password"
-					hint={$_('account.security.changePassword.newPasswordHint')}
+					{hint}
 					autocomplete="new-password"
 					required
 					error={fieldError('new')}

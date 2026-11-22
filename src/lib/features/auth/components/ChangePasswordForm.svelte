@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
 	import { ActionForm, PasswordField, type ActionFormResult } from '$form';
+	import { session } from '../stores/session.svelte';
+	import { passwordPolicyHint } from '#lib/features/auth/password-policy.ts';
 
 	/**
 	 * ChangePasswordForm: authenticated password change via the form action `?/changePassword`. The server verifies
@@ -11,6 +13,8 @@
 	type Props = { form?: FormResult };
 	let { form }: Props = $props();
 
+	// the policy of the company this person belongs to, as the server provides it
+	const hint = $derived(passwordPolicyHint(session.capabilities?.password_policy, $_));
 	const ours = $derived(form?.which === 'changePassword' ? form : null);
 </script>
 
@@ -33,7 +37,7 @@
 		<PasswordField
 			label={$_('account.security.changePassword.newPassword')}
 			name="new_password"
-			hint={$_('account.security.changePassword.newPasswordHint')}
+			hint={`${hint} ${$_('account.security.changePassword.differs')}`}
 			autocomplete="new-password"
 			required
 			error={fieldError('new')}

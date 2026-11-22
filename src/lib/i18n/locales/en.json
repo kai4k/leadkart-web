@@ -37,7 +37,7 @@
 			"title": "Choose a new password",
 			"subtitle": "Set the password you'll use to sign in.",
 			"newPassword": "New password",
-			"newPasswordHint": "At least 8 characters, with an uppercase letter, a lowercase letter, a digit and a symbol.",
+			"newPasswordHint": "The new password does not meet the password rules.",
 			"confirmPassword": "Confirm new password",
 			"submit": "Reset password",
 			"success": "Password reset. Redirecting you to sign in…",
@@ -107,7 +107,7 @@
 				"description": "Pick a strong password you don't use elsewhere. We'll keep you signed in on this device.",
 				"currentPassword": "Current password",
 				"newPassword": "New password",
-				"newPasswordHint": "At least 8 characters, with an uppercase letter, a lowercase letter, a digit and a symbol. Must differ from your current password.",
+				"newPasswordHint": "The new password does not meet the password rules.",
 				"confirmPassword": "Confirm new password",
 				"submit": "Update password",
 				"success": "Password updated.",
@@ -115,7 +115,8 @@
 					"incorrectCurrent": "That doesn't match your current password.",
 					"mismatch": "Passwords don't match.",
 					"generic": "Couldn't update your password. Please try again."
-				}
+				},
+				"differs": "It must differ from your current password."
 			}
 		}
 	},
@@ -392,7 +393,6 @@
 			"selectOrder": "Select at least one order.",
 			"permissionNamesInvalid": "One or more permission names are invalid."
 		},
-		"passwordHint": "At least 8 characters, with an uppercase letter, a lowercase letter, a digit and a symbol.",
 		"passwordRule": {
 			"min_length": "The password is too short.",
 			"max_length": "The password is too long.",
@@ -474,7 +474,15 @@
 			"near": "{remaining, plural, one {# character left} other {# characters left}}",
 			"limit": "Character limit reached"
 		},
-		"typeToConfirmHint": "Type it exactly, including capital letters."
+		"typeToConfirmHint": "Type it exactly, including capital letters.",
+		"passwordPolicy": {
+			"length": "At least {min} characters.",
+			"withClasses": "At least {min} characters, with {classes}.",
+			"uppercase": "an uppercase letter",
+			"lowercase": "a lowercase letter",
+			"digit": "a digit",
+			"symbol": "a symbol"
+		}
 	},
 	"dashboard": {
 		"title": {

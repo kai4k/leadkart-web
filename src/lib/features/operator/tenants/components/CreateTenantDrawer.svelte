@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { passwordPolicyHint } from '#lib/features/auth/password-policy.ts';
 	import { oneShot } from '#lib/utils/one-shot.ts';
 	import { _ } from 'svelte-i18n';
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
@@ -118,7 +119,7 @@
 			bind:value={form.values.admin_password}
 			required
 			minlength={8}
-			hint={$_('form.passwordHint')}
+			hint={passwordPolicyHint(null, $_)}
 			error={form.errors.admin_password}
 		/>
 	{/snippet}

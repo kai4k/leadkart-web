@@ -1,5 +1,7 @@
 <!-- src/lib/features/users/components/CreateUserDrawer.svelte -->
 <script lang="ts">
+	import { passwordPolicyHint } from '#lib/features/auth/password-policy.ts';
+	import { session } from '$features/auth';
 	import { oneShot } from '#lib/utils/one-shot.ts';
 	import { _ } from 'svelte-i18n';
 	import type { z } from 'zod';
@@ -20,6 +22,8 @@
 	type Added = { membershipId: string; personExisted: boolean };
 
 	const mutation = createUserMutation();
+	// the policy that applies to the person being added: the caller's company's, as the server provides it
+	const hint = $derived(passwordPolicyHint(session.capabilities?.password_policy, $_));
 	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
 	useResetOnChange(() => open, mutation);
 
@@ -74,7 +78,7 @@
 			autocomplete="new-password"
 			bind:value={form.values.password}
 			required
-			hint={$_('form.passwordHint')}
+			{hint}
 			error={form.errors.password}
 		/>
 		<p class="caption text-subtle-foreground">

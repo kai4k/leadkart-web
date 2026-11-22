@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
+	import { passwordPolicyHint } from '#lib/features/auth/password-policy.ts';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -43,7 +44,7 @@
 				<PasswordField
 					label={$_('auth.resetPassword.newPassword')}
 					name="new_password"
-					hint={$_('auth.resetPassword.newPasswordHint')}
+					hint={passwordPolicyHint(null, $_)}
 					autocomplete="new-password"
 					required
 					error={fieldError('new_password')}
