@@ -22,6 +22,7 @@ vi.mock('#lib/features/operator/tenants/api.ts', async (importOriginal) => ({
 	...gw
 }));
 
+import { holdersIn, reachablePath } from '../helpers/reachable.ts';
 import { reactiveProps } from '../helpers/reactive-props.svelte.ts';
 import { createQueryClient } from '#lib/api/query-client.ts';
 import CreateTenantDrawer from '#lib/features/operator/tenants/components/CreateTenantDrawer.svelte';
@@ -107,12 +108,19 @@ describe('CreateTenantDrawer is a FormSheet', () => {
 		props.open = false;
 		flushSync();
 		expect(gw.registerTenant.mock.calls[0]![0].admin_password).toBe(VALUES.admin_password);
-		const cached = h.qc
-			.getMutationCache()
-			.getAll()
-			.map((m) => JSON.stringify([m.state.variables, m.state.data]));
-		expect(cached.length).toBeGreaterThan(0);
-		for (const entry of cached) expect(entry).not.toContain(VALUES.admin_password);
+		const entries = h.qc.getMutationCache().getAll();
+		expect(entries.length).toBeGreaterThan(0);
+		for (const m of entries) {
+			// behaviour, not serialisation: a holder that kept the password in a closure is found by calling it
+			expect(
+				reachablePath(m, VALUES.admin_password),
+				'a path from the cache entry to the password'
+			).toBeNull();
+			const holders = holdersIn(m.state.variables);
+			expect(holders.length).toBe(1);
+			expect(() => holders[0]!.take(), 'reading the holder again yields nothing').toThrow();
+		}
+		expect(document.body.textContent).not.toContain(VALUES.admin_password);
 	});
 
 	it('Done closes the sheet; reopening shows an empty form, never the previous credentials', async () => {
