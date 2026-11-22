@@ -1,10 +1,9 @@
 <!-- src/lib/features/users/components/DeactivateUserDialog.svelte -->
 <script lang="ts">
-	import { ConfirmDialog, Alert } from '$ui';
+	import { ReasonConfirmDialog } from '#lib/components/feedback/index.ts';
 	import { deactivateUserMutation } from '$features/users/queries';
 	import type { UserDto } from '$features/users/types';
 	import { displayName } from '$features/auth';
-	import { describeReasonError } from '$api/errors';
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 
 	type Props = {
@@ -15,65 +14,24 @@
 
 	let { open = $bindable(false), user, onOpenChange }: Props = $props();
 
-	let reason = $state('');
-	let reasonError = $state<string | null>(null);
-	let bannerError = $state<string | null>(null);
-
 	const mutation = deactivateUserMutation();
 	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
 	useResetOnChange(() => open, mutation);
-	const isPending = $derived(mutation.isPending);
 
-	async function onConfirm() {
+	async function onConfirm(reason: string) {
 		if (!user) return;
-		reasonError = null;
-		bannerError = null;
-		mutation.mutate(
-			{ id: user.membership_id, reason: reason.trim() },
-			{
-				onSuccess: () => {
-					reason = '';
-					onOpenChange(false);
-				},
-				onError: (err: unknown) => {
-					({ reasonError, banner: bannerError } = describeReasonError(err, {
-						fallback: 'Failed to deactivate. Please try again.',
-						status: {
-							403: "You don't have permission to deactivate this user.",
-							404: 'This user was deleted or moved.',
-							409: 'This user is already deactivated.'
-						}
-					}));
-				}
-			}
-		);
+		await mutation.mutateAsync({ id: user.membership_id, reason });
 	}
 </script>
 
-<ConfirmDialog
+<ReasonConfirmDialog
 	bind:open
+	{onOpenChange}
 	title="Deactivate {user ? displayName(user) : 'user'}"
 	description="Deactivated users can't sign in until reactivated. All open sessions are revoked. This is reversible."
 	confirmLabel="Deactivate"
-	variant="danger"
-	loading={isPending}
-	{onOpenChange}
+	reasonLabel="Reason (required, audited)"
+	noun="user"
+	conflict="This user is already deactivated."
 	{onConfirm}
->
-	{#snippet body()}
-		<label class="stack stack-tight">
-			<span class="label">Reason (required, audited)</span>
-			<textarea
-				bind:value={reason}
-				required
-				minlength={1}
-				maxlength={500}
-				rows={3}
-				aria-invalid={reasonError ? 'true' : undefined}
-				class="bg-card border border-border rounded-md w-full rounded-md px-3 py-2 text-sm"
-			></textarea>
-			{#if reasonError}<span class="body-sm text-destructive">{reasonError}</span>{/if}
-		</label>
-		{#if bannerError}<Alert variant="destructive">{bannerError}</Alert>{/if}
-	{/snippet}
-</ConfirmDialog>
+/>

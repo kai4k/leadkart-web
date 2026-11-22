@@ -101,12 +101,13 @@ test.describe('Tenant user management — positive', () => {
 		await page.getByRole('button', { name: 'Row actions' }).first().click();
 		await page.getByRole('menuitem', { name: /deactivate/i }).click();
 		await page.getByLabel(/reason/i).fill('Left the company');
+		// a confirmation is an alert dialog now (role alertdialog)
 		await page
-			.getByRole('dialog')
+			.getByRole('alertdialog')
 			.getByRole('button', { name: /^deactivate$/i })
 			.click();
 		await expect(page.getByText(/member deactivated/i)).toBeVisible({ timeout: 5000 });
-		await expect(page.getByRole('dialog')).toHaveCount(0);
+		await expect(page.getByRole('alertdialog')).toHaveCount(0);
 	});
 
 	test('existing members render in the table', async ({ page }) => {

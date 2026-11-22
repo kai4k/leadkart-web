@@ -435,6 +435,9 @@ const OVERLAY_NAMESPACE =
 /** A default import of a wrapper that renders an overlay (one level of wrapping; the wrapper files are material surfaces themselves). */
 const OVERLAY_WRAPPER_FILE =
 	/import\s+(?:type\s+)?\w+\s+from\s*['"][^'"]*\/(?:ConfirmDialog|FormSheet|FormDialog|\w*Drawer)\.svelte['"]/;
+/** A named import of a wrapper that renders an overlay from a barrel (`{ ReasonConfirmDialog } from '#lib/components/feedback/index.ts'`, `{ FormSheet } from '$form'`). */
+const OVERLAY_WRAPPER_NAMED =
+	/import\s*\{[^}]*\b(?:ReasonConfirmDialog|FormSheet|FormDialog)\b[^}]*\}\s*from\s*['"][^'"]+['"]/;
 const OVERLAY_FROM =
 	/import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*['"](?:\$ui|#lib\/components\/ui\/index\.ts|#lib\/components\/ui(?:\/(?:dialog|alert-dialog|sheet|drawer|popover|dropdown-menu|select|command|combobox|sonner|sidebar)[^'"]*)?)['"]/g;
 const CONTROL_BG = new Set(['bg-muted', 'bg-accent']);
@@ -444,7 +447,11 @@ function isMaterialSurface(norm, parsed) {
 	if (MATERIAL_SURFACE_FILES.some((re) => re.test(norm))) return true;
 	if (parsed.usesMaterial) return true;
 	for (const m of parsed.text.matchAll(OVERLAY_FROM)) if (OVERLAY_IMPORTS.test(m[1])) return true;
-	return OVERLAY_NAMESPACE.test(parsed.text) || OVERLAY_WRAPPER_FILE.test(parsed.text);
+	return (
+		OVERLAY_NAMESPACE.test(parsed.text) ||
+		OVERLAY_WRAPPER_FILE.test(parsed.text) ||
+		OVERLAY_WRAPPER_NAMED.test(parsed.text)
+	);
 }
 
 /** Two variant chains that cannot both hold: the same data-/aria- attribute selector with different values. */

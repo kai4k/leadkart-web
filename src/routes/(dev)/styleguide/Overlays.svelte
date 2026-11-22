@@ -7,10 +7,15 @@
 	 */
 	import { Button, Command, Dialog, DropdownMenu, Sheet, Tabs, toast } from '$ui';
 	import * as Table from '#lib/components/ui/table/index.ts';
-	import { DatePicker } from '$form';
+	import { z } from 'zod';
+	import { DatePicker, FormSheet, TextField } from '$form';
+	import { ReasonConfirmDialog } from '#lib/components/feedback/index.ts';
 
 	let sheetOpen = $state(false);
 	let dialogOpen = $state(false);
+	let formSheetOpen = $state(false);
+	let reasonOpen = $state(false);
+	const demoSchema = z.object({ name: z.string().min(1, 'Enter a name.') });
 	const rows = [
 		{ id: 'r1', name: 'Alpha Pharma', state: 'normal' },
 		{ id: 'r2', name: 'Beta Distributors', state: 'selected' },
@@ -74,6 +79,45 @@
 			</Dialog.Footer>
 		</Dialog.Content>
 	</Dialog.Root>
+
+	{@render row(
+		'Form sheet and reason confirm',
+		'The real FormSheet and the real ReasonConfirmDialog: the confirm opened over the sheet is opaque.'
+	)}
+	<div class="cluster">
+		<Button onclick={() => (formSheetOpen = true)}>Open form sheet</Button>
+	</div>
+	<FormSheet
+		bind:open={formSheetOpen}
+		onOpenChange={(o) => (formSheetOpen = o)}
+		title="Demo form sheet"
+		description="A form in a sheet."
+		submitLabel="Save demo"
+		schema={demoSchema}
+		initial={() => ({ name: '' })}
+		onSubmit={async () => {}}
+		formId="demo-form-sheet"
+	>
+		{#snippet fields(form)}
+			<TextField
+				label="Demo name"
+				name="name"
+				bind:value={form.values.name}
+				error={form.errors.name}
+			/>
+			<Button variant="outline" onclick={() => (reasonOpen = true)}>Delete the demo</Button>
+		{/snippet}
+	</FormSheet>
+	<ReasonConfirmDialog
+		bind:open={reasonOpen}
+		onOpenChange={(o) => (reasonOpen = o)}
+		title="Delete the demo"
+		description="This is a demonstration."
+		confirmLabel="Delete demo"
+		confirmText="acme"
+		noun="demo"
+		onConfirm={async () => {}}
+	/>
 
 	{@render row('Toasts', 'One of each type; the default one is the pane material.')}
 	<div class="cluster">

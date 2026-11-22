@@ -13,12 +13,19 @@
 </script>
 
 <script lang="ts">
-	import * as Dialog from './dialog/index.js';
+	import * as AlertDialog from './alert-dialog/index.js';
 	import { Button } from './button';
 	import { Icon, AlertTriangle, Info, AlertCircle } from '$icons';
 	import { cn } from '#lib/utils/cn.ts';
-	import type { Snippet, Component } from 'svelte';
+	import { untrack, type Snippet, type Component } from 'svelte';
 
+	/**
+	 * A confirmation on the `alert-dialog` primitive (role `alertdialog`): focus starts on Cancel, an outside press
+	 * does not dismiss it, Escape and Cancel close it unless the action is in flight (`loading` vetoes every way out).
+	 * The panel is the `material-pane`; over a form sheet it is opaque (a pane over a pane is never glass on glass).
+	 * Cancel comes first in the DOM. The confirm button is a plain Button, not `AlertDialog.Action`: that closes the
+	 * dialog on click, and a confirmation closes when its action SUCCEEDS (the caller sets `open` to false).
+	 */
 	type Props = {
 		open: boolean;
 		title: string;
@@ -27,6 +34,8 @@
 		cancelLabel?: string;
 		variant?: ConfirmDialogVariant;
 		loading?: boolean;
+		/** The confirm button is disabled (type-to-confirm not matched, a required reason missing). */
+		confirmDisabled?: boolean;
 		onConfirm: () => void | Promise<void>;
 		onOpenChange?: (open: boolean) => void;
 		body?: Snippet;
@@ -40,10 +49,18 @@
 		cancelLabel = 'Cancel',
 		variant = 'default',
 		loading = false,
+		confirmDisabled = false,
 		onConfirm,
 		onOpenChange,
 		body
 	}: Props = $props();
+
+	let cancelEl: HTMLElement | null = $state(null);
+	// the least destructive action takes focus when the dialog opens (alert-dialog semantics, every variant)
+	function focusCancel(e: Event) {
+		e.preventDefault();
+		untrack(() => cancelEl)?.focus();
+	}
 
 	async function onConfirmClick() {
 		await onConfirm();
@@ -72,16 +89,14 @@
 		}
 	};
 	const vc = $derived(VARIANT_CONFIG[variant]);
-	// Button variant mapping. Buttons.danger is the only "warm" variant we
-	// own; warning + info defer to `primary` (Material 3 treats info as
-	// neutral-emphasis, and a warning's emphasis lives in the icon + strip
-	// rather than a yellow CTA which fails contrast targets).
+	// Buttons.danger is the only "warm" variant we own; warning + info defer to `default` (a yellow CTA fails
+	// contrast targets: the warning's emphasis lives in the icon).
 	const buttonVariant = $derived(variant === 'danger' ? 'destructive' : 'default');
 </script>
 
-<Dialog.Root bind:open busy={loading} {onOpenChange}>
-	<Dialog.Content size="xl">
-		<Dialog.Header>
+<AlertDialog.Root bind:open busy={loading} {onOpenChange}>
+	<AlertDialog.Content onOpenAutoFocus={focusCancel}>
+		<AlertDialog.Header>
 			<div class="cluster cluster-tight items-start gap-3">
 				{#if vc.icon}
 					<span
@@ -92,23 +107,23 @@
 					</span>
 				{/if}
 				<div class="stack stack-tight">
-					<Dialog.Title class="h5 text-base">{title}</Dialog.Title>
-					{#if description}<p class="body-sm text-muted-foreground">{description}</p>{/if}
+					<AlertDialog.Title>{title}</AlertDialog.Title>
+					{#if description}
+						<AlertDialog.Description class="body-sm text-muted-foreground"
+							>{description}</AlertDialog.Description
+						>
+					{/if}
 				</div>
 			</div>
-		</Dialog.Header>
+		</AlertDialog.Header>
 		{#if body}
-			<Dialog.Body>{@render body()}</Dialog.Body>
+			<div class="stack stack-relaxed">{@render body()}</div>
 		{/if}
-		<Dialog.Footer>
-			<Dialog.Close>
-				{#snippet child({ props })}
-					<Button {...props} variant="ghost" disabled={loading}>{cancelLabel}</Button>
-				{/snippet}
-			</Dialog.Close>
-			<Button variant={buttonVariant} {loading} onclick={onConfirmClick}>
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel bind:ref={cancelEl} disabled={loading}>{cancelLabel}</AlertDialog.Cancel>
+			<Button variant={buttonVariant} {loading} disabled={confirmDisabled} onclick={onConfirmClick}>
 				{confirmLabel}
 			</Button>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
+</AlertDialog.Root>

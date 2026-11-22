@@ -344,6 +344,7 @@
 		"invalidCharacters": "Remove the characters that are not allowed.",
 		"leaveGuard": "You have unsaved changes. Leave without saving?",
 		"reason": "Reason",
+		"typeToConfirm": "Type {text} to confirm",
 		"calendar": {
 			"previousMonth": "Previous month",
 			"nextMonth": "Next month",

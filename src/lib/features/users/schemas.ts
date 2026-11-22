@@ -17,7 +17,7 @@ import {
 	ListUsersResponse,
 	ReplaceUserPermissionOverridesRequest
 } from '#lib/api/generated/index.ts';
-import { formEmailField, reasonField } from '#lib/api/request-schema.ts';
+import { formEmailField, newPasswordField, reasonField } from '#lib/api/request-schema.ts';
 import { userDtoSchema } from '#lib/features/auth/schemas.ts';
 
 export { userDtoSchema };
@@ -48,8 +48,9 @@ export type SearchMembershipsResponse = z.output<typeof searchMembershipsRespons
 
 export const createUserRequestSchema = CreateUserRequest.extend({
 	email: formEmailField,
-	first_name: z.string().min(1).max(120),
-	last_name: z.string().min(1).max(120)
+	first_name: z.string().min(1, 'Enter a first name.').max(120, 'Use at most 120 characters.'),
+	last_name: z.string().min(1, 'Enter a last name.').max(120, 'Use at most 120 characters.'),
+	password: newPasswordField
 }).strict();
 
 export const createUserResponseSchema = CreateUserResponse;

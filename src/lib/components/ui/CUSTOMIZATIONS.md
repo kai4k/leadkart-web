@@ -23,6 +23,11 @@ touch `components.json`, `src/app.css` or `package.json` of this repo.
 
 ## Edits by file
 
+- `alert-dialog/alert-dialog.svelte`: the same busy veto (`busy`), so a confirmation whose action is in flight refuses
+  Escape and Cancel. `alert-dialog-content`: the default width is `sm:max-w-md` (a reason field needs the room);
+  `alert-dialog-footer`: no `bg-muted` fill, an opaque `border-border` hairline like the Sheet and Dialog footers
+  (an inner panel is never a second material). `ConfirmDialog` (the LeadKart composite) sits on this primitive and
+  focuses Cancel on open.
 - `dialog/dialog.svelte`, `sheet/sheet.svelte`: the busy veto (`createBusyVeto`): Escape, outside
   press and every Close are refused while `busy`, bounded by the client read timeout.
 - `dialog/dialog-body.svelte`, `sheet/sheet-body.svelte`: LeadKart additions (scrolling body).

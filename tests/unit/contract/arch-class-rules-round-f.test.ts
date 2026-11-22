@@ -130,6 +130,14 @@ describe('m6: the file scope follows what a file renders', () => {
 			`<script>import ConfirmDialog from '#lib/components/ui/ConfirmDialog.svelte';</script>\n<div class="bg-accent text-destructive">x</div>`
 		],
 		[
+			'a ReasonConfirmDialog named import from the feedback barrel',
+			`<script>import { ReasonConfirmDialog } from '#lib/components/feedback/index.ts';</script>\n<div class="bg-accent text-destructive">x</div>`
+		],
+		[
+			'a FormSheet named import from the form barrel',
+			`<script>import { FormSheet, TextField } from '#lib/components/form/index.ts';</script>\n<div class="bg-accent text-destructive">x</div>`
+		],
+		[
 			'a Drawer wrapper file',
 			`<script>import BulkUploadDrawer from '$lib/components/data/BulkUploadDrawer.svelte';</script>\n<div class="bg-accent text-destructive">x</div>`
 		]

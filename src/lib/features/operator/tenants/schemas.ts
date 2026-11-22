@@ -29,14 +29,18 @@ const registerShape = RegisterTenantRequest.shape;
 export const registerTenantRequestSchema = RegisterTenantRequest.extend({
 	slug: registerShape.slug.regex(
 		/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/,
-		'slug must be lowercase letters, digits, and dashes'
+		'Use lowercase letters, digits and dashes only.'
 	),
-	legal_name: registerShape.legal_name.min(2),
-	display_name: registerShape.display_name.min(2),
+	legal_name: registerShape.legal_name.min(2, 'Enter the legal name.'),
+	display_name: registerShape.display_name.min(2, 'Enter the display name.'),
 	admin_email: formEmailField,
 	admin_password: newPasswordField,
-	admin_first_name: registerShape.admin_first_name.min(1).max(120),
-	admin_last_name: registerShape.admin_last_name.min(1).max(120)
+	admin_first_name: registerShape.admin_first_name
+		.min(1, 'Enter a first name.')
+		.max(120, 'Use at most 120 characters.'),
+	admin_last_name: registerShape.admin_last_name
+		.min(1, 'Enter a last name.')
+		.max(120, 'Use at most 120 characters.')
 }).strict();
 
 export const registerTenantResponseSchema = RegisterTenantResponse;

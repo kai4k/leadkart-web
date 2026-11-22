@@ -61,7 +61,7 @@ const type = (el: HTMLInputElement | HTMLTextAreaElement, value: string) => {
 	flushSync();
 };
 const submit = () => {
-	type(field('input'), 'a@b.co');
+	type(field('input[name="confirm_text"]'), 'a@b.co');
 	type(document.querySelector('textarea')!, 'because');
 	buttonNamed(/Anonymise permanently/)!.click();
 	flushSync();
@@ -70,17 +70,18 @@ const pressEscape = () => {
 	document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 	flushSync();
 };
-const dialogOpen = () => document.querySelector('[role="dialog"]') !== null;
+// a confirmation is an alert dialog (role alertdialog)
+const dialogOpen = () => document.querySelector('[role="alertdialog"]') !== null;
 
 describe('a pending save cannot be dismissed into silence', () => {
-	it('Escape and the X do nothing while the call is in flight, then work again', async () => {
+	it('Escape and Cancel do nothing while the call is in flight, then work again', async () => {
 		let reject!: (e: unknown) => void;
 		gw.anonymisePerson.mockReturnValue(new Promise((_r, rej) => (reject = rej)));
 		submit();
 		await vi.waitFor(() => expect(gw.anonymisePerson).toHaveBeenCalledTimes(1));
 
 		pressEscape();
-		document.querySelector<HTMLElement>('[aria-label="Close"]')?.click();
+		buttonNamed(/^Cancel$/)?.click();
 		flushSync();
 		expect(dialogOpen()).toBe(true);
 		expect(onOpenChange).not.toHaveBeenCalledWith(false);

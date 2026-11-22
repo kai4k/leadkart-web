@@ -33,13 +33,15 @@ export function withRealMutations(
 				pending = result.isPending;
 			});
 			Object.defineProperty(observer, 'isPending', { get: () => pending });
+			// like the real binding: `mutateAsync` REJECTS on failure even where `mutate` swallows it
+			const rejecting = observer.mutate.bind(observer);
 			if (opts.swallowRejections) {
 				const mutate = observer.mutate.bind(observer);
 				observer.mutate = ((vars, mutateOpts) =>
 					mutate(vars, mutateOpts).catch(() => undefined)) as typeof observer.mutate;
 			}
 			Object.defineProperty(observer, 'mutateAsync', {
-				value: (vars: never) => observer.mutate(vars)
+				value: (vars: never) => rejecting(vars)
 			});
 			return observer;
 		},
