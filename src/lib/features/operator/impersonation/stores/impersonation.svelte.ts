@@ -30,12 +30,10 @@ export {
 
 /**
  * Impersonation store: what the SERVER lists for the signed-in person, and nothing the client remembers (a security
- * indicator). No session id is kept across reads, sign-ins or tabs. State is tagged with the person it was read for; a
- * person change or `forget()` empties it and abandons the old person's queue, and a result for another person is dropped.
- * ONE serial queue (`serial-queue.ts`); `start` re-checks when it RUNS; `end` uses the id captured at click time. A
- * mutation has a deadline (`MUTATION_DEADLINE_MS`); past it the outcome is UNKNOWN and `unknown-outcome.svelte.ts` looks
- * until a read answers. When in doubt the indicator is SHOWN: a successful start shows a provisional session before the
- * follow-up read, a failed read never hides a shown session, and a read is queued at the earliest `expires_at`.
+ * indicator). State is tagged with the person it was read for; a person change or `forget()` empties it and abandons the
+ * old person's queue. ONE serial queue (`serial-queue.ts`); `start` re-checks when it RUNS; `end` uses the id captured
+ * at click time. A mutation has a deadline; past it the outcome is UNKNOWN and `unknown-outcome.svelte.ts` looks until
+ * a read answers. When in doubt the indicator is SHOWN: a failed read never hides a shown session.
  */
 export function createImpersonation(opts: ImpersonationOptions): Impersonation {
 	const readDeadlineMs = opts.deadlineMs ?? DEFAULT_READ_TIMEOUT_MS;
@@ -57,8 +55,7 @@ export function createImpersonation(opts: ImpersonationOptions): Impersonation {
 	const ending = new SvelteSet<string>();
 	let legacyCleared = false;
 
-	// plain reads, not $derived: they depend on the signed-in person, which a caller supplies (page.data is reactive,
-	// so a component reading these still follows it)
+	// plain reads, not $derived: they depend on the signed-in person, which a caller supplies
 	const isMine = () => owner !== null && owner === opts.personId();
 	const shown = () => (isMine() ? (sessions[0] ?? null) : null);
 	const statusNow = (): ImpersonationStatus =>
@@ -102,12 +99,10 @@ export function createImpersonation(opts: ImpersonationOptions): Impersonation {
 		if (kind === 'read') reads++;
 		else mutations++;
 		return queue.run(async () => {
-			// a read left in the abandoned chain of a forgotten person must not run as the NEXT person
 			if (kind === 'read' && e !== epoch) return undefined as T;
 			try {
 				return await run();
 			} finally {
-				// forget() already zeroed the counters: an abandoned operation does not count against the next person
 				if (e === epoch) {
 					if (kind === 'read') reads--;
 					else mutations--;
@@ -278,8 +273,7 @@ export function createImpersonation(opts: ImpersonationOptions): Impersonation {
 			return isMine() && unknown.checking;
 		},
 		get targetName() {
-			// the company's CURRENT name comes from the server's session (create response, every read); what the caller
-			// passed to start() is only a fallback for a server that sent none
+			// the server's CURRENT name (create response, every read); start()'s argument is only a fallback
 			const a = shown();
 			if (!a) return null;
 			if (a.tenant_display_name) return a.tenant_display_name;

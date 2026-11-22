@@ -9,11 +9,12 @@ import type { ImpersonationSessionDto } from '../types';
 export const FOLLOW_UP_DELAYS_MS = [2_000, 5_000, 15_000, 30_000] as const;
 
 export interface FollowUpOptions {
-	/** One read; true when it succeeded (the list is now known). */
 	/** One read (zero-based index in the schedule); true when it settled the question, false to look again later. */
 	read: (index: number) => Promise<boolean>;
 	/** Called after each read of the schedule, with its zero-based index. */
 	onRead?: (ok: boolean, index: number) => void;
+	/** The schedule ran out without a read settling the question. */
+	onExhausted?: () => void;
 	delays?: readonly number[];
 }
 
@@ -33,6 +34,7 @@ export function createFollowUp(opts: FollowUpOptions): FollowUp {
 	function step(index: number, mine: number) {
 		if (index >= delays.length) {
 			running = false;
+			opts.onExhausted?.();
 			return;
 		}
 		timer = setTimeout(() => {

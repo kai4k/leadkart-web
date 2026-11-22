@@ -111,7 +111,6 @@
 				loading={ending}
 				aria-disabled={stale ? 'true' : undefined}
 				onclick={stale ? undefined : () => endNow(shown.session_id)}
-				aria-label={impersonation.endError ? undefined : $_('shell.impersonation.endLabel')}
 			>
 				<Icon icon={LogOut} size="sm" />
 				{impersonation.endError

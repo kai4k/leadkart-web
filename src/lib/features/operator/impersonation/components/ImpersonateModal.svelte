@@ -59,7 +59,8 @@
 	formId="impersonate-form"
 >
 	{#snippet fields(form)}
-		{#if impersonation.checking}
+		<!-- the store may keep looking after this dialog was told "not started"; the notice is for the wait -->
+		{#if impersonation.checking && form.isSubmitting}
 			<Alert variant="info">{$_('shell.impersonation.startUnknown')}</Alert>
 		{/if}
 		<Alert variant="warning">

@@ -235,7 +235,6 @@
 			"impersonatingCompany": "Impersonating a company",
 			"details": "{reason} · Expires {expires}",
 			"end": "End impersonation",
-			"endLabel": "End impersonation session",
 			"retry": "Retry",
 			"endRetry": "Try ending again",
 			"refreshFailed": "Could not refresh the session status.",

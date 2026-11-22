@@ -105,12 +105,11 @@ const render = () => {
 	flushSync();
 };
 const endButton = () =>
-	(document.querySelector<HTMLButtonElement>(
-		`button[aria-label="${en.shell.impersonation.endLabel}"]`
-	) ??
-		[...document.querySelectorAll<HTMLButtonElement>('button')].find(
-			(b) => b.textContent?.trim() === en.shell.impersonation.endRetry
-		))!;
+	[...document.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+		[en.shell.impersonation.end, en.shell.impersonation.endRetry].includes(
+			b.textContent?.trim() ?? ''
+		)
+	)!;
 
 describe('ImpersonationBanner', () => {
 	it('names the company when the store has the name of the active session', () => {
@@ -154,7 +153,7 @@ describe('ImpersonationBanner', () => {
 		store.state.readError = 'Network down';
 		render();
 		expect(endButton().textContent).toContain(en.shell.impersonation.end);
-		expect(endButton().getAttribute('aria-label')).toBe(en.shell.impersonation.endLabel);
+		expect(endButton().hasAttribute('aria-label')).toBe(false); // the name is the visible text
 		const retry = [...document.querySelectorAll('button')].find(
 			(b) => b.textContent?.trim() === en.shell.impersonation.retry
 		)!;
