@@ -69,7 +69,7 @@
 	/>
 
 	<Field.Content>
-		<Field.Label for={switchId} class={srLabel ? 'sr-only' : undefined}>
+		<Field.Label for={switchId} {required} class={srLabel ? 'sr-only' : undefined}>
 			{label}
 			{#if labelTrailing}{@render labelTrailing()}{/if}
 		</Field.Label>

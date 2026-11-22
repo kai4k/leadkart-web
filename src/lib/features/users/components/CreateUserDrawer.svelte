@@ -60,7 +60,7 @@
 		<TextField
 			label="Email"
 			name="email"
-			type="email"
+			format="email"
 			bind:value={form.values.email}
 			required
 			error={form.errors.email}

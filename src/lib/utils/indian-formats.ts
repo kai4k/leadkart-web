@@ -140,3 +140,89 @@ export function checkAddress(raw: AddressParts): Partial<Record<keyof AddressPar
 	else if (!PIN_PATTERN.test(a.pincode)) out.pincode = 'invalid_pincode';
 	return out;
 }
+
+// ---- the one table of text formats: what a TextField with `format="..."` is -----------------------------------------
+
+/** Text that is not prose: a mobile keyboard must not capitalise, correct or spell-check it. */
+export type TextFormat = 'email' | 'phone' | 'pincode' | 'gstin' | 'pan' | 'code';
+
+export interface TextFormatSpec {
+	/** The input `type` (`email` and `tel` open the right keyboard and are what a password manager recognises). */
+	readonly type: 'text' | 'email' | 'tel';
+	readonly inputmode: 'text' | 'email' | 'tel' | 'numeric';
+	/** `characters` makes the keyboard start in capitals (GSTIN, PAN); `none` keeps it lower-case. */
+	readonly autocapitalize: 'none' | 'characters';
+	readonly autocorrect: 'off';
+	readonly spellcheck: false;
+	/** The default `autocomplete` token, where one is right; a caller's own always wins (sign-in says `username`). */
+	readonly autocomplete: string;
+	/** Applied to the text when the field is left and when text is pasted, and written back into the input. */
+	readonly tidy: (text: string) => string;
+}
+
+/** An address has no spaces, and no tab or line break: a paste with one at either end is the usual case. */
+export const tidyEmail = (text: string): string => text.trim();
+
+/** A code (slug, a confirm phrase, a permission name): trimmed, otherwise exactly as typed. */
+export const tidyCode = (text: string): string => text.trim();
+
+/**
+ * Per format: the attributes the browser and keyboard need, and the tidy. `tidy` for GSTIN, PAN, phone and pincode is
+ * the function the checks above assume (what is shown is what is sent); email and code only trim.
+ */
+export const TEXT_FORMATS: Readonly<Record<TextFormat, TextFormatSpec>> = {
+	email: {
+		type: 'email',
+		inputmode: 'email',
+		autocapitalize: 'none',
+		autocorrect: 'off',
+		spellcheck: false,
+		autocomplete: 'email',
+		tidy: tidyEmail
+	},
+	phone: {
+		type: 'tel',
+		inputmode: 'tel',
+		autocapitalize: 'none',
+		autocorrect: 'off',
+		spellcheck: false,
+		autocomplete: 'tel',
+		tidy: tidyPhone
+	},
+	pincode: {
+		type: 'text',
+		inputmode: 'numeric',
+		autocapitalize: 'none',
+		autocorrect: 'off',
+		spellcheck: false,
+		autocomplete: 'postal-code',
+		tidy: tidyPincode
+	},
+	gstin: {
+		type: 'text',
+		inputmode: 'text',
+		autocapitalize: 'characters',
+		autocorrect: 'off',
+		spellcheck: false,
+		autocomplete: 'off',
+		tidy: tidyIdentifier
+	},
+	pan: {
+		type: 'text',
+		inputmode: 'text',
+		autocapitalize: 'characters',
+		autocorrect: 'off',
+		spellcheck: false,
+		autocomplete: 'off',
+		tidy: tidyIdentifier
+	},
+	code: {
+		type: 'text',
+		inputmode: 'text',
+		autocapitalize: 'none',
+		autocorrect: 'off',
+		spellcheck: false,
+		autocomplete: 'off',
+		tidy: tidyCode
+	}
+};

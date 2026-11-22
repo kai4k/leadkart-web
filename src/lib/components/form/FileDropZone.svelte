@@ -29,6 +29,8 @@
 		label: string;
 		srLabel?: boolean;
 		error?: string | null;
+		/** Visible required mark and `aria-required` on the file input. */
+		required?: boolean;
 		id?: string;
 		class?: string;
 		onError?: (msg: string) => void;
@@ -45,6 +47,7 @@
 		label,
 		srLabel = false,
 		error,
+		required = false,
 		id,
 		class: className = '',
 		onError
@@ -149,7 +152,9 @@
 </script>
 
 <Field.Field class={className}>
-	<Field.Label for={fieldId} class={srLabel ? 'sr-only' : undefined}>{label}</Field.Label>
+	<Field.Label for={fieldId} {required} class={srLabel ? 'sr-only' : undefined}>
+		{label}
+	</Field.Label>
 
 	<input
 		bind:this={inputEl}
@@ -160,6 +165,7 @@
 		{accept}
 		{multiple}
 		{disabled}
+		aria-required={required ? 'true' : undefined}
 		aria-describedby={describedBy}
 		aria-invalid={error || localError ? 'true' : undefined}
 		onchange={onChange}

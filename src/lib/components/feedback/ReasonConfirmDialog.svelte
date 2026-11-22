@@ -159,7 +159,7 @@
 				<TextField
 					label={$_('form.typeToConfirm', { values: { text: confirmText } })}
 					name="confirm_text"
-					autocomplete="off"
+					format="code"
 					hint={$_('form.typeToConfirmHint')}
 					bind:value={typed}
 					onblur={() => (typedTouched = true)}

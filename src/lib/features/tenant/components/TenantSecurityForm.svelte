@@ -5,6 +5,7 @@
 	import { NumberInput, Switch, type ActionFormResult } from '$form';
 	import TenantSectionForm from './TenantSectionForm.svelte';
 	import type { Tenant } from '../types';
+	import { PASSWORD_MIN_LENGTH_CEILING, PASSWORD_MIN_LENGTH_FLOOR } from '../schemas.ts';
 
 	/**
 	 * TenantSecurityForm — password policy editor via the security form
@@ -63,8 +64,9 @@
 						name="min_length"
 						hint="NIST SP 800-63B recommends 8 or more. Stripe and GitHub use 8."
 						bind:value={minLength}
-						min={8}
-						max={128}
+						min={PASSWORD_MIN_LENGTH_FLOOR}
+						max={PASSWORD_MIN_LENGTH_CEILING}
+						required
 						error={fieldError('password_policy.min_length')}
 					/>
 

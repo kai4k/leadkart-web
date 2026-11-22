@@ -105,7 +105,7 @@
 </script>
 
 <Field.Field class={className}>
-	<Field.Label for={fieldId}>{label}</Field.Label>
+	<Field.Label for={fieldId} {required}>{label}</Field.Label>
 
 	<Textarea
 		id={fieldId}
@@ -114,6 +114,7 @@
 		{rows}
 		{maxlength}
 		{required}
+		aria-required={required ? 'true' : undefined}
 		{placeholder}
 		{disabled}
 		{onkeydown}

@@ -168,7 +168,9 @@
 </script>
 
 <Field.Field class={className}>
-	<Field.Label for={fieldId} class={srLabel ? 'sr-only' : undefined}>{label}</Field.Label>
+	<Field.Label for={fieldId} {required} class={srLabel ? 'sr-only' : undefined}>
+		{label}
+	</Field.Label>
 
 	<Popover.Root {open} onOpenChange={handleOpenChange}>
 		<div class="relative">

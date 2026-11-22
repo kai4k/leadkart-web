@@ -62,7 +62,10 @@
 
 <Field.Field class={className}>
 	{#if label}
-		<Field.Title id={groupId} class={srLabel ? 'sr-only' : undefined}>{label}</Field.Title>
+		<Field.Title id={groupId} class={srLabel ? 'sr-only' : undefined}>
+			{label}
+			{#if required}<Field.Required />{/if}
+		</Field.Title>
 	{/if}
 
 	<RadioGroupRoot

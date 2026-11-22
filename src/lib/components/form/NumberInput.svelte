@@ -9,12 +9,14 @@
 	 *   - +/− buttons step by `step`; disabled at min/max.
 	 *   - ArrowUp / ArrowDown step by `step`; Shift+Arrow steps by step×10.
 	 *   - Blur and Enter parse the text in the active locale ("1,00,000" in en-IN is 100000; a group
-	 *     separator in the wrong place, "1,5", is refused; "100,000" is read too), clamp to [min, max]
-	 *     and round to `precision` decimals. The default locale is the business one (en-IN), not the
-	 *     interface language. Text that is not a number stays on screen as typed, marks the field
-	 *     invalid and blocks submission (custom validity for native forms, `data-unreadable` for
-	 *     `useForm`); the previous value is never restored under an error, nor silently cleared.
-	 *     Enter commits first, so the submit that follows reads what is shown.
+	 *     separator in the wrong place, "1,5", is refused; "100,000" is read too). The default locale is
+	 *     the business one (en-IN), not the interface language. A typed value is NEVER rewritten: text
+	 *     that is not a number, a fraction in a whole-number field, more decimals than `precision`, a
+	 *     number outside [min, max] or past the safe-integer range stays on screen as typed, says what
+	 *     is wrong, marks the field invalid and blocks submission (custom validity for native forms,
+	 *     `data-unreadable` for `useForm` and `ActionForm`); the previous value is never restored under
+	 *     an error, nor silently cleared. Only the +/− buttons and the arrow keys clamp (a step never
+	 *     leaves the range). Enter commits first, so the submit that follows reads what is shown.
 	 *   - What the field shows after a commit is the locale's plain form (decimal comma in de, no
 	 *     grouping), which the parser reads back to the same number.
 	 *   - Empty string preserved as null in `value`.
@@ -48,6 +50,8 @@
 		srLabel?: boolean;
 		hint?: string;
 		error?: string | null;
+		/** Visible required mark and `aria-required`; whether an empty value is refused is the form's rule. */
+		required?: boolean;
 		'aria-label'?: string;
 		/** BCP 47 tag the typed text is read in. Default: the business locale (en-IN), the one amounts are shown in. */
 		locale?: string;
@@ -70,6 +74,7 @@
 		srLabel = false,
 		hint,
 		error,
+		required = false,
 		'aria-label': ariaLabel,
 		locale,
 		class: className = ''
@@ -80,9 +85,29 @@
 	const hintId = $derived(`${fieldId}-hint`);
 	const errorId = $derived(`${fieldId}-error`);
 	const activeLocale = $derived(locale ?? BUSINESS_LOCALE);
-	// Set when the last commit could not read the text as a number; cleared on the next keystroke.
-	let unreadable = $state(false);
-	const shownError = $derived(error || (unreadable ? $_('form.number.invalid') : null));
+	// Set when the last commit found something wrong with the text; cleared on the next keystroke.
+	type Problem = 'unreadable' | 'unsafe' | 'whole' | 'precision' | 'min' | 'max';
+	let problem = $state<Problem | null>(null);
+	const unreadable = $derived(problem !== null);
+	const problemText = $derived.by(() => {
+		switch (problem) {
+			case null:
+				return null;
+			case 'unreadable':
+				return $_('form.number.invalid');
+			case 'unsafe':
+				return $_('form.number.unsafe');
+			case 'whole':
+				return $_('form.number.whole');
+			case 'precision':
+				return $_('form.number.precision', { values: { places: precision } });
+			case 'min':
+				return $_('form.number.min', { values: { min: show(min ?? null) } });
+			case 'max':
+				return $_('form.number.max', { values: { max: show(max ?? null) } });
+		}
+	});
+	const shownError = $derived(error || problemText);
 	const describedBy = $derived(
 		[shownError ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined
 	);
@@ -104,9 +129,10 @@
 	// useForm.submit refuses on `data-unreadable` for forms that submit through it.
 	let inputEl = $state<HTMLInputElement | null>(null);
 	$effect(() => {
-		inputEl?.setCustomValidity(unreadable ? $_('form.number.invalid') : '');
+		inputEl?.setCustomValidity(problemText ?? '');
 	});
 
+	/** The steppers' clamp. A typed value is checked with `check`, never clamped. */
 	function clamp(n: number): number {
 		if (min !== undefined && n < min) return min;
 		if (max !== undefined && n > max) return max;
@@ -119,31 +145,51 @@
 		return Math.round(n * factor) / factor;
 	}
 
-	/** Returns false when the text could not be read (the previous value is shown again). */
+	/** What is wrong with a number the text was read as, or null. */
+	function check(n: number): Problem | null {
+		if (Math.abs(n) > Number.MAX_SAFE_INTEGER) return 'unsafe';
+		if (precision === 0 ? !Number.isInteger(n) : n !== Number(n.toFixed(precision))) {
+			return precision === 0 ? 'whole' : 'precision';
+		}
+		if (min !== undefined && n < min) return 'min';
+		if (max !== undefined && n > max) return 'max';
+		return null;
+	}
+
+	/**
+	 * Returns false when the text is not acceptable. It stays on screen as typed and the field says why:
+	 * never restore an old value (it would look valid and get submitted), never change the typed one.
+	 */
 	function commit(raw: string): boolean {
 		if (raw.trim() === '') {
-			unreadable = false;
+			problem = null;
 			value = null;
 			displayValue = '';
 			return true;
 		}
 		const parsed = parseLocaleNumber(raw, activeLocale);
 		if (parsed === null) {
-			// Keep what the user typed on screen (never restore: a restored old value under an
-			// error looks valid and gets submitted); the field is invalid and blocks the submit.
-			unreadable = true;
+			problem = 'unreadable';
 			return false;
 		}
-		unreadable = false;
-		const next = round(clamp(parsed));
-		value = next;
-		displayValue = show(next);
+		const wrong = check(parsed);
+		if (wrong) {
+			problem = wrong;
+			return false;
+		}
+		problem = null;
+		value = parsed;
+		displayValue = show(parsed);
 		return true;
 	}
 
+	/** A step is the one place a value is clamped: it never leaves [min, max]. */
 	function nudge(delta: number) {
 		const base = value ?? min ?? 0;
-		commit(formatPlainNumber(round(base + delta), activeLocale));
+		const next = round(clamp(base + delta));
+		problem = null;
+		value = next;
+		displayValue = show(next);
 	}
 
 	const isAtMin = $derived(value !== null && min !== undefined && value <= min);
@@ -168,7 +214,9 @@
 </script>
 
 <Field.Field class={className}>
-	<Field.Label for={fieldId} class={srLabel ? 'sr-only' : undefined}>{label}</Field.Label>
+	<Field.Label for={fieldId} {required} class={srLabel ? 'sr-only' : undefined}>
+		{label}
+	</Field.Label>
 
 	<div class="flex items-stretch gap-1">
 		<Button
@@ -203,6 +251,7 @@
 				aria-valuemin={min}
 				aria-valuemax={max}
 				aria-label={srLabel ? (ariaLabel ?? label) : undefined}
+				aria-required={required ? 'true' : undefined}
 				aria-invalid={shownError ? 'true' : undefined}
 				aria-describedby={describedBy}
 				{name}
@@ -211,7 +260,7 @@
 				value={displayValue}
 				oninput={(e) => {
 					displayValue = e.currentTarget.value;
-					unreadable = false;
+					problem = null;
 				}}
 				onblur={() => commit(displayValue)}
 				onkeydown={onKeyDown}

@@ -219,8 +219,11 @@
 	<DateField.Label
 		id={`${fieldId}-label`}
 		class={srLabel ? 'sr-only' : undefined}
-		onclick={() => editableSegments()[0]?.focus()}>{label}</DateField.Label
+		onclick={() => editableSegments()[0]?.focus()}
 	>
+		{label}
+		{#if required}<Field.Required />{/if}
+	</DateField.Label>
 
 	<div
 		bind:this={frame}

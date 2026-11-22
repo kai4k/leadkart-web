@@ -74,6 +74,7 @@
 						bind:value={hierarchyLevel}
 						min={ROLE_LEVEL_MIN}
 						max={ROLE_LEVEL_MAX}
+						required
 						error={fieldError('hierarchy_level')}
 					/>
 				{/snippet}

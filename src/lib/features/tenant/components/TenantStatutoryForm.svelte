@@ -25,8 +25,7 @@
 			label="GSTIN"
 			name="gst_number"
 			hint="15-character GSTIN (e.g. 27AAAPL1234C1Z1). Leave blank if not registered."
-			autocomplete="off"
-			spellcheck={false}
+			format="gstin"
 			value={String(value('gst_number') ?? tenant.gst_number ?? '')}
 			error={fieldError('gst_number')}
 		/>
@@ -35,8 +34,7 @@
 			label="PAN"
 			name="pan_number"
 			hint="10-character permanent account number (e.g. AAAPL1234C)."
-			autocomplete="off"
-			spellcheck={false}
+			format="pan"
 			value={String(value('pan_number') ?? tenant.pan_number ?? '')}
 			error={fieldError('pan_number')}
 		/>
@@ -45,8 +43,8 @@
 			label="Drug licence number"
 			name="drug_licence_number"
 			hint="Issued by the State Drug Controller. 8 to 30 capital letters, digits, dashes, slashes or spaces (e.g. KA-W-22B-12345)."
-			autocomplete="off"
-			spellcheck={false}
+			format="code"
+			autocapitalize="characters"
 			value={String(value('drug_licence_number') ?? tenant.drug_licence_number ?? '')}
 			error={fieldError('drug_licence_number')}
 		/>

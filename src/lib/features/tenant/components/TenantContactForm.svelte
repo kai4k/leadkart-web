@@ -27,8 +27,7 @@
 			label="Admin phone"
 			name="phone"
 			hint="With + and the country code, for example +919876543210."
-			type="tel"
-			autocomplete="tel"
+			format="phone"
 			value={String(value('phone') ?? tenant.admin_phone ?? '')}
 			error={fieldError('phone')}
 		/>
@@ -81,14 +80,15 @@
 					label="State code"
 					name="address.state_code"
 					hint="Up to 4 characters, for example MH."
-					autocomplete="off"
+					format="code"
+					autocapitalize="characters"
 					value={String(value('address.state_code') ?? tenant.admin_address.state_code ?? '')}
 					error={fieldError('address.state_code')}
 				/>
 				<TextField
 					label="Pincode"
 					name="address.pincode"
-					autocomplete="postal-code"
+					format="pincode"
 					value={String(value('address.pincode') ?? tenant.admin_address.pincode ?? '')}
 					error={fieldError('address.pincode')}
 				/>

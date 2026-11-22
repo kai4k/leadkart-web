@@ -6,16 +6,21 @@
 		label,
 		hint,
 		error,
-		placeholder
+		placeholder,
+		initial = '',
+		required = false
 	}: {
+		required?: boolean;
+		initial?: string;
 		options: SelectOption[];
 		label: string;
 		hint?: string;
 		error?: string | null;
 		placeholder?: string;
 	} = $props();
-	let value = $state('');
+	// svelte-ignore state_referenced_locally
+	let value = $state(initial);
 </script>
 
-<Select {options} {label} {hint} {error} {placeholder} bind:value />
+<Select {options} {label} {hint} {error} {placeholder} {required} bind:value />
 <output data-testid="bound">{value}</output>

@@ -33,8 +33,7 @@
 			<TextField
 				label={$_('auth.changeEmail.newEmail')}
 				name="new_email"
-				type="email"
-				autocomplete="email"
+				format="email"
 				required
 				value={String(value('email') ?? '')}
 				error={fieldError('email')}

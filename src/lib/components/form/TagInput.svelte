@@ -6,6 +6,13 @@
 	 * a tag; Backspace on an empty input removes the last tag. The input is labelled by the visible
 	 * `label` (never by the placeholder).
 	 *
+	 * Nothing typed is lost: text still in the input is committed when the field is left and again just
+	 * before the form is submitted; a comma or a line break is a separator wherever it arrives (an
+	 * Android keyboard reports `key = Unidentified`, so the input event, not the key, is what splits), so
+	 * a pasted "Tablet, Syrup, Capsule" becomes three tags; tags are unique ignoring case. Text that
+	 * cannot become a tag (a refused name, the maximum) stays in the field, says why, and blocks the
+	 * submit (`data-unreadable`), instead of being dropped.
+	 *
 	 * Autocomplete: when `suggestions` is provided and the input matches at least one (case-
 	 * insensitive substring), a listbox surfaces the options. Arrow keys move the highlight
 	 * (`aria-activedescendant`), Enter or a click picks it.
@@ -13,6 +20,7 @@
 </script>
 
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { _ } from 'svelte-i18n';
 	import { Icon, X } from '#lib/icons/index.ts';
 	import { Badge } from '#lib/components/ui/badge/index.ts';
@@ -31,6 +39,8 @@
 		srLabel?: boolean;
 		hint?: string;
 		error?: string | null;
+		/** Visible required mark and `aria-required`; whether zero tags are refused is the form's rule. */
+		required?: boolean;
 		/** The API field this input is for: a server error on it lands here (the form looks for `[name]`). */
 		name?: string;
 		id?: string;
@@ -48,6 +58,7 @@
 		srLabel = false,
 		hint,
 		error,
+		required = false,
 		name,
 		id,
 		class: className = ''
@@ -72,39 +83,73 @@
 			.join(' ') || undefined
 	);
 
-	const atMax = $derived(maxTags !== undefined && value.length >= maxTags);
-
 	const filteredSuggestions = $derived.by(() => {
 		const q = inputText.trim().toLowerCase();
 		if (!q) return [];
-		return suggestions.filter((s) => s.toLowerCase().includes(q) && !value.includes(s)).slice(0, 8);
+		return suggestions.filter((s) => s.toLowerCase().includes(q) && !has(value, s)).slice(0, 8);
 	});
 
 	const showDropdown = $derived(focused && filteredSuggestions.length > 0);
 
+	/** Tags are unique ignoring case ("Tablet", "tablet" and "TABLET" are one). */
+	function has(tags: string[], tag: string): boolean {
+		const key = tag.toLowerCase();
+		return tags.some((t) => t.toLowerCase() === key);
+	}
+
+	const SEPARATOR = /[,\n\r]/;
+	const splitTags = (text: string) => text.split(SEPARATOR);
+
+	/**
+	 * Adds each piece in turn. Returns the text that could NOT become a tag ('' when all did): the
+	 * caller keeps it in the input with the reason in `localError`, it is never dropped.
+	 */
+	function addAll(raws: string[]): string {
+		let next = value;
+		let rest = '';
+		for (let i = 0; i < raws.length; i++) {
+			const tag = (raws[i] ?? '').trim();
+			if (!tag || has(next, tag)) continue;
+			if (maxTags !== undefined && next.length >= maxTags) {
+				localError = $_('form.tags.max', { values: { max: maxTags } });
+				rest = raws.slice(i).join(', ');
+				break;
+			}
+			const refused = validateTag?.(tag);
+			if (refused) {
+				localError = refused;
+				rest = raws.slice(i).join(', ');
+				break;
+			}
+			next = [...next, tag];
+		}
+		if (next !== value) value = next;
+		if (rest === '') localError = null;
+		highlightIndex = 0;
+		return rest;
+	}
+
 	function commitTag(raw: string) {
-		const tag = raw.trim();
-		if (!tag) return;
-		if (value.includes(tag)) {
+		inputText = addAll([raw]);
+	}
+
+	/** Whatever is still typed becomes tags (leaving the field, submitting). */
+	function flush() {
+		if (inputText.trim() === '') {
 			inputText = '';
 			return;
 		}
-		if (atMax) {
-			localError = $_('form.tags.max', { values: { max: maxTags } });
-			return;
-		}
-		if (validateTag) {
-			const v = validateTag(tag);
-			if (v) {
-				localError = v;
-				return;
-			}
-		}
-		value = [...value, tag];
-		inputText = '';
-		localError = null;
-		highlightIndex = 0;
+		inputText = addAll(splitTags(inputText));
 	}
+
+	// The form may be submitted without this field ever losing focus (a button elsewhere, Ctrl+Enter):
+	// what is typed becomes tags first. Capture phase: before the form's own submit handler reads the value.
+	$effect(() => {
+		const form = inputEl?.form;
+		if (!form) return;
+		form.addEventListener('submit', flush, true);
+		return () => form.removeEventListener('submit', flush, true);
+	});
 
 	function removeTag(idx: number) {
 		value = value.filter((_, i) => i !== idx);
@@ -132,15 +177,34 @@
 		}
 	}
 
+	// How the last text arrived: a paste or drop is a whole list (its last piece is a tag too); typing is
+	// still being written (the piece after the last separator is the next tag, in progress).
+	let lastInputType = '';
 	function onInput(e: Event) {
-		inputText = (e.target as HTMLInputElement).value;
+		lastInputType = (e as InputEvent).inputType ?? '';
 		highlightIndex = 0;
 		localError = null;
 	}
+
+	// A separator arrived without a key event we can read (Android reports key = Unidentified; a paste; a
+	// drop): split here, whichever listener saw the input first.
+	$effect(() => {
+		const typed = inputText;
+		if (!SEPARATOR.test(typed)) return;
+		untrack(() => {
+			const parts = splitTags(typed);
+			const whole = /^insertFrom(Paste|Drop)/.test(lastInputType);
+			const remainder = whole ? '' : (parts.pop() ?? '');
+			const unadded = addAll(parts);
+			inputText = [unadded, remainder].filter(Boolean).join(', ');
+		});
+	});
 </script>
 
 <Field.Field class={className}>
-	<Field.Label for={fieldId} class={srLabel ? 'sr-only' : undefined}>{label}</Field.Label>
+	<Field.Label for={fieldId} {required} class={srLabel ? 'sr-only' : undefined}>
+		{label}
+	</Field.Label>
 
 	<div class="relative">
 		<!-- The frame only forwards a click to the input; the input is the keyboard target. -->
@@ -184,15 +248,20 @@
 				aria-controls={showDropdown ? listboxId : undefined}
 				aria-activedescendant={showDropdown ? `${listboxId}-${highlightIndex}` : undefined}
 				aria-autocomplete="list"
+				aria-required={required ? 'true' : undefined}
+				data-unreadable={localError && inputText.trim() !== '' ? 'true' : undefined}
 				aria-invalid={error || localError ? 'true' : undefined}
 				aria-describedby={describedBy}
 				class="h-auto min-w-24 flex-1 rounded-none border-0 bg-transparent px-1 py-0.5 shadow-none focus-visible:ring-0 dark:bg-transparent"
 				placeholder={value.length === 0 ? placeholder : ''}
 				{disabled}
-				value={inputText}
+				bind:value={inputText}
 				oninput={onInput}
 				onfocus={() => (focused = true)}
-				onblur={() => setTimeout(() => (focused = false), 150)}
+				onblur={() => {
+					flush();
+					setTimeout(() => (focused = false), 150);
+				}}
 				onkeydown={onKeyDown}
 			/>
 		</div>

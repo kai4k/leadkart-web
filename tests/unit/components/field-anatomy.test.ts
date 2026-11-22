@@ -148,9 +148,11 @@ describe('NumberInput parsing', () => {
 		expect(input.getAttribute('aria-invalid')).toBeNull();
 	});
 
-	it('reads a decimal and keeps min / max clamping', () => {
+	it('reads a decimal; a number over the max is NOT clamped, it stays as typed under an error', () => {
 		expect(blurWith('1.5', { precision: 1 }).value).toBe('1.5');
-		expect(blurWith('1,00,000', { max: 500 }).value).toBe('500');
+		const over = blurWith('1,00,000', { max: 500 });
+		expect(over.value).toBe('1,00,000');
+		expect(over.getAttribute('aria-invalid')).toBe('true');
 	});
 
 	it('garbage keeps the previous value, keeps the typed text on screen and marks the field invalid', () => {

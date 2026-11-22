@@ -186,10 +186,10 @@
 
 				<TagInput
 					label="Product ranges"
-					value={productRanges}
+					bind:value={productRanges}
 					placeholder="Antibiotics, Pediatric…"
 				/>
-				<TagInput label="Dosage forms" value={dosageForms} placeholder="Tablet, Syrup…" />
+				<TagInput label="Dosage forms" bind:value={dosageForms} placeholder="Tablet, Syrup…" />
 
 				<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 					<Switch label="Has drug licence" bind:checked={form.values.has_drug_licence} />

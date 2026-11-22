@@ -32,7 +32,7 @@
 				<TextField
 					label={$_('auth.forgotPassword.email')}
 					name="email"
-					type="email"
+					format="email"
 					autocomplete="username"
 					required
 					value={String(value('email') ?? '')}

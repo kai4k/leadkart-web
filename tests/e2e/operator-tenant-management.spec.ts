@@ -159,13 +159,13 @@ test.describe('Register tenant — form validation', () => {
 		await page.getByRole('button', { name: /register tenant/i }).click();
 
 		const form = page.locator('#register-tenant-form');
-		await form.getByLabel('Slug', { exact: true }).fill('duplicate-slug');
-		await form.getByLabel('Legal name', { exact: true }).fill('Duplicate Pharma Pvt Ltd');
-		await form.getByLabel('Display name', { exact: true }).fill('Duplicate');
-		await form.getByLabel('First name', { exact: true }).fill('Admin');
-		await form.getByLabel('Last name', { exact: true }).fill('User');
-		await form.getByLabel('Email', { exact: true }).fill('admin@duplicate.test');
-		await form.getByLabel('Initial password', { exact: true }).fill('SuperSecret1!');
+		await form.getByLabel('Slug').fill('duplicate-slug');
+		await form.getByLabel('Legal name').fill('Duplicate Pharma Pvt Ltd');
+		await form.getByLabel('Display name').fill('Duplicate');
+		await form.getByLabel('First name').fill('Admin');
+		await form.getByLabel('Last name').fill('User');
+		await form.getByLabel('Email').fill('admin@duplicate.test');
+		await form.getByLabel('Initial password').fill('SuperSecret1!');
 		// Footer submit button (last in DOM, scoped to drawer)
 		await page.locator('button[type="submit"][form="register-tenant-form"]').click();
 

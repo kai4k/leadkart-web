@@ -2,13 +2,18 @@
 	import { Label } from '#lib/components/ui/label/index.ts';
 	import { cn } from '#lib/utils/cn.ts';
 	import type { ComponentProps } from 'svelte';
+	import FieldRequired from './field-required.svelte';
 
 	let {
 		ref = $bindable(null),
 		class: className,
+		required = false,
 		children,
 		...restProps
-	}: ComponentProps<typeof Label> = $props();
+	}: ComponentProps<typeof Label> & {
+		/** Draws the visible required mark; the control carries the matching `required` / `aria-required`. */
+		required?: boolean;
+	} = $props();
 </script>
 
 <Label
@@ -22,4 +27,5 @@
 	{...restProps}
 >
 	{@render children?.()}
+	{#if required}<FieldRequired />{/if}
 </Label>

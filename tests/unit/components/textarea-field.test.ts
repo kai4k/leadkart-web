@@ -95,7 +95,10 @@ describe('TextareaField', () => {
 			required: true,
 			placeholder: 'Say why'
 		});
-		expect(ta.labels?.[0]?.textContent?.trim()).toBe('Reason');
+		// the required mark is part of the label's text, decorative (aria-hidden)
+		expect(ta.labels?.[0]?.textContent?.trim()).toBe('Reason *');
+		expect(ta.labels?.[0]?.querySelector('[data-slot="field-required"]')).not.toBeNull();
+		expect(ta.getAttribute('aria-required')).toBe('true');
 		expect(ta.name).toBe('reason');
 		expect(ta.rows).toBe(5);
 		expect(ta.required).toBe(true);

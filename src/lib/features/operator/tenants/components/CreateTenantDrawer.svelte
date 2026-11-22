@@ -65,6 +65,7 @@
 		<TextField
 			label="Slug"
 			name="slug"
+			format="code"
 			bind:value={form.values.slug}
 			required
 			maxlength={60}
@@ -107,7 +108,7 @@
 		<TextField
 			label="Email"
 			name="admin_email"
-			type="email"
+			format="email"
 			bind:value={form.values.admin_email}
 			required
 			error={form.errors.admin_email}

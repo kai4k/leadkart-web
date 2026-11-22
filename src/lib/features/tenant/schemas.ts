@@ -19,6 +19,10 @@ export const adminAddressSchema = AdminAddressDto;
 
 export const passwordPolicySchema = PasswordPolicyDto;
 
+/** The minimum password length a tenant may require: the contract's own bounds (Go: 8 to 128), never a copy. */
+export const PASSWORD_MIN_LENGTH_FLOOR = PasswordPolicyDto.shape.min_length.minValue ?? 8;
+export const PASSWORD_MIN_LENGTH_CEILING = PasswordPolicyDto.shape.min_length.maxValue ?? 128;
+
 /**
  * Tenant lifecycle status: the generated enum is Go's own
  * (`pending | active | suspended | pending_deletion | deleted`).

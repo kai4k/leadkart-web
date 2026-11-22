@@ -366,6 +366,7 @@
 		"invalid": "Check this value.",
 		"tooLong": "This is too long.",
 		"tooShort": "This is too short.",
+		"textTooLong": "Use at most {max, plural, one {# character} other {# characters}}.",
 		"tooLarge": "This number is too large.",
 		"tooSmall": "This number is too small.",
 		"invalidCharacters": "Remove line breaks, tabs and invisible characters.",
@@ -432,6 +433,11 @@
 		},
 		"number": {
 			"invalid": "Enter a valid number.",
+			"whole": "Enter a whole number.",
+			"min": "Enter {min} or more.",
+			"max": "Enter {max} or less.",
+			"precision": "Use at most {places, plural, one {# decimal place} other {# decimal places}}.",
+			"unsafe": "This number is too large to be exact.",
 			"increment": "Increment",
 			"decrement": "Decrement"
 		},

@@ -11,14 +11,17 @@
 	 * Reduces typo-driven sign-in failures (NN/g forms research). The toggle is a button whose
 	 * `aria-label` switches between "Show password" and "Hide password" and which carries
 	 * `aria-pressed`, so a screen reader announces the state. The input type swaps between
-	 * `password` and `text`.
+	 * `password` and `text`. Shown as text it must not be capitalised, auto-corrected, spell-checked or
+	 * learned by the keyboard, so those are off in both states.
 	 */
 
-	type Props = Omit<HTMLInputAttributes, 'class' | 'type' | 'value'> & {
+	type Props = Omit<HTMLInputAttributes, 'class' | 'type' | 'value' | 'required' | 'maxlength'> & {
 		label: string;
 		srLabel?: boolean;
 		hint?: string;
 		error?: string | null;
+		required?: boolean;
+		maxlength?: number;
 		value?: string;
 		class?: string;
 	};
@@ -54,6 +57,9 @@
 	class={className}
 	type={visible ? 'text' : 'password'}
 	autocomplete="current-password"
+	autocapitalize="none"
+	autocorrect="off"
+	spellcheck={false}
 	{...rest}
 >
 	{#snippet trailing()}
