@@ -314,6 +314,21 @@ const TENANT_OMITZERO = [
 	'currency'
 ] as const;
 
+/**
+ * The policy Go reports for a company that never saved one: `DefaultPasswordPolicy()` at
+ * leadkart-go 6ebcddf (internal/identity/domain/tenant/settings.go) projected on every read
+ * (query/tenant.go). 8 characters, all four classes, 5 attempts, 15 minutes.
+ */
+export const DEFAULT_PASSWORD_POLICY: TenantDto['password_policy'] = {
+	min_length: 8,
+	require_uppercase: true,
+	require_lowercase: true,
+	require_digit: true,
+	require_symbol: true,
+	max_failed_attempts: 5,
+	lockout_minutes: 15
+};
+
 export function fakeTenantDto(overrides?: Partial<TenantDto>): TenantDto {
 	return omitEmptyStrings(
 		{

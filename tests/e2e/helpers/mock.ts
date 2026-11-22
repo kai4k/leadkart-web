@@ -39,6 +39,19 @@ export async function registerMock(fixture: MockFixture): Promise<void> {
 	});
 }
 
+/**
+ * Registers a fixture the Go contract would REFUSE, without the guard. Only for a test that proves
+ * the app's reaction to a server that broke its contract (the name is the warning); never to make
+ * a screen look right.
+ */
+export async function registerOutOfContract(fixture: MockFixture): Promise<void> {
+	await fetch(`${MOCK_BASE}/_mock/register`, {
+		method: 'POST',
+		headers: { 'content-type': 'application/json' },
+		body: JSON.stringify(fixture)
+	});
+}
+
 export async function registerMocks(fixtures: MockFixture[]): Promise<void> {
 	assertFixtures(fixtures);
 	await fetch(`${MOCK_BASE}/_mock/registerMany`, {
