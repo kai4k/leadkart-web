@@ -116,6 +116,18 @@ export async function signInAsTier(page: Page, opts: SignInOpts): Promise<void> 
 		// (ADR 0052) returning ListTenantsResponse. The mock-server matches on
 		// pathname only — both the bare GET and the slug-filter GET land here.
 		{ method: 'GET', path: '/api/v1/tenants', status: 200, body: { tenants: [tenant] } },
+		// A caller who can impersonate has the impersonation banner read the server's list on every load (the server is
+		// the only truth about who is impersonating): nothing listed unless a spec registers a session.
+		...(effective.includes('platform.impersonation.manage')
+			? [
+					{
+						method: 'GET' as const,
+						path: '/api/v1/platform/impersonation/sessions',
+						status: 200,
+						body: { sessions: [] }
+					}
+				]
+			: []),
 		// The operator dashboard (/dashboard for a platform caller) asks for these on first paint.
 		...(isPlatform
 			? [
