@@ -371,6 +371,12 @@
 			"nameMismatch": "The name doesn't match."
 		},
 		"leaveGuard": "You have unsaved changes. Leave without saving?",
+		"discard": {
+			"title": "Discard changes?",
+			"description": "What you typed has not been saved.",
+			"keep": "Keep editing",
+			"confirm": "Discard"
+		},
 		"reason": "Reason",
 		"typeToConfirm": "Type {text} to confirm",
 		"calendar": {

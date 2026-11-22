@@ -29,7 +29,9 @@ export function releaseLeaveGuards(on = true): void {
 	released = on;
 }
 
-const silent = () => released || resetPending();
+/** True while no guard may ask anything: a sign-out was chosen, or a security reload is under way / done. */
+export const guardsSilent = (): boolean => released || resetPending();
+const silent = guardsSilent;
 
 export function useLeaveGuard(isDirty: () => boolean, message?: string): void {
 	beforeNavigate((navigation) => {

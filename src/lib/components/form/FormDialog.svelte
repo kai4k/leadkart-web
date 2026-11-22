@@ -2,6 +2,7 @@
 	import { _ } from 'svelte-i18n';
 	import * as Dialog from '#lib/components/ui/dialog/index.ts';
 	import { Button } from '#lib/components/ui/button/index.ts';
+	import ConfirmDialog from '#lib/components/ui/ConfirmDialog.svelte';
 	import FormSurfaceForm from './FormSurfaceForm.svelte';
 	import {
 		createFormSurface,
@@ -48,7 +49,13 @@
 	const form = $derived(surface.form);
 </script>
 
-<Dialog.Root bind:open busy={form.isSubmitting} {onOpenChange}>
+<Dialog.Root
+	bind:open
+	busy={form.isSubmitting}
+	hold={surface.holdsClose}
+	onHeld={surface.ask}
+	{onOpenChange}
+>
 	<Dialog.Content {size}>
 		<Dialog.Header class="border-b border-border pe-14">
 			<Dialog.Title>{title}</Dialog.Title>
@@ -83,3 +90,17 @@
 		{/if}
 	</Dialog.Content>
 </Dialog.Root>
+
+<!-- unsaved input: every way out asks first (an alert dialog, opaque over the dialog); "Keep editing" has focus -->
+<ConfirmDialog
+	bind:open={() => surface.asking, (v) => (v ? surface.ask() : surface.keepEditing())}
+	title={$_('form.discard.title')}
+	description={$_('form.discard.description')}
+	cancelLabel={$_('form.discard.keep')}
+	confirmLabel={$_('form.discard.confirm')}
+	variant="danger"
+	onConfirm={() => {
+		surface.discard();
+		open = false;
+	}}
+/>

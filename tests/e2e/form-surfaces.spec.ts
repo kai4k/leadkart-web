@@ -129,3 +129,66 @@ test.describe('a reason confirm over a form sheet', () => {
 		});
 	}
 });
+
+test.describe('a form with unsaved input asks before it closes', () => {
+	async function openDirty(page: Page) {
+		await guide(page);
+		await page.getByRole('button', { name: 'Open form sheet' }).click();
+		const sheet = page.locator('[data-slot="sheet-content"]');
+		await expect(sheet).toBeVisible();
+		await page.waitForTimeout(400);
+		await sheet.getByRole('textbox', { name: 'Demo name' }).fill('Half typed');
+		return sheet;
+	}
+	const question = (page: Page) => page.locator('[data-slot="alert-dialog-content"]');
+
+	test('a clean sheet closes at once on Escape, no question', async ({ page }) => {
+		await guide(page);
+		await page.getByRole('button', { name: 'Open form sheet' }).click();
+		const sheet = page.locator('[data-slot="sheet-content"]');
+		await expect(sheet).toBeVisible();
+		await page.waitForTimeout(400);
+		await page.keyboard.press('Escape');
+		await expect(sheet).toBeHidden();
+		await expect(question(page)).toHaveCount(0);
+	});
+
+	test('Escape asks; the question is opaque over the glass sheet, Keep editing is focused, an outside press does not dismiss it', async ({
+		page
+	}) => {
+		const sheet = await openDirty(page);
+		await sheet.getByRole('textbox', { name: 'Demo name' }).press('Escape');
+		const q = question(page);
+		await expect(q).toBeVisible();
+		await expect(q.getByRole('heading', { name: 'Discard changes?' })).toBeVisible();
+		await page.waitForTimeout(300);
+		await expect(q.getByRole('button', { name: 'Keep editing' })).toBeFocused();
+		expect((await paint(q)).filter, 'the question over the sheet: backdrop-filter').toBe('none');
+		opaque(await paint(q), 'the discard question over the sheet');
+		glass(await paint(sheet), 'the sheet stays glass under the question');
+		await page.mouse.click(5, 5);
+		await expect(q).toBeVisible();
+		await expect(sheet).toBeVisible();
+	});
+
+	test('Keep editing keeps the sheet and the text; the outside press and the X ask again; Discard closes', async ({
+		page
+	}) => {
+		const sheet = await openDirty(page);
+		const q = question(page);
+		await sheet.getByRole('button', { name: 'Cancel' }).click();
+		await expect(q).toBeVisible();
+		await q.getByRole('button', { name: 'Keep editing' }).click();
+		await expect(q).toBeHidden();
+		await expect(sheet.getByRole('textbox', { name: 'Demo name' })).toHaveValue('Half typed');
+		await sheet.getByRole('button', { name: 'Close' }).click();
+		await expect(q).toBeVisible();
+		await q.getByRole('button', { name: 'Keep editing' }).click();
+		await expect(q).toBeHidden();
+		await page.mouse.click(5, 5); // outside the sheet (the scrim)
+		await expect(q).toBeVisible();
+		await q.getByRole('button', { name: 'Discard' }).click();
+		await expect(sheet).toBeHidden();
+		await expect(q).toBeHidden();
+	});
+});

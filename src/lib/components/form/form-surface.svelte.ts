@@ -9,7 +9,7 @@ import { untrack, type Snippet } from 'svelte';
 import type { z } from 'zod';
 import type { DescribeErrorOptions } from '$api/errors';
 import { useForm, type Form } from '#lib/hooks/use-form.svelte.ts';
-import { useLeaveGuard } from '#lib/hooks/use-leave-guard.svelte.ts';
+import { guardsSilent, useLeaveGuard } from '#lib/hooks/use-leave-guard.svelte.ts';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the schema's generic args are intentionally any-typed, as in useForm
 export type AnyObjectSchema = z.ZodObject<any, any>;
@@ -71,6 +71,19 @@ export interface FormSurface<S extends AnyObjectSchema, R = void> {
 	submit(e: SubmitEvent): Promise<void>;
 	/** "Add another": drop the result and show an empty form. */
 	again(): void;
+	/**
+	 * A way out (Cancel, the X, Escape, an outside press) must ASK first: there is unsaved input, nothing is being saved,
+	 * and no security reload or sign-out is under way (then the surface just closes). Read when the close is attempted.
+	 */
+	holdsClose(): boolean;
+	/** The "Discard changes?" question is on screen. */
+	readonly asking: boolean;
+	/** A held close was attempted: show the question. */
+	ask(): void;
+	/** "Keep editing": the question goes away, the form stays as it is. */
+	keepEditing(): void;
+	/** "Discard": the question goes away and the surface closes (the form is reset by the close). */
+	discard(): void;
 }
 
 export function createFormSurface<S extends AnyObjectSchema, R = void>(
@@ -91,11 +104,13 @@ export function createFormSurface<S extends AnyObjectSchema, R = void>(
 	let seed = $state(JSON.stringify(untrack(() => form.values)));
 	let resetKey = $state(0);
 	let result = $state<{ value: R } | null>(null);
+	let asking = $state(false);
 	// Open or close: nothing a previous submission produced survives, and what was typed (a password) is dropped on close.
 	$effect.pre(() => {
 		const open = source().open;
 		untrack(() => {
 			result = null;
+			asking = false;
 			if (!open) form.reset(source().initial());
 		});
 	});
@@ -130,6 +145,13 @@ export function createFormSurface<S extends AnyObjectSchema, R = void>(
 		});
 	}
 
+	const holdsClose = () =>
+		source().open &&
+		(source().guardLeave ?? true) &&
+		dirty &&
+		!form.isSubmitting &&
+		!guardsSilent();
+
 	function again(): void {
 		result = null;
 		form.reset(source().initial());
@@ -140,6 +162,20 @@ export function createFormSurface<S extends AnyObjectSchema, R = void>(
 	return {
 		form,
 		again,
+		holdsClose,
+		get asking() {
+			return asking;
+		},
+		ask() {
+			asking = true;
+		},
+		keepEditing() {
+			asking = false;
+		},
+		discard() {
+			asking = false;
+			source().onOpenChange(false);
+		},
 		get dirty() {
 			return dirty;
 		},

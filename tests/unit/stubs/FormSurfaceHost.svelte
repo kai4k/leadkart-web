@@ -8,7 +8,8 @@
 		seed = 'Asha',
 		onSubmit,
 		onOpenChange,
-		submitVariant
+		submitVariant,
+		guardLeave
 	}: {
 		surface?: 'sheet' | 'dialog';
 		open?: boolean;
@@ -16,6 +17,7 @@
 		onSubmit: (values: { name: string }) => Promise<void>;
 		onOpenChange: (open: boolean) => void;
 		submitVariant?: 'default' | 'destructive';
+		guardLeave?: boolean;
 	} = $props();
 
 	const schema = z.object({ name: z.string().min(1, 'Enter a name.') });
@@ -28,6 +30,7 @@
 	{onSubmit}
 	{schema}
 	{submitVariant}
+	{guardLeave}
 	initial={() => ({ name: seed })}
 	title="Edit person"
 	description="Change the name."
