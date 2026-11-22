@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
+	import { onDestroy, onMount, untrack } from 'svelte';
 	import { _ } from 'svelte-i18n';
 	import type { ActionResult } from '$app/forms';
 	import { page } from '$app/state';
@@ -19,7 +19,16 @@
 	type Props = { form?: ActionData };
 	let { form }: Props = $props();
 
-	let remaining = $state(0);
+	/** The seconds Go asked to wait, when it said a real number (never zero, negative or NaN). */
+	const waitOf = (seconds: unknown): number =>
+		typeof seconds === 'number' && Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : 0;
+
+	// A first paint (no JavaScript yet, or a native POST) already shows the server's number: seeded from the form.
+	let remaining = $state(
+		untrack(() => waitOf((form as { retryAfterSeconds?: unknown } | undefined)?.retryAfterSeconds))
+	);
+	// the countdown ran out: the lockout line gives way to "you can try again now"
+	let elapsed = $state(false);
 	let timer: ReturnType<typeof setInterval> | undefined;
 	const stop = () => {
 		clearInterval(timer);
@@ -27,29 +36,48 @@
 	};
 	onDestroy(stop);
 
+	/** (Re)start the countdown: one interval at a time, however many 423s arrive. */
+	function begin(seconds: number) {
+		stop();
+		elapsed = false;
+		remaining = seconds;
+		if (seconds <= 0) return;
+		timer = setInterval(() => {
+			remaining = Math.max(0, remaining - 1);
+			if (remaining === 0) {
+				stop();
+				elapsed = true;
+			}
+		}, 1000);
+	}
+	onMount(() => begin(remaining));
+
 	/** After the page applied the result: a lockout starts (or restarts) the countdown, any other result ends it. */
 	function onResult(result: ActionResult) {
 		// A sign-in changes the person the browser holds: the other tabs reload instead of collecting 409s.
 		if (result.type === 'redirect') announceContextChange('session');
-		stop();
-		const seconds =
+		begin(
 			result.type === 'failure'
-				? (result.data as { retryAfterSeconds?: unknown })?.retryAfterSeconds
-				: 0;
-		remaining = typeof seconds === 'number' && seconds > 0 ? Math.ceil(seconds) : 0;
-		if (remaining > 0) {
-			timer = setInterval(() => {
-				remaining = Math.max(0, remaining - 1);
-				if (remaining === 0) stop();
-			}, 1000);
-		}
+				? waitOf((result.data as { retryAfterSeconds?: unknown })?.retryAfterSeconds)
+				: 0
+		);
 	}
+
+	// What the lockout line says: the seconds while they count, "try again now" after, and a plain line when Go sent none.
+	const shown = $derived.by(() => {
+		if (!form || form.formErrorKey !== 'auth.errors.accountLocked') return form;
+		if (remaining > 0) return form;
+		return {
+			...form,
+			formErrorKey: elapsed ? 'auth.signin.canRetryNow' : 'auth.signin.lockedLater'
+		};
+	});
 </script>
 
 <AuthCard title={$_('auth.signin.title')} subtitle={$_('auth.signin.subtitle')}>
 	<ActionForm
 		id="signin-form"
-		result={form}
+		result={shown}
 		scoped={false}
 		wide
 		submitLabel={$_('auth.signin.submit')}

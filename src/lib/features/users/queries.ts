@@ -9,6 +9,7 @@
  * Cache discipline: see `#lib/api/mutations.ts` (mutations invalidate, no
  * DTO is written into the cache, the global MutationCache toasts errors).
  */
+import type { OneShot } from '#lib/utils/one-shot.ts';
 import { createQuery } from '@tanstack/svelte-query';
 import { createResourceMutation } from '#lib/api/mutations.ts';
 import { queryRoots } from '#lib/api/query-keys.ts';
@@ -77,7 +78,8 @@ export function userDetailQuery(getId: () => string) {
 
 export function createUserMutation() {
 	return createResourceMutation({
-		fn: (req: CreateUserRequest) => api.createUser(req),
+		// the variables hold a one-shot holder: the typed password does not stay in the mutation cache
+		fn: (req: OneShot<CreateUserRequest>) => api.createUser(req.take()),
 		invalidate: () => [usersKeys.list()],
 		successToast: 'Member added',
 		inlineErrors: true

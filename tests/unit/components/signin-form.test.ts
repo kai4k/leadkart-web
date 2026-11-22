@@ -81,6 +81,59 @@ describe('lockout countdown', () => {
 		expect(button().disabled).toBe(false);
 	});
 
+	const LOCKED = {
+		values: { email: 'a@b.co' },
+		fieldKeys: {},
+		fieldMessages: {},
+		formErrorKey: 'auth.errors.accountLocked'
+	};
+	const remount = (form: Record<string, unknown>) => {
+		unmount(component!);
+		target.remove();
+		target = document.body.appendChild(document.createElement('div'));
+		component = mount(SigninForm, { target, props: { form } as never });
+		flushSync();
+	};
+
+	it('the first paint of a 423 already shows the server number and the button off (no result handled yet)', () => {
+		remount({ ...LOCKED, retryAfterSeconds: 30 });
+		expect(target.textContent).toContain('30 seconds');
+		expect(button().disabled).toBe(true);
+		vi.advanceTimersByTime(1000);
+		flushSync();
+		expect(target.textContent).toContain('29 seconds');
+	});
+
+	it('when the countdown reaches zero the line says "You can try again now." and never "0 seconds"', () => {
+		remount({ ...LOCKED, retryAfterSeconds: 2 });
+		vi.advanceTimersByTime(2000);
+		flushSync();
+		expect(target.textContent).toContain(en.auth.signin.canRetryNow);
+		expect(target.textContent).not.toContain(' 0 seconds');
+		expect(button().disabled).toBe(false);
+	});
+
+	it.each([undefined, 0, -3, Number.NaN, 'soon'])(
+		'a 423 with no usable seconds (%s) says to try later, with no zero, negative or NaN',
+		(seconds) => {
+			remount({ ...LOCKED, retryAfterSeconds: seconds });
+			expect(target.textContent).toContain(en.auth.signin.lockedLater);
+			expect(target.textContent).not.toContain('NaN');
+			expect(target.textContent).not.toContain(' 0 seconds');
+			expect(button().disabled).toBe(false);
+		}
+	);
+
+	it('a second 423 does not start a second interval (the countdown must not run at double speed)', async () => {
+		remount({ ...LOCKED, retryAfterSeconds: 30 });
+		await submitResult('failure', { retryAfterSeconds: 30 });
+		await submitResult('failure', { retryAfterSeconds: 30 });
+		expect(vi.getTimerCount()).toBe(1);
+		vi.advanceTimersByTime(3000);
+		flushSync();
+		expect(target.textContent).toContain('27 seconds');
+	});
+
 	it('any other result ends a countdown at once', async () => {
 		await submitResult('failure', { retryAfterSeconds: 30 });
 		expect(button().disabled).toBe(true);

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { oneShot } from '#lib/utils/one-shot.ts';
 	import { _ } from 'svelte-i18n';
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	import { Alert, Button, Card, CopyButton } from '$ui';
@@ -26,7 +27,7 @@
 	async function onSubmit(
 		values: z.output<typeof registerTenantRequestSchema>
 	): Promise<Credentials> {
-		const resp = await registerMutation.mutateAsync(values);
+		const resp = await registerMutation.mutateAsync(oneShot(values));
 		return {
 			email: values.admin_email,
 			password: values.admin_password,

@@ -1,5 +1,6 @@
 <!-- src/lib/features/users/components/CreateUserDrawer.svelte -->
 <script lang="ts">
+	import { oneShot } from '#lib/utils/one-shot.ts';
 	import { _ } from 'svelte-i18n';
 	import type { z } from 'zod';
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
@@ -23,7 +24,7 @@
 	useResetOnChange(() => open, mutation);
 
 	async function onSubmit(values: z.output<typeof createUserRequestSchema>): Promise<Added> {
-		const resp = await mutation.mutateAsync(values);
+		const resp = await mutation.mutateAsync(oneShot(values));
 		return { membershipId: resp.membership_id, personExisted: resp.person_existed };
 	}
 </script>

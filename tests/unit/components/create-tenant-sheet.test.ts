@@ -97,6 +97,24 @@ describe('CreateTenantDrawer is a FormSheet', () => {
 		expect(document.querySelector('[data-slot="sheet-footer"]')).toBeNull();
 	});
 
+	it('after the save settles and the sheet closes, the mutation cache holds nothing equal to the typed password', async () => {
+		gw.registerTenant.mockResolvedValue({ tenant_id: 't-1' });
+		fillAll();
+		submit();
+		await vi.waitFor(() => expect(document.body.textContent).toContain('one-time view'));
+		[...document.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Done')!.click();
+		flushSync();
+		props.open = false;
+		flushSync();
+		expect(gw.registerTenant.mock.calls[0]![0].admin_password).toBe(VALUES.admin_password);
+		const cached = h.qc
+			.getMutationCache()
+			.getAll()
+			.map((m) => JSON.stringify([m.state.variables, m.state.data]));
+		expect(cached.length).toBeGreaterThan(0);
+		for (const entry of cached) expect(entry).not.toContain(VALUES.admin_password);
+	});
+
 	it('Done closes the sheet; reopening shows an empty form, never the previous credentials', async () => {
 		gw.registerTenant.mockResolvedValue({ tenant_id: 't-1' });
 		fillAll();

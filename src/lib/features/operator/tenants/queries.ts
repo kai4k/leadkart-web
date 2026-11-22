@@ -15,6 +15,7 @@
  * TenantDto via +layout.server.ts. There is no client-side
  * tenantBySlugQuery — the slug never appears in a browser URL.
  */
+import type { OneShot } from '#lib/utils/one-shot.ts';
 import { createQuery } from '@tanstack/svelte-query';
 import { refreshAll } from '$app/navigation';
 import { createResourceMutation } from '#lib/api/mutations.ts';
@@ -38,7 +39,8 @@ export function tenantsListQuery() {
 
 export function registerTenantMutation() {
 	return createResourceMutation({
-		fn: (req: RegisterTenantRequest) => api.registerTenant(req),
+		// the variables hold a one-shot holder: the admin's password does not stay in the mutation cache
+		fn: (req: OneShot<RegisterTenantRequest>) => api.registerTenant(req.take()),
 		invalidate: () => [tenantsKeys.all],
 		successToast: 'Tenant registered',
 		// CreateTenantDrawer shows the error in its form banner.
