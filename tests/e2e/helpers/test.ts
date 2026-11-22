@@ -80,13 +80,48 @@ const SPEC_FETCH = () => {
 	};
 };
 
+/**
+ * The suite's convention: nothing is clicked or filled before the app has hydrated (`html[data-hydrated="true"]`,
+ * set by the root layout once the whole tree is mounted). A server-rendered control answers a click that nothing
+ * handles yet, and a lost click shows up only as a later timeout (the `permission-requests` failures). So
+ * `page.goto` of an HTML page of the app returns once the marker is there: a spec cannot forget. Opt out with
+ * `test.use({ waitForHydration: false })` for a spec about the page BEFORE its JavaScript runs, or a goto with
+ * `waitUntil: 'commit'`.
+ */
+function waitsForHydration(page: Page): void {
+	const goto = page.goto.bind(page);
+	page.goto = (async (url: string, options?: Parameters<Page['goto']>[1]) => {
+		const response = await goto(url, options);
+		if (
+			response &&
+			options?.waitUntil !== 'commit' &&
+			(response.headers()['content-type'] ?? '').includes('text/html')
+		)
+			await page.locator('html[data-hydrated="true"]').waitFor({ state: 'attached' });
+		return response;
+	}) as Page['goto'];
+}
+
 export const test = base.extend<{
 	allowUnregistered: boolean;
+	waitForHydration: boolean;
+	hydrationAwareGoto: void;
 	specFetch: void;
 	noUnregisteredCalls: void;
 	noHoverPreload: void;
 }>({
 	allowUnregistered: [false, { option: true }],
+	waitForHydration: [true, { option: true }],
+	hydrationAwareGoto: [
+		async ({ context, waitForHydration }, use) => {
+			if (waitForHydration) {
+				context.pages().forEach(waitsForHydration);
+				context.on('page', waitsForHydration);
+			}
+			await use();
+		},
+		{ auto: true }
+	],
 	specFetch: [
 		async ({ context }, use) => {
 			// What each page shows = the fingerprint its own (app) calls last carried (the app reads it from
