@@ -7,7 +7,9 @@
 	 * glass over the backdrop, opaque under Solid), with padding and an entrance animation of its own.
 	 *
 	 * API:
+	 *   - title       the page's one `<h1>`; with `subtitle` it is the header every auth screen shares
 	 *   - children    required; the form content
+	 *   - footer      the one link row under the content ("Back to sign in"): same place on every auth screen
 	 *   - class       append-only token classes for caller overrides
 	 *   - layoutClass content layout (default `stack stack-relaxed`)
 	 */
@@ -16,15 +18,32 @@
 		class?: string;
 		/** Override the default `stack stack-relaxed` content layout. */
 		layoutClass?: string;
+		title: string;
+		subtitle?: string;
+		footer?: Snippet;
 		children: Snippet;
 	};
 
-	let { class: className = '', layoutClass = 'stack stack-relaxed', children }: Props = $props();
+	let {
+		class: className = '',
+		layoutClass = 'stack stack-relaxed',
+		title,
+		subtitle,
+		footer,
+		children
+	}: Props = $props();
 </script>
 
 <div class={cn('lk-auth-card material-pane rounded-xl', className)}>
 	<div class={cn(layoutClass)}>
+		<header class="stack stack-tight text-center">
+			<h1 class="h2 text-foreground">{title}</h1>
+			{#if subtitle}<p class="body-sm text-muted-foreground">{subtitle}</p>{/if}
+		</header>
 		{@render children()}
+		{#if footer}
+			<p class="caption text-muted-foreground text-center empty:hidden">{@render footer()}</p>
+		{/if}
 	</div>
 </div>
 

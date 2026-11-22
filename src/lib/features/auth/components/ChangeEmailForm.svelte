@@ -1,35 +1,21 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { bannerText, fieldText, readFailure } from '#lib/utils/form-failure.ts';
-	import { enhance } from '$app/forms';
-	import { withFocusOnFailure } from '#lib/utils/focus-first-invalid.ts';
-	import { Alert, Button } from '$ui';
-	import { ScopeContextField, TextField } from '#lib/components/form/index.ts';
+	import { Alert } from '$ui';
+	import { ActionForm, TextField, type ActionFormResult } from '$form';
 
 	/**
-	 * ChangeEmailForm — authenticated email-change request via SvelteKit
-	 * form action `?/changeEmail`. The change does NOT apply until the
-	 * user clicks the confirmation link emailed to the new address.
+	 * ChangeEmailForm: authenticated email-change request via the form action `?/changeEmail`. The change does NOT
+	 * apply until the user clicks the confirmation link emailed to the new address.
 	 */
-	type FormResult = {
+	type FormResult = ActionFormResult & {
 		which?: 'changePassword' | 'changeEmail';
-		values?: { email?: string };
-		fieldKeys?: Record<string, string>;
-		fieldMessages?: Record<string, string>;
-		formErrorKey?: string | null;
 		submitted?: boolean;
 	};
 	type Props = { form?: FormResult };
 	let { form }: Props = $props();
 
-	let loading = $state(false);
-
-	const ours = $derived(form?.which === 'changeEmail');
-	const submitted = $derived(Boolean(ours && form?.submitted));
-	const failure = $derived(ours ? readFailure<{ email?: string }>(form) : null);
-	const fieldError = $derived(fieldText(failure, 'email', $_) ?? null);
-	const formError = $derived(bannerText(failure, $_));
-	const initialEmail = $derived(failure?.values.email ?? '');
+	const ours = $derived(form?.which === 'changeEmail' ? form : null);
+	const submitted = $derived(Boolean(ours?.submitted));
 </script>
 
 {#if submitted}
@@ -37,37 +23,22 @@
 		<p>{$_('auth.changeEmail.successCopy')}</p>
 	</Alert>
 {:else}
-	<form
-		class="stack"
-		method="POST"
+	<ActionForm
+		id="change-email-form"
 		action="?/changeEmail"
-		novalidate
-		use:enhance={withFocusOnFailure(() => {
-			loading = true;
-			return async ({ update }) => {
-				await update();
-				loading = false;
-			};
-		})}
+		result={ours}
+		submitLabel={$_('auth.changeEmail.submit')}
 	>
-		<ScopeContextField />
-
-		<TextField
-			label={$_('auth.changeEmail.newEmail')}
-			name="new_email"
-			type="email"
-			autocomplete="email"
-			required
-			value={initialEmail}
-			error={fieldError ?? undefined}
-		/>
-		{#if formError}
-			<Alert variant="destructive">{formError}</Alert>
-		{/if}
-		<div class="form-footer">
-			<Button type="submit" {loading}>
-				{$_('auth.changeEmail.submit')}
-			</Button>
-		</div>
-	</form>
+		{#snippet children({ fieldError, value })}
+			<TextField
+				label={$_('auth.changeEmail.newEmail')}
+				name="new_email"
+				type="email"
+				autocomplete="email"
+				required
+				value={String(value('email') ?? '')}
+				error={fieldError('email')}
+			/>
+		{/snippet}
+	</ActionForm>
 {/if}

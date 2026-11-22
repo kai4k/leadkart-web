@@ -6,32 +6,19 @@
 	import type { ConfirmPhase } from '../../../../routes/(auth)/confirm-email-change/+page';
 
 	/**
-	 * ConfirmEmailChangeView — Svelte canon load-shaped route.
-	 * The POST happens in (auth)/confirm-email-change/+page.ts; this
-	 * component is a pure renderer over the `phase` returned by load.
+	 * ConfirmEmailChangeView: the POST happens in (auth)/confirm-email-change/+page.ts; this component is a pure
+	 * renderer over the `phase` the load returned, in the same card as the other auth screens.
 	 */
 	type Props = { phase: ConfirmPhase };
 	let { phase }: Props = $props();
 </script>
 
-<AuthCard>
-	<div class="flex flex-col items-center gap-6">
-		<div class="stack stack-tight text-center">
-			<h1 class="h1 text-primary-text">{$_('auth.changeEmail.confirm.title')}</h1>
-			<p class="body-sm text-muted-foreground">{$_('auth.changeEmail.confirm.subtitle')}</p>
-		</div>
-	</div>
-
+<AuthCard title={$_('auth.changeEmail.confirm.title')}>
 	{#if phase === 'missing'}
 		<Alert variant="warning">{$_('auth.changeEmail.confirm.missingToken')}</Alert>
 	{:else if phase === 'success'}
 		<Alert variant="success">{$_('auth.changeEmail.confirm.success')}</Alert>
-		<a
-			href={resolve('signin')}
-			class="bg-primary hover:bg-primary-hover focus-visible:ring-ring inline-flex h-10 w-full items-center justify-center rounded-md px-4 text-sm font-medium text-primary-foreground focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none"
-		>
-			{$_('auth.signin.title')}
-		</a>
+		<Button class="w-full" size="lg" href={resolve('signin')}>{$_('auth.signin.title')}</Button>
 	{:else if phase === 'unreachable' || phase === 'rateLimited'}
 		<!-- The token was never consumed, so the same link works once Go answers: re-run the load. -->
 		<Alert variant="warning">
@@ -41,16 +28,19 @@
 					: 'auth.changeEmail.confirm.unreachable'
 			)}
 		</Alert>
-		<Button class="w-full" onclick={() => invalidateAll()}>
+		<Button class="w-full" size="lg" onclick={() => invalidateAll()}>
 			{$_('auth.changeEmail.confirm.retry')}
 		</Button>
 	{:else}
 		<Alert variant="destructive">{$_('auth.changeEmail.confirm.invalidToken')}</Alert>
-		<a
-			href={resolve('settings/account/security')}
-			class="text-muted-foreground hover:bg-muted focus-visible:ring-ring inline-flex h-10 w-full items-center justify-center rounded-md px-4 text-sm font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none"
-		>
-			{$_('common.cancel')}
-		</a>
 	{/if}
+	{#snippet footer()}
+		{#if phase === 'invalid'}
+			<a
+				href={resolve('settings/account/security')}
+				class="text-primary-text underline underline-offset-2 hover:no-underline"
+				>{$_('common.cancel')}</a
+			>
+		{/if}
+	{/snippet}
 </AuthCard>

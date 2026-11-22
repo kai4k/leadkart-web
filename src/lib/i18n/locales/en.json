@@ -35,7 +35,7 @@
 			"title": "Choose a new password",
 			"subtitle": "Set the password you'll use to sign in.",
 			"newPassword": "New password",
-			"newPasswordHint": "At least 12 characters.",
+			"newPasswordHint": "At least 8 characters, with an uppercase letter, a lowercase letter, a digit and a symbol.",
 			"confirmPassword": "Confirm new password",
 			"submit": "Reset password",
 			"success": "Password reset. Redirecting you to sign in…",
@@ -96,6 +96,7 @@
 		}
 	},
 	"account": {
+		"profileSaved": "Profile saved.",
 		"security": {
 			"title": "Account & Security",
 			"subtitle": "Manage your sign-in credentials. Changes take effect immediately and may sign you out of other devices.",
@@ -104,7 +105,7 @@
 				"description": "Pick a strong password you don't use elsewhere. We'll keep you signed in on this device.",
 				"currentPassword": "Current password",
 				"newPassword": "New password",
-				"newPasswordHint": "At least 12 characters. Must differ from your current password.",
+				"newPasswordHint": "At least 8 characters, with an uppercase letter, a lowercase letter, a digit and a symbol. Must differ from your current password.",
 				"confirmPassword": "Confirm new password",
 				"submit": "Update password",
 				"success": "Password updated.",

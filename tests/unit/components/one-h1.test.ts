@@ -1,6 +1,6 @@
 /**
  * "Exactly one <h1> per route" is kept by construction: the only places an `<h1>` may be written are
- * PageHeader (every signed-in page; it writes a `svelte:element`, tested below), the auth forms (the pages inside the auth frame), the error pages
+ * PageHeader (every signed-in page; it writes a `svelte:element`, tested below), AuthCard (the title of every auth screen: sign-in, forgot / reset password, confirm email change, must-change-password), the error pages
  * and the dev styleguide/stories. Anything else is a second heading waiting to happen. The route walk
  * in `tests/a11y/routes.spec.ts` and `tests/e2e/tenant-context-banner.spec.ts` count the rendered `<h1>`.
  */
@@ -8,10 +8,7 @@ import { globSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const ALLOWED = [
-	'src/lib/features/auth/components/SigninForm.svelte',
-	'src/lib/features/auth/components/ForgotPasswordForm.svelte',
-	'src/lib/features/auth/components/ResetPasswordForm.svelte',
-	'src/lib/features/auth/components/ConfirmEmailChangeView.svelte',
+	'src/lib/components/ui/AuthCard.svelte',
 	'src/routes/+error.svelte',
 	'src/routes/(auth)/+error.svelte',
 	'src/routes/(dev)/+error.svelte'

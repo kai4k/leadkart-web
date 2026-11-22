@@ -1,130 +1,86 @@
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import { _ } from 'svelte-i18n';
-	import { bannerText, fieldText, readFailure } from '#lib/utils/form-failure.ts';
-	import { enhance } from '$app/forms';
-	import { withFocusOnFailure } from '#lib/utils/focus-first-invalid.ts';
-	import { announceContextChange } from '#lib/api/operator-scope.ts';
+	import type { ActionResult } from '$app/forms';
 	import { page } from '$app/state';
-	import { Icon, Lock } from '#lib/icons/index.ts';
-	import { Alert, AuthCard, Button } from '#lib/components/ui/index.ts';
-	import { TextField, PasswordField } from '#lib/components/form/index.ts';
 	import { resolve } from '$app/paths';
+	import { announceContextChange } from '#lib/api/operator-scope.ts';
+	import { AuthCard } from '#lib/components/ui/index.ts';
+	import { ActionForm, PasswordField, TextField } from '#lib/components/form/index.ts';
 	import type { ActionData } from '../../../../routes/(auth)/signin/$types';
 
 	/**
-	 * SigninForm — Svelte canon for form-shaped routes per the
-	 * "per-route shape" principle: forms use SvelteKit form actions +
-	 * use:enhance for progressive enhancement, lists use TanStack.
-	 *
-	 * The action lives at (auth)/signin/+page.server.ts. The `form` prop
-	 * exposes the action's last result (validation errors, login error,
-	 * lockout countdown). use:enhance keeps the submit on-page when JS
-	 * is available and degrades to a full POST + 303 redirect without it.
-	 *
-	 * Three post-submit branches per ADR 0053:
-	 *   1. 200 with must_change_password=true → /must-change-password
-	 *   2. 200 with must_change_password=false → /dashboard (or ?next=)
-	 *   3. 423 locked → renders countdown using returned retryAfterSeconds
-	 *
-	 * `?email=` prefill from an admin-initiated invite redirect.
+	 * SigninForm: the sign-in card. The action lives at (auth)/signin/+page.server.ts; the `form` prop is its last
+	 * result (validation errors, a refused login, the lockout). Three outcomes (ADR 0053): a redirect to
+	 * /must-change-password, a redirect to /dashboard (or `?next=`), or a 423 with `retryAfterSeconds`, which this
+	 * card counts down: the button stays off until the wait is over, and the banner shows the seconds left.
+	 * `?email=` prefills the field (an admin-initiated invite).
 	 */
-
 	type Props = { form?: ActionData };
 	let { form }: Props = $props();
 
-	let loading = $state(false);
-	let errorRegion: HTMLElement | undefined = $state();
+	let remaining = $state(0);
+	let timer: ReturnType<typeof setInterval> | undefined;
+	const stop = () => {
+		clearInterval(timer);
+		timer = undefined;
+	};
+	onDestroy(stop);
 
-	const failure = $derived(readFailure<{ email?: string }>(form));
-
-	// Repopulate email after a failed submit (the action returns what was typed).
-	// Falls back to ?email= prefill on first render.
-	const initialEmail = $derived(failure?.values.email ?? page.url.searchParams.get('email') ?? '');
-
-	const formError = $derived.by(() => {
-		const key = failure?.formErrorKey;
-		if (!key) return null;
-		const rawSeconds =
-			form && 'retryAfterSeconds' in form ? (form.retryAfterSeconds as unknown) : undefined;
-		const seconds = typeof rawSeconds === 'number' ? rawSeconds : undefined;
-		if (key === 'auth.errors.accountLocked' && seconds !== undefined) {
-			return $_(key, { values: { seconds } });
+	/** After the page applied the result: a lockout starts (or restarts) the countdown, any other result ends it. */
+	function onResult(result: ActionResult) {
+		// A sign-in changes the person the browser holds: the other tabs reload instead of collecting 409s.
+		if (result.type === 'redirect') announceContextChange('session');
+		stop();
+		const seconds =
+			result.type === 'failure'
+				? (result.data as { retryAfterSeconds?: unknown })?.retryAfterSeconds
+				: 0;
+		remaining = typeof seconds === 'number' && seconds > 0 ? Math.ceil(seconds) : 0;
+		if (remaining > 0) {
+			timer = setInterval(() => {
+				remaining = Math.max(0, remaining - 1);
+				if (remaining === 0) stop();
+			}, 1000);
 		}
-		return bannerText(failure, $_);
-	});
-
-	const fieldErrors = $derived({
-		email: fieldText(failure, 'email', $_),
-		password: fieldText(failure, 'password', $_)
-	});
-
-	$effect(() => {
-		if (formError) queueMicrotask(() => errorRegion?.focus());
-	});
+	}
 </script>
 
-<AuthCard>
-	<div class="flex flex-col items-center gap-6">
-		<div class="stack stack-tight text-center">
-			<h1 class="h1 text-primary-text">{$_('auth.signin.title')}</h1>
-			<p class="body-sm text-muted-foreground">{$_('auth.signin.subtitle')}</p>
-		</div>
-	</div>
-
-	<form
-		class="stack"
-		method="POST"
-		novalidate
-		use:enhance={withFocusOnFailure(() => {
-			loading = true;
-			return async ({ result, update }) => {
-				// A sign-in changes the person the browser holds: the other tabs reload instead of collecting 409s.
-				if (result.type === 'redirect') announceContextChange('session');
-				await update();
-				loading = false;
-			};
-		})}
+<AuthCard title={$_('auth.signin.title')} subtitle={$_('auth.signin.subtitle')}>
+	<ActionForm
+		id="signin-form"
+		result={form}
+		scoped={false}
+		wide
+		submitLabel={$_('auth.signin.submit')}
+		submitDisabled={remaining > 0}
+		bannerValues={{ seconds: remaining }}
+		{onResult}
 	>
-		<TextField
-			label={$_('auth.signin.email')}
-			name="email"
-			type="email"
-			autocomplete="email"
-			required
-			value={initialEmail}
-			error={fieldErrors.email}
-		/>
-
-		<PasswordField
-			label={$_('auth.signin.password')}
-			name="password"
-			required
-			error={fieldErrors.password}
-		/>
-
-		{#if formError}
-			<div bind:this={errorRegion} tabindex="-1">
-				<Alert variant="destructive">{formError}</Alert>
-			</div>
-		{/if}
-
-		<Button class="w-full" type="submit" {loading} size="lg"
-			>{loading ? $_('common.loading') : $_('auth.signin.submit')}</Button
+		{#snippet children({ fieldError, value })}
+			<TextField
+				label={$_('auth.signin.email')}
+				name="email"
+				type="email"
+				autocomplete="username"
+				required
+				value={String(value('email') ?? page.url.searchParams.get('email') ?? '')}
+				error={fieldError('email')}
+			/>
+			<PasswordField
+				label={$_('auth.signin.password')}
+				name="password"
+				autocomplete="current-password"
+				required
+				error={fieldError('password')}
+			/>
+		{/snippet}
+	</ActionForm>
+	{#snippet footer()}
+		<a
+			href={resolve('forgot-password')}
+			class="text-primary-text underline underline-offset-2 hover:no-underline"
+			>{$_('auth.signin.forgotPassword')}</a
 		>
-
-		<p class="caption text-muted-foreground text-center">
-			<a
-				href={resolve('forgot-password')}
-				class="text-primary-text underline underline-offset-2 hover:no-underline"
-				>{$_('auth.signin.forgotPassword')}</a
-			>
-		</p>
-	</form>
-
-	<div
-		class="border-border text-subtle-foreground flex flex-col items-center gap-2 border-t pt-4 sm:flex-row sm:justify-center"
-	>
-		<Icon icon={Lock} size="xs" />
-		<span class="caption">256-bit SSL encrypted</span>
-	</div>
+	{/snippet}
 </AuthCard>

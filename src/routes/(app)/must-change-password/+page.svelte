@@ -1,64 +1,38 @@
 <script lang="ts">
-	import PageHeader from '$layouts/PageHeader.svelte';
 	import { _ } from 'svelte-i18n';
-	import { enhance } from '$app/forms';
-	import { withFocusOnFailure } from '#lib/utils/focus-first-invalid.ts';
-	import { Alert, Button, Card } from '$ui';
-	import { PasswordField, ScopeContextField } from '#lib/components/form/index.ts';
-	import { bannerText, fieldText, readFailure } from '#lib/utils/form-failure.ts';
+	import { AuthCard } from '$ui';
+	import { ActionForm, PasswordField } from '#lib/components/form/index.ts';
 	import type { ActionData } from './$types';
 
 	/**
-	 * /must-change-password — forced password rotation per ADR 0053.
-	 *
-	 * Reached when login returned `must_change_password=true`. The action
-	 * at +page.server.ts handles the rotation server-side; this component
-	 * is a pure renderer over the `form` prop.
+	 * /must-change-password: forced password rotation per ADR 0053. Reached when login returned
+	 * `must_change_password=true`. The action at +page.server.ts rotates the password server-side; this page is a
+	 * renderer over the `form` prop, in the same card as the sign-in screens. A change of password ends in a
+	 * redirect, so nothing typed stays on screen.
 	 */
 	let { form }: { form: ActionData } = $props();
-	let loading = $state(false);
-
-	const failure = $derived(readFailure(form));
-	const formError = $derived(bannerText(failure, $_));
-	const fieldErrors = $derived({
-		current: fieldText(failure, 'current', $_),
-		new: fieldText(failure, 'new', $_),
-		confirm: fieldText(failure, 'confirm', $_)
-	});
 </script>
 
 <svelte:head>
 	<title>{$_('auth.mustChange.title')} · LeadKart</title>
 </svelte:head>
 
-<div class="stack stack-relaxed mx-auto max-w-5xl">
-	<PageHeader
-		title={$_('auth.mustChange.title')}
-		description={$_('auth.mustChange.subtitle')}
-		crumbs={[]}
-	/>
-
-	<Card.Root>
-		<Card.Content>
-			<form
-				class="stack"
-				method="POST"
-				novalidate
-				use:enhance={withFocusOnFailure(() => {
-					loading = true;
-					return async ({ update }) => {
-						await update();
-						loading = false;
-					};
-				})}
-			>
-				<ScopeContextField />
+<div class="mx-auto w-full max-w-[min(28rem,100%)]">
+	<AuthCard title={$_('auth.mustChange.title')} subtitle={$_('auth.mustChange.subtitle')}>
+		<ActionForm
+			id="must-change-password-form"
+			result={form}
+			wide
+			resetOnSuccess
+			submitLabel={$_('auth.mustChange.submit')}
+		>
+			{#snippet children({ fieldError })}
 				<PasswordField
 					label={$_('account.security.changePassword.currentPassword')}
 					name="current_password"
 					autocomplete="current-password"
 					required
-					error={fieldErrors.current}
+					error={fieldError('current')}
 				/>
 				<PasswordField
 					label={$_('account.security.changePassword.newPassword')}
@@ -66,22 +40,16 @@
 					hint={$_('account.security.changePassword.newPasswordHint')}
 					autocomplete="new-password"
 					required
-					error={fieldErrors.new}
+					error={fieldError('new')}
 				/>
 				<PasswordField
 					label={$_('account.security.changePassword.confirmPassword')}
 					name="confirm"
 					autocomplete="new-password"
 					required
-					error={fieldErrors.confirm}
+					error={fieldError('confirm')}
 				/>
-				{#if formError}
-					<Alert variant="destructive">{formError}</Alert>
-				{/if}
-				<Button class="w-full" type="submit" {loading} size="lg">
-					{loading ? $_('common.loading') : $_('auth.mustChange.submit')}
-				</Button>
-			</form>
-		</Card.Content>
-	</Card.Root>
+			{/snippet}
+		</ActionForm>
+	</AuthCard>
 </div>

@@ -57,6 +57,10 @@
 		guardLeave = false,
 		isDirty,
 		onResult,
+		wide = false,
+		resetOnSuccess = false,
+		submitDisabled = false,
+		bannerValues,
 		secondary,
 		children
 	}: {
@@ -81,6 +85,14 @@
 		isDirty?: () => boolean;
 		/** After the page applied the result: the escape hatch (the sign-in lockout countdown). */
 		onResult?: (result: ActionResult) => void;
+		/** After a saved result, clear the fields (a password form: nothing typed stays on screen). */
+		resetOnSuccess?: boolean;
+		/** A full-width large submit button (the auth cards). */
+		wide?: boolean;
+		/** Disable the submit button without it being busy (a lockout countdown). */
+		submitDisabled?: boolean;
+		/** Values for the banner's ICU placeholders (`{seconds}`). */
+		bannerValues?: Record<string, string | number>;
 		/** Buttons before the submit button (a Cancel link). */
 		secondary?: Snippet;
 		children: Snippet<[ActionFormSlot]>;
@@ -100,7 +112,9 @@
 					v && typeof v === 'object' ? (v as Record<string, unknown>)[part] : undefined,
 				result?.values
 			);
-	const banner = $derived(failure?.formErrorKey ? $_(failure.formErrorKey) : null);
+	const banner = $derived(
+		failure?.formErrorKey ? $_(failure.formErrorKey, { values: bannerValues }) : null
+	);
 
 	// Dirty = what the form would send differs from what it held when it loaded (or was last saved).
 	let baseline: string | null = null;
@@ -134,6 +148,7 @@
 			try {
 				if (outcome.type === 'redirect') leavingBySave = true;
 				await update({ reset: false });
+				if (resetOnSuccess && outcome.type === 'success') formEl?.reset();
 				onResult?.(outcome);
 			} finally {
 				submitting = false;
@@ -160,7 +175,13 @@
 	<div class="form-footer">
 		{#if allowed}
 			{@render secondary?.()}
-			<Button type="submit" loading={submitting}>{submitLabel}</Button>
+			<Button
+				type="submit"
+				loading={submitting}
+				disabled={submitDisabled}
+				class={wide ? 'w-full' : undefined}
+				size={wide ? 'lg' : 'default'}>{submitLabel}</Button
+			>
 		{:else if disallowedReason}
 			<p class="caption text-muted-foreground">{disallowedReason}</p>
 		{/if}
