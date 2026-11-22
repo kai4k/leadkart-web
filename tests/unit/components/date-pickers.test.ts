@@ -72,8 +72,8 @@ describe('DatePicker: typed entry', () => {
 	it('shows day / month / year in the business locale order (en-IN), three editable segments', () => {
 		render(DatePicker, { value: START });
 		expect(segments().map((s) => s.getAttribute('data-segment'))).toEqual(['day', 'month', 'year']);
-		expect(segments().map((s) => s.textContent?.trim())).toEqual(['10', '05', '2026']);
-		for (const s of segments()) expect(s.getAttribute('tabindex')).toBe('0');
+		expect(segments().map((s) => (s as HTMLInputElement).value)).toEqual(['10', '05', '2026']);
+		for (const s of segments()) expect((s as HTMLInputElement).tabIndex).toBe(0);
 	});
 
 	it('typing 1 0 0 5 2 0 2 6 sets 2026-05-10, the hidden input and the string value', () => {
@@ -109,7 +109,7 @@ describe('DatePicker: typed entry', () => {
 		day(15).click();
 		flushSync();
 		await vi.waitFor(() => expect(days()).toHaveLength(0));
-		expect(segments().map((s) => s.textContent?.trim())).toEqual(['15', '05', '2026']);
+		expect(segments().map((s) => (s as HTMLInputElement).value)).toEqual(['15', '05', '2026']);
 		expect(hidden('when')!.value).toBe('2026-05-15');
 	});
 
@@ -118,7 +118,7 @@ describe('DatePicker: typed entry', () => {
 		focusFirstSegment();
 		press(segments()[0]!, 'ArrowDown', { altKey: true });
 		await vi.waitFor(() => expect(days().length).toBeGreaterThan(27));
-		expect(segments()[0]!.textContent?.trim()).toBe('10');
+		expect((segments()[0] as HTMLInputElement).value).toBe('10');
 	});
 
 	it('ArrowUp steps the focused segment; Backspace clears it', () => {
@@ -126,10 +126,10 @@ describe('DatePicker: typed entry', () => {
 		const [d] = segments();
 		d!.focus();
 		press(d!, 'ArrowUp');
-		expect(segments()[0]!.textContent?.trim()).toBe('11');
+		expect((segments()[0] as HTMLInputElement).value).toBe('11');
 		// Backspace removes the last digit; the segment is empty when none is left
 		press(segments()[0]!, 'Backspace');
-		expect(segments()[0]!.textContent?.trim()).toBe('1');
+		expect((segments()[0] as HTMLInputElement).value).toBe('1');
 		press(segments()[0]!, 'Backspace');
 		expect(segments()[0]!.getAttribute('aria-valuetext')).toBe('Empty');
 	});
@@ -196,7 +196,7 @@ describe('DatePicker: typed entry', () => {
 	it('valueString: a string in sets the date, a date out reports the string (ISO, day-first display)', () => {
 		const onValueStringChange = vi.fn();
 		render(DatePicker, { valueString: '2026-05-10', onValueStringChange });
-		expect(segments().map((s) => s.textContent?.trim())).toEqual(['10', '05', '2026']);
+		expect(segments().map((s) => (s as HTMLInputElement).value)).toEqual(['10', '05', '2026']);
 	});
 });
 
@@ -209,7 +209,7 @@ describe('DatePicker: typed-entry parsing rules (en-IN, day / month / year)', ()
 		type(digits);
 		return {
 			text: segments()
-				.map((s) => s.textContent?.trim())
+				.map((s) => (s as HTMLInputElement).value || s.getAttribute('placeholder'))
 				.join('/'),
 			value: onValueChange.mock.calls.at(-1)?.[0]?.toString() as string | undefined,
 			focus: (document.activeElement as HTMLElement).getAttribute('data-segment')
@@ -257,7 +257,7 @@ describe('DatePicker: a date that does not exist is an error, never a different 
 			render(DatePicker, { onValueChange, onValueStringChange, name: 'when' });
 			focusFirstSegment();
 			type(digits);
-			expect(segments().map((s) => s.textContent?.trim())).toEqual([
+			expect(segments().map((s) => (s as HTMLInputElement).value)).toEqual([
 				digits.slice(0, 2),
 				digits.slice(2, 4),
 				digits.slice(4)
@@ -292,7 +292,7 @@ describe('DatePicker: a date that does not exist is an error, never a different 
 		expect(errorText()).toBe(en.form.datePicker.notExist);
 		segments()[1]!.focus();
 		type('03');
-		expect(segments().map((s) => s.textContent?.trim())).toEqual(['31', '03', '2026']);
+		expect(segments().map((s) => (s as HTMLInputElement).value)).toEqual(['31', '03', '2026']);
 		expect(onValueChange.mock.calls.at(-1)![0].toString()).toBe('2026-03-31');
 		expect(hidden('when')!.value).toBe('2026-03-31');
 		expect(errorText()).toBeUndefined();
@@ -304,7 +304,7 @@ describe('DatePicker: a date that does not exist is an error, never a different 
 		const d = segments()[0]!;
 		d.focus();
 		press(d, 'ArrowUp');
-		expect(segments()[0]!.textContent?.trim()).toBe('01');
+		expect((segments()[0] as HTMLInputElement).value).toBe('01');
 	});
 
 	it('the range picker refuses an impossible start or end on its own side', () => {
@@ -317,7 +317,11 @@ describe('DatePicker: a date that does not exist is an error, never a different 
 		const [start, end] = groups();
 		expect(start!.getAttribute('aria-invalid')).toBe('true');
 		expect(end!.getAttribute('aria-invalid')).toBeNull();
-		expect(segments(start!).map((s) => s.textContent?.trim())).toEqual(['31', '02', '2026']);
+		expect(segments(start!).map((s) => (s as HTMLInputElement).value)).toEqual([
+			'31',
+			'02',
+			'2026'
+		]);
 		expect(hidden('from')!.value).toBe('');
 		expect(errorText()).toBe(en.form.dateRangePicker.notExistStart);
 		// the end side too
@@ -342,7 +346,7 @@ describe('DatePicker: the date the user picked or set is the date that is saved 
 		day(10).click();
 		flushSync();
 		await vi.waitFor(() => expect(days()).toHaveLength(0));
-		expect(segments().map((s) => s.textContent?.trim())).toEqual(['10', '03', '2026']);
+		expect(segments().map((s) => (s as HTMLInputElement).value)).toEqual(['10', '03', '2026']);
 		expect(hidden('when')!.value).toBe('2026-03-10');
 		expect(onValueStringChange).toHaveBeenLastCalledWith('2026-03-10');
 	});
@@ -355,11 +359,11 @@ describe('DatePicker: the date the user picked or set is the date that is saved 
 		const month = segments()[1]!;
 		month.focus();
 		press(month, 'ArrowUp');
-		expect(segments().map((s) => s.textContent?.trim())).toEqual(['31', '02', '2026']);
+		expect(segments().map((s) => (s as HTMLInputElement).value)).toEqual(['31', '02', '2026']);
 		expect(hidden('when')!.value).toBe('');
 		expect(groups()[0]!.getAttribute('aria-invalid')).toBe('true');
 		press(segments()[1]!, 'ArrowUp');
-		expect(segments().map((s) => s.textContent?.trim())).toEqual(['31', '03', '2026']);
+		expect(segments().map((s) => (s as HTMLInputElement).value)).toEqual(['31', '03', '2026']);
 		expect(hidden('when')!.value).toBe('2026-03-31');
 		expect(groups()[0]!.getAttribute('aria-invalid')).toBeNull();
 	});
@@ -369,15 +373,15 @@ describe('DatePicker: the date the user picked or set is the date that is saved 
 		render(Host, {});
 		focusFirstSegment();
 		type('31022026'); // impossible: shown as typed
-		expect(segments().map((s) => s.textContent?.trim())).toEqual(['31', '02', '2026']);
+		expect(segments().map((s) => (s as HTMLInputElement).value)).toEqual(['31', '02', '2026']);
 		const set = document.querySelector<HTMLButtonElement>('[data-testid="set"]')!;
 		set.click();
 		flushSync();
-		expect(segments().map((s) => s.textContent?.trim())).toEqual(['07', '08', '2025']);
+		expect(segments().map((s) => (s as HTMLInputElement).value)).toEqual(['07', '08', '2025']);
 		expect(hidden('when')!.value).toBe('2025-08-07');
 		document.querySelector<HTMLButtonElement>('[data-testid="reset"]')!.click();
 		flushSync();
-		expect(segments().map((s) => s.textContent?.trim())).toEqual(['dd', 'mm', 'yyyy']);
+		expect(segments().map((s) => (s as HTMLInputElement).value)).toEqual(['', '', '']);
 		expect(hidden('when')!.value).toBe('');
 	});
 
@@ -386,7 +390,7 @@ describe('DatePicker: the date the user picked or set is the date that is saved 
 		const year = segments()[2]!;
 		year.focus();
 		press(year, 'ArrowUp');
-		expect(segments()[2]!.textContent?.trim()).toBe(String(new Date().getFullYear()));
+		expect((segments()[2] as HTMLInputElement).value).toBe(String(new Date().getFullYear()));
 	});
 
 	it('each segment carries aria-invalid and aria-describedby, so the focused control announces the message', () => {
@@ -408,7 +412,7 @@ describe('DatePicker: a half-typed year is not a value', () => {
 		render(DatePicker, { onValueChange, onIncomplete, name: 'when' });
 		focusFirstSegment();
 		type('100526');
-		expect(segments()[2]!.textContent?.trim()).toBe('26');
+		expect((segments()[2] as HTMLInputElement).value).toBe('26');
 		for (const [v] of onValueChange.mock.calls) expect(v).toBeUndefined();
 		expect(hidden('when')!.value).toBe('');
 		blurAll();
@@ -424,7 +428,7 @@ describe('DatePicker: a half-typed year is not a value', () => {
 		render(DatePicker, { onValueChange, minYear: 1990, maxYear: 2030, name: 'when' });
 		focusFirstSegment();
 		type('10050026');
-		expect(segments()[2]!.textContent?.trim()).toBe('0026');
+		expect((segments()[2] as HTMLInputElement).value).toBe('0026');
 		for (const [v] of onValueChange.mock.calls) expect(v).toBeUndefined();
 		expect(hidden('when')!.value).toBe('');
 		expect(groups()[0]!.getAttribute('aria-invalid')).toBe('true');
@@ -505,8 +509,16 @@ describe('DateRangePicker', () => {
 			'When, start date',
 			'When, end date'
 		]);
-		expect(segments(gs[0]!).map((s) => s.textContent?.trim())).toEqual(['10', '05', '2026']);
-		expect(segments(gs[1]!).map((s) => s.textContent?.trim())).toEqual(['12', '05', '2026']);
+		expect(segments(gs[0]!).map((s) => (s as HTMLInputElement).value)).toEqual([
+			'10',
+			'05',
+			'2026'
+		]);
+		expect(segments(gs[1]!).map((s) => (s as HTMLInputElement).value)).toEqual([
+			'12',
+			'05',
+			'2026'
+		]);
 		expect(hidden('from')!.value).toBe('2026-05-10');
 		expect(hidden('to')!.value).toBe('2026-05-12');
 	});

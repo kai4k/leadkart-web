@@ -46,7 +46,7 @@ const segs = () => [
 ];
 const group = () => target.querySelector<HTMLElement>('[data-slot="date-field-input"]')!;
 const hidden = () => target.querySelector<HTMLInputElement>('input[type="hidden"][name="when"]')!;
-const shown = () => segs().map((s) => s.textContent?.trim() ?? '');
+const shown = () => segs().map((s) => (s as HTMLInputElement).value);
 const invalid = () => group().getAttribute('aria-invalid') === 'true';
 const key = (el: Element, k: string, init: KeyboardEventInit = {}) => {
 	el.dispatchEvent(
@@ -57,10 +57,10 @@ const key = (el: Element, k: string, init: KeyboardEventInit = {}) => {
 const type = (digits: string) => {
 	for (const d of digits) key(document.activeElement!, d);
 };
-const beforeInput = (el: Element, data: string, inputType = 'insertText') => {
-	el.dispatchEvent(
-		new InputEvent('beforeinput', { data, inputType, bubbles: true, cancelable: true })
-	);
+// what a virtual keyboard does: the text lands in the input's value, then `input` fires
+const inputText = (el: Element, text: string, init: InputEventInit = {}) => {
+	(el as HTMLInputElement).value = text;
+	el.dispatchEvent(new InputEvent('input', { inputType: 'insertText', bubbles: true, ...init }));
 	flushSync();
 };
 const paste = (el: Element, text: string) => {
@@ -165,9 +165,9 @@ describe('I3: a constraint change re-checks AND re-emits', () => {
 });
 
 describe('M2: several digits in one input event, and paste', () => {
-	it('15032026 in one beforeinput lands as 15/03/2026', () => {
+	it('15032026 in one input event lands as 15/03/2026', () => {
 		setup();
-		beforeInput(segs()[0]!, '15032026');
+		inputText(segs()[0]!, '15032026');
 		expect(shown()).toEqual(['15', '03', '2026']);
 		expect(hidden().value).toBe('2026-03-15');
 	});
@@ -192,7 +192,7 @@ describe('M2: several digits in one input event, and paste', () => {
 			setup();
 			paste(segs()[0]!, text);
 			expect(hidden().value).toBe('');
-			expect(shown()).toEqual(['dd', 'mm', 'yyyy']);
+			expect(shown()).toEqual(['', '', '']);
 		}
 	);
 
@@ -205,48 +205,59 @@ describe('M2: several digits in one input event, and paste', () => {
 	});
 });
 
-describe('M3: IME and Android composition are read back from the DOM', () => {
-	it('compositionstart, a text change, input(insertCompositionText), compositionend: the digits land in the segment', () => {
+describe('M3: virtual keyboards and IMEs are read back from the input value', () => {
+	it('a composition is left alone until compositionend, then its digits land in the segment', () => {
 		setup();
-		const day = segs()[0]!;
+		const day = segs()[0] as HTMLInputElement;
 		day.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
-		day.textContent = 'dd1'; // the IME wrote into the element behind Svelte's back
-		day.dispatchEvent(
-			new InputEvent('input', {
-				inputType: 'insertCompositionText',
-				isComposing: true,
-				bubbles: true
-			})
-		);
-		flushSync();
-		expect(segs()[0]!.textContent).toBe('dd1'); // not touched while composing
-		day.textContent = 'dd12';
+		inputText(day, '1', { inputType: 'insertCompositionText', isComposing: true });
+		expect(day.value).toBe('1'); // not rewritten while composing
+		expect(day.getAttribute('aria-valuenow')).toBeNull(); // the state has not seen it yet
+		day.value = '12';
 		day.dispatchEvent(new CompositionEvent('compositionend', { data: '12', bubbles: true }));
 		flushSync();
 		expect(shown()[0]).toBe('12');
 		expect(document.activeElement).toBe(segs()[1]); // a complete day moved on
 	});
 
-	it('an input event with no cancellable beforeinput (key 229): the element text is read back and made canonical', () => {
+	it('an input event with no keydown key (key 229): the value is read back and made canonical', () => {
 		setup();
-		const day = segs()[0]!;
+		const day = segs()[0] as HTMLInputElement;
 		key(day, 'Process', { keyCode: 229 });
-		day.textContent = '7';
-		day.dispatchEvent(
-			new InputEvent('input', { inputType: 'insertText', data: '7', bubbles: true })
-		);
-		flushSync();
+		inputText(day, '7');
 		expect(shown()[0]).toBe('07');
-		expect(day.textContent!.trim()).toBe('07');
+		expect(day.value).toBe('07');
 	});
 
-	it('letters an IME wrote are dropped: digits only', () => {
+	it('letters an IME wrote are dropped: digits only, and the input is rewritten', () => {
 		setup();
-		const day = segs()[0]!;
-		day.textContent = 'ab3';
-		day.dispatchEvent(new InputEvent('input', { inputType: 'insertText', bubbles: true }));
-		flushSync();
+		const day = segs()[0] as HTMLInputElement;
+		inputText(day, 'ab3');
 		expect(shown()[0]).toBe('3'); // 3 can still become 30 or 31: it waits
+		expect(day.value).toBe('3');
+	});
+
+	it('typing over the selected content replaces it', () => {
+		setup();
+		type('15');
+		segs()[0]!.focus();
+		const day = segs()[0] as HTMLInputElement;
+		expect(day.selectionStart).toBe(0);
+		expect(day.selectionEnd).toBe(2);
+		inputText(day, '5');
+		expect(shown()[0]).toBe('05');
+	});
+
+	it('the segments are numeric text inputs', () => {
+		setup();
+		for (const s of segs()) {
+			expect(s.tagName).toBe('INPUT');
+			expect(s.getAttribute('type')).toBe('text');
+			expect(s.getAttribute('inputmode')).toBe('numeric');
+			expect(s.getAttribute('autocomplete')).toBe('off');
+			expect(s.getAttribute('pattern')).toBe('[0-9]*');
+			expect(s.getAttribute('role')).toBe('spinbutton');
+		}
 	});
 });
 
@@ -254,16 +265,16 @@ describe('M4: reset', () => {
 	it('the form native reset clears typed text that is not a value (15/0/yyyy) and an impossible date with its error', () => {
 		setup();
 		type('150');
-		expect(shown()).toEqual(['15', '0', 'yyyy']);
+		expect(shown()).toEqual(['15', '0', '']);
 		target.querySelector<HTMLButtonElement>('[data-testid="native-reset"]')!.click();
 		flushSync();
-		expect(shown()).toEqual(['dd', 'mm', 'yyyy']);
+		expect(shown()).toEqual(['', '', '']);
 		segs()[0]!.focus();
 		type('31022026');
 		expect(invalid()).toBe(true);
 		target.querySelector<HTMLButtonElement>('[data-testid="native-reset"]')!.click();
 		flushSync();
-		expect(shown()).toEqual(['dd', 'mm', 'yyyy']);
+		expect(shown()).toEqual(['', '', '']);
 		expect(invalid()).toBe(false);
 	});
 
@@ -272,7 +283,7 @@ describe('M4: reset', () => {
 		type('31022026');
 		target.querySelector<HTMLButtonElement>('[data-testid="clear"]')!.click();
 		flushSync();
-		expect(shown()).toEqual(['dd', 'mm', 'yyyy']);
+		expect(shown()).toEqual(['', '', '']);
 		expect(invalid()).toBe(false);
 		expect(hidden().value).toBe('');
 	});
@@ -335,15 +346,12 @@ describe('M1: the digit-run and non-digit branches (regexes written with their b
 	it('letters and symbols in a digit run are not a digit run (nothing is typed)', () => {
 		setup();
 		paste(segs()[0]!, '1a5');
-		expect(shown()).toEqual(['dd', 'mm', 'yyyy']);
+		expect(shown()).toEqual(['', '', '']);
 	});
 
-	it('non-digits are stripped when the element text is read back (placeholder letters, an IME)', () => {
+	it('non-digits are stripped when the input value is read back (placeholder letters, an IME)', () => {
 		setup();
-		const day = segs()[0]!;
-		day.textContent = 'dd15';
-		day.dispatchEvent(new Event('input', { bubbles: true }));
-		flushSync();
+		inputText(segs()[0]!, 'dd15');
 		expect(shown()[0]).toBe('15');
 	});
 });

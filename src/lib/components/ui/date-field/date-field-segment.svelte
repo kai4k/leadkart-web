@@ -1,35 +1,50 @@
 <script lang="ts">
-	import type { HTMLAttributes } from 'svelte/elements';
+	import type { HTMLInputAttributes } from 'svelte/elements';
 	import { cn } from '#lib/utils/cn.ts';
 
 	/**
-	 * One piece of a typed date: an editable segment (`role="spinbutton"`, day, month or year) or the literal separator.
-	 * Presentational: `date-field-input` owns the state and the keys. An editable segment is 24 x 24 at least (WCAG 2.5.8;
-	 * a two-digit day is narrower), and the 24 px comes from the segment itself, so the targets touch but never overlap.
-	 * The literal is an ordinary inline character with a small inline padding: a placeholder letter ("mm", "yyyy") is wider
-	 * than a digit, so a zero-width separator would collide with it. Digits are tabular, so a typed date does not jiggle.
+	 * One piece of a typed date: an editable segment (a real text `<input inputmode="numeric">` with
+	 * `role="spinbutton"`: day, month or year) or the literal separator. Presentational: `date-field-input` owns the state,
+	 * the keys and the reading back of what the browser put into the input.
+	 *
+	 * An editable segment is 24 x 24 at least (WCAG 2.5.8) and its width is in `ch` (digits are tabular), so a typed date
+	 * never jiggles and a placeholder (`dd`, `mm`, `yyyy`) fits. The literal is an ordinary inline character with a small
+	 * inline padding.
 	 */
 	let {
 		class: className,
 		part,
-		empty = false,
+		value = '',
 		children,
 		...restProps
-	}: HTMLAttributes<HTMLSpanElement> & {
+	}: Omit<HTMLInputAttributes, 'value' | 'children'> & {
 		part: 'day' | 'month' | 'year' | 'literal';
-		empty?: boolean;
+		value?: string;
+		children?: import('svelte').Snippet;
 	} = $props();
 </script>
 
-<span
-	data-slot="date-field-segment"
-	data-segment={part}
-	data-placeholder={empty ? '' : undefined}
-	class={cn(
-		part === 'literal'
-			? 'inline-flex items-center px-1 text-muted-foreground select-none'
-			: 'inline-flex min-h-6 min-w-6 items-center justify-center rounded-sm tabular-nums caret-transparent outline-none focus:bg-accent focus:text-accent-foreground data-placeholder:text-muted-foreground',
-		className
-	)}
-	{...restProps}>{@render children?.()}</span
->
+{#if part === 'literal'}
+	<span
+		data-slot="date-field-segment"
+		data-segment="literal"
+		class={cn('inline-flex items-center px-1 text-muted-foreground select-none', className)}
+		aria-hidden="true">{@render children?.()}</span
+	>
+{:else}
+	<input
+		type="text"
+		inputmode="numeric"
+		autocomplete="off"
+		pattern="[0-9]*"
+		data-slot="date-field-segment"
+		data-segment={part}
+		{value}
+		class={cn(
+			'inline-block min-h-6 min-w-6 rounded-sm bg-transparent p-0 text-center tabular-nums outline-none placeholder:text-muted-foreground focus:bg-accent focus:text-accent-foreground',
+			part === 'year' ? 'w-[5ch]' : 'w-[3ch]',
+			className
+		)}
+		{...restProps}
+	/>
+{/if}

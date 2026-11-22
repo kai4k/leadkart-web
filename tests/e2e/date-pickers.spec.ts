@@ -24,7 +24,7 @@ async function openSheetPicker(page: Page) {
 const segs = (scope: ReturnType<Page['locator']>) =>
 	scope.locator('[data-segment]:not([data-segment="literal"])');
 const text = async (scope: ReturnType<Page['locator']>) =>
-	(await segs(scope).allTextContents()).map((t) => t.trim()).join('/');
+	(await segs(scope).evaluateAll((els) => els.map((e) => (e as HTMLInputElement).value))).join('/');
 
 test.describe('typed entry and calendar agree', () => {
 	test('typing day / month / year fills the hidden ISO value and moves the calendar to that month', async ({
@@ -434,10 +434,10 @@ test.describe('Android: typed entry through the input method', () => {
 		// a composition the page cannot cancel: the element is rewritten behind us and reconciled
 		await first.evaluate((el) => {
 			el.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
-			el.textContent = 'dd2x';
+			(el as HTMLInputElement).value = 'dd2x';
 			el.dispatchEvent(new CompositionEvent('compositionend', { data: '2', bubbles: true }));
 		});
-		expect((await segs(sheet).first().textContent())?.trim()).toMatch(/^\d{1,2}$/);
+		expect(await first.inputValue()).toMatch(/^\d{1,2}$/);
 		await context.close();
 	});
 });

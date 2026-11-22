@@ -52,7 +52,7 @@ const realDate = (d: number, m: number, y: number) => {
 };
 
 function assertInvariant(where: string) {
-	const [d, m, y] = segs().map((s) => s.textContent?.trim() ?? '');
+	const [d, m, y] = segs().map((s) => (s as HTMLInputElement).value);
 	const emitted = hidden().value;
 	const invalid = group().getAttribute('aria-invalid') === 'true';
 	if (emitted !== '') {
@@ -102,10 +102,10 @@ async function run(seed: number, withCalendar: boolean) {
 			expect(hidden().value, label).toBe(set);
 			expect(
 				segs()
-					.map((e) => e.textContent?.trim())
+					.map((e) => (e as HTMLInputElement).value)
 					.join('/'),
 				label
-			).toBe(set ? set.split('-').reverse().join('/') : 'dd/mm/yyyy');
+			).toBe(set ? set.split('-').reverse().join('/') : '//');
 		} else if (withCalendar && x < 0.22) {
 			(target.querySelector('button[aria-label^="Open calendar"]') as HTMLButtonElement).click();
 			flushSync();
