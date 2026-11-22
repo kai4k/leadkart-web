@@ -80,6 +80,7 @@ export function createImpersonation(opts: ImpersonationOptions): Impersonation {
 	function adopt(person: string) {
 		if (owner === person) return;
 		owner = person;
+		unknown.reset(); // another person's "checking", timers and waiters are not this person's
 		sessions = [];
 		named = null;
 		readError = null;
