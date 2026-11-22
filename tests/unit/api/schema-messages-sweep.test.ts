@@ -222,6 +222,12 @@ const cases: [string, z.ZodType, Record<string, unknown>[]][] = [
 	['globalSuspend', globalSuspendRequestSchema, [{ reason: '' }, { reason: long(600) }]]
 ];
 
+const PASSWORD_RULE_CODES = new Set([
+	'requires_uppercase',
+	'requires_lowercase',
+	'requires_digit',
+	'requires_symbol'
+]);
 const ZOD_DEFAULT = /^(Too (small|big)|Invalid (input|string|number|option|value|format))/;
 
 describe('no raw Zod default reaches a user', () => {
@@ -240,6 +246,10 @@ describe('no raw Zod default reaches a user', () => {
 						// an authored message: a catalogue key with a full sentence
 						expect(get(_)(m, { default: '' }), `${where}: no en.json entry`).toMatch(/\.$/);
 						expect(shown, where).toMatch(/\.$/);
+					} else if (PASSWORD_RULE_CODES.has(m)) {
+						// Go's own rule code (Register tenant checks the default policy): the mapper turns it into a sentence
+						expect(shown, where).toMatch(/\.$/);
+						expect(shown, where).not.toBe(en.form.invalid);
 					} else {
 						// anything else (a library default for a rule nobody gave a key) reads "Check this value."
 						expect(shown, where).toBe(en.form.invalid);
