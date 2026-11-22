@@ -53,6 +53,11 @@ describe('the code table', () => {
 		);
 	});
 
+	it('a code Go no longer sends has no copy (ADR 0069: no not_approver, no role_deleted)', () => {
+		for (const gone of ['not_approver', 'role_deleted'])
+			expect(goCodeKey(gone), gone).toBeUndefined();
+	});
+
 	it('the corrected lines: insufficient_rank covers roles, role_level_breaks_reporting both directions', () => {
 		expect(codeCopy('insufficient_rank')).toBe(
 			'You can only do this for people and roles below your own level.'

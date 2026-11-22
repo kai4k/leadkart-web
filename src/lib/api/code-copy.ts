@@ -32,7 +32,6 @@ const CODES = [
 	'self_modification_forbidden',
 	'impersonation_not_allowed',
 	'admin_tier_required',
-	'not_approver',
 	// Members and roles
 	'last_owner_protected',
 	'owner_protected',
@@ -40,7 +39,6 @@ const CODES = [
 	'member_roles_inconsistent',
 	'manager_not_eligible',
 	'role_in_use',
-	'role_deleted',
 	'role_name_taken',
 	'role_system_default',
 	'role_parent_not_eligible',
