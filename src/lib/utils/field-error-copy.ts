@@ -28,6 +28,8 @@ const CODE_KEYS: Record<string, string> = {
 	// the postal address names its part (`address.pincode`): required / too_long above, these two below
 	invalid_pincode: 'form.errors.pinInvalid',
 	invalid_city: 'form.errors.cityPincodeMismatch',
+	// caught on this side only: the PAN typed is not the PAN inside the GSTIN (Go answers a field-less `tenant_invalid`)
+	gstin_pan_mismatch: 'form.errors.gstinPanMismatch',
 	// the whole-address fallback under `address`
 	invalid_address: 'form.errors.addressInvalid',
 	// `revoked` of the permission overrides: a name listed in both arrays

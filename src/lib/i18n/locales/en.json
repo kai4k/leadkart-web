@@ -394,6 +394,7 @@
 			"gstinInvalid": "Enter a valid 15-character GSTIN.",
 			"panInvalid": "Enter a valid PAN, for example AAAAA9999A.",
 			"drugLicenceInvalid": "Use 8 to 30 capital letters, digits, dashes, slashes or spaces, with at least one letter and one digit.",
+			"gstinPanMismatch": "The PAN does not match the PAN inside the GSTIN (its characters 3 to 12).",
 			"phoneInvalid": "Enter the number with + and country code, for example +919876543210.",
 			"cityPincodeMismatch": "This pincode does not serve this city. Check the city and the pincode.",
 			"addressInvalid": "Check the street, city, state and pincode.",

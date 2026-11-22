@@ -4,6 +4,7 @@
 	import * as Field from '#lib/components/ui/field/index.ts';
 	import TenantSectionForm from './TenantSectionForm.svelte';
 	import type { Tenant } from '../types';
+	import { CONTACT_TIDY, validateContact } from '../validate.ts';
 
 	/**
 	 * TenantContactForm — admin phone + postal address via the contact form action. Nested address
@@ -18,6 +19,8 @@
 	section="admin-contact"
 	result={form}
 	successMessage={$_('pages.tenant.form.saved.contact')}
+	tidy={CONTACT_TIDY}
+	validate={validateContact}
 >
 	{#snippet children({ fieldError, value })}
 		<TextField

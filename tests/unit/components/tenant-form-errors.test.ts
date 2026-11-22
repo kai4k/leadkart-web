@@ -114,7 +114,11 @@ describe('the tenant settings forms show a server error on the field it names', 
 				const invalid = [...target.querySelectorAll('[aria-invalid="true"]')];
 				expect(invalid, 'one control marked invalid').toHaveLength(1);
 				// and it is the control the server named, not a neighbour (a swapped pair of bindings would pass without this)
-				expect(invalid[0].getAttribute('name')).toBe(field.replace(/^password_policy\./, ''));
+				// a switch's button carries no `name`; its hidden form input, next to it in the same field, does
+				const named = invalid[0].getAttribute('name')
+					? invalid[0]
+					: invalid[0].closest('[data-slot="field"]')?.querySelector('input[name]');
+				expect(named?.getAttribute('name')).toBe(field.replace(/^password_policy\./, ''));
 				const alert = target.querySelector('[data-slot="field-error"], [role="alert"]');
 				expect(alert?.textContent?.trim()).toBeTruthy();
 				const describedBy = invalid[0].getAttribute('aria-describedby') ?? '';

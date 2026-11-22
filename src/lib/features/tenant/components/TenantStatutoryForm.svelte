@@ -3,6 +3,7 @@
 	import { TextField, type ActionFormResult } from '$form';
 	import TenantSectionForm from './TenantSectionForm.svelte';
 	import type { Tenant } from '../types';
+	import { STATUTORY_TIDY, validateStatutory } from '../validate.ts';
 
 	/**
 	 * TenantStatutoryForm — edits GSTIN + PAN + drug licence number
@@ -16,6 +17,8 @@
 	section="statutory"
 	result={form}
 	successMessage={$_('pages.tenant.form.saved.statutory')}
+	tidy={STATUTORY_TIDY}
+	validate={validateStatutory}
 >
 	{#snippet children({ fieldError, value })}
 		<TextField

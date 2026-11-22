@@ -14,6 +14,7 @@
  */
 import { z } from 'zod';
 import { formEmailField } from '#lib/api/request-schema.ts';
+import { GSTIN_PATTERN, PAN_PATTERN, PIN_PATTERN } from '#lib/utils/indian-formats.ts';
 
 // ── Enums ───────────────────────────────────────────────────────────
 
@@ -75,12 +76,10 @@ export type BulkAction = z.output<typeof bulkActionSchema>;
 
 // Indian mobile: +91 followed by 10 digits starting 6-9.
 const MOBILE_RE = /^\+91[6-9][0-9]{9}$/;
-// PIN code: 6 digits, first digit non-zero.
-const PIN_RE = /^[1-9][0-9]{5}$/;
-// GSTIN: 2 state digits + 5 PAN chars + 4 PAN nums + PAN check + entity + Z + check.
-const GSTIN_RE = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z][Z][0-9A-Z]$/;
-// PAN: AAAAA9999A.
-const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+// PIN code, GSTIN and PAN patterns: the one copy lives in `utils/indian-formats.ts` (the same rules Go enforces).
+const PIN_RE = PIN_PATTERN;
+const GSTIN_RE = GSTIN_PATTERN;
+const PAN_RE = PAN_PATTERN;
 
 export const mobileNumberSchema = z.string().regex(MOBILE_RE, 'form.errors.mobileInvalid');
 export const pinCodeSchema = z.string().regex(PIN_RE, 'form.errors.pinInvalid');

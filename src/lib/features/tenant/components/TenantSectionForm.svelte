@@ -16,12 +16,17 @@
 		result,
 		successMessage,
 		relaxed = false,
+		tidy,
+		validate,
 		children
 	}: {
 		section: TenantSectionId;
 		result: ActionFormResult | null | undefined;
 		successMessage: string;
 		relaxed?: boolean;
+		/** What the form tidies and checks before it posts (`ActionForm`). */
+		tidy?: Record<string, (text: string) => string>;
+		validate?: (values: Record<string, string>) => Record<string, string>;
 		children: Snippet<[ActionFormSlot]>;
 	} = $props();
 </script>
@@ -35,5 +40,7 @@
 	disallowedReason={$_('pages.tenant.form.notAllowed')}
 	allowed={session.can(TENANT_SECTION_PERMISSION[section])}
 	guardLeave
+	{tidy}
+	{validate}
 	{children}
 />

@@ -25,8 +25,9 @@
 	import { _ } from 'svelte-i18n';
 	import { Button } from '#lib/components/ui/button/index.ts';
 	import { useLeaveGuard } from '#lib/hooks/use-leave-guard.svelte.ts';
-	import { withFocusOnFailure } from '#lib/utils/focus-first-invalid.ts';
+	import { focusFirstInvalid, withFocusOnFailure } from '#lib/utils/focus-first-invalid.ts';
 	import { fieldText, readFailure } from '#lib/utils/form-failure.ts';
+	import { fieldMessageText } from '#lib/utils/field-error-copy.ts';
 	import FormOutcome from './FormOutcome.svelte';
 	import ScopeContextField from './ScopeContextField.svelte';
 
@@ -61,6 +62,8 @@
 		submitDisabled = false,
 		bannerValues,
 		secondary,
+		tidy,
+		validate,
 		children
 	}: {
 		id: string;
@@ -92,6 +95,18 @@
 		bannerValues?: Record<string, string | number>;
 		/** Buttons before the submit button (a Cancel link). */
 		secondary?: Snippet;
+		/**
+		 * Field name -> a tidying function. On blur and again before submit the tidied text is written into the input, so
+		 * what is shown is what is sent (`TIDY` of `utils/indian-formats.ts`).
+		 */
+		tidy?: Record<string, (text: string) => string>;
+		/**
+		 * What the form can tell before anything is sent: tidied values by field name -> the API's field CODE per refused
+		 * field (shown through the same catalogue as the server's answer). Run on blur (for the blurred and the already
+		 * blurred fields, never per keystroke) and on submit: with errors the submit is cancelled, nothing is sent, and
+		 * focus goes to the first invalid field. The server stays the authority: its answer is rendered as ever.
+		 */
+		validate?: (values: Record<string, string>) => Record<string, string>;
 		children: Snippet<[ActionFormSlot]>;
 	} = $props();
 
@@ -99,7 +114,16 @@
 	let submitting = $state(false);
 
 	const failure = $derived(readFailure(result));
-	const fieldError = (name: string) => fieldText(failure, name, $_);
+	// what this side caught before sending: field -> API code; a server answer replaces it
+	let clientErrors = $state<Record<string, string>>({});
+	$effect(() => {
+		void result;
+		clientErrors = {};
+	});
+	const fieldError = (name: string) =>
+		clientErrors[name] !== undefined
+			? fieldMessageText(clientErrors[name], $_)
+			: fieldText(failure, name, $_);
 	/** What the failed submit typed (dotted names reach nested values: `address.street`). */
 	const value = (name: string): unknown =>
 		name
@@ -163,6 +187,54 @@
 				touch();
 			});
 	});
+	const formValues = (): Record<string, string> =>
+		formEl
+			? Object.fromEntries(
+					[...new FormData(formEl)].filter(
+						(entry): entry is [string, string] => typeof entry[1] === 'string'
+					)
+				)
+			: {};
+	/** Write the tidied text into the input(s) named (all of them when none is). */
+	function applyTidy(only?: string): void {
+		if (!tidy || !formEl) return;
+		for (const [name, fn] of Object.entries(tidy)) {
+			if (only !== undefined && name !== only) continue;
+			const el = formEl.elements.namedItem(name);
+			if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) || el.disabled)
+				continue;
+			const next = fn(el.value);
+			if (next === el.value) continue;
+			el.value = next;
+			el.dispatchEvent(new Event('input', { bubbles: true }));
+		}
+	}
+	// fields whose error may show before a submit: the ones the person has left
+	const left: Record<string, true> = {};
+	function onBlur(e: FocusEvent) {
+		const el = e.target;
+		if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) || !el.name) return;
+		applyTidy(el.name);
+		if (!validate) return;
+		left[el.name] = true;
+		const found = validate(formValues());
+		const next = { ...clientErrors };
+		for (const name of Object.keys(left)) {
+			if (found[name] !== undefined) next[name] = found[name];
+			else delete next[name];
+		}
+		clientErrors = next;
+	}
+	// typing clears the stale message of THAT field; it is checked again on blur, never per keystroke
+	function onInput(e: Event) {
+		touch();
+		const name = (e.target as HTMLInputElement | null)?.name;
+		if (name && name in clientErrors) {
+			const { [name]: _cleared, ...rest } = clientErrors;
+			clientErrors = rest;
+		}
+	}
+
 	// A result that redirects is the save itself leaving the page (create role): that is not unsaved input.
 	let leavingBySave = false;
 	useLeaveGuard(() => {
@@ -173,6 +245,17 @@
 	});
 
 	const submit = withFocusOnFailure(({ cancel }) => {
+		applyTidy();
+		if (validate) {
+			const found = validate(formValues());
+			if (Object.keys(found).length > 0) {
+				cancel();
+				clientErrors = found;
+				for (const name of Object.keys(found)) left[name] = true;
+				void focusFirstInvalid(formEl);
+				return;
+			}
+		}
 		// the button is disabled while loading; this also covers Enter in a field and a second event before the repaint
 		if (submitting) {
 			cancel();
@@ -204,11 +287,14 @@
 	{action}
 	novalidate
 	use:enhance={submit}
-	oninput={touch}
+	oninput={onInput}
 	onchange={touch}
 	onclick={touch}
 	onfocusin={touch}
-	onfocusout={touch}
+	onfocusout={(e) => {
+		touch();
+		onBlur(e);
+	}}
 >
 	{#if scoped}<ScopeContextField />{/if}
 	<!-- A form the caller may not save shows its values and changes none of them (`disabled` reaches every control). -->
