@@ -456,6 +456,9 @@ test.describe('Operator scope flow', () => {
 		context
 	}) => {
 		await setupOperator(page);
+		// Planted behind a live page's back the cookie is "another tab changed the context": the page reloads and
+		// aborts the navigation below (net::ERR_ABORTED under load). Leave the page first.
+		await page.goto('about:blank');
 		await context.addCookies([
 			{ name: 'lk_op_tenant', value: 'tampered.signature', url: 'http://localhost:4173' }
 		]);
