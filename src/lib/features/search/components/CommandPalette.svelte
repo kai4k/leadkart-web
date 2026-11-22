@@ -5,6 +5,7 @@
 	import { omniSearchQuery } from '$features/search/queries';
 	import { enterScopeMutation } from '$features/operator';
 	import { P, session } from '$features/auth';
+	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
 	import { visibleNav } from '#lib/config/nav.ts';
 	import { NAV_ICONS } from '#lib/config/nav-icons.ts';
 	import type { SearchPersonHit, SearchTenantHit } from '$features/search/schemas';
@@ -53,6 +54,7 @@
 	// The one enter flow (same as the tenants-list row click): cookie, cache, layout reload, navigate.
 	const enterMutation = enterScopeMutation();
 	function enterTenantScope(slug: string) {
+		if (!confirmLeave()) return; // entering a company moves the page: unsaved input is asked about first
 		enterMutation.mutate({ slug }, { onSuccess: () => onOpenChange(false) });
 	}
 </script>

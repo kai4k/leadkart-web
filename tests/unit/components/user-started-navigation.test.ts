@@ -30,15 +30,31 @@ vi.mock('$features/search/queries', () => ({
 	omniSearchQuery: () => ({
 		data: {
 			persons: [{ id: 'p1', first_name: 'Ravi', last_name: 'Kumar', email: 'ravi@acme.test' }],
-			tenants: []
+			tenants: [{ id: 't1', slug: 'acme', display_name: 'Acme', legal_name: 'Acme Ltd' }]
 		},
 		isPending: false
 	})
 }));
-vi.mock('$features/operator', () => ({ enterScopeMutation: () => ({ mutate: vi.fn() }) }));
+const scope = vi.hoisted(() => ({
+	enter: undefined as unknown as () => void,
+	exit: undefined as unknown as () => void
+}));
+vi.mock('$features/operator', () => ({
+	enterScopeMutation: () => ({ mutate: () => scope.enter() })
+}));
+vi.mock('$features/operator/scope', () => ({
+	exitScopeMutation: () => ({ mutate: () => scope.exit(), isPending: false })
+}));
+vi.mock('$app/state', () => ({
+	page: {
+		data: { tenantContext: { displayName: 'Acme', isPlatform: false } },
+		url: new URL('http://x/')
+	}
+}));
 vi.mock('#lib/config/nav.ts', () => ({ visibleNav: () => [] }));
 
 import UserMenu from '#lib/layouts/UserMenu.svelte';
+import TenantContextBanner from '#lib/layouts/TenantContextBanner.svelte';
 import CommandPalette from '#lib/features/search/components/CommandPalette.svelte';
 import { releaseLeaveGuards } from '#lib/hooks/use-leave-guard.svelte.ts';
 
@@ -50,6 +66,8 @@ let disposeGuard: (() => void) | undefined;
 let ask: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
+	scope.enter = vi.fn();
+	scope.exit = vi.fn();
 	Element.prototype.scrollIntoView = vi.fn();
 	dirty = false;
 	r = fakeRouter();
@@ -154,5 +172,40 @@ describe('the command palette person hits', () => {
 		expect(ask).not.toHaveBeenCalled();
 		expect(r.navigated).toHaveLength(1);
 		expect(onOpenChange).toHaveBeenCalledWith(false);
+	});
+});
+
+describe('entering or leaving a company moves the page: a user action, asked about first', () => {
+	const tenantHit = () =>
+		[...document.querySelectorAll<HTMLElement>('[role="option"]')].find((el) =>
+			el.textContent?.includes('Acme Ltd')
+		) ?? null;
+
+	it('Exit on the banner: dirty and declined leaves the scope alone; clean exits', () => {
+		component = mount(TenantContextBanner, { target });
+		flushSync();
+		const exit = () =>
+			[...target.querySelectorAll('button')].find((b) => b.textContent?.includes('Exit'))!;
+		dirty = true;
+		exit().click();
+		expect(ask).toHaveBeenCalledTimes(1);
+		expect(scope.exit).not.toHaveBeenCalled();
+		dirty = false;
+		exit().click();
+		expect(ask).toHaveBeenCalledTimes(1);
+		expect(scope.exit).toHaveBeenCalledOnce();
+	});
+
+	it('the palette tenant hit: dirty and declined leaves the scope alone; clean enters', async () => {
+		await openPalette();
+		const hit = tenantHit();
+		expect(hit, 'the tenant hit').not.toBeNull();
+		dirty = true;
+		hit!.click();
+		expect(ask).toHaveBeenCalledTimes(1);
+		expect(scope.enter).not.toHaveBeenCalled();
+		dirty = false;
+		hit!.click();
+		expect(scope.enter).toHaveBeenCalledOnce();
 	});
 });

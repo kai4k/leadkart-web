@@ -11,6 +11,7 @@
 	import { Building2, Icon, LogOut } from '$icons';
 	import { exitScopeMutation } from '$features/operator/scope';
 	import { resetPending } from '#lib/api/hard-reset.ts';
+	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
 	import ContextBanner from './ContextBanner.svelte';
 	import EntityName from './EntityName.svelte';
 
@@ -21,7 +22,8 @@
 	const exit = exitScopeMutation();
 	// a reset can start between the last render and this click (`resetPending` is not reactive)
 	function exitNow(): void {
-		if (!resetPending()) exit.mutate();
+		// leaving the company moves the page: a user action, so unsaved input is asked about first
+		if (!resetPending() && confirmLeave()) exit.mutate();
 	}
 </script>
 
