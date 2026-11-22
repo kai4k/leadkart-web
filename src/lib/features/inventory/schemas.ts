@@ -53,7 +53,7 @@ export type StockMovementReferenceKind = z.output<typeof stockMovementReferenceK
 
 // ── HSN code regex (4-8 digits, GST canonical) ───────────────────────
 
-export const hsnCodeSchema = z.string().regex(/^[0-9]{4,8}$/, 'HSN code must be 4–8 digits');
+export const hsnCodeSchema = z.string().regex(/^[0-9]{4,8}$/, 'form.errors.hsnInvalid');
 
 // ── Product DTO ──────────────────────────────────────────────────────
 
@@ -168,14 +168,14 @@ export type ListStockMovementsResponse = z.output<typeof listStockMovementsRespo
 
 export const createProductRequestSchema = z
 	.object({
-		brand_name: z.string().min(1, 'Brand name is required').max(200),
+		brand_name: z.string().min(1, 'form.required').max(200),
 		generic_name: z.string().max(500).optional(),
 		composition: z.string().max(1000).optional(),
 		manufacturer_name: z.string().max(200).optional(),
 		manufacturing_license_no: z.string().max(100).optional(),
 
-		product_category: z.string().min(1, 'Category is required').max(100),
-		product_type: z.string().min(1, 'Type is required').max(100),
+		product_category: z.string().min(1, 'form.required').max(100),
+		product_type: z.string().min(1, 'form.required').max(100),
 		drug_schedule: drugScheduleSchema,
 
 		pack_size: z.string().max(50).optional(),
@@ -202,13 +202,10 @@ export type UpdateProductRequest = z.output<typeof updateProductRequestSchema>;
 
 export const createBatchRequestSchema = z
 	.object({
-		batch_number: z.string().min(1, 'Batch number is required').max(100),
-		manufactured_at: z.string().min(1, 'Manufacture date is required'),
-		expires_at: z.string().min(1, 'Expiry date is required'),
-		quantity_received: z
-			.number()
-			.int('Quantity must be a whole number')
-			.min(1, 'Quantity must be at least 1'),
+		batch_number: z.string().min(1, 'form.required').max(100),
+		manufactured_at: z.string().min(1, 'form.required'),
+		expires_at: z.string().min(1, 'form.required'),
+		quantity_received: z.number().int('form.errors.wholeNumber').min(1, 'form.errors.atLeastOne'),
 		purchase_rate: z.number().min(0),
 		gst_percentage: z.number().min(0).max(100).optional(),
 		inward_date: z.string().optional(),
@@ -217,7 +214,7 @@ export const createBatchRequestSchema = z
 	})
 	.strict()
 	.refine((v) => new Date(v.manufactured_at) < new Date(v.expires_at), {
-		message: 'Expiry must be after manufacture date',
+		message: 'form.errors.expiryAfterManufacture',
 		path: ['expires_at']
 	});
 export type CreateBatchRequest = z.output<typeof createBatchRequestSchema>;
@@ -236,8 +233,8 @@ export const createMovementRequestSchema = z
 		batch_id: z.string().optional(),
 		delta: z
 			.number()
-			.int('Delta must be a whole number')
-			.refine((v) => v !== 0, 'Delta cannot be zero'),
+			.int('form.errors.wholeNumber')
+			.refine((v) => v !== 0, 'form.errors.notZero'),
 		reason: stockMovementReasonSchema,
 		note: z.string().max(1000).optional()
 	})

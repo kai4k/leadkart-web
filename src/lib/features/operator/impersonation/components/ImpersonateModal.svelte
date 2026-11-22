@@ -18,7 +18,7 @@
 
 	/** Form-local schema — reason min 10 chars, duration 1-240 min. */
 	const impersonateFormSchema = z.object({
-		reason: z.string().min(10, 'Reason must be at least 10 characters.').max(500),
+		reason: z.string().min(10, 'form.errors.reasonTooShort').max(500),
 		duration_minutes: z.number().int().min(1).max(240)
 	});
 

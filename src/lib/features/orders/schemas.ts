@@ -205,10 +205,10 @@ export type ListCreditNotesResponse = z.output<typeof listCreditNotesResponseSch
 // ── Create / Revise quotation request ────────────────────────────────
 
 export const createOrderItemSchema = z.object({
-	product_id: z.string().min(1, 'Product is required'),
-	batch_id: z.string().min(1, 'Batch is required'),
-	quantity: z.number().int().min(1, 'Quantity must be at least 1'),
-	unit_price: z.number().nonnegative('Price must be ≥ 0'),
+	product_id: z.string().min(1, 'form.required'),
+	batch_id: z.string().min(1, 'form.required'),
+	quantity: z.number().int().min(1, 'form.errors.atLeastOne'),
+	unit_price: z.number().nonnegative('form.errors.notNegative'),
 	// Default to 0 so the form input shape ALSO has a `number` instead
 	// of `number | undefined` — matters because the line-items editor
 	// binds NumberInput directly to this field.
@@ -217,14 +217,14 @@ export const createOrderItemSchema = z.object({
 export type CreateOrderItem = z.output<typeof createOrderItemSchema>;
 
 export const createQuotationRequestSchema = z.object({
-	customer_lead_id: z.string().min(1, 'Customer is required'),
-	items: z.array(createOrderItemSchema).min(1, 'At least one line item is required'),
+	customer_lead_id: z.string().min(1, 'form.required'),
+	items: z.array(createOrderItemSchema).min(1, 'form.errors.itemsRequired'),
 	notes: z.string().max(2000).optional()
 });
 export type CreateQuotationRequest = z.output<typeof createQuotationRequestSchema>;
 
 export const reviseQuotationRequestSchema = z.object({
-	items: z.array(createOrderItemSchema).min(1, 'At least one line item is required'),
+	items: z.array(createOrderItemSchema).min(1, 'form.errors.itemsRequired'),
 	notes: z.string().max(2000).optional()
 });
 export type ReviseQuotationRequest = z.output<typeof reviseQuotationRequestSchema>;
@@ -237,7 +237,7 @@ export const approveQuotationRequestSchema = z.object({
 export type ApproveQuotationRequest = z.output<typeof approveQuotationRequestSchema>;
 
 export const markPackedRequestSchema = z.object({
-	box_count: z.number().int().min(1, 'Box count must be at least 1'),
+	box_count: z.number().int().min(1, 'form.errors.atLeastOne'),
 	packed_by_membership_id: z.string().optional()
 });
 export type MarkPackedRequest = z.output<typeof markPackedRequestSchema>;
@@ -248,20 +248,20 @@ export const markDeliveredRequestSchema = z.object({
 export type MarkDeliveredRequest = z.output<typeof markDeliveredRequestSchema>;
 
 export const dispatchRequestSchema = z.object({
-	carrier: z.string().min(1, 'Carrier is required').optional(),
+	carrier: z.string().min(1, 'form.required').optional(),
 	tracking_number: z.string().optional(),
 	notes: z.string().max(1000).optional()
 });
 export type DispatchRequest = z.output<typeof dispatchRequestSchema>;
 
 export const cancelOrderRequestSchema = z.object({
-	reason: z.string().min(1, 'Reason is required').max(1024)
+	reason: z.string().min(1, 'form.errors.reasonRequired').max(1024)
 });
 export type CancelOrderRequest = z.output<typeof cancelOrderRequestSchema>;
 
 export const recordPaymentRequestSchema = z.object({
 	kind: paymentKindSchema,
-	amount: z.number().positive('Amount must be greater than 0'),
+	amount: z.number().positive('form.errors.amountPositive'),
 	method: paymentMethodSchema,
 	reference: z.string().max(200).optional()
 });
@@ -278,7 +278,7 @@ export const bulkOrderActionSchema = z.enum(['cancel', 'delete_drafts']);
 export type BulkOrderAction = z.output<typeof bulkOrderActionSchema>;
 
 export const bulkOrderActionRequestSchema = z.object({
-	ids: z.array(z.string()).min(1, 'Select at least one order').max(500),
+	ids: z.array(z.string()).min(1, 'form.errors.selectOrder').max(500),
 	action: bulkOrderActionSchema,
 	reason: z.string().max(1024).optional()
 });

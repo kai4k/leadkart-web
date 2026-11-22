@@ -150,7 +150,9 @@ describe('createBatchRequestSchema', () => {
 		});
 		expect(r.success).toBe(false);
 		if (!r.success) {
-			expect(r.error.issues.some((i) => i.message.match(/Expiry must be after/))).toBe(true);
+			expect(r.error.issues.some((i) => i.message === 'form.errors.expiryAfterManufacture')).toBe(
+				true
+			);
 		}
 	});
 
@@ -178,7 +180,7 @@ describe('createMovementRequestSchema', () => {
 	it('rejects zero delta', () => {
 		const r = createMovementRequestSchema.safeParse({ delta: 0, reason: 'correction' });
 		expect(r.success).toBe(false);
-		if (!r.success) expect(r.error.issues[0]?.message).toMatch(/cannot be zero/);
+		if (!r.success) expect(r.error.issues[0]?.message).toBe('form.errors.notZero');
 	});
 	it('rejects non-integer delta', () => {
 		expect(

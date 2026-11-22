@@ -48,8 +48,8 @@ export type SearchMembershipsResponse = z.output<typeof searchMembershipsRespons
 
 export const createUserRequestSchema = CreateUserRequest.extend({
 	email: formEmailField,
-	first_name: z.string().min(1, 'Enter a first name.').max(120, 'Use at most 120 characters.'),
-	last_name: z.string().min(1, 'Enter a last name.').max(120, 'Use at most 120 characters.'),
+	first_name: z.string().min(1, 'form.required').max(120, 'form.tooLong'),
+	last_name: z.string().min(1, 'form.required').max(120, 'form.tooLong'),
 	password: newPasswordField
 }).strict();
 

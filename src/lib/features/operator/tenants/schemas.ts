@@ -31,16 +31,13 @@ export const registerTenantRequestSchema = RegisterTenantRequest.extend({
 		.string()
 		.min(2, 'form.errors.slugLength')
 		.max(100, 'form.errors.slugLength')
-		.regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, 'Use lowercase letters, digits and dashes only.'),
-	legal_name: z.string().min(2, 'Enter the legal name.').max(200, 'form.tooLong'),
-	display_name: z.string().min(2, 'Enter the display name.').max(200, 'form.tooLong'),
+		.regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, 'form.errors.slugCharacters'),
+	legal_name: z.string().min(2, 'form.required').max(200, 'form.tooLong'),
+	display_name: z.string().min(2, 'form.required').max(200, 'form.tooLong'),
 	admin_email: formEmailField,
 	admin_password: newPasswordField,
-	admin_first_name: z
-		.string()
-		.min(1, 'Enter a first name.')
-		.max(120, 'Use at most 120 characters.'),
-	admin_last_name: z.string().min(1, 'Enter a last name.').max(120, 'Use at most 120 characters.')
+	admin_first_name: z.string().min(1, 'form.required').max(120, 'form.tooLong'),
+	admin_last_name: z.string().min(1, 'form.required').max(120, 'form.tooLong')
 }).strict();
 
 export const registerTenantResponseSchema = RegisterTenantResponse;

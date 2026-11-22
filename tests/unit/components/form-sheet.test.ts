@@ -4,6 +4,7 @@ import { ConflictError, ValidationError } from '$api/errors';
 import { reactiveProps } from '../helpers/reactive-props.svelte.ts';
 import { beforeNavigate } from '$app/navigation';
 import Host from '../stubs/FormSurfaceHost.svelte';
+import en from '../../../src/lib/i18n/locales/en.json';
 
 vi.mock('$app/navigation', () => ({ beforeNavigate: vi.fn() }));
 
@@ -68,7 +69,7 @@ describe.each(['sheet', 'dialog'] as const)('Form surface: %s', (surface) => {
 		flushSync();
 		await vi.waitFor(() => expect(input().value).toBe('Ravi'));
 		expect(input().getAttribute('aria-invalid')).not.toBe('true');
-		expect(document.body.textContent).not.toContain('Enter a name.');
+		expect(document.body.textContent).not.toContain(en.form.required);
 	});
 
 	it('(b) a resolving submit calls onSubmit with the parsed values and closes once', async () => {

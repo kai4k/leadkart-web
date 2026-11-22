@@ -27,7 +27,7 @@ export const PERMISSION_REQUEST_MAX_DAYS =
 /** Duration (1-90 days) and reason (max 1024) bounds are the generated ones; only the messages are ours. */
 export const createPermissionRequestSchema = CreatePermissionRequestRequest.extend({
 	permission: z.string().min(1, 'form.errors.permissionRequired'),
-	reason: z.string().min(10, 'Reason must be at least 10 characters.').max(1024, 'form.tooLong'),
+	reason: z.string().min(10, 'form.errors.reasonTooShort').max(1024, 'form.tooLong'),
 	duration_days: z
 		.number({ error: 'form.errors.durationOutOfRange' })
 		.int('form.errors.durationOutOfRange')

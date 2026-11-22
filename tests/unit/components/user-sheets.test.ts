@@ -55,6 +55,7 @@ vi.mock('#lib/features/users/api', async (importOriginal) => ({
 
 import { reactiveProps } from '../helpers/reactive-props.svelte.ts';
 import { createQueryClient } from '#lib/api/query-client.ts';
+import en from '../../../src/lib/i18n/locales/en.json';
 import {
 	ApiError,
 	AuthError,
@@ -284,7 +285,7 @@ describe('PermissionOverridesPanel', () => {
 		open();
 		save();
 		await vi.waitFor(() =>
-			expect(document.body.textContent).toContain('One or more permission names are invalid.')
+			expect(document.body.textContent).toContain(en.form.errors.permissionNamesInvalid)
 		);
 	});
 });

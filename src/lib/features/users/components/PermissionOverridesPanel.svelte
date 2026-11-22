@@ -28,10 +28,7 @@
 		} catch (err) {
 			// a refusal with no field named: one line for the whole set
 			if (err instanceof ValidationError && !err.fields.granted && !err.fields.revoked)
-				throw new ValidationError(
-					{ granted: 'One or more permission names are invalid.' },
-					err.status
-				);
+				throw new ValidationError({ granted: 'form.errors.permissionNamesInvalid' }, err.status);
 			throw err;
 		}
 	}

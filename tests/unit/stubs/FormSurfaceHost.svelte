@@ -20,7 +20,7 @@
 		guardLeave?: boolean;
 	} = $props();
 
-	const schema = z.object({ name: z.string().min(1, 'Enter a name.') });
+	const schema = z.object({ name: z.string().min(1, 'form.required') });
 	const Surface = $derived(surface === 'sheet' ? FormSheet : FormDialog);
 </script>
 

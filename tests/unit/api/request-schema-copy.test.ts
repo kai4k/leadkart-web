@@ -61,15 +61,24 @@ describe('request-schema messages', () => {
 
 describe('fieldMessageText', () => {
 	const t = (k: string) => `T(${k})`;
-	it('translates a key, maps an API code, leaves a sentence alone', () => {
+	it('translates a key, maps an API code, and shows nothing else (a sentence, a default, a missing key)', () => {
 		expect(fieldMessageText('auth.errors.emailRequired', t)).toBe('T(auth.errors.emailRequired)');
 		expect(fieldMessageText('required', t)).toBe('T(form.required)');
 		expect(fieldMessageText('too_long', t)).toBe('T(form.tooLong)');
-		expect(fieldMessageText('Reason must be at least 10 characters.', t)).toBe(
-			'Reason must be at least 10 characters.'
-		);
-		expect(fieldMessageText('', t)).toBe('');
-		expect(fieldMessageText('invalid_type', t)).toBe('T(form.invalid)');
+		for (const raw of [
+			'Reason must be at least 10 characters.',
+			'Too small: expected string to have >=12 characters',
+			'Invalid input: expected string, received undefined',
+			'',
+			'invalid_type'
+		])
+			expect(fieldMessageText(raw, t), raw).toBe('T(form.invalid)');
+	});
+	it('a key the catalogue lacks renders form.invalid, not the key', () => {
+		// a catalogue lookup that finds nothing answers with the key itself (svelte-i18n)
+		const lookup = (k: string) => (k === 'form.invalid' ? 'Check this value.' : k);
+		expect(fieldMessageText('form.errors.noSuchKey', lookup)).toBe('Check this value.');
+		expect(fieldMessageText('form.invalid', lookup)).toBe('Check this value.');
 	});
 	it('isCopyKey: dotted camelCase paths only', () => {
 		expect(isCopyKey('form.errors.reasonRequired')).toBe(true);

@@ -3,14 +3,15 @@
  * Covers the client-side Zod validation path, error surface,
  * bannerError on unexpected throws, and ValidationError field mapping.
  */
+import en from '../../../src/lib/i18n/locales/en.json';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { formInRoot } from '../helpers/form-root.svelte.ts';
 import { NetworkError, ValidationError } from '#lib/api/errors.ts';
 
 const testSchema = z.object({
-	email: z.string().email('Invalid email'),
-	name: z.string().min(2, 'Name too short')
+	email: z.string().email('auth.changeEmail.errors.invalid'),
+	name: z.string().min(2, 'form.errors.roleNameTooShort')
 });
 
 function makeEvent(): SubmitEvent {
@@ -38,8 +39,8 @@ describe('Form.submit — client-side Zod validation', () => {
 		await form.submit(makeEvent(), submitFn);
 
 		expect(submitFn).not.toHaveBeenCalled();
-		expect(form.errors.email).toBe('Invalid email');
-		expect(form.errors.name).toBe('Name too short');
+		expect(form.errors.email).toBe(en.auth.changeEmail.errors.invalid);
+		expect(form.errors.name).toBe(en.form.errors.roleNameTooShort);
 		expect(form.isSubmitting).toBe(false);
 	});
 
@@ -62,12 +63,13 @@ describe('Form.submit — client-side Zod validation', () => {
 describe('Form.submit — error handling', () => {
 	it('maps ValidationError.fields to form.errors', async () => {
 		const form = formInRoot(testSchema, { email: 'alice@example.com', name: 'Alice' }).form;
-		const ve = new ValidationError({ email: 'Already taken' }, 422);
+		const ve = new ValidationError({ email: 'invalid_characters' }, 422);
 		const submitFn = vi.fn().mockRejectedValue(ve);
 
 		await form.submit(makeEvent(), submitFn);
 
-		expect(form.errors.email).toBe('Already taken');
+		// a code from the API is translated; Go's own words are never shown
+		expect(form.errors.email).toBe(en.form.invalidCharacters);
 		expect(form.bannerError).toBeNull();
 	});
 
@@ -161,7 +163,7 @@ describe('Form.validateField — blur validation', () => {
 		form.clearErrors();
 		// Now blur on email with still-invalid value
 		form.validateField('email');
-		expect(form.errors.email).toBe('Invalid email');
+		expect(form.errors.email).toBe(en.auth.changeEmail.errors.invalid);
 	});
 
 	it('clears field error when value becomes valid on blur', async () => {

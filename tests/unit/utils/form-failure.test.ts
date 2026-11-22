@@ -24,13 +24,13 @@ describe('readFailure', () => {
 describe('fieldText', () => {
 	const failure = readFailure({
 		fieldKeys: { email: 'auth.errors.emailRequired' },
-		fieldMessages: { email: 'schema text', name: 'Go says too long' },
+		fieldMessages: { email: 'schema text', name: 'too_long' },
 		formErrorKey: 'auth.errors.forbidden'
 	});
 
-	it('a key is translated and wins; else the message that came with the field', () => {
+	it('a key is translated and wins; else the code that came with the field, translated', () => {
 		expect(fieldText(failure, 'email', t)).toBe('T(auth.errors.emailRequired)');
-		expect(fieldText(failure, 'name', t)).toBe('Go says too long');
+		expect(fieldText(failure, 'name', t)).toBe('T(form.tooLong)');
 		expect(fieldText(failure, 'other', t)).toBeUndefined();
 		expect(fieldText(null, 'email', t)).toBeUndefined();
 	});
@@ -39,10 +39,15 @@ describe('fieldText', () => {
 describe('fieldText: a schema message that is an i18n key is translated, an API code is mapped', () => {
 	it('keys in fieldMessages reach the screen as catalogue text', () => {
 		const failure = readFailure({
-			fieldMessages: { email: 'auth.errors.emailRequired', name: 'required', note: 'A sentence.' }
+			fieldMessages: {
+				email: 'auth.errors.emailRequired',
+				name: 'required',
+				note: 'Too small: expected string to have >=8 characters'
+			}
 		});
 		expect(fieldText(failure, 'email', t)).toBe('T(auth.errors.emailRequired)');
 		expect(fieldText(failure, 'name', t)).toBe('T(form.required)');
-		expect(fieldText(failure, 'note', t)).toBe('A sentence.');
+		// a sentence (a Zod default, anything nobody put in the catalogue) is never shown
+		expect(fieldText(failure, 'note', t)).toBe('T(form.invalid)');
 	});
 });

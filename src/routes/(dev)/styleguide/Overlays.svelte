@@ -15,7 +15,7 @@
 	let dialogOpen = $state(false);
 	let formSheetOpen = $state(false);
 	let reasonOpen = $state(false);
-	const demoSchema = z.object({ name: z.string().min(1, 'Enter a name.') });
+	const demoSchema = z.object({ name: z.string().min(1, 'form.required') });
 	const rows = [
 		{ id: 'r1', name: 'Alpha Pharma', state: 'normal' },
 		{ id: 'r2', name: 'Beta Distributors', state: 'selected' },

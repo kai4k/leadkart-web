@@ -82,14 +82,10 @@ const GSTIN_RE = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z][Z][0-9A-Z]$/;
 // PAN: AAAAA9999A.
 const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 
-export const mobileNumberSchema = z
-	.string()
-	.regex(MOBILE_RE, 'Mobile must be +91 followed by a 10-digit number starting 6-9');
-export const pinCodeSchema = z.string().regex(PIN_RE, 'PIN code must be 6 digits, not starting 0');
-export const gstinSchema = z
-	.string()
-	.regex(GSTIN_RE, 'GSTIN must be 15 chars in the canonical pattern');
-export const panSchema = z.string().regex(PAN_RE, 'PAN must be AAAAA9999A');
+export const mobileNumberSchema = z.string().regex(MOBILE_RE, 'form.errors.mobileInvalid');
+export const pinCodeSchema = z.string().regex(PIN_RE, 'form.errors.pinInvalid');
+export const gstinSchema = z.string().regex(GSTIN_RE, 'form.errors.gstinInvalid');
+export const panSchema = z.string().regex(PAN_RE, 'form.errors.panInvalid');
 
 // ── Address (DTO + edit) ────────────────────────────────────────────
 
@@ -188,7 +184,7 @@ export type UpdateLeadRequest = z.output<typeof updateLeadSchema>;
 // ── Reassignment ────────────────────────────────────────────────────
 
 export const reassignLeadSchema = z.object({
-	to_membership_id: z.string().min(1, 'Pick the new owner'),
+	to_membership_id: z.string().min(1, 'form.errors.ownerRequired'),
 	reason: z.string().max(500).optional()
 });
 export type ReassignLeadRequest = z.output<typeof reassignLeadSchema>;

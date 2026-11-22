@@ -1,13 +1,16 @@
 /**
- * What a field's error says, from one place. A field's message reaches the screen in one of three
- * shapes, and `fieldMessageText` turns each into the sentence the user reads:
+ * What a field's error says, from ONE place: the only way a field message reaches the screen. It arrives in one of
+ * two shapes, and `fieldMessageText` turns each into the sentence the user reads:
  *
- *   - an i18n KEY (`auth.errors.emailRequired`): what a request schema carries as its message. The
- *     schema is shared with server actions, which cannot call `$_`, so the stable key travels and
- *     the renderer translates it;
- *   - an API CODE (`required`, `too_long`, `invalid_characters`): the Go API names a refused field
- *     with a code, never a sentence;
- *   - anything else (a sentence the web wrote, Go's own text): returned as it is.
+ *   - an i18n KEY (`auth.errors.emailRequired`): what a request schema carries as its message. The schema is shared
+ *     with server actions, which cannot call `$_`, so the stable key travels and the renderer translates it;
+ *   - an API CODE (`required`, `too_long`, `invalid_characters`): the Go API names a refused field with a code,
+ *     never a sentence.
+ *
+ * Anything else is NOT shown: a Zod default ("Too small: expected string to have >=8 characters"), a sentence nobody
+ * put in the catalogue, a code this table does not know, a key `en.json` lacks all read `form.invalid`. There is no
+ * branch that returns the message itself, so no library or server text reaches a user whatever a schema forgot.
+ * (A unit test enumerates every key the schemas can produce and fails on one the catalogue lacks.)
  */
 import { get } from 'svelte/store';
 import { _ } from 'svelte-i18n';
@@ -28,17 +31,17 @@ const CODE_KEYS: Record<string, string> = {
 /** `namespace.camelCase` path: letters and digits in dotted segments that each start with a letter. */
 const KEY_SHAPE = /^[a-z][A-Za-z0-9]*(?:\.[A-Za-z][A-Za-z0-9]*)+$/;
 
-/** An API code this table does not know (`invalid_type`): lower case words joined by underscores. */
-const UNKNOWN_CODE = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/;
-
 export const isCopyKey = (message: string): boolean => KEY_SHAPE.test(message);
 
 export function fieldMessageText(message: string, t: (key: string) => string): string {
 	const codeKey = CODE_KEYS[message];
 	if (codeKey) return t(codeKey);
-	if (isCopyKey(message)) return t(message);
-	// never a raw code on screen
-	return UNKNOWN_CODE.test(message) ? t('form.invalid') : message;
+	if (isCopyKey(message)) {
+		const text = t(message);
+		// a catalogue lookup that finds nothing answers with the key itself: that is a missing key, never copy
+		if (text && text !== message) return text;
+	}
+	return t('form.invalid');
 }
 
 export function fieldErrorCopy(message: string): string {

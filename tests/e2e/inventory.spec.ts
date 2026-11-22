@@ -437,7 +437,7 @@ test.describe('Inventory — add batch', () => {
 		await page.getByTestId('batch-manufactured-at').fill('2027-01-01');
 		await page.getByTestId('batch-expires-at').fill('2026-01-01');
 		await page.locator('button[type="submit"][form="add-batch-form"]').click();
-		await expect(page.getByText(/Expiry must be after/i)).toBeVisible({ timeout: 3000 });
+		await expect(page.getByText(/expiry date must be after/i)).toBeVisible({ timeout: 3000 });
 	});
 });
 
@@ -484,7 +484,7 @@ test.describe('Inventory — adjust stock', () => {
 		await expect(page.getByRole('button', { name: /undo/i })).toBeVisible();
 	});
 
-	test('422 negative_stock_disallowed → inline banner', async ({ page }) => {
+	test('422 with a field code on delta → the field error, never Go words', async ({ page }) => {
 		await signInAsTier(page, { tier: 'tenant-admin', permissions: INVENTORY_PERMISSIONS });
 		const small = makeBatch({ quantity_available: 5 });
 		await registerMocks([
@@ -511,10 +511,10 @@ test.describe('Inventory — adjust stock', () => {
 				path: `/api/v1/inventory/products/${productIn.id}/movements`,
 				status: 422,
 				body: {
-					// Go's envelope: error + errors: { field: [messages] }.
+					// Go's envelope: error + errors: { field: [rule codes] } (a code, never a sentence).
 					error: 'validation_failed',
 					message: 'Adjustment would drive stock below zero',
-					errors: { delta: ['Would drive stock below zero'] }
+					errors: { delta: ['invalid'] }
 				}
 			}
 		]);
@@ -525,10 +525,9 @@ test.describe('Inventory — adjust stock', () => {
 		await page.locator('input[role="spinbutton"]').last().fill('-1000');
 		await page.locator('input[role="spinbutton"]').last().press('Tab');
 		await page.locator('button[type="submit"][form="adjust-stock-form"]').click();
-		// Go's 422 field error (errors.delta) reaches the form.
-		await expect(page.getByText(/drive stock below zero/i).first()).toBeVisible({
-			timeout: 5000
-		});
+		// Go's 422 field error (errors.delta) reaches the form as catalogue copy, not as Go's message.
+		await expect(page.getByText('Check this value.').first()).toBeVisible({ timeout: 5000 });
+		await expect(page.getByText(/drive stock below zero/i)).toHaveCount(0);
 	});
 });
 
@@ -691,7 +690,7 @@ test.describe('Inventory — create product', () => {
 		await page.locator('input[name="brand_name"]').fill('Test');
 		await page.locator('input[name="hsn_code"]').fill('abc');
 		await page.locator('button[type="submit"][form="create-product-form"]').click();
-		await expect(page.getByText(/HSN code must be 4.+digits/i).first()).toBeVisible({
+		await expect(page.getByText(/Enter a 4 to 8 digit HSN code/i).first()).toBeVisible({
 			timeout: 5000
 		});
 	});
