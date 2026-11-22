@@ -45,31 +45,35 @@
 	result={form}
 	successMessage={$_('pages.tenant.form.saved.preferences')}
 >
-	{#snippet children({ value })}
+	{#snippet children({ value, fieldError })}
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 			<Select
 				label="Locale"
 				name="locale"
 				options={localeOptions}
 				value={String(value('locale') ?? tenant.locale ?? 'en-IN')}
+				error={fieldError('locale')}
 			/>
 			<Select
 				label="Time zone"
 				name="time_zone"
 				options={timeZoneOptions}
 				value={String(value('time_zone') ?? tenant.time_zone ?? 'Asia/Kolkata')}
+				error={fieldError('time_zone')}
 			/>
 			<Select
 				label="Date format"
 				name="date_format"
 				options={dateFormatOptions}
 				value={String(value('date_format') ?? tenant.date_format ?? 'dd-MM-yyyy')}
+				error={fieldError('date_format')}
 			/>
 			<Select
 				label="Currency"
 				name="currency"
 				options={currencyOptions}
 				value={String(value('currency') ?? tenant.currency ?? 'INR')}
+				error={fieldError('currency')}
 			/>
 		</div>
 	{/snippet}

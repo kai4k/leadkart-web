@@ -17,6 +17,8 @@
 		label: string;
 		srLabel?: boolean;
 		hint?: string;
+		/** The server's (or form's) message for this control; shown under the label and linked by `aria-describedby`. */
+		error?: string | null;
 		checked?: boolean;
 		onCheckedChange?: (checked: boolean) => void;
 		disabled?: boolean;
@@ -32,6 +34,7 @@
 		label,
 		srLabel = false,
 		hint,
+		error,
 		checked = $bindable(false),
 		onCheckedChange,
 		disabled = false,
@@ -46,6 +49,10 @@
 	const uid = $props.id();
 	const switchId = $derived(id ?? `switch-${uid}`);
 	const hintId = $derived(`${switchId}-hint`);
+	const errorId = $derived(`${switchId}-error`);
+	const describedBy = $derived(
+		[error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined
+	);
 </script>
 
 <Field.Field orientation="horizontal" class={cn('items-start gap-3', className)}>
@@ -57,7 +64,8 @@
 		{required}
 		{name}
 		{value}
-		aria-describedby={hint ? hintId : undefined}
+		aria-describedby={describedBy}
+		aria-invalid={error ? 'true' : undefined}
 	/>
 
 	<Field.Content>
@@ -67,6 +75,9 @@
 		</Field.Label>
 		{#if hint}
 			<Field.Description id={hintId}>{hint}</Field.Description>
+		{/if}
+		{#if error}
+			<Field.Error id={errorId}>{error}</Field.Error>
 		{/if}
 	</Field.Content>
 </Field.Field>

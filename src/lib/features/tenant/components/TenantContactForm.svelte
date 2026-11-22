@@ -39,6 +39,7 @@
 				placeholder="Building, street, landmark"
 				autocomplete="street-address"
 				value={String(value('address.street') ?? tenant.admin_address.street ?? '')}
+				error={fieldError('address.street')}
 			/>
 
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -47,11 +48,13 @@
 					name="address.city"
 					autocomplete="address-level2"
 					value={String(value('address.city') ?? tenant.admin_address.city ?? '')}
+					error={fieldError('address.city')}
 				/>
 				<TextField
 					label="District"
 					name="address.district"
 					value={String(value('address.district') ?? tenant.admin_address.district ?? '')}
+					error={fieldError('address.district')}
 				/>
 			</div>
 
@@ -61,6 +64,7 @@
 					name="address.state"
 					autocomplete="address-level1"
 					value={String(value('address.state') ?? tenant.admin_address.state ?? '')}
+					error={fieldError('address.state')}
 				/>
 				<TextField
 					label="State code"
@@ -68,12 +72,14 @@
 					hint="2-digit GST state code"
 					autocomplete="off"
 					value={String(value('address.state_code') ?? tenant.admin_address.state_code ?? '')}
+					error={fieldError('address.state_code')}
 				/>
 				<TextField
 					label="Pincode"
 					name="address.pincode"
 					autocomplete="postal-code"
 					value={String(value('address.pincode') ?? tenant.admin_address.pincode ?? '')}
+					error={fieldError('address.pincode')}
 				/>
 			</div>
 		</fieldset>

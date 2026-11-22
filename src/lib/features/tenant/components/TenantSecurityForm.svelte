@@ -48,57 +48,64 @@
 	relaxed
 	successMessage={$_('pages.tenant.form.saved.security')}
 >
-	<Card.Root padding="md" elevation="sm">
-		<Card.Header>
-			<Card.Title>Password complexity</Card.Title>
-			<Card.Description>
-				Minimum length and required character classes for every member's password.
-			</Card.Description>
-		</Card.Header>
-		<Card.Content>
-			<div class="stack">
-				<NumberInput
-					label="Minimum length"
-					name="min_length"
-					hint="NIST SP 800-63B recommends 8 or more. Stripe and GitHub use 8."
-					bind:value={minLength}
-					min={8}
-					max={64}
-				/>
+	{#snippet children({ fieldError })}
+		<Card.Root padding="md" elevation="sm">
+			<Card.Header>
+				<Card.Title>Password complexity</Card.Title>
+				<Card.Description>
+					Minimum length and required character classes for every member's password.
+				</Card.Description>
+			</Card.Header>
+			<Card.Content>
+				<div class="stack">
+					<NumberInput
+						label="Minimum length"
+						name="min_length"
+						hint="NIST SP 800-63B recommends 8 or more. Stripe and GitHub use 8."
+						bind:value={minLength}
+						min={8}
+						max={64}
+						error={fieldError('password_policy.min_length')}
+					/>
 
-				<div class="stack stack-tight">
-					<p class="label text-foreground">Required character classes</p>
-					<Switch
-						label="Require uppercase letter (A–Z)"
-						name="require_uppercase"
-						checked={requireUppercase}
-						onCheckedChange={(c) => (requireUppercase = c)}
-					/>
-					<Switch
-						label="Require lowercase letter (a–z)"
-						name="require_lowercase"
-						checked={requireLowercase}
-						onCheckedChange={(c) => (requireLowercase = c)}
-					/>
-					<Switch
-						label="Require digit (0–9)"
-						name="require_digit"
-						checked={requireDigit}
-						onCheckedChange={(c) => (requireDigit = c)}
-					/>
-					<Switch
-						label="Require symbol (! @ # …)"
-						name="require_symbol"
-						checked={requireSymbol}
-						onCheckedChange={(c) => (requireSymbol = c)}
-					/>
+					<div class="stack stack-tight">
+						<p class="label text-foreground">Required character classes</p>
+						<Switch
+							label="Require uppercase letter (A–Z)"
+							name="require_uppercase"
+							checked={requireUppercase}
+							onCheckedChange={(c) => (requireUppercase = c)}
+							error={fieldError('password_policy.require_uppercase')}
+						/>
+						<Switch
+							label="Require lowercase letter (a–z)"
+							name="require_lowercase"
+							checked={requireLowercase}
+							onCheckedChange={(c) => (requireLowercase = c)}
+							error={fieldError('password_policy.require_lowercase')}
+						/>
+						<Switch
+							label="Require digit (0–9)"
+							name="require_digit"
+							checked={requireDigit}
+							onCheckedChange={(c) => (requireDigit = c)}
+							error={fieldError('password_policy.require_digit')}
+						/>
+						<Switch
+							label="Require symbol (! @ # …)"
+							name="require_symbol"
+							checked={requireSymbol}
+							onCheckedChange={(c) => (requireSymbol = c)}
+							error={fieldError('password_policy.require_symbol')}
+						/>
+					</div>
 				</div>
-			</div>
-		</Card.Content>
-	</Card.Root>
+			</Card.Content>
+		</Card.Root>
 
-	<!-- Go accepts and returns these two but does NOT enforce them (the platform lockout is fixed: 10 failures in 15
+		<!-- Go accepts and returns these two but does NOT enforce them (the platform lockout is fixed: 10 failures in 15
 	     minutes; BFF_API_CHANGES row 49), so they are not controls: the values read back are sent back unchanged. -->
-	<input type="hidden" name="max_failed_attempts" value={maxFailedAttempts} />
-	<input type="hidden" name="lockout_minutes" value={lockoutMinutes} />
+		<input type="hidden" name="max_failed_attempts" value={maxFailedAttempts} />
+		<input type="hidden" name="lockout_minutes" value={lockoutMinutes} />
+	{/snippet}
 </TenantSectionForm>
