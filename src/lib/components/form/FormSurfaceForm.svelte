@@ -12,16 +12,21 @@
 		form,
 		formId,
 		onsubmit,
+		resetKey,
 		fields
 	}: {
 		form: Form<S>;
 		formId: string;
 		onsubmit: (e: SubmitEvent) => void;
+		/** Changes when the form is reset: the fields are rebuilt (typed date fields keep their own text otherwise). */
+		resetKey: number;
 		fields: Snippet<[Form<S>]>;
 	} = $props();
 </script>
 
 <form id={formId} class="stack stack-relaxed" {onsubmit} novalidate>
 	{#if form.bannerError}<Alert variant="destructive">{form.bannerError}</Alert>{/if}
-	{@render fields(form)}
+	{#key resetKey}
+		{@render fields(form)}
+	{/key}
 </form>

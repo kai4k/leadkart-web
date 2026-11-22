@@ -51,7 +51,13 @@
 			{#if description}<Sheet.Description>{description}</Sheet.Description>{/if}
 		</Sheet.Header>
 		<Sheet.Body>
-			<FormSurfaceForm {form} {formId} onsubmit={surface.submit} {fields} />
+			<FormSurfaceForm
+				{form}
+				{formId}
+				onsubmit={surface.submit}
+				resetKey={surface.resetKey}
+				{fields}
+			/>
 		</Sheet.Body>
 		<Sheet.Footer class="flex-row justify-end border-t border-border">
 			<Sheet.Close>

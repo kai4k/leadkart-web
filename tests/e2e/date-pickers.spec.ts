@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { devices, expect, test, type Page } from '@playwright/test';
 import { glass, opaque, paint, setPrefs } from './helpers/materials';
 
 /**
@@ -411,4 +411,32 @@ test.describe('axe (serious or critical = fail)', () => {
 			await page.waitForTimeout(300);
 			await scan('calendar open');
 		});
+});
+
+test.describe('Android: typed entry through the input method', () => {
+	test('insertText of a whole date lands in the three segments, and a composed digit is read back', async ({
+		browser
+	}) => {
+		const context = await browser.newContext({ ...devices['Pixel 7'] });
+		const page = await context.newPage();
+		await setPrefs(page, { transparency: 'glass' });
+		await page.goto('/styleguide');
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
+		await page.getByRole('button', { name: 'Open sheet' }).click();
+		const sheet = page.locator('[data-slot="sheet-content"]');
+		await expect(sheet).toBeVisible();
+		await page.waitForTimeout(400);
+		const first = segs(sheet).first();
+		await first.tap();
+		await page.keyboard.insertText('15032026');
+		expect(await text(sheet)).toBe('15/03/2026');
+		await expect(sheet.locator('input[type="hidden"][name="followup"]')).toHaveValue('2026-03-15');
+		// a composition the page cannot cancel: the element is rewritten behind us and reconciled
+		await first.evaluate((el) => {
+			el.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+			el.textContent = 'dd2x';
+			el.dispatchEvent(new CompositionEvent('compositionend', { data: '2', bubbles: true }));
+		});
+		expect((await segs(sheet).first().textContent())?.trim()).toMatch(/^\d{1,2}$/);
+	});
 });

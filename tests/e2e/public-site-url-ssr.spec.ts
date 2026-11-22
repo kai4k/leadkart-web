@@ -59,7 +59,7 @@ async function spawnServer(value: string): Promise<Run> {
 	child.stderr?.on('data', (d) => (out += d));
 	let done = false;
 	const exited = new Promise<number | null>((resolve) =>
-		child.once('exit', (code) => {
+		child.once('close', (code) => {
 			done = true;
 			resolve(code);
 		})

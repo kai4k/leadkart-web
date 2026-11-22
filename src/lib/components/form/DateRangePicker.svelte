@@ -104,6 +104,15 @@
 	let open = $state(false);
 	let incomplete = $state(false);
 	let frame: HTMLElement | undefined = $state();
+	let startInput: { clear(): void } | undefined = $state();
+	let endInput: { clear(): void } | undefined = $state();
+
+	/** Forget the typed text of both sides (a programmatic reset; the form's native `reset` event is handled by the fields). */
+	export function clear() {
+		startInput?.clear();
+		endInput?.clear();
+		incomplete = false;
+	}
 	let startResolved = $state<Resolved>({ status: 'empty' });
 	let endResolved = $state<Resolved>({ status: 'empty' });
 
@@ -225,6 +234,7 @@
 		onfocusout={handleFocusOut}
 	>
 		<DateField.Input
+			bind:this={startInput}
 			id={fieldId}
 			bind:value={() => value?.start, (v) => (value = { start: v, end: value?.end })}
 			bind:resolved={startResolved}
@@ -244,6 +254,7 @@
 		/>
 		<span aria-hidden="true" class="px-1 text-muted-foreground">–</span>
 		<DateField.Input
+			bind:this={endInput}
 			bind:value={() => value?.end, (v) => (value = { start: value?.start, end: v })}
 			bind:resolved={endResolved}
 			onChange={handleSideChange}

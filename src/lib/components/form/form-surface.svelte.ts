@@ -42,6 +42,8 @@ type Source<S extends AnyObjectSchema> = Pick<
 export interface FormSurface<S extends AnyObjectSchema> {
 	readonly form: Form<S>;
 	readonly dirty: boolean;
+	/** Changes on every open: the fields are rebuilt then, so a typed date field never keeps text the form reset away. */
+	readonly resetKey: number;
 	submit(e: SubmitEvent): Promise<void>;
 }
 
@@ -59,11 +61,13 @@ export function createFormSurface<S extends AnyObjectSchema>(
 
 	// What the form held when it opened: "dirty" is a change from that, not from the empty form.
 	let seed = $state(JSON.stringify(untrack(() => form.values)));
+	let resetKey = $state(0);
 	$effect.pre(() => {
 		if (!source().open) return;
 		untrack(() => {
 			form.reset(source().initial());
 			seed = JSON.stringify(form.values);
+			resetKey++;
 		});
 	});
 	const dirty = $derived(JSON.stringify(form.values) !== seed);
@@ -85,6 +89,9 @@ export function createFormSurface<S extends AnyObjectSchema>(
 		form,
 		get dirty() {
 			return dirty;
+		},
+		get resetKey() {
+			return resetKey;
 		},
 		submit
 	};

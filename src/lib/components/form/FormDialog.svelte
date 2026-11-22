@@ -48,7 +48,13 @@
 			{#if description}<Dialog.Description>{description}</Dialog.Description>{/if}
 		</Dialog.Header>
 		<Dialog.Body>
-			<FormSurfaceForm {form} {formId} onsubmit={surface.submit} {fields} />
+			<FormSurfaceForm
+				{form}
+				{formId}
+				onsubmit={surface.submit}
+				resetKey={surface.resetKey}
+				{fields}
+			/>
 		</Dialog.Body>
 		<Dialog.Footer class="border-t border-border">
 			<Dialog.Close>

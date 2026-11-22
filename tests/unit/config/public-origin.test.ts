@@ -63,7 +63,7 @@ describe('checkedPublicOrigin: an origin or nothing, never a silent drop', () =>
 			'PUBLIC_SITE_URL must be a bare origin (e.g. https://app.example.com)'
 		);
 	});
-	it('never echoes more than the first 60 characters of the bad value', () => {
+	it('never echoes the path of a long bad value: protocol//hostname at most, and the message stays short', () => {
 		const long = `https://a.example/${'x'.repeat(500)}`;
 		const msg = (() => {
 			try {
@@ -73,8 +73,8 @@ describe('checkedPublicOrigin: an origin or nothing, never a silent drop', () =>
 			}
 			return '';
 		})();
-		expect(msg).toContain(long.slice(0, 60));
-		expect(msg).not.toContain(long.slice(0, 61));
+		expect(msg).toContain('Got https://a.example');
+		expect(msg).not.toContain('xxxxx');
 		expect(msg.length).toBeLessThan(400);
 	});
 });
@@ -103,5 +103,44 @@ describe('the src/env.ts schema, as the server runs it (defineEnvVars wraps it a
 	);
 	it('the public variable is marked public (it is rendered into app.html)', () => {
 		expect(variables.PUBLIC_SITE_URL.public).toBe(true);
+	});
+});
+
+describe('the start-up error never echoes a secret from the value', () => {
+	const SECRET = 'S3cretPw';
+	const CASES = [
+		`https://admin:${SECRET}@app.example.com`,
+		`https://admin:${SECRET}@app.example.com/`,
+		`https://app.example.com/path/${SECRET}`,
+		`https://app.example.com/?token=${SECRET}`,
+		`https://app.example.com/#${SECRET}`,
+		`https://app.example.com:8443/x?y=${SECRET}#z`,
+		`ftp://admin:${SECRET}@app.example.com`,
+		`admin:${SECRET}@app.example.com`,
+		`HTTPS://ADMIN:${SECRET}@APP.EXAMPLE.COM`,
+		`https://admin:${SECRET}@a.example"onload=x`
+	];
+	it.each(CASES)('%s', (value) => {
+		let message = '';
+		try {
+			checkedPublicOrigin(value);
+		} catch (e) {
+			message = (e as Error).message;
+		}
+		expect(message).toContain('PUBLIC_SITE_URL must be a bare origin');
+		expect(message).not.toContain(SECRET);
+		expect(message).not.toContain('admin');
+		expect(message).not.toContain('ADMIN');
+		expect(message).not.toContain('token=');
+		expect(message).not.toContain('/path');
+	});
+
+	it('says what is wrong, and echoes only protocol//hostname of a value that parses', () => {
+		expect(() => checkedPublicOrigin(`https://admin:${SECRET}@app.example.com/x`)).toThrow(
+			/credentials.*Got https:\/\/app\.example\.com$/s
+		);
+		expect(() => checkedPublicOrigin('not a url')).toThrow(
+			/not a URL.*Got a value of 9 characters$/s
+		);
 	});
 });

@@ -1051,6 +1051,8 @@ Compare against Apple's look (frosted, dark text) and against Domiex geometry. R
 
 ### Task G10: DatePicker and DateRangePicker — typed entry plus calendar popover
 
+> **Superseded by GD24 (fix rounds G and H).** The segments are hand-written (`ui/date-field`: `date-field-input`, `date-field-segment`, `date-field-label`; the rules are pure functions in `src/lib/utils/typed-date.ts`). There are no bits-ui `DateField` / `DateRangeField` wrappers and no `date-range-field/` folder: bits-ui is used for the calendar only. Read the file list below as history.
+
 **Files:**
 
 - Create:

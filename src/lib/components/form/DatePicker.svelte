@@ -101,6 +101,13 @@
 	let open = $state(false);
 	let incomplete = $state(false);
 	let frame: HTMLElement | undefined = $state();
+	let input: { clear(): void } | undefined = $state();
+
+	/** Forget the typed text (a programmatic reset: the form's native `reset` event is handled by the field itself). */
+	export function clear() {
+		input?.clear();
+		incomplete = false;
+	}
 	let resolved = $state<Resolved>({ status: 'empty' });
 
 	const bounds = $derived(
@@ -190,6 +197,7 @@
 		onfocusout={handleFocusOut}
 	>
 		<DateField.Input
+			bind:this={input}
 			id={fieldId}
 			bind:value
 			bind:resolved

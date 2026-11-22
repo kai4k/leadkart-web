@@ -150,3 +150,29 @@ export function layoutFor(locale: string): { order: Part[]; separator: string } 
 	const separator = parts.find((p) => p.type === 'literal')?.value.trim() || '/';
 	return { order: order.length === 3 ? order : ['day', 'month', 'year'], separator };
 }
+
+/**
+ * Read a pasted date into segments, or `null`. Accepted: ISO `yyyy-mm-dd`, and three numbers in the locale's order
+ * separated by `/`, `-` or `.` (`dd/mm/yyyy`, `d/m/yyyy`, `dd-mm-yyyy`, `dd.mm.yyyy`). The year must have FOUR digits:
+ * `03/04/26` is refused, a two-digit year is never guessed. What is returned still goes through `resolve`, so a
+ * pasted `31/02/2026` is shown as pasted and is invalid, like a typed one.
+ */
+export function parsePaste(text: string, order: Part[]): Parts | null {
+	const t = text.trim();
+	const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(t);
+	const loose = /^(\d{1,4})([/.-])(\d{1,2})\2(\d{1,4})$/.exec(t);
+	const raw: Record<Part, string> = { day: '', month: '', year: '' };
+	if (iso) {
+		raw.year = iso[1] ?? '';
+		raw.month = iso[2] ?? '';
+		raw.day = iso[3] ?? '';
+	} else if (loose) {
+		const [first, second, third] = order;
+		if (!first || !second || !third) return null;
+		raw[first] = loose[1] ?? '';
+		raw[second] = loose[3] ?? '';
+		raw[third] = loose[4] ?? '';
+	} else return null;
+	if (raw.year.length !== 4 || raw.day.length > 2 || raw.month.length > 2) return null;
+	return { day: pad2(Number(raw.day)), month: pad2(Number(raw.month)), year: raw.year };
+}

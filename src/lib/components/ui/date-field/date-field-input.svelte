@@ -7,7 +7,9 @@
 	import {
 		backspace,
 		commit,
+		EMPTY_PARTS,
 		layoutFor,
+		parsePaste,
 		partsOf,
 		resolve,
 		step,
@@ -79,13 +81,27 @@
 	const layout = $derived(layoutFor(locale));
 	const thisYear = new Date().getFullYear();
 
+	// bumped when the DOM was touched behind Svelte's back: the segment text is then rebuilt (a fresh text node)
+	let rev = $state(0);
 	let parts = $state<Parts>(partsOf(untrack(() => value)));
 	// the ISO string of the last date this field emitted or took from `value`: a `value` equal to it is our own echo
 	let known = untrack(() => toDateOnly(value));
 
 	const opts = $derived({ bounds, minValue, maxValue });
+	// ONE place decides what the segments show and what they emit: (segments, constraints) -> resolved. The date is emitted
+	// whenever the resolved value differs from the last one emitted, whatever changed it: a keystroke, a paste, a calendar
+	// pick, an outside set, or a constraint (min / max / year bounds), so what is shown is always what is submitted.
 	$effect(() => {
-		resolved = resolve(parts, opts);
+		const r = resolve(parts, opts);
+		resolved = r;
+		const date = r.status === 'valid' ? r.date : undefined;
+		const s = toDateOnly(date);
+		untrack(() => {
+			if (s === known) return;
+			known = s;
+			value = date;
+			onChange?.(date, r);
+		});
 	});
 
 	// a date the caller sets (calendar pick, reset, valueString) replaces what is typed
@@ -98,16 +114,12 @@
 
 	function change(next: Parts) {
 		parts = next;
-		const r = resolve(
-			next,
-			untrack(() => opts)
-		);
-		const date = r.status === 'valid' ? r.date : undefined;
-		const s = toDateOnly(date);
-		if (s === known) return;
-		known = s;
-		value = date;
-		onChange?.(date, r);
+	}
+
+	/** Forget what was typed (a form reset, a programmatic reset): the segments are empty and nothing is emitted. */
+	export function clear() {
+		parts = { ...EMPTY_PARTS };
+		rev++;
 	}
 
 	const editable = () =>
@@ -115,41 +127,119 @@
 			? [...ref.querySelectorAll<HTMLElement>('[data-segment]:not([data-segment="literal"])')]
 			: [];
 
-	function move(from: HTMLElement, by: 1 | -1) {
+	// ArrowLeft / ArrowRight follow what is SEEN: in a right-to-left page the first segment is on the right
+	const visualStep = (by: 1 | -1): 1 | -1 =>
+		ref && getComputedStyle(ref).direction === 'rtl' ? (by === 1 ? -1 : 1) : by;
+
+	function move(from: HTMLElement, by: 1 | -1): HTMLElement | undefined {
 		const list = editable();
-		list[list.indexOf(from) + by]?.focus();
+		const to = list[list.indexOf(from) + by];
+		to?.focus();
+		return to;
 	}
 
 	const isDigit = (k: string) => /^[0-9]$/.test(k);
+	const partOf = (el: HTMLElement) => el.dataset.segment as Part;
 
-	function type(part: Part, el: HTMLElement, digit: string) {
-		const r = typeDigit(parts, part, digit);
-		change(r.parts);
-		if (r.advance) move(el, 1);
+	/** Type digits as if one by one: each goes to the segment that has focus after the previous one. */
+	function typeMany(part: Part, el: HTMLElement, text: string) {
+		let p = part;
+		let e = el;
+		for (const ch of text) {
+			if (!isDigit(ch)) continue;
+			const r = typeDigit(parts, p, ch);
+			change(r.parts);
+			if (r.advance) {
+				const next = move(e, 1);
+				if (next) {
+					e = next;
+					p = partOf(next);
+				}
+			}
+		}
 	}
 
 	function onkeydown(e: KeyboardEvent, part: Part) {
 		if (disabled || e.ctrlKey || e.metaKey || e.key === 'Tab' || e.key === 'Escape') return;
-		if (e.key === 'Unidentified') return; // a virtual keyboard: the digit arrives in beforeinput
+		// a virtual keyboard or an IME: the text arrives through beforeinput / composition and is read back from the DOM
+		if (e.key === 'Unidentified' || e.key === 'Process' || e.isComposing || e.keyCode === 229)
+			return;
 		if (e.altKey) return; // Alt + ArrowDown belongs to the picker (it opens the calendar)
 		e.preventDefault();
 		const el = e.currentTarget as HTMLElement;
-		if (e.key === 'ArrowLeft') return move(el, -1);
-		if (e.key === 'ArrowRight') return move(el, 1);
+		if (e.key === 'ArrowLeft') return void move(el, visualStep(-1));
+		if (e.key === 'ArrowRight') return void move(el, visualStep(1));
+		if (e.key === 'Enter') {
+			// like a text input: Enter submits the enclosing form
+			if (!readonly) el.closest('form')?.requestSubmit();
+			return;
+		}
 		if (readonly) return;
-		if (isDigit(e.key)) type(part, el, e.key);
-		else if (e.key === 'Backspace' || e.key === 'Delete') change(backspace(parts, part));
-		else if (e.key === 'ArrowUp') change(step(parts, part, 1, bounds, thisYear));
+		if (isDigit(e.key)) typeMany(part, el, e.key);
+		else if (e.key === 'Backspace' || e.key === 'Delete') {
+			if (e.key === 'Backspace' && parts[part] === '') {
+				// an empty segment: go back and delete the previous one's last digit, as a native date input does
+				const prev = move(el, -1);
+				if (prev) change(backspace(parts, partOf(prev)));
+			} else change(backspace(parts, part));
+		} else if (e.key === 'ArrowUp') change(step(parts, part, 1, bounds, thisYear));
 		else if (e.key === 'ArrowDown') change(step(parts, part, -1, bounds, thisYear));
 	}
 
 	function onbeforeinput(e: InputEvent, part: Part) {
+		// a composition cannot be cancelled: it is reconciled from the DOM afterwards (oncompositionend / oninput)
+		if (e.isComposing || e.inputType === 'insertCompositionText') return;
 		e.preventDefault();
 		if (disabled || readonly) return;
 		const el = e.currentTarget as HTMLElement;
 		if (e.inputType === 'deleteContentBackward') change(backspace(parts, part));
-		else if (e.inputType === 'insertText' && e.data)
-			for (const ch of e.data) if (isDigit(ch)) type(part, el, ch);
+		else if (e.inputType === 'insertText' && e.data) typeMany(part, el, e.data);
+	}
+
+	function onpaste(e: ClipboardEvent, part: Part) {
+		e.preventDefault();
+		if (disabled || readonly) return;
+		const text = e.clipboardData?.getData('text') ?? '';
+		const whole = parsePaste(text, layout.order);
+		if (whole) {
+			change(whole);
+			return;
+		}
+		// not a whole date: a run of digits is typed from this segment on (nothing else is guessed)
+		if (/^s*d+s*$/.test(text)) typeMany(part, e.currentTarget as HTMLElement, text.trim());
+	}
+
+	// IME / Android keyboards: what the browser put into the element is read back after the fact. Digits only; the
+	// digits the element holds beyond what the segment held are typed through the same rules, and the element's text is
+	// rewritten as the canonical one (a new text node, so Svelte's own never points at a detached one).
+	// The segment's text is written by this attachment, not by a Svelte text node: an IME that replaces the node (and
+	// anything Svelte tracked in it) can no longer leave the element showing text the state does not hold. It runs again
+	// when the text OR `rev` changes, so a reconcile always rewrites the canonical text.
+	const paint = (text: string, version: number) => (node: HTMLElement) => {
+		void version;
+		node.textContent = text;
+	};
+	let composing = false;
+	function reconcileFromDom(part: Part, el: HTMLElement) {
+		const typed = (el.textContent ?? '').replace(/D/g, '');
+		const held = parts[part];
+		if (typed !== held) {
+			if (typed.startsWith(held)) typeMany(part, el, typed.slice(held.length));
+			else {
+				change({ ...parts, [part]: '' });
+				typeMany(part, el, typed);
+			}
+		}
+		rev++;
+	}
+	function oninput(e: Event, part: Part) {
+		if (composing || (e as InputEvent).isComposing || disabled || readonly) return;
+		reconcileFromDom(part, e.currentTarget as HTMLElement);
+	}
+	function oncompositionend(e: CompositionEvent, part: Part) {
+		composing = false;
+		if (disabled || readonly) return;
+		reconcileFromDom(part, e.currentTarget as HTMLElement);
 	}
 
 	// leaving a segment pads a lone digit: `1` becomes `01`
@@ -157,6 +247,15 @@
 		const next = commit(parts, part);
 		if (next !== parts) change(next);
 	}
+
+	// the enclosing form's native reset clears what was typed (programmatic resets call clear())
+	$effect(() => {
+		const form = ref?.closest('form');
+		if (!form) return;
+		const onReset = () => clear();
+		form.addEventListener('reset', onReset);
+		return () => form.removeEventListener('reset', onReset);
+	});
 
 	const range = (part: Part) =>
 		part === 'day'
@@ -206,7 +305,7 @@
 			spellcheck={false}
 			inputmode="numeric"
 			{...{ autocorrect: 'off' }}
-			enterkeyhint="next"
+			enterkeyhint="done"
 			aria-label={names[part]}
 			aria-labelledby={labelledBy ? `${groupId}-${part} ${labelledBy}` : undefined}
 			aria-valuemin={range(part).min}
@@ -221,10 +320,13 @@
 			aria-invalid={invalid ? 'true' : undefined}
 			aria-describedby={describedBy}
 			onkeydown={(e: KeyboardEvent) => onkeydown(e, part)}
+			{@attach paint(text(part), rev)}
 			onbeforeinput={(e: InputEvent) => onbeforeinput(e, part)}
+			oninput={(e: Event) => oninput(e, part)}
+			onpaste={(e: ClipboardEvent) => onpaste(e, part)}
+			oncompositionstart={() => (composing = true)}
+			oncompositionend={(e: CompositionEvent) => oncompositionend(e, part)}
 			onfocusout={() => onfocusout(part)}
-		>
-			{text(part)}
-		</DateFieldSegment>
+		></DateFieldSegment>
 	{/each}
 </div>
