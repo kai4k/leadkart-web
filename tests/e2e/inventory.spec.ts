@@ -441,95 +441,110 @@ test.describe('Inventory — add batch', () => {
 	});
 });
 
+// The web's stock adjust posts `{ delta }` to /inventory/products/{id}/movements. Go has no such route: its movement
+// is POST /inventory/batches/{batchId}/movements with { type, quantity, reason, source_reference }, and an over-draw
+// is 409 insufficient_stock (inventory/ports/http.go). A mock answering the dead route would pass for a request the
+// real API answers with 404, so both tests wait for the adjust flow to be rebuilt with the inventory page.
+const ADJUST_FIXME =
+	'adjust stock posts to a route Go does not have; rebuilt with the inventory page';
+
 test.describe('Inventory — adjust stock', () => {
 	test.beforeEach(async () => {
 		await resetMock();
 		await registerReferenceData();
 	});
 
-	test('delta=+10 → POST → toast with Undo', async ({ page }) => {
-		await signInAsTier(page, { tier: 'tenant-admin', permissions: INVENTORY_PERMISSIONS });
-		await registerMocks([
-			{
-				method: 'GET',
-				path: `/api/v1/inventory/products/${productIn.id}`,
-				status: 200,
-				body: productIn
-			},
-			{
-				method: 'GET',
-				path: `/api/v1/inventory/products/${productIn.id}/batches`,
-				status: 200,
-				body: { items: [makeBatch()], has_more: false }
-			},
-			{
-				method: 'GET',
-				path: `/api/v1/inventory/products/${productIn.id}/movements`,
-				status: 200,
-				body: { items: [], has_more: false }
-			},
-			{
-				method: 'POST',
-				path: `/api/v1/inventory/products/${productIn.id}/movements`,
-				status: 201,
-				body: makeMovement({ delta: 10, reason: 'correction', balance_after: 100 })
-			}
-		]);
-		await page.goto(`/inventory/${productIn.id}`);
-		await page.getByTestId(`adjust-batch-${BATCH_ID}`).click();
-		await expect(page.getByRole('heading', { name: /adjust stock/i })).toBeVisible();
-		await page.locator('input[role="spinbutton"]').last().fill('10');
-		await page.locator('button[type="submit"][form="adjust-stock-form"]').click();
-		await expect(page.getByText(/\+10/).first()).toBeVisible({ timeout: 5000 });
-		await expect(page.getByRole('button', { name: /undo/i })).toBeVisible();
-	});
+	test.fixme(
+		'delta=+10 → POST → toast with Undo',
+		{ annotation: { type: 'fixme', description: ADJUST_FIXME } },
+		async ({ page }) => {
+			await signInAsTier(page, { tier: 'tenant-admin', permissions: INVENTORY_PERMISSIONS });
+			await registerMocks([
+				{
+					method: 'GET',
+					path: `/api/v1/inventory/products/${productIn.id}`,
+					status: 200,
+					body: productIn
+				},
+				{
+					method: 'GET',
+					path: `/api/v1/inventory/products/${productIn.id}/batches`,
+					status: 200,
+					body: { items: [makeBatch()], has_more: false }
+				},
+				{
+					method: 'GET',
+					path: `/api/v1/inventory/products/${productIn.id}/movements`,
+					status: 200,
+					body: { items: [], has_more: false }
+				},
+				{
+					method: 'POST',
+					path: `/api/v1/inventory/products/${productIn.id}/movements`,
+					status: 201,
+					body: makeMovement({ delta: 10, reason: 'correction', balance_after: 100 })
+				}
+			]);
+			await page.goto(`/inventory/${productIn.id}`);
+			await page.getByTestId(`adjust-batch-${BATCH_ID}`).click();
+			await expect(page.getByRole('heading', { name: /adjust stock/i })).toBeVisible();
+			await page.locator('input[role="spinbutton"]').last().fill('10');
+			await page.locator('button[type="submit"][form="adjust-stock-form"]').click();
+			await expect(page.getByText(/\+10/).first()).toBeVisible({ timeout: 5000 });
+			await expect(page.getByRole('button', { name: /undo/i })).toBeVisible();
+		}
+	);
 
-	test('insufficient stock: Go answers 409 insufficient_stock, shown as catalogue copy, never Go words', async ({
-		page
-	}) => {
-		await signInAsTier(page, { tier: 'tenant-admin', permissions: INVENTORY_PERMISSIONS });
-		const small = makeBatch({ quantity_available: 5 });
-		await registerMocks([
-			{
-				method: 'GET',
-				path: `/api/v1/inventory/products/${productIn.id}`,
-				status: 200,
-				body: productIn
-			},
-			{
-				method: 'GET',
-				path: `/api/v1/inventory/products/${productIn.id}/batches`,
-				status: 200,
-				body: { items: [small], has_more: false }
-			},
-			{
-				method: 'GET',
-				path: `/api/v1/inventory/products/${productIn.id}/movements`,
-				status: 200,
-				body: { items: [], has_more: false }
-			},
-			{
-				method: 'POST',
-				path: `/api/v1/inventory/products/${productIn.id}/movements`,
-				// inventory/ports/http.go (LogStockMovement): batch.ErrInsufficientStock -> 409 insufficient_stock with
-				// the domain error's text. Go never fills `errors` in the inventory module.
-				status: 409,
-				body: { error: 'insufficient_stock', message: 'batch: insufficient stock' }
-			}
-		]);
-		await page.goto(`/inventory/${productIn.id}`);
-		await page.getByTestId(`adjust-batch-${BATCH_ID}`).click();
-		// NumberInput commits its draft to `form.values.delta` only on blur, so Tab
-		// off the input before submitting.
-		await page.locator('input[role="spinbutton"]').last().fill('-1000');
-		await page.locator('input[role="spinbutton"]').last().press('Tab');
-		await page.locator('button[type="submit"][form="adjust-stock-form"]').click();
-		// the typed 409 reaches the dialog as the catalogue line for its code, not as Go's text
-		await expect(page.getByText('There is not enough stock for this change.').first()).toBeVisible({
-			timeout: 5000
-		});
-		await expect(page.getByText(/batch: insufficient stock/i)).toHaveCount(0);
-	});
+	test.fixme(
+		'insufficient stock: Go answers 409 insufficient_stock, shown as catalogue copy, never Go words',
+		{ annotation: { type: 'fixme', description: ADJUST_FIXME } },
+		async ({ page }) => {
+			await signInAsTier(page, { tier: 'tenant-admin', permissions: INVENTORY_PERMISSIONS });
+			const small = makeBatch({ quantity_available: 5 });
+			await registerMocks([
+				{
+					method: 'GET',
+					path: `/api/v1/inventory/products/${productIn.id}`,
+					status: 200,
+					body: productIn
+				},
+				{
+					method: 'GET',
+					path: `/api/v1/inventory/products/${productIn.id}/batches`,
+					status: 200,
+					body: { items: [small], has_more: false }
+				},
+				{
+					method: 'GET',
+					path: `/api/v1/inventory/products/${productIn.id}/movements`,
+					status: 200,
+					body: { items: [], has_more: false }
+				},
+				{
+					method: 'POST',
+					path: `/api/v1/inventory/products/${productIn.id}/movements`,
+					// inventory/ports/http.go (LogStockMovement): batch.ErrInsufficientStock -> 409 insufficient_stock with
+					// the domain error's text. Go never fills `errors` in the inventory module.
+					status: 409,
+					body: { error: 'insufficient_stock', message: 'batch: insufficient stock' }
+				}
+			]);
+			await page.goto(`/inventory/${productIn.id}`);
+			await page.getByTestId(`adjust-batch-${BATCH_ID}`).click();
+			// NumberInput commits its draft to `form.values.delta` only on blur, so Tab
+			// off the input before submitting.
+			await page.locator('input[role="spinbutton"]').last().fill('-1000');
+			await page.locator('input[role="spinbutton"]').last().press('Tab');
+			await page.locator('button[type="submit"][form="adjust-stock-form"]').click();
+			// the typed 409 reaches the dialog as the catalogue line for its code, not as Go's text
+			await expect(
+				page.getByText('There is not enough stock for this change.').first()
+			).toBeVisible({
+				timeout: 5000
+			});
+			await expect(page.getByText(/batch: insufficient stock/i)).toHaveCount(0);
+		}
+	);
 });
 
 test.describe('Inventory — write off batch', () => {
