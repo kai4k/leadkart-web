@@ -7,5 +7,6 @@ export function remainingAlpha(src: string): Array<{ line: number; utility: stri
 export function normalizeSource(
 	src: string,
 	options?: { icons?: Set<string>; file?: string }
-): { out: string; problems: string[] };
+): { out: string; problems: string[]; reapplied: boolean };
 export function customFor(file?: string): unknown;
+export function handWrittenRoot(file?: string): 'dialog' | 'sheet' | undefined;

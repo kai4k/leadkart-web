@@ -514,3 +514,70 @@ describe('shadcn normaliser: the alert dialog keeps its height cap and scrolling
 		expect(out).toBe('<div class="grid gap-4"></div>');
 	});
 });
+
+describe('shadcn normaliser: the hand-written roots of dialog and sheet (busy veto, hold / onHeld)', () => {
+	const UI = 'src/lib/components/ui';
+	const OVERRIDES = 'scripts/shadcn/overrides';
+	// the primitive library's name, written so the bits-ui boundary gate does not mistake test data for an import
+	const UPSTREAM_PRIMITIVES = ['bits', 'ui'].join('-');
+	const pristine = (primitive: string) =>
+		`<script lang="ts">
+	import { ${primitive} as DialogPrimitive } from "${UPSTREAM_PRIMITIVES}";
+
+	let { open = $bindable(false), ...restProps }: DialogPrimitive.RootProps = $props();
+</script>
+
+<DialogPrimitive.Root bind:open {...restProps} />
+`;
+	const regenerate = (name: 'dialog' | 'sheet') =>
+		normalizeSource(pristine('Dialog'), { icons: ICONS, file: `${UI}/${name}/${name}.svelte` }) as {
+			out: string;
+			problems: string[];
+		};
+
+	it.each(['dialog', 'sheet'] as const)(
+		'a pristine upstream %s root is normalised to the committed file (hold, onHeld and the busy veto back)',
+		(name) => {
+			const { out, problems } = regenerate(name);
+			expect(problems).toEqual([]);
+			expect(out).toBe(readFileSync(`${UI}/${name}/${name}.svelte`, 'utf8'));
+			expect(out).toContain('onHeld');
+			expect(out).toContain('createBusyVeto');
+		}
+	);
+
+	it.each(['dialog', 'sheet'] as const)(
+		'%s: the re-applied root is stable (idempotent)',
+		(name) => {
+			const once = regenerate(name).out;
+			expect(
+				(
+					normalizeSource(once, { icons: ICONS, file: `${UI}/${name}/${name}.svelte` }) as {
+						out: string;
+					}
+				).out
+			).toBe(once);
+		}
+	);
+
+	it.each(['dialog', 'sheet'] as const)(
+		'%s: the stored override is the committed file (they cannot drift apart)',
+		(name) => {
+			expect(readFileSync(`${OVERRIDES}/${name}.svelte.tpl`, 'utf8')).toBe(
+				readFileSync(`${UI}/${name}/${name}.svelte`, 'utf8')
+			);
+		}
+	);
+
+	it('a root that lost only `hold` is still re-applied, never left half-customised', () => {
+		const committed = readFileSync(`${UI}/sheet/sheet.svelte`, 'utf8');
+		const { out } = normalizeSource(
+			committed.replaceAll('hold?.()', 'false').replace('\thold,\n', ''),
+			{
+				icons: ICONS,
+				file: `${UI}/sheet/sheet.svelte`
+			}
+		) as { out: string };
+		expect(out).toBe(committed);
+	});
+});

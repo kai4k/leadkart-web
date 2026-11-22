@@ -33,7 +33,7 @@
  *
  * Idempotent: a second run changes nothing.
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ALLOWED_ALPHA, UI_DIR, colourNames, findAlphaModifiers } from '../arch/check-tokens.mjs';
@@ -504,11 +504,31 @@ export function normalizeSource(src, { icons = iconExports(), file = '' } = {}) 
 		role: materialRole(file),
 		custom: customFor(file)
 	});
+	const root = reapplyRoot(out, file);
+	out = root.out;
 	for (const f of remainingAlpha(out))
 		problems.push(
 			`line ${f.line}: ${f.utility} (alpha on a contrast colour; use an opaque token, only ${[...ALLOWED_ALPHA].join(', ')} may carry alpha)`
 		);
-	return { out, problems };
+	return { out, problems, reapplied: root.applied };
+}
+
+// ── hand-written roots ─────────────────────────────────────────────────────
+
+const ROOT_MARKERS = ['createBusyVeto', 'hold?.()', 'onHeld?.()'];
+
+/** `dialog` or `sheet` when `file` is that primitive's root component, else undefined. */
+export function handWrittenRoot(file = '') {
+	return /ui[^a-z](dialog|sheet)[^a-z](?:dialog|sheet)[.]svelte$/.exec(file)?.[1];
+}
+
+/** The stored hand-written root when `out` lost any customisation, else `out` unchanged. */
+function reapplyRoot(out, file) {
+	const name = handWrittenRoot(file);
+	if (!name || ROOT_MARKERS.every((m) => out.includes(m))) return { out, applied: false };
+	const stored = join(ROOT, 'scripts/shadcn/overrides', `${name}.svelte.tpl`);
+	if (!existsSync(stored)) throw new Error(`the stored hand-written root ${stored} is missing`);
+	return { out: readFileSync(stored, 'utf8'), applied: true };
 }
 
 // ── CLI ────────────────────────────────────────────────────────────────────
@@ -523,7 +543,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
 	let failed = 0;
 	for (const file of files) {
 		const before = readFileSync(file, 'utf8');
-		const { out, problems } = normalizeSource(before, { icons, file });
+		const { out, problems, reapplied } = normalizeSource(before, { icons, file });
+		if (reapplied)
+			console.log(`↻ ${file}: the hand-written root was re-applied (ui/CUSTOMIZATIONS.md)`);
 		if (out !== before) writeFileSync(file, out);
 		for (const p of problems) {
 			failed++;

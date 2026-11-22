@@ -30,6 +30,12 @@ touch `components.json`, `src/app.css` or `package.json` of this repo.
   focuses Cancel on open.
 - `dialog/dialog.svelte`, `sheet/sheet.svelte`: the busy veto (`createBusyVeto`): Escape, outside
   press and every Close are refused while `busy`, bounded by the client read timeout.
+- `dialog/dialog.svelte`, `sheet/sheet.svelte` (the ROOTS): also `hold` / `onHeld` (a form with unsaved input refuses
+  every way out and calls `onHeld` so the caller can ask "Discard changes?"; the busy veto wins). Upstream's root is
+  three lines, so these are hand-written files the normaliser cannot derive: `scripts/shadcn/normalize.mjs`
+  re-applies `scripts/shadcn/overrides/{dialog,sheet}.svelte.tpl` (stored copies, a test keeps them equal to the
+  committed files) whenever its output lacks the busy veto or either marker, and says so. Change the root here, then
+  copy it to `overrides/`.
 - `dialog/dialog-body.svelte`, `sheet/sheet-body.svelte`: LeadKart additions (scrolling body).
   Dialog body `px-5 py-5`; sheet body `flex-1 overflow-y-auto px-6 py-4`.
 - `dialog/dialog-content.svelte`: scrolling layout (`flex max-h-[90vh] flex-col gap-0 overflow-hidden
