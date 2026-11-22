@@ -12,6 +12,11 @@ export { default as RadioItem } from './RadioItem.svelte';
 export { default as Combobox, type ComboboxOption } from './Combobox.svelte';
 export { default as DatePicker } from './DatePicker.svelte';
 export { default as DateRangePicker, type DateRange } from './DateRangePicker.svelte';
+export {
+	default as ActionForm,
+	type ActionFormResult,
+	type ActionFormSlot
+} from './ActionForm.svelte';
 export { default as FormSheet } from './FormSheet.svelte';
 export { default as FormDialog } from './FormDialog.svelte';
 export type { FormSurfaceProps } from './form-surface.svelte.ts';

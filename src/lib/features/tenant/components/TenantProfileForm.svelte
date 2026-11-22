@@ -1,66 +1,39 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { fieldText, readFailure } from '#lib/utils/form-failure.ts';
-	import TenantSaveFooter from './TenantSaveFooter.svelte';
-	import { enhance } from '$app/forms';
-	import { withFocusOnFailure } from '#lib/utils/focus-first-invalid.ts';
-	import { TextField } from '$form';
+	import { TextField, type ActionFormResult } from '$form';
+	import TenantSectionForm from './TenantSectionForm.svelte';
 	import type { Tenant } from '../types';
 
 	/**
-	 * TenantProfileForm — edits legal_name + display_name via SvelteKit
-	 * form action (default action on /settings/tenant/profile/+page.server.ts).
-	 * Pure renderer over tenant + form.
+	 * TenantProfileForm — edits legal_name + display_name via the tenant profile form action.
+	 * Pure renderer over tenant + the action's result.
 	 */
-	type FormResult = {
-		values?: { legal_name: string; display_name: string };
-		fieldKeys?: Record<string, string>;
-		fieldMessages?: Record<string, string>;
-		formErrorKey?: string | null;
-		success?: boolean;
-	};
-	type Props = { tenant: Tenant; form?: FormResult };
+	type Props = { tenant: Tenant; form?: ActionFormResult };
 	let { tenant, form }: Props = $props();
-
-	let loading = $state(false);
-
-	const failure = $derived(readFailure(form));
-	const err = (field: string) => fieldText(failure, field, $_);
-
-	const values = $derived(
-		form?.values ?? { legal_name: tenant.legal_name, display_name: tenant.display_name }
-	);
 </script>
 
-<form
-	class="stack"
-	method="POST"
-	novalidate
-	use:enhance={withFocusOnFailure(() => {
-		loading = true;
-		return async ({ update }) => {
-			await update();
-			loading = false;
-		};
-	})}
+<TenantSectionForm
+	section="profile"
+	result={form}
+	successMessage={$_('pages.tenant.form.saved.profile')}
 >
-	<TextField
-		label="Legal name"
-		name="legal_name"
-		hint="The registered name on the tenant's drug-licence and tax filings."
-		required
-		value={values.legal_name}
-		error={err('legal_name')}
-	/>
+	{#snippet children({ fieldError, value })}
+		<TextField
+			label="Legal name"
+			name="legal_name"
+			hint="The registered name on the tenant's drug-licence and tax filings."
+			required
+			value={String(value('legal_name') ?? tenant.legal_name)}
+			error={fieldError('legal_name')}
+		/>
 
-	<TextField
-		label="Display name"
-		name="display_name"
-		hint="The friendly name shown in the topbar and on emailed documents."
-		required
-		value={values.display_name}
-		error={err('display_name')}
-	/>
-
-	<TenantSaveFooter {form} {loading} section="profile" successMessage="Profile saved." />
-</form>
+		<TextField
+			label="Display name"
+			name="display_name"
+			hint="The friendly name shown in the topbar and on emailed documents."
+			required
+			value={String(value('display_name') ?? tenant.display_name)}
+			error={fieldError('display_name')}
+		/>
+	{/snippet}
+</TenantSectionForm>

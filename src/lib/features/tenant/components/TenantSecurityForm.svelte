@@ -1,30 +1,27 @@
 <script lang="ts">
-	import TenantSaveFooter from './TenantSaveFooter.svelte';
-	import { enhance } from '$app/forms';
-	import { withFocusOnFailure } from '#lib/utils/focus-first-invalid.ts';
 	import { untrack } from 'svelte';
+	import { _ } from 'svelte-i18n';
 	import { Card } from '$ui';
-	import { NumberInput, Switch } from '$form';
+	import { NumberInput, Switch, type ActionFormResult } from '$form';
+	import TenantSectionForm from './TenantSectionForm.svelte';
 	import type { Tenant } from '../types';
 
 	/**
-	 * TenantSecurityForm — password policy editor via SvelteKit form
+	 * TenantSecurityForm — password policy editor via the security form
 	 * action. Submits the whole policy as one PATCH per the gateway
 	 * contract (atomic replace).
 	 */
-	type FormResult = {
-		values?: { password_policy: Tenant['password_policy'] };
-		fieldKeys?: Record<string, string>;
-		fieldMessages?: Record<string, string>;
-		formErrorKey?: string | null;
-		success?: boolean;
+	type Props = {
+		tenant: Tenant;
+		/** The action's result; a refused submit also carries the typed policy in `values.password_policy`. */
+		form?: ActionFormResult;
 	};
-	type Props = { tenant: Tenant; form?: FormResult };
 	let { tenant, form }: Props = $props();
 
-	let loading = $state(false);
-
-	const initial = $derived(form?.values?.password_policy ?? tenant.password_policy);
+	const initial = $derived(
+		(form?.values?.password_policy as Tenant['password_policy'] | undefined) ??
+			tenant.password_policy
+	);
 
 	let minLength = $state(untrack(() => tenant.password_policy.min_length));
 	let requireUppercase = $state(untrack(() => tenant.password_policy.require_uppercase));
@@ -45,17 +42,11 @@
 	});
 </script>
 
-<form
-	class="stack stack-relaxed"
-	method="POST"
-	novalidate
-	use:enhance={withFocusOnFailure(() => {
-		loading = true;
-		return async ({ update }) => {
-			await update();
-			loading = false;
-		};
-	})}
+<TenantSectionForm
+	section="settings"
+	result={form}
+	relaxed
+	successMessage={$_('pages.tenant.form.saved.security')}
 >
 	<Card.Root padding="md" elevation="sm">
 		<Card.Header>
@@ -135,6 +126,4 @@
 			</div>
 		</Card.Content>
 	</Card.Root>
-
-	<TenantSaveFooter {form} {loading} section="settings" successMessage="Security settings saved." />
-</form>
+</TenantSectionForm>

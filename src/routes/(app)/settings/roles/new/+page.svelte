@@ -1,15 +1,13 @@
 <script lang="ts">
 	import PageHeader from '$layouts/PageHeader.svelte';
-	import { enhance } from '$app/forms';
-	import { withFocusOnFailure } from '#lib/utils/focus-first-invalid.ts';
 	import { untrack } from 'svelte';
 	import { _ } from 'svelte-i18n';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Alert, Button, Card } from '$ui';
-	import { NumberInput, ScopeContextField, TextField } from '$form';
+	import { Button, Card } from '$ui';
+	import { ActionForm, NumberInput, TextField } from '$form';
 	import { ROLE_LEVEL_MAX, ROLE_LEVEL_MIN, ROLE_NAME_MAX, ROLE_NAME_MIN } from '$features/roles';
-	import { bannerText, fieldText, readFailure } from '#lib/utils/form-failure.ts';
+	import { readFailure } from '#lib/utils/form-failure.ts';
 	import type { ActionData } from './$types';
 
 	/**
@@ -20,10 +18,7 @@
 	 */
 
 	let { form }: { form: ActionData } = $props();
-	let loading = $state(false);
-
 	const failure = $derived(readFailure<{ name: string; hierarchy_level: number }>(form));
-	const err = (field: string) => fieldText(failure, field, $_);
 
 	const initial = $derived(
 		failure?.values.name !== undefined ? failure.values : { name: '', hierarchy_level: 50 }
@@ -35,8 +30,6 @@
 		name = initial.name;
 		hierarchyLevel = initial.hierarchy_level;
 	});
-
-	const bannerError = $derived(bannerText(failure, $_));
 
 	const crumbs = $derived([
 		{ label: $_('pages.crumbs.settings') },
@@ -56,51 +49,40 @@
 
 	<Card.Root padding="md" elevation="sm">
 		<Card.Content>
-			<form
-				class="stack stack-relaxed"
-				method="POST"
-				novalidate
-				use:enhance={withFocusOnFailure(() => {
-					loading = true;
-					return async ({ update }) => {
-						await update();
-						loading = false;
-					};
-				})}
+			<ActionForm
+				id="role-new-form"
+				result={form}
+				relaxed
+				guardLeave
+				submitLabel={$_('pages.roleNew.submit')}
 			>
-				<ScopeContextField />
-				<TextField
-					label="Role name"
-					hint="A short, descriptive name. Visible to members on permission requests."
-					name="name"
-					bind:value={name}
-					minlength={ROLE_NAME_MIN}
-					maxlength={ROLE_NAME_MAX}
-					required
-					error={err('name')}
-				/>
+				{#snippet children({ fieldError })}
+					<TextField
+						label="Role name"
+						hint="A short, descriptive name. Visible to members on permission requests."
+						name="name"
+						bind:value={name}
+						minlength={ROLE_NAME_MIN}
+						maxlength={ROLE_NAME_MAX}
+						required
+						error={fieldError('name')}
+					/>
 
-				<NumberInput
-					label="Hierarchy level"
-					name="hierarchy_level"
-					hint={`${ROLE_LEVEL_MIN} = highest authority. ${ROLE_LEVEL_MAX} = lowest. Used for hierarchy-scoped operations like lead reassignment and leave approval. Default 50 = middle management.`}
-					bind:value={hierarchyLevel}
-					min={ROLE_LEVEL_MIN}
-					max={ROLE_LEVEL_MAX}
-				/>
-
-				{#if bannerError}
-					<Alert variant="destructive">{bannerError}</Alert>
-				{/if}
-
-				<div class="form-footer">
+					<NumberInput
+						label="Hierarchy level"
+						name="hierarchy_level"
+						hint={`${ROLE_LEVEL_MIN} = highest authority. ${ROLE_LEVEL_MAX} = lowest. Used for hierarchy-scoped operations like lead reassignment and leave approval. Default 50 = middle management.`}
+						bind:value={hierarchyLevel}
+						min={ROLE_LEVEL_MIN}
+						max={ROLE_LEVEL_MAX}
+					/>
+				{/snippet}
+				{#snippet secondary()}
 					<Button variant="ghost" type="button" onclick={() => goto(resolve('settings/roles'))}
 						>Cancel</Button
 					>
-
-					<Button type="submit" {loading}>Create role</Button>
-				</div>
-			</form>
+				{/snippet}
+			</ActionForm>
 		</Card.Content>
 	</Card.Root>
 </div>

@@ -1,25 +1,15 @@
 <script lang="ts">
-	import TenantSaveFooter from './TenantSaveFooter.svelte';
-	import { enhance } from '$app/forms';
-	import { withFocusOnFailure } from '#lib/utils/focus-first-invalid.ts';
-	import { Select, type SelectOption } from '$form';
+	import { _ } from 'svelte-i18n';
+	import { Select, type ActionFormResult, type SelectOption } from '$form';
+	import TenantSectionForm from './TenantSectionForm.svelte';
 	import type { Tenant } from '../types';
 
 	/**
 	 * TenantDisplayPreferencesForm — locale + IANA timezone + date
-	 * format + ISO 4217 currency. Submits via SvelteKit form action.
+	 * format + ISO 4217 currency. Submits via the preferences form action.
 	 */
-	type FormResult = {
-		values?: { locale: string; time_zone: string; date_format: string; currency: string };
-		fieldKeys?: Record<string, string>;
-		fieldMessages?: Record<string, string>;
-		formErrorKey?: string | null;
-		success?: boolean;
-	};
-	type Props = { tenant: Tenant; form?: FormResult };
+	type Props = { tenant: Tenant; form?: ActionFormResult };
 	let { tenant, form }: Props = $props();
-
-	let loading = $state(false);
 
 	const localeOptions: ReadonlyArray<SelectOption> = [
 		{ value: 'en-IN', label: 'English (India)' },
@@ -48,45 +38,39 @@
 		{ value: 'AED', label: 'د.إ UAE Dirham (AED)' },
 		{ value: 'SGD', label: 'S$ Singapore Dollar (SGD)' }
 	];
-
-	const values = $derived(
-		form?.values ?? {
-			locale: tenant.locale ?? 'en-IN',
-			time_zone: tenant.time_zone ?? 'Asia/Kolkata',
-			date_format: tenant.date_format ?? 'dd-MM-yyyy',
-			currency: tenant.currency ?? 'INR'
-		}
-	);
 </script>
 
-<form
-	class="stack"
-	method="POST"
-	novalidate
-	use:enhance={withFocusOnFailure(() => {
-		loading = true;
-		return async ({ update }) => {
-			await update();
-			loading = false;
-		};
-	})}
+<TenantSectionForm
+	section="display-preferences"
+	result={form}
+	successMessage={$_('pages.tenant.form.saved.preferences')}
 >
-	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-		<Select label="Locale" name="locale" options={localeOptions} value={values.locale} />
-		<Select label="Time zone" name="time_zone" options={timeZoneOptions} value={values.time_zone} />
-		<Select
-			label="Date format"
-			name="date_format"
-			options={dateFormatOptions}
-			value={values.date_format}
-		/>
-		<Select label="Currency" name="currency" options={currencyOptions} value={values.currency} />
-	</div>
-
-	<TenantSaveFooter
-		{form}
-		{loading}
-		section="display-preferences"
-		successMessage="Preferences saved."
-	/>
-</form>
+	{#snippet children({ value })}
+		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+			<Select
+				label="Locale"
+				name="locale"
+				options={localeOptions}
+				value={String(value('locale') ?? tenant.locale ?? 'en-IN')}
+			/>
+			<Select
+				label="Time zone"
+				name="time_zone"
+				options={timeZoneOptions}
+				value={String(value('time_zone') ?? tenant.time_zone ?? 'Asia/Kolkata')}
+			/>
+			<Select
+				label="Date format"
+				name="date_format"
+				options={dateFormatOptions}
+				value={String(value('date_format') ?? tenant.date_format ?? 'dd-MM-yyyy')}
+			/>
+			<Select
+				label="Currency"
+				name="currency"
+				options={currencyOptions}
+				value={String(value('currency') ?? tenant.currency ?? 'INR')}
+			/>
+		</div>
+	{/snippet}
+</TenantSectionForm>

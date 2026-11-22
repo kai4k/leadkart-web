@@ -1,128 +1,81 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { fieldText, readFailure } from '#lib/utils/form-failure.ts';
-	import TenantSaveFooter from './TenantSaveFooter.svelte';
-	import { enhance } from '$app/forms';
-	import { withFocusOnFailure } from '#lib/utils/focus-first-invalid.ts';
-	import { TextField } from '$form';
+	import { TextField, type ActionFormResult } from '$form';
+	import TenantSectionForm from './TenantSectionForm.svelte';
 	import type { Tenant } from '../types';
 
 	/**
-	 * TenantContactForm — admin phone + postal address via SvelteKit
-	 * form action. Nested address fields use `name="address.field"`
-	 * pattern; the action handler reconstructs the nested object.
+	 * TenantContactForm — admin phone + postal address via the contact form action. Nested address
+	 * fields use the `address.field` name pattern; the action reconstructs the nested object and
+	 * `value('address.street')` reads what a refused submit typed.
 	 */
-	type FormResult = {
-		values?: {
-			phone: string;
-			address: {
-				street?: string;
-				city?: string;
-				district?: string;
-				state?: string;
-				state_code?: string;
-				pincode?: string;
-			};
-		};
-		fieldKeys?: Record<string, string>;
-		fieldMessages?: Record<string, string>;
-		formErrorKey?: string | null;
-		success?: boolean;
-	};
-	type Props = { tenant: Tenant; form?: FormResult };
+	type Props = { tenant: Tenant; form?: ActionFormResult };
 	let { tenant, form }: Props = $props();
-
-	let loading = $state(false);
-
-	const failure = $derived(readFailure(form));
-	const err = (field: string) => fieldText(failure, field, $_);
-
-	const values = $derived(
-		form?.values ?? {
-			phone: tenant.admin_phone ?? '',
-			address: {
-				street: tenant.admin_address.street ?? '',
-				city: tenant.admin_address.city ?? '',
-				district: tenant.admin_address.district ?? '',
-				state: tenant.admin_address.state ?? '',
-				state_code: tenant.admin_address.state_code ?? '',
-				pincode: tenant.admin_address.pincode ?? ''
-			}
-		}
-	);
 </script>
 
-<form
-	class="stack"
-	method="POST"
-	novalidate
-	use:enhance={withFocusOnFailure(() => {
-		loading = true;
-		return async ({ update }) => {
-			await update();
-			loading = false;
-		};
-	})}
+<TenantSectionForm
+	section="admin-contact"
+	result={form}
+	successMessage={$_('pages.tenant.form.saved.contact')}
 >
-	<TextField
-		label="Admin phone"
-		name="phone"
-		hint="The number drug-control inspectors and platform notifications reach you on."
-		type="tel"
-		autocomplete="tel"
-		value={values.phone}
-		error={err('phone')}
-	/>
-
-	<fieldset class="stack stack-tight">
-		<legend class="label text-foreground">Postal address</legend>
-
+	{#snippet children({ fieldError, value })}
 		<TextField
-			label="Street"
-			name="address.street"
-			srLabel
-			placeholder="Building, street, landmark"
-			autocomplete="street-address"
-			value={values.address.street ?? ''}
+			label="Admin phone"
+			name="phone"
+			hint="The number drug-control inspectors and platform notifications reach you on."
+			type="tel"
+			autocomplete="tel"
+			value={String(value('phone') ?? tenant.admin_phone ?? '')}
+			error={fieldError('phone')}
 		/>
 
-		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-			<TextField
-				label="City"
-				name="address.city"
-				autocomplete="address-level2"
-				value={values.address.city ?? ''}
-			/>
-			<TextField label="District" name="address.district" value={values.address.district ?? ''} />
-		</div>
+		<fieldset class="stack stack-tight">
+			<legend class="label text-foreground">Postal address</legend>
 
-		<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 			<TextField
-				label="State"
-				name="address.state"
-				autocomplete="address-level1"
-				value={values.address.state ?? ''}
+				label="Street"
+				name="address.street"
+				srLabel
+				placeholder="Building, street, landmark"
+				autocomplete="street-address"
+				value={String(value('address.street') ?? tenant.admin_address.street ?? '')}
 			/>
-			<TextField
-				label="State code"
-				name="address.state_code"
-				hint="2-digit GST state code"
-				autocomplete="off"
-				value={values.address.state_code ?? ''}
-			/>
-			<TextField
-				label="Pincode"
-				name="address.pincode"
-				autocomplete="postal-code"
-				value={values.address.pincode ?? ''}
-			/>
-		</div>
-	</fieldset>
 
-	<TenantSaveFooter
-		{form}
-		{loading}
-		section="admin-contact"
-		successMessage="Contact details saved."
-	/>
-</form>
+			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+				<TextField
+					label="City"
+					name="address.city"
+					autocomplete="address-level2"
+					value={String(value('address.city') ?? tenant.admin_address.city ?? '')}
+				/>
+				<TextField
+					label="District"
+					name="address.district"
+					value={String(value('address.district') ?? tenant.admin_address.district ?? '')}
+				/>
+			</div>
+
+			<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+				<TextField
+					label="State"
+					name="address.state"
+					autocomplete="address-level1"
+					value={String(value('address.state') ?? tenant.admin_address.state ?? '')}
+				/>
+				<TextField
+					label="State code"
+					name="address.state_code"
+					hint="2-digit GST state code"
+					autocomplete="off"
+					value={String(value('address.state_code') ?? tenant.admin_address.state_code ?? '')}
+				/>
+				<TextField
+					label="Pincode"
+					name="address.pincode"
+					autocomplete="postal-code"
+					value={String(value('address.pincode') ?? tenant.admin_address.pincode ?? '')}
+				/>
+			</div>
+		</fieldset>
+	{/snippet}
+</TenantSectionForm>
