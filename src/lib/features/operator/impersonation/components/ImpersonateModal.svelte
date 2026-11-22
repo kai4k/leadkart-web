@@ -38,8 +38,16 @@
 		} catch (err) {
 			if (!(err instanceof StartOutcomeUnknownError)) throw err;
 			// no answer in time: the store keeps looking; the dialog stays (busy) and then closes as success, or says it did not start
-			if ((await impersonation.resolveUnknownStart()) === 'started') return;
-			throw new ImpersonationRefusedError($_('shell.impersonation.notStarted'));
+			const answer = await impersonation.resolveUnknownStart();
+			if (answer === 'started') return;
+			// "did not start" is said only after a read that answered; with none, nothing is known and the banner says so
+			throw new ImpersonationRefusedError(
+				$_(
+					answer === 'unknown'
+						? 'shell.impersonation.outcomeUnknown'
+						: 'shell.impersonation.notStarted'
+				)
+			);
 		}
 		// the server already lists a session for this person (the banner shows it): nothing was posted
 		if (result.kind === 'already') throw new AlreadyImpersonatingError();

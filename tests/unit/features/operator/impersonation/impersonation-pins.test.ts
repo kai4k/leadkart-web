@@ -143,6 +143,19 @@ describe('I06: readError carries its person tag', () => {
 	});
 });
 
+describe('M-10: endError carries its person tag', () => {
+	it('A fails to end a session; B signs in on the same tab and sees no end error', async () => {
+		store = createImpersonation({ personId: () => person });
+		api.listImpersonationSessions.mockResolvedValue({ sessions: [dto('A1')] });
+		await store.reconcile();
+		api.endImpersonation.mockRejectedValue(new Error('boom'));
+		await store.end().catch(() => {});
+		expect(store.endError).toBeTruthy();
+		person = 'B';
+		expect(store.endError).toBeNull();
+	});
+});
+
 describe('I03 / I18: follow-up timers die with forget() and dispose()', () => {
 	async function unknownStart() {
 		vi.useFakeTimers();

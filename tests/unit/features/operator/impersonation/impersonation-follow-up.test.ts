@@ -109,15 +109,27 @@ describe('M-3: the 15 s and 30 s reads keep running after the modal was told "di
 		await expect(store.resolveUnknownStart()).resolves.toBe('not-started');
 	});
 
-	it('when every follow-up read fails, the waiter is not left hanging', async () => {
+	it('when every follow-up read fails, the waiter is not left hanging, and the answer is "unknown" (I-5)', async () => {
 		const { verdict } = await unknownStart();
 		api.listImpersonationSessions.mockRejectedValue(new Error('net')); // from now on
 		const answered = vi.fn();
 		void verdict.then(answered);
 		await vi.advanceTimersByTimeAsync(2_000);
-		expect(answered).toHaveBeenCalledWith('not-started');
+		expect(answered).toHaveBeenCalledWith('unknown'); // no read answered: "did not start" would be a guess
 		expect(store.checking).toBe(false);
 		expect(store.unknown).toBe(true); // the status is still unknown: the banner offers Retry
+		// asking again later is still "unknown", not "not-started"
+		await expect(store.resolveUnknownStart()).resolves.toBe('unknown');
+	});
+});
+
+describe('I-5: "did not start" needs a read that answered', () => {
+	it('one empty read, then only failures: unknown', async () => {
+		const { verdict } = await unknownStart();
+		await vi.advanceTimersByTimeAsync(100); // the first read answers: nothing listed (not believed yet)
+		api.listImpersonationSessions.mockRejectedValue(new Error('net'));
+		await vi.advanceTimersByTimeAsync(2_000);
+		await expect(verdict).resolves.toBe('unknown');
 	});
 });
 

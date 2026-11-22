@@ -244,6 +244,7 @@
 			"already": "You are already impersonating a company. End that session first.",
 			"startUnknown": "This is taking longer than expected. The session may have started — checking…",
 			"notStarted": "The session did not start. Try again.",
+			"outcomeUnknown": "We could not confirm whether the session started. Check the banner before trying again.",
 			"inProgress": "Another impersonation request is in progress.",
 			"signIn": "Sign in to continue.",
 			"changed": "The session changed. Try again.",

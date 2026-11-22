@@ -18,7 +18,11 @@ export interface UnknownOutcomeOptions {
 	sessionCount: () => number;
 }
 
-export type StartAnswer = 'started' | 'not-started';
+/**
+ * What a start came to. `not-started` needs a SUCCESSFUL read that does not list the session; when every read failed
+ * nothing is known, and the answer is `unknown` (the session may exist).
+ */
+export type StartAnswer = 'started' | 'not-started' | 'unknown';
 
 export interface UnknownOutcome {
 	/** A follow-up schedule is running: the status could not be settled yet. */
@@ -37,6 +41,7 @@ export function createUnknownOutcome(opts: UnknownOutcomeOptions): UnknownOutcom
 	let checking = $state(false);
 	let startUnknown = false; // the unknown outcome is a start (it also ends with "not started")
 	let verdictGiven = false; // the modal was told "not started"; later reads still look
+	let noRead = false; // every read failed and no session is listed: the start's outcome is not known
 	let waiters: ((r: StartAnswer) => void)[] = [];
 
 	function settleWaiters(result: StartAnswer) {
@@ -65,13 +70,16 @@ export function createUnknownOutcome(opts: UnknownOutcomeOptions): UnknownOutcom
 		},
 		onRead: (ok) => {
 			if (!ok) return;
+			noRead = false;
 			checking = false;
 			if (startUnknown) settleWaiters(opts.sessionCount() > 0 ? 'started' : 'not-started');
 			startUnknown = false;
 		},
 		// every read failed: nobody keeps waiting; the banner still says the status is unknown and offers Retry
 		onExhausted: () => {
-			settleWaiters('not-started');
+			// no read ever answered: "did not start" would be a guess on an audited security action
+			noRead = !verdictGiven && opts.sessionCount() === 0;
+			settleWaiters(noRead ? 'unknown' : 'not-started');
 			checking = false;
 			startUnknown = false;
 		}
@@ -83,6 +91,7 @@ export function createUnknownOutcome(opts: UnknownOutcomeOptions): UnknownOutcom
 		},
 		begin(isStart) {
 			checking = true;
+			noRead = false;
 			if (isStart) {
 				startUnknown = true;
 				verdictGiven = false;
@@ -91,7 +100,9 @@ export function createUnknownOutcome(opts: UnknownOutcomeOptions): UnknownOutcom
 		},
 		resolveStart() {
 			if (!startUnknown || verdictGiven)
-				return Promise.resolve<StartAnswer>(opts.sessionCount() > 0 ? 'started' : 'not-started');
+				return Promise.resolve<StartAnswer>(
+					opts.sessionCount() > 0 ? 'started' : noRead ? 'unknown' : 'not-started'
+				);
 			return new Promise((resolve) => waiters.push(resolve));
 		},
 		reset() {
@@ -100,6 +111,7 @@ export function createUnknownOutcome(opts: UnknownOutcomeOptions): UnknownOutcom
 			checking = false;
 			startUnknown = false;
 			verdictGiven = false;
+			noRead = false;
 		},
 		cancel() {
 			followUp.cancel();

@@ -40,7 +40,7 @@ export interface Impersonation {
 	/** Check the server's list, then POST a session only if it lists none. */
 	start(req: CreateImpersonationSessionRequest, targetName?: string): Promise<StartResult>;
 	/** After a start whose outcome is unknown: resolves once the follow-up reads say whether a session exists. */
-	resolveUnknownStart(): Promise<'started' | 'not-started'>;
+	resolveUnknownStart(): Promise<'started' | 'not-started' | 'unknown'>;
 	/** DELETE a session. The id is the one SHOWN when the user clicked (default: the shown one now). */
 	end(sessionId?: string): Promise<void>;
 	/** Sign-out / person change: empty the store and drop every result still on its way. */
