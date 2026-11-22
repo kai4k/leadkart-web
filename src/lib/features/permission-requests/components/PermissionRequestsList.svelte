@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
 	import { createDialogState } from '#lib/hooks/index.ts';
 	import PageHeader from '$layouts/PageHeader.svelte';
 	import { _ } from 'svelte-i18n';
@@ -90,7 +91,7 @@
 
 	function onRowClick(req: PermissionRequestDto) {
 		// not-a-guard: opens the request row; capabilities only hide the request button
-		goto(resolve('/(app)/permission-requests/[id]', { id: req.id }));
+		if (confirmLeave()) goto(resolve('/(app)/permission-requests/[id]', { id: req.id }));
 	}
 </script>
 

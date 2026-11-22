@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
 	import { ACTION, session } from '$features/auth';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -198,7 +199,7 @@
 
 	function openDetail(p: ProductDto) {
 		// not-a-guard: opens the product row; capabilities only hide create / bulk upload
-		goto(resolve('/(app)/inventory/[id]', { id: p.id }));
+		if (confirmLeave()) goto(resolve('/(app)/inventory/[id]', { id: p.id }));
 	}
 
 	// ── Keyboard nav (Linear / Superhuman convention) ─────────────────

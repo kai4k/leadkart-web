@@ -33,7 +33,30 @@ export function releaseLeaveGuards(on = true): void {
 export const guardsSilent = (): boolean => released || resetPending();
 const silent = guardsSilent;
 
+// every mounted guard's dirty check: `confirmLeave` asks when ANY says there is unsaved input
+let guards: (() => boolean)[] = [];
+
+/**
+ * Ask before a navigation the USER started that is made with `goto` (a row click, a menu item, a command-palette hit):
+ * `beforeNavigate` ignores programmatic navigations on purpose (the session guard, scope changes, filter URL updates
+ * must never be questioned), so such a handler calls this first and goes only when it resolves true. True at once when
+ * nothing is dirty; always true while a security reload is pending or after sign-out. A real `<a href>` needs none of
+ * this: the guard sees it as a `link` navigation.
+ */
+export function confirmLeave(message?: string): boolean {
+	if (guardsSilent()) return true;
+	if (!guards.some((dirty) => dirty())) return true;
+	// eslint-disable-next-line no-alert -- the platform's own blocking question is the contract of a leave guard
+	return confirm(message ?? get(_)('form.leaveGuard'));
+}
+
 export function useLeaveGuard(isDirty: () => boolean, message?: string): void {
+	$effect(() => {
+		guards = [...guards, isDirty];
+		return () => {
+			guards = guards.filter((g) => g !== isDirty);
+		};
+	});
 	beforeNavigate((navigation) => {
 		if (silent() || !isDirty()) return;
 		// the page is unloading: confirm() is not allowed there, the beforeunload prompt below speaks for it

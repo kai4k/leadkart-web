@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import {
@@ -89,7 +90,7 @@
 	);
 
 	function openDetail(o: OrderDto) {
-		goto(resolve('/(app)/orders/[id]', { id: o.id }));
+		if (confirmLeave()) goto(resolve('/(app)/orders/[id]', { id: o.id }));
 	}
 
 	// ── Bulk actions ─────────────────────────────────────────────────
@@ -238,7 +239,9 @@
 	primaryAction={{
 		label: 'New quotation',
 		icon: Plus as unknown as Component,
-		onClick: () => goto(resolve('orders/new'))
+		onClick: () => {
+			if (confirmLeave()) goto(resolve('orders/new'));
+		}
 	}}
 	{savedViews}
 	filters={{ config: filterConfig, instance: urlFilters }}

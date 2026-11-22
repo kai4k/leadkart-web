@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
 	import PageHeader from '$layouts/PageHeader.svelte';
 	import { _ } from 'svelte-i18n';
 	import { page } from '$app/state';
@@ -368,7 +369,9 @@
 		state={tableState}
 		error={listErrorCopy}
 		{selection}
-		onRowClick={(u) => goto(resolve('/(app)/settings/users/[id]', { id: u.membership_id }))}
+		onRowClick={(u) => {
+			if (confirmLeave()) goto(resolve('/(app)/settings/users/[id]', { id: u.membership_id }));
+		}}
 		{rowActions}
 	>
 		{#snippet emptyState()}

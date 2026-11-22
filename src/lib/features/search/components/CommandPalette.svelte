@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
 	import { Command } from '$ui';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -58,6 +59,7 @@
 	}
 
 	function openPerson(id: string) {
+		if (!confirmLeave()) return; // a person hit is a navigation the user started: unsaved input is asked about first
 		onOpenChange(false);
 		// not-a-guard: opens the person picked from a search hit; capabilities only choose which groups are listed
 		goto(resolve('/(app)/operator/persons/[id]', { id }));

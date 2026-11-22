@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
 	import { createDialogState } from '#lib/hooks/index.ts';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -62,7 +63,7 @@
 	}
 	function openTenant(slug: string) {
 		// not-a-guard: opens a tenant from a membership row; capabilities only hide manage / anonymise actions
-		goto(resolve(`/(app)/operator/tenants?q=${slug}`));
+		if (confirmLeave()) goto(resolve(`/(app)/operator/tenants?q=${slug}`));
 	}
 </script>
 

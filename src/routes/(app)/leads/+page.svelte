@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
 	import { ACTION, session } from '$features/auth';
 	/**
 	 * Leads list page — composes the canonical `<ResourceListPage>` shell
@@ -132,7 +133,10 @@
 	// focus when open, so j/k bubble naturally out of the row list
 	// instead of needing an `isAnyOverlayOpen` guard.
 	const nav = createKeyboardListNav<CrmLeadDto>({
-		onSelect: (lead) => goto(resolve('/(app)/leads/[id]', { id: lead.id })), // not-a-guard: opens the lead row on keyboard select
+		onSelect: (lead) => {
+			// not-a-guard: opens the lead row on keyboard select
+			if (confirmLeave()) goto(resolve('/(app)/leads/[id]', { id: lead.id }));
+		},
 		onEdit: (lead) => {
 			if (!session.canAny(...ACTION.leadManage)) return;
 			editingLead = lead;

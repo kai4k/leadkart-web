@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
 	import { _ } from 'svelte-i18n';
 	import { LogOut, User, Icon } from '$icons';
 	import { goto } from '$app/navigation';
@@ -44,7 +45,11 @@
 			<p class="truncate text-sm font-medium">{session.principal?.email ?? '—'}</p>
 		</div>
 
-		<Dropdown.Item onSelect={() => goto(resolve('settings/account/security'))}>
+		<Dropdown.Item
+			onSelect={() => {
+				if (confirmLeave()) goto(resolve('settings/account/security'));
+			}}
+		>
 			<Icon icon={User} size="sm" />
 			{$_('shell.userMenu.account')}
 		</Dropdown.Item>

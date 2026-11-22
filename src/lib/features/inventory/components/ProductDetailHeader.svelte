@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
 	import PageHeader from '$layouts/PageHeader.svelte';
 	import { ACTION, session } from '$features/auth';
 	import { Badge, Dropdown } from '$ui';
@@ -27,7 +28,7 @@
 	const active = $derived(activeBadge(product));
 	function back() {
 		// not-a-guard: the back arrow; capabilities only hide edit / delete
-		goto(resolve('inventory'));
+		if (confirmLeave()) goto(resolve('inventory'));
 	}
 </script>
 

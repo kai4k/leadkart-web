@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
 	import { ACTION, session } from '$features/auth';
 	/**
 	 * LeadsTable — table view of leads with cursor-based infinite scroll,
@@ -57,7 +58,7 @@
 
 	function openDetail(lead: CrmLeadDto) {
 		// not-a-guard: opens the lead row; capabilities only disable the inline stage / temperature pickers
-		goto(resolve('/(app)/leads/[id]', { id: lead.id }));
+		if (confirmLeave()) goto(resolve('/(app)/leads/[id]', { id: lead.id }));
 	}
 
 	function toggleAll() {

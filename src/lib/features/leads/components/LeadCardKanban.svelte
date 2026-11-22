@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
 	/**
 	 * LeadCardKanban — kanban card body for one lead.
 	 *
@@ -28,7 +29,7 @@
 	const tempVariant = $derived(temperatureMeta(lead.temperature).variant);
 
 	function open() {
-		goto(resolve('/(app)/leads/[id]', { id: lead.id }));
+		if (confirmLeave()) goto(resolve('/(app)/leads/[id]', { id: lead.id }));
 	}
 </script>
 

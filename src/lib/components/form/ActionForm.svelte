@@ -112,8 +112,25 @@
 					v && typeof v === 'object' ? (v as Record<string, unknown>)[part] : undefined,
 				result?.values
 			);
+	// A failure that names fields but leaves no control marked invalid (the form does not render them) must still say
+	// so: decided by what the DOM shows after render, not by a hand-kept list of field names.
+	let orphaned = $state(false);
+	$effect(() => {
+		const f = failure;
+		const named =
+			f && (Object.keys(f.fieldKeys).length > 0 || Object.keys(f.fieldMessages).length > 0);
+		if (!f || f.formErrorKey || !named) {
+			orphaned = false;
+			return;
+		}
+		void tick().then(() => (orphaned = !formEl?.querySelector('[aria-invalid="true"]')));
+	});
 	const banner = $derived(
-		failure?.formErrorKey ? $_(failure.formErrorKey, { values: bannerValues }) : null
+		failure?.formErrorKey
+			? $_(failure.formErrorKey, { values: bannerValues })
+			: orphaned
+				? $_('auth.errors.validation')
+				: null
 	);
 
 	// Dirty = what the form would send differs from what it held when it loaded (or was last saved).
