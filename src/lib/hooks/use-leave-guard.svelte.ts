@@ -37,7 +37,7 @@ const silent = guardsSilent;
 let guards: (() => boolean)[] = [];
 
 /**
- * Ask before a navigation the USER started that is made with `goto` (a row click, a menu item, a command-palette hit):
+ * Ask before a navigation the USER started that is made with `goto` (a list row, a kanban card, a back button; menu and command items are real links instead):
  * `beforeNavigate` ignores programmatic navigations on purpose (the session guard, scope changes, filter URL updates
  * must never be questioned), so such a handler calls this first and goes only when it resolves true. True at once when
  * nothing is dirty; always true while a security reload is pending or after sign-out. A real `<a href>` needs none of

@@ -1,7 +1,5 @@
 <script lang="ts">
-	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
 	import { Command } from '$ui';
-	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { Building2, User, Icon } from '$icons';
 	import { omniSearchQuery } from '$features/search/queries';
@@ -57,13 +55,6 @@
 	function enterTenantScope(slug: string) {
 		enterMutation.mutate({ slug }, { onSuccess: () => onOpenChange(false) });
 	}
-
-	function openPerson(id: string) {
-		if (!confirmLeave()) return; // a person hit is a navigation the user started: unsaved input is asked about first
-		onOpenChange(false);
-		// not-a-guard: opens the person picked from a search hit; capabilities only choose which groups are listed
-		goto(resolve('/(app)/operator/persons/[id]', { id }));
-	}
 </script>
 
 <Command.Dialog
@@ -118,13 +109,18 @@
 				{#if persons.length > 0}
 					<Command.Group heading="People">
 						{#each persons as p (p.id)}
-							<Command.Item value={`person:${p.id}`} onSelect={() => openPerson(p.id)}>
+							<!-- a real link: open-in-new-tab works, and the leave guard sees a `link` navigation (keyboard Enter clicks the anchor) -->
+							<Command.LinkItem
+								value={`person:${p.id}`}
+								href={resolve('/(app)/operator/persons/[id]', { id: p.id })}
+								onSelect={() => onOpenChange(false)}
+							>
 								<Icon icon={User} size="sm" class="text-muted-foreground" />
 								<span class="flex min-w-0 flex-1 flex-col">
 									<span class="truncate font-medium">{p.first_name} {p.last_name}</span>
 									<span class="caption text-muted-foreground truncate">{p.email}</span>
 								</span>
-							</Command.Item>
+							</Command.LinkItem>
 						{/each}
 					</Command.Group>
 				{/if}

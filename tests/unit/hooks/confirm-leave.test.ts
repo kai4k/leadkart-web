@@ -1,6 +1,6 @@
 /**
- * `confirmLeave()`: the question a USER-started navigation made with `goto` (a row click, the user menu's Account item,
- * a command-palette hit) asks before it goes, because `beforeNavigate` ignores programmatic navigations on purpose.
+ * `confirmLeave()`: the question a USER-started navigation made with `goto` (a list row click, a card, a back button)
+ * asks before it goes, because `beforeNavigate` ignores programmatic navigations on purpose.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { guardInRoot } from '../helpers/guard-root.svelte.ts';
