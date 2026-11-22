@@ -34,7 +34,7 @@ let target: HTMLElement;
 let component: ReturnType<typeof mount> | undefined;
 let props: { form?: Record<string, unknown> };
 beforeEach(() => {
-	vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+	vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
 	target = document.body.appendChild(document.createElement('div'));
 	props = reactiveProps<{ form?: Record<string, unknown> }>({});
 	component = mount(SigninForm, { target, props: props as never });
@@ -135,6 +135,27 @@ describe('lockout countdown', () => {
 		vi.advanceTimersByTime(3000);
 		flushSync();
 		expect(target.textContent).toContain('27 seconds');
+	});
+
+	it('counts from a deadline: one late tick of a throttled background tab catches up all the time that passed', () => {
+		remount({ ...LOCKED, retryAfterSeconds: 30 });
+		vi.setSystemTime(Date.now() + 9000); // the tab was asleep: no tick ran
+		vi.advanceTimersByTime(1000); // the one tick that finally runs
+		flushSync();
+		expect(target.textContent).toContain('20 seconds');
+	});
+
+	it('recomputes on visibilitychange, so a tab shown again is right before its next tick', () => {
+		remount({ ...LOCKED, retryAfterSeconds: 30 });
+		vi.setSystemTime(Date.now() + 12000);
+		document.dispatchEvent(new Event('visibilitychange'));
+		flushSync();
+		expect(target.textContent).toContain('18 seconds');
+		vi.setSystemTime(Date.now() + 60000);
+		document.dispatchEvent(new Event('visibilitychange'));
+		flushSync();
+		expect(target.textContent).toContain(en.auth.signin.canRetryNow);
+		expect(button().disabled).toBe(false);
 	});
 
 	it('any other result ends a countdown at once', async () => {

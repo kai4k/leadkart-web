@@ -30,27 +30,39 @@
 	// the countdown ran out: the lockout line gives way to "you can try again now"
 	let elapsed = $state(false);
 	let timer: ReturnType<typeof setInterval> | undefined;
+	// The wait is a DEADLINE, not a count of ticks: a background tab throttles its timers (a tick may come minutes late),
+	// so every tick and every return to the tab re-reads the clock.
+	let deadline = 0;
 	const stop = () => {
 		clearInterval(timer);
 		timer = undefined;
 	};
 	onDestroy(stop);
 
+	function refresh() {
+		if (deadline === 0) return;
+		remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+		if (remaining === 0) {
+			stop();
+			deadline = 0;
+			elapsed = true;
+		}
+	}
+
 	/** (Re)start the countdown: one interval at a time, however many 423s arrive. */
 	function begin(seconds: number) {
 		stop();
 		elapsed = false;
 		remaining = seconds;
+		deadline = seconds > 0 ? Date.now() + seconds * 1000 : 0;
 		if (seconds <= 0) return;
-		timer = setInterval(() => {
-			remaining = Math.max(0, remaining - 1);
-			if (remaining === 0) {
-				stop();
-				elapsed = true;
-			}
-		}, 1000);
+		timer = setInterval(refresh, 1000);
 	}
-	onMount(() => begin(remaining));
+	onMount(() => {
+		begin(remaining);
+		document.addEventListener('visibilitychange', refresh);
+		return () => document.removeEventListener('visibilitychange', refresh);
+	});
 
 	/** After the page applied the result: a lockout starts (or restarts) the countdown, any other result ends it. */
 	function onResult(result: ActionResult) {
