@@ -16,6 +16,7 @@ vi.mock('#lib/features/operator/impersonation/api', () => api);
 import {
 	createImpersonation,
 	DeadlineError,
+	StartOutcomeUnknownError,
 	type Impersonation
 } from '#lib/features/operator/impersonation/stores/impersonation.svelte.ts';
 import {
@@ -52,7 +53,7 @@ beforeEach(() => {
 	person = 'A';
 	api.listImpersonationSessions.mockResolvedValue({ sessions: [] });
 	api.endImpersonation.mockResolvedValue(undefined);
-	store = createImpersonation({ personId: () => person, deadlineMs: 40 });
+	store = createImpersonation({ personId: () => person, deadlineMs: 40, mutationDeadlineMs: 40 });
 });
 afterEach(() => {
 	store.dispose();
@@ -140,7 +141,7 @@ describe('state belongs to the signed-in person (mutant: no person tag)', () => 
 		person = 'B'; // the next person signs in on the same tab; the SERVER STILL LISTS A1 (the old test hid this)
 		expect(store.active).toBeNull();
 		expect(store.targetName).toBeNull();
-		expect(store.error).toBeNull();
+		expect(store.readError).toBeNull();
 		await expect(store.end()).resolves.toBeUndefined(); // nothing shown, nothing to end
 		expect(api.endImpersonation).not.toHaveBeenCalled();
 
@@ -227,7 +228,7 @@ describe('start (mutant: the guard only at call time)', () => {
 		api.startImpersonation.mockRejectedValueOnce(new Error('denied'));
 		await expect(store.start(START)).rejects.toThrow('denied');
 		expect(store.active).toBeNull();
-		expect(store.status).toBe('error');
+		expect(store.status).toBe('idle');
 	});
 
 	it('refused while another start or end is queued; resolves "already" while one is shown', async () => {
@@ -267,7 +268,7 @@ describe('end (mutant: the id read at run time)', () => {
 		api.endImpersonation.mockRejectedValueOnce(new Error('boom'));
 		await expect(store.end('S1')).rejects.toThrow('boom');
 		expect(store.active?.session_id).toBe('S1');
-		expect(store.error).toBeTruthy();
+		expect(store.endError).toBeTruthy();
 		api.listImpersonationSessions.mockResolvedValue({ sessions: [] });
 		const a = store.end('S1');
 		const b = store.end('S1');
@@ -287,20 +288,22 @@ describe('every operation has a deadline (mutant: none)', () => {
 		expect(store.active?.session_id).toBe('A1');
 	});
 
-	it('a POST that never settles fails with a DeadlineError and later starts are not refused for ever', async () => {
+	it('a POST that never settles is an UNKNOWN outcome, not a failure: later starts are not refused for ever', async () => {
 		api.startImpersonation.mockReturnValueOnce(new Promise(() => {}));
-		await expect(store.start(START)).rejects.toBeInstanceOf(DeadlineError);
+		await expect(store.start(START)).rejects.toBeInstanceOf(StartOutcomeUnknownError);
 		expect(store.status).not.toBe('mutating');
+		expect(store.checking).toBe(true);
 		api.startImpersonation.mockResolvedValueOnce(created('N'));
 		await expect(store.start(START)).resolves.toEqual({ kind: 'started' });
 	});
 
-	it('a DELETE that never settles fails; the session stays shown with an error', async () => {
+	it('a DELETE that never settles: the session stays shown, no end error, the store is checking', async () => {
 		await showing('S1');
 		api.endImpersonation.mockReturnValueOnce(new Promise(() => {}));
 		await expect(store.end('S1')).rejects.toBeInstanceOf(DeadlineError);
 		expect(store.active?.session_id).toBe('S1');
-		expect(store.error).toBeTruthy();
+		expect(store.endError).toBeNull();
+		expect(store.checking).toBe(true);
 	});
 
 	it('a late answer from a timed-out read does not overwrite what came after it', async () => {

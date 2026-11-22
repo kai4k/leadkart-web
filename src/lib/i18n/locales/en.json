@@ -234,7 +234,18 @@
 			"end": "End impersonation",
 			"endLabel": "End impersonation session",
 			"retry": "Retry",
+			"endRetry": "Try ending again",
+			"refreshFailed": "Could not refresh the session status.",
+			"checking": "Checking whether an impersonation session is active…",
 			"unknown": "Could not check impersonation status.",
+			"already": "You are already impersonating a company. End that session first.",
+			"startUnknown": "This is taking longer than expected. The session may have started — checking…",
+			"notStarted": "The session did not start. Try again.",
+			"inProgress": "Another impersonation request is in progress.",
+			"signIn": "Sign in to continue.",
+			"changed": "The session changed. Try again.",
+			"readFailed": "Could not load impersonation sessions.",
+			"endFailed": "Could not end the impersonation session.",
 			"more": "+{count} more"
 		},
 		"footer": {

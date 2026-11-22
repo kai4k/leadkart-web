@@ -1,43 +1,39 @@
 import { page } from '$app/state';
+import { get } from 'svelte/store';
+import { _ } from 'svelte-i18n';
 import { SvelteDate, SvelteSet } from 'svelte/reactivity';
 import { startImpersonation, endImpersonation, listImpersonationSessions } from '../api';
-import { ApiError, describeError } from '$api/errors';
+import { describeError } from '$api/errors';
 import {
-	IMPERSONATION_SESSION_KEY as LEGACY_SESSION_KEY,
-	IMPERSONATION_SIGNAL_KEY as SIGNAL_KEY
-} from '#lib/utils/impersonation-session-key.ts';
+	BFF_MAX_UPSTREAM_HOPS,
+	DEFAULT_READ_TIMEOUT_MS,
+	DEFAULT_UPSTREAM_TIMEOUT_MS
+} from '$api/timeouts';
 import type { ImpersonationSessionDto, CreateImpersonationSessionRequest } from '../types';
+import { announceChange, clearLegacyId, listenForChanges } from './cross-tab';
+import { createExpiryTimer, createFollowUp } from './schedule';
+import { ImpersonationRefusedError, StartOutcomeUnknownError } from './errors';
+import { createSerialQueue, DeadlineError, withDeadline } from './serial-queue';
+
+export { DeadlineError } from './serial-queue';
+export {
+	AlreadyImpersonatingError,
+	ImpersonationRefusedError,
+	StartOutcomeUnknownError
+} from './errors';
 
 type ImpersonationStatus = 'idle' | 'loading' | 'active' | 'mutating' | 'error';
 
 /** `started`: a session was opened. `already`: the server lists one for this person (it is shown), nothing was posted. */
 export type StartResult = { kind: 'started' } | { kind: 'already' };
 
-/** The UI's rendering of `already` for a form: an error whose message is the one line. */
-export class AlreadyImpersonatingError extends ApiError {
-	constructor() {
-		super();
-		this.name = 'AlreadyImpersonatingError';
-		this.message = 'You are already impersonating a company. End that session first.';
-	}
-}
-
-/** A refusal the store itself makes (nobody signed in, the state changed, the status could not be checked). */
-export class ImpersonationRefusedError extends ApiError {
-	constructor(message: string) {
-		super();
-		this.name = 'ImpersonationRefusedError';
-		this.message = message;
-	}
-}
-
-/** An operation did not settle inside its deadline: treated as failed, and a late answer is dropped. */
-export class DeadlineError extends Error {
-	constructor() {
-		super('The request took too long.');
-		this.name = 'DeadlineError';
-	}
-}
+/**
+ * A MUTATION is allowed longer than the BFF can spend on one browser request (3 upstream hops of 10 s plus a margin
+ * that clears the read deadline): a write the server committed is never reported as timed out (`api/timeouts.ts`).
+ * Past it the outcome is UNKNOWN, not failed.
+ */
+export const MUTATION_DEADLINE_MS =
+	BFF_MAX_UPSTREAM_HOPS * DEFAULT_UPSTREAM_TIMEOUT_MS + DEFAULT_READ_TIMEOUT_MS;
 
 export interface Impersonation {
 	/** The session shown: the first the server listed for the signed-in person, or null. */
@@ -45,67 +41,78 @@ export interface Impersonation {
 	/** How many more sessions the server lists for this person (the banner says "+N more"). */
 	readonly more: number;
 	readonly status: ImpersonationStatus;
-	readonly error: string | null;
-	/** The last read failed and nothing is shown: the status is unknown, not "none". */
+	/** The last READ failed (the status could not be checked). Retry reads again; it never ends anything. */
+	readonly readError: string | null;
+	/** The last END failed for the session shown. Trying again ends that session. */
+	readonly endError: string | null;
+	/** Nothing is shown and the status could not be checked, or a mutation's outcome is still being checked. */
 	readonly unknown: boolean;
-	/** The company's name, in memory only (the DTO carries an id): after a reload the banner says "a company". */
+	/** A start or end did not answer in time: follow-up reads are running until one tells the truth. */
+	readonly checking: boolean;
+	/** The company's name, in memory only (the DTO carries an id): the banner says "a company" without it. */
 	readonly targetName: string | null;
 	/** Read the server's list for the signed-in person. Reads queued behind each other collapse into one. */
 	reconcile(): Promise<void>;
 	/** Check the server's list, then POST a session only if it lists none. */
 	start(req: CreateImpersonationSessionRequest, targetName?: string): Promise<StartResult>;
+	/** After a start whose outcome is unknown: resolves once the follow-up reads say whether a session exists. */
+	resolveUnknownStart(): Promise<'started' | 'not-started'>;
 	/** DELETE a session. The id is the one SHOWN when the user clicked (default: the shown one now). */
 	end(sessionId?: string): Promise<void>;
 	/** Sign-out / person change: empty the store and drop every result still on its way. */
 	forget(): void;
-	/** Stop listening to other tabs (tests, and any caller that owns an instance). */
+	/** Stop listening to other tabs and cancel timers (tests, and any caller that owns an instance). */
 	dispose(): void;
 }
 
 export interface ImpersonationOptions {
 	/** The signed-in person (null: nobody). State is tagged with it; a result for another person is dropped. */
 	personId: () => string | null;
-	/** Longest an operation may take before it counts as failed. Default 30 s. */
+	/** Longest a READ may take before it counts as failed. Default: the client read timeout. */
 	deadlineMs?: number;
+	/** Longest a START or END may take before its outcome is UNKNOWN. Default: above the BFF's worst case. */
+	mutationDeadlineMs?: number;
+	/** Follow-up read schedule after an unknown outcome (ms). */
+	followUpDelaysMs?: readonly number[];
 	now?: () => number;
 }
-
-const MAX_TIMER = 2 ** 31 - 1;
 
 /**
  * Impersonation store: what the SERVER lists for the signed-in person, and nothing the client remembers. A security
  * indicator, so:
  *
  *   - The server's list (`GET /v1/platform/impersonation/sessions`) is the only truth. No session id is kept across
- *     reads, sign-ins or tabs; localStorage holds a pure cross-tab SIGNAL (a changing value, no id).
- *   - State is tagged with the person it was read for. A person change or `forget()` empties it, and a result that
- *     arrives for another person (or after `forget()`) is dropped, so one person's banner, tenant name or End can never
- *     reach the next person who signs in on the same tab.
- *   - ONE serial queue (no two requests of this store in flight together); `status` is derived.
- *   - `start` re-checks when it RUNS (a fresh read: any listed session means no POST); `end` uses the id captured at
- *     click time.
- *   - Every operation has a deadline: a request that never settles fails, the queue goes on, a late answer is dropped.
+ *     reads, sign-ins or tabs (`cross-tab.ts`: a changing signal, no id).
+ *   - State is tagged with the person it was read for. A person change or `forget()` empties it and abandons the old
+ *     person's queue; a result that arrives for another person is dropped.
+ *   - ONE serial queue (`serial-queue.ts`); `status` is derived.
+ *   - `start` re-checks when it RUNS; `end` uses the id captured at click time.
+ *   - Reads have a deadline; a mutation has a longer one (`MUTATION_DEADLINE_MS`) and past it the outcome is UNKNOWN:
+ *     follow-up reads (`schedule.ts`) run until one answers, and a late answer of the timed-out request is dropped.
  *   - When in doubt the indicator is SHOWN: a successful start shows a provisional session before the follow-up read,
- *     and a failed read never hides a shown session of the same person. At `expires_at` a read is queued (the client
- *     clock never hides the banner on its own).
+ *     and a failed read never hides a shown session of the same person. At the earliest `expires_at` a read is queued.
  */
 export function createImpersonation(opts: ImpersonationOptions): Impersonation {
-	const deadlineMs = opts.deadlineMs ?? 30_000;
+	const readDeadlineMs = opts.deadlineMs ?? DEFAULT_READ_TIMEOUT_MS;
+	const mutationDeadlineMs = opts.mutationDeadlineMs ?? MUTATION_DEADLINE_MS;
 	const now = opts.now ?? Date.now;
 
 	let sessions = $state<ImpersonationSessionDto[]>([]);
 	let owner = $state<string | null>(null); // the person the state below was read for
-	let error = $state<string | null>(null);
+	let readError = $state<string | null>(null);
+	let endError = $state<string | null>(null);
 	let readFailed = $state(false);
+	let checking = $state(false);
+	let startUnknown = false; // the unknown outcome is a start (it also ends with "not started")
+	let waiters: ((r: 'started' | 'not-started') => void)[] = [];
 	let named = $state<{ sessionId: string; name: string } | null>(null);
 	let epoch = 0; // bumped by forget(): results of older operations are dropped
 
-	let tail: Promise<void> = Promise.resolve();
+	const queue = createSerialQueue();
 	let mutations = $state(0);
 	let reads = $state(0);
 	let queuedRead: Promise<void> | null = null;
 	const ending = new SvelteSet<string>();
-	let expiryTimer: ReturnType<typeof setTimeout> | undefined;
 	let legacyCleared = false;
 
 	// plain reads, not $derived: they depend on the signed-in person, which a caller supplies (page.data is reactive,
@@ -119,11 +126,13 @@ export function createImpersonation(opts: ImpersonationOptions): Impersonation {
 				? 'loading'
 				: shown()
 					? 'active'
-					: isMine() && error
+					: isMine() && readError
 						? 'error'
 						: 'idle';
 
 	const stale = (person: string, e: number) => e !== epoch || opts.personId() !== person;
+
+	const expiry = createExpiryTimer(() => void reconcile(), now);
 
 	/** The state belongs to `person`: another person's is thrown away. */
 	function adopt(person: string) {
@@ -131,63 +140,54 @@ export function createImpersonation(opts: ImpersonationOptions): Impersonation {
 		owner = person;
 		sessions = [];
 		named = null;
-		error = null;
+		readError = null;
+		endError = null;
 		readFailed = false;
-		armExpiry();
+		expiry.arm(sessions);
 	}
 
-	function signal() {
-		try {
-			window.localStorage.setItem(SIGNAL_KEY, `${now()}.${Math.random().toString(36).slice(2)}`);
-		} catch {
-			/* storage blocked: other tabs catch up on focus */
+	function settleWaiters(result: 'started' | 'not-started') {
+		const w = waiters;
+		waiters = [];
+		for (const resolve of w) resolve(result);
+	}
+
+	const followUp = createFollowUp({
+		delays: opts.followUpDelaysMs,
+		read: async (index) => {
+			const e = epoch;
+			await reconcile();
+			if (e !== epoch) return true; // forgotten: nothing left to look for
+			if (readFailed) return false;
+			// a start's absence is only believed on the second read: the POST may still be landing
+			if (startUnknown && sessions.length === 0 && index < 1) return false;
+			return true;
+		},
+		onRead: (ok) => {
+			if (!ok) return;
+			checking = false;
+			if (startUnknown) settleWaiters(sessions.length > 0 ? 'started' : 'not-started');
+			startUnknown = false;
 		}
-	}
-
-	function armExpiry() {
-		clearTimeout(expiryTimer);
-		expiryTimer = undefined;
-		const s = sessions[0];
-		if (!s || typeof window === 'undefined') return;
-		const at = Date.parse(s.expires_at);
-		if (!Number.isFinite(at)) return;
-		// a read, never a hide; if the server still lists it (clock skew) the next read re-arms a later one
-		const delay = Math.min(Math.max(at - now() + 1000, 5000), MAX_TIMER);
-		expiryTimer = setTimeout(() => void reconcile(), delay);
-	}
-
-	function within<T>(p: Promise<T>): Promise<T> {
-		return new Promise<T>((resolve, reject) => {
-			const timer = setTimeout(() => reject(new DeadlineError()), deadlineMs);
-			p.then(
-				(v) => {
-					clearTimeout(timer);
-					resolve(v);
-				},
-				(e: unknown) => {
-					clearTimeout(timer);
-					reject(e);
-				}
-			);
-		});
-	}
+	});
 
 	function enqueue<T>(kind: 'read' | 'mutation', run: () => Promise<T>): Promise<T> {
+		const e = epoch;
 		if (kind === 'read') reads++;
 		else mutations++;
-		const op = tail.then(async () => {
+		return queue.run(async () => {
+			// a read left in the abandoned chain of a forgotten person must not run as the NEXT person
+			if (kind === 'read' && e !== epoch) return undefined as T;
 			try {
 				return await run();
 			} finally {
-				if (kind === 'read') reads--;
-				else mutations--;
+				// forget() already zeroed the counters: an abandoned operation does not count against the next person
+				if (e === epoch) {
+					if (kind === 'read') reads--;
+					else mutations--;
+				}
 			}
 		});
-		tail = op.then(
-			() => undefined,
-			() => undefined
-		);
-		return op;
 	}
 
 	/** One read, inside the queue. Never throws: a failure keeps what is shown and records the message. */
@@ -196,19 +196,19 @@ export function createImpersonation(opts: ImpersonationOptions): Impersonation {
 		if (!person) return;
 		const e = epoch;
 		try {
-			const { sessions: list } = await within(listImpersonationSessions());
+			const { sessions: list } = await withDeadline(listImpersonationSessions(), readDeadlineMs);
 			if (stale(person, e)) return;
 			adopt(person);
 			sessions = list;
-			error = null;
+			readError = null;
 			readFailed = false;
 			const keep = named?.sessionId;
 			if (keep && !list.some((s) => s.session_id === keep)) named = null;
-			armExpiry();
+			expiry.arm(sessions);
 		} catch (err) {
 			if (stale(person, e)) return;
 			adopt(person);
-			error = describeError(err, { fallback: 'Failed to load impersonation sessions' });
+			readError = describeError(err, { fallback: get(_)('shell.impersonation.readFailed') });
 			readFailed = true;
 		}
 	}
@@ -220,43 +220,46 @@ export function createImpersonation(opts: ImpersonationOptions): Impersonation {
 			queuedRead = null;
 			if (!legacyCleared) {
 				legacyCleared = true;
-				try {
-					window.localStorage.removeItem(LEGACY_SESSION_KEY); // an id remembered by an older build
-				} catch {
-					/* best effort */
-				}
+				clearLegacyId();
 			}
 			await read();
 		});
 		return queuedRead;
 	}
 
+	/** A mutation's deadline passed: whatever happened server-side, look until the list says. */
+	function outcomeUnknown(isStart: boolean) {
+		checking = true;
+		if (isStart) startUnknown = true;
+		followUp.start();
+	}
+
 	function start(req: CreateImpersonationSessionRequest, name?: string): Promise<StartResult> {
 		if (mutations > 0)
 			return Promise.reject(
-				new ImpersonationRefusedError('Another impersonation request is in progress')
+				new ImpersonationRefusedError(get(_)('shell.impersonation.inProgress'))
 			);
 		if (shown()) return Promise.resolve({ kind: 'already' });
 		const person = opts.personId(); // who clicked
 		const clicked = epoch;
 		return enqueue('mutation', async (): Promise<StartResult> => {
 			if (!person || stale(person, clicked))
-				throw new ImpersonationRefusedError('Sign in to continue.');
+				throw new ImpersonationRefusedError(get(_)('shell.impersonation.signIn'));
 			const e = clicked;
 			// checked when the operation RUNS: another tab (or a read ahead of us) may have opened a session
 			await read();
-			if (stale(person, e)) throw new ImpersonationRefusedError('The session changed. Try again.');
+			if (stale(person, e))
+				throw new ImpersonationRefusedError(get(_)('shell.impersonation.changed'));
 			if (readFailed)
-				throw new ImpersonationRefusedError(error ?? 'Could not check impersonation status.');
+				throw new ImpersonationRefusedError(readError ?? get(_)('shell.impersonation.readFailed'));
 			if (sessions.length > 0) return { kind: 'already' };
 			let created;
 			try {
-				created = await within(startImpersonation(req));
+				created = await withDeadline(startImpersonation(req), mutationDeadlineMs);
 			} catch (err) {
-				if (!stale(person, e)) {
-					error = describeError(err, { fallback: 'Failed to start impersonation' });
-					// a timed-out POST may still have landed: look again once the queue is free
-					if (err instanceof DeadlineError) queueMicrotask(() => void reconcile());
+				if (err instanceof DeadlineError) {
+					if (!stale(person, e)) outcomeUnknown(true);
+					throw new StartOutcomeUnknownError();
 				}
 				throw err;
 			}
@@ -273,13 +276,19 @@ export function createImpersonation(opts: ImpersonationOptions): Impersonation {
 				}
 			];
 			named = name ? { sessionId: created.session_id, name } : null;
-			error = null;
+			readError = null;
+			endError = null;
 			readFailed = false;
-			signal();
-			armExpiry();
+			announceChange(now);
+			expiry.arm(sessions);
 			await read(); // refines it; a failed read keeps the provisional session shown
 			return { kind: 'started' };
 		});
+	}
+
+	function resolveUnknownStart(): Promise<'started' | 'not-started'> {
+		if (!startUnknown) return Promise.resolve(sessions.length > 0 ? 'started' : 'not-started');
+		return new Promise((resolve) => waiters.push(resolve));
 	}
 
 	function end(sessionId?: string): Promise<void> {
@@ -292,18 +301,19 @@ export function createImpersonation(opts: ImpersonationOptions): Impersonation {
 			try {
 				if (!person || stale(person, e)) return; // another person is signed in now: never send this id as them
 				try {
-					await within(endImpersonation(id));
+					await withDeadline(endImpersonation(id), mutationDeadlineMs);
 				} catch (err) {
-					if (!stale(person, e))
-						error = describeError(err, { fallback: 'Failed to end impersonation' });
+					if (stale(person, e)) throw err;
+					if (err instanceof DeadlineError) outcomeUnknown(false);
+					else endError = describeError(err, { fallback: get(_)('shell.impersonation.endFailed') });
 					throw err;
 				}
 				if (stale(person, e)) return;
 				sessions = sessions.filter((s) => s.session_id !== id);
 				if (named?.sessionId === id) named = null;
-				error = null;
-				signal();
-				armExpiry();
+				endError = null;
+				announceChange(now);
+				expiry.arm(sessions);
 				await read();
 			} finally {
 				ending.delete(id);
@@ -313,19 +323,25 @@ export function createImpersonation(opts: ImpersonationOptions): Impersonation {
 
 	function forget() {
 		epoch++;
-		clearTimeout(expiryTimer);
-		expiryTimer = undefined;
+		queue.abandon(); // the old person's in-flight operations cannot hold up the next person
+		queuedRead = null;
+		mutations = 0;
+		reads = 0;
+		followUp.cancel();
+		expiry.clear();
+		settleWaiters('not-started');
 		sessions = [];
 		owner = null;
-		error = null;
+		readError = null;
+		endError = null;
 		readFailed = false;
+		checking = false;
+		startUnknown = false;
 		named = null;
+		ending.clear();
 	}
 
-	const onStorage = (ev: StorageEvent) => {
-		if (ev.key === null || ev.key === SIGNAL_KEY) void reconcile();
-	};
-	if (typeof window !== 'undefined') window.addEventListener('storage', onStorage);
+	const stopListening = listenForChanges(() => void reconcile());
 
 	return {
 		get active() {
@@ -337,11 +353,17 @@ export function createImpersonation(opts: ImpersonationOptions): Impersonation {
 		get status() {
 			return statusNow();
 		},
-		get error() {
-			return isMine() ? error : null;
+		get readError() {
+			return isMine() ? readError : null;
+		},
+		get endError() {
+			return isMine() ? endError : null;
 		},
 		get unknown() {
-			return isMine() && readFailed && sessions.length === 0;
+			return isMine() && sessions.length === 0 && (readFailed || checking);
+		},
+		get checking() {
+			return isMine() && checking;
 		},
 		get targetName() {
 			const a = shown();
@@ -349,11 +371,13 @@ export function createImpersonation(opts: ImpersonationOptions): Impersonation {
 		},
 		reconcile,
 		start,
+		resolveUnknownStart,
 		end,
 		forget,
 		dispose() {
-			clearTimeout(expiryTimer);
-			if (typeof window !== 'undefined') window.removeEventListener('storage', onStorage);
+			followUp.cancel();
+			expiry.clear();
+			stopListening();
 		}
 	};
 }

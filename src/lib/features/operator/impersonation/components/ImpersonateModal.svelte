@@ -2,7 +2,13 @@
 	import { z } from 'zod';
 	import { Alert } from '$ui';
 	import { FormDialog, NumberInput, TextareaField } from '#lib/components/form/index.ts';
-	import { AlreadyImpersonatingError, impersonation } from '../stores/impersonation.svelte';
+	import { _ } from 'svelte-i18n';
+	import {
+		AlreadyImpersonatingError,
+		impersonation,
+		ImpersonationRefusedError,
+		StartOutcomeUnknownError
+	} from '../stores/impersonation.svelte';
 	// Type-only; deliberately bypasses the tenants barrel to avoid a cycle
 	// (tenants barrel -> TenantsList -> impersonation -> ImpersonateModal -> tenants).
 	import type { TenantDto } from '../../tenants/types';
@@ -19,14 +25,22 @@
 	async function onSubmit(values: z.output<typeof impersonateFormSchema>) {
 		// Opened only with a tenant; a missing one is a no-op, never a request without a target.
 		if (!tenant) return;
-		const result = await impersonation.start(
-			{
-				target_tenant_id: tenant.id,
-				reason: values.reason,
-				duration_minutes: values.duration_minutes
-			},
-			tenant.display_name
-		);
+		let result;
+		try {
+			result = await impersonation.start(
+				{
+					target_tenant_id: tenant.id,
+					reason: values.reason,
+					duration_minutes: values.duration_minutes
+				},
+				tenant.display_name
+			);
+		} catch (err) {
+			if (!(err instanceof StartOutcomeUnknownError)) throw err;
+			// no answer in time: the store keeps looking; the dialog stays (busy) and then closes as success, or says it did not start
+			if ((await impersonation.resolveUnknownStart()) === 'started') return;
+			throw new ImpersonationRefusedError($_('shell.impersonation.notStarted'));
+		}
 		// the server already lists a session for this person (the banner shows it): nothing was posted
 		if (result.kind === 'already') throw new AlreadyImpersonatingError();
 	}
@@ -45,6 +59,9 @@
 	formId="impersonate-form"
 >
 	{#snippet fields(form)}
+		{#if impersonation.checking}
+			<Alert variant="info">{$_('shell.impersonation.startUnknown')}</Alert>
+		{/if}
 		<Alert variant="warning">
 			Every action is auditable to you, with the reason below. End the session as soon as your task
 			is complete.

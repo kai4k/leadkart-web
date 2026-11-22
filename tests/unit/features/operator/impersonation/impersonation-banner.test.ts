@@ -11,7 +11,9 @@ const store = vi.hoisted(() => ({
 		status: 'active',
 		targetName: null as string | null,
 		more: 0,
-		error: null as string | null,
+		readError: null as string | null,
+		endError: null as string | null,
+		checking: false,
 		unknown: false,
 		can: true,
 		end: vi.fn(),
@@ -19,6 +21,7 @@ const store = vi.hoisted(() => ({
 		reconcile: vi.fn(() => Promise.resolve())
 	}
 }));
+vi.mock('$app/state', () => ({ page: { data: { capabilities: { person_id: 'P1' } } } }));
 vi.mock('#lib/features/operator/impersonation/stores/impersonation.svelte.ts', () => ({
 	impersonation: {
 		get active() {
@@ -33,8 +36,14 @@ vi.mock('#lib/features/operator/impersonation/stores/impersonation.svelte.ts', (
 		get more() {
 			return store.state.more;
 		},
-		get error() {
-			return store.state.error;
+		get readError() {
+			return store.state.readError;
+		},
+		get endError() {
+			return store.state.endError;
+		},
+		get checking() {
+			return store.state.checking;
 		},
 		get unknown() {
 			return store.state.unknown;
@@ -67,7 +76,9 @@ beforeEach(() => {
 	store.state.status = 'active';
 	store.state.targetName = null;
 	store.state.more = 0;
-	store.state.error = null;
+	store.state.readError = null;
+	store.state.endError = null;
+	store.state.checking = false;
 	store.state.unknown = false;
 	store.state.can = true;
 	store.state.end.mockResolvedValue(undefined);
@@ -87,9 +98,12 @@ const render = () => {
 	flushSync();
 };
 const endButton = () =>
-	document.querySelector<HTMLButtonElement>(
+	(document.querySelector<HTMLButtonElement>(
 		`button[aria-label="${en.shell.impersonation.endLabel}"]`
-	)!;
+	) ??
+		[...document.querySelectorAll<HTMLButtonElement>('button')].find(
+			(b) => b.textContent?.trim() === en.shell.impersonation.endRetry
+		))!;
 
 describe('ImpersonationBanner', () => {
 	it('names the company when the store has the name of the active session', () => {
@@ -120,13 +134,29 @@ describe('ImpersonationBanner', () => {
 		expect(store.state.end).toHaveBeenCalledWith('A'); // the id shown at click time
 	});
 
-	it('a failed End is rendered in the banner and the button becomes Retry', () => {
-		store.state.error = 'Could not end the session.';
+	it('a failed End is rendered in the banner and the button says Try ending again', () => {
+		store.state.endError = 'Could not end the session.';
 		render();
 		expect(document.querySelector('[role="alert"]')!.textContent).toBe(
 			'Could not end the session.'
 		);
-		expect(endButton().textContent).toContain(en.shell.impersonation.retry);
+		expect(endButton().textContent).toContain(en.shell.impersonation.endRetry);
+	});
+
+	it('a failed READ while a session is shown: the End button still says End and ends; Retry reads and never ends', async () => {
+		store.state.readError = 'Network down';
+		render();
+		expect(endButton().textContent).toContain(en.shell.impersonation.end);
+		expect(endButton().getAttribute('aria-label')).toBe(en.shell.impersonation.endLabel);
+		const retry = [...document.querySelectorAll('button')].find(
+			(b) => b.textContent?.trim() === en.shell.impersonation.retry
+		)!;
+		store.state.reconcile.mockClear();
+		retry.click();
+		flushSync();
+		await tick();
+		expect(store.state.reconcile).toHaveBeenCalledTimes(1);
+		expect(store.state.end).not.toHaveBeenCalled();
 	});
 
 	it('says how many more sessions the server lists', () => {

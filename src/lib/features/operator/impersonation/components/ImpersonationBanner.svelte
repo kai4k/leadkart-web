@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onDestroy, untrack } from 'svelte';
+	import { page } from '$app/state';
 	import { _ } from 'svelte-i18n';
 	import { Button } from '$ui';
 	import { Eye, LogOut, Icon } from '$icons';
@@ -16,8 +17,12 @@
 	// (the provider) — TanStack Query v6 uses getContext() to find the client.
 	// Only a person who can impersonate asks: nobody else has a session to show, and no read is made for them.
 	const canImpersonate = $derived(session.can(P.platformImpersonationManage));
+	// A different person on the same mounted layout (no unmount in between) is read for at once, not on the next focus.
+	const personId = $derived(
+		(page.data as { capabilities?: { person_id?: string } } | undefined)?.capabilities?.person_id
+	);
 	$effect(() => {
-		if (canImpersonate) {
+		if (canImpersonate && personId) {
 			untrack(() => impersonation.reconcile()).catch(() => {});
 		}
 	});
@@ -89,8 +94,15 @@
 				>{$_('shell.impersonation.more', { values: { count: impersonation.more } })}</span
 			>
 		{/if}
-		{#if impersonation.error}
-			<span class="ms-2 font-medium" role="alert">{impersonation.error}</span>
+		{#if impersonation.endError}
+			<span class="ms-2 font-medium" role="alert">{impersonation.endError}</span>
+		{:else if impersonation.readError}
+			<span class="ms-2">
+				{$_('shell.impersonation.refreshFailed')}
+				<Button variant="link" size="sm" onclick={retryRead}
+					>{$_('shell.impersonation.retry')}</Button
+				>
+			</span>
 		{/if}
 		{#snippet action({ stale })}
 			<Button
@@ -99,16 +111,22 @@
 				loading={ending}
 				aria-disabled={stale ? 'true' : undefined}
 				onclick={stale ? undefined : () => endNow(shown.session_id)}
-				aria-label={$_('shell.impersonation.endLabel')}
+				aria-label={impersonation.endError ? undefined : $_('shell.impersonation.endLabel')}
 			>
 				<Icon icon={LogOut} size="sm" />
-				{impersonation.error ? $_('shell.impersonation.retry') : $_('shell.impersonation.end')}
+				{impersonation.endError
+					? $_('shell.impersonation.endRetry')
+					: $_('shell.impersonation.end')}
 			</Button>
 		{/snippet}
 	</ContextBanner>
 {:else if canImpersonate && impersonation.unknown}
 	<ContextBanner tone="warning" icon={Eye} label={$_('shell.impersonation.region')}>
-		<span class="font-medium">{$_('shell.impersonation.unknown')}</span>
+		<span class="font-medium"
+			>{impersonation.checking
+				? $_('shell.impersonation.checking')
+				: $_('shell.impersonation.unknown')}</span
+		>
 		{#snippet action({ stale })}
 			<Button
 				variant="outline"

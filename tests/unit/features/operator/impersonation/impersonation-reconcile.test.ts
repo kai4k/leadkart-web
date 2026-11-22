@@ -9,6 +9,7 @@ const store = vi.hoisted(() => ({
 	status: 'idle',
 	reconcile: vi.fn(() => Promise.resolve())
 }));
+vi.mock('$app/state', () => ({ page: { data: { capabilities: { person_id: 'P1' } } } }));
 vi.mock('#lib/features/operator/impersonation/stores/impersonation.svelte.ts', () => ({
 	impersonation: {
 		active: null,
@@ -17,7 +18,9 @@ vi.mock('#lib/features/operator/impersonation/stores/impersonation.svelte.ts', (
 		},
 		targetName: null,
 		more: 0,
-		error: null,
+		readError: null,
+		endError: null,
+		checking: false,
 		unknown: false,
 		forget: vi.fn(),
 		end: vi.fn(),

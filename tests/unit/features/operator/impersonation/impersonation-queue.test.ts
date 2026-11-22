@@ -58,14 +58,22 @@ describe('property: any interleaving', () => {
 	it('300 random sequences, seed 20261121', async () => {
 		const r = rng(20261121);
 		let person: string | null = 'A';
-		const store = createImpersonation({ personId: () => person, deadlineMs: DEADLINE });
+		const store = createImpersonation({
+			personId: () => person,
+			deadlineMs: DEADLINE,
+			mutationDeadlineMs: DEADLINE,
+			followUpDelaysMs: [1e9]
+		});
 		const server = new Map<string, Set<string>>([
 			['A', new Set()],
 			['B', new Set()]
 		]);
 		const ownerOf = new Map<string, string>(); // session id -> the person it was created for
 		const inflight: Array<{ settle: (how: 'ok' | 'fail' | 'hang') => void }> = [];
-		let concurrent = 0;
+		// in flight together PER PERSON: forget() abandons the old person's chain on purpose, so A's request that is still
+		// on its way never holds up B; within one person the queue is strictly serial
+		let generation = 0; // a person change starts a new chain (the old one is abandoned)
+		const concurrentBy = new Map<string, number>();
 		let maxConcurrent = 0;
 		let n = 0;
 		// recorded, not asserted, inside the mocks: a throw there would be swallowed as an ordinary request failure
@@ -73,14 +81,22 @@ describe('property: any interleaving', () => {
 
 		const track = <T>(run: (ok: boolean) => T) => {
 			const d = deferred<T>();
-			concurrent++;
-			maxConcurrent = Math.max(maxConcurrent, concurrent);
+			const who = `${person}#${generation}`;
+			concurrentBy.set(who, (concurrentBy.get(who) ?? 0) + 1);
+			maxConcurrent = Math.max(maxConcurrent, concurrentBy.get(who)!);
 			let done = false;
+			// past its deadline the queue has moved on: the request no longer counts as in flight with the next one
+			let expired = false;
+			setTimeout(() => {
+				if (done) return;
+				expired = true;
+				concurrentBy.set(who, concurrentBy.get(who)! - 1);
+			}, DEADLINE);
 			inflight.push({
 				settle: (how) => {
 					if (done) return;
 					done = true;
-					concurrent--;
+					if (!expired) concurrentBy.set(who, concurrentBy.get(who)! - 1);
 					if (how === 'hang') return; // never settles: only the deadline frees the queue
 					if (how === 'ok') d.resolve(run(true));
 					else {
@@ -162,6 +178,7 @@ describe('property: any interleaving', () => {
 				} else if (x < 0.6) {
 					// sign-out without a reload, then the other person signs in (the old person's sessions stay on the server)
 					person = person === 'A' ? 'B' : 'A';
+					generation++;
 					if (r() < 0.5) store.forget();
 				} else if (inflight.length) {
 					const [op] = inflight.splice(Math.floor(r() * inflight.length), 1);
