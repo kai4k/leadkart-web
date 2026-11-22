@@ -505,7 +505,8 @@
 		},
 		"roles": {
 			"title": "Roles",
-			"count": "{count, plural, one {# role} other {# roles}}"
+			"count": "{count, plural, one {# role} other {# roles}}",
+			"adminTierOnly": "Only the Administrator tier and above can add users."
 		},
 		"permissionRequests": {
 			"title": "Permission requests",

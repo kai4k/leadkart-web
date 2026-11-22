@@ -22,6 +22,7 @@
 		ROLE_NAME_MIN
 	} from '$features/roles';
 	import { describeError } from '$api/errors';
+	import { isBelowAdminTier, P } from '#lib/features/auth/permissions.ts';
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 
 	let { data } = $props();
@@ -115,6 +116,12 @@
 
 	const metaDirty = $derived(
 		role !== null && (name !== role.name || hierarchyLevel !== role.hierarchy_level)
+	);
+	// A role below the Administrator tier cannot contain `identity.users.create` (Go: admin_tier_required): not offered.
+	const refusedPermissions = $derived<Record<string, string>>(
+		role !== null && isBelowAdminTier(role.hierarchy_level)
+			? { [P.identityUsersCreate]: $_('pages.roles.adminTierOnly') }
+			: {}
 	);
 	const permsDirty = $derived.by(() => {
 		const r = role;
@@ -274,6 +281,7 @@
 					<PermissionTree
 						selected={selectedPerms}
 						disabled={!canUpdate}
+						refused={refusedPermissions}
 						onChange={(next) => (selectedPerms = next)}
 					/>
 				</Card.Content>

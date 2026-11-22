@@ -90,6 +90,14 @@ export const P = {
 	notificationsManage: 'notifications.inbox.manage'
 } as const;
 
+/**
+ * The Administrator tier ends at rank 10 (the API's `Capabilities.tier` band: owner 0, admin 1-10, manager 11-20,
+ * team lead 21-30, user 31-99). Go refuses `identity.users.create` to a role or member BELOW it
+ * (`admin_tier_required`). This only decides what an editor does not OFFER; Go stays the enforcer.
+ */
+const ADMIN_TIER_MAX_RANK = 10;
+export const isBelowAdminTier = (rank: number): boolean => rank > ADMIN_TIER_MAX_RANK;
+
 export type Permission = (typeof P)[keyof typeof P];
 
 /**

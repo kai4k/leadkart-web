@@ -10,15 +10,17 @@
 	type Props = {
 		selected: string[];
 		disabled?: boolean;
+		/** Permissions the server would refuse here, by name -> the reason: shown disabled with the reason. */
+		refused?: Record<string, string>;
 		onChange: (next: string[]) => void;
 	};
 
-	let { selected, disabled = false, onChange }: Props = $props();
+	let { selected, disabled = false, refused = {}, onChange }: Props = $props();
 
 	const groups = $derived(Array.from(groupedCatalogue().entries()));
 
 	function toggle(name: string) {
-		if (disabled) return;
+		if (disabled || name in refused) return;
 		const set = new SvelteSet(selected);
 		if (set.has(name)) set.delete(name);
 		else set.add(name);
@@ -39,7 +41,7 @@
 		if (state === 'all') {
 			for (const e of entries) set.delete(e.name);
 		} else {
-			for (const e of entries) set.add(e.name);
+			for (const e of entries) if (!(e.name in refused)) set.add(e.name);
 		}
 		onChange([...set]);
 	}
@@ -72,11 +74,17 @@
 							<input
 								type="checkbox"
 								checked={selected.includes(entry.name)}
-								{disabled}
+								disabled={disabled || entry.name in refused}
 								onchange={() => toggle(entry.name)}
 								aria-label={entry.name}
+								aria-describedby={entry.name in refused ? `refused-${entry.name}` : undefined}
 							/>
 							<span class="label text-foreground font-mono text-xs">{entry.name}</span>
+							{#if entry.name in refused}
+								<span id="refused-{entry.name}" class="caption text-muted-foreground"
+									>{refused[entry.name]}</span
+								>
+							{/if}
 						</label>
 						<Tooltip.Root>
 							<Tooltip.Trigger
