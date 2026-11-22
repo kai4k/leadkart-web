@@ -83,6 +83,8 @@ test.describe('Permission requests — requester flow', () => {
 			body: { requests: [], has_more: false }
 		});
 		await page.goto('/permission-requests');
+		// the page is server-rendered: a click before hydration is lost, and the next `fill` then waits out its timeout
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
 		await expect(page.getByText(/no requests yet/i)).toBeVisible();
 		await page
 			.locator('#main-content')
@@ -110,6 +112,8 @@ test.describe('Permission requests — requester flow', () => {
 			}
 		]);
 		await page.goto('/permission-requests');
+		// the page is server-rendered: a click before hydration is lost, and the next `fill` then waits out its timeout
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
 		await expect(page.getByText('identity.users.create')).toBeVisible();
 		await page.getByText('identity.users.create').click();
 		await page.waitForURL(new RegExp(`/permission-requests/${r.id}$`));
@@ -132,6 +136,8 @@ test.describe('Permission requests — requester flow', () => {
 			}
 		]);
 		await page.goto('/permission-requests');
+		// the page is server-rendered: a click before hydration is lost, and the next `fill` then waits out its timeout
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
 		await page
 			.locator('#main-content')
 			.getByRole('button', { name: /request permission/i })
@@ -156,6 +162,8 @@ test.describe('Permission requests — requester flow', () => {
 			body: { requests: [], has_more: false }
 		});
 		await page.goto('/permission-requests');
+		// the page is server-rendered: a click before hydration is lost, and the next `fill` then waits out its timeout
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
 		await page
 			.locator('#main-content')
 			.getByRole('button', { name: /request permission/i })
@@ -191,6 +199,8 @@ test.describe('Permission requests — approver flow', () => {
 			body: { requests: [otherUserReq], has_more: false }
 		});
 		await page.goto('/permission-requests?role=approver');
+		// the page is server-rendered: a click before hydration is lost, and the next `fill` then waits out its timeout
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
 		await expect(page.getByText('identity.users.create')).toBeVisible();
 	});
 
@@ -221,6 +231,8 @@ test.describe('Permission requests — approver flow', () => {
 			}
 		]);
 		await page.goto(`/permission-requests/${otherUserReq.id}`);
+		// the page is server-rendered: a click before hydration is lost, and the next `fill` then waits out its timeout
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
 		// Wait for capabilities + detail to load — Approve only appears once
 		// callerMembershipId is populated AND query.data is in.
 		await expect(page.getByRole('heading', { name: 'Permission request' })).toBeVisible();
@@ -245,6 +257,8 @@ test.describe('Permission requests — approver flow', () => {
 			}
 		]);
 		await page.goto(`/permission-requests/${req.id}`);
+		// the page is server-rendered: a click before hydration is lost, and the next `fill` then waits out its timeout
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
 		await expect(page.getByRole('button', { name: /^deny$/i })).toBeVisible({ timeout: 5000 });
 		await expect(page.getByRole('button', { name: /^approve$/i })).toHaveCount(0);
 	});
@@ -264,6 +278,8 @@ test.describe('Permission requests — approver flow', () => {
 			}
 		]);
 		await page.goto(`/permission-requests/${req.id}`);
+		// the page is server-rendered: a click before hydration is lost, and the next `fill` then waits out its timeout
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
 		await expect(page.getByRole('heading', { name: 'Permission request' })).toBeVisible();
 		await expect(page.getByRole('button', { name: /^deny$/i })).toBeVisible();
 		// can_approve is sent only by the queue, and the queue does not list it: no Approve.
@@ -287,6 +303,8 @@ test.describe('Permission requests — approver flow', () => {
 			}
 		]);
 		await page.goto(`/permission-requests/${myReq.id}`);
+		// the page is server-rendered: a click before hydration is lost, and the next `fill` then waits out its timeout
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
 		await expect(page.getByRole('heading', { name: 'Permission request' })).toBeVisible();
 		await expect(page.getByRole('button', { name: /cancel request/i })).toBeVisible({
 			timeout: 5000
