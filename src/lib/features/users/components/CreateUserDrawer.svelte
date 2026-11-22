@@ -1,6 +1,6 @@
 <!-- src/lib/features/users/components/CreateUserDrawer.svelte -->
 <script lang="ts">
-	import { passwordPolicyHint } from '#lib/features/auth/password-policy.ts';
+	import { passwordPolicyHint, type PolicyRules } from '#lib/features/auth/password-policy.ts';
 	import { session } from '$features/auth';
 	import { oneShot } from '#lib/utils/one-shot.ts';
 	import { _ } from 'svelte-i18n';
@@ -14,16 +14,25 @@
 	type Props = {
 		open: boolean;
 		onOpenChange: (open: boolean) => void;
+		/**
+		 * The policy of the company the password is FOR when it is not the caller's own: an operator acting in a tenant
+		 * scope adds into the scoped company (Go user_create.go checks the target company's policy). Absent = the
+		 * caller's own company.
+		 */
+		passwordPolicy?: PolicyRules;
 	};
 
-	let { open = $bindable(false), onOpenChange }: Props = $props();
+	let { open = $bindable(false), onOpenChange, passwordPolicy }: Props = $props();
 
 	/** Held by the form surface: dropped on close, on open, and when stale. */
 	type Added = { membershipId: string; personExisted: boolean };
 
 	const mutation = createUserMutation();
-	// the policy that applies to the person being added: the caller's company's, as the server provides it
-	const hint = $derived(passwordPolicyHint(session.capabilities?.password_policy, $_));
+	// the policy of the company the person is added to: the scoped company's (an operator in a tenant scope), else the
+	// caller's own, both as the server provides them
+	const hint = $derived(
+		passwordPolicyHint(passwordPolicy ?? session.capabilities?.password_policy, $_)
+	);
 	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
 	useResetOnChange(() => open, mutation);
 

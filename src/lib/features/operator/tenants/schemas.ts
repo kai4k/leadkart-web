@@ -17,13 +17,14 @@ import {
 	RegisterTenantResponse
 } from '#lib/api/generated/index.ts';
 import { formEmailField, newPasswordField, reasonField } from '#lib/api/request-schema.ts';
+import { DEFAULT_PASSWORD_RULES, unmetPasswordRules } from '#lib/features/auth/password-policy.ts';
 import { tenantSchema } from '#lib/features/tenant/schemas.ts';
 
 export { tenantSchema as tenantDtoSchema } from '#lib/features/tenant/schemas.ts';
 
 /**
  * Built from the generated request: its slug / name bounds stand.
- * Added here: the shared e-mail rule, no leading/trailing dash in a slug, names must not be empty, the shared password rule.
+ * Added here: the shared e-mail rule, no leading/trailing dash in a slug, names must not be empty, the shared password rule plus the default policy's classes.
  */
 export const registerTenantRequestSchema = RegisterTenantRequest.extend({
 	// The contract's bounds (2-100); only the messages are ours.
@@ -35,7 +36,13 @@ export const registerTenantRequestSchema = RegisterTenantRequest.extend({
 	legal_name: z.string().min(2, 'form.required').max(200, 'form.tooLong'),
 	display_name: z.string().min(2, 'form.required').max(200, 'form.tooLong'),
 	admin_email: formEmailField,
-	admin_password: newPasswordField,
+	// Go always checks the DEFAULT policy at registration (register_tenant.go), so this form, and only this one,
+	// holds the first admin's password to the default's classes too. Each unmet class is its own issue (the rule code
+	// is the message: `fieldMessageText` turns it into the sentence).
+	admin_password: newPasswordField.superRefine((password, ctx) => {
+		for (const code of unmetPasswordRules(password, DEFAULT_PASSWORD_RULES))
+			if (code !== 'min_length') ctx.addIssue({ code: 'custom', message: code });
+	}),
 	admin_first_name: z.string().min(1, 'form.required').max(120, 'form.tooLong'),
 	admin_last_name: z.string().min(1, 'form.required').max(120, 'form.tooLong')
 }).strict();

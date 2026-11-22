@@ -22,6 +22,38 @@ export const DEFAULT_PASSWORD_RULES: PolicyRules = {
 	requires_symbol: true
 };
 
+/** A tenant read carries its policy as `require_*` (the settings shape); the hint speaks `requires_*` (capabilities). */
+export function rulesOfTenantPolicy(p: {
+	min_length: number;
+	require_uppercase: boolean;
+	require_lowercase: boolean;
+	require_digit: boolean;
+	require_symbol: boolean;
+}): PolicyRules {
+	return {
+		min_length: p.min_length,
+		requires_uppercase: p.require_uppercase,
+		requires_lowercase: p.require_lowercase,
+		requires_digit: p.require_digit,
+		requires_symbol: p.require_symbol
+	};
+}
+
+/**
+ * The rule codes a password fails, in the order Go reports them (tenant `PasswordPolicy.Check`: length in characters,
+ * then uppercase, lowercase, digit, symbol; a symbol is Unicode punctuation or a symbol, a space is none). ONLY for a
+ * form where the policy is known to be exactly this one (Register tenant: Go always checks the default there).
+ */
+export function unmetPasswordRules(password: string, rules: PolicyRules): string[] {
+	const unmet: string[] = [];
+	if ([...password].length < rules.min_length) unmet.push('min_length');
+	if (rules.requires_uppercase && !/\p{Lu}/u.test(password)) unmet.push('requires_uppercase');
+	if (rules.requires_lowercase && !/\p{Ll}/u.test(password)) unmet.push('requires_lowercase');
+	if (rules.requires_digit && !/\p{Nd}/u.test(password)) unmet.push('requires_digit');
+	if (rules.requires_symbol && !/[\p{P}\p{S}]/u.test(password)) unmet.push('requires_symbol');
+	return unmet;
+}
+
 type Translate = (key: string, options?: { values?: Record<string, string | number> }) => string;
 
 export function passwordPolicyHint(policy: PolicyRules | null | undefined, t: Translate): string {

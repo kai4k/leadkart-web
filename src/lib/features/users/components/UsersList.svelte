@@ -46,6 +46,7 @@
 	} from '#lib/hooks/index.ts';
 	import { BulkActionBar, type BulkAction } from '#lib/components/data/index.ts';
 	import UsersTruncatedAlert from './UsersTruncatedAlert.svelte';
+	import type { PolicyRules } from '#lib/features/auth/password-policy.ts';
 	import CreateUserDrawer from './CreateUserDrawer.svelte';
 	import DeactivateUserDialog from './DeactivateUserDialog.svelte';
 	import RoleAssignmentDrawer from './RoleAssignmentDrawer.svelte';
@@ -60,6 +61,9 @@
 	 * the caller's JWT tenant scope applies (tenant-admin /settings/users).
 	 * The frontend never sees, sends, or knows the tenant identifier.
 	 */
+	/** The policy of the company being managed when it is not the caller's own (an operator inside a tenant scope). */
+	let { passwordPolicy }: { passwordPolicy?: PolicyRules } = $props();
+
 	const createDialog = createDialogState();
 	const deactivateDialog = createDialogState<UserDto>();
 	const rolesDialog = createDialogState<UserDto>();
@@ -402,7 +406,11 @@
 	<BulkActionBar {selection} actions={bulkActions} />
 </div>
 
-<CreateUserDrawer bind:open={createDialog.open} onOpenChange={createDialog.onOpenChange} />
+<CreateUserDrawer
+	bind:open={createDialog.open}
+	onOpenChange={createDialog.onOpenChange}
+	{passwordPolicy}
+/>
 
 <DeactivateUserDialog
 	bind:open={deactivateDialog.open}

@@ -88,15 +88,15 @@ describe('registerTenantRequestSchema — slug', () => {
 // ---------------------------------------------------------------------------
 
 describe('registerTenantRequestSchema — password + strict', () => {
-	// Go's policy (openapi at 166b6e7: `admin_password` min 8; BFF_API_CHANGES row 26): 8 characters, not 12. The classes
-	// (upper, lower, digit, symbol) are the tenant's policy: Go answers `password_policy_violation`, never stricter here.
-	it('uses the shared password rule: 8 characters (a password of 8-11 is accepted)', () => {
+	// Go's policy: 8 characters, not 12. On THIS form alone the four classes are checked too: Go always applies the
+	// DEFAULT policy at registration (register_tenant.go), which requires all four.
+	it('uses the default policy: 8 characters and all four classes', () => {
 		const parse = (admin_password: string) =>
 			registerTenantRequestSchema.safeParse({ ...VALID_REGISTER, admin_password }).success;
 		expect(parse('1234567')).toBe(false);
 		expect(parse('Abcdef1!')).toBe(true);
-		expect(parse('a'.repeat(11))).toBe(true);
-		expect(parse('a'.repeat(12))).toBe(true);
+		expect(parse('Abcdef1!x')).toBe(true);
+		expect(parse('a'.repeat(11))).toBe(false); // length is met, the classes are not
 	});
 
 	it('rejects extra fields (strict mode)', () => {
@@ -246,5 +246,20 @@ describe('listAllTenantsResponseSchema', () => {
 
 	it('rejects a response where tenants is not an array', () => {
 		expect(listAllTenantsResponseSchema.safeParse({ tenants: null }).success).toBe(false);
+	});
+});
+
+describe('registerTenantRequestSchema: Go checks the DEFAULT policy on Register tenant (register_tenant.go)', () => {
+	const issuesOf = (admin_password: string) => {
+		const r = registerTenantRequestSchema.safeParse({ ...VALID_REGISTER, admin_password });
+		return r.success
+			? []
+			: r.error.issues.filter((i) => i.path[0] === 'admin_password').map((i) => i.message);
+	};
+	it('a password with no digit or symbol is refused with those rules', () => {
+		expect(issuesOf('Abcdefghij')).toEqual(['requires_digit', 'requires_symbol']);
+	});
+	it('a password that meets the default is accepted', () => {
+		expect(issuesOf('S3cur3Pass!!x')).toEqual([]);
 	});
 });
