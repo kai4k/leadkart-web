@@ -1,11 +1,11 @@
 <!-- src/lib/features/users/components/CreateUserDrawer.svelte -->
 <script lang="ts">
+	import type { z } from 'zod';
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
-	import { Drawer, Button, Alert } from '$ui';
-	import { TextField, PasswordField } from '#lib/components/form/index.ts';
+	import { Alert, Button } from '$ui';
+	import { FormSheet, TextField, PasswordField } from '#lib/components/form/index.ts';
 	import { createUserMutation } from '$features/users/queries';
 	import { createUserRequestSchema } from '$features/users/schemas';
-	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 
 	type Props = {
 		open: boolean;
@@ -19,125 +19,78 @@
 	const mutation = createUserMutation();
 	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.
 	useResetOnChange(() => open, mutation);
-	const form = useForm(
-		createUserRequestSchema,
-		{
-			email: '',
-			password: '',
-			first_name: '',
-			last_name: ''
-		},
-		{ open: () => open, validateOn: 'blur' }
-	);
+	$effect(() => {
+		if (!open) success = null;
+	});
 
-	function resetAll() {
-		form.reset();
-		success = null;
-	}
-
-	async function onSubmit(e: SubmitEvent) {
-		await form.submit(e, async (values, current) => {
-			const resp = await mutation.mutateAsync(values);
-			if (!current()) return;
-			success = { membershipId: resp.membership_id, personExisted: resp.person_existed };
-		});
-	}
-
-	function handleClose(next: boolean) {
-		if (!next && success) resetAll();
-		onOpenChange(next);
+	async function onSubmit(values: z.output<typeof createUserRequestSchema>) {
+		const resp = await mutation.mutateAsync(values);
+		success = { membershipId: resp.membership_id, personExisted: resp.person_existed };
 	}
 </script>
 
-<Drawer.Root bind:open busy={form.isSubmitting} onOpenChange={handleClose}>
-	<Drawer.Content>
-		<Drawer.Header>
-			<div class="stack stack-tight">
-				<Drawer.Title class="h4">Add team member</Drawer.Title>
-				<p class="caption text-muted-foreground">
-					Sends a sign-in to the email below. Roles can be assigned after creation.
-				</p>
-			</div>
-			<Drawer.Close>
-				{#snippet child({ props })}
-					<button
-						{...props}
-						type="button"
-						class="hover:bg-muted rounded-md p-1.5"
-						aria-label="Close"
-					>
-						×
-					</button>
-				{/snippet}
-			</Drawer.Close>
-		</Drawer.Header>
-		<Drawer.Body>
-			{#if success}
-				<Alert variant="success">
-					Member added. {success.personExisted
-						? 'This email already had a LeadKart identity; we attached a new tenant membership to it.'
-						: 'A new identity was created.'}
-				</Alert>
-				<div class="cluster mt-4">
-					<Button variant="ghost" onclick={resetAll}>Add another</Button>
-					<Button onclick={() => handleClose(false)}>Done</Button>
-				</div>
-			{:else}
-				<form id="create-user-form" class="stack stack-relaxed" onsubmit={onSubmit} novalidate>
-					<TextField
-						label="Email"
-						name="email"
-						type="email"
-						bind:value={form.values.email}
-						required
-						error={form.errors.email}
-						onblur={() => form.validateField('email')}
-					/>
-					<TextField
-						label="First name"
-						name="first_name"
-						bind:value={form.values.first_name}
-						required
-						maxlength={120}
-						error={form.errors.first_name}
-						onblur={() => form.validateField('first_name')}
-					/>
-					<TextField
-						label="Last name"
-						name="last_name"
-						bind:value={form.values.last_name}
-						required
-						maxlength={120}
-						error={form.errors.last_name}
-						onblur={() => form.validateField('last_name')}
-					/>
-					<PasswordField
-						label="Initial password"
-						name="password"
-						autocomplete="new-password"
-						bind:value={form.values.password}
-						required
-						error={form.errors.password}
-						onblur={() => form.validateField('password')}
-					/>
-					<p class="caption text-subtle-foreground">
-						The user will be prompted to change this on first sign-in.
-					</p>
-					{#if form.bannerError}<Alert variant="destructive">{form.bannerError}</Alert>{/if}
-				</form>
-			{/if}
-		</Drawer.Body>
-		{#if !success}
-			<Drawer.Footer>
-				<Drawer.Close>
-					{#snippet child({ props })}
-						<Button {...props} variant="ghost" disabled={form.isSubmitting}>Cancel</Button>
-					{/snippet}
-				</Drawer.Close>
-				<Button type="submit" form="create-user-form" loading={form.isSubmitting}
-					>Create user</Button
-				>
-			</Drawer.Footer>
-		{/if}
-	</Drawer.Content>
-</Drawer.Root>
+<FormSheet
+	bind:open
+	{onOpenChange}
+	title="Add team member"
+	description="Sends a sign-in to the email below. Roles can be assigned after creation."
+	submitLabel="Create user"
+	schema={createUserRequestSchema}
+	initial={() => ({ email: '', password: '', first_name: '', last_name: '' })}
+	{onSubmit}
+	closeOnSuccess={false}
+	done={success ? done : undefined}
+	formId="create-user-form"
+>
+	{#snippet fields(form)}
+		<TextField
+			label="Email"
+			name="email"
+			type="email"
+			bind:value={form.values.email}
+			required
+			error={form.errors.email}
+		/>
+		<TextField
+			label="First name"
+			name="first_name"
+			bind:value={form.values.first_name}
+			required
+			maxlength={120}
+			error={form.errors.first_name}
+		/>
+		<TextField
+			label="Last name"
+			name="last_name"
+			bind:value={form.values.last_name}
+			required
+			maxlength={120}
+			error={form.errors.last_name}
+		/>
+		<PasswordField
+			label="Initial password"
+			name="password"
+			autocomplete="new-password"
+			bind:value={form.values.password}
+			required
+			error={form.errors.password}
+		/>
+		<p class="caption text-subtle-foreground">
+			The user will be prompted to change this on first sign-in.
+		</p>
+	{/snippet}
+</FormSheet>
+
+{#snippet done()}
+	{#if success}
+		<Alert variant="success">
+			Member added. {success.personExisted
+				? 'This email already had a LeadKart identity; we attached a new tenant membership to it.'
+				: 'A new identity was created.'}
+		</Alert>
+		<div class="cluster mt-4">
+			<Button variant="ghost" onclick={() => (success = null)}>Add another</Button>
+			<Button onclick={() => onOpenChange(false)}>Done</Button>
+		</div>
+	{/if}
+{/snippet}

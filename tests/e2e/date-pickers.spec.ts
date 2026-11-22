@@ -438,5 +438,6 @@ test.describe('Android: typed entry through the input method', () => {
 			el.dispatchEvent(new CompositionEvent('compositionend', { data: '2', bubbles: true }));
 		});
 		expect((await segs(sheet).first().textContent())?.trim()).toMatch(/^\d{1,2}$/);
+		await context.close();
 	});
 });

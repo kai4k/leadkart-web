@@ -32,11 +32,18 @@ export type FormSurfaceProps<S extends AnyObjectSchema> = {
 	size?: 'md' | 'lg';
 	/** Ask before leaving the page with unsaved input while open. Default true. */
 	guardLeave?: boolean;
+	/** Close the surface when the submit succeeds. Default true; false when the result is shown in `done`. */
+	closeOnSuccess?: boolean;
+	/**
+	 * The result of the submit (a one-time credential, a confirmation), shown INSTEAD of the form and its footer while the
+	 * parent passes it. It owns its own buttons ("Done" calls `onOpenChange(false)`). Pass `undefined` for the form.
+	 */
+	done?: Snippet;
 };
 
 type Source<S extends AnyObjectSchema> = Pick<
 	FormSurfaceProps<S>,
-	'open' | 'onOpenChange' | 'schema' | 'initial' | 'onSubmit' | 'guardLeave'
+	'open' | 'onOpenChange' | 'schema' | 'initial' | 'onSubmit' | 'guardLeave' | 'closeOnSuccess'
 >;
 
 export interface FormSurface<S extends AnyObjectSchema> {
@@ -80,8 +87,15 @@ export function createFormSurface<S extends AnyObjectSchema>(
 	function submit(e: SubmitEvent): Promise<void> {
 		return form.submit(e, async (values, current) => {
 			await source().onSubmit(values);
-			// a result that lands after the surface was closed or reopened closes nothing
-			if (current()) source().onOpenChange(false);
+			if (!current()) return; // a result that lands after the surface was closed or reopened changes nothing
+			if (source().closeOnSuccess ?? true) source().onOpenChange(false);
+			else {
+				// what was sent is saved and the result is shown in `done`: the form is empty again (nothing typed, a
+				// password included, lingers in its state) and leaving now is not leaving unsaved input
+				form.reset(source().initial());
+				seed = JSON.stringify(form.values);
+				resetKey++;
+			}
 		});
 	}
 

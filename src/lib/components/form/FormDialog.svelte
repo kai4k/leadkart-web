@@ -27,7 +27,9 @@
 		fields,
 		formId,
 		size = 'md',
-		guardLeave = true
+		guardLeave = true,
+		closeOnSuccess = true,
+		done
 	}: FormSurfaceProps<S> = $props();
 
 	const surface = createFormSurface<S>(() => ({
@@ -36,7 +38,8 @@
 		schema,
 		initial,
 		onSubmit,
-		guardLeave
+		guardLeave,
+		closeOnSuccess
 	}));
 	const form = $derived(surface.form);
 </script>
@@ -48,25 +51,31 @@
 			{#if description}<Dialog.Description>{description}</Dialog.Description>{/if}
 		</Dialog.Header>
 		<Dialog.Body>
-			<FormSurfaceForm
-				{form}
-				{formId}
-				onsubmit={surface.submit}
-				resetKey={surface.resetKey}
-				{fields}
-			/>
+			{#if done}
+				{@render done()}
+			{:else}
+				<FormSurfaceForm
+					{form}
+					{formId}
+					onsubmit={surface.submit}
+					resetKey={surface.resetKey}
+					{fields}
+				/>
+			{/if}
 		</Dialog.Body>
-		<Dialog.Footer class="border-t border-border">
-			<Dialog.Close>
-				{#snippet child({ props })}
-					<Button {...props} variant="outline" disabled={form.isSubmitting}
-						>{$_('common.cancel')}</Button
-					>
-				{/snippet}
-			</Dialog.Close>
-			<Button type="submit" form={formId} variant={submitVariant} loading={form.isSubmitting}
-				>{submitLabel}</Button
-			>
-		</Dialog.Footer>
+		{#if !done}
+			<Dialog.Footer class="border-t border-border">
+				<Dialog.Close>
+					{#snippet child({ props })}
+						<Button {...props} variant="outline" disabled={form.isSubmitting}
+							>{$_('common.cancel')}</Button
+						>
+					{/snippet}
+				</Dialog.Close>
+				<Button type="submit" form={formId} variant={submitVariant} loading={form.isSubmitting}
+					>{submitLabel}</Button
+				>
+			</Dialog.Footer>
+		{/if}
 	</Dialog.Content>
 </Dialog.Root>

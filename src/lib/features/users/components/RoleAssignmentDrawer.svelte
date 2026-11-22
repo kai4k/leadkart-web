@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Drawer, Button, Badge, Alert } from '$ui';
+	import { Button, Badge, Alert } from '$ui';
+	import * as Sheet from '#lib/components/ui/sheet/index.ts';
 	import { Icon, Plus, X } from '$icons';
 	import { assignRoleMutation, revokeRoleMutation } from '$features/users/queries';
 	import type { UserDto, RoleDto } from '$features/users/types';
@@ -65,28 +66,17 @@
 	);
 </script>
 
-<Drawer.Root bind:open busy={assignMutation.isPending || revokeMutation.isPending} {onOpenChange}>
-	<Drawer.Content>
-		<Drawer.Header>
-			<div class="stack stack-tight">
-				<Drawer.Title class="h4">Roles for {user ? displayName(user) : 'user'}</Drawer.Title>
-				<p class="caption text-muted-foreground">
-					Assignments are immediate. Each role contributes its default permissions; user-level
-					grants/revokes overlay on top.
-				</p>
-			</div>
-			<Drawer.Close>
-				{#snippet child({ props })}
-					<button
-						{...props}
-						type="button"
-						class="hover:bg-muted rounded-md p-1.5"
-						aria-label="Close">×</button
-					>
-				{/snippet}
-			</Drawer.Close>
-		</Drawer.Header>
-		<Drawer.Body>
+<!-- Assignments are immediate (no form to submit): the sheet is the primitive, not a FormSheet. -->
+<Sheet.Root bind:open busy={assignMutation.isPending || revokeMutation.isPending} {onOpenChange}>
+	<Sheet.Content size="md">
+		<Sheet.Header class="border-b border-border pe-14">
+			<Sheet.Title>Roles for {user ? displayName(user) : 'user'}</Sheet.Title>
+			<Sheet.Description>
+				Assignments are immediate. Each role contributes its default permissions; user-level
+				grants/revokes overlay on top.
+			</Sheet.Description>
+		</Sheet.Header>
+		<Sheet.Body>
 			<section class="stack stack-tight mb-6">
 				<h3 class="overline">Assigned</h3>
 				{#if assignedRoles.length === 0}
@@ -133,13 +123,13 @@
 				{/if}
 			</section>
 			{#if bannerError}<Alert class="mt-4" variant="destructive">{bannerError}</Alert>{/if}
-		</Drawer.Body>
-		<Drawer.Footer>
-			<Drawer.Close>
+		</Sheet.Body>
+		<Sheet.Footer class="flex-row justify-end border-t border-border">
+			<Sheet.Close>
 				{#snippet child({ props })}
-					<Button {...props} variant="ghost">Done</Button>
+					<Button {...props} variant="outline">Done</Button>
 				{/snippet}
-			</Drawer.Close>
-		</Drawer.Footer>
-	</Drawer.Content>
-</Drawer.Root>
+			</Sheet.Close>
+		</Sheet.Footer>
+	</Sheet.Content>
+</Sheet.Root>

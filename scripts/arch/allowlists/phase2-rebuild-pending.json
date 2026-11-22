@@ -21,7 +21,6 @@
 		"src/lib/features/roles/components/DeleteRoleDialog.svelte",
 		"src/lib/features/roles/components/PermissionTree.svelte",
 		"src/lib/features/users/components/DeactivateUserDialog.svelte",
-		"src/lib/features/users/components/PermissionOverridesPanel.svelte",
 		"src/lib/features/users/components/UsersList.svelte",
 		"src/routes/(app)/settings/roles/[id]/+page.svelte"
 	],
@@ -31,12 +30,7 @@
 		"src/lib/features/inventory/components/CreateProductDrawer.svelte",
 		"src/lib/features/inventory/components/EditProductDrawer.svelte",
 		"src/lib/features/leads/components/EditLeadDrawer.svelte",
-		"src/lib/features/operator/tenants/components/CreateTenantDrawer.svelte",
-		"src/lib/features/orders/components/ReviseQuotationDrawer.svelte",
-		"src/lib/features/users/components/CreateUserDrawer.svelte",
-		"src/lib/features/users/components/ManagerSelectorDrawer.svelte",
-		"src/lib/features/users/components/PermissionOverridesPanel.svelte",
-		"src/lib/features/users/components/RoleAssignmentDrawer.svelte"
+		"src/lib/features/orders/components/ReviseQuotationDrawer.svelte"
 	],
 	"legacyDataTable": [
 		"src/lib/features/inventory/components/ProductsList.svelte",
@@ -70,7 +64,6 @@
 			"src/lib/features/roles/components/DeleteRoleDialog.svelte": 1,
 			"src/lib/features/roles/components/PermissionTree.svelte": 2,
 			"src/lib/features/users/components/DeactivateUserDialog.svelte": 1,
-			"src/lib/features/users/components/PermissionOverridesPanel.svelte": 2,
 			"src/lib/features/users/components/UsersList.svelte": 1,
 			"src/routes/(app)/settings/roles/[id]/+page.svelte": 1
 		},
@@ -80,12 +73,7 @@
 			"src/lib/features/inventory/components/CreateProductDrawer.svelte": 1,
 			"src/lib/features/inventory/components/EditProductDrawer.svelte": 1,
 			"src/lib/features/leads/components/EditLeadDrawer.svelte": 1,
-			"src/lib/features/operator/tenants/components/CreateTenantDrawer.svelte": 1,
-			"src/lib/features/orders/components/ReviseQuotationDrawer.svelte": 1,
-			"src/lib/features/users/components/CreateUserDrawer.svelte": 1,
-			"src/lib/features/users/components/ManagerSelectorDrawer.svelte": 1,
-			"src/lib/features/users/components/PermissionOverridesPanel.svelte": 1,
-			"src/lib/features/users/components/RoleAssignmentDrawer.svelte": 1
+			"src/lib/features/orders/components/ReviseQuotationDrawer.svelte": 1
 		},
 		"legacyDataTable": {
 			"src/lib/features/inventory/components/ProductsList.svelte": 2,
@@ -114,7 +102,6 @@
 		"src/lib/features/operator/people/components/GlobalSuspendDialog.svelte": "// removed by Task 20",
 		"src/lib/features/operator/people/components/PeopleList.svelte": "// removed by Task 26",
 		"src/lib/features/operator/people/components/PersonDetail.svelte": "// removed by Task 26",
-		"src/lib/features/operator/tenants/components/CreateTenantDrawer.svelte": "// removed by Task 19",
 		"src/lib/features/operator/tenants/components/MarkForDeletionDialog.svelte": "// removed by Task 20",
 		"src/lib/features/operator/tenants/components/SuspendDialog.svelte": "// removed by Task 20",
 		"src/lib/features/operator/tenants/components/TenantsList.svelte": "// removed by Task 26",
@@ -127,11 +114,7 @@
 		"src/lib/features/roles/components/DeleteRoleDialog.svelte": "// removed by Task 20",
 		"src/lib/features/roles/components/PermissionTree.svelte": "// removed by Task 27",
 		"src/lib/features/roles/components/RolesList.svelte": "// removed by Task 27",
-		"src/lib/features/users/components/CreateUserDrawer.svelte": "// removed by Task 19",
 		"src/lib/features/users/components/DeactivateUserDialog.svelte": "// removed by Task 20",
-		"src/lib/features/users/components/ManagerSelectorDrawer.svelte": "// removed by Task 19",
-		"src/lib/features/users/components/PermissionOverridesPanel.svelte": "// removed by Task 19",
-		"src/lib/features/users/components/RoleAssignmentDrawer.svelte": "// removed by Task 19",
 		"src/lib/features/users/components/UsersList.svelte": "// removed by Task 27",
 		"src/routes/(app)/settings/roles/[id]/+page.svelte": "// removed by Task 27"
 	}
