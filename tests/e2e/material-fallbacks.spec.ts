@@ -42,6 +42,17 @@ const SHELL = {
 	sidebar: '[data-slot="sidebar-inner"]'
 };
 
+/** The computed value of the system colour `Highlight` in this page (under forced colours). */
+async function highlight(page: Page): Promise<string> {
+	return page.evaluate(() => {
+		const probe = document.body.appendChild(document.createElement('span'));
+		probe.style.backgroundColor = 'Highlight';
+		const value = getComputedStyle(probe).backgroundColor;
+		probe.remove();
+		return value;
+	});
+}
+
 test.describe('glass degrades to opaque', () => {
 	test.beforeEach(async () => {
 		await resetMock();
@@ -104,10 +115,29 @@ test.describe('glass degrades to opaque', () => {
 		expect(bar.content, 'the bar is generated').not.toBe('none');
 		expect(bar.bg, 'the bar has a colour that forced colours keep').not.toBe('rgba(0, 0, 0, 0)');
 		expect(bar.bg).not.toBe('transparent');
-		// forced colours paint a background as Canvas: the bar must differ from the item it sits on (Highlight)
+		// the bar is painted with the system colour Highlight itself (resolved in this page, not guessed)
+		expect(bar.bg, 'the bar is Highlight').toBe(await highlight(page));
 		expect(bar.bg, 'the bar is not painted as the canvas').not.toBe(bar.item);
 		expect(parseFloat(bar.width)).toBeGreaterThanOrEqual(2);
 		expect(parseFloat(bar.height)).toBeGreaterThanOrEqual(12);
+	});
+
+	test('3c. forced colours: the horizontal nav keeps its current-page underline in Highlight', async ({
+		page
+	}) => {
+		await page.setViewportSize({ width: 1280, height: 800 });
+		await leads(page, { layout: 'horizontal' });
+		await page.emulateMedia({ forcedColors: 'active' });
+		// the item that holds the page: a link, or the trigger of the group that holds it
+		const current = page.locator('[aria-current="page"], [aria-current="true"]').first();
+		await expect(current).toBeVisible();
+		const bar = await current.evaluate((el) => {
+			const cs = getComputedStyle(el, '::after');
+			return { bg: cs.backgroundColor, height: cs.height, content: cs.content };
+		});
+		expect(bar.content, 'the underline is generated').not.toBe('none');
+		expect(bar.bg, 'the underline is Highlight').toBe(await highlight(page));
+		expect(parseFloat(bar.height)).toBeGreaterThanOrEqual(2);
 	});
 
 	test('4. print: no backdrop filter on any surface', async ({ page }) => {

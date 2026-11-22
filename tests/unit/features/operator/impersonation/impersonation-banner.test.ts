@@ -10,7 +10,12 @@ const store = vi.hoisted(() => ({
 		active: null as null | { session_id: string; reason: string; expires_at: string },
 		status: 'active',
 		targetName: null as string | null,
+		more: 0,
+		error: null as string | null,
+		unknown: false,
+		can: true,
 		end: vi.fn(),
+		forget: vi.fn(),
 		reconcile: vi.fn(() => Promise.resolve())
 	}
 }));
@@ -25,11 +30,27 @@ vi.mock('#lib/features/operator/impersonation/stores/impersonation.svelte.ts', (
 		get targetName() {
 			return store.state.targetName;
 		},
+		get more() {
+			return store.state.more;
+		},
+		get error() {
+			return store.state.error;
+		},
+		get unknown() {
+			return store.state.unknown;
+		},
+		forget: () => store.state.forget(),
 		end: (...a: unknown[]) => store.state.end(...a),
 		reconcile: () => store.state.reconcile()
 	}
 }));
-vi.mock('$features/auth', () => ({ session: { capabilities: null } }));
+vi.mock('$features/auth', () => ({
+	P: { platformImpersonationManage: 'platform.impersonation.manage' },
+	session: {
+		capabilities: null,
+		can: () => store.state.can
+	}
+}));
 
 import ImpersonationBanner from '#lib/features/operator/impersonation/components/ImpersonationBanner.svelte';
 import { hardReset } from '#lib/api/hard-reset.ts';
@@ -45,6 +66,10 @@ beforeEach(() => {
 	store.state.active = { session_id: 'A', reason: 'support', expires_at: '2030-01-01T00:00:00Z' };
 	store.state.status = 'active';
 	store.state.targetName = null;
+	store.state.more = 0;
+	store.state.error = null;
+	store.state.unknown = false;
+	store.state.can = true;
 	store.state.end.mockResolvedValue(undefined);
 	target = document.body.appendChild(document.createElement('div'));
 });
@@ -92,6 +117,53 @@ describe('ImpersonationBanner', () => {
 		flushSync();
 		await tick();
 		expect(store.state.end).toHaveBeenCalledTimes(1);
+		expect(store.state.end).toHaveBeenCalledWith('A'); // the id shown at click time
+	});
+
+	it('a failed End is rendered in the banner and the button becomes Retry', () => {
+		store.state.error = 'Could not end the session.';
+		render();
+		expect(document.querySelector('[role="alert"]')!.textContent).toBe(
+			'Could not end the session.'
+		);
+		expect(endButton().textContent).toContain(en.shell.impersonation.retry);
+	});
+
+	it('says how many more sessions the server lists', () => {
+		store.state.more = 2;
+		render();
+		expect(document.body.textContent).toContain('+2 more');
+	});
+
+	it('an unknown status (the read failed, nothing shown) is a neutral notice with Retry, for people who can impersonate', async () => {
+		store.state.active = null;
+		store.state.unknown = true;
+		render();
+		expect(document.body.textContent).toContain(en.shell.impersonation.unknown);
+		const retry = [...document.querySelectorAll('button')].find(
+			(b) => b.textContent?.trim() === en.shell.impersonation.retry
+		)!;
+		store.state.reconcile.mockClear();
+		retry.click();
+		flushSync();
+		await tick();
+		expect(store.state.reconcile).toHaveBeenCalledTimes(1);
+	});
+
+	it('people who cannot impersonate: nothing is shown and no read is made', () => {
+		store.state.can = false;
+		store.state.active = null;
+		store.state.unknown = true;
+		render();
+		expect(document.querySelector('[role="region"]')).toBeNull();
+		expect(store.state.reconcile).not.toHaveBeenCalled();
+	});
+
+	it('leaving the app (unmount) empties the store', () => {
+		render();
+		unmount(component!);
+		component = undefined;
+		expect(store.state.forget).toHaveBeenCalledTimes(1);
 	});
 
 	it('End is aria-disabled and does nothing while a block banner is up', async () => {

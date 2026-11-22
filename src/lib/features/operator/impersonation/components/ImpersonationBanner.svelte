@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
+	import { onDestroy, untrack } from 'svelte';
 	import { _ } from 'svelte-i18n';
 	import { Button } from '$ui';
 	import { Eye, LogOut, Icon } from '$icons';
 	import ContextBanner from '$layouts/ContextBanner.svelte';
 	import { impersonation } from '../stores/impersonation.svelte';
-	import { session } from '$features/auth';
+	import { P, session } from '$features/auth';
 	import { formatDateTime } from '#lib/utils/format.ts';
 	import { resetPending } from '#lib/api/hard-reset.ts';
 	import EntityName from '$layouts/EntityName.svelte';
@@ -14,16 +14,20 @@
 	// the store's own state, and an effect that tracked it would run again on every settle (a request loop).
 	// Must live here (inside <QueryClientProvider>) not in (app)/+layout.svelte
 	// (the provider) — TanStack Query v6 uses getContext() to find the client.
+	// Only a person who can impersonate asks: nobody else has a session to show, and no read is made for them.
+	const canImpersonate = $derived(session.can(P.platformImpersonationManage));
 	$effect(() => {
-		if (session.capabilities) {
+		if (canImpersonate) {
 			untrack(() => impersonation.reconcile()).catch(() => {});
 		}
 	});
+	// Leaving the signed-in app (sign-out) empties the store: nothing of this person is left for the next one.
+	onDestroy(() => impersonation.forget());
 
 	// Another tab may have started or ended a session: a tab that comes back to the front, or gets focus,
 	// reconciles again (the mount effect above covers only the first load).
 	$effect(() => {
-		if (!session.capabilities) return;
+		if (!canImpersonate) return;
 		const again = () => {
 			if (
 				document.visibilityState !== 'visible' ||
@@ -44,17 +48,23 @@
 	const ending = $derived(impersonation.status === 'mutating');
 
 	// a reset can start between the last render and this click: re-check, like Exit does
-	async function endNow() {
+	// the id is the one SHOWN when the user clicked, not whatever is shown when the request runs
+	async function endNow(sessionId: string) {
 		if (resetPending()) return;
 		try {
-			await impersonation.end();
+			await impersonation.end(sessionId);
 		} catch {
-			/* error surfaced via store.error */
+			/* the failure is rendered from store.error */
 		}
+	}
+	async function retryRead() {
+		if (resetPending()) return;
+		await impersonation.reconcile().catch(() => {});
 	}
 </script>
 
 {#if impersonation.active}
+	{@const shown = impersonation.active}
 	<ContextBanner tone="destructive" icon={Eye} label={$_('shell.impersonation.region')}>
 		<span class="font-medium">
 			{#if impersonation.targetName}
@@ -74,17 +84,40 @@
 				}
 			})}
 		</span>
+		{#if impersonation.more > 0}
+			<span class="ms-2"
+				>{$_('shell.impersonation.more', { values: { count: impersonation.more } })}</span
+			>
+		{/if}
+		{#if impersonation.error}
+			<span class="ms-2 font-medium" role="alert">{impersonation.error}</span>
+		{/if}
 		{#snippet action({ stale })}
 			<Button
 				variant="outline"
 				size="sm"
 				loading={ending}
 				aria-disabled={stale ? 'true' : undefined}
-				onclick={stale ? undefined : endNow}
+				onclick={stale ? undefined : () => endNow(shown.session_id)}
 				aria-label={$_('shell.impersonation.endLabel')}
 			>
 				<Icon icon={LogOut} size="sm" />
-				{$_('shell.impersonation.end')}
+				{impersonation.error ? $_('shell.impersonation.retry') : $_('shell.impersonation.end')}
+			</Button>
+		{/snippet}
+	</ContextBanner>
+{:else if canImpersonate && impersonation.unknown}
+	<ContextBanner tone="warning" icon={Eye} label={$_('shell.impersonation.region')}>
+		<span class="font-medium">{$_('shell.impersonation.unknown')}</span>
+		{#snippet action({ stale })}
+			<Button
+				variant="outline"
+				size="sm"
+				loading={impersonation.status === 'loading'}
+				aria-disabled={stale ? 'true' : undefined}
+				onclick={stale ? undefined : retryRead}
+			>
+				{$_('shell.impersonation.retry')}
 			</Button>
 		{/snippet}
 	</ContextBanner>

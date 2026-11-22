@@ -13,11 +13,14 @@ const api = vi.hoisted(() => ({
 }));
 vi.mock('#lib/features/operator/impersonation/api.ts', () => api);
 vi.mock('#lib/features/operator/impersonation/api', () => api);
-vi.mock('$features/auth', () => ({ session: { capabilities: { tier: 'operator' } } }));
+vi.mock('$features/auth', () => ({
+	P: { platformImpersonationManage: 'platform.impersonation.manage' },
+	session: { capabilities: { tier: 'operator' }, can: () => true }
+}));
+vi.mock('$app/state', () => ({ page: { data: { capabilities: { person_id: 'P1' } } } }));
 
 import ImpersonationBanner from '#lib/features/operator/impersonation/components/ImpersonationBanner.svelte';
 import { impersonation } from '#lib/features/operator/impersonation/stores/impersonation.svelte.ts';
-import { IMPERSONATION_SESSION_KEY as KEY } from '#lib/utils/impersonation-session-key.ts';
 
 let component: ReturnType<typeof mount> | undefined;
 beforeEach(() => {
@@ -31,8 +34,7 @@ afterEach(() => {
 });
 
 describe('the banner does not poll the sessions endpoint', () => {
-	it('mounting with a persisted key reads once, and 20 settles later still once', async () => {
-		window.localStorage.setItem(KEY, 'A');
+	it('mounting reads once, and 20 settles later still once', async () => {
 		api.listImpersonationSessions.mockResolvedValue({
 			sessions: [
 				{

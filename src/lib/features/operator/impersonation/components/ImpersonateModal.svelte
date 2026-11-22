@@ -2,7 +2,7 @@
 	import { z } from 'zod';
 	import { Alert } from '$ui';
 	import { FormDialog, NumberInput, TextareaField } from '#lib/components/form/index.ts';
-	import { impersonation } from '../stores/impersonation.svelte';
+	import { AlreadyImpersonatingError, impersonation } from '../stores/impersonation.svelte';
 	// Type-only; deliberately bypasses the tenants barrel to avoid a cycle
 	// (tenants barrel -> TenantsList -> impersonation -> ImpersonateModal -> tenants).
 	import type { TenantDto } from '../../tenants/types';
@@ -19,7 +19,7 @@
 	async function onSubmit(values: z.output<typeof impersonateFormSchema>) {
 		// Opened only with a tenant; a missing one is a no-op, never a request without a target.
 		if (!tenant) return;
-		await impersonation.start(
+		const result = await impersonation.start(
 			{
 				target_tenant_id: tenant.id,
 				reason: values.reason,
@@ -27,6 +27,8 @@
 			},
 			tenant.display_name
 		);
+		// the server already lists a session for this person (the banner shows it): nothing was posted
+		if (result.kind === 'already') throw new AlreadyImpersonatingError();
 	}
 </script>
 

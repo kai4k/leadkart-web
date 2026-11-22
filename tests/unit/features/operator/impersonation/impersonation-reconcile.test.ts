@@ -16,11 +16,18 @@ vi.mock('#lib/features/operator/impersonation/stores/impersonation.svelte.ts', (
 			return store.status;
 		},
 		targetName: null,
+		more: 0,
+		error: null,
+		unknown: false,
+		forget: vi.fn(),
 		end: vi.fn(),
 		reconcile: () => store.reconcile()
 	}
 }));
-vi.mock('$features/auth', () => ({ session: { capabilities: { tier: 'platform' } } }));
+vi.mock('$features/auth', () => ({
+	P: { platformImpersonationManage: 'platform.impersonation.manage' },
+	session: { capabilities: { tier: 'platform' }, can: () => true }
+}));
 
 import ImpersonationBanner from '#lib/features/operator/impersonation/components/ImpersonationBanner.svelte';
 

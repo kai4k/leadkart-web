@@ -231,7 +231,10 @@
 			"impersonatingCompany": "Impersonating a company",
 			"details": "{reason} · Expires {expires}",
 			"end": "End impersonation",
-			"endLabel": "End impersonation session"
+			"endLabel": "End impersonation session",
+			"retry": "Retry",
+			"unknown": "Could not check impersonation status.",
+			"more": "+{count} more"
 		},
 		"footer": {
 			"label": "Application footer",
