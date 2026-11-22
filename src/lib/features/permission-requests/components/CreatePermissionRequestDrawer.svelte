@@ -31,7 +31,7 @@
 		<TextField
 			label="Permission"
 			name="permission"
-			placeholder="e.g. identity.users.create"
+			placeholder="e.g. crm.leads.reassign"
 			bind:value={form.values.permission}
 			required
 			error={form.errors.permission}

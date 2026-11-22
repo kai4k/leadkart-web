@@ -325,6 +325,10 @@
 			"tenant_scope_forbidden": "You don't have permission to act in another tenant.",
 			"tenant_scope_conflict": "This action targets a different tenant than the one you are acting in. Exit the tenant context and try again.",
 			"tenant_not_active": "This tenant is not active. Changes are disabled.",
+			"tenant_suspended": "Your company's account is suspended. Contact support.",
+			"admin_tier_required": "Only the Company Owner and Administrators can add users.",
+			"service_busy": "The service is busy. Try again in a moment.",
+			"session_not_found": "This session was already removed.",
 			"tenant_has_dependents": "This tenant still has members or data, so it can't be deleted yet.",
 			"forbidden": "You don't have permission to do this.",
 			"insufficient_rank": "You can only do this for people and roles below your own level.",
@@ -369,6 +373,15 @@
 			"slugLength": "Use between 2 and 100 characters.",
 			"durationOutOfRange": "Enter a whole number of days from 1 to 90.",
 			"nameMismatch": "The name doesn't match."
+		},
+		"passwordHint": "At least 8 characters, with an uppercase letter, a lowercase letter, a digit and a symbol.",
+		"passwordRule": {
+			"min_length": "The password is too short.",
+			"max_length": "The password is too long.",
+			"requires_uppercase": "Add an uppercase letter.",
+			"requires_lowercase": "Add a lowercase letter.",
+			"requires_digit": "Add a digit.",
+			"requires_symbol": "Add a symbol (a space is not a symbol)."
 		},
 		"leaveGuard": "You have unsaved changes. Leave without saving?",
 		"discard": {

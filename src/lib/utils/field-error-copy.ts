@@ -15,7 +15,14 @@ import { _ } from 'svelte-i18n';
 const CODE_KEYS: Record<string, string> = {
 	required: 'form.required',
 	too_long: 'form.tooLong',
-	invalid_characters: 'form.invalidCharacters'
+	invalid_characters: 'form.invalidCharacters',
+	// the password rule codes of `password_policy_violation` (`errors.new_password: [min_length, ...]`)
+	min_length: 'form.passwordRule.min_length',
+	max_length: 'form.passwordRule.max_length',
+	requires_uppercase: 'form.passwordRule.requires_uppercase',
+	requires_lowercase: 'form.passwordRule.requires_lowercase',
+	requires_digit: 'form.passwordRule.requires_digit',
+	requires_symbol: 'form.passwordRule.requires_symbol'
 };
 
 /** `namespace.camelCase` path: letters and digits in dotted segments that each start with a letter. */

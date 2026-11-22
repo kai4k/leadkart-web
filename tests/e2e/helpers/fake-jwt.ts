@@ -99,6 +99,7 @@ export function fakeRefreshToken(familyId: string = TEST_FAMILY_ID): string {
  * `{ permission: ['tenant.admin'] }` for tenant-admin tier).
  */
 export function fakeLoginResponse(claimOverrides: Record<string, unknown> = {}): {
+	must_change_password: boolean;
 	access_token: string;
 	refresh_token: string;
 	access_token_expires_at: string;
@@ -108,7 +109,8 @@ export function fakeLoginResponse(claimOverrides: Record<string, unknown> = {}):
 		access_token: fakeAccessToken(claimOverrides),
 		refresh_token: fakeRefreshToken(),
 		access_token_expires_at: new Date(Date.now() + 3_600_000).toISOString(),
-		token_type: 'Bearer'
+		token_type: 'Bearer',
+		must_change_password: false
 	};
 }
 
@@ -131,6 +133,16 @@ function base64url(s: string): string {
  * tenant.admin / super-user authority into it server-side); `rank` and
  * `tier` are Go's seniority, presentation only.
  */
+/** Go's default password rules (`GET /auth/me/capabilities` `password_policy`). */
+export const DEFAULT_PASSWORD_RULES = {
+	min_length: 8,
+	max_length: 1024,
+	requires_uppercase: true,
+	requires_lowercase: true,
+	requires_digit: true,
+	requires_symbol: true
+};
+
 export function fakeCapabilitiesResponse(overrides?: {
 	permissions?: Permission[];
 	is_platform?: boolean;
@@ -148,6 +160,9 @@ export function fakeCapabilitiesResponse(overrides?: {
 	/** Seniority (0 = owner, 99 = no role) and its band; presentation only. */
 	rank?: number;
 	tier?: 'owner' | 'admin' | 'manager' | 'team_lead' | 'user';
+	must_change_password?: boolean;
+	/** Only an impersonation session's own token carries it. */
+	impersonation?: { session_id: string; tenant_display_name: string };
 }) {
 	return {
 		person_id: overrides?.person_id ?? TEST_PERSON_ID,
@@ -163,7 +178,11 @@ export function fakeCapabilitiesResponse(overrides?: {
 		effective_permissions: overrides?.effective_permissions ?? overrides?.permissions ?? [],
 		roles: overrides?.roles ?? [],
 		rank: overrides?.rank ?? 99,
-		tier: overrides?.tier ?? 'user'
+		tier: overrides?.tier ?? 'user',
+		must_change_password: overrides?.must_change_password ?? false,
+		// the caller's own tenant's rules (the 8-character default of the owner's ruling, 2026-11-21)
+		password_policy: DEFAULT_PASSWORD_RULES,
+		...(overrides?.impersonation ? { impersonation: overrides.impersonation } : {})
 	};
 }
 

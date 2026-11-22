@@ -41,6 +41,7 @@ describe('the banner does not poll the sessions endpoint', () => {
 					session_id: 'A',
 					operator_id: 'o',
 					target_tenant_id: 't',
+					tenant_display_name: 'Company A',
 					reason: 'support',
 					created_at: '2030-01-01T00:00:00Z',
 					expires_at: '2030-01-01T01:00:00Z'

@@ -114,8 +114,8 @@
 		{#each states as s (s)}
 			<PasswordField
 				label="Password"
-				hint="At least 12 characters."
-				error={err(s, 'Use at least 12 characters.')}
+				hint="At least 8 characters."
+				error={err(s, 'Use at least 8 characters.')}
 				disabled={s === 'disabled'}
 				bind:value={password[s]}
 			/>

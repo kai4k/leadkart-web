@@ -28,6 +28,7 @@ const VALID_SESSION_DTO = {
 	session_id: '00000000-0000-4000-8000-000000000002',
 	operator_id: '00000000-0000-4000-8000-000000000003',
 	target_tenant_id: '00000000-0000-4000-8000-000000000001',
+	tenant_display_name: 'Acme Pharma',
 	reason: 'Investigating billing discrepancy',
 	created_at: '2026-05-18T10:00:00Z',
 	expires_at: '2026-05-18T10:30:00Z'
@@ -165,6 +166,7 @@ describe('createImpersonationSessionResponseSchema', () => {
 	it('parses a valid 201 response', () => {
 		const result = createImpersonationSessionResponseSchema.safeParse({
 			session_id: '00000000-0000-4000-8000-000000000002',
+			tenant_display_name: 'Acme Pharma',
 			expires_at_utc: '2026-05-18T10:30:00Z'
 		});
 		expect(result.success).toBe(true);

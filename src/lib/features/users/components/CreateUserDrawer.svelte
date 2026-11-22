@@ -1,5 +1,6 @@
 <!-- src/lib/features/users/components/CreateUserDrawer.svelte -->
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import type { z } from 'zod';
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	import { Alert, Button } from '$ui';
@@ -72,6 +73,7 @@
 			autocomplete="new-password"
 			bind:value={form.values.password}
 			required
+			hint={$_('form.passwordHint')}
 			error={form.errors.password}
 		/>
 		<p class="caption text-subtle-foreground">

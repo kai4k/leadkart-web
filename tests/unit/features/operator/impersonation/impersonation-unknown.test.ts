@@ -24,6 +24,7 @@ const dto = (id: string) => ({
 	session_id: id,
 	operator_id: 'op',
 	target_tenant_id: 't',
+	tenant_display_name: `Company ${id}`,
 	reason: 'support',
 	created_at: '2030-01-01T00:00:00Z',
 	expires_at: '2099-01-01T00:00:00Z'
@@ -62,7 +63,11 @@ describe('the mutation deadline is above what the BFF can spend', () => {
 
 describe('a start that lands after its deadline', () => {
 	it('timed-out POST queues follow-up reads: the server created the session late, the banner state shows it', async () => {
-		const post = deferred<{ session_id: string; expires_at_utc: string }>();
+		const post = deferred<{
+			session_id: string;
+			tenant_display_name: string;
+			expires_at_utc: string;
+		}>();
 		api.startImpersonation.mockReturnValueOnce(post.promise);
 		await expect(store.start(START)).rejects.toBeInstanceOf(StartOutcomeUnknownError);
 		expect(store.active).toBeNull();
@@ -73,7 +78,11 @@ describe('a start that lands after its deadline', () => {
 		await wait(120);
 		expect(store.active?.session_id).toBe('LATE');
 		expect(store.checking).toBe(false);
-		post.resolve({ session_id: 'LATE', expires_at_utc: '2099-01-01T00:00:00Z' }); // the late answer changes nothing
+		post.resolve({
+			session_id: 'LATE',
+			tenant_display_name: 'Late',
+			expires_at_utc: '2099-01-01T00:00:00Z'
+		}); // the late answer changes nothing
 		await wait(10);
 		expect(store.active?.session_id).toBe('LATE');
 	});
@@ -140,6 +149,7 @@ describe('person boundary, each mutant by name', () => {
 		person = 'B';
 		api.startImpersonation.mockResolvedValueOnce({
 			session_id: 'B1',
+			tenant_display_name: 'Company B1',
 			expires_at_utc: '2099-01-01T00:00:00Z'
 		});
 		await expect(store.start(START)).resolves.toEqual({ kind: 'started' });

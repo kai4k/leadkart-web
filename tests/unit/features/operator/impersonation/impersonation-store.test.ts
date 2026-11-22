@@ -28,11 +28,16 @@ export const dto = (id: string, expires = '2099-01-01T00:00:00Z') => ({
 	session_id: id,
 	operator_id: 'op',
 	target_tenant_id: 't',
+	tenant_display_name: `Company ${id}`,
 	reason: 'support',
 	created_at: '2030-01-01T00:00:00Z',
 	expires_at: expires
 });
-const created = (id: string) => ({ session_id: id, expires_at_utc: '2099-01-01T00:00:00Z' });
+const created = (id: string) => ({
+	session_id: id,
+	tenant_display_name: `Company ${id}`,
+	expires_at_utc: '2099-01-01T00:00:00Z'
+});
 const START = { target_tenant_id: 't', reason: 'a reason that is long enough' } as never;
 const flush = () => new Promise((r) => setTimeout(r, 0));
 function deferred<T>() {
@@ -73,11 +78,12 @@ describe('the target name belongs to one session', () => {
 			.mockResolvedValueOnce({ sessions: [] }) // start's own check
 			.mockResolvedValue({ sessions: [dto('A1')] });
 		await store.start(START, 'Alpha');
-		expect(store.targetName).toBe('Alpha');
+		// the name is the SERVER's (create response, then every read), not what start() was handed
+		expect(store.targetName).toBe('Company A1');
 		api.listImpersonationSessions.mockResolvedValue({ sessions: [dto('B1')] });
 		await store.reconcile();
 		expect(store.active?.session_id).toBe('B1');
-		expect(store.targetName).toBeNull();
+		expect(store.targetName).toBe('Company B1');
 		api.listImpersonationSessions.mockResolvedValue({ sessions: [] });
 		await store.reconcile();
 		expect(store.active).toBeNull();
@@ -220,7 +226,7 @@ describe('start (mutant: the guard only at call time)', () => {
 		await expect(store.start(START, 'Alpha')).resolves.toEqual({ kind: 'started' });
 		expect(store.active?.session_id).toBe('N');
 		expect(store.active?.reason).toBe('a reason that is long enough');
-		expect(store.targetName).toBe('Alpha');
+		expect(store.targetName).toBe('Company N'); // the server's name, not the one start() was handed
 		expect(store.status).toBe('active');
 	});
 

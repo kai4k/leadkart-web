@@ -22,6 +22,7 @@ const CODES = [
 	'tenant_scope_forbidden',
 	'tenant_scope_conflict',
 	'tenant_not_active',
+	'tenant_suspended',
 	'tenant_has_dependents',
 	// Authority
 	'forbidden',
@@ -30,6 +31,7 @@ const CODES = [
 	'grant_exceeds_authority',
 	'self_modification_forbidden',
 	'impersonation_not_allowed',
+	'admin_tier_required',
 	'not_approver',
 	// Members and roles
 	'last_owner_protected',
@@ -58,6 +60,8 @@ const CODES = [
 	'permission_request_not_pending',
 	// Account and search
 	'incorrect_current_password',
+	'service_busy',
+	'session_not_found',
 	'search_category_forbidden',
 	'invalid_search_include'
 ] as const;

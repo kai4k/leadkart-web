@@ -62,7 +62,7 @@
 					name="min_length"
 					hint="NIST SP 800-63B recommends 8 or more. Stripe and GitHub use 8."
 					bind:value={minLength}
-					min={6}
+					min={8}
 					max={64}
 				/>
 
@@ -97,33 +97,8 @@
 		</Card.Content>
 	</Card.Root>
 
-	<Card.Root padding="md" elevation="sm">
-		<Card.Header>
-			<Card.Title>Account lockout</Card.Title>
-			<Card.Description>
-				Throttle brute-force attacks. After the maximum failed attempts, the account is temporarily
-				locked.
-			</Card.Description>
-		</Card.Header>
-		<Card.Content>
-			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-				<NumberInput
-					label="Max failed attempts"
-					name="max_failed_attempts"
-					hint="Auth0 default is 10. Set to 0 to disable lockout entirely."
-					bind:value={maxFailedAttempts}
-					min={0}
-					max={50}
-				/>
-				<NumberInput
-					label="Lockout duration (minutes)"
-					name="lockout_minutes"
-					hint="How long the account stays locked once the threshold is hit."
-					bind:value={lockoutMinutes}
-					min={0}
-					max={1440}
-				/>
-			</div>
-		</Card.Content>
-	</Card.Root>
+	<!-- Go accepts and returns these two but does NOT enforce them (the platform lockout is fixed: 10 failures in 15
+	     minutes; BFF_API_CHANGES row 49), so they are not controls: the values read back are sent back unchanged. -->
+	<input type="hidden" name="max_failed_attempts" value={maxFailedAttempts} />
+	<input type="hidden" name="lockout_minutes" value={lockoutMinutes} />
 </TenantSectionForm>

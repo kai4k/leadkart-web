@@ -124,7 +124,7 @@ test.describe('Reset password — confirm', () => {
 		await expect(page.getByText(/passwords don't match/i)).toBeVisible({ timeout: 3000 });
 	});
 
-	test('weak new password (<12 chars): Zod field error, no POST', async ({ page }) => {
+	test('weak new password (<8 chars): Zod field error, no POST', async ({ page }) => {
 		await page.goto('/reset-password?token=t');
 		await page
 			.getByLabel(/new password/i)

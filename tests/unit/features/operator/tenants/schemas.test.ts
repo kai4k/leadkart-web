@@ -88,12 +88,14 @@ describe('registerTenantRequestSchema — slug', () => {
 // ---------------------------------------------------------------------------
 
 describe('registerTenantRequestSchema — password + strict', () => {
-	it('uses the shared password rule: 12 characters, not 8', () => {
+	// Go's policy (openapi at 166b6e7: `admin_password` min 8; BFF_API_CHANGES row 26): 8 characters, not 12. The classes
+	// (upper, lower, digit, symbol) are the tenant's policy: Go answers `password_policy_violation`, never stricter here.
+	it('uses the shared password rule: 8 characters (a password of 8-11 is accepted)', () => {
 		const parse = (admin_password: string) =>
 			registerTenantRequestSchema.safeParse({ ...VALID_REGISTER, admin_password }).success;
 		expect(parse('1234567')).toBe(false);
-		expect(parse('12345678')).toBe(false);
-		expect(parse('a'.repeat(11))).toBe(false);
+		expect(parse('Abcdef1!')).toBe(true);
+		expect(parse('a'.repeat(11))).toBe(true);
 		expect(parse('a'.repeat(12))).toBe(true);
 	});
 

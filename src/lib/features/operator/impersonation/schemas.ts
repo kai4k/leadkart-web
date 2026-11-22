@@ -25,6 +25,7 @@ export const createImpersonationSessionRequestSchema = z
 /** The access token in the 201 body is consumed by the BFF only; the browser keeps the id + expiry. */
 export const createImpersonationSessionResponseSchema = CreateImpersonationSessionResponse.pick({
 	session_id: true,
+	tenant_display_name: true,
 	expires_at_utc: true
 });
 

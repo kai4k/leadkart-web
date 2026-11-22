@@ -20,6 +20,7 @@ const dto = (id: string) => ({
 	session_id: id,
 	operator_id: 'op',
 	target_tenant_id: 't',
+	tenant_display_name: `Company ${id}`,
 	reason: 'support',
 	created_at: '2030-01-01T00:00:00Z',
 	expires_at: '2099-01-01T01:00:00Z'
@@ -118,7 +119,11 @@ describe('property: any interleaving', () => {
 					server.get(who)!.add(id);
 					ownerOf.set(id, who);
 				}
-				return { session_id: id, expires_at_utc: '2099-01-01T01:00:00Z' };
+				return {
+					session_id: id,
+					tenant_display_name: `Company ${id}`,
+					expires_at_utc: '2099-01-01T01:00:00Z'
+				};
 			});
 		});
 		api.endImpersonation.mockImplementation((id: string) => {

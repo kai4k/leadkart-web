@@ -33,7 +33,7 @@ export interface Impersonation {
 	readonly unknown: boolean;
 	/** A start or end did not answer in time: follow-up reads are running until one tells the truth. */
 	readonly checking: boolean;
-	/** The company's name, in memory only (the DTO carries an id): the banner says "a company" without it. */
+	/** The company's name as the SERVER sent it (`tenant_display_name`); the name `start()` was given is only a fallback. */
 	readonly targetName: string | null;
 	/** Read the server's list for the signed-in person. Reads queued behind each other collapse into one. */
 	reconcile(): Promise<void>;

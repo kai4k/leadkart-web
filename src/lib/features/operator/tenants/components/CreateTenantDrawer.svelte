@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	import { Alert, Button, Card, CopyButton } from '$ui';
 	import { FormSheet, TextField, PasswordField } from '#lib/components/form/index.ts';
@@ -116,6 +117,7 @@
 			bind:value={form.values.admin_password}
 			required
 			minlength={8}
+			hint={$_('form.passwordHint')}
 			error={form.errors.admin_password}
 		/>
 	{/snippet}

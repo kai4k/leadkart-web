@@ -66,6 +66,7 @@ test.describe('Impersonation — positive', () => {
 			status: 201,
 			body: {
 				session_id: '00000000-0000-4000-8000-000000000102',
+				tenant_display_name: 'Beta Meds',
 				expires_at_utc: new Date(Date.now() + 30 * 60_000).toISOString(),
 				access_token: 'fake.scoped.jwt',
 				access_token_expires_at_utc: new Date(Date.now() + 30 * 60_000).toISOString(),

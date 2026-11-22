@@ -127,7 +127,16 @@ describe('capabilitiesSchema (generated CapabilitiesDto)', () => {
 		effective_permissions: [],
 		roles: [],
 		rank: 99,
-		tier: 'user'
+		tier: 'user',
+		must_change_password: false,
+		password_policy: {
+			min_length: 8,
+			max_length: 1024,
+			requires_uppercase: true,
+			requires_lowercase: true,
+			requires_digit: true,
+			requires_symbol: true
+		}
 	};
 
 	it('parses a body without email / first_name / last_name (omitzero in Go)', () => {

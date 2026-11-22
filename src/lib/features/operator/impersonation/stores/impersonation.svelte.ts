@@ -188,6 +188,7 @@ export function createImpersonation(opts: ImpersonationOptions): Impersonation {
 					session_id: created.session_id,
 					operator_id: '',
 					target_tenant_id: req.target_tenant_id,
+					tenant_display_name: created.tenant_display_name,
 					reason: req.reason,
 					created_at: new SvelteDate(now()).toISOString(),
 					expires_at: created.expires_at_utc
@@ -276,8 +277,12 @@ export function createImpersonation(opts: ImpersonationOptions): Impersonation {
 			return isMine() && unknown.checking;
 		},
 		get targetName() {
+			// the company's CURRENT name comes from the server's session (create response, every read); what the caller
+			// passed to start() is only a fallback for a server that sent none
 			const a = shown();
-			return named && a && named.sessionId === a.session_id ? named.name : null;
+			if (!a) return null;
+			if (a.tenant_display_name) return a.tenant_display_name;
+			return named && named.sessionId === a.session_id ? named.name : null;
 		},
 		reconcile,
 		start,
