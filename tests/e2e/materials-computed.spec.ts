@@ -148,6 +148,7 @@ test.describe('materials: computed styles on the built app', () => {
 			await page.getByRole('button', { name: 'Default', exact: true }).click();
 			const neutral = page.locator('[data-sonner-toast][data-type="default"]');
 			await expect(neutral).toBeVisible();
+			await expect(neutral).toHaveAttribute('data-mounted', 'true');
 			glass(await paint(neutral), 'neutral toast at rest');
 			await page.getByRole('button', { name: 'Success', exact: true }).click();
 			const typed = page.locator('[data-sonner-toast][data-type="success"]');
@@ -161,6 +162,8 @@ test.describe('materials: computed styles on the built app', () => {
 			await page.getByRole('button', { name: 'Toast from the dialog' }).click();
 			const toast = page.locator('[data-sonner-toast][data-type="default"]');
 			await expect(toast).toBeVisible();
+			// sonner's own mount transition (data-mounted) is over before the paint is read
+			await expect(toast).toHaveAttribute('data-mounted', 'true');
 			opaque(await paint(toast), 'neutral toast over a modal');
 		});
 
