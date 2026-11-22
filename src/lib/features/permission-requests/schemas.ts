@@ -26,8 +26,14 @@ export const PERMISSION_REQUEST_MAX_DAYS =
 
 /** Duration (1-90 days) and reason (max 1024) bounds are the generated ones; only the messages are ours. */
 export const createPermissionRequestSchema = CreatePermissionRequestRequest.extend({
-	permission: z.string().min(1, 'Pick a permission.'),
-	reason: z.string().min(10, 'Reason must be at least 10 characters.').max(1024)
+	permission: z.string().min(1, 'form.errors.permissionRequired'),
+	reason: z.string().min(10, 'Reason must be at least 10 characters.').max(1024, 'form.tooLong'),
+	duration_days: z
+		.number({ error: 'form.errors.durationOutOfRange' })
+		.int('form.errors.durationOutOfRange')
+		.gte(1, 'form.errors.durationOutOfRange')
+		.lte(PERMISSION_REQUEST_MAX_DAYS, 'form.errors.durationOutOfRange')
+		.optional()
 });
 export type CreatePermissionRequest = z.output<typeof createPermissionRequestSchema>;
 
@@ -37,8 +43,8 @@ export type CreatePermissionRequestResponse = z.output<
 >;
 
 export const approvePermissionRequestSchema = z.object({
-	decision_reason: z.string().max(1024).optional()
+	decision_reason: z.string().max(1024, 'form.tooLong').optional()
 });
 export const denyPermissionRequestSchema = z.object({
-	decision_reason: z.string().min(1, 'Reason is required').max(1024)
+	decision_reason: z.string().min(1, 'form.errors.reasonRequired').max(1024, 'form.tooLong')
 });

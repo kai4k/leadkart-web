@@ -48,7 +48,7 @@ export const confirmEmailChangeBodySchema = z.object({ token: tokenField }).stri
  * enforced server-side.
  */
 export const changePasswordSchema = ChangePasswordRequest.extend({
-	current_password: currentPasswordField('Current password is required'),
+	current_password: currentPasswordField('auth.errors.currentPasswordRequired'),
 	new_password: newPasswordField
 });
 
@@ -72,7 +72,7 @@ export const revokeOtherSessionsResponseSchema = RevokeAllSessionsResponse;
  * accepted, and all three are required by the form.
  */
 export const updateProfileRequestSchema = UpdateUserProfileRequest.extend({
-	designation: z.string().max(120),
-	department: z.string().max(120),
-	status_message: z.string().max(280)
+	designation: z.string().max(120, 'form.tooLong'),
+	department: z.string().max(120, 'form.tooLong'),
+	status_message: z.string().max(280, 'form.tooLong')
 }).strict();

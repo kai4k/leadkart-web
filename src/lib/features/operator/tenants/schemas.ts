@@ -25,22 +25,22 @@ export { tenantSchema as tenantDtoSchema } from '#lib/features/tenant/schemas.ts
  * Built from the generated request: its slug / name bounds stand.
  * Added here: the shared e-mail rule, no leading/trailing dash in a slug, names must not be empty, the shared password rule.
  */
-const registerShape = RegisterTenantRequest.shape;
 export const registerTenantRequestSchema = RegisterTenantRequest.extend({
-	slug: registerShape.slug.regex(
-		/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/,
-		'Use lowercase letters, digits and dashes only.'
-	),
-	legal_name: registerShape.legal_name.min(2, 'Enter the legal name.'),
-	display_name: registerShape.display_name.min(2, 'Enter the display name.'),
+	// The contract's bounds (2-100); only the messages are ours.
+	slug: z
+		.string()
+		.min(2, 'form.errors.slugLength')
+		.max(100, 'form.errors.slugLength')
+		.regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, 'Use lowercase letters, digits and dashes only.'),
+	legal_name: z.string().min(2, 'Enter the legal name.').max(200, 'form.tooLong'),
+	display_name: z.string().min(2, 'Enter the display name.').max(200, 'form.tooLong'),
 	admin_email: formEmailField,
 	admin_password: newPasswordField,
-	admin_first_name: registerShape.admin_first_name
+	admin_first_name: z
+		.string()
 		.min(1, 'Enter a first name.')
 		.max(120, 'Use at most 120 characters.'),
-	admin_last_name: registerShape.admin_last_name
-		.min(1, 'Enter a last name.')
-		.max(120, 'Use at most 120 characters.')
+	admin_last_name: z.string().min(1, 'Enter a last name.').max(120, 'Use at most 120 characters.')
 }).strict();
 
 export const registerTenantResponseSchema = RegisterTenantResponse;

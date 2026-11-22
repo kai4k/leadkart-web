@@ -86,7 +86,8 @@
 			"emailRequired": "Email is required.",
 			"emailTooLong": "Email is too long.",
 			"passwordRequired": "Password is required.",
-			"passwordTooLong": "Password is too long."
+			"passwordTooLong": "Password is too long.",
+			"currentPasswordRequired": "Current password is required."
 		},
 		"mustChange": {
 			"title": "Set a new password",
@@ -342,6 +343,19 @@
 		"required": "This field is required.",
 		"tooLong": "This is too long.",
 		"invalidCharacters": "Remove the characters that are not allowed.",
+		"errors": {
+			"reasonRequired": "Reason is required.",
+			"passwordTooShort": "Password is too short.",
+			"legalNameRequired": "Legal name is required.",
+			"displayNameRequired": "Display name is required.",
+			"permissionRequired": "Pick a permission.",
+			"roleNameTooShort": "Role name is too short.",
+			"roleNameTooLong": "Role name is too long.",
+			"levelInvalid": "Enter a whole number for the hierarchy level.",
+			"levelOutOfRange": "Hierarchy level is out of range.",
+			"slugLength": "Use between 2 and 100 characters.",
+			"durationOutOfRange": "Enter a whole number of days from 1 to 90."
+		},
 		"leaveGuard": "You have unsaved changes. Leave without saving?",
 		"reason": "Reason",
 		"typeToConfirm": "Type {text} to confirm",

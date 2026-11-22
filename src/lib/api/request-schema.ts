@@ -4,10 +4,12 @@ import { ChangePasswordRequest } from '#lib/api/generated/index.ts';
 /**
  * Field rules several request (form) schemas share: what a user's input must meet before it is sent.
  * Response data is never format-checked (the generated DTOs carry no `format: email`).
+ * A message here is an i18n KEY, not a sentence: server actions share these schemas and cannot call
+ * `$_`, so the key travels and the renderer (`fieldMessageText`) translates it.
  */
 
 /** "Why are you doing this": required, capped at 500. Suspend, delete, anonymise, deactivate, write-off. */
-export const reasonField = z.string().min(1, 'Reason is required').max(500);
+export const reasonField = z.string().min(1, 'form.errors.reasonRequired').max(500, 'form.tooLong');
 
 /** Go's maximum email length (RFC 5321 path limit). */
 const EMAIL_MAX_LENGTH = 254;
@@ -21,11 +23,11 @@ const EMAIL_MAX_LENGTH = 254;
 export const formEmailField = z
 	.string()
 	.trim()
-	.min(1, 'Email is required')
+	.min(1, 'auth.errors.emailRequired')
 	// Go's own cap. Checked BEFORE the pattern (abort) so an oversized body never reaches it.
-	.max(EMAIL_MAX_LENGTH, { error: 'Email is too long', abort: true })
+	.max(EMAIL_MAX_LENGTH, { error: 'auth.errors.emailTooLong', abort: true })
 	// Linear: no label can contain a dot, so the domain splits one way only (no backtracking).
-	.regex(/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/, 'Invalid email format');
+	.regex(/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/, 'auth.changeEmail.errors.invalid');
 
 /**
  * Sign-in and forgot-password: trimmed, non-empty and at most 254 characters (Go's cap; nothing
@@ -35,8 +37,8 @@ export const formEmailField = z
 export const lookupEmailField = z
 	.string()
 	.trim()
-	.min(1, 'Email is required')
-	.max(EMAIL_MAX_LENGTH, 'Email is too long');
+	.min(1, 'auth.errors.emailRequired')
+	.max(EMAIL_MAX_LENGTH, 'auth.errors.emailTooLong');
 
 /**
  * Ceilings on what a PRE-LOGIN (or any password-bearing) request may carry. Without them a body up
@@ -46,8 +48,8 @@ const PASSWORD_MAX_LENGTH = 1024;
 const TOKEN_MAX_LENGTH = 512;
 
 /** The sign-in password (and any "current password"): present, and not absurdly long. Nothing else is Go's call. */
-export const currentPasswordField = (requiredMessage = 'Password is required') =>
-	z.string().min(1, requiredMessage).max(PASSWORD_MAX_LENGTH, 'Password is too long');
+export const currentPasswordField = (requiredMessage = 'auth.errors.passwordRequired') =>
+	z.string().min(1, requiredMessage).max(PASSWORD_MAX_LENGTH, 'auth.errors.passwordTooLong');
 
 /** An emailed / URL token (password reset, email change): present, and at most 512 characters. */
 export const tokenField = z.string().min(1).max(TOKEN_MAX_LENGTH);
@@ -58,5 +60,5 @@ const PASSWORD_MIN_LENGTH = ChangePasswordRequest.shape.new_password.minLength ?
 /** A NEW password a user picks. (The current/sign-in password is only checked for presence.) */
 export const newPasswordField = z
 	.string()
-	.min(PASSWORD_MIN_LENGTH, `Password must be at least ${PASSWORD_MIN_LENGTH} characters`)
-	.max(PASSWORD_MAX_LENGTH, 'Password is too long');
+	.min(PASSWORD_MIN_LENGTH, 'form.errors.passwordTooShort')
+	.max(PASSWORD_MAX_LENGTH, 'auth.errors.passwordTooLong');

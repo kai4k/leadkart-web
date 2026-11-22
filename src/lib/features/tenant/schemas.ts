@@ -29,8 +29,8 @@ export type TenantStatus = z.output<typeof tenantStatusSchema>;
 export const tenantSchema = TenantDto;
 
 export const updateTenantProfileSchema = z.object({
-	legal_name: z.string().min(1, 'Legal name is required'),
-	display_name: z.string().min(1, 'Display name is required')
+	legal_name: z.string().min(1, 'form.errors.legalNameRequired'),
+	display_name: z.string().min(1, 'form.errors.displayNameRequired')
 });
 
 export const updateTenantStatutorySchema = z.object({

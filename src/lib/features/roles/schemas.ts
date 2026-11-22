@@ -29,15 +29,27 @@ export const ROLE_NAME_MIN = CreateRoleRequest.shape.name.minLength ?? 2;
 export const ROLE_NAME_MAX = CreateRoleRequest.shape.name.maxLength ?? 100;
 
 /** The contract allows level 0, but Go rejects it for a created or re-levelled role (the Owner's level). */
-const levelField = z.number().int().min(ROLE_LEVEL_MIN).max(ROLE_LEVEL_MAX);
+const levelField = z
+	.number({ error: 'form.errors.levelInvalid' })
+	.int('form.errors.levelInvalid')
+	.min(ROLE_LEVEL_MIN, 'form.errors.levelOutOfRange')
+	.max(ROLE_LEVEL_MAX, 'form.errors.levelOutOfRange');
+
+/** The same bounds as the contract's name; only the messages are ours. */
+const nameField = z
+	.string()
+	.min(ROLE_NAME_MIN, 'form.errors.roleNameTooShort')
+	.max(ROLE_NAME_MAX, 'form.errors.roleNameTooLong');
 
 export const createRoleRequestSchema = CreateRoleRequest.extend({
+	name: nameField,
 	hierarchy_level: levelField
 }).strict();
 
 export const createRoleResponseSchema = CreateRoleResponse;
 
 export const updateRoleRequestSchema = UpdateRoleRequest.extend({
+	name: nameField.optional(),
 	hierarchy_level: levelField.nullable().optional()
 }).strict();
 

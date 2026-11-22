@@ -41,3 +41,14 @@ describe('fieldText / bannerText', () => {
 		expect(bannerText(null, t)).toBeNull();
 	});
 });
+
+describe('fieldText: a schema message that is an i18n key is translated, an API code is mapped', () => {
+	it('keys in fieldMessages reach the screen as catalogue text', () => {
+		const failure = readFailure({
+			fieldMessages: { email: 'auth.errors.emailRequired', name: 'required', note: 'A sentence.' }
+		});
+		expect(fieldText(failure, 'email', t)).toBe('T(auth.errors.emailRequired)');
+		expect(fieldText(failure, 'name', t)).toBe('T(form.required)');
+		expect(fieldText(failure, 'note', t)).toBe('A sentence.');
+	});
+});

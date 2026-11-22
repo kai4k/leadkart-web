@@ -22,7 +22,7 @@
  */
 import { describeError, ValidationError } from '$api/errors';
 import { focusFirstInvalid } from '#lib/utils/focus-first-invalid.ts';
-import { fieldErrorsCopy } from '#lib/utils/field-error-copy.ts';
+import { fieldErrorCopy, fieldErrorsCopy } from '#lib/utils/field-error-copy.ts';
 import type { z } from 'zod';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- z.ZodObject's generic args are intentionally any-typed at the call-site of useForm
@@ -126,7 +126,7 @@ export function useForm<TSchema extends AnyObjectSchema>(
 			: (result.error.flatten().fieldErrors as Record<string, string[] | undefined>)[field]?.[0];
 
 		if (fieldError) {
-			errors = { ...errors, [field]: fieldError };
+			errors = { ...errors, [field]: fieldErrorCopy(fieldError) };
 		} else if (field in errors) {
 			const { [field]: _omitted, ...rest } = errors;
 			errors = rest;
@@ -160,7 +160,7 @@ export function useForm<TSchema extends AnyObjectSchema>(
 			const mapped: Record<string, string> = {};
 			for (const key of Object.keys(flat)) {
 				const msg = flat[key]?.[0];
-				if (msg) mapped[key] = msg;
+				if (msg) mapped[key] = fieldErrorCopy(msg);
 			}
 			errors = mapped;
 			// A failed submit lands on the first invalid field (its error is read with it), instead of

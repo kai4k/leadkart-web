@@ -4,6 +4,7 @@
  * `FormFailure`, and asks it for the text of a field or of the banner, so the key / message
  * split lives here once.
  */
+import { fieldMessageText } from '#lib/utils/field-error-copy.ts';
 
 export type FormFailure<V extends object = Record<string, never>> = {
 	/** What the user typed, to repopulate the form. */
@@ -33,7 +34,10 @@ export function readFailure<V extends object = Record<string, never>>(
 	};
 }
 
-/** The text to show under a field: its key translated, else the message that came with it. */
+/**
+ * The text to show under a field: its key translated, else the message that came with it (a
+ * schema's key is translated, an API code mapped, a sentence kept: `fieldMessageText`).
+ */
 export function fieldText(
 	failure: FormFailure<object> | null,
 	field: string,
@@ -41,7 +45,9 @@ export function fieldText(
 ): string | undefined {
 	if (!failure) return undefined;
 	const key = failure.fieldKeys[field];
-	return key ? t(key) : failure.fieldMessages[field];
+	if (key) return t(key);
+	const message = failure.fieldMessages[field];
+	return message === undefined ? undefined : fieldMessageText(message, t);
 }
 
 /** The banner line, translated. */
