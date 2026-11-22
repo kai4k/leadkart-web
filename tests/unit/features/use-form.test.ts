@@ -404,3 +404,38 @@ describe('Form.submit: focus moves to the first invalid field', () => {
 		el.remove();
 	});
 });
+
+describe('Form.submit: a validation error for a field the form does not render', () => {
+	const eventFor = (el: HTMLElement) =>
+		({ preventDefault: vi.fn(), currentTarget: el }) as unknown as SubmitEvent;
+	const formWith = (names: string[]) => {
+		const el = document.createElement('form');
+		el.innerHTML = names.map((n) => `<input name="${n}" />`).join('');
+		document.body.append(el);
+		return el;
+	};
+
+	it('shows in the banner (never nothing), and the rendered fields keep their own errors', async () => {
+		const el = formWith(['email', 'name']);
+		const form = formInRoot(testSchema, { email: 'a@b.com', name: 'Alice' }).form;
+		await form.submit(eventFor(el), () => {
+			throw new ValidationError({ admin_first_name: 'too_long', name: 'too_long' }, 422);
+		});
+		expect(form.bannerError).toBeTruthy();
+		expect(form.bannerError).not.toContain('admin_first_name');
+		expect(form.errors.admin_first_name).toBeUndefined();
+		expect(form.errors.name).toBeTruthy();
+		el.remove();
+	});
+
+	it('only rendered fields: no banner, the field shows the error', async () => {
+		const el = formWith(['email', 'name']);
+		const form = formInRoot(testSchema, { email: 'a@b.com', name: 'Alice' }).form;
+		await form.submit(eventFor(el), () => {
+			throw new ValidationError({ name: 'too_long' }, 422);
+		});
+		expect(form.bannerError).toBeNull();
+		expect(form.errors.name).toBeTruthy();
+		el.remove();
+	});
+});

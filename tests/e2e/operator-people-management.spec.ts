@@ -90,6 +90,73 @@ test.describe('People list — positive', () => {
 	});
 });
 
+test.describe('Anonymise dialog on a phone', () => {
+	test.beforeEach(async () => {
+		await resetMock();
+	});
+
+	// the REAL Anonymise dialog (person detail), not a styleguide stand-in
+	test('at 360x640 its footer buttons are inside the viewport and the body scrolls', async ({
+		page
+	}) => {
+		await page.setViewportSize({ width: 360, height: 640 });
+		await signInAsOperator(page);
+		await registerMocks([
+			{
+				method: 'GET',
+				path: `/api/v1/platform/persons/${PERSON_AAA.id}`,
+				status: 200,
+				body: PERSON_AAA
+			},
+			{
+				method: 'GET',
+				path: `/api/v1/platform/persons/${PERSON_AAA.id}/memberships`,
+				status: 200,
+				body: { memberships: [] }
+			},
+			{ method: 'GET', path: '/api/v1/platform/tenants', status: 200, body: { tenants: [] } },
+			{
+				method: 'GET',
+				path: `/api/v1/platform/persons/${PERSON_AAA.id}/activity`,
+				status: 200,
+				body: {}
+			}
+		]);
+		await page.goto(`/operator/persons/${PERSON_AAA.id}`);
+		await page.getByRole('button', { name: 'Anonymise' }).first().click();
+		const dialog = page.locator('[data-slot="alert-dialog-content"]');
+		await expect(dialog).toBeVisible();
+		await expect(dialog.getByText('Anonymise alice@acme.test')).toBeVisible();
+		await page.waitForTimeout(300);
+		const box = (await dialog.boundingBox())!;
+		expect(box.y).toBeGreaterThanOrEqual(0);
+		expect(box.y + box.height).toBeLessThanOrEqual(640);
+		const buttons = dialog.locator('[data-slot="alert-dialog-footer"] button');
+		expect(await buttons.count()).toBeGreaterThanOrEqual(2);
+		for (let i = 0; i < (await buttons.count()); i++) {
+			const b = (await buttons.nth(i).boundingBox())!;
+			expect(b.y, `footer button ${i} top`).toBeGreaterThanOrEqual(0);
+			expect(b.y + b.height, `footer button ${i} bottom`).toBeLessThanOrEqual(640);
+			expect(b.x + b.width, `footer button ${i} right`).toBeLessThanOrEqual(360);
+		}
+		// the body between the pinned header and footer is what scrolls when the dialog is taller than the cap
+		const body = await dialog.evaluate((el) => {
+			const footer = el.querySelector('[data-slot="alert-dialog-footer"]')!;
+			const scroller = [...el.children].find(
+				(c) => c !== footer && getComputedStyle(c).overflowY === 'auto'
+			);
+			return {
+				dialogOverflow: getComputedStyle(el).overflowY,
+				hasScroller: Boolean(scroller)
+			};
+		});
+		expect(box.height).toBeLessThanOrEqual(640 * 0.9 + 1);
+		expect(body.hasScroller, 'the body is the scroll container, not the dialog').toBe(true);
+		expect(body.dialogOverflow).not.toBe('auto');
+		await expect(buttons.first()).toBeFocused();
+	});
+});
+
 test.describe('People list — negative', () => {
 	test.beforeEach(async () => {
 		await resetMock();

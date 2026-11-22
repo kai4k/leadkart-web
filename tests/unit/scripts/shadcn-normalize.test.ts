@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import {
 	iconExports,
 	mergeImports,
@@ -458,5 +459,58 @@ describe('shadcn normaliser: item labels on glass are medium weight (plan G7)', 
 		expect(run2('<i class="text-sm"></i>', file('card', 'card.svelte'))).toBe(
 			'<i class="text-sm"></i>'
 		);
+	});
+});
+
+describe('shadcn normaliser: the alert dialog keeps its height cap and scrolling body', () => {
+	const dir = 'src/lib/components/ui/alert-dialog';
+	const committed = (name: string) => readFileSync(`${dir}/${name}`, 'utf8');
+	const regenerate = (name: string, strip: (s: string) => string) =>
+		(
+			normalizeSource(strip(committed(name)), { icons: ICONS, file: `${dir}/${name}` }) as {
+				out: string;
+			}
+		).out;
+
+	it('content: a grid without the cap regenerates to the committed flex column capped at 90dvh', () => {
+		const stripped = (s: string) =>
+			s
+				.replace('max-h-[90dvh] ', '')
+				.replace('flex flex-col', 'grid')
+				.replace('data-[size=default]:sm:max-w-md', 'data-[size=default]:sm:max-w-sm');
+		expect(stripped(committed('alert-dialog-content.svelte'))).not.toBe(
+			committed('alert-dialog-content.svelte')
+		);
+		expect(regenerate('alert-dialog-content.svelte', stripped)).toBe(
+			committed('alert-dialog-content.svelte')
+		);
+	});
+
+	it.each([
+		['alert-dialog-header.svelte', 'shrink-0 '],
+		['alert-dialog-footer.svelte', 'shrink-0 ']
+	])('%s: the shrink-0 that keeps it pinned is put back', (name, gone) => {
+		const stripped = (s: string) => s.replace(gone, '');
+		expect(stripped(committed(name))).not.toBe(committed(name));
+		expect(regenerate(name, stripped)).toBe(committed(name));
+	});
+
+	it('is idempotent: normalising the committed files changes nothing', () => {
+		for (const name of [
+			'alert-dialog-content.svelte',
+			'alert-dialog-header.svelte',
+			'alert-dialog-footer.svelte'
+		])
+			expect(regenerate(name, (s) => s)).toBe(committed(name));
+	});
+
+	it('only the alert dialog files carry the customizations', () => {
+		const out = (
+			normalizeSource('<div class="grid gap-4"></div>', {
+				icons: ICONS,
+				file: 'src/lib/components/ui/dialog/dialog-content.svelte'
+			}) as { out: string }
+		).out;
+		expect(out).toBe('<div class="grid gap-4"></div>');
 	});
 });

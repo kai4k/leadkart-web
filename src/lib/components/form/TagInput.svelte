@@ -31,6 +31,8 @@
 		srLabel?: boolean;
 		hint?: string;
 		error?: string | null;
+		/** The API field this input is for: a server error on it lands here (the form looks for `[name]`). */
+		name?: string;
 		id?: string;
 		class?: string;
 	};
@@ -46,6 +48,7 @@
 		srLabel = false,
 		hint,
 		error,
+		name,
 		id,
 		class: className = ''
 	}: Props = $props();
@@ -174,6 +177,7 @@
 			<Input
 				bind:ref={inputEl}
 				id={fieldId}
+				{name}
 				type="text"
 				role="combobox"
 				aria-expanded={showDropdown}

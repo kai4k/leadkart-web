@@ -57,12 +57,14 @@
 		<!-- V1: no endpoint returns a user's existing overrides, so they are managed blind: grant-only-on-save. -->
 		<TagInput
 			label="Extra grants"
+			name="granted"
 			placeholder="e.g. crm.leads.reassign"
 			bind:value={form.values.granted}
 			error={form.errors.granted}
 		/>
 		<TagInput
 			label="Revocations"
+			name="revoked"
 			placeholder="e.g. crm.leads.delete"
 			bind:value={form.values.revoked}
 			error={form.errors.revoked}

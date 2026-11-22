@@ -170,6 +170,55 @@ export function materialRole(file = '') {
 	return undefined;
 }
 
+/**
+ * Customizations of one generated file (see `src/lib/components/ui/CUSTOMIZATIONS.md`), so a regeneration keeps them.
+ * `swap`: a whole class (variants included) becomes another. `ensure`: a class that must be present, inserted before `before`
+ * (or first when `before` is absent); a class already there is never added twice.
+ *
+ * The alert dialog is a flex column capped at 90dvh: its header and footer never shrink and the body between them scrolls,
+ * so a tall confirmation keeps its buttons inside a 360 x 640 phone; the default width is `sm:max-w-md` (a reason field
+ * needs the room).
+ */
+const FILE_CUSTOM = {
+	'alert-dialog/alert-dialog-content.svelte': {
+		swap: {
+			grid: 'flex flex-col',
+			'data-[size=default]:sm:max-w-sm': 'data-[size=default]:sm:max-w-md'
+		},
+		ensure: [{ add: 'max-h-[90dvh]', before: 'gap-4' }]
+	},
+	'alert-dialog/alert-dialog-header.svelte': { ensure: [{ add: 'shrink-0' }] },
+	'alert-dialog/alert-dialog-footer.svelte': {
+		ensure: [{ add: 'shrink-0', before: 'rounded-b-xl' }]
+	}
+};
+
+/** The customizations of a path (`family/file.svelte`), or undefined. */
+export function customFor(file = '') {
+	return FILE_CUSTOM[file.replaceAll('\\', '/').split('/').slice(-2).join('/')];
+}
+
+/** Index of `token` as a whole class in `text`, or -1 (a class is delimited by whitespace, quotes or the ends). */
+function indexOfClass(text, token) {
+	const delimiter = (c) => c === undefined || /[\s"'`{}]/.test(c);
+	for (let at = text.indexOf(token); at >= 0; at = text.indexOf(token, at + 1))
+		if (delimiter(text[at - 1]) && delimiter(text[at + token.length])) return at;
+	return -1;
+}
+
+/** Adds each `ensure` class that is missing (before its anchor when the anchor is there, else first). */
+function ensureClasses(text, custom) {
+	let out = text;
+	for (const { add, before } of custom?.ensure ?? []) {
+		if (out.trim() === '' || indexOfClass(out, add) >= 0) continue;
+		const at = before ? indexOfClass(out, before) : -1;
+		if (before && at < 0) continue;
+		const lead = before ? at : out.length - out.trimStart().length;
+		out = `${out.slice(0, lead)}${add} ${out.slice(lead)}`;
+	}
+	return out;
+}
+
 /** Invalid-state ring/border alphas on a control: dropped (the control shows `aria-invalid` through its own border token). */
 const DROP = [
 	{ variants: /aria-invalid/, utility: /^(?:ring|border)-destructive\/\d+$/ },
@@ -238,8 +287,9 @@ function splitVariants(token) {
 	return cut < 0 ? ['', token] : [token.slice(0, cut), token.slice(cut + 1)];
 }
 
-function rewriteToken(token, z = Z_FLOATING, family, role) {
+function rewriteToken(token, z = Z_FLOATING, family, role, custom) {
 	const [variants, utility] = splitVariants(token);
+	if (custom?.swap?.[token]) return custom.swap[token];
 	if (DROP.some((d) => d.variants.test(variants) && d.utility.test(utility))) return '';
 	if (
 		role === 'content' &&
@@ -287,8 +337,11 @@ function rewriteToken(token, z = Z_FLOATING, family, role) {
 }
 
 /** Rewrites every class-like token in `text` (the inside of a class string). */
-export function normalizeClasses(text, { z = Z_FLOATING, family, role } = {}) {
-	const out = text.replace(/[^\s"'`{}]+/g, (token) => rewriteToken(token, z, family, role));
+export function normalizeClasses(text, { z = Z_FLOATING, family, role, custom } = {}) {
+	const out = ensureClasses(
+		text.replace(/[^\s"'`{}]+/g, (token) => rewriteToken(token, z, family, role, custom)),
+		custom
+	);
 	// plan G7: an item label on glass is at least weight 500 (composited text loses subpixel antialiasing). Added once.
 	if (role === 'item' && !/(?:^|\s)font-medium(?=\s|$)/.test(out))
 		return out.replace(/(^|\s)text-sm(?=\s|$)/, '$1text-sm font-medium');
@@ -448,7 +501,8 @@ export function normalizeSource(src, { icons = iconExports(), file = '' } = {}) 
 	out = normalizeClassStrings(out, {
 		z: zLayerFor(file),
 		family: familyOf(file),
-		role: materialRole(file)
+		role: materialRole(file),
+		custom: customFor(file)
 	});
 	for (const f of remainingAlpha(out))
 		problems.push(

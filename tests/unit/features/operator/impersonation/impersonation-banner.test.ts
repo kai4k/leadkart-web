@@ -15,7 +15,8 @@ const store = vi.hoisted(() => ({
 		endError: null as string | null,
 		checking: false,
 		unknown: false,
-		can: true,
+		// the real capability data the real `can` reads (not a boolean switch)
+		permissions: ['platform.impersonation.manage'] as string[],
 		end: vi.fn(),
 		forget: vi.fn(),
 		reconcile: vi.fn(() => Promise.resolve())
@@ -53,13 +54,19 @@ vi.mock('#lib/features/operator/impersonation/stores/impersonation.svelte.ts', (
 		reconcile: () => store.state.reconcile()
 	}
 }));
-vi.mock('$features/auth', () => ({
-	P: { platformImpersonationManage: 'platform.impersonation.manage' },
-	session: {
-		capabilities: null,
-		can: () => store.state.can
-	}
-}));
+vi.mock('$features/auth', async () => {
+	const { can } = await import('#lib/features/auth/capabilities.ts');
+	const caps = () => ({ effective_permissions: store.state.permissions }) as never;
+	return {
+		P: { platformImpersonationManage: 'platform.impersonation.manage' },
+		session: {
+			get capabilities() {
+				return caps();
+			},
+			can: (permission: string) => can(caps(), permission)
+		}
+	};
+});
 
 import ImpersonationBanner from '#lib/features/operator/impersonation/components/ImpersonationBanner.svelte';
 import { hardReset } from '#lib/api/hard-reset.ts';
@@ -80,7 +87,7 @@ beforeEach(() => {
 	store.state.endError = null;
 	store.state.checking = false;
 	store.state.unknown = false;
-	store.state.can = true;
+	store.state.permissions = ['platform.impersonation.manage'];
 	store.state.end.mockResolvedValue(undefined);
 	target = document.body.appendChild(document.createElement('div'));
 });
@@ -180,8 +187,13 @@ describe('ImpersonationBanner', () => {
 		expect(store.state.reconcile).toHaveBeenCalledTimes(1);
 	});
 
+	it('a person with the impersonate capability: exactly one read on mount', () => {
+		render();
+		expect(store.state.reconcile).toHaveBeenCalledTimes(1);
+	});
+
 	it('people who cannot impersonate: nothing is shown and no read is made', () => {
-		store.state.can = false;
+		store.state.permissions = ['crm.leads.view'];
 		store.state.active = null;
 		store.state.unknown = true;
 		render();
