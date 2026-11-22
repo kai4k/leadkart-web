@@ -70,7 +70,11 @@ export function useLeaveGuard(isDirty: () => boolean, message?: string): void {
 		if (!confirm(message ?? get(_)('form.leaveGuard'))) navigation.cancel();
 	});
 
+	// Registered ONLY while there is unsaved input and removed as soon as the form is clean: a permanent
+	// `beforeunload` listener takes the page out of Firefox's back/forward cache. `isDirty()` is read inside the
+	// effect, so a reactive dirty flag adds and removes the listener; the handler still checks at the time of the event.
 	$effect(() => {
+		if (!isDirty()) return;
 		const onBeforeUnload = (e: BeforeUnloadEvent) => {
 			if (silent() || !isDirty()) return;
 			e.preventDefault();

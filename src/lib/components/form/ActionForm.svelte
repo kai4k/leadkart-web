@@ -55,7 +55,6 @@
 		scoped = true,
 		relaxed = false,
 		guardLeave = false,
-		isDirty,
 		onResult,
 		wide = false,
 		resetOnSuccess = false,
@@ -81,8 +80,6 @@
 		relaxed?: boolean;
 		/** Ask before leaving with unsaved input. Off for a form nobody loses by leaving (sign-in). */
 		guardLeave?: boolean;
-		/** Override of "what would be sent differs from what the form loaded with" (the default). */
-		isDirty?: () => boolean;
 		/** After the page applied the result: the escape hatch (the sign-in lockout countdown). */
 		onResult?: (result: ActionResult) => void;
 		/** After a saved result, clear the fields (a password form: nothing typed stays on screen). */
@@ -135,6 +132,10 @@
 
 	// Dirty = what the form would send differs from what it held when it loaded (or was last saved).
 	let baseline: string | null = null;
+	// What the form would send is read from the DOM, which is not reactive: any user activity inside the form bumps
+	// this, so the dirty flag (and with it the `beforeunload` listener) follows the form.
+	let touched = $state(0);
+	const touch = () => touched++;
 	const snapshot = (): string | null =>
 		formEl
 			? JSON.stringify([...new FormData(formEl)].filter(([, v]) => typeof v === 'string'))
@@ -143,13 +144,18 @@
 		baseline = snapshot();
 	});
 	$effect(() => {
-		if (result?.success) void tick().then(() => (baseline = snapshot()));
+		if (result?.success)
+			void tick().then(() => {
+				baseline = snapshot();
+				touch();
+			});
 	});
 	// A result that redirects is the save itself leaving the page (create role): that is not unsaved input.
 	let leavingBySave = false;
 	useLeaveGuard(() => {
-		if (!guardLeave || leavingBySave) return false;
-		if (isDirty) return isDirty();
+		void touched;
+		// A form nobody may save (`allowed` false) holds no input that could be lost: nothing to ask about.
+		if (!guardLeave || !allowed || leavingBySave) return false;
 		return baseline !== null && snapshot() !== baseline;
 	});
 
@@ -165,7 +171,10 @@
 			try {
 				if (outcome.type === 'redirect') leavingBySave = true;
 				await update({ reset: false });
-				if (resetOnSuccess && outcome.type === 'success') formEl?.reset();
+				if (resetOnSuccess && outcome.type === 'success') {
+					formEl?.reset();
+					touch();
+				}
 				onResult?.(outcome);
 			} finally {
 				submitting = false;
@@ -182,9 +191,17 @@
 	{action}
 	novalidate
 	use:enhance={submit}
+	oninput={touch}
+	onchange={touch}
+	onclick={touch}
+	onfocusin={touch}
+	onfocusout={touch}
 >
 	{#if scoped}<ScopeContextField />{/if}
-	{@render children({ submitting, fieldError, value })}
+	<!-- A form the caller may not save shows its values and changes none of them (`disabled` reaches every control). -->
+	<fieldset disabled={!allowed} class="m-0 min-w-0 border-0 p-0 contents">
+		{@render children({ submitting, fieldError, value })}
+	</fieldset>
 	<FormOutcome
 		error={banner}
 		success={successMessage === undefined ? undefined : result?.success ? successMessage : null}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bannerText, fieldText, readFailure } from '#lib/utils/form-failure.ts';
+import { fieldText, readFailure } from '#lib/utils/form-failure.ts';
 
 const t = (key: string) => `T(${key})`;
 
@@ -21,7 +21,7 @@ describe('readFailure', () => {
 	});
 });
 
-describe('fieldText / bannerText', () => {
+describe('fieldText', () => {
 	const failure = readFailure({
 		fieldKeys: { email: 'auth.errors.emailRequired' },
 		fieldMessages: { email: 'schema text', name: 'Go says too long' },
@@ -33,12 +33,6 @@ describe('fieldText / bannerText', () => {
 		expect(fieldText(failure, 'name', t)).toBe('Go says too long');
 		expect(fieldText(failure, 'other', t)).toBeUndefined();
 		expect(fieldText(null, 'email', t)).toBeUndefined();
-	});
-
-	it('the banner is the translated key, or null', () => {
-		expect(bannerText(failure, t)).toBe('T(auth.errors.forbidden)');
-		expect(bannerText(readFailure({ fieldKeys: {} }), t)).toBeNull();
-		expect(bannerText(null, t)).toBeNull();
 	});
 });
 

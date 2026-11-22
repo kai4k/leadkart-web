@@ -56,6 +56,27 @@
 	}: Props = $props();
 
 	let cancelEl: HTMLElement | null = $state(null);
+	let bodyEl: HTMLElement | null = $state(null);
+	// The body scrolls when the dialog is capped at 90dvh. Text alone has nothing to tab to, so a keyboard user could not
+	// scroll it (axe `scrollable-region-focusable`): such a region is focusable itself, and named. A body with a field in
+	// it already has a focus stop inside.
+	let needsFocusStop = $state(false);
+	$effect(() => {
+		const el = bodyEl;
+		if (!el) return;
+		const measure = () => {
+			needsFocusStop =
+				el.scrollHeight > el.clientHeight &&
+				!el.querySelector(
+					'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
+				);
+		};
+		measure();
+		if (typeof ResizeObserver === 'undefined') return;
+		const observer = new ResizeObserver(measure);
+		observer.observe(el);
+		return () => observer.disconnect();
+	});
 	// the least destructive action takes focus when the dialog opens (alert-dialog semantics, every variant)
 	function focusCancel(e: Event) {
 		e.preventDefault();
@@ -117,7 +138,16 @@
 			</div>
 		</AlertDialog.Header>
 		{#if body}
-			<div class="stack stack-relaxed min-h-0 flex-1 overflow-y-auto">{@render body()}</div>
+			<!-- p-1 / -m-1: the scroll region would clip the focus ring of a full-width field; the padding is the ring's room -->
+			<div
+				bind:this={bodyEl}
+				class="stack stack-relaxed -m-1 min-h-0 flex-1 overflow-y-auto p-1 focus-visible:ring-2 focus-visible:ring-ring"
+				tabindex={needsFocusStop ? 0 : undefined}
+				role={needsFocusStop ? 'region' : undefined}
+				aria-label={needsFocusStop ? title : undefined}
+			>
+				{@render body()}
+			</div>
 		{/if}
 		<AlertDialog.Footer>
 			<AlertDialog.Cancel bind:ref={cancelEl} disabled={loading}>{cancelLabel}</AlertDialog.Cancel>

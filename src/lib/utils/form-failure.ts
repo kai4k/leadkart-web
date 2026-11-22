@@ -49,8 +49,3 @@ export function fieldText(
 	const message = failure.fieldMessages[field];
 	return message === undefined ? undefined : fieldMessageText(message, t);
 }
-
-/** The banner line, translated. */
-export function bannerText(failure: FormFailure<object> | null, t: Translate): string | null {
-	return failure?.formErrorKey ? t(failure.formErrorKey) : null;
-}

@@ -34,6 +34,15 @@
 	}: Props = $props();
 
 	let visible = $state(false);
+	let toggle: HTMLElement | null = $state(null);
+	// A form that is reset (a saved password form clears itself) starts hidden again: the next password is never typed in clear.
+	$effect(() => {
+		const form = toggle?.closest('form');
+		if (!form) return;
+		const hide = () => (visible = false);
+		form.addEventListener('reset', hide);
+		return () => form.removeEventListener('reset', hide);
+	});
 </script>
 
 <TextField
@@ -49,6 +58,7 @@
 >
 	{#snippet trailing()}
 		<Button
+			bind:ref={toggle}
 			variant="ghost"
 			size="icon-sm"
 			class="text-muted-foreground"
