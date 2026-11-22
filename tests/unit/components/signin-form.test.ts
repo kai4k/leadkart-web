@@ -5,6 +5,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, tick, unmount } from 'svelte';
 import { reactiveProps } from '../helpers/reactive-props.svelte.ts';
+import { get } from 'svelte/store';
+import { _ } from 'svelte-i18n';
+import { passwordPolicyHint } from '#lib/features/auth/password-policy.ts';
 
 type After = (o: {
 	result: { type: string; data?: unknown };
@@ -162,12 +165,15 @@ describe('the fields', () => {
 });
 
 describe('the password policy text states the server policy, not 12', () => {
-	it.each([
-		en.auth.resetPassword.newPasswordHint,
-		en.account.security.changePassword.newPasswordHint
-	])('%s', (hint) => {
+	it('the default hint says 8 characters and the four classes; the server-keyed generic lines state no number', () => {
+		const hint = passwordPolicyHint(null, (k, o) => get(_)(k, o));
 		expect(hint).toContain('8 characters');
 		expect(hint).not.toContain('12');
 		for (const part of ['uppercase', 'lowercase', 'digit', 'symbol']) expect(hint).toContain(part);
+		for (const generic of [
+			en.auth.resetPassword.newPasswordHint,
+			en.account.security.changePassword.newPasswordHint
+		])
+			expect(generic).not.toMatch(/\d/);
 	});
 });
