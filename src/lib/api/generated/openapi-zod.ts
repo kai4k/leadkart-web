@@ -10204,7 +10204,9 @@ minute, burst 5, whichever address the requests come from).
 		method: 'patch',
 		path: '/api/v1/tenants/:tenantId/settings',
 		alias: 'patchApiv1tenantsTenantIdsettings',
-		description: `Requires &#x60;identity.tenants.update_settings&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+		description: `A company that has not set a policy reports the default policy on every read, so the body a client read back is always accepted (full replace).
+
+Requires &#x60;identity.tenants.update_settings&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
 `,
 		requestFormat: 'json',
 		parameters: [
