@@ -311,3 +311,39 @@ describe('M8: Backspace, Enter, arrows', () => {
 		expect(document.activeElement).toBe(segs()[1]);
 	});
 });
+
+describe('M1: the digit-run and non-digit branches (regexes written with their backslashes)', () => {
+	it('a run of digits pasted into the day is typed from there on', () => {
+		setup();
+		paste(segs()[0]!, '15032026');
+		expect(shown()).toEqual(['15', '03', '2026']);
+		expect(hidden().value).toBe('2026-03-15');
+	});
+
+	it('digits with spaces around them are still a digit run', () => {
+		setup();
+		paste(segs()[0]!, '  15 \n');
+		expect(shown()[0]).toBe('15');
+	});
+
+	it('a run of digits pasted into the year fills the year', () => {
+		setup();
+		paste(segs()[2]!, '2026');
+		expect(shown()[2]).toBe('2026');
+	});
+
+	it('letters and symbols in a digit run are not a digit run (nothing is typed)', () => {
+		setup();
+		paste(segs()[0]!, '1a5');
+		expect(shown()).toEqual(['dd', 'mm', 'yyyy']);
+	});
+
+	it('non-digits are stripped when the element text is read back (placeholder letters, an IME)', () => {
+		setup();
+		const day = segs()[0]!;
+		day.textContent = 'dd15';
+		day.dispatchEvent(new Event('input', { bubbles: true }));
+		flushSync();
+		expect(shown()[0]).toBe('15');
+	});
+});

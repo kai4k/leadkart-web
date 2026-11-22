@@ -206,7 +206,7 @@
 			return;
 		}
 		// not a whole date: a run of digits is typed from this segment on (nothing else is guessed)
-		if (/^s*d+s*$/.test(text)) typeMany(part, e.currentTarget as HTMLElement, text.trim());
+		if (/^\s*\d+\s*$/.test(text)) typeMany(part, e.currentTarget as HTMLElement, text.trim());
 	}
 
 	// IME / Android keyboards: what the browser put into the element is read back after the fact. Digits only; the
@@ -221,7 +221,7 @@
 	};
 	let composing = false;
 	function reconcileFromDom(part: Part, el: HTMLElement) {
-		const typed = (el.textContent ?? '').replace(/D/g, '');
+		const typed = (el.textContent ?? '').replace(/\D/g, '');
 		const held = parts[part];
 		if (typed !== held) {
 			if (typed.startsWith(held)) typeMany(part, el, typed.slice(held.length));
