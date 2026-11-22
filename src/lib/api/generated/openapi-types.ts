@@ -39,10 +39,35 @@ export interface paths {
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
 				/**
+				 * @description `tenant_suspended`: the password was CORRECT but the person's company is
+				 *     suspended (an operator suspended it; reactivation restores sign-in). It is
+				 *     answered only after the password was verified, so a wrong password or an unknown
+				 *     email still answers `401 invalid_credentials` and the code tells a stranger
+				 *     nothing. `tenant_not_active`: the password was CORRECT but the company is
+				 *     neither active nor suspended nor deleted, that is `pending` or marked for
+				 *     deletion (`pending_deletion`); same rule (owner ruling 2026-11-21: only an active
+				 *     company's members sign in; restoring the company or an operator's activation
+				 *     brings them back). A company registered by an operator is created `active`, so
+				 *     its first admin signs in. A deleted company, and one with no usable membership,
+				 *     stay `401 invalid_credentials`.
+				 */
+				403: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				/**
 				 * @description Account locked after [person.MaxFailedLogins] consecutive
 				 *     failed login attempts within [person.LockoutWindow] per
 				 *     NIST 800-63B §5.2.2 + ADR 0053. Retry-After header carries
 				 *     integer seconds until unlock (RFC 7231 §7.1.3 delta-seconds).
+				 *     An email with no usable account (unknown, deactivated, anonymised, GLOBALLY
+				 *     SUSPENDED) locks on the same schedule and answers identically, so 423 does not
+				 *     reveal that an account exists (ADR 0068 D12). While locked, even the correct
+				 *     password answers 423.
 				 */
 				423: {
 					headers: {
@@ -54,7 +79,9 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
+				503: components['responses']['ServiceBusy'];
 			};
 		};
 		delete?: never;
@@ -72,7 +99,11 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Rotate refresh token + reissue access token */
+		/**
+		 * Rotate refresh token + reissue access token
+		 * @description Rotates the refresh token and reissues the access token. Re-presenting a just-rotated token within the grace window (default 30 s, at most 120 s, `Refresh.GraceWindow`) returns the SAME successor (a deterministic derivation: no new token row is written), so two tabs or a retried request after a lost response do not end the session. That holds ONLY for the client that rotated the token (the client address the rate limiters use: behind the BFF its `X-Forwarded-For`; only a keyed hash of it is stored) and for at most 3 replays per token. A replay from another client, a 4th replay, a token whose consumer was not recorded, a replay outside the window, a token two or more generations old, or one whose successor has been used is token reuse: the whole family is revoked and the answer is `401 refresh_rejected`. A client whose address changes inside the window (a phone switching networks) between a lost response and its retry is therefore signed out. A revoked family never answers a replay, whatever the window says (logout, password change and reset revoke every family of the person). The answer to a replay is indistinguishable from the first answer, apart from the access token's own issue time.
+		 *     A session ends `Refresh.AbsoluteTTL` (default 14 days, `LEADKART_REFRESH__ABSOLUTE_TTL`) after the login that opened it, however often it was refreshed: the first refresh after that answers `401 refresh_rejected` with `reason: session_expired` (sign in again) and the family is revoked (`absolute_ttl`). A session also ends when it sits IDLE: each refresh token lives `Refresh.SlidingTTL` (default 24 hours, `LEADKART_REFRESH__SLIDING_TTL`; a session unused for 24 hours ends) from its issue, never past the absolute deadline, and every rotation renews it (a grace replay does not). The first refresh after the token ran out answers the same `401 refresh_rejected` with `reason: session_expired` and the family is revoked (`idle_timeout`). A globally suspended person is refused (the family is revoked), and so is a member of a SUSPENDED company: `401 refresh_rejected` with `reason: tenant_suspended` (the family is revoked as `tenant_suspended`; a reactivated company's members sign in again, the old session does not return). A member of a company that is `pending` or marked for deletion is refused the same way with `reason: tenant_not_active` (the family is revoked as `tenant_not_active`; a restored company's members sign in again). A deleted company's members are refused without a reason. Suspending a company or marking it for deletion also revokes its members' families (outbox subscriber), but an access token already issued stays valid until its own expiry (600 s).
+		 */
 		post: {
 			parameters: {
 				query?: never;
@@ -95,7 +126,14 @@ export interface paths {
 						'application/json': components['schemas']['LoginResponse'];
 					};
 				};
-				/** @description Refresh rejected (consumed / expired / family revoked) */
+				400: components['responses']['BadRequest'];
+				/**
+				 * @description Refresh rejected (consumed / expired / family revoked / reuse). For a session that
+				 *     ended by time (absolute lifetime or idle timeout) the body carries
+				 *     `reason: session_expired`; for a member of a suspended company
+				 *     `reason: tenant_suspended`; for a member of a pending or marked-for-deletion
+				 *     company `reason: tenant_not_active`.
+				 */
 				401: {
 					headers: {
 						[name: string]: unknown;
@@ -104,6 +142,7 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -142,6 +181,8 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -161,22 +202,15 @@ export interface paths {
 		put?: never;
 		/**
 		 * Request password reset email
-		 * @description ALWAYS returns 204 regardless of whether the email is registered (Auth0/Okta canon — defeats account enumeration).
+		 * @description ALWAYS returns 204 regardless of whether the email is registered (Auth0/Okta canon — defeats account
+		 *     enumeration). The answer is released no earlier than a fixed 300 ms after the handler starts, so
+		 *     response time does not reveal whether the address has an account either. The 300 ms is measured
+		 *     from when the handler starts: the limiters and middleware before it are not included.
 		 */
 		post: {
 			parameters: {
 				query?: never;
-				header?: {
-					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
-					 */
-					'X-Command-Id'?: components['parameters']['XCommandId'];
-				};
+				header?: never;
 				path?: never;
 				cookie?: never;
 			};
@@ -193,6 +227,8 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -210,21 +246,25 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Confirm password reset using emailed token */
+		/**
+		 * Confirm password reset using emailed token
+		 * @description The token is validated FIRST (state and expiry), before any password work: an unknown,
+		 *     consumed, expired, or suspended-person's token answers `400 reset_token_invalid`
+		 *     whatever the password is (an expired pending reset is cleared), so the answer
+		 *     reveals nothing about whether an account exists or which tenant it belongs to.
+		 *     Only then is the new password checked against the policy of the tenant of the person's
+		 *     active membership (the default policy when there is none): only a holder of a live
+		 *     token can see `422 password_policy_violation` (field `errors.new_password`) or
+		 *     `422 password_breached`. A refused password leaves the token usable but counts: after
+		 *     5 refusals the token is invalidated (`400 reset_token_invalid`), so a link cannot be
+		 *     probed forever. There is no same-as-current check on a reset (with a valid token it
+		 *     would be an oracle for the current password): resetting to the current password
+		 *     succeeds.
+		 */
 		post: {
 			parameters: {
 				query?: never;
-				header?: {
-					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
-					 */
-					'X-Command-Id'?: components['parameters']['XCommandId'];
-				};
+				header?: never;
 				path?: never;
 				cookie?: never;
 			};
@@ -242,7 +282,20 @@ export interface paths {
 					content?: never;
 				};
 				400: components['responses']['BadRequest'];
-				422: components['responses']['Unprocessable'];
+				/**
+				 * @description `password_policy_violation` (see PasswordPolicyViolation; field `new_password`)
+				 *     or `password_breached`. (`password_same_as_current` is change-password only.)
+				 */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				429: components['responses']['TooManyRequests'];
+				503: components['responses']['ServiceBusy'];
 			};
 		};
 		delete?: never;
@@ -263,21 +316,26 @@ export interface paths {
 		/**
 		 * Change own password (authenticated)
 		 * @description Current password verified even when authenticated (security.md "Password change").
+		 *     Allowed while `must_change_password` is pending: this is the way out of the
+		 *     forced-change state. The change rotates the security stamp, clears the flag and,
+		 *     in the same transaction, revokes EVERY refresh session of the person (the access
+		 *     token carries no session id, so the caller's own session is ended too).
+		 *     Contract: `204`; the access token used is now `401 stale_token` (at once on every instance
+		 *     when the api's cache is reachable, otherwise within the 30 s lifetime of the cached
+		 *     stamp); every refresh
+		 *     token the person held is now `401` on refresh; the caller signs in again with the
+		 *     new password, and that login (and its refreshes) carries no flag.
+		 *
+		 *     The new password is checked against the password policy of the caller's OWN tenant
+		 *     (the token's `tenant_id`, never an operator's acted-on scope; the default policy when
+		 *     that tenant is gone) BEFORE the current password is verified, so a refused password
+		 *     costs no hashing: `422 password_policy_violation` with `errors.new_password`. A current
+		 *     password over 1024 bytes is answered as an incorrect one without being hashed.
 		 */
 		post: {
 			parameters: {
 				query?: never;
-				header?: {
-					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
-					 */
-					'X-Command-Id'?: components['parameters']['XCommandId'];
-				};
+				header?: never;
 				path?: never;
 				cookie?: never;
 			};
@@ -294,7 +352,8 @@ export interface paths {
 					};
 					content?: never;
 				};
-				/** @description Incorrect current password */
+				400: components['responses']['BadRequest'];
+				/** @description Incorrect current password, or the access token is stale (`stale_token`) */
 				401: {
 					headers: {
 						[name: string]: unknown;
@@ -303,7 +362,21 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
-				422: components['responses']['Unprocessable'];
+				403: components['responses']['ImpersonationNotAllowed'];
+				/**
+				 * @description `password_policy_violation` (see PasswordPolicyViolation; field `errors.new_password`),
+				 *     `password_breached`, or `password_same_as_current`.
+				 */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				429: components['responses']['TooManyRequests'];
+				503: components['responses']['ServiceBusy'];
 			};
 		};
 		delete?: never;
@@ -333,17 +406,7 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: {
-					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
-					 */
-					'X-Command-Id'?: components['parameters']['XCommandId'];
-				};
+				header?: never;
 				path?: never;
 				cookie?: never;
 			};
@@ -361,6 +424,8 @@ export interface paths {
 					content?: never;
 				};
 				400: components['responses']['BadRequest'];
+				403: components['responses']['SessionRefused'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -388,17 +453,7 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: {
-					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
-					 */
-					'X-Command-Id'?: components['parameters']['XCommandId'];
-				};
+				header?: never;
 				path?: never;
 				cookie?: never;
 			};
@@ -416,6 +471,7 @@ export interface paths {
 					content?: never;
 				};
 				400: components['responses']['BadRequest'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -436,7 +492,28 @@ export interface paths {
 		 * @description Auth0 `/userinfo` canon. Returns JWT-resident fields (no DB hit) plus
 		 *     cached profile enrichment (email + name + role names). The frontend
 		 *     uses this to drive nav / tier / button-visibility without decoding
-		 *     the JWT.
+		 *     the JWT. Allowed while `must_change_password` is pending (the response
+		 *     reports it, so the front-end can render the forced-change screen).
+		 *
+		 *     `password_policy` is the password policy that binds the caller: the policy
+		 *     of the caller's OWN tenant (the tenant of the token, never an operator's
+		 *     acted-on `X-Tenant-Id`, which this route ignores), the system default when
+		 *     the tenant has none. The system default is 8 characters minimum with an upper-case
+		 *     letter, a lower-case letter, a digit and a symbol (owner ruling 2026-11-21; it was 12;
+		 *     8 is also the lowest minimum a tenant may set); a tenant that stored its own policy,
+		 *     including a stored 12, keeps it. It is the same policy `POST /auth/change-password`
+		 *     enforces, so the change-password page (including the forced screen) can show
+		 *     the rules before the first attempt. It is read fresh on every call, not from
+		 *     the cached bundle. An impersonation session reads this route and sees the
+		 *     impersonated tenant's rules (the token's tenant is the impersonated one);
+		 *     change-password itself is refused to it.
+		 *
+		 *     There is deliberately NO anonymous policy endpoint. The password-reset page
+		 *     learns the rules only from the 422 `password_policy_violation` answer to a
+		 *     reset made with a valid token (`errors` lists the failed rule codes): a
+		 *     holder of a valid emailed token is the only anonymous party that is told
+		 *     anything about the tenant's settings, and the answer is limited to rule
+		 *     codes.
 		 */
 		get: {
 			parameters: {
@@ -456,6 +533,7 @@ export interface paths {
 						'application/json': components['schemas']['CapabilitiesDto'];
 					};
 				};
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -496,6 +574,9 @@ export interface paths {
 						'application/json': components['schemas']['ListAuditEventsResponse'];
 					};
 				};
+				400: components['responses']['BadRequest'];
+				403: components['responses']['SessionRefused'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -532,6 +613,8 @@ export interface paths {
 						'application/json': components['schemas']['ListSessionsResponse'];
 					};
 				};
+				403: components['responses']['SessionRefused'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -559,6 +642,8 @@ export interface paths {
 						'application/json': components['schemas']['RevokeAllSessionsResponse'];
 					};
 				};
+				403: components['responses']['SessionRefused'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		options?: never;
@@ -588,13 +673,29 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Session revoked (idempotent) */
+				/** @description The caller's own session is revoked now, or already was (idempotent for the owner) */
 				204: {
 					headers: {
 						[name: string]: unknown;
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
+				403: components['responses']['SessionRefused'];
+				/**
+				 * @description `session_not_found`: no such session, OR it belongs to another person. The two are
+				 *     indistinguishable on purpose (no session-id enumeration); a session of the caller
+				 *     that is already revoked is 204, not 404.
+				 */
+				404: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		options?: never;
@@ -648,6 +749,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				403: components['responses']['Forbidden'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -656,18 +758,35 @@ export interface paths {
 		 * @description Platform operators only (is_platform + slug anchor) — ADR 0068. Tenant
 		 *     onboarding is operator-led (ADR 0053 "no public sign-up surface").
 		 *     Requires `platform.tenants.create`.
+		 *
+		 *     The company is created `active` (the operator's registration is the approval; owner
+		 *     ruling 2026-11-21: only an active company's members sign in), so its first admin
+		 *     signs in at once. `pending` is produced by no route today.
+		 *
+		 *     The first admin's temporary password is checked against the DEFAULT password policy
+		 *     (the new tenant has no stored policy yet; default: 8 characters minimum with an
+		 *     upper-case letter, a lower-case letter, a digit and a symbol): `422 password_policy_violation` with
+		 *     `errors.admin_password`. Nothing is created on a violation.
+		 *
+		 *     Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 `tenant_invalid (company names) / person_invalid (admin names)` with `errors{<field>: ["invalid_characters"]}` (or `["required"]` / `["too_long"]` for a blank or over-long name) for `legal_name`, `display_name`, `admin_first_name`, `admin_last_name`, and nothing is written.
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 				};
@@ -701,7 +820,25 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				/**
+				 * @description Invalid input, nothing is written. `password_policy_violation` with
+				 *     `errors.admin_password` (rule codes). `tenant_invalid` (company names) or
+				 *     `person_invalid` (admin names) with `errors{<field>: [<code>]}` for `legal_name`,
+				 *     `display_name`, `admin_first_name`, `admin_last_name`; the code is `required`
+				 *     (blank), `too_long` (company names over 200 bytes, admin names over 100) or
+				 *     `invalid_characters`. A malformed `slug` or `admin_email` is a 400
+				 *     (`invalid_slug` / `invalid_email`), not a 422. Never a 500.
+				 */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				429: components['responses']['TooManyRequests'];
+				503: components['responses']['ServiceBusy'];
 			};
 		};
 		delete?: never;
@@ -792,8 +929,10 @@ export interface paths {
 						'application/json': components['schemas']['TenantDto'];
 					};
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -820,18 +959,26 @@ export interface paths {
 		/**
 		 * Update tenant legal + display name
 		 * @description Requires `identity.tenants.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 *
+		 *     Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 `tenant_invalid` with `errors{<field>: ["invalid_characters"]}` for `legal_name`, `display_name`, and nothing is written. A full-replace body that re-sends a stored value UNCHANGED is accepted (a value stored before the rule existed never blocks an untouched save); only a changed value is checked.
 		 */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -906,7 +1053,17 @@ export interface paths {
 				400: components['responses']['BadRequest'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				/** @description Conflict with the current state of the resource (see the `error` code) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		trace?: never;
@@ -938,12 +1095,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -1018,7 +1181,17 @@ export interface paths {
 				400: components['responses']['BadRequest'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				/** @description Conflict with the current state of the resource (see the `error` code) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		trace?: never;
@@ -1047,12 +1220,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -1127,7 +1306,17 @@ export interface paths {
 				400: components['responses']['BadRequest'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				/** @description Conflict with the current state of the resource (see the `error` code) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		trace?: never;
@@ -1154,12 +1343,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -1234,7 +1429,17 @@ export interface paths {
 				400: components['responses']['BadRequest'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				/** @description Conflict with the current state of the resource (see the `error` code) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		trace?: never;
@@ -1261,12 +1466,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -1341,7 +1552,17 @@ export interface paths {
 				400: components['responses']['BadRequest'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				/** @description Conflict with the current state of the resource (see the `error` code) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		trace?: never;
@@ -1360,18 +1581,26 @@ export interface paths {
 		 * @description Reason is mandatory per data-retention.md audit canon.
 		 *
 		 *     Requires `identity.tenants.suspend` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
+		 *
+		 *     Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 `tenant_invalid` with `errors{<field>: ["invalid_characters"]}` for `reason`, and nothing is written.
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -1443,9 +1672,20 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				/** @description Conflict with the current state of the resource (see the `error` code) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -1465,19 +1705,29 @@ export interface paths {
 		put?: never;
 		/**
 		 * Activate a pending or suspended tenant (Platform-only)
-		 * @description Requires `identity.tenants.activate` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
+		 * @description A company registered through `POST /api/v1/tenants` is created `active`, so activating
+		 *     it answers 204 and changes nothing (no event, `activated_at` is kept): idempotent, not
+		 *     an error. Activating a company in `pending_deletion` is 422 `tenant_invalid` (restore it instead) and a
+		 *     deleted one is 422 `tenant_invalid`.
+		 *     Requires `identity.tenants.activate` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -1545,9 +1795,20 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				/** @description Conflict with the current state of the resource (see the `error` code) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -1573,18 +1834,26 @@ export interface paths {
 		 *     with 422 (`platform_tenant_undeletable`).
 		 *
 		 *     Requires `identity.tenants.delete` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
+		 *
+		 *     Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 `tenant_invalid` with `errors{<field>: ["invalid_characters"]}` for `reason`, and nothing is written.
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -1656,9 +1925,20 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				/** @description Conflict with the current state of the resource (see the `error` code) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -1685,12 +1965,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -1758,9 +2044,20 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				/** @description Conflict with the current state of the resource (see the `error` code) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -1816,6 +2113,7 @@ export interface paths {
 				400: components['responses']['BadRequest'];
 				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -1912,7 +2210,9 @@ export interface paths {
 						'application/json': components['schemas']['ListAuditEventsResponse'];
 					};
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['TenantScopeForbidden'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -2007,25 +2307,49 @@ export interface paths {
 						'application/json': components['schemas']['ListUsersResponse'];
 					};
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['TenantScopeForbidden'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
 		/**
 		 * Create a user (find-or-create-by-email, per Auth0/Entra ID canon)
 		 * @description Requires `identity.users.create` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 *
+		 *     **Who may add users (owner ruling 2026-11-21):** a super user, a platform operator holding
+		 *     `platform.users.create` or `platform.users.manage` (through `X-Tenant-Id` or an impersonation
+		 *     session), and, inside a company, ONLY the Company Owner and the Administrator tier (rank 0 to 10).
+		 *     Everyone below that tier is refused, even a member who still holds `identity.users.create` from
+		 *     before the ruling: the route answers `403 forbidden` (the permission is not in the caller's
+		 *     `effective_permissions`), and the command, deciding on the caller's stored roles under the tenant
+		 *     lock, answers `403 admin_tier_required` for a stale token. A refused caller learns nothing about the
+		 *     email (no `email_has_active_membership`).
+		 *
+		 *     The temporary password is checked against the password policy of the TARGET tenant
+		 *     (the effective tenant: the caller's own, or the one an operator acts in through
+		 *     `X-Tenant-Id`): `422 password_policy_violation` with `errors.password`. Nothing is
+		 *     created on a violation.
+		 *
+		 *     Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 `user_invalid` with `errors{<field>: ["invalid_characters"]}` for `first_name`, `last_name`, and nothing is written.
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -2097,7 +2421,44 @@ export interface paths {
 						'application/json': components['schemas']['CreateUserResponse'];
 					};
 				};
-				403: components['responses']['TenantScopeForbidden'];
+				/** @description `invalid_body` — the body is not valid JSON; `invalid_email` — the email is not a valid address */
+				400: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				/** @description `forbidden` (the caller lacks `identity.users.create`, including every member below the Administrator tier), `admin_tier_required` (the caller's stored rank is below the Administrator tier), or `tenant_scope_forbidden` (see TenantScopeForbidden) */
+				403: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				/** @description `email_has_active_membership` — the email already has an active membership in another tenant */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				/** @description `password_policy_violation` — the password fails the target tenant's policy (field `errors.password`, see PasswordPolicyViolation); `user_invalid` — the new membership violates a domain invariant (see `message`) */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				429: components['responses']['TooManyRequests'];
+				503: components['responses']['ServiceBusy'];
 			};
 		};
 		delete?: never;
@@ -2188,8 +2549,10 @@ export interface paths {
 						'application/json': components['schemas']['UserDto'];
 					};
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -2216,18 +2579,26 @@ export interface paths {
 		/**
 		 * Update user designation + department + status message
 		 * @description Requires `identity.users.update` or self (path id equals the caller's membership) (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).  Editing ANOTHER member's profile is also an authority decision: the caller must strictly outrank the member (`insufficient_rank`; owners may act on owners; super users and exempt platform operators are exempt), decided under the tenant's authority lock (ADR 0069); editing one's own profile is unchanged.
+		 *
+		 *     Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 `user_invalid` with `errors{<field>: ["invalid_characters"]}` for `designation`, `department`, `status_message`, and nothing is written. A full-replace body that re-sends a stored value UNCHANGED is accepted (a value stored before the rule existed never blocks an untouched save); only a changed value is checked.
 		 */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -2301,7 +2672,18 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				403: components['responses']['AuthorityForbidden'];
+				404: components['responses']['NotFound'];
+				/** @description Conflict with the current state of the resource (see the `error` code) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		trace?: never;
@@ -2318,18 +2700,26 @@ export interface paths {
 		/**
 		 * Deactivate a user (reason required)
 		 * @description Requires `identity.users.deactivate` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`). The caller must strictly outrank the target member (`insufficient_rank`; owners may act on owners; super users and exempt platform operators are exempt), decided inside the transaction that holds the tenant's authority lock (ADR 0069).
+		 *
+		 *     Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 `user_invalid` with `errors{<field>: ["invalid_characters"]}` for `reason`, and nothing is written.
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -2401,6 +2791,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
 				/** @description `last_owner_protected` — the change would leave the tenant without an active owner; `member_roles_inconsistent` — the member's assigned roles cannot be loaded as this tenant's roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant) */
@@ -2412,6 +2803,8 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -2438,12 +2831,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -2511,9 +2910,10 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
-				/** @description `member_roles_inconsistent` — the member's assigned roles cannot be loaded as this tenant's roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant) */
+				/** @description `person_active_elsewhere` — the person already has an active membership in another company (a person is active in at most one); nothing was changed; `member_roles_inconsistent` — the member's assigned roles cannot be loaded as this tenant's roles, so its rank cannot be decided; nothing was changed */
 				409: {
 					headers: {
 						[name: string]: unknown;
@@ -2522,6 +2922,8 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -2548,12 +2950,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -2653,6 +3061,8 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -2745,6 +3155,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
 				/** @description `last_owner_protected` — the change would leave the tenant without an active owner; `member_roles_inconsistent` — the member's assigned roles cannot be loaded as this tenant's roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant) */
@@ -2757,6 +3168,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		options?: never;
@@ -2789,12 +3201,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -2879,6 +3297,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		trace?: never;
@@ -2902,12 +3321,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -2979,6 +3404,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
 				/** @description `member_roles_inconsistent` — the member's assigned roles cannot be loaded as this tenant's roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant) */
@@ -2999,6 +3425,7 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		post?: never;
@@ -3075,6 +3502,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
 				/** @description `member_roles_inconsistent` — the member's assigned roles cannot be loaded as this tenant's roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant) */
@@ -3086,6 +3514,8 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		options?: never;
@@ -3109,18 +3539,26 @@ export interface paths {
 		 *     "SuperUser god-mode" + `identity.users.anonymise` permission.
 		 *
 		 *     Requires `identity.users.anonymise` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
+		 *
+		 *     Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 `person_invalid` with `errors{<field>: ["invalid_characters"]}` for `reason`, and nothing is written.
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -3179,7 +3617,11 @@ export interface paths {
 				};
 				cookie?: never;
 			};
-			requestBody?: never;
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['AnonymiseRequest'];
+				};
+			};
 			responses: {
 				/** @description User anonymised */
 				204: {
@@ -3188,6 +3630,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
 				/** @description `last_owner_protected` — the person is the only active owner of a tenant; nothing was changed. `person_memberships_changing` — the person's memberships kept changing while the change was checked (a reactivation raced it); nothing was changed, retry */
@@ -3200,6 +3643,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -3289,24 +3733,33 @@ export interface paths {
 					};
 				};
 				403: components['responses']['TenantScopeForbidden'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
 		/**
 		 * Create a custom role
 		 * @description Requires `identity.roles.create` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 *
+		 *     Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 `role_invalid` with `errors{<field>: ["invalid_characters"]}` for `name`, and nothing is written.
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -3380,6 +3833,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				403: components['responses']['AuthorityForbidden'];
+				404: components['responses']['NotFound'];
 				/** @description Role name already taken in this tenant (`role_name_taken`) */
 				409: {
 					headers: {
@@ -3401,6 +3855,7 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -3491,7 +3946,26 @@ export interface paths {
 						'application/json': components['schemas']['RoleDto'];
 					};
 				};
+				/** @description `invalid_role_id` — the path id is not a role id */
+				400: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				403: components['responses']['TenantScopeForbidden'];
+				/** @description `role_not_found` */
+				404: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -3500,7 +3974,7 @@ export interface paths {
 		 * Soft-delete a role
 		 * @description Requires `identity.roles.delete` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
 		 *     The caller must hold every permission the role carries (deleting removes them from every holder) and must
-		 *     be allowed to act on every active holder (answered before `role_in_use`).
+		 *     be allowed to act on every holder, active or not (answered before `role_in_use`).
 		 *     A role still held by an ACTIVE member is refused with 409 `role_in_use` (`errors.active_holders` is the
 		 *     count); a role held only by inactive members is deleted and their assignments are removed in the same
 		 *     transaction.
@@ -3574,6 +4048,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
 				/** @description `role_in_use` (an active member holds the role) or `role_system_default` (system-default roles cannot be deleted) */
@@ -3585,35 +4060,48 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		options?: never;
 		head?: never;
 		/**
 		 * Rename a role and/or change its hierarchy level
-		 * @description Both fields optional. Empty `name` skips rename. Omitting
-		 *     `hierarchy_level` (or sending `null`) skips re-level — using a
-		 *     pointer field instead of a -1 sentinel keeps the wire shape clean.
-		 *     Changing what a role confers, re-levelling it or deleting it is acting on every ACTIVE member who holds it: the
-		 *     caller must strictly outrank each active holder (owners may act on owners) and must not hold the role
-		 *     themself (`insufficient_rank`, `self_modification_forbidden`); a rename acts on nobody. Every active holder's
+		 * @description At least one of `name` and `hierarchy_level` is required: a body that carries neither (`{}`, `null`) is
+		 *     `400 invalid_body`. An empty `name` skips rename; omitting `hierarchy_level` (or sending `null`) skips
+		 *     re-level — using a pointer field instead of a -1 sentinel keeps the wire shape clean.
+		 *     Changing what a role confers, re-levelling it or deleting it is acting on every member who holds it, active or
+		 *     not: the caller must strictly outrank each holder (owners may act on owners) and must not hold the role
+		 *     themself, except an owner, who may edit a custom role they hold (`insufficient_rank`,
+		 *     `self_modification_forbidden`); a rename acts on nobody. Every active holder's
 		 *     session ends the way an authority change on the member does: their old token answers 401 `stale_token`, the
 		 *     refresh succeeds with the new permissions and rank.
-		 *     A re-level is refused with 422 `role_level_breaks_reporting` when it would leave an active holder not strictly
-		 *     junior to their manager, or a direct report of a holder not strictly junior to the holder.
+		 *     A re-level is refused with 422 `role_level_breaks_reporting` only when it would NEWLY break a reporting line: an
+		 *     active holder that is strictly junior to their (active) manager would no longer be, or a direct report that is
+		 *     strictly junior to a holder would no longer be. Lines that are already broken, and inactive managers or
+		 *     reports, do not block it.
 		 *     Requires `identity.roles.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 *
+		 *     Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 `role_invalid` with `errors{<field>: ["invalid_characters"]}` for `name`, and nothing is written. A full-replace body that re-sends a stored value UNCHANGED is accepted (a value stored before the rule existed never blocks an untouched save); only a changed value is checked.
 		 */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -3685,6 +4173,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
 				/**
@@ -3700,8 +4189,9 @@ export interface paths {
 					};
 				};
 				/**
-				 * @description `validation_failed` / `role_invalid`, or `role_level_breaks_reporting` (the new level would leave an active
-				 *     holder not strictly junior to their manager, or a direct report of a holder not strictly junior to the holder).
+				 * @description `validation_failed` / `role_invalid`, or `role_level_breaks_reporting` (the new level would newly break a reporting
+				 *     line of an active holder: no longer strictly junior to their manager, or a direct report no longer strictly
+				 *     junior to the holder; lines already broken do not count).
 				 */
 				422: {
 					headers: {
@@ -3711,6 +4201,7 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		trace?: never;
@@ -3750,18 +4241,26 @@ export interface paths {
 		 *     Optional `reason` (10-1024 chars) is recorded onto the new
 		 *     edge OR the cleared edge for audit.
 		 *     Requires `identity.roles.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 *
+		 *     Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 `role_hierarchy_invalid_reason` with `errors{<field>: ["invalid_characters"]}` for `reason`, and nothing is written.
 		 */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -3862,6 +4361,7 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		trace?: never;
@@ -3894,12 +4394,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -3984,6 +4490,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		post?: never;
@@ -4016,12 +4523,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -4093,6 +4606,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
 				/** @description `role_system_default` (system-default roles cannot be changed by anyone) */
@@ -4105,6 +4619,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -4136,12 +4651,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -4213,6 +4734,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
 				/** @description `role_system_default` (system-default roles cannot be changed by anyone) */
@@ -4225,6 +4747,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -4263,6 +4786,7 @@ export interface paths {
 					};
 				};
 				403: components['responses']['Forbidden'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -4382,6 +4906,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		options?: never;
@@ -4420,7 +4945,18 @@ export interface paths {
 						'application/json': components['schemas']['PersonDto'];
 					};
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['Forbidden'];
+				/** @description `person_not_found` */
+				404: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -4462,8 +4998,10 @@ export interface paths {
 						'application/json': components['schemas']['ListPersonMembershipsResponse'];
 					};
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -4495,18 +5033,26 @@ export interface paths {
 		 *
 		 *     Requires `platform.users.manage` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
 		 *     An operator cannot change their own Person: the caller's own `personId` is refused with 403 `self_modification_forbidden` (super users exempt).
+		 *
+		 *     Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 `person_invalid` with `errors{<field>: ["invalid_characters"]}` for `first_name`, `last_name`, and nothing is written. A full-replace body that re-sends a stored value UNCHANGED is accepted (a value stored before the rule existed never blocks an untouched save); only a changed value is checked.
 		 */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 				};
@@ -4531,7 +5077,17 @@ export interface paths {
 				400: components['responses']['BadRequest'];
 				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
+				/** @description Conflict with the current state of the resource (see the `error` code) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		trace?: never;
@@ -4551,18 +5107,26 @@ export interface paths {
 		 *
 		 *     Requires `platform.users.manage` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
 		 *     An operator cannot change their own Person: the caller's own `personId` is refused with 403 `self_modification_forbidden` (super users exempt).
+		 *
+		 *     Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 `person_invalid` with `errors{<field>: ["invalid_characters"]}` for `reason`, and nothing is written.
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 				};
@@ -4584,6 +5148,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
 				/** @description `last_owner_protected` — the person is the only active owner of a tenant; nothing was changed. `person_memberships_changing` — the person's memberships kept changing while the change was checked (a reactivation raced it); nothing was changed, retry */
@@ -4596,6 +5161,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -4623,12 +5189,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 				};
@@ -4646,9 +5218,20 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
+				/** @description Conflict with the current state of the resource (see the `error` code) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -4670,18 +5253,26 @@ export interface paths {
 		 * Anonymise a Person record directly (DPDP §12 / GDPR Art. 17)
 		 * @description Requires `identity.users.anonymise` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
 		 *     An operator cannot change their own Person: the caller's own `personId` is refused with 403 `self_modification_forbidden` (super users exempt).
+		 *
+		 *     Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 `person_invalid` with `errors{<field>: ["invalid_characters"]}` for `reason`, and nothing is written.
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 				};
@@ -4690,7 +5281,11 @@ export interface paths {
 				};
 				cookie?: never;
 			};
-			requestBody?: never;
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['AnonymiseRequest'];
+				};
+			};
 			responses: {
 				/** @description Person anonymised */
 				204: {
@@ -4699,6 +5294,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
 				/** @description `last_owner_protected` — the person is the only active owner of a tenant; nothing was changed. `person_memberships_changing` — the person's memberships kept changing while the change was checked (a reactivation raced it); nothing was changed, retry */
@@ -4711,6 +5307,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -4750,8 +5347,10 @@ export interface paths {
 						'application/json': components['schemas']['PersonDto'];
 					};
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -4798,7 +5397,9 @@ export interface paths {
 						'application/json': components['schemas']['PlatformStatsResponse'];
 					};
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['Forbidden'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -4839,6 +5440,7 @@ export interface paths {
 					};
 				};
 				403: components['responses']['Forbidden'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -4851,18 +5453,26 @@ export interface paths {
 		 *     unaffected.
 		 *
 		 *     Requires `platform.impersonation.manage` held by a platform-tenant operator; platform-tenant membership alone, and `platform.tenants.manage`, are refused with 403 `forbidden` (a session mints a `tenant.admin` token for the target tenant, so it has its own permission; `tenant.admin` never implies it).
+		 *
+		 *     Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 `impersonation_invalid` with `errors{<field>: ["invalid_characters"]}` for `reason`, and nothing is written.
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 				};
@@ -4884,6 +5494,7 @@ export interface paths {
 						'application/json': components['schemas']['CreateImpersonationSessionResponse'];
 					};
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['Forbidden'];
 				/** @description Target tenant not found */
 				404: {
@@ -4895,6 +5506,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -4945,6 +5557,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				403: components['responses']['Forbidden'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		options?: never;
@@ -5007,6 +5620,7 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -5115,6 +5729,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				403: components['responses']['TenantScopeNotSupported'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -5130,19 +5745,28 @@ export interface paths {
 		 *     At most one pending request per (membership, permission) tuple.
 		 *     `tenant.admin`, platform-reserved permissions and names outside the catalogue are not
 		 *     requestable: they are conferred by role only, and the request is refused with 422
-		 *     (`permission_not_requestable`).
+		 *     (`permission_not_requestable`). `identity.users.create` is requested only at the Administrator tier or
+		 *     above (403 `admin_tier_required` below it; owner ruling 2026-11-21).
+		 *
+		 *     Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 `permission_request_invalid` with `errors{<field>: ["invalid_characters"]}` for `reason`, and nothing is written.
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -5216,6 +5840,7 @@ export interface paths {
 				};
 				/**
 				 * @description `forbidden` (the caller lacks `identity.meta.request_permission_elevation`),
+				 *     `admin_tier_required` (`identity.users.create` requested below the Administrator tier),
 				 *     `impersonation_not_allowed`, or `X-Tenant-Id` selected a foreign tenant (`tenant_scope_not_supported`)
 				 */
 				403: {
@@ -5236,6 +5861,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -5328,8 +5954,10 @@ export interface paths {
 						'application/json': components['schemas']['PermissionRequestDto'];
 					};
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['TenantScopeNotSupported'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -5356,9 +5984,10 @@ export interface paths {
 		 *     Decided by the authority policy (ADR 0069), never by the body: the requester's manager who
 		 *     holds `identity.roles.approve` AND the permission; or anyone of Administrator rank or above who
 		 *     strictly outranks the requester (an Administrator may approve any requestable permission
-		 *     without holding it, except user/role management, tenant settings, marketplace purchase, payment and
-		 *     invoice access, tenant-wide visibility (read-all, users, roles, tenants, lead credits) and the right to
-		 *     request elevation, which the Administrator must hold); or a super user / exempt operator
+		 *     without holding it, user lifecycle (create, update, deactivate, reactivate, unlock) included, except
+		 *     role management and approval, changing a user's permissions, tenant settings, marketplace purchase, recording
+		 *     payments, payment and invoice access, tenant-wide visibility (read-all, users, roles, tenants, lead credits)
+		 *     and the right to request elevation, which the Administrator must hold); or a super user / exempt operator
 		 *     acting in ANOTHER tenant (in the platform tenant an operator follows rank like anyone else).
 		 *     Never an impersonation session and never the requester. The approved grant ends no later than the
 		 *     approver's own when the approver holds the permission only through a time-bound override. A caller who
@@ -5373,18 +6002,26 @@ export interface paths {
 		 *     stored request whose permission is not requestable, for example one submitted before that rule
 		 *     existed, stays pending; the approver can deny it and the requester can cancel it) → requester
 		 *     still active (409 `permission_request_requester_inactive`; the request stays pending).
+		 *
+		 *     Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 `permission_request_invalid` with `errors{<field>: ["invalid_characters"]}` for `decision_reason`, and nothing is written.
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -5456,12 +6093,15 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				/**
 				 * @description `grant_exceeds_authority` (the approver does not hold the permission, an Administrator lacks a
-				 *     must-hold one, or the approval would lift a revoke without the Admin tier), `self_modification_forbidden`
+				 *     must-hold one, or the approval would lift a revoke without the Admin tier), `admin_tier_required`
+				 *     (a request for `identity.users.create` from a member below the Administrator tier: nobody approves
+				 *     it, the request stays pending and can be denied or cancelled), `self_modification_forbidden`
 				 *     (own request), `impersonation_not_allowed`, `forbidden` (no valid or no longer active acting member), or
 				 *     `tenant_scope_not_supported` (`X-Tenant-Id` selected a foreign tenant). Callers who may not decide the
-				 *     request at all get 404, not `not_approver` / `insufficient_rank`.
+				 *     request at all get 404 `permission_request_not_found`.
 				 */
 				403: {
 					headers: {
@@ -5482,6 +6122,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -5504,18 +6145,26 @@ export interface paths {
 		 * @description Transitions Pending → Denied. `decision_reason` is REQUIRED on
 		 *     Deny per ADR 0055 audit canon. Same eligibility and check order as Approve, except that the
 		 *     denier need not hold the requested permission (nor `identity.roles.approve` as an Administrator).
+		 *
+		 *     Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 `permission_request_invalid` with `errors{<field>: ["invalid_characters"]}` for `decision_reason`, and nothing is written.
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -5587,6 +6236,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				/**
 				 * @description `self_modification_forbidden` (own request), `impersonation_not_allowed`, `forbidden`, or
 				 *     `tenant_scope_not_supported` (`X-Tenant-Id` selected a foreign tenant). Callers who may not decide the
@@ -5611,6 +6261,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -5639,12 +6290,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -5712,6 +6369,7 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['TenantScopeNotSupported'];
 				404: components['responses']['NotFound'];
 				/** @description Request is not in pending state */
@@ -5723,6 +6381,7 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -5765,8 +6424,10 @@ export interface paths {
 						'application/json': components['schemas']['ListUnverifiedContactsResponse'];
 					};
 				};
+				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['Forbidden'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -5779,12 +6440,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 				};
@@ -5806,9 +6473,11 @@ export interface paths {
 						'application/json': components['schemas']['CreateUnverifiedContactResponse'];
 					};
 				};
+				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['Forbidden'];
 				422: components['responses']['ValidationError'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -5836,12 +6505,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 				};
@@ -5866,10 +6541,12 @@ export interface paths {
 						'application/json': components['schemas']['LogVerificationCallResponse'];
 					};
 				};
+				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['ValidationError'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -5900,12 +6577,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 				};
@@ -5926,6 +6609,7 @@ export interface paths {
 						'application/json': components['schemas']['VerifyUnverifiedContactResponse'];
 					};
 				};
+				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
@@ -5939,6 +6623,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['ValidationError'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -5962,12 +6647,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 				};
@@ -5990,10 +6681,12 @@ export interface paths {
 					};
 					content?: never;
 				};
+				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['Forbidden'];
 				404: components['responses']['NotFound'];
 				422: components['responses']['ValidationError'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -6052,8 +6745,10 @@ export interface paths {
 						'application/json': components['schemas']['BrowseMarketplaceResponse'];
 					};
 				};
+				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['Forbidden'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -6083,12 +6778,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 				};
@@ -6113,6 +6814,7 @@ export interface paths {
 						'application/json': components['schemas']['PurchaseLeadResponse'];
 					};
 				};
+				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['TenantScopeNotSupported'];
 				404: components['responses']['NotFound'];
@@ -6126,6 +6828,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['ValidationError'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -6149,12 +6852,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 				};
@@ -6176,9 +6885,11 @@ export interface paths {
 						'application/json': components['schemas']['TopupLeadCreditsResponse'];
 					};
 				};
+				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['Forbidden'];
 				422: components['responses']['ValidationError'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -6268,6 +6979,7 @@ export interface paths {
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -6374,6 +7086,7 @@ export interface paths {
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -6388,12 +7101,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -6479,6 +7198,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -6573,6 +7293,7 @@ export interface paths {
 				400: components['responses']['TenantScopeInvalid'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -6664,6 +7385,8 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		options?: never;
@@ -6682,12 +7405,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -6772,6 +7501,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		trace?: never;
@@ -6868,6 +7598,7 @@ export interface paths {
 				400: components['responses']['TenantScopeInvalid'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -6882,12 +7613,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -6974,6 +7711,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -7072,6 +7810,7 @@ export interface paths {
 				400: components['responses']['TenantScopeInvalid'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -7168,6 +7907,7 @@ export interface paths {
 				400: components['responses']['TenantScopeInvalid'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -7270,6 +8010,7 @@ export interface paths {
 				400: components['responses']['BadRequest'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -7292,12 +8033,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -7384,6 +8131,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -7499,6 +8247,7 @@ export interface paths {
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -7528,15 +8277,6 @@ export interface paths {
 			parameters: {
 				query?: never;
 				header?: {
-					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
-					 */
-					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 					 *     slug-anchored, non-impersonation platform operators whose token and
@@ -7608,6 +8348,7 @@ export interface paths {
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		put?: never;
@@ -7642,12 +8383,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -7734,6 +8481,7 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -7766,12 +8514,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -7857,6 +8611,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -7888,12 +8643,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -7978,6 +8739,8 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -8009,12 +8772,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -8101,6 +8870,7 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -8132,12 +8902,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -8218,6 +8994,8 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -8323,6 +9101,7 @@ export interface paths {
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -8340,12 +9119,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -8423,6 +9208,7 @@ export interface paths {
 				404: components['responses']['NotFound'];
 				409: components['responses']['TenantNotActive'];
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -8521,6 +9307,7 @@ export interface paths {
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -8615,6 +9402,7 @@ export interface paths {
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -8641,12 +9429,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -8727,6 +9521,8 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -8750,12 +9546,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -8836,6 +9638,8 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -8859,12 +9663,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -8958,6 +9768,7 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -8987,12 +9798,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -9086,6 +9903,7 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -9180,6 +9998,7 @@ export interface paths {
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -9196,12 +10015,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -9288,6 +10113,7 @@ export interface paths {
 				404: components['responses']['NotFound'];
 				409: components['responses']['TenantNotActive'];
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -9380,6 +10206,7 @@ export interface paths {
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -9406,12 +10233,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -9497,6 +10330,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -9521,12 +10355,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -9607,6 +10447,8 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -9631,12 +10473,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -9717,6 +10565,8 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -9741,12 +10591,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -9832,6 +10688,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -9861,12 +10718,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -9944,6 +10807,7 @@ export interface paths {
 				404: components['responses']['NotFound'];
 				409: components['responses']['TenantNotActive'];
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -10036,6 +10900,7 @@ export interface paths {
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -10066,12 +10931,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -10157,6 +11028,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -10181,12 +11053,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -10270,6 +11148,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -10294,12 +11173,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -10384,6 +11269,8 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -10476,6 +11363,7 @@ export interface paths {
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -10502,12 +11390,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -10593,6 +11487,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -10617,12 +11512,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -10703,6 +11604,8 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -10727,12 +11630,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -10817,6 +11726,8 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -10909,6 +11820,7 @@ export interface paths {
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -10919,12 +11831,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -11007,6 +11925,7 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -11031,12 +11950,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -11121,6 +12046,8 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -11145,12 +12072,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -11231,6 +12164,8 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -11323,6 +12258,7 @@ export interface paths {
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -11333,12 +12269,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -11426,6 +12368,7 @@ export interface paths {
 					};
 				};
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -11455,12 +12398,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -11540,6 +12489,7 @@ export interface paths {
 				404: components['responses']['NotFound'];
 				409: components['responses']['TenantNotActive'];
 				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -11572,12 +12522,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -11671,6 +12627,7 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -11705,12 +12662,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -11798,6 +12761,7 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -11904,6 +12868,7 @@ export interface paths {
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -11937,12 +12902,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -12023,6 +12994,8 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -12054,12 +13027,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 					/**
@@ -12153,6 +13132,7 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -12209,6 +13189,8 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['PasswordChangeRequired'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -12247,6 +13229,8 @@ export interface paths {
 					};
 				};
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['PasswordChangeRequired'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -12273,12 +13257,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 				};
@@ -12297,6 +13287,8 @@ export interface paths {
 					};
 				};
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['PasswordChangeRequired'];
+				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
 		};
@@ -12321,12 +13313,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 				};
@@ -12346,6 +13344,7 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['PasswordChangeRequired'];
 				404: components['responses']['NotFound'];
 				/** @description Cannot mark a dismissed notification read */
 				409: {
@@ -12356,6 +13355,7 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -12379,12 +13379,18 @@ export interface paths {
 				query?: never;
 				header?: {
 					/**
-					 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-					 *     the server replays the original response within the
-					 *     idempotency-store retention window (24h, Stripe canon). Per
-					 *     ADR 0031 — required by every state-mutating endpoint (POST /
-					 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-					 *     (token operations are idempotent at the token-family level).
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
 					 */
 					'X-Command-Id'?: components['parameters']['XCommandId'];
 				};
@@ -12404,7 +13410,18 @@ export interface paths {
 				};
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
+				403: components['responses']['PasswordChangeRequired'];
 				404: components['responses']['NotFound'];
+				/** @description Conflict with the current state of the resource (see the `error` code) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				429: components['responses']['TooManyRequests'];
 			};
 		};
 		delete?: never;
@@ -12420,7 +13437,11 @@ export interface components {
 		/**
 		 * @description RFC 9457 Problem Details + LeadKart legacy fields. Legacy `error`/
 		 *     `message` stay populated for backward compat. Validation failures
-		 *     carry the `errors` map (field name → list of messages).
+		 *     carry the `errors` map (field name → list of messages). The stable field
+		 *     code `invalid_characters` marks text a person typed that holds control,
+		 *     direction-override, invisible or line-breaking characters (see the operations
+		 *     that accept names, titles and reasons). A zero-width joiner or non-joiner
+		 *     between two letters or marks of one word is accepted and must not be stripped.
 		 */
 		ErrorResponse: {
 			/** @description RFC 9457 §3.1.1 — canonical type URI */
@@ -12435,6 +13456,14 @@ export interface components {
 			error: string;
 			/** @description human-readable message (LeadKart legacy) */
 			message?: string;
+			/**
+			 * @description Refines `error` where a client must react differently to one failure of a code
+			 *     (RFC 9457 extension). Present only on `401 refresh_rejected`: `session_expired`
+			 *     (the session reached its absolute lifetime or sat idle past `Refresh.SlidingTTL`) or
+			 *     `tenant_suspended` (the person's company is suspended) or `tenant_not_active` (it is
+			 *     pending or marked for deletion). Absent everywhere else.
+			 */
+			reason?: string;
 			/** @description Field-level errors (RFC 9457 §3.1 extension). Key = JSON field name; value = list of error strings. */
 			errors?: {
 				[key: string]: string[];
@@ -12451,17 +13480,22 @@ export interface components {
 		LoginResponse: {
 			access_token: string;
 			refresh_token: string;
-			/** Format: date-time */
+			/**
+			 * Format: date-time
+			 * @description UTC expiry of access_token (issued + 600 s).
+			 */
 			access_token_expires_at: string;
 			/** @enum {string} */
 			token_type: 'Bearer';
 			/**
-			 * @description BRD line 241 + ADR 0053 — when true, the credential was
-			 *     provisioned by an admin/operator and the frontend MUST
-			 *     redirect to the change-password screen on first login.
-			 *     Omitted from the wire shape when false.
+			 * @description BRD line 241 + ADR 0053 / ADR 0068 D8: when true, the credential was
+			 *     provisioned by an admin/operator. The access token carries the flag and
+			 *     every route except change-password and capabilities answers `403
+			 *     password_change_required` until the password is changed. Always present
+			 *     on login AND refresh (refresh mints it from the stored person, so a
+			 *     front-end that lost its own gate restores it from here).
 			 */
-			must_change_password?: boolean;
+			must_change_password: boolean;
 		};
 		RefreshRequest: {
 			refresh_token: string;
@@ -12505,6 +13539,8 @@ export interface components {
 			last_name?: string;
 			is_platform: boolean;
 			is_super_user: boolean;
+			/** @description Mirrors the access token's flag. True while the person holds a temporary credential; such a token reaches only change-password and this endpoint. */
+			must_change_password: boolean;
 			permissions: string[];
 			/** @description Every catalogue permission the caller satisfies in their own tenant (tenant.admin expanded). Use this, not permissions[], for UI gating. */
 			effective_permissions: string[];
@@ -12520,6 +13556,36 @@ export interface components {
 			 * @enum {string}
 			 */
 			tier: 'owner' | 'admin' | 'manager' | 'team_lead' | 'user';
+			password_policy: components['schemas']['PasswordRulesDto'];
+			impersonation?: components['schemas']['ImpersonationContextDto'];
+		};
+		/**
+		 * @description Present ONLY when the bearer token is an impersonation session's own token. Names the session the
+		 *     token belongs to and the company it acts in, so a reloaded page can print "Impersonating <company>"
+		 *     without keeping the name in memory. Read fresh (a rename shows on the next read, never cached).
+		 *     It carries nothing about any other session.
+		 */
+		ImpersonationContextDto: {
+			/** Format: uuid */
+			session_id: string;
+			/** @description The acted-in tenant's CURRENT display name; empty only if the tenant row is gone or unreadable. */
+			tenant_display_name: string;
+		};
+		/**
+		 * @description The password rules that bind the caller (the caller's own tenant's policy, or the system
+		 *     default), under the same names as the rule codes of the 422 `password_policy_violation`
+		 *     answer. A class rule applies only when its flag is true.
+		 */
+		PasswordRulesDto: {
+			/** @description Minimum length in characters (Unicode code points). */
+			min_length: number;
+			/** @description Size bound in BYTES (1024); a longer password fails the rule `max_length`. Not configurable per tenant. */
+			max_length: number;
+			requires_uppercase: boolean;
+			requires_lowercase: boolean;
+			requires_digit: boolean;
+			/** @description A symbol is punctuation or a symbol character; whitespace is not one. */
+			requires_symbol: boolean;
 		};
 		CapabilityRoleDto: {
 			/** Format: uuid */
@@ -12603,13 +13669,32 @@ export interface components {
 			state_code?: string;
 			pincode?: string;
 		};
+		/**
+		 * @description A tenant's password policy as stored. A tenant admin may set any rule inside the
+		 *     validated bounds below, INCLUDING rules weaker than the platform default (12
+		 *     characters and all four classes): `min_length` may go down to 8 and any subset of
+		 *     the four classes, none included, may be required. The platform guarantees only the
+		 *     floors, not the default. `max_failed_attempts` and `lockout_minutes` are accepted,
+		 *     stored and returned but NOT ENFORCED: the platform lockout is fixed (10 failures in
+		 *     15 minutes locks for 15 minutes, for every account, so that a locked answer reveals
+		 *     nothing about which emails exist). Clients should not show them.
+		 */
 		PasswordPolicyDto: {
+			/** @description Minimum password length in characters (8 to 128; counted in characters, not bytes). */
 			min_length: number;
 			require_uppercase: boolean;
 			require_lowercase: boolean;
 			require_digit: boolean;
 			require_symbol: boolean;
+			/**
+			 * @deprecated
+			 * @description Stored, not enforced - the platform lockout is fixed. Validated to 3..50. Hide it in the UI.
+			 */
 			max_failed_attempts: number;
+			/**
+			 * @deprecated
+			 * @description Stored, not enforced - the platform lockout is fixed. Validated to 0..1440. Hide it in the UI.
+			 */
 			lockout_minutes: number;
 		};
 		/** @description Full replace. Every field is required; a body that omits one is 400 `invalid_body` (the `errors` map names it) and nothing is changed. */
@@ -12831,6 +13916,15 @@ export interface components {
 		GlobalSuspendPersonRequest: {
 			reason: string;
 		};
+		/**
+		 * @description The operator's free-text justification for an irreversible erasure. It is kept on the audit/outbox
+		 *     event (`identity.person_anonymised.v1`, field `reason`) and never logged. It must describe the
+		 *     request (a ticket number, the data-subject request), not contain the erased person's data.
+		 */
+		AnonymiseRequest: {
+			/** @description Not blank after trimming (same bound as a global suspension). */
+			reason: string;
+		};
 		UpdatePersonProfileRequest: {
 			first_name?: string;
 			last_name?: string;
@@ -12861,6 +13955,8 @@ export interface components {
 		CreateImpersonationSessionResponse: {
 			/** Format: uuid */
 			session_id: string;
+			/** @description The target tenant's current display name. */
+			tenant_display_name: string;
 			/** Format: date-time */
 			expires_at_utc: string;
 			/** @description Scoped JWT (aud=leadkart-impersonation; is_platform=false). Bound to session lifetime. */
@@ -12877,6 +13973,8 @@ export interface components {
 			operator_id: string;
 			/** Format: uuid */
 			target_tenant_id: string;
+			/** @description The target tenant's CURRENT display name, read at response time (a rename shows on the next read); empty only if the tenant row is gone. */
+			tenant_display_name: string;
 			reason: string;
 			/** Format: date-time */
 			created_at: string;
@@ -13834,8 +14932,58 @@ export interface components {
 				'application/json': components['schemas']['ErrorResponse'];
 			};
 		};
-		/** @description Authenticated but missing the required permission */
+		/**
+		 * @description Authenticated but missing the required permission. Every authenticated operation
+		 *     outside the forced-change allowlist can also answer `403` with
+		 *     `error: password_change_required` while the token carries `must_change_password`
+		 *     (see the API description; no `WWW-Authenticate`, do not refresh), and an
+		 *     impersonation token answers `403 impersonation_not_allowed` on the routes it may
+		 *     not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+		 */
 		Forbidden: {
+			headers: {
+				[name: string]: unknown;
+			};
+			content: {
+				'application/json': components['schemas']['ErrorResponse'];
+			};
+		};
+		/**
+		 * @description `error: password_change_required`. The token carries `must_change_password`: the
+		 *     person holds a temporary credential and must change it first. Only
+		 *     `POST /api/v1/auth/change-password` and `GET /api/v1/auth/me/capabilities` are
+		 *     reachable. The response carries no `WWW-Authenticate` (this is not a session
+		 *     problem: do not refresh). Applies to every authenticated operation outside that
+		 *     allowlist; operations that document a more specific 403 carry it in that
+		 *     response's description.
+		 */
+		PasswordChangeRequired: {
+			headers: {
+				[name: string]: unknown;
+			};
+			content: {
+				'application/json': components['schemas']['ErrorResponse'];
+			};
+		};
+		/**
+		 * @description `error: impersonation_not_allowed` (the token is an impersonation token, and this
+		 *     account route is never reachable with one) or `error: password_change_required`
+		 *     (the token carries `must_change_password`). Neither carries `WWW-Authenticate`.
+		 */
+		SessionRefused: {
+			headers: {
+				[name: string]: unknown;
+			};
+			content: {
+				'application/json': components['schemas']['ErrorResponse'];
+			};
+		};
+		/**
+		 * @description `error: impersonation_not_allowed`. The token is an impersonation token; changing
+		 *     a password is never reachable with one. (This operation is on the forced-change
+		 *     allowlist, so `password_change_required` does not apply.)
+		 */
+		ImpersonationNotAllowed: {
 			headers: {
 				[name: string]: unknown;
 			};
@@ -13847,6 +14995,7 @@ export interface components {
 		 * @description The route does not support the `X-Tenant-Id` operator scope (it acts on the
 		 *     caller's own tenant only) and the header selected a different tenant
 		 *     (`tenant_scope_not_supported`, ADR 0039).
+		 *     (Like every authenticated operation, also `403 password_change_required` while the token carries `must_change_password`.)
 		 */
 		TenantScopeNotSupported: {
 			headers: {
@@ -13862,13 +15011,17 @@ export interface components {
 		 *     TenantScopeForbidden), `self_modification_forbidden` (the caller targeted themself),
 		 *     `insufficient_rank` (the caller does not strictly outrank the target member or role,
 		 *     ADR 0069), `grant_exceeds_authority` (the change confers or removes a permission the
-		 *     caller does not hold, or `tenant.admin` as a non-owner), `ownership_authority_required`
+		 *     caller does not hold, or `tenant.admin` as a non-owner), `admin_tier_required` (the change would give
+		 *     `identity.users.create` to a role or a member below the Administrator tier: a role below the tier cannot
+		 *     contain it, it cannot be an override of a member below the tier, and it cannot be requested or approved
+		 *     below the tier; owner ruling 2026-11-21), `ownership_authority_required`
 		 *     (a platform operator acting under `X-Tenant-Id` tried to change who OWNS the tenant:
 		 *     assign or revoke Company Owner, confer or remove `tenant.admin` by role or override, or
 		 *     deactivate or reactivate an owner, without `platform.tenants.ownership`; super users are unaffected).
 		 *     Editing a role acts on its active holders (`insufficient_rank`, `self_modification_forbidden`); lifting a
 		 *     member's explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
 		 *     tier or above (`grant_exceeds_authority`).
+		 *     (Like every authenticated operation, also `403 password_change_required` while the token carries `must_change_password`.)
 		 */
 		AuthorityForbidden: {
 			headers: {
@@ -13888,6 +15041,7 @@ export interface components {
 		 *     decides, with `forbidden`. `tenant_scope_forbidden` is decided before any tenant
 		 *     lookup and is identical for existing, unknown and suspended tenants, so it cannot
 		 *     be used to probe which tenants exist.
+		 *     (Like every authenticated operation, also `403 password_change_required` while the token carries `must_change_password`.)
 		 */
 		TenantScopeForbidden: {
 			headers: {
@@ -13903,6 +15057,7 @@ export interface components {
 		 *     tenant, and this route is not one of the identity writes operators may perform
 		 *     under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 		 *     accepted under a foreign `X-Tenant-Id`; call them as a member of the tenant.
+		 *     (Like every authenticated operation, also `403 password_change_required` while the token carries `must_change_password`.)
 		 */
 		TenantScopeReadOnly: {
 			headers: {
@@ -13942,11 +15097,62 @@ export interface components {
 				'application/json': components['schemas']['ErrorResponse'];
 			};
 		};
-		/** @description Rate limit exceeded; `Retry-After` carries the seconds to wait. */
+		/**
+		 * @description Rate limit exceeded; `Retry-After` carries the whole seconds to wait (rounded up).
+		 *     EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+		 *     runs in front of the whole API, and its key map is capped (a new client is refused while
+		 *     the cap is full). The bucket is the client address (the end client the BFF forwards in
+		 *     `X-Forwarded-For`, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+		 *     request-password-reset, reset-password, confirm-email-change and tenant registration also
+		 *     carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+		 *     minute, burst 5, whichever address the requests come from).
+		 */
 		TooManyRequests: {
 			headers: {
 				/** @description Seconds until the request may be retried. */
 				'Retry-After'?: number;
+				[name: string]: unknown;
+			};
+			content: {
+				'application/json': components['schemas']['ErrorResponse'];
+			};
+		};
+		/**
+		 * @description Every password-hashing slot of this process was busy for longer than the queue
+		 *     timeout (the process bounds concurrent Argon2id work, ADR 0068 D12), or the caller's
+		 *     own address already had its share of operations running and a full line of waiting
+		 *     ones. A caller's operations beyond its share WAIT their turn (within the same queue
+		 *     timeout) instead of failing, so a burst from one office address is served; only the
+		 *     wait that runs out, or the line that is full, answers this. Nothing was done and
+		 *     nothing was counted; retry after `Retry-After` seconds. Every login branch (real
+		 *     account, unknown email, locked account) answers this the same way.
+		 */
+		ServiceBusy: {
+			headers: {
+				/** @description Seconds until the request may be retried. */
+				'Retry-After'?: number;
+				[name: string]: unknown;
+			};
+			content: {
+				'application/json': components['schemas']['ErrorResponse'];
+			};
+		};
+		/**
+		 * @description The password does not satisfy the tenant password policy (ADR 0068 D13). `error` is
+		 *     `password_policy_violation`; `errors.<field>` lists the failed rule codes, in this
+		 *     order, for the field that carried the password: `min_length`, `max_length`,
+		 *     `requires_uppercase`, `requires_lowercase`, `requires_digit`, `requires_symbol`.
+		 *     `max_length` is answered alone: a password over 1024 bytes is refused before any
+		 *     class counting or hashing. `detail` is a fixed sentence; the answer never echoes the
+		 *     password. A violation changes nothing (a reset token stays valid, the session stays
+		 *     alive). Which tenant's policy applies is stated on each operation. The policy is
+		 *     enforced when a password is SET: a weakened policy never locks an existing member out
+		 *     and a strengthened one applies at the next password set, not at login. The system
+		 *     default, used by a tenant that never stored a policy, is 8 characters minimum (so
+		 *     `min_length` is the failure for 7 characters) with all four classes.
+		 */
+		PasswordPolicyViolation: {
+			headers: {
 				[name: string]: unknown;
 			};
 			content: {
@@ -13974,12 +15180,18 @@ export interface components {
 	};
 	parameters: {
 		/**
-		 * @description Per-caller idempotency key (UUIDv4/v7, lowercase). When supplied
-		 *     the server replays the original response within the
-		 *     idempotency-store retention window (24h, Stripe canon). Per
-		 *     ADR 0031 — required by every state-mutating endpoint (POST /
-		 *     PUT / PATCH) except auth/login, auth/refresh, auth/logout
-		 *     (token operations are idempotent at the token-family level).
+		 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+		 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+		 *     within the retention window (24h, Stripe canon). The scope is the verified
+		 *     tenant + person + membership + impersonation session + acted-on tenant
+		 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+		 *     route, tenant or session is a different command. Only 2xx answers are stored.
+		 *
+		 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+		 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+		 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+		 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+		 *     operations. Per ADR 0031 and ADR 0068 D11.
 		 */
 		XCommandId: string;
 		/** @description Opaque base64-encoded keyset cursor. Omit for first page. */

@@ -17,7 +17,7 @@ export const LoginResponse = z
 		refresh_token: z.string(),
 		access_token_expires_at: z.string().datetime({ offset: true }),
 		token_type: z.literal('Bearer'),
-		must_change_password: z.boolean().optional()
+		must_change_password: z.boolean()
 	})
 	.passthrough();
 export const ErrorResponse = z
@@ -28,6 +28,7 @@ export const ErrorResponse = z
 		detail: z.string().optional(),
 		error: z.string(),
 		message: z.string().optional(),
+		reason: z.string().optional(),
 		errors: z.record(z.string(), z.array(z.string())).optional()
 	})
 	.passthrough();
@@ -37,15 +38,28 @@ export const LogoutRequest = z
 	.passthrough();
 export const RequestPasswordResetRequest = z.object({ email: z.string().email() }).passthrough();
 export const ResetPasswordRequest = z
-	.object({ token: z.string(), new_password: z.string().min(12) })
+	.object({ token: z.string(), new_password: z.string().min(8) })
 	.passthrough();
 export const ChangePasswordRequest = z
-	.object({ current_password: z.string(), new_password: z.string().min(12) })
+	.object({ current_password: z.string(), new_password: z.string().min(8) })
 	.passthrough();
 export const RequestEmailChangeRequest = z.object({ new_email: z.string().email() }).passthrough();
 export const ConfirmEmailChangeRequest = z.object({ token: z.string() }).passthrough();
 export const CapabilityRoleDto = z
 	.object({ id: z.string().uuid(), name: z.string(), is_super_admin: z.boolean() })
+	.passthrough();
+export const PasswordRulesDto = z
+	.object({
+		min_length: z.number().int().gte(8).lte(128),
+		max_length: z.number().int(),
+		requires_uppercase: z.boolean(),
+		requires_lowercase: z.boolean(),
+		requires_digit: z.boolean(),
+		requires_symbol: z.boolean()
+	})
+	.passthrough();
+export const ImpersonationContextDto = z
+	.object({ session_id: z.string().uuid(), tenant_display_name: z.string() })
 	.passthrough();
 export const CapabilitiesDto = z
 	.object({
@@ -58,11 +72,14 @@ export const CapabilitiesDto = z
 		last_name: z.string().optional(),
 		is_platform: z.boolean(),
 		is_super_user: z.boolean(),
+		must_change_password: z.boolean(),
 		permissions: z.array(z.string()),
 		effective_permissions: z.array(z.string()),
 		roles: z.array(CapabilityRoleDto),
 		rank: z.number().int().gte(0).lte(99),
-		tier: z.enum(['owner', 'admin', 'manager', 'team_lead', 'user'])
+		tier: z.enum(['owner', 'admin', 'manager', 'team_lead', 'user']),
+		password_policy: PasswordRulesDto,
+		impersonation: ImpersonationContextDto.optional()
 	})
 	.passthrough();
 export const AuditEventDto = z
@@ -116,13 +133,13 @@ export const AdminAddressDto = z
 	.passthrough();
 export const PasswordPolicyDto = z
 	.object({
-		min_length: z.number().int(),
+		min_length: z.number().int().gte(8).lte(128),
 		require_uppercase: z.boolean(),
 		require_lowercase: z.boolean(),
 		require_digit: z.boolean(),
 		require_symbol: z.boolean(),
-		max_failed_attempts: z.number().int(),
-		lockout_minutes: z.number().int()
+		max_failed_attempts: z.number().int().gte(3).lte(50),
+		lockout_minutes: z.number().int().gte(0).lte(1440)
 	})
 	.passthrough();
 export const TenantDto = z
@@ -160,7 +177,7 @@ export const RegisterTenantRequest = z
 		legal_name: z.string().max(200),
 		display_name: z.string().max(200),
 		admin_email: z.string().email(),
-		admin_password: z.string().min(12),
+		admin_password: z.string().min(8),
 		admin_first_name: z.string(),
 		admin_last_name: z.string()
 	})
@@ -228,7 +245,7 @@ export const ListUsersResponse = z
 export const CreateUserRequest = z
 	.object({
 		email: z.string().email(),
-		password: z.string().min(12),
+		password: z.string().min(8),
 		first_name: z.string(),
 		last_name: z.string()
 	})
@@ -249,6 +266,7 @@ export const ReplaceUserPermissionOverridesRequest = z
 	.object({ granted: z.array(z.string()), revoked: z.array(z.string()) })
 	.passthrough();
 export const AssignUserManagerRequest = z.object({ manager_id: z.string().uuid() }).passthrough();
+export const AnonymiseRequest = z.object({ reason: z.string().min(1) }).passthrough();
 export const RoleDto = z
 	.object({
 		id: z.string().uuid(),
@@ -341,6 +359,7 @@ export const CreateImpersonationSessionRequest = z
 export const CreateImpersonationSessionResponse = z
 	.object({
 		session_id: z.string().uuid(),
+		tenant_display_name: z.string(),
 		expires_at_utc: z.string().datetime({ offset: true }),
 		access_token: z.string(),
 		access_token_expires_at_utc: z.string().datetime({ offset: true }),
@@ -352,6 +371,7 @@ export const ImpersonationSessionDto = z
 		session_id: z.string().uuid(),
 		operator_id: z.string().uuid(),
 		target_tenant_id: z.string().uuid(),
+		tenant_display_name: z.string(),
 		reason: z.string(),
 		created_at: z.string().datetime({ offset: true }),
 		expires_at: z.string().datetime({ offset: true })
@@ -1025,6 +1045,8 @@ export const schemas = {
 	RequestEmailChangeRequest,
 	ConfirmEmailChangeRequest,
 	CapabilityRoleDto,
+	PasswordRulesDto,
+	ImpersonationContextDto,
 	CapabilitiesDto,
 	AuditEventDto,
 	ListAuditEventsResponse,
@@ -1055,6 +1077,7 @@ export const schemas = {
 	AssignUserRoleRequest,
 	ReplaceUserPermissionOverridesRequest,
 	AssignUserManagerRequest,
+	AnonymiseRequest,
 	RoleDto,
 	ListRolesResponse,
 	CreateRoleRequest,
@@ -1176,30 +1199,82 @@ export const endpoints: readonly GeneratedEndpoint[] = [
 		method: 'post',
 		path: '/api/v1/auth/change-password',
 		alias: 'postApiv1authchangePassword',
-		description: `Current password verified even when authenticated (security.md &quot;Password change&quot;).`,
+		description: `Current password verified even when authenticated (security.md &quot;Password change&quot;).
+Allowed while &#x60;must_change_password&#x60; is pending: this is the way out of the
+forced-change state. The change rotates the security stamp, clears the flag and,
+in the same transaction, revokes EVERY refresh session of the person (the access
+token carries no session id, so the caller&#x27;s own session is ended too).
+Contract: &#x60;204&#x60;; the access token used is now &#x60;401 stale_token&#x60; (at once on every instance
+when the api&#x27;s cache is reachable, otherwise within the 30 s lifetime of the cached
+stamp); every refresh
+token the person held is now &#x60;401&#x60; on refresh; the caller signs in again with the
+new password, and that login (and its refreshes) carries no flag.
+
+The new password is checked against the password policy of the caller&#x27;s OWN tenant
+(the token&#x27;s &#x60;tenant_id&#x60;, never an operator&#x27;s acted-on scope; the default policy when
+that tenant is gone) BEFORE the current password is verified, so a refused password
+costs no hashing: &#x60;422 password_policy_violation&#x60; with &#x60;errors.new_password&#x60;. A current
+password over 1024 bytes is answered as an incorrect one without being hashed.
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
 				name: 'body',
 				type: 'Body',
 				schema: ChangePasswordRequest
-			},
-			{
-				name: 'X-Command-Id',
-				type: 'Header',
-				schema: z.string().min(36).max(36).uuid().optional()
 			}
 		],
 		response: z.void(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 401,
-				description: `Incorrect current password`,
+				description: `Incorrect current password, or the access token is stale (&#x60;stale_token&#x60;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `&#x60;error: impersonation_not_allowed&#x60;. The token is an impersonation token; changing
+a password is never reachable with one. (This operation is on the forced-change
+allowlist, so &#x60;password_change_required&#x60; does not apply.)
+`,
 				schema: ErrorResponse
 			},
 			{
 				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				description: `&#x60;password_policy_violation&#x60; (see PasswordPolicyViolation; field &#x60;errors.new_password&#x60;),
+&#x60;password_breached&#x60;, or &#x60;password_same_as_current&#x60;.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 503,
+				description: `Every password-hashing slot of this process was busy for longer than the queue
+timeout (the process bounds concurrent Argon2id work, ADR 0068 D12), or the caller&#x27;s
+own address already had its share of operations running and a full line of waiting
+ones. A caller&#x27;s operations beyond its share WAIT their turn (within the same queue
+timeout) instead of failing, so a burst from one office address is served; only the
+wait that runs out, or the line that is full, answers this. Nothing was done and
+nothing was counted; retry after &#x60;Retry-After&#x60; seconds. Every login branch (real
+account, unknown email, locked account) answers this the same way.
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -1219,11 +1294,6 @@ target-email collisions.
 				name: 'body',
 				type: 'Body',
 				schema: z.object({ token: z.string() }).passthrough()
-			},
-			{
-				name: 'X-Command-Id',
-				type: 'Header',
-				schema: z.string().min(36).max(36).uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -1231,6 +1301,19 @@ target-email collisions.
 			{
 				status: 400,
 				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -1260,17 +1343,63 @@ target-email collisions.
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `&#x60;tenant_suspended&#x60;: the password was CORRECT but the person&#x27;s company is
+suspended (an operator suspended it; reactivation restores sign-in). It is
+answered only after the password was verified, so a wrong password or an unknown
+email still answers &#x60;401 invalid_credentials&#x60; and the code tells a stranger
+nothing. &#x60;tenant_not_active&#x60;: the password was CORRECT but the company is
+neither active nor suspended nor deleted, that is &#x60;pending&#x60; or marked for
+deletion (&#x60;pending_deletion&#x60;); same rule (owner ruling 2026-11-21: only an active
+company&#x27;s members sign in; restoring the company or an operator&#x27;s activation
+brings them back). A company registered by an operator is created &#x60;active&#x60;, so
+its first admin signs in. A deleted company, and one with no usable membership,
+stay &#x60;401 invalid_credentials&#x60;.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 423,
 				description: `Account locked after [person.MaxFailedLogins] consecutive
 failed login attempts within [person.LockoutWindow] per
 NIST 800-63B §5.2.2 + ADR 0053. Retry-After header carries
 integer seconds until unlock (RFC 7231 §7.1.3 delta-seconds).
+An email with no usable account (unknown, deactivated, anonymised, GLOBALLY
+SUSPENDED) locks on the same schedule and answers identically, so 423 does not
+reveal that an account exists (ADR 0068 D12). While locked, even the correct
+password answers 423.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 500,
 				description: `Server error`,
+				schema: ErrorResponse
+			},
+			{
+				status: 503,
+				description: `Every password-hashing slot of this process was busy for longer than the queue
+timeout (the process bounds concurrent Argon2id work, ADR 0068 D12), or the caller&#x27;s
+own address already had its share of operations running and a full line of waiting
+ones. A caller&#x27;s operations beyond its share WAIT their turn (within the same queue
+timeout) instead of failing, so a burst from one office address is served; only the
+wait that runs out, or the line that is full, answers this. Nothing was done and
+nothing was counted; retry after &#x60;Retry-After&#x60; seconds. Every login branch (real
+account, unknown email, locked account) answers this the same way.
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -1287,7 +1416,27 @@ integer seconds until unlock (RFC 7231 §7.1.3 delta-seconds).
 				schema: LogoutRequest
 			}
 		],
-		response: z.void()
+		response: z.void(),
+		errors: [
+			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
 	},
 	{
 		method: 'get',
@@ -1306,7 +1455,35 @@ integer seconds until unlock (RFC 7231 §7.1.3 delta-seconds).
 				schema: z.number().int().gte(1).lte(200).optional().default(50)
 			}
 		],
-		response: ListAuditEventsResponse
+		response: ListAuditEventsResponse,
+		errors: [
+			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `&#x60;error: impersonation_not_allowed&#x60; (the token is an impersonation token, and this
+account route is never reachable with one) or &#x60;error: password_change_required&#x60;
+(the token carries &#x60;must_change_password&#x60;). Neither carries &#x60;WWW-Authenticate&#x60;.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
 	},
 	{
 		method: 'get',
@@ -1315,15 +1492,54 @@ integer seconds until unlock (RFC 7231 §7.1.3 delta-seconds).
 		description: `Auth0 &#x60;/userinfo&#x60; canon. Returns JWT-resident fields (no DB hit) plus
 cached profile enrichment (email + name + role names). The frontend
 uses this to drive nav / tier / button-visibility without decoding
-the JWT.
+the JWT. Allowed while &#x60;must_change_password&#x60; is pending (the response
+reports it, so the front-end can render the forced-change screen).
+
+&#x60;password_policy&#x60; is the password policy that binds the caller: the policy
+of the caller&#x27;s OWN tenant (the tenant of the token, never an operator&#x27;s
+acted-on &#x60;X-Tenant-Id&#x60;, which this route ignores), the system default when
+the tenant has none. The system default is 8 characters minimum with an upper-case
+letter, a lower-case letter, a digit and a symbol (owner ruling 2026-11-21; it was 12;
+8 is also the lowest minimum a tenant may set); a tenant that stored its own policy,
+including a stored 12, keeps it. It is the same policy &#x60;POST /auth/change-password&#x60;
+enforces, so the change-password page (including the forced screen) can show
+the rules before the first attempt. It is read fresh on every call, not from
+the cached bundle. An impersonation session reads this route and sees the
+impersonated tenant&#x27;s rules (the token&#x27;s tenant is the impersonated one);
+change-password itself is refused to it.
+
+There is deliberately NO anonymous policy endpoint. The password-reset page
+learns the rules only from the 422 &#x60;password_policy_violation&#x60; answer to a
+reset made with a valid token (&#x60;errors&#x60; lists the failed rule codes): a
+holder of a valid emailed token is the only anonymous party that is told
+anything about the tenant&#x27;s settings, and the answer is limited to rule
+codes.
 `,
 		requestFormat: 'json',
-		response: CapabilitiesDto
+		response: CapabilitiesDto,
+		errors: [
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
 	},
 	{
 		method: 'post',
 		path: '/api/v1/auth/refresh',
 		alias: 'postApiv1authrefresh',
+		description: `Rotates the refresh token and reissues the access token. Re-presenting a just-rotated token within the grace window (default 30 s, at most 120 s, &#x60;Refresh.GraceWindow&#x60;) returns the SAME successor (a deterministic derivation: no new token row is written), so two tabs or a retried request after a lost response do not end the session. That holds ONLY for the client that rotated the token (the client address the rate limiters use: behind the BFF its &#x60;X-Forwarded-For&#x60;; only a keyed hash of it is stored) and for at most 3 replays per token. A replay from another client, a 4th replay, a token whose consumer was not recorded, a replay outside the window, a token two or more generations old, or one whose successor has been used is token reuse: the whole family is revoked and the answer is &#x60;401 refresh_rejected&#x60;. A client whose address changes inside the window (a phone switching networks) between a lost response and its retry is therefore signed out. A revoked family never answers a replay, whatever the window says (logout, password change and reset revoke every family of the person). The answer to a replay is indistinguishable from the first answer, apart from the access token&#x27;s own issue time.
+A session ends &#x60;Refresh.AbsoluteTTL&#x60; (default 14 days, &#x60;LEADKART_REFRESH__ABSOLUTE_TTL&#x60;) after the login that opened it, however often it was refreshed: the first refresh after that answers &#x60;401 refresh_rejected&#x60; with &#x60;reason: session_expired&#x60; (sign in again) and the family is revoked (&#x60;absolute_ttl&#x60;). A session also ends when it sits IDLE: each refresh token lives &#x60;Refresh.SlidingTTL&#x60; (default 24 hours, &#x60;LEADKART_REFRESH__SLIDING_TTL&#x60;; a session unused for 24 hours ends) from its issue, never past the absolute deadline, and every rotation renews it (a grace replay does not). The first refresh after the token ran out answers the same &#x60;401 refresh_rejected&#x60; with &#x60;reason: session_expired&#x60; and the family is revoked (&#x60;idle_timeout&#x60;). A globally suspended person is refused (the family is revoked), and so is a member of a SUSPENDED company: &#x60;401 refresh_rejected&#x60; with &#x60;reason: tenant_suspended&#x60; (the family is revoked as &#x60;tenant_suspended&#x60;; a reactivated company&#x27;s members sign in again, the old session does not return). A member of a company that is &#x60;pending&#x60; or marked for deletion is refused the same way with &#x60;reason: tenant_not_active&#x60; (the family is revoked as &#x60;tenant_not_active&#x60;; a restored company&#x27;s members sign in again). A deleted company&#x27;s members are refused without a reason. Suspending a company or marking it for deletion also revokes its members&#x27; families (outbox subscriber), but an access token already issued stays valid until its own expiry (600 s).
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -1335,8 +1551,31 @@ the JWT.
 		response: LoginResponse,
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 401,
-				description: `Refresh rejected (consumed / expired / family revoked)`,
+				description: `Refresh rejected (consumed / expired / family revoked / reuse). For a session that
+ended by time (absolute lifetime or idle timeout) the body carries
+&#x60;reason: session_expired&#x60;; for a member of a suspended company
+&#x60;reason: tenant_suspended&#x60;; for a member of a pending or marked-for-deletion
+company &#x60;reason: tenant_not_active&#x60;.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -1358,11 +1597,6 @@ actual constraint via POST /api/v1/auth/confirm-email-change.
 				name: 'body',
 				type: 'Body',
 				schema: z.object({ new_email: z.string().email() }).passthrough()
-			},
-			{
-				name: 'X-Command-Id',
-				type: 'Header',
-				schema: z.string().min(36).max(36).uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -1371,6 +1605,27 @@ actual constraint via POST /api/v1/auth/confirm-email-change.
 				status: 400,
 				description: `Malformed request (invalid body, bad param shape)`,
 				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `&#x60;error: impersonation_not_allowed&#x60; (the token is an impersonation token, and this
+account route is never reachable with one) or &#x60;error: password_change_required&#x60;
+(the token carries &#x60;must_change_password&#x60;). Neither carries &#x60;WWW-Authenticate&#x60;.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
 			}
 		]
 	},
@@ -1378,37 +1633,64 @@ actual constraint via POST /api/v1/auth/confirm-email-change.
 		method: 'post',
 		path: '/api/v1/auth/request-password-reset',
 		alias: 'postApiv1authrequestPasswordReset',
-		description: `ALWAYS returns 204 regardless of whether the email is registered (Auth0/Okta canon — defeats account enumeration).`,
+		description: `ALWAYS returns 204 regardless of whether the email is registered (Auth0/Okta canon — defeats account
+enumeration). The answer is released no earlier than a fixed 300 ms after the handler starts, so
+response time does not reveal whether the address has an account either. The 300 ms is measured
+from when the handler starts: the limiters and middleware before it are not included.
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
 				name: 'body',
 				type: 'Body',
 				schema: z.object({ email: z.string().email() }).passthrough()
-			},
-			{
-				name: 'X-Command-Id',
-				type: 'Header',
-				schema: z.string().min(36).max(36).uuid().optional()
 			}
 		],
-		response: z.void()
+		response: z.void(),
+		errors: [
+			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
 	},
 	{
 		method: 'post',
 		path: '/api/v1/auth/reset-password',
 		alias: 'postApiv1authresetPassword',
+		description: `The token is validated FIRST (state and expiry), before any password work: an unknown,
+consumed, expired, or suspended-person&#x27;s token answers &#x60;400 reset_token_invalid&#x60;
+whatever the password is (an expired pending reset is cleared), so the answer
+reveals nothing about whether an account exists or which tenant it belongs to.
+Only then is the new password checked against the policy of the tenant of the person&#x27;s
+active membership (the default policy when there is none): only a holder of a live
+token can see &#x60;422 password_policy_violation&#x60; (field &#x60;errors.new_password&#x60;) or
+&#x60;422 password_breached&#x60;. A refused password leaves the token usable but counts: after
+5 refusals the token is invalidated (&#x60;400 reset_token_invalid&#x60;), so a link cannot be
+probed forever. There is no same-as-current check on a reset (with a valid token it
+would be an oracle for the current password): resetting to the current password
+succeeds.
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
 				name: 'body',
 				type: 'Body',
 				schema: ResetPasswordRequest
-			},
-			{
-				name: 'X-Command-Id',
-				type: 'Header',
-				schema: z.string().min(36).max(36).uuid().optional()
 			}
 		],
 		response: z.void(),
@@ -1420,7 +1702,35 @@ actual constraint via POST /api/v1/auth/confirm-email-change.
 			},
 			{
 				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				description: `&#x60;password_policy_violation&#x60; (see PasswordPolicyViolation; field &#x60;new_password&#x60;)
+or &#x60;password_breached&#x60;. (&#x60;password_same_as_current&#x60; is change-password only.)
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 503,
+				description: `Every password-hashing slot of this process was busy for longer than the queue
+timeout (the process bounds concurrent Argon2id work, ADR 0068 D12), or the caller&#x27;s
+own address already had its share of operations running and a full line of waiting
+ones. A caller&#x27;s operations beyond its share WAIT their turn (within the same queue
+timeout) instead of failing, so a burst from one office address is served; only the
+wait that runs out, or the line that is full, answers this. Nothing was done and
+nothing was counted; retry after &#x60;Retry-After&#x60; seconds. Every login branch (real
+account, unknown email, locked account) answers this the same way.
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -1430,7 +1740,30 @@ actual constraint via POST /api/v1/auth/confirm-email-change.
 		path: '/api/v1/auth/sessions',
 		alias: 'getApiv1authsessions',
 		requestFormat: 'json',
-		response: ListSessionsResponse
+		response: ListSessionsResponse,
+		errors: [
+			{
+				status: 403,
+				description: `&#x60;error: impersonation_not_allowed&#x60; (the token is an impersonation token, and this
+account route is never reachable with one) or &#x60;error: password_change_required&#x60;
+(the token carries &#x60;must_change_password&#x60;). Neither carries &#x60;WWW-Authenticate&#x60;.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
 	},
 	{
 		method: 'delete',
@@ -1444,7 +1777,30 @@ actual constraint via POST /api/v1/auth/confirm-email-change.
 				schema: RevokeAllSessionsRequest
 			}
 		],
-		response: z.object({ revoked_count: z.number().int() }).passthrough()
+		response: z.object({ revoked_count: z.number().int() }).passthrough(),
+		errors: [
+			{
+				status: 403,
+				description: `&#x60;error: impersonation_not_allowed&#x60; (the token is an impersonation token, and this
+account route is never reachable with one) or &#x60;error: password_change_required&#x60;
+(the token carries &#x60;must_change_password&#x60;). Neither carries &#x60;WWW-Authenticate&#x60;.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
 	},
 	{
 		method: 'delete',
@@ -1458,7 +1814,43 @@ actual constraint via POST /api/v1/auth/confirm-email-change.
 				schema: z.string().uuid()
 			}
 		],
-		response: z.void()
+		response: z.void(),
+		errors: [
+			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `&#x60;error: impersonation_not_allowed&#x60; (the token is an impersonation token, and this
+account route is never reachable with one) or &#x60;error: password_change_required&#x60;
+(the token carries &#x60;must_change_password&#x60;). Neither carries &#x60;WWW-Authenticate&#x60;.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `&#x60;session_not_found&#x60;: no such session, OR it belongs to another person. The two are
+indistinguishable on purpose (no session-id enumeration); a session of the caller
+that is already revoked is 204, not 404.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
 	},
 	{
 		method: 'get',
@@ -1567,12 +1959,26 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -1597,11 +2003,6 @@ does not exist.
 				name: 'leadId',
 				type: 'Path',
 				schema: z.string().uuid()
-			},
-			{
-				name: 'X-Command-Id',
-				type: 'Header',
-				schema: z.string().min(36).max(36).uuid().optional()
 			},
 			{
 				name: 'X-Tenant-Id',
@@ -1632,12 +2033,26 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -1696,6 +2111,7 @@ The response echoes the canonical (lower-case, hyphenated) &#x60;assignee_member
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -1707,6 +2123,19 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 409,
 				description: `Lead is in a terminal stage (converted / lost)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -1764,6 +2193,7 @@ does not exist.
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -1775,6 +2205,19 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 409,
 				description: `Lead is in a terminal stage`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -1827,6 +2270,7 @@ does not exist.
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -1838,6 +2282,24 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 409,
 				description: `Lead is already in a terminal stage`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -1895,6 +2357,7 @@ does not exist.
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -1911,6 +2374,19 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 422,
 				description: `Reason missing`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -1971,6 +2447,7 @@ does not exist.
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -1991,6 +2468,19 @@ exempt: the path is authoritative there, with or without the header.
 			{
 				status: 422,
 				description: `Invalid due_at / assignee`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -2049,6 +2539,7 @@ does not exist.
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -2065,6 +2556,19 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -2122,6 +2626,7 @@ does not exist.
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -2133,6 +2638,24 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 409,
 				description: `Lead is in a terminal stage`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -2212,12 +2735,26 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -2280,6 +2817,7 @@ reminder assigned to their own membership; any other reminder answers 404
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -2296,6 +2834,19 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 422,
 				description: `Reason missing`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -2347,6 +2898,7 @@ reminder assigned to their own membership; any other reminder answers 404
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -2358,6 +2910,24 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 409,
 				description: `Reminder is already in a terminal state`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -2408,6 +2978,7 @@ a pre-existing note returns 200 with &#x60;already_existed: true&#x60;.
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -2428,6 +2999,19 @@ exempt: the path is authoritative there, with or without the header.
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -2478,12 +3062,26 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -2533,12 +3131,26 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -2589,6 +3201,7 @@ be used to probe which tenants exist.
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -2600,6 +3213,24 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 409,
 				description: `Invalid status transition`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -2655,6 +3286,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -2671,6 +3303,19 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -2726,6 +3371,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -2742,6 +3388,19 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -2792,6 +3451,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -2803,6 +3463,24 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 409,
 				description: `Invalid status transition`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -2856,12 +3534,26 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -2925,6 +3617,7 @@ take them.
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -2941,6 +3634,19 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -2999,12 +3705,26 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -3054,6 +3774,7 @@ SKU collision. 422 on field-validation failure.
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -3070,6 +3791,19 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -3143,12 +3877,26 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -3197,12 +3945,26 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -3261,6 +4023,7 @@ take them.
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -3277,6 +4040,19 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -3322,6 +4098,7 @@ take them.
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -3333,6 +4110,24 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 409,
 				description: `Product has live batches with non-zero stock`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -3388,6 +4183,7 @@ take them.
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -3404,6 +4200,19 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -3468,12 +4277,26 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -3526,12 +4349,26 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -3592,6 +4429,31 @@ enforced server-side — a caller only ever sees their own inbox.
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `&#x60;error: password_change_required&#x60;. The token carries &#x60;must_change_password&#x60;: the
+person holds a temporary credential and must change it first. Only
+&#x60;POST /api/v1/auth/change-password&#x60; and &#x60;GET /api/v1/auth/me/capabilities&#x60; are
+reachable. The response carries no &#x60;WWW-Authenticate&#x60; (this is not a session
+problem: do not refresh). Applies to every authenticated operation outside that
+allowlist; operations that document a more specific 403 carry it in that
+response&#x27;s description.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 500,
 				description: `Server error`,
 				schema: ErrorResponse
@@ -3628,8 +4490,38 @@ enforced server-side — a caller only ever sees their own inbox.
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `&#x60;error: password_change_required&#x60;. The token carries &#x60;must_change_password&#x60;: the
+person holds a temporary credential and must change it first. Only
+&#x60;POST /api/v1/auth/change-password&#x60; and &#x60;GET /api/v1/auth/me/capabilities&#x60; are
+reachable. The response carries no &#x60;WWW-Authenticate&#x60; (this is not a session
+problem: do not refresh). Applies to every authenticated operation outside that
+allowlist; operations that document a more specific 403 carry it in that
+response&#x27;s description.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `Conflict with the current state of the resource (see the &#x60;error&#x60; code)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -3664,6 +4556,18 @@ enforced server-side — a caller only ever sees their own inbox.
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `&#x60;error: password_change_required&#x60;. The token carries &#x60;must_change_password&#x60;: the
+person holds a temporary credential and must change it first. Only
+&#x60;POST /api/v1/auth/change-password&#x60; and &#x60;GET /api/v1/auth/me/capabilities&#x60; are
+reachable. The response carries no &#x60;WWW-Authenticate&#x60; (this is not a session
+problem: do not refresh). Applies to every authenticated operation outside that
+allowlist; operations that document a more specific 403 carry it in that
+response&#x27;s description.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
@@ -3671,6 +4575,19 @@ enforced server-side — a caller only ever sees their own inbox.
 			{
 				status: 409,
 				description: `Cannot mark a dismissed notification read`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -3695,6 +4612,31 @@ enforced server-side — a caller only ever sees their own inbox.
 				schema: ErrorResponse
 			},
 			{
+				status: 403,
+				description: `&#x60;error: password_change_required&#x60;. The token carries &#x60;must_change_password&#x60;: the
+person holds a temporary credential and must change it first. Only
+&#x60;POST /api/v1/auth/change-password&#x60; and &#x60;GET /api/v1/auth/me/capabilities&#x60; are
+reachable. The response carries no &#x60;WWW-Authenticate&#x60; (this is not a session
+problem: do not refresh). Applies to every authenticated operation outside that
+allowlist; operations that document a more specific 403 carry it in that
+response&#x27;s description.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 500,
 				description: `Server error`,
 				schema: ErrorResponse
@@ -3711,6 +4653,31 @@ enforced server-side — a caller only ever sees their own inbox.
 			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `&#x60;error: password_change_required&#x60;. The token carries &#x60;must_change_password&#x60;: the
+person holds a temporary credential and must change it first. Only
+&#x60;POST /api/v1/auth/change-password&#x60; and &#x60;GET /api/v1/auth/me/capabilities&#x60; are
+reachable. The response carries no &#x60;WWW-Authenticate&#x60; (this is not a session
+problem: do not refresh). Applies to every authenticated operation outside that
+allowlist; operations that document a more specific 403 carry it in that
+response&#x27;s description.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -3760,12 +4727,26 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -3821,6 +4802,7 @@ be used to probe which tenants exist.
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -3832,6 +4814,24 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 409,
 				description: `Order already terminal`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -3888,6 +4888,7 @@ take them.
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -3899,6 +4900,24 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 409,
 				description: `Invalid state transition`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -3955,6 +4974,7 @@ take them.
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -3966,6 +4986,24 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 409,
 				description: `Invalid state transition`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -4025,6 +5063,7 @@ allowed) against the order&#x27;s invoice with a gapless number. Requires
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -4045,6 +5084,19 @@ exempt: the path is authoritative there, with or without the header.
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -4094,12 +5146,26 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -4156,6 +5222,7 @@ take them.
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -4167,6 +5234,19 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 409,
 				description: `Invalid transition or invoice already exists`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -4222,6 +5302,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -4233,6 +5314,24 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 409,
 				description: `Invalid state transition`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -4282,12 +5381,26 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -4343,6 +5456,7 @@ be used to probe which tenants exist.
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -4359,6 +5473,19 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -4414,6 +5541,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -4430,6 +5558,19 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -4484,6 +5625,7 @@ spelling; stored and echoed in canonical form). A malformed one is 400
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -4504,6 +5646,19 @@ exempt: the path is authoritative there, with or without the header.
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -4553,12 +5708,26 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -4615,6 +5784,7 @@ take them.
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -4631,6 +5801,19 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -4686,6 +5869,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -4697,6 +5881,24 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 409,
 				description: `Quotation already approved`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -4755,6 +5957,7 @@ canonical form); a malformed one is 400 &#x60;invalid_body&#x60;.
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -4771,6 +5974,19 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -4794,7 +6010,10 @@ cannot submit (403 &#x60;impersonation_not_allowed&#x60;).
 At most one pending request per (membership, permission) tuple.
 &#x60;tenant.admin&#x60;, platform-reserved permissions and names outside the catalogue are not
 requestable: they are conferred by role only, and the request is refused with 422
-(&#x60;permission_not_requestable&#x60;).
+(&#x60;permission_not_requestable&#x60;). &#x60;identity.users.create&#x60; is requested only at the Administrator tier or
+above (403 &#x60;admin_tier_required&#x60; below it; owner ruling 2026-11-21).
+
+Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 &#x60;permission_request_invalid&#x60; with &#x60;errors{&lt;field&gt;: [&quot;invalid_characters&quot;]}&#x60; for &#x60;reason&#x60;, and nothing is written.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -4819,6 +6038,7 @@ requestable: they are conferred by role only, and the request is refused with 42
 			{
 				status: 403,
 				description: `&#x60;forbidden&#x60; (the caller lacks &#x60;identity.meta.request_permission_elevation&#x60;),
+&#x60;admin_tier_required&#x60; (&#x60;identity.users.create&#x60; requested below the Administrator tier),
 &#x60;impersonation_not_allowed&#x60;, or &#x60;X-Tenant-Id&#x60; selected a foreign tenant (&#x60;tenant_scope_not_supported&#x60;)
 `,
 				schema: ErrorResponse
@@ -4831,6 +6051,19 @@ requestable: they are conferred by role only, and the request is refused with 42
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -4887,6 +6120,20 @@ below the Admin tier sees only the requests of members who report to them.
 				description: `The route does not support the &#x60;X-Tenant-Id&#x60; operator scope (it acts on the
 caller&#x27;s own tenant only) and the header selected a different tenant
 (&#x60;tenant_scope_not_supported&#x60;, ADR 0039).
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
 `,
 				schema: ErrorResponse
 			}
@@ -4916,16 +6163,35 @@ enumeration-safety canon.
 		response: PermissionRequestDto,
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `The route does not support the &#x60;X-Tenant-Id&#x60; operator scope (it acts on the
 caller&#x27;s own tenant only) and the header selected a different tenant
 (&#x60;tenant_scope_not_supported&#x60;, ADR 0039).
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -4939,9 +6205,10 @@ requester for the stored duration (single transaction under the tenant authority
 Decided by the authority policy (ADR 0069), never by the body: the requester&#x27;s manager who
 holds &#x60;identity.roles.approve&#x60; AND the permission; or anyone of Administrator rank or above who
 strictly outranks the requester (an Administrator may approve any requestable permission
-without holding it, except user/role management, tenant settings, marketplace purchase, payment and
-invoice access, tenant-wide visibility (read-all, users, roles, tenants, lead credits) and the right to
-request elevation, which the Administrator must hold); or a super user / exempt operator
+without holding it, user lifecycle (create, update, deactivate, reactivate, unlock) included, except
+role management and approval, changing a user&#x27;s permissions, tenant settings, marketplace purchase, recording
+payments, payment and invoice access, tenant-wide visibility (read-all, users, roles, tenants, lead credits)
+and the right to request elevation, which the Administrator must hold); or a super user / exempt operator
 acting in ANOTHER tenant (in the platform tenant an operator follows rank like anyone else).
 Never an impersonation session and never the requester. The approved grant ends no later than the
 approver&#x27;s own when the approver holds the permission only through a time-bound override. A caller who
@@ -4956,6 +6223,8 @@ Check order: unknown request, or a caller who may not decide it (404) → author
 stored request whose permission is not requestable, for example one submitted before that rule
 existed, stays pending; the approver can deny it and the requester can cancel it) → requester
 still active (409 &#x60;permission_request_requester_inactive&#x60;; the request stays pending).
+
+Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 &#x60;permission_request_invalid&#x60; with &#x60;errors{&lt;field&gt;: [&quot;invalid_characters&quot;]}&#x60; for &#x60;decision_reason&#x60;, and nothing is written.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -4987,12 +6256,19 @@ still active (409 &#x60;permission_request_requester_inactive&#x60;; the request
 		response: z.void(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `&#x60;grant_exceeds_authority&#x60; (the approver does not hold the permission, an Administrator lacks a
-must-hold one, or the approval would lift a revoke without the Admin tier), &#x60;self_modification_forbidden&#x60;
+must-hold one, or the approval would lift a revoke without the Admin tier), &#x60;admin_tier_required&#x60;
+(a request for &#x60;identity.users.create&#x60; from a member below the Administrator tier: nobody approves
+it, the request stays pending and can be denied or cancelled), &#x60;self_modification_forbidden&#x60;
 (own request), &#x60;impersonation_not_allowed&#x60;, &#x60;forbidden&#x60; (no valid or no longer active acting member), or
 &#x60;tenant_scope_not_supported&#x60; (&#x60;X-Tenant-Id&#x60; selected a foreign tenant). Callers who may not decide the
-request at all get 404, not &#x60;not_approver&#x60; / &#x60;insufficient_rank&#x60;.
+request at all get 404 &#x60;permission_request_not_found&#x60;.
 `,
 				schema: ErrorResponse
 			},
@@ -5009,6 +6285,19 @@ request at all get 404, not &#x60;not_approver&#x60; / &#x60;insufficient_rank&#
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -5042,10 +6331,16 @@ ADR 0044 enumeration-safety canon.
 		response: z.void(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `The route does not support the &#x60;X-Tenant-Id&#x60; operator scope (it acts on the
 caller&#x27;s own tenant only) and the header selected a different tenant
 (&#x60;tenant_scope_not_supported&#x60;, ADR 0039).
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -5058,6 +6353,19 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 				status: 409,
 				description: `Request is not in pending state`,
 				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
 			}
 		]
 	},
@@ -5068,6 +6376,8 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 		description: `Transitions Pending → Denied. &#x60;decision_reason&#x60; is REQUIRED on
 Deny per ADR 0055 audit canon. Same eligibility and check order as Approve, except that the
 denier need not hold the requested permission (nor &#x60;identity.roles.approve&#x60; as an Administrator).
+
+Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 &#x60;permission_request_invalid&#x60; with &#x60;errors{&lt;field&gt;: [&quot;invalid_characters&quot;]}&#x60; for &#x60;decision_reason&#x60;, and nothing is written.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -5095,6 +6405,11 @@ denier need not hold the requested permission (nor &#x60;identity.roles.approve&
 		response: z.void(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `&#x60;self_modification_forbidden&#x60; (own request), &#x60;impersonation_not_allowed&#x60;, &#x60;forbidden&#x60;, or
 &#x60;tenant_scope_not_supported&#x60; (&#x60;X-Tenant-Id&#x60; selected a foreign tenant). Callers who may not decide the
@@ -5116,6 +6431,19 @@ request get 404.
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
 				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
 			}
 		]
 	},
@@ -5130,6 +6458,8 @@ session lifetime (≤4h). The original operator&#x27;s regular JWT is
 unaffected.
 
 Requires &#x60;platform.impersonation.manage&#x60; held by a platform-tenant operator; platform-tenant membership alone, and &#x60;platform.tenants.manage&#x60;, are refused with 403 &#x60;forbidden&#x60; (a session mints a &#x60;tenant.admin&#x60; token for the target tenant, so it has its own permission; &#x60;tenant.admin&#x60; never implies it).
+
+Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 &#x60;impersonation_invalid&#x60; with &#x60;errors{&lt;field&gt;: [&quot;invalid_characters&quot;]}&#x60; for &#x60;reason&#x60;, and nothing is written.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -5147,8 +6477,19 @@ Requires &#x60;platform.impersonation.manage&#x60; held by a platform-tenant ope
 		response: CreateImpersonationSessionResponse,
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Authenticated but missing the required permission. Every authenticated operation
+outside the forced-change allowlist can also answer &#x60;403&#x60; with
+&#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
+(see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
+impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
+not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -5159,6 +6500,19 @@ Requires &#x60;platform.impersonation.manage&#x60; held by a platform-tenant ope
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -5174,7 +6528,26 @@ Requires &#x60;platform.impersonation.manage&#x60; held by a platform-tenant ope
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Authenticated but missing the required permission. Every authenticated operation
+outside the forced-change allowlist can also answer &#x60;403&#x60; with
+&#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
+(see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
+impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
+not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -5210,7 +6583,26 @@ close the session they opened. Principals that are not platform operators are re
 			},
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Authenticated but missing the required permission. Every authenticated operation
+outside the forced-change allowlist can also answer &#x60;403&#x60; with
+&#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
+(see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
+impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
+not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -5256,12 +6648,26 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -5286,18 +6692,42 @@ be used to probe which tenants exist.
 		response: TopupLeadCreditsResponse,
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
 				schema: ErrorResponse
 			},
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Authenticated but missing the required permission. Every authenticated operation
+outside the forced-change allowlist can also answer &#x60;403&#x60; with
+&#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
+(see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
+impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
+not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+`,
 				schema: ErrorResponse
 			},
 			{
 				status: 422,
 				description: `Field-level validation failure (RFC 9457 with &#x60;errors&#x60; map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -5391,13 +6821,37 @@ and match ANY-overlap via GIN.
 		response: BrowseMarketplaceResponse,
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
 				schema: ErrorResponse
 			},
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Authenticated but missing the required permission. Every authenticated operation
+outside the forced-change allowlist can also answer &#x60;403&#x60; with
+&#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
+(see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
+impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
+not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -5430,6 +6884,11 @@ the lead to the tenant&#x27;s CRM (via the LeadPurchasedV1 event consumed by CRM
 		response: PurchaseLeadResponse,
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
 				schema: ErrorResponse
@@ -5439,6 +6898,7 @@ the lead to the tenant&#x27;s CRM (via the LeadPurchasedV1 event consumed by CRM
 				description: `The route does not support the &#x60;X-Tenant-Id&#x60; operator scope (it acts on the
 caller&#x27;s own tenant only) and the header selected a different tenant
 (&#x60;tenant_scope_not_supported&#x60;, ADR 0039).
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -5455,6 +6915,19 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 			{
 				status: 422,
 				description: `Field-level validation failure (RFC 9457 with &#x60;errors&#x60; map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -5476,13 +6949,37 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 		response: PersonDto,
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Authenticated but missing the required permission. Every authenticated operation
+outside the forced-change allowlist can also answer &#x60;403&#x60; with
+&#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
+(see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
+impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
+not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+`,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -5504,8 +7001,37 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 		response: PersonDto,
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Authenticated but missing the required permission. Every authenticated operation
+outside the forced-change allowlist can also answer &#x60;403&#x60; with
+&#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
+(see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
+impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
+not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `&#x60;person_not_found&#x60;`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -5516,64 +7042,8 @@ caller&#x27;s own tenant only) and the header selected a different tenant
 		alias: 'postApiv1platformpersonsPersonIdanonymise',
 		description: `Requires &#x60;identity.users.anonymise&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
 An operator cannot change their own Person: the caller&#x27;s own &#x60;personId&#x60; is refused with 403 &#x60;self_modification_forbidden&#x60; (super users exempt).
-`,
-		requestFormat: 'json',
-		parameters: [
-			{
-				name: 'X-Command-Id',
-				type: 'Header',
-				schema: z.string().min(36).max(36).uuid().optional()
-			},
-			{
-				name: 'personId',
-				type: 'Path',
-				schema: z.string().uuid()
-			}
-		],
-		response: z.void(),
-		errors: [
-			{
-				status: 403,
-				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
-the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
-TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
-&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
-ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
-(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
-assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
-deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
-Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
-member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
-tier or above (&#x60;grant_exceeds_authority&#x60;).
-`,
-				schema: ErrorResponse
-			},
-			{
-				status: 404,
-				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
-				schema: ErrorResponse
-			},
-			{
-				status: 409,
-				description: `&#x60;last_owner_protected&#x60; — the person is the only active owner of a tenant; nothing was changed. &#x60;person_memberships_changing&#x60; — the person&#x27;s memberships kept changing while the change was checked (a reactivation raced it); nothing was changed, retry`,
-				schema: ErrorResponse
-			},
-			{
-				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
-				schema: ErrorResponse
-			}
-		]
-	},
-	{
-		method: 'post',
-		path: '/api/v1/platform/persons/:personId/global-suspend',
-		alias: 'postApiv1platformpersonsPersonIdglobalSuspend',
-		description: `Reason is mandatory per data-retention.md audit canon.
 
-Requires &#x60;platform.users.manage&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
-An operator cannot change their own Person: the caller&#x27;s own &#x60;personId&#x60; is refused with 403 &#x60;self_modification_forbidden&#x60; (super users exempt).
+Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 &#x60;person_invalid&#x60; with &#x60;errors{&lt;field&gt;: [&quot;invalid_characters&quot;]}&#x60; for &#x60;reason&#x60;, and nothing is written.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -5596,19 +7066,28 @@ An operator cannot change their own Person: the caller&#x27;s own &#x60;personId
 		response: z.void(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
 the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;admin_tier_required&#x60; (the change would give
+&#x60;identity.users.create&#x60; to a role or a member below the Administrator tier: a role below the tier cannot
+contain it, it cannot be an override of a member below the tier, and it cannot be requested or approved
+below the tier; owner ruling 2026-11-21), &#x60;ownership_authority_required&#x60;
 (a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
 assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
 deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
 Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
 member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
 tier or above (&#x60;grant_exceeds_authority&#x60;).
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -5625,6 +7104,106 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
+	},
+	{
+		method: 'post',
+		path: '/api/v1/platform/persons/:personId/global-suspend',
+		alias: 'postApiv1platformpersonsPersonIdglobalSuspend',
+		description: `Reason is mandatory per data-retention.md audit canon.
+
+Requires &#x60;platform.users.manage&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+An operator cannot change their own Person: the caller&#x27;s own &#x60;personId&#x60; is refused with 403 &#x60;self_modification_forbidden&#x60; (super users exempt).
+
+Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 &#x60;person_invalid&#x60; with &#x60;errors{&lt;field&gt;: [&quot;invalid_characters&quot;]}&#x60; for &#x60;reason&#x60;, and nothing is written.
+`,
+		requestFormat: 'json',
+		parameters: [
+			{
+				name: 'body',
+				type: 'Body',
+				schema: z.object({ reason: z.string().min(1) }).passthrough()
+			},
+			{
+				name: 'X-Command-Id',
+				type: 'Header',
+				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'personId',
+				type: 'Path',
+				schema: z.string().uuid()
+			}
+		],
+		response: z.void(),
+		errors: [
+			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
+the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
+TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
+&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
+ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;admin_tier_required&#x60; (the change would give
+&#x60;identity.users.create&#x60; to a role or a member below the Administrator tier: a role below the tier cannot
+contain it, it cannot be an override of a member below the tier, and it cannot be requested or approved
+below the tier; owner ruling 2026-11-21), &#x60;ownership_authority_required&#x60;
+(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
+assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
+deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
+Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
+member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
+tier or above (&#x60;grant_exceeds_authority&#x60;).
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `&#x60;last_owner_protected&#x60; — the person is the only active owner of a tenant; nothing was changed. &#x60;person_memberships_changing&#x60; — the person&#x27;s memberships kept changing while the change was checked (a reactivation raced it); nothing was changed, retry`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -5652,8 +7231,19 @@ An operator cannot change their own Person: the caller&#x27;s own &#x60;personId
 		response: z.void(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Authenticated but missing the required permission. Every authenticated operation
+outside the forced-change allowlist can also answer &#x60;403&#x60; with
+&#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
+(see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
+impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
+not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -5662,8 +7252,26 @@ An operator cannot change their own Person: the caller&#x27;s own &#x60;personId
 				schema: ErrorResponse
 			},
 			{
+				status: 409,
+				description: `Conflict with the current state of the resource (see the &#x60;error&#x60; code)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -5685,13 +7293,37 @@ An operator cannot change their own Person: the caller&#x27;s own &#x60;personId
 		response: ListPersonMembershipsResponse,
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Authenticated but missing the required permission. Every authenticated operation
+outside the forced-change allowlist can also answer &#x60;403&#x60; with
+&#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
+(see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
+impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
+not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+`,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -5706,6 +7338,8 @@ PATCH /api/v1/users/{userId}/profile.
 
 Requires &#x60;platform.users.manage&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
 An operator cannot change their own Person: the caller&#x27;s own &#x60;personId&#x60; is refused with 403 &#x60;self_modification_forbidden&#x60; (super users exempt).
+
+Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 &#x60;person_invalid&#x60; with &#x60;errors{&lt;field&gt;: [&quot;invalid_characters&quot;]}&#x60; for &#x60;first_name&#x60;, &#x60;last_name&#x60;, and nothing is written. A full-replace body that re-sends a stored value UNCHANGED is accepted (a value stored before the rule existed never blocks an untouched save); only a changed value is checked.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -5734,7 +7368,13 @@ An operator cannot change their own Person: the caller&#x27;s own &#x60;personId
 			},
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Authenticated but missing the required permission. Every authenticated operation
+outside the forced-change allowlist can also answer &#x60;403&#x60; with
+&#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
+(see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
+impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
+not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -5743,8 +7383,26 @@ An operator cannot change their own Person: the caller&#x27;s own &#x60;personId
 				schema: ErrorResponse
 			},
 			{
+				status: 409,
+				description: `Conflict with the current state of the resource (see the &#x60;error&#x60; code)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -5766,8 +7424,32 @@ An operator cannot change their own Person: the caller&#x27;s own &#x60;personId
 		response: PlatformStatsResponse,
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Authenticated but missing the required permission. Every authenticated operation
+outside the forced-change allowlist can also answer &#x60;403&#x60; with
+&#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
+(see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
+impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
+not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -5783,7 +7465,26 @@ An operator cannot change their own Person: the caller&#x27;s own &#x60;personId
 		errors: [
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Authenticated but missing the required permission. Every authenticated operation
+outside the forced-change allowlist can also answer &#x60;403&#x60; with
+&#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
+(see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
+impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
+not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -5835,7 +7536,13 @@ take them.
 			},
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Authenticated but missing the required permission. Every authenticated operation
+outside the forced-change allowlist can also answer &#x60;403&#x60; with
+&#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
+(see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
+impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
+not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -5851,6 +7558,19 @@ take them.
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -5876,18 +7596,42 @@ take them.
 		response: z.object({ contact_id: z.string().uuid() }).passthrough(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
 				schema: ErrorResponse
 			},
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Authenticated but missing the required permission. Every authenticated operation
+outside the forced-change allowlist can also answer &#x60;403&#x60; with
+&#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
+(see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
+impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
+not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+`,
 				schema: ErrorResponse
 			},
 			{
 				status: 422,
 				description: `Field-level validation failure (RFC 9457 with &#x60;errors&#x60; map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -5918,13 +7662,37 @@ take them.
 		response: ListUnverifiedContactsResponse,
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
 				schema: ErrorResponse
 			},
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Authenticated but missing the required permission. Every authenticated operation
+outside the forced-change allowlist can also answer &#x60;403&#x60; with
+&#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
+(see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
+impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
+not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -5957,13 +7725,24 @@ callback window fields are required; otherwise they MUST be omitted.
 		response: z.object({ call_id: z.string().uuid() }).passthrough(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
 				schema: ErrorResponse
 			},
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Authenticated but missing the required permission. Every authenticated operation
+outside the forced-change allowlist can also answer &#x60;403&#x60; with
+&#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
+(see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
+impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
+not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -5974,6 +7753,19 @@ callback window fields are required; otherwise they MUST be omitted.
 			{
 				status: 422,
 				description: `Field-level validation failure (RFC 9457 with &#x60;errors&#x60; map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -6003,13 +7795,24 @@ callback window fields are required; otherwise they MUST be omitted.
 		response: z.void(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
 				schema: ErrorResponse
 			},
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Authenticated but missing the required permission. Every authenticated operation
+outside the forced-change allowlist can also answer &#x60;403&#x60; with
+&#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
+(see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
+impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
+not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -6020,6 +7823,19 @@ callback window fields are required; otherwise they MUST be omitted.
 			{
 				status: 422,
 				description: `Field-level validation failure (RFC 9457 with &#x60;errors&#x60; map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -6050,13 +7866,24 @@ H11.
 		response: z.object({ platform_lead_id: z.string().uuid() }).passthrough(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 401,
 				description: `Missing or invalid bearer token`,
 				schema: ErrorResponse
 			},
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Authenticated but missing the required permission. Every authenticated operation
+outside the forced-change allowlist can also answer &#x60;403&#x60; with
+&#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
+(see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
+impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
+not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -6072,6 +7899,19 @@ H11.
 			{
 				status: 422,
 				description: `Field-level validation failure (RFC 9457 with &#x60;errors&#x60; map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -6103,6 +7943,20 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
 `,
 				schema: ErrorResponse
 			}
@@ -6113,6 +7967,8 @@ be used to probe which tenants exist.
 		path: '/api/v1/roles',
 		alias: 'postApiv1roles',
 		description: `Requires &#x60;identity.roles.create&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+
+Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 &#x60;role_invalid&#x60; with &#x60;errors{&lt;field&gt;: [&quot;invalid_characters&quot;]}&#x60; for &#x60;name&#x60;, and nothing is written.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -6146,14 +8002,23 @@ the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x6
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;admin_tier_required&#x60; (the change would give
+&#x60;identity.users.create&#x60; to a role or a member below the Administrator tier: a role below the tier cannot
+contain it, it cannot be an override of a member below the tier, and it cannot be requested or approved
+below the tier; owner ruling 2026-11-21), &#x60;ownership_authority_required&#x60;
 (a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
 assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
 deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
 Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
 member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
 tier or above (&#x60;grant_exceeds_authority&#x60;).
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
 			},
 			{
@@ -6165,6 +8030,19 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 				status: 422,
 				description: `&#x60;role_invalid&#x60; (name length, &#x60;hierarchy_level&#x60; outside 1-99) or &#x60;role_parent_not_eligible&#x60;
 (the parent is missing, deleted, or not strictly more senior than the new role&#x27;s level).
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
 `,
 				schema: ErrorResponse
 			}
@@ -6192,6 +8070,11 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 		response: RoleDto,
 		errors: [
 			{
+				status: 400,
+				description: `&#x60;invalid_role_id&#x60; — the path id is not a role id`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
 effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
@@ -6202,6 +8085,25 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `&#x60;role_not_found&#x60;`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
 `,
 				schema: ErrorResponse
 			}
@@ -6211,17 +8113,22 @@ be used to probe which tenants exist.
 		method: 'patch',
 		path: '/api/v1/roles/:roleId',
 		alias: 'patchApiv1rolesRoleId',
-		description: `Both fields optional. Empty &#x60;name&#x60; skips rename. Omitting
-&#x60;hierarchy_level&#x60; (or sending &#x60;null&#x60;) skips re-level — using a
-pointer field instead of a -1 sentinel keeps the wire shape clean.
-Changing what a role confers, re-levelling it or deleting it is acting on every ACTIVE member who holds it: the
-caller must strictly outrank each active holder (owners may act on owners) and must not hold the role
-themself (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); a rename acts on nobody. Every active holder&#x27;s
+		description: `At least one of &#x60;name&#x60; and &#x60;hierarchy_level&#x60; is required: a body that carries neither (&#x60;{}&#x60;, &#x60;null&#x60;) is
+&#x60;400 invalid_body&#x60;. An empty &#x60;name&#x60; skips rename; omitting &#x60;hierarchy_level&#x60; (or sending &#x60;null&#x60;) skips
+re-level — using a pointer field instead of a -1 sentinel keeps the wire shape clean.
+Changing what a role confers, re-levelling it or deleting it is acting on every member who holds it, active or
+not: the caller must strictly outrank each holder (owners may act on owners) and must not hold the role
+themself, except an owner, who may edit a custom role they hold (&#x60;insufficient_rank&#x60;,
+&#x60;self_modification_forbidden&#x60;); a rename acts on nobody. Every active holder&#x27;s
 session ends the way an authority change on the member does: their old token answers 401 &#x60;stale_token&#x60;, the
 refresh succeeds with the new permissions and rank.
-A re-level is refused with 422 &#x60;role_level_breaks_reporting&#x60; when it would leave an active holder not strictly
-junior to their manager, or a direct report of a holder not strictly junior to the holder.
+A re-level is refused with 422 &#x60;role_level_breaks_reporting&#x60; only when it would NEWLY break a reporting line: an
+active holder that is strictly junior to their (active) manager would no longer be, or a direct report that is
+strictly junior to a holder would no longer be. Lines that are already broken, and inactive managers or
+reports, do not block it.
 Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+
+Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 &#x60;role_invalid&#x60; with &#x60;errors{&lt;field&gt;: [&quot;invalid_characters&quot;]}&#x60; for &#x60;name&#x60;, and nothing is written. A full-replace body that re-sends a stored value UNCHANGED is accepted (a value stored before the rule existed never blocks an untouched save); only a changed value is checked.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -6249,19 +8156,28 @@ Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60
 		response: z.void(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
 the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;admin_tier_required&#x60; (the change would give
+&#x60;identity.users.create&#x60; to a role or a member below the Administrator tier: a role below the tier cannot
+contain it, it cannot be an override of a member below the tier, and it cannot be requested or approved
+below the tier; owner ruling 2026-11-21), &#x60;ownership_authority_required&#x60;
 (a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
 assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
 deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
 Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
 member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
 tier or above (&#x60;grant_exceeds_authority&#x60;).
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -6279,8 +8195,22 @@ renamed or re-levelled by anyone, super users included).
 			},
 			{
 				status: 422,
-				description: `&#x60;validation_failed&#x60; / &#x60;role_invalid&#x60;, or &#x60;role_level_breaks_reporting&#x60; (the new level would leave an active
-holder not strictly junior to their manager, or a direct report of a holder not strictly junior to the holder).
+				description: `&#x60;validation_failed&#x60; / &#x60;role_invalid&#x60;, or &#x60;role_level_breaks_reporting&#x60; (the new level would newly break a reporting
+line of an active holder: no longer strictly junior to their manager, or a direct report no longer strictly
+junior to the holder; lines already broken do not count).
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
 `,
 				schema: ErrorResponse
 			}
@@ -6292,7 +8222,7 @@ holder not strictly junior to their manager, or a direct report of a holder not 
 		alias: 'deleteApiv1rolesRoleId',
 		description: `Requires &#x60;identity.roles.delete&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
 The caller must hold every permission the role carries (deleting removes them from every holder) and must
-be allowed to act on every active holder (answered before &#x60;role_in_use&#x60;).
+be allowed to act on every holder, active or not (answered before &#x60;role_in_use&#x60;).
 A role still held by an ACTIVE member is refused with 409 &#x60;role_in_use&#x60; (&#x60;errors.active_holders&#x60; is the
 count); a role held only by inactive members is deleted and their assignments are removed in the same
 transaction.
@@ -6313,19 +8243,28 @@ transaction.
 		response: z.void(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
 the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;admin_tier_required&#x60; (the change would give
+&#x60;identity.users.create&#x60; to a role or a member below the Administrator tier: a role below the tier cannot
+contain it, it cannot be an override of a member below the tier, and it cannot be requested or approved
+below the tier; owner ruling 2026-11-21), &#x60;ownership_authority_required&#x60;
 (a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
 assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
 deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
 Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
 member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
 tier or above (&#x60;grant_exceeds_authority&#x60;).
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -6337,6 +8276,24 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 			{
 				status: 409,
 				description: `&#x60;role_in_use&#x60; (an active member holds the role) or &#x60;role_system_default&#x60; (system-default roles cannot be deleted)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -6365,6 +8322,8 @@ DB layer (composite FK + cycle trigger). Surfaces as 422
 Optional &#x60;reason&#x60; (10-1024 chars) is recorded onto the new
 edge OR the cleared edge for audit.
 Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+
+Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 &#x60;role_hierarchy_invalid_reason&#x60; with &#x60;errors{&lt;field&gt;: [&quot;invalid_characters&quot;]}&#x60; for &#x60;reason&#x60;, and nothing is written.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -6403,13 +8362,17 @@ the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x6
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;admin_tier_required&#x60; (the change would give
+&#x60;identity.users.create&#x60; to a role or a member below the Administrator tier: a role below the tier cannot
+contain it, it cannot be an override of a member below the tier, and it cannot be requested or approved
+below the tier; owner ruling 2026-11-21), &#x60;ownership_authority_required&#x60;
 (a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
 assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
 deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
 Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
 member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
 tier or above (&#x60;grant_exceeds_authority&#x60;).
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -6431,6 +8394,19 @@ retrying.
 				status: 422,
 				description: `&#x60;role_parent_not_eligible&#x60; (the parent is missing, deleted, in another tenant, or not strictly more
 senior than the child), or a cycle / cross-tenant refusal.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
 `,
 				schema: ErrorResponse
 			}
@@ -6490,13 +8466,17 @@ the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x6
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;admin_tier_required&#x60; (the change would give
+&#x60;identity.users.create&#x60; to a role or a member below the Administrator tier: a role below the tier cannot
+contain it, it cannot be an override of a member below the tier, and it cannot be requested or approved
+below the tier; owner ruling 2026-11-21), &#x60;ownership_authority_required&#x60;
 (a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
 assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
 deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
 Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
 member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
 tier or above (&#x60;grant_exceeds_authority&#x60;).
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -6513,6 +8493,19 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -6554,19 +8547,28 @@ refresh succeeds with the new permissions and rank.
 		response: z.void(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
 the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;admin_tier_required&#x60; (the change would give
+&#x60;identity.users.create&#x60; to a role or a member below the Administrator tier: a role below the tier cannot
+contain it, it cannot be an override of a member below the tier, and it cannot be requested or approved
+below the tier; owner ruling 2026-11-21), &#x60;ownership_authority_required&#x60;
 (a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
 assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
 deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
 Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
 member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
 tier or above (&#x60;grant_exceeds_authority&#x60;).
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -6583,6 +8585,19 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -6624,19 +8639,28 @@ refresh succeeds with the new permissions and rank.
 		response: z.void(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
 the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;admin_tier_required&#x60; (the change would give
+&#x60;identity.users.create&#x60; to a role or a member below the Administrator tier: a role below the tier cannot
+contain it, it cannot be an override of a member below the tier, and it cannot be requested or approved
+below the tier; owner ruling 2026-11-21), &#x60;ownership_authority_required&#x60;
 (a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
 assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
 deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
 Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
 member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
 tier or above (&#x60;grant_exceeds_authority&#x60;).
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -6653,6 +8677,19 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -6694,6 +8731,19 @@ category the caller may not see is 403 &#x60;search_category_forbidden&#x60; (th
 			{
 				status: 403,
 				description: `Missing both permissions (&#x60;forbidden&#x60;), or an explicitly requested category the caller lacks the permission for (&#x60;search_category_forbidden&#x60;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -6745,6 +8795,7 @@ the same tenant (otherwise 422 &#x60;assignee_inactive&#x60;). Emits
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -6765,6 +8816,19 @@ exempt: the path is authoritative there, with or without the header.
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -6860,12 +8924,26 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -6915,12 +8993,26 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -6976,6 +9068,7 @@ be used to probe which tenants exist.
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -6992,6 +9085,19 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 422,
 				description: `Reason missing`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -7043,6 +9149,7 @@ take them.
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -7054,6 +9161,24 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 409,
 				description: `Cannot complete a cancelled task`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -7109,6 +9234,7 @@ caller&#x27;s subordinate scope (or be the caller themselves). 403
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -7125,6 +9251,19 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 422,
 				description: `New assignee not active in tenant`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -7170,6 +9309,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 tenant, and this route is not one of the identity writes operators may perform
 under scope. Writes to crm, orders, tasks, dispatch and inventory are never
 accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -7181,6 +9321,24 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 409,
 				description: `Work item is in a terminal / overdue state`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -7236,12 +9394,26 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -7286,7 +9458,26 @@ caller&#x27;s own tenant) or &#x60;platform.tenants.view&#x60;; a caller holding
 			},
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Authenticated but missing the required permission. Every authenticated operation
+outside the forced-change allowlist can also answer &#x60;403&#x60; with
+&#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
+(see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
+impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
+not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -7298,6 +9489,17 @@ caller&#x27;s own tenant) or &#x60;platform.tenants.view&#x60;; a caller holding
 		description: `Platform operators only (is_platform + slug anchor) — ADR 0068. Tenant
 onboarding is operator-led (ADR 0053 &quot;no public sign-up surface&quot;).
 Requires &#x60;platform.tenants.create&#x60;.
+
+The company is created &#x60;active&#x60; (the operator&#x27;s registration is the approval; owner
+ruling 2026-11-21: only an active company&#x27;s members sign in), so its first admin
+signs in at once. &#x60;pending&#x60; is produced by no route today.
+
+The first admin&#x27;s temporary password is checked against the DEFAULT password policy
+(the new tenant has no stored policy yet; default: 8 characters minimum with an
+upper-case letter, a lower-case letter, a digit and a symbol): &#x60;422 password_policy_violation&#x60; with
+&#x60;errors.admin_password&#x60;. Nothing is created on a violation.
+
+Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 &#x60;tenant_invalid (company names) / person_invalid (admin names)&#x60; with &#x60;errors{&lt;field&gt;: [&quot;invalid_characters&quot;]}&#x60; (or &#x60;[&quot;required&quot;]&#x60; / &#x60;[&quot;too_long&quot;]&#x60; for a blank or over-long name) for &#x60;legal_name&#x60;, &#x60;display_name&#x60;, &#x60;admin_first_name&#x60;, &#x60;admin_last_name&#x60;, and nothing is written.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -7326,7 +9528,13 @@ Requires &#x60;platform.tenants.create&#x60;.
 			},
 			{
 				status: 403,
-				description: `Authenticated but missing the required permission`,
+				description: `Authenticated but missing the required permission. Every authenticated operation
+outside the forced-change allowlist can also answer &#x60;403&#x60; with
+&#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
+(see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
+impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
+not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+`,
 				schema: ErrorResponse
 			},
 			{
@@ -7335,8 +9543,41 @@ Requires &#x60;platform.tenants.create&#x60;.
 				schema: ErrorResponse
 			},
 			{
+				status: 422,
+				description: `Invalid input, nothing is written. &#x60;password_policy_violation&#x60; with
+&#x60;errors.admin_password&#x60; (rule codes). &#x60;tenant_invalid&#x60; (company names) or
+&#x60;person_invalid&#x60; (admin names) with &#x60;errors{&lt;field&gt;: [&lt;code&gt;]}&#x60; for &#x60;legal_name&#x60;,
+&#x60;display_name&#x60;, &#x60;admin_first_name&#x60;, &#x60;admin_last_name&#x60;; the code is &#x60;required&#x60;
+(blank), &#x60;too_long&#x60; (company names over 200 bytes, admin names over 100) or
+&#x60;invalid_characters&#x60;. A malformed &#x60;slug&#x60; or &#x60;admin_email&#x60; is a 400
+(&#x60;invalid_slug&#x60; / &#x60;invalid_email&#x60;), not a 422. Never a 500.
+`,
+				schema: ErrorResponse
+			},
+			{
 				status: 429,
-				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the seconds to wait.`,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 503,
+				description: `Every password-hashing slot of this process was busy for longer than the queue
+timeout (the process bounds concurrent Argon2id work, ADR 0068 D12), or the caller&#x27;s
+own address already had its share of operations running and a full line of waiting
+ones. A caller&#x27;s operations beyond its share WAIT their turn (within the same queue
+timeout) instead of failing, so a burst from one office address is served; only the
+wait that runs out, or the line that is full, answers this. Nothing was done and
+nothing was counted; retry after &#x60;Retry-After&#x60; seconds. Every login branch (real
+account, unknown email, locked account) answers this the same way.
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -7363,6 +9604,11 @@ Requires &#x60;platform.tenants.create&#x60;.
 		response: TenantDto,
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
 effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
@@ -7373,12 +9619,26 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -7387,7 +9647,11 @@ be used to probe which tenants exist.
 		method: 'post',
 		path: '/api/v1/tenants/:tenantId/activate',
 		alias: 'postApiv1tenantsTenantIdactivate',
-		description: `Requires &#x60;identity.tenants.activate&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+		description: `A company registered through &#x60;POST /api/v1/tenants&#x60; is created &#x60;active&#x60;, so activating
+it answers 204 and changes nothing (no event, &#x60;activated_at&#x60; is kept): idempotent, not
+an error. Activating a company in &#x60;pending_deletion&#x60; is 422 &#x60;tenant_invalid&#x60; (restore it instead) and a
+deleted one is 422 &#x60;tenant_invalid&#x60;.
+Requires &#x60;identity.tenants.activate&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -7410,6 +9674,11 @@ be used to probe which tenants exist.
 		response: z.void(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
 effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
@@ -7420,6 +9689,7 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -7429,8 +9699,26 @@ be used to probe which tenants exist.
 				schema: ErrorResponse
 			},
 			{
+				status: 409,
+				description: `Conflict with the current state of the resource (see the &#x60;error&#x60; code)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -7484,6 +9772,7 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -7493,8 +9782,26 @@ be used to probe which tenants exist.
 				schema: ErrorResponse
 			},
 			{
+				status: 409,
+				description: `Conflict with the current state of the resource (see the &#x60;error&#x60; code)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -7531,6 +9838,11 @@ be used to probe which tenants exist.
 		response: ListAuditEventsResponse,
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
 effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
@@ -7541,6 +9853,20 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
 `,
 				schema: ErrorResponse
 			}
@@ -7593,6 +9919,7 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -7602,8 +9929,26 @@ be used to probe which tenants exist.
 				schema: ErrorResponse
 			},
 			{
+				status: 409,
+				description: `Conflict with the current state of the resource (see the &#x60;error&#x60; code)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -7618,6 +9963,8 @@ Tenants holding an active SuperAdmin role refuse the transition
 with 422 (&#x60;platform_tenant_undeletable&#x60;).
 
 Requires &#x60;identity.tenants.delete&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+
+Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 &#x60;tenant_invalid&#x60; with &#x60;errors{&lt;field&gt;: [&quot;invalid_characters&quot;]}&#x60; for &#x60;reason&#x60;, and nothing is written.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -7645,6 +9992,11 @@ Requires &#x60;identity.tenants.delete&#x60; held by a platform-tenant operator;
 		response: z.void(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
 effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
@@ -7655,6 +10007,7 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -7664,8 +10017,26 @@ be used to probe which tenants exist.
 				schema: ErrorResponse
 			},
 			{
+				status: 409,
+				description: `Conflict with the current state of the resource (see the &#x60;error&#x60; code)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -7675,6 +10046,8 @@ be used to probe which tenants exist.
 		path: '/api/v1/tenants/:tenantId/profile',
 		alias: 'patchApiv1tenantsTenantIdprofile',
 		description: `Requires &#x60;identity.tenants.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+
+Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 &#x60;tenant_invalid&#x60; with &#x60;errors{&lt;field&gt;: [&quot;invalid_characters&quot;]}&#x60; for &#x60;legal_name&#x60;, &#x60;display_name&#x60;, and nothing is written. A full-replace body that re-sends a stored value UNCHANGED is accepted (a value stored before the rule existed never blocks an untouched save); only a changed value is checked.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -7717,6 +10090,7 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -7726,8 +10100,26 @@ be used to probe which tenants exist.
 				schema: ErrorResponse
 			},
 			{
+				status: 409,
+				description: `Conflict with the current state of the resource (see the &#x60;error&#x60; code)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -7759,6 +10151,11 @@ be used to probe which tenants exist.
 		response: z.void(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
 effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
@@ -7769,6 +10166,7 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -7778,8 +10176,26 @@ be used to probe which tenants exist.
 				schema: ErrorResponse
 			},
 			{
+				status: 409,
+				description: `Conflict with the current state of the resource (see the &#x60;error&#x60; code)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -7831,6 +10247,7 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -7840,8 +10257,26 @@ be used to probe which tenants exist.
 				schema: ErrorResponse
 			},
 			{
+				status: 409,
+				description: `Conflict with the current state of the resource (see the &#x60;error&#x60; code)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -7898,6 +10333,7 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -7907,8 +10343,26 @@ be used to probe which tenants exist.
 				schema: ErrorResponse
 			},
 			{
+				status: 409,
+				description: `Conflict with the current state of the resource (see the &#x60;error&#x60; code)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -7920,6 +10374,8 @@ be used to probe which tenants exist.
 		description: `Reason is mandatory per data-retention.md audit canon.
 
 Requires &#x60;identity.tenants.suspend&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+
+Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 &#x60;tenant_invalid&#x60; with &#x60;errors{&lt;field&gt;: [&quot;invalid_characters&quot;]}&#x60; for &#x60;reason&#x60;, and nothing is written.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -7947,6 +10403,11 @@ Requires &#x60;identity.tenants.suspend&#x60; held by a platform-tenant operator
 		response: z.void(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
 effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
@@ -7957,6 +10418,7 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -7966,8 +10428,26 @@ be used to probe which tenants exist.
 				schema: ErrorResponse
 			},
 			{
+				status: 409,
+				description: `Conflict with the current state of the resource (see the &#x60;error&#x60; code)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -7999,6 +10479,11 @@ be used to probe which tenants exist.
 		response: ListUsersResponse,
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
 effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
@@ -8009,6 +10494,20 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
 `,
 				schema: ErrorResponse
 			}
@@ -8019,6 +10518,22 @@ be used to probe which tenants exist.
 		path: '/api/v1/users',
 		alias: 'postApiv1users',
 		description: `Requires &#x60;identity.users.create&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+
+**Who may add users (owner ruling 2026-11-21):** a super user, a platform operator holding
+&#x60;platform.users.create&#x60; or &#x60;platform.users.manage&#x60; (through &#x60;X-Tenant-Id&#x60; or an impersonation
+session), and, inside a company, ONLY the Company Owner and the Administrator tier (rank 0 to 10).
+Everyone below that tier is refused, even a member who still holds &#x60;identity.users.create&#x60; from
+before the ruling: the route answers &#x60;403 forbidden&#x60; (the permission is not in the caller&#x27;s
+&#x60;effective_permissions&#x60;), and the command, deciding on the caller&#x27;s stored roles under the tenant
+lock, answers &#x60;403 admin_tier_required&#x60; for a stale token. A refused caller learns nothing about the
+email (no &#x60;email_has_active_membership&#x60;).
+
+The temporary password is checked against the password policy of the TARGET tenant
+(the effective tenant: the caller&#x27;s own, or the one an operator acts in through
+&#x60;X-Tenant-Id&#x60;): &#x60;422 password_policy_violation&#x60; with &#x60;errors.password&#x60;. Nothing is
+created on a violation.
+
+Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 &#x60;user_invalid&#x60; with &#x60;errors{&lt;field&gt;: [&quot;invalid_characters&quot;]}&#x60; for &#x60;first_name&#x60;, &#x60;last_name&#x60;, and nothing is written.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -8041,16 +10556,48 @@ be used to probe which tenants exist.
 		response: CreateUserResponse,
 		errors: [
 			{
+				status: 400,
+				description: `&#x60;invalid_body&#x60; — the body is not valid JSON; &#x60;invalid_email&#x60; — the email is not a valid address`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
-				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
-effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
-and the caller is neither a super user nor a platform operator holding
-&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
-the lifecycle routes) a header equal to the path tenant is not a scope request, so
-&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
-decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
-lookup and is identical for existing, unknown and suspended tenants, so it cannot
-be used to probe which tenants exist.
+				description: `&#x60;forbidden&#x60; (the caller lacks &#x60;identity.users.create&#x60;, including every member below the Administrator tier), &#x60;admin_tier_required&#x60; (the caller&#x27;s stored rank is below the Administrator tier), or &#x60;tenant_scope_forbidden&#x60; (see TenantScopeForbidden)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `&#x60;email_has_active_membership&#x60; — the email already has an active membership in another tenant`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `&#x60;password_policy_violation&#x60; — the password fails the target tenant&#x27;s policy (field &#x60;errors.password&#x60;, see PasswordPolicyViolation); &#x60;user_invalid&#x60; — the new membership violates a domain invariant (see &#x60;message&#x60;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 503,
+				description: `Every password-hashing slot of this process was busy for longer than the queue
+timeout (the process bounds concurrent Argon2id work, ADR 0068 D12), or the caller&#x27;s
+own address already had its share of operations running and a full line of waiting
+ones. A caller&#x27;s operations beyond its share WAIT their turn (within the same queue
+timeout) instead of failing, so a burst from one office address is served; only the
+wait that runs out, or the line that is full, answers this. Nothing was done and
+nothing was counted; retry after &#x60;Retry-After&#x60; seconds. Every login branch (real
+account, unknown email, locked account) answers this the same way.
 `,
 				schema: ErrorResponse
 			}
@@ -8078,6 +10625,11 @@ be used to probe which tenants exist.
 		response: UserDto,
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
 effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
@@ -8088,12 +10640,26 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -8107,66 +10673,8 @@ the cascade is gated on Platform tier per multi-tenancy.md
 &quot;SuperUser god-mode&quot; + &#x60;identity.users.anonymise&#x60; permission.
 
 Requires &#x60;identity.users.anonymise&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
-`,
-		requestFormat: 'json',
-		parameters: [
-			{
-				name: 'X-Command-Id',
-				type: 'Header',
-				schema: z.string().min(36).max(36).uuid().optional()
-			},
-			{
-				name: 'userId',
-				type: 'Path',
-				schema: z.string().uuid()
-			},
-			{
-				name: 'X-Tenant-Id',
-				type: 'Header',
-				schema: z.string().uuid().optional()
-			}
-		],
-		response: z.void(),
-		errors: [
-			{
-				status: 403,
-				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
-the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
-TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
-&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
-ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
-(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
-assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
-deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
-Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
-member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
-tier or above (&#x60;grant_exceeds_authority&#x60;).
-`,
-				schema: ErrorResponse
-			},
-			{
-				status: 404,
-				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
-				schema: ErrorResponse
-			},
-			{
-				status: 409,
-				description: `&#x60;last_owner_protected&#x60; — the person is the only active owner of a tenant; nothing was changed. &#x60;person_memberships_changing&#x60; — the person&#x27;s memberships kept changing while the change was checked (a reactivation raced it); nothing was changed, retry`,
-				schema: ErrorResponse
-			},
-			{
-				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
-				schema: ErrorResponse
-			}
-		]
-	},
-	{
-		method: 'post',
-		path: '/api/v1/users/:userId/deactivate',
-		alias: 'postApiv1usersUserIddeactivate',
-		description: `Requires &#x60;identity.users.deactivate&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;). The caller must strictly outrank the target member (&#x60;insufficient_rank&#x60;; owners may act on owners; super users and exempt platform operators are exempt), decided inside the transaction that holds the tenant&#x27;s authority lock (ADR 0069).
+
+Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 &#x60;person_invalid&#x60; with &#x60;errors{&lt;field&gt;: [&quot;invalid_characters&quot;]}&#x60; for &#x60;reason&#x60;, and nothing is written.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -8194,19 +10702,117 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 		response: z.void(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
 the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;admin_tier_required&#x60; (the change would give
+&#x60;identity.users.create&#x60; to a role or a member below the Administrator tier: a role below the tier cannot
+contain it, it cannot be an override of a member below the tier, and it cannot be requested or approved
+below the tier; owner ruling 2026-11-21), &#x60;ownership_authority_required&#x60;
 (a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
 assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
 deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
 Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
 member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
 tier or above (&#x60;grant_exceeds_authority&#x60;).
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `&#x60;last_owner_protected&#x60; — the person is the only active owner of a tenant; nothing was changed. &#x60;person_memberships_changing&#x60; — the person&#x27;s memberships kept changing while the change was checked (a reactivation raced it); nothing was changed, retry`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
+	},
+	{
+		method: 'post',
+		path: '/api/v1/users/:userId/deactivate',
+		alias: 'postApiv1usersUserIddeactivate',
+		description: `Requires &#x60;identity.users.deactivate&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;). The caller must strictly outrank the target member (&#x60;insufficient_rank&#x60;; owners may act on owners; super users and exempt platform operators are exempt), decided inside the transaction that holds the tenant&#x27;s authority lock (ADR 0069).
+
+Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 &#x60;user_invalid&#x60; with &#x60;errors{&lt;field&gt;: [&quot;invalid_characters&quot;]}&#x60; for &#x60;reason&#x60;, and nothing is written.
+`,
+		requestFormat: 'json',
+		parameters: [
+			{
+				name: 'body',
+				type: 'Body',
+				schema: z.object({ reason: z.string().min(1) }).passthrough()
+			},
+			{
+				name: 'X-Command-Id',
+				type: 'Header',
+				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'userId',
+				type: 'Path',
+				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
+			}
+		],
+		response: z.void(),
+		errors: [
+			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
+the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
+TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
+&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
+ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;admin_tier_required&#x60; (the change would give
+&#x60;identity.users.create&#x60; to a role or a member below the Administrator tier: a role below the tier cannot
+contain it, it cannot be an override of a member below the tier, and it cannot be requested or approved
+below the tier; owner ruling 2026-11-21), &#x60;ownership_authority_required&#x60;
+(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
+assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
+deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
+Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
+member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
+tier or above (&#x60;grant_exceeds_authority&#x60;).
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -8218,6 +10824,24 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 			{
 				status: 409,
 				description: `&#x60;last_owner_protected&#x60; — the change would leave the tenant without an active owner; &#x60;member_roles_inconsistent&#x60; — the member&#x27;s assigned roles cannot be loaded as this tenant&#x27;s roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -8256,19 +10880,28 @@ Requires &#x60;identity.users.update&#x60; (satisfied by &#x60;tenant.admin&#x60
 		response: z.void(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
 the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;admin_tier_required&#x60; (the change would give
+&#x60;identity.users.create&#x60; to a role or a member below the Administrator tier: a role below the tier cannot
+contain it, it cannot be an override of a member below the tier, and it cannot be requested or approved
+below the tier; owner ruling 2026-11-21), &#x60;ownership_authority_required&#x60;
 (a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
 assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
 deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
 Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
 member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
 tier or above (&#x60;grant_exceeds_authority&#x60;).
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -8285,6 +10918,19 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 			{
 				status: 422,
 				description: `&#x60;manager_not_eligible&#x60; — the manager is not an active member of this tenant more senior than the member, or the link would close a reporting cycle; otherwise validation (&#x60;user_invalid&#x60;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -8311,19 +10957,28 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 		response: z.void(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
 the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;admin_tier_required&#x60; (the change would give
+&#x60;identity.users.create&#x60; to a role or a member below the Administrator tier: a role below the tier cannot
+contain it, it cannot be an override of a member below the tier, and it cannot be requested or approved
+below the tier; owner ruling 2026-11-21), &#x60;ownership_authority_required&#x60;
 (a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
 assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
 deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
 Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
 member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
 tier or above (&#x60;grant_exceeds_authority&#x60;).
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -8335,6 +10990,24 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 			{
 				status: 409,
 				description: `&#x60;member_roles_inconsistent&#x60; — the member&#x27;s assigned roles cannot be loaded as this tenant&#x27;s roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -8385,13 +11058,17 @@ the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x6
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;admin_tier_required&#x60; (the change would give
+&#x60;identity.users.create&#x60; to a role or a member below the Administrator tier: a role below the tier cannot
+contain it, it cannot be an override of a member below the tier, and it cannot be requested or approved
+below the tier; owner ruling 2026-11-21), &#x60;ownership_authority_required&#x60;
 (a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
 assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
 deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
 Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
 member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
 tier or above (&#x60;grant_exceeds_authority&#x60;).
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -8409,6 +11086,19 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
 				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
 			}
 		]
 	},
@@ -8417,6 +11107,8 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 		path: '/api/v1/users/:userId/profile',
 		alias: 'patchApiv1usersUserIdprofile',
 		description: `Requires &#x60;identity.users.update&#x60; or self (path id equals the caller&#x27;s membership) (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).  Editing ANOTHER member&#x27;s profile is also an authority decision: the caller must strictly outrank the member (&#x60;insufficient_rank&#x60;; owners may act on owners; super users and exempt platform operators are exempt), decided under the tenant&#x27;s authority lock (ADR 0069); editing one&#x27;s own profile is unchanged.
+
+Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 &#x60;user_invalid&#x60; with &#x60;errors{&lt;field&gt;: [&quot;invalid_characters&quot;]}&#x60; for &#x60;designation&#x60;, &#x60;department&#x60;, &#x60;status_message&#x60;, and nothing is written. A full-replace body that re-sends a stored value UNCHANGED is accepted (a value stored before the rule existed never blocks an untouched save); only a changed value is checked.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -8455,19 +11147,46 @@ the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x6
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;admin_tier_required&#x60; (the change would give
+&#x60;identity.users.create&#x60; to a role or a member below the Administrator tier: a role below the tier cannot
+contain it, it cannot be an override of a member below the tier, and it cannot be requested or approved
+below the tier; owner ruling 2026-11-21), &#x60;ownership_authority_required&#x60;
 (a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
 assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
 deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
 Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
 member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
 tier or above (&#x60;grant_exceeds_authority&#x60;).
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `Conflict with the current state of the resource (see the &#x60;error&#x60; code)`,
 				schema: ErrorResponse
 			},
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -8499,19 +11218,28 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 		response: z.void(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
 the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;admin_tier_required&#x60; (the change would give
+&#x60;identity.users.create&#x60; to a role or a member below the Administrator tier: a role below the tier cannot
+contain it, it cannot be an override of a member below the tier, and it cannot be requested or approved
+below the tier; owner ruling 2026-11-21), &#x60;ownership_authority_required&#x60;
 (a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
 assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
 deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
 Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
 member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
 tier or above (&#x60;grant_exceeds_authority&#x60;).
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -8522,7 +11250,25 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 			},
 			{
 				status: 409,
-				description: `&#x60;member_roles_inconsistent&#x60; — the member&#x27;s assigned roles cannot be loaded as this tenant&#x27;s roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant)`,
+				description: `&#x60;person_active_elsewhere&#x60; — the person already has an active membership in another company (a person is active in at most one); nothing was changed; &#x60;member_roles_inconsistent&#x60; — the member&#x27;s assigned roles cannot be loaded as this tenant&#x27;s roles, so its rank cannot be decided; nothing was changed`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -8570,13 +11316,17 @@ the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x6
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;admin_tier_required&#x60; (the change would give
+&#x60;identity.users.create&#x60; to a role or a member below the Administrator tier: a role below the tier cannot
+contain it, it cannot be an override of a member below the tier, and it cannot be requested or approved
+below the tier; owner ruling 2026-11-21), &#x60;ownership_authority_required&#x60;
 (a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
 assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
 deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
 Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
 member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
 tier or above (&#x60;grant_exceeds_authority&#x60;).
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -8588,6 +11338,24 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 			{
 				status: 409,
 				description: `&#x60;member_roles_inconsistent&#x60; — the member&#x27;s assigned roles cannot be loaded as this tenant&#x27;s roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
@@ -8619,19 +11387,28 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 		response: z.void(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
 the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
 TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
 &#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
 ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;ownership_authority_required&#x60;
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;admin_tier_required&#x60; (the change would give
+&#x60;identity.users.create&#x60; to a role or a member below the Administrator tier: a role below the tier cannot
+contain it, it cannot be an override of a member below the tier, and it cannot be requested or approved
+below the tier; owner ruling 2026-11-21), &#x60;ownership_authority_required&#x60;
 (a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
 assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
 deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
 Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
 member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
 tier or above (&#x60;grant_exceeds_authority&#x60;).
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
 			},
@@ -8648,6 +11425,19 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
 				schema: ErrorResponse
 			}
 		]
