@@ -37,6 +37,7 @@
 	<Dropdown.Trigger
 		variant="ghost"
 		size="sm"
+		class="size-6 p-0"
 		aria-label={$_('dataTable.rowActions', { values: { row: label } })}
 	>
 		<Icon icon={MoreHorizontal} size="sm" />

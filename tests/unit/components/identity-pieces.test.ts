@@ -92,6 +92,11 @@ describe('IdChip', () => {
 });
 
 describe('BackLink', () => {
+	it('is link-coloured, as every link is', () => {
+		render(BackLink, { href: '/requests', label: 'Requests' });
+		expect(target.querySelector('a')!.className).toContain('text-primary-text');
+	});
+
 	it('is a link with the label and a decorative arrow', () => {
 		render(BackLink, { href: '/requests', label: 'Permission requests' });
 		const link = target.querySelector('a')!;
@@ -145,6 +150,23 @@ describe('RowActionsMenu', () => {
 		await openMenu('Actions for Sales Lead');
 		const edit = menuItems().find((i) => i.textContent?.includes('Edit'))!;
 		expect(edit.getAttribute('aria-disabled')).toBe('true');
+	});
+
+	it('a disabled href action is not a link: a disabled item, no anchor to follow', async () => {
+		render(RowActionsMenu, {
+			label: 'Sales Lead',
+			actions: [{ id: 'open', label: 'Open', href: '/roles/1', disabled: true }]
+		});
+		await openMenu('Actions for Sales Lead');
+		const item = menuItems()[0]!;
+		expect(item.tagName).not.toBe('A');
+		expect(item.hasAttribute('href')).toBe(false);
+		expect(item.getAttribute('aria-disabled')).toBe('true');
+	});
+
+	it('the trigger is a 24 px target', () => {
+		render(RowActionsMenu, { label: 'x', actions: actions() });
+		expect(target.querySelector('button')!.className).toContain('size-6');
 	});
 
 	it('a destructive action is marked destructive', async () => {

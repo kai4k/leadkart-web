@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from './helpers/test';
 
 /**
@@ -142,4 +143,101 @@ test('the page has no sticky-header material', async ({ page }) => {
 	await open(page);
 	const filter = await page.locator('thead').evaluate((el) => getComputedStyle(el).backdropFilter);
 	expect(filter === 'none' || filter === '').toBe(true);
+});
+
+/**
+ * Rows of three heights (a name with a subtitle on every fifth row, a wrapped note on every seventh),
+ * in both densities: the case that crashed the first windowing. No page error, no error page, and
+ * after every jump the rows that fill the viewport are rendered (no blank frame).
+ */
+for (const density of ['compact', 'default'] as const) {
+	test(`mixed row heights scroll without a crash or a blank frame (${density})`, async ({
+		page
+	}) => {
+		const errors: string[] = [];
+		page.on('pageerror', (e) => errors.push(e.message));
+		await open(page);
+		await page.getByRole('button', { name: density, exact: true }).click();
+		const blank = async () =>
+			scroller(page).evaluate((el) => {
+				const view = el.getBoundingClientRect();
+				const head = el.querySelector('thead')?.getBoundingClientRect().height ?? 0;
+				const rows = [...el.querySelectorAll('tbody tr[data-row-id]')].map((r) =>
+					r.getBoundingClientRect()
+				);
+				let covered = view.top + head;
+				for (const r of rows.sort((a, b) => a.top - b.top)) {
+					if (r.bottom <= covered) continue;
+					if (r.top - covered > 1) return true;
+					covered = Math.max(covered, r.bottom);
+				}
+				return covered < view.bottom - 1 && el.scrollTop + el.clientHeight < el.scrollHeight - 1;
+			});
+		for (const top of [1244, 2799, 3421, 20000, 1e7, 3421, 0, 1e7, 0]) {
+			await scroller(page).evaluate((el, y) => el.scrollTo(0, y), top);
+			await page.waitForTimeout(80);
+			expect(await blank(), `blank frame at ${top}`).toBe(false);
+			await expect(page.getByText(/^Error 500/)).toHaveCount(0);
+		}
+		// 120 arrow steps over rows of mixed heights lose no row
+		await scroller(page).evaluate((el) => el.scrollTo(0, 0));
+		await page.locator('tbody tr[data-row-id]').first().focus();
+		for (let i = 0; i < 120; i++) await page.keyboard.press('ArrowDown');
+		await expect(page.locator(':focus')).toHaveAttribute('data-row-id', 'r-121');
+		expect(errors).toEqual([]);
+	});
+}
+
+test('column widths do not move while the body scrolls', async ({ page }) => {
+	await open(page);
+	const widths = () =>
+		page
+			.locator('thead th')
+			.evaluateAll((ths) => ths.map((th) => Math.round(th.getBoundingClientRect().width)));
+	const first = await widths();
+	for (const top of [900, 4000, 12000, 30000]) {
+		await scroller(page).evaluate((el, y) => el.scrollTo(0, y), top);
+		await page.waitForTimeout(80);
+		expect(await widths()).toEqual(first);
+	}
+});
+
+test('the header keeps its bottom edge once it is stuck', async ({ page }) => {
+	await open(page);
+	await scroller(page).evaluate((el) => el.scrollTo(0, 3000));
+	const shadow = await page
+		.locator('thead th')
+		.first()
+		.evaluate((th) => getComputedStyle(th).boxShadow);
+	expect(shadow).not.toBe('none');
+});
+
+test('sorting starts at the top', async ({ page }) => {
+	await open(page);
+	await scroller(page).evaluate((el) => el.scrollTo(0, 20000));
+	await page.getByRole('button', { name: /^Name/ }).click();
+	await expect.poll(() => scroller(page).evaluate((el) => el.scrollTop)).toBe(0);
+});
+
+test('Tab leaves the table in a few presses', async ({ page }) => {
+	await open(page);
+	await page.locator('tbody tr[data-row-id]').first().focus();
+	for (let i = 0; i < 6; i++) await page.keyboard.press('Tab');
+	const inside = await page.evaluate(() => !!document.activeElement?.closest('tbody'));
+	expect(inside).toBe(false);
+});
+
+test('axe finds no serious or critical violation, at the top and scrolled', async ({ page }) => {
+	await open(page);
+	for (const top of [0, 6000]) {
+		await scroller(page).evaluate((el, y) => el.scrollTo(0, y), top);
+		const results = await new AxeBuilder({ page })
+			.withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'])
+			.include('main')
+			.analyze();
+		const blocking = results.violations.filter(
+			(v) => v.impact === 'critical' || v.impact === 'serious'
+		);
+		expect(blocking, JSON.stringify(blocking, null, 2)).toEqual([]);
+	}
 });

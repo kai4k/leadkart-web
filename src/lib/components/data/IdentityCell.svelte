@@ -2,7 +2,9 @@
 	/**
 	 * IdentityCell — who a row is about: an avatar, a name (a link when `href` is given) and an
 	 * optional line under it. The avatar is decoration (`aria-hidden`; the name beside it is the
-	 * accessible text), so an image has an empty `alt`.
+	 * accessible text), so an image has an empty `alt`. The name takes the colour of where it sits, so
+	 * inside a `DataTable` `rowHref` link it is link-coloured: a primary cell never also passes `href`
+	 * (two nested anchors are invalid).
 	 */
 	import { Avatar, avatarVariants } from '#lib/components/ui/avatar/index.ts';
 	import { initials } from '#lib/utils/person-name.ts';
@@ -40,7 +42,7 @@
 			>
 			<!-- eslint-enable svelte/no-navigation-without-resolve -->
 		{:else}
-			<p class="text-foreground truncate font-medium">{name}</p>
+			<p class="truncate font-medium">{name}</p>
 		{/if}
 		{#if subtitle}
 			<p class="text-muted-foreground truncate text-sm">{subtitle}</p>

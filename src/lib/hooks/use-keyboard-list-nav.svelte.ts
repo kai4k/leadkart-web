@@ -46,7 +46,9 @@ import { SvelteMap } from 'svelte/reactivity';
 
 export type KeyableItem = { id: string };
 
-export interface KeyboardListNavOptions<TItem extends KeyableItem> {
+export interface KeyboardListNavOptions<TItem> {
+	/** The stable id of an item (the key its element is registered under). Default: `item.id`. */
+	getId?: (item: TItem) => string;
 	/** Invoked on Enter while a row is focused. */
 	onSelect?: (item: TItem) => void;
 	/** Invoked on `e` while a row is focused. */
@@ -55,13 +57,15 @@ export interface KeyboardListNavOptions<TItem extends KeyableItem> {
 	onToggleSelect?: (item: TItem) => void;
 }
 
-export interface KeyboardListNav<TItem extends KeyableItem> {
+export interface KeyboardListNav<TItem> {
 	readonly focusedIdx: number;
 	readonly hasFocus: boolean;
 	setItems(items: TItem[]): void;
 	registerRef(id: string, el: HTMLElement | null): void;
 	tabindexFor(idx: number): 0 | -1;
 	focusRow(idx: number): void;
+	/** Make `idx` the current row without moving DOM focus (focus arrived there by click or Tab). */
+	syncFocus(idx: number): void;
 	handleKey(event: KeyboardEvent): void;
 	onFocusIn(): void;
 	onFocusOut(event: FocusEvent): void;
@@ -75,13 +79,15 @@ function isTypingTarget(target: EventTarget | null): boolean {
 	return false;
 }
 
-export function createKeyboardListNav<TItem extends KeyableItem>(
+export function createKeyboardListNav<TItem = KeyableItem>(
 	options: KeyboardListNavOptions<TItem> = {}
 ): KeyboardListNav<TItem> {
 	let focusedIdx = $state(0);
 	let hasFocus = $state(false);
 	let items: TItem[] = $state([]);
 	const refs = new SvelteMap<string, HTMLElement>();
+	const idOf = (item: TItem): string =>
+		options.getId ? options.getId(item) : (item as unknown as KeyableItem).id;
 
 	function setItems(next: TItem[]): void {
 		items = next;
@@ -93,7 +99,8 @@ export function createKeyboardListNav<TItem extends KeyableItem>(
 	function focusRow(idx: number): void {
 		if (idx < 0 || idx >= items.length) return;
 		focusedIdx = idx;
-		const id = items[idx]?.id;
+		const item = items[idx];
+		const id = item === undefined ? undefined : idOf(item);
 		const el = id ? refs.get(id) : null;
 		if (!el) return;
 		el.focus();
@@ -193,6 +200,9 @@ export function createKeyboardListNav<TItem extends KeyableItem>(
 			return idx === focusedIdx ? 0 : -1;
 		},
 		focusRow,
+		syncFocus(idx) {
+			if (idx >= 0 && idx < items.length) focusedIdx = idx;
+		},
 		handleKey,
 		onFocusIn() {
 			hasFocus = true;

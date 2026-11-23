@@ -1,31 +1,40 @@
 /**
- * `createRowWindow` — which rows of a long table are rendered.
+ * `createRowWindow` — which rows of a long table are rendered, on virtua's own layout, store and
+ * driver (`virtua/unstable_core`, pinned to an exact version; typed by `virtua-core.d.ts`; this is the
+ * only file that imports it).
  *
- * Why not virtua's `Virtualizer as="tbody" item="tr"`: virtua positions every item `position: absolute`,
- * and an absolutely positioned `<tr>` becomes its own table, so the columns of one row no longer line
- * up with the header or the next row. A table stays a table here: the visible slice is rendered in
- * normal flow between two spacer rows whose heights stand for the rows that are not rendered.
- *
- * Rows are one height (cells do not wrap), measured from a rendered row; `estimate` stands in until
- * the first measure. Selection and focus are keyed by row id elsewhere, so a row that leaves the
- * window and comes back is the same row.
+ * Why not virtua's `Virtualizer as="tbody" item="tr"`: it positions every item `position: absolute`,
+ * and an absolutely positioned `<tr>` becomes its own table, so its columns stop lining up with the
+ * header. Here a table stays a table: the visible slice is rendered in normal flow between two spacer
+ * rows, and every rendered row is observed on its own (`observe`), so rows of different heights
+ * (an `IdentityCell` with and without a subtitle, a wrapped cell, another density) are measured, not
+ * assumed. Selection and focus are keyed by row id elsewhere, so a row that leaves the window and
+ * comes back is the same row.
  */
+import {
+	ACTION_ITEMS_LENGTH_CHANGE,
+	ACTION_START_OFFSET_CHANGE,
+	UPDATE_VIRTUAL_STATE,
+	createContainerDriver,
+	createListLayout,
+	createVirtualStore
+} from 'virtua/unstable_core';
 
 export interface RowWindow {
 	/** True when the body is windowed. */
 	readonly active: boolean;
-	/** First rendered index. */
+	/** First index virtua wants rendered. */
 	readonly start: number;
-	/** One past the last rendered index. */
+	/** One past the last index virtua wants rendered. */
 	readonly end: number;
-	/** Height in px standing for the rows before `start`. */
-	readonly before: number;
-	/** Height in px standing for the rows from `end` on. */
-	readonly after: number;
-	/** Attachment for the scroll container: tracks its scroll offset and height. */
+	/** Height in px standing for the rows before `index`. */
+	before(index: number): number;
+	/** Height in px standing for the rows from `index` on. */
+	after(index: number): number;
+	/** Attachment for the scroll container: tracks its scroll offset and size. */
 	attach(el: HTMLElement): () => void;
-	/** Tell the window the height of one rendered row. */
-	measure(rowHeight: number): void;
+	/** Measure one rendered row (an attachment on every `<tr>`); returns its cleanup. */
+	observe(el: HTMLElement, index: number): () => void;
 	/** Scroll so row `index` is fully visible below the sticky header. */
 	reveal(index: number): void;
 }
@@ -34,41 +43,49 @@ export interface RowWindowOptions {
 	count: () => number;
 	/** Windowing starts when `count()` exceeds this. */
 	threshold: () => number;
-	/** Row height in px before any row was measured. */
+	/** Row height in px until a row has been measured. */
 	estimate: () => number;
-	/** Extra rows rendered above and below the viewport. */
-	overscan?: number;
 }
 
-/** Viewport height assumed before the scroll container reports one (first render, no layout). */
-const FALLBACK_VIEWPORT = 480;
+/** virtua's store action that reports the scroll offset. */
+const ACTION_SCROLL = 1;
+/** Rows rendered before the scroll container has reported its size (first paint, no layout yet). */
+const FIRST_PAINT_ROWS = 24;
+/** Extra px rendered above and below the viewport. */
+const BUFFER_PX = 300;
 
 export function createRowWindow(options: RowWindowOptions): RowWindow {
-	const overscan = options.overscan ?? 8;
+	const layout = createListLayout(options.count(), options.estimate());
+	const store = createVirtualStore(layout);
+	const driver = createContainerDriver(store, layout, false);
+	let version = $state(store.$getStateVersion());
+	const unsubscribe = store.$subscribe((flag) => {
+		if (flag & UPDATE_VIRTUAL_STATE) version = store.$getStateVersion();
+	});
 	let scrollEl: HTMLElement | null = null;
-	let scrollTop = $state(0);
-	let viewport = $state(0);
-	let head = $state(0);
-	let measured = $state(0);
+	let head = 0;
 
-	const rowHeight = $derived(measured > 0 ? measured : options.estimate());
 	const active = $derived(options.count() > options.threshold());
+
+	$effect.pre(() => {
+		store.$update(ACTION_ITEMS_LENGTH_CHANGE, options.count(), false);
+	});
+	let previous: number | undefined;
+	$effect(() => {
+		if (previous === version) return;
+		previous = version;
+		driver.$effect();
+	});
+	$effect(() => () => unsubscribe());
+
 	const range = $derived.by(() => {
+		void version;
 		const count = options.count();
 		if (!active) return { start: 0, end: count };
-		const top = Math.max(0, scrollTop - head);
-		const height = viewport > 0 ? viewport : FALLBACK_VIEWPORT;
-		const start = Math.max(0, Math.floor(top / rowHeight) - overscan);
-		const end = Math.min(count, Math.ceil((top + height) / rowHeight) + overscan);
-		return { start: Math.min(start, count), end: Math.max(end, Math.min(start, count)) };
+		const [first, last] = store.$getRange(BUFFER_PX);
+		if (last < first) return { start: 0, end: Math.min(count, FIRST_PAINT_ROWS) };
+		return { start: Math.min(first, count), end: Math.min(last + 1, count) };
 	});
-
-	function sync(): void {
-		if (!scrollEl) return;
-		scrollTop = scrollEl.scrollTop;
-		viewport = scrollEl.clientHeight;
-		head = scrollEl.querySelector('thead')?.offsetHeight ?? 0;
-	}
 
 	return {
 		get active() {
@@ -80,39 +97,41 @@ export function createRowWindow(options: RowWindowOptions): RowWindow {
 		get end() {
 			return range.end;
 		},
-		get before() {
-			return range.start * rowHeight;
+		before(index) {
+			void version;
+			return index > 0 ? store.$getItemOffset(index) : 0;
 		},
-		get after() {
-			return (options.count() - range.end) * rowHeight;
+		after(index) {
+			void version;
+			if (index >= options.count()) return 0;
+			return Math.max(0, store.$getTotalSize() - store.$getItemOffset(index));
 		},
 		attach(el) {
 			scrollEl = el;
-			sync();
-			el.addEventListener('scroll', sync, { passive: true });
-			const observer = new ResizeObserver(sync);
-			observer.observe(el);
+			head = el.querySelector('thead')?.offsetHeight ?? 0;
+			store.$update(ACTION_START_OFFSET_CHANGE, head);
+			driver.$observe(el.querySelector('tbody'), el);
 			return () => {
-				el.removeEventListener('scroll', sync);
-				observer.disconnect();
+				driver.$dispose();
 				scrollEl = null;
 			};
 		},
-		measure(height) {
-			if (height > 0 && height !== measured) measured = height;
+		observe(el, index) {
+			return driver.$observeItem(el, index);
 		},
 		reveal(index) {
 			if (!scrollEl) return;
-			const top = head + index * rowHeight;
-			const bottom = top + rowHeight;
+			const top = head + store.$getItemOffset(index);
+			const bottom = top + layout.$getItemSize(index);
 			const current = scrollEl.scrollTop;
 			let next = current;
+			// The sticky header covers the first `head` px of the viewport: a row under it is not visible.
 			if (top < current + head) next = top - head;
 			else if (bottom > current + scrollEl.clientHeight) next = bottom - scrollEl.clientHeight;
 			if (next === current) return;
 			scrollEl.scrollTop = next;
-			// A scroll event follows in a browser; the state is set now so the rows exist this frame.
-			scrollTop = next;
+			// A scroll event follows in a browser; the store is told now so the rows exist this frame.
+			store.$update(ACTION_SCROLL, scrollEl.scrollTop);
 		}
 	};
 }

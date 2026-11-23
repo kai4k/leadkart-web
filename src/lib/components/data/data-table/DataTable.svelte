@@ -5,10 +5,13 @@
 	 * `BulkSelection`, keyed by row id, and the loading / error / empty states are `QueryState`'s.
 	 *
 	 * Pages write `DataTableColumn<T>` and never see TanStack. Sorting is `none`, `client` or `server`;
-	 * paging is `none`, `client`, `offset` (a page number the page owns) or `cursor` (an infinite list).
-	 * Above `virtualizeAbove` rows the body is windowed (`row-window.svelte.ts`).
+	 * paging is `none`, `client`, `offset` (a page number the page owns) or `cursor` (an infinite list;
+	 * its sorting is `none` or `server`, never `client`). Above `virtualizeAbove` rows the body is
+	 * windowed (`row-window.svelte.ts`) and the column widths are locked, so they do not move as rows
+	 * come and go. Printing renders every row.
 	 */
 	import { _ } from 'svelte-i18n';
+	import { flushSync, tick, untrack } from 'svelte';
 	import { createTable, type RowData } from '@tanstack/svelte-table';
 	import * as Table from '#lib/components/ui/table/index.ts';
 	import { Skeleton } from '#lib/components/ui/index.ts';
@@ -22,6 +25,7 @@
 	import { createRowWindow } from './row-window.svelte.ts';
 	import {
 		dataTableFeatures,
+		hideBelowClass,
 		hideableColumns,
 		initialVisibility,
 		toTableColumns
@@ -66,8 +70,11 @@
 	const pageCount = $derived(
 		pagination.mode === 'client' ? Math.max(1, Math.ceil(data.length / pagination.pageSize)) : 0
 	);
-	// The page can end up past the last one when rows are removed.
+	// The page can end up past the last one when rows are removed; the clamped page is the page.
 	const page = $derived(Math.min(pageIndex, Math.max(0, pageCount - 1)));
+	$effect(() => {
+		if (pageIndex !== page) pageIndex = page;
+	});
 
 	const table = createTable({
 		features: dataTableFeatures,
@@ -119,11 +126,16 @@
 
 	function toggleColumn(id: string, visible: boolean): void {
 		toggled = { ...toggled, [id]: visible };
+		// A hidden column leaves no sort indicator behind: the order would change with no sign why.
+		if (!visible && activeSort?.id === id) {
+			if (sorting.mode === 'server') sorting.onChange(null);
+			else clientSort = null;
+		}
 	}
 
 	// ---- selection: the header box acts on every LOADED row, not the page or the window ----
-	function loadedItems(): (T & { id: string })[] {
-		return data.map((row) => ({ id: getRowId(row) }) as T & { id: string });
+	function loadedItems(): { id: string }[] {
+		return data.map((row) => ({ id: getRowId(row) }));
 	}
 	const selectAll = $derived.by(() => {
 		if (!selection) return undefined;
@@ -133,6 +145,7 @@
 			multi: selection.mode === 'multi',
 			checked: all,
 			indeterminate: !all && items.some((i) => selection.state.isSelected(i.id)),
+			label: $_('dataTable.selectAll', { values: { count: items.length } }),
 			onToggle: () => {
 				if (all) selection.state.deselectAllVisible(items);
 				else selection.state.selectAllVisible(items);
@@ -140,9 +153,19 @@
 		};
 	});
 
+	// Rows that are gone (filtered away, deleted, the list shrank) are not selected any more: a bulk
+	// action would send ids the user can no longer see. In `offset` paging `data` is one page of a
+	// longer list, so ids from other pages stay (the page clears them when the filter changes).
+	$effect(() => {
+		if (!selection || pagination.mode === 'offset' || queryLike.isPending) return;
+		const present = new Set(data.map((row) => getRowId(row)));
+		const stale = [...selection.state.selected].filter((id) => !present.has(id));
+		if (stale.length > 0) selection.state.deselectAllVisible(stale.map((id) => ({ id })));
+	});
+
 	// ---- keyboard nav sees every row, in the order shown ----
 	$effect(() => {
-		nav?.setItems(rows as (T & { id: string })[]);
+		nav?.setItems(rows);
 	});
 
 	// ---- query: static data, an explicit query, or the cursor list's own ----
@@ -161,16 +184,98 @@
 		};
 	});
 
+	// ---- windowing, locked column widths, scrolling, printing ----
+	let printing = $state(false);
+	let scroller = $state<HTMLElement | null>(null);
+	let widths = $state<Record<string, number> | null>(null);
+
 	const win = createRowWindow({
 		count: () => rows.length,
-		threshold: () => virtualizeAbove,
+		threshold: () => (printing ? Number.POSITIVE_INFINITY : virtualizeAbove),
 		estimate: () => (density === 'compact' ? 36 : 53)
 	});
+
+	let measuring = 0;
+	/** Let the columns size to what is on screen once, then keep those widths while rows recycle. */
+	async function lockWidths(): Promise<void> {
+		const token = ++measuring;
+		widths = null;
+		await tick();
+		if (token !== measuring || !scroller) return;
+		const next: Record<string, number> = {};
+		for (const th of scroller.querySelectorAll<HTMLElement>('thead th[data-col-id]')) {
+			const width = th.getBoundingClientRect().width;
+			if (width > 0 && th.dataset.colId) next[th.dataset.colId] = width;
+		}
+		widths = next;
+	}
+
+	$effect(() => {
+		// the shape of the table: windowed or not, which columns, selection and actions columns
+		void [
+			win.active,
+			visibleColumns.map((c) => c.id).join(','),
+			selection !== undefined,
+			rowActions !== undefined
+		];
+		untrack(() => {
+			if (win.active) void lockWidths();
+			else {
+				measuring++;
+				widths = null;
+			}
+		});
+	});
+
+	function watchWidth(el: HTMLElement): () => void {
+		let last = el.clientWidth;
+		const observer = new ResizeObserver(() => {
+			if (el.clientWidth === last) return;
+			last = el.clientWidth;
+			if (win.active) void lockWidths();
+		});
+		observer.observe(el);
+		return () => observer.disconnect();
+	}
+
+	// A new order or a new page starts at the top (and the browser's scroll anchoring is off).
+	$effect(() => {
+		void activeSort?.id;
+		void activeSort?.desc;
+		void page;
+		void (pagination.mode === 'offset' ? pagination.page : 0);
+		untrack(() => {
+			if (scroller) scroller.scrollTop = 0;
+		});
+	});
+
+	// The cursor list's sentinel is watched against the scroll container, so a page loads before the end is reached.
+	$effect(() => {
+		if (pagination.mode === 'cursor') pagination.list.rootRef = scroller;
+	});
+
+	const rowOffset = $derived(pagination.mode === 'client' ? page * pageSize : 0);
+	// ARIA: -1 while a cursor list has more rows to load.
+	const ariaRowCount = $derived(
+		pagination.mode === 'client'
+			? data.length + 1
+			: pagination.mode === 'cursor' && pagination.list.hasNextPage
+				? -1
+				: rows.length + 1
+	);
 
 	const showingFrom = $derived(page * pageSize + 1);
 	const showingTo = $derived(Math.min(data.length, showingFrom + rows.length - 1));
 	const SKELETON_ROWS = 5;
 </script>
+
+<svelte:window
+	onbeforeprint={() => {
+		printing = true;
+		flushSync();
+	}}
+	onafterprint={() => (printing = false)}
+/>
 
 {#snippet tableSkeleton()}
 	<div class="border-border bg-card overflow-hidden rounded-xl border">
@@ -179,7 +284,9 @@
 				<Table.Row class="hover:bg-transparent">
 					{#if selection}<Table.Head class="bg-muted w-10"></Table.Head>{/if}
 					{#each visibleColumns as col (col.id)}
-						<Table.Head class="bg-muted text-muted-foreground px-3">{col.header}</Table.Head>
+						<Table.Head class={cn('bg-muted text-muted-foreground px-3', hideBelowClass(col))}>
+							{col.header}
+						</Table.Head>
 					{/each}
 					{#if rowActions}<Table.Head class="bg-muted w-10"></Table.Head>{/if}
 				</Table.Row>
@@ -189,7 +296,9 @@
 					<Table.Row class="hover:bg-transparent">
 						{#if selection}<Table.Cell class="px-3"><Skeleton class="size-4" /></Table.Cell>{/if}
 						{#each visibleColumns as col (col.id)}
-							<Table.Cell class={cn('px-3', density === 'compact' ? 'py-2' : 'py-3.5')}>
+							<Table.Cell
+								class={cn('px-3', density === 'compact' ? 'py-2' : 'py-3.5', hideBelowClass(col))}
+							>
 								<Skeleton class="h-4 w-full max-w-40" />
 							</Table.Cell>
 						{/each}
@@ -225,19 +334,22 @@
 			role="region"
 			aria-label={caption ?? noun}
 			tabindex="0"
+			bind:this={scroller}
 			{@attach win.attach}
-			class="border-border bg-card focus-visible:ring-ring max-h-(--data-table-max-height) overflow-auto rounded-xl border outline-none focus-visible:ring-2 [&_[data-slot=table-container]]:overflow-visible"
+			{@attach watchWidth}
+			class="border-border bg-card focus-visible:ring-ring max-h-(--data-table-max-height) overflow-auto rounded-xl border [overflow-anchor:none] outline-none focus-visible:ring-2 print:max-h-none print:overflow-visible [&_[data-slot=table-container]]:overflow-visible"
 		>
-			<Table.Root aria-rowcount={rows.length + 1}>
+			<Table.Root aria-rowcount={ariaRowCount} class={cn(widths && 'table-fixed')}>
 				{#if caption}<Table.Caption class="sr-only">{caption}</Table.Caption>{/if}
 				<DataTableHeader
 					columns={visibleColumns}
-					sortable={sorting.mode !== 'none'}
+					sortMode={sorting.mode}
 					sort={activeSort}
 					{onSort}
 					{selectAll}
 					hasActions={rowActions !== undefined}
 					sticky={stickyHeader}
+					{widths}
 				/>
 				<DataTableBody
 					{rows}
@@ -250,6 +362,7 @@
 					{density}
 					{win}
 					{nav}
+					{rowOffset}
 				/>
 				{#if footer}
 					<Table.Footer>{@render footer()}</Table.Footer>

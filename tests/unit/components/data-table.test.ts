@@ -139,7 +139,7 @@ describe('DataTable core', () => {
 			sorting: { mode: 'client' },
 			selection: { mode: 'multi', state, rowLabel: (r: Person) => `Select ${r.name}` }
 		});
-		const all = target.querySelector<HTMLElement>('[aria-label="Select all"]')!;
+		const all = target.querySelector<HTMLElement>('[aria-label^="Select all"]')!;
 		all.click();
 		flushSync();
 		expect([...state.selected].sort()).toEqual(['p-1', 'p-2', 'p-3']);
@@ -163,7 +163,7 @@ describe('DataTable core', () => {
 	it('single selection clears the previous row before selecting', () => {
 		const state = createBulkSelection<Person>();
 		render({ selection: { mode: 'single', state, rowLabel: (r: Person) => `Select ${r.name}` } });
-		expect(target.querySelector('[aria-label="Select all"]')).toBeNull();
+		expect(target.querySelector('[aria-label^="Select all"]')).toBeNull();
 		target.querySelector<HTMLElement>('[aria-label="Select Carol"]')!.click();
 		flushSync();
 		target.querySelector<HTMLElement>('[aria-label="Select Bob"]')!.click();
@@ -297,7 +297,7 @@ describe('DataTable core', () => {
 			pagination: { mode: 'client', pageSize: 10 },
 			selection: { mode: 'multi', state, rowLabel: (r: Person) => `Select ${r.name}` }
 		});
-		target.querySelector<HTMLElement>('[aria-label="Select all"]')!.click();
+		target.querySelector<HTMLElement>('[aria-label^="Select all"]')!.click();
 		flushSync();
 		expect(state.count).toBe(25);
 	});

@@ -8,7 +8,7 @@
 	import PageHeader from '#lib/layouts/PageHeader.svelte';
 	import { Button } from '#lib/components/ui/index.ts';
 	import { DataTable } from '#lib/components/data/data-table/index.ts';
-	import type { DataTableColumn } from '#lib/components/data/index.ts';
+	import { IdentityCell, type DataTableColumn } from '#lib/components/data/index.ts';
 	import { createBulkSelection, createKeyboardListNav } from '#lib/hooks/index.ts';
 	import { getPreferences, PREFERENCE_VALUES } from '$features/preferences';
 
@@ -21,6 +21,9 @@
 		status: string;
 		score: number;
 		joined: string;
+		/** Every fifth row has a subtitle; every seventh a long note that wraps: rows of three heights. */
+		subtitle?: string;
+		note: string;
 	};
 
 	const COUNT = 1000;
@@ -56,25 +59,40 @@
 			region: pick(rand, REGIONS),
 			status: pick(rand, STATUSES),
 			score: Math.floor(rand() * 1000),
+			subtitle: (i + 1) % 5 === 0 ? `${first}.${last}@bench.test`.toLowerCase() : undefined,
+			note:
+				(i + 1) % 7 === 0
+					? 'A long note that does not fit on one line and wraps onto a second and a third line in a narrow column.'
+					: 'ok',
 			joined: `2026-${String(1 + Math.floor(rand() * 12)).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 		};
 	});
 
 	const columns: DataTableColumn<Row>[] = [
-		{ id: 'name', header: 'Name', accessor: (r) => r.name, sortable: true, primary: true },
+		{ id: 'name', header: 'Name', accessor: (r) => r.name, sortable: true, cell: nameCell },
 		{ id: 'email', header: 'Email', accessor: (r) => r.email, sortable: true },
 		{ id: 'role', header: 'Role', accessor: (r) => r.role, sortable: true },
 		{ id: 'region', header: 'Region', accessor: (r) => r.region, sortable: true },
 		{ id: 'status', header: 'Status', accessor: (r) => r.status, sortable: true },
 		{ id: 'score', header: 'Score', accessor: (r) => r.score, sortable: true, align: 'end' },
 		{ id: 'joined', header: 'Joined', accessor: (r) => r.joined, sortable: true },
+		{ id: 'note', header: 'Note', accessor: (r) => r.note, cell: noteCell, class: 'w-56' },
 		{ id: 'id', header: 'Id', accessor: (r) => r.id }
 	];
 
+	let density = $state<'compact' | 'default'>('compact');
 	const selection = createBulkSelection<Row>();
 	const nav = createKeyboardListNav<Row>({ onToggleSelect: (row) => selection.toggle(row.id) });
 	const prefs = getPreferences();
 </script>
+
+{#snippet nameCell(r: Row)}
+	<IdentityCell name={r.name} subtitle={r.subtitle} size="sm" />
+{/snippet}
+
+{#snippet noteCell(r: Row)}
+	<span class="whitespace-normal">{r.note}</span>
+{/snippet}
 
 <svelte:head>
 	<title>DataTable bench</title>
@@ -94,6 +112,18 @@
 			</Button>
 		{/each}
 	</div>
+	<div class="cluster" role="group" aria-label="Density">
+		{#each ['compact', 'default'] as const as value (value)}
+			<Button
+				variant={density === value ? 'default' : 'outline'}
+				size="sm"
+				aria-pressed={density === value}
+				onclick={() => (density = value)}
+			>
+				{value}
+			</Button>
+		{/each}
+	</div>
 	<p class="text-muted-foreground text-sm" aria-live="polite">{selection.count} selected</p>
 	<DataTable
 		{columns}
@@ -103,8 +133,7 @@
 		caption="Bench rows"
 		sorting={{ mode: 'client' }}
 		selection={{ mode: 'multi', state: selection, rowLabel: (r) => `Select ${r.name}` }}
-		rowHref={(r) => `/data-table-bench#${r.id}`}
 		{nav}
-		density="compact"
+		{density}
 	/>
 </main>

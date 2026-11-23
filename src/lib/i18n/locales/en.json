@@ -204,7 +204,7 @@
 		"actions": "Actions",
 		"rowActions": "Actions for {row}",
 		"select": "Select",
-		"selectAll": "Select all",
+		"selectAll": "Select all {count} loaded rows",
 		"columns": "Columns",
 		"showing": "Showing {from}–{to} of {total}",
 		"sortAscending": "Sort ascending",

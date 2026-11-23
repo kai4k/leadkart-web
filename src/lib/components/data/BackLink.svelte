@@ -9,7 +9,7 @@
 <!-- eslint-disable svelte/no-navigation-without-resolve -- the caller passes a resolved path -->
 <a
 	{href}
-	class="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1 rounded text-sm outline-none focus-visible:ring-2"
+	class="text-primary-text hover:underline focus-visible:ring-ring inline-flex items-center gap-1 rounded text-sm outline-none focus-visible:ring-2"
 >
 	<Icon icon={ArrowLeft} size="sm" class="rtl:rotate-180" />{label}
 </a>

@@ -53,6 +53,8 @@ export type InfiniteListQuery<T> = CreateInfiniteQueryResult<
 export interface InfiniteList<T> {
 	readonly query: InfiniteListQuery<T>;
 	sentinelRef: HTMLElement | null;
+	/** The element the sentinel scrolls in (a table's scroll container); the viewport when null, so `rootMargin` prefetches. */
+	rootRef: HTMLElement | null;
 	readonly items: T[];
 	readonly state: InfiniteListState;
 	readonly error: string | null;
@@ -79,9 +81,11 @@ export function createInfiniteList<T>(options: InfiniteListOptions<T>): Infinite
 	})) as InfiniteListQuery<T>;
 
 	let sentinelRef = $state<HTMLElement | null>(null);
+	let rootRef = $state<HTMLElement | null>(null);
 
 	$effect(() => {
 		const el = sentinelRef;
+		const root = rootRef;
 		if (!el) return;
 		// Tracked on purpose: when a page lands a fresh observer reports whether the sentinel is
 		// still in view (an observer only fires on a change, so without this a tall viewport stalls).
@@ -97,7 +101,7 @@ export function createInfiniteList<T>(options: InfiniteListOptions<T>): Infinite
 					}
 				}
 			},
-			{ rootMargin }
+			{ root, rootMargin }
 		);
 		observer.observe(el);
 		return () => observer.disconnect();
@@ -110,6 +114,12 @@ export function createInfiniteList<T>(options: InfiniteListOptions<T>): Infinite
 		},
 		set sentinelRef(el: HTMLElement | null) {
 			sentinelRef = el;
+		},
+		get rootRef() {
+			return rootRef;
+		},
+		set rootRef(el: HTMLElement | null) {
+			rootRef = el;
 		},
 		get items() {
 			const pages = query.data?.pages ?? [];
