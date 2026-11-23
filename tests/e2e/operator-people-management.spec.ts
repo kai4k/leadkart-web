@@ -224,3 +224,92 @@ test.describe('People tier guard', () => {
 		await page.waitForURL(/\/dashboard$/);
 	});
 });
+
+test.describe('People search after sign-out', () => {
+	test.beforeEach(async () => {
+		await resetMock();
+	});
+
+	// What one person searched for is not history for the next person on the same tab (SvelteKit
+	// keeps snapshots in sessionStorage, and that outlives a sign-out): Back shows an empty box and
+	// asks Go nothing, and the text sits in no storage.
+	test('the next person on the tab does not get the last search back, and it is in no storage', async ({
+		page
+	}) => {
+		const SECRET = 'alice.secret';
+		await signInAsOperator(page);
+		await registerMocks([
+			{
+				method: 'GET',
+				path: '/api/v1/search',
+				status: 200,
+				body: {
+					persons: [
+						{
+							id: PERSON_AAA.id,
+							email: PERSON_AAA.email,
+							first_name: PERSON_AAA.first_name,
+							last_name: PERSON_AAA.last_name,
+							created_at: PERSON_AAA.created_at
+						}
+					],
+					tenants: [],
+					has_partial: false
+				}
+			},
+			{
+				method: 'GET',
+				path: `/api/v1/platform/persons/${PERSON_AAA.id}`,
+				status: 200,
+				body: PERSON_AAA
+			},
+			{
+				method: 'GET',
+				path: `/api/v1/platform/persons/${PERSON_AAA.id}/memberships`,
+				status: 200,
+				body: { memberships: [] }
+			},
+			{ method: 'GET', path: '/api/v1/platform/tenants', status: 200, body: { tenants: [] } },
+			{ method: 'POST', path: '/api/v1/auth/logout', status: 204 }
+		]);
+		await page.goto('/operator/persons');
+		await page.waitForSelector('html[data-hydrated="true"]');
+		await page.getByRole('searchbox', { name: /search people/i }).fill(SECRET);
+		await page.getByRole('link', { name: /Alice Anderson/ }).click();
+		await expect(page.getByText('Lifecycle')).toBeVisible();
+
+		const inStorage = () =>
+			page.evaluate((text) => {
+				const hits: string[] = [];
+				for (const store of [sessionStorage, localStorage]) {
+					for (let i = 0; i < store.length; i++) {
+						const k = store.key(i)!;
+						if ((store.getItem(k) ?? '').includes(text)) hits.push(k);
+					}
+				}
+				return hits;
+			}, SECRET);
+		// leaving the page writes its snapshot: the text is not in it
+		await page.getByRole('button', { name: 'User menu' }).click();
+		await page.getByRole('menuitem', { name: /sign out/i }).click();
+		await page.waitForURL(/\/signin/);
+		expect(await inStorage()).toEqual([]);
+
+		await signInAsOperator(page);
+		const before = (await listMockCalls()).length;
+		for (let i = 0; i < 6 && !/\/operator\/persons$/.test(new URL(page.url()).pathname); i++) {
+			await page.goBack();
+			await page.waitForLoadState('load');
+		}
+		await page.waitForURL(/\/operator\/persons$/);
+		// Back passed through the person page as a fresh document: reload so the list is a real load
+		// of its own history entry (a reload is also where SvelteKit puts a stored snapshot back)
+		await page.reload();
+		await page.waitForSelector('html[data-hydrated="true"]');
+		await expect(page.getByRole('searchbox', { name: /search people/i })).toHaveValue('');
+		expect(await inStorage()).toEqual([]);
+		const after = await listMockCalls();
+		expect(after.slice(before).filter((c) => c.path === '/api/v1/search')).toEqual([]);
+		expect(after.slice(before).some((c) => c.query.includes(SECRET))).toBe(false);
+	});
+});

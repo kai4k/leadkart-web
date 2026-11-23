@@ -2,6 +2,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import { createListSearch } from '#lib/hooks/use-list-search.svelte.ts';
 
+// a signed-in person: what is remembered for Back belongs to them
+vi.mock('$app/state', () => ({
+	page: {
+		url: new URL('http://localhost/'),
+		route: { id: '/operator/persons' },
+		data: { capabilities: { person_id: 'p1' } }
+	}
+}));
+
 type Hit = {
 	id: string;
 	email: string;
@@ -75,13 +84,16 @@ const button = (name: string) =>
 
 describe('PeopleList: Back', () => {
 	it('a restored snapshot puts the text back in the box', () => {
+		const earlier = createListSearch();
+		earlier.value = 'pat';
+		const saved = earlier.snapshot.capture();
 		const search = createListSearch();
 		h.state.result = { persons: [], has_partial: false };
 		h.state.refetch = vi.fn();
 		target = document.body.appendChild(document.createElement('div'));
 		component = mount(PeopleList, { target, props: { search } });
 		flushSync();
-		search.snapshot.restore('pat');
+		search.snapshot.restore(saved);
 		flushSync();
 		expect(target.querySelector<HTMLInputElement>('input[type="search"]')!.value).toBe('pat');
 	});
