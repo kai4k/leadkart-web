@@ -81,6 +81,23 @@ test.describe('Operator tenants list', () => {
 		await expect(page.getByRole('button', { name: /register tenant/i })).toBeVisible();
 	});
 
+	test('the search text stays out of the URL and Back brings it back', async ({ page }) => {
+		await setupOperator(page);
+		await page.goto('/operator/tenants');
+		const box = page.getByRole('searchbox', { name: 'Filter tenants' });
+		await expect(page.getByText('Beta Meds').first()).toBeVisible();
+		await box.fill('acme');
+		await expect(page.getByText('Beta Meds')).toHaveCount(0);
+		expect(page.url()).not.toContain('q=');
+		expect(page.url()).not.toContain('acme');
+
+		await page.getByText('Acme Pharma').first().click();
+		await page.waitForURL(/\/operator\/scope\/profile$/);
+		await page.goBack();
+		await page.waitForURL(/\/operator\/tenants/);
+		await expect(page.getByRole('searchbox', { name: 'Filter tenants' })).toHaveValue('acme');
+	});
+
 	test('list page has no critical/serious a11y violations', async ({ page }) => {
 		await setupOperator(page);
 		await page.goto('/operator/tenants');

@@ -276,7 +276,9 @@
 
 <!-- a standing live region (one inserted with its text is often not read): what is being opened -->
 <p class="sr-only" role="status">
-	{openingTenant ? `Opening ${openingTenant.display_name}…` : ''}
+	{openingTenant
+		? $_('pages.tenants.opening', { values: { name: openingTenant.display_name } })
+		: ''}
 </p>
 
 <ResourceListPage
