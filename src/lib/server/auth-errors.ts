@@ -8,22 +8,42 @@ import type { Cookies } from '@sveltejs/kit';
 import type { z } from 'zod';
 import { changePasswordSchema } from '#lib/features/auth/schemas.ts';
 import { endSession } from './auth-refresh.ts';
-import { goErrorStatus, goFetch, readGoError } from './go.ts';
+import { goFetch, readGoFailure } from './go.ts';
 import { callGoForAction, goFailureKey } from './form-action.ts';
 
 export const RESET_TOKEN_INVALID = 'reset_token_invalid';
 
+/** 422: the password does not satisfy the tenant's policy; `errors.new_password` lists the unmet rule codes. */
+const PASSWORD_POLICY_VIOLATION = 'password_policy_violation';
+
+/**
+ * Which screen asks. Go answers `password_same_as_current` on change-password only: a reset to the
+ * current password is accepted, so the reset screen has no line for it.
+ */
+export type PasswordFlow = 'reset' | 'change';
+
+/**
+ * The field a Go password refusal is about, and its sentence. `null` = no field is to blame (a busy
+ * service, a rate limit, a dead link, a bug): the caller shows a banner.
+ *
+ * A policy violation maps here to the one "does not meet the rules" line: that is what a caller
+ * shows when it reads the code alone. `changePasswordViaGo` goes further and names the unmet rule
+ * Go lists under the field.
+ */
 export function passwordErrorKey(
 	status: number,
-	code: string | undefined
+	code: string | undefined,
+	flow: PasswordFlow = 'reset'
 ): { field: 'new' | 'current'; key: string } | null {
 	if (status === 401 && code === 'incorrect_current_password')
 		return { field: 'current', key: 'account.security.changePassword.errors.incorrectCurrent' };
 	if (code === 'password_breached')
 		return { field: 'new', key: 'auth.resetPassword.errors.breached' };
-	if (code === 'password_same_as_current')
+	if (code === 'password_same_as_current' && flow === 'change')
 		return { field: 'new', key: 'auth.resetPassword.errors.same' };
 	if (code === 'invalid_password') return { field: 'new', key: 'auth.resetPassword.errors.weak' };
+	if (code === PASSWORD_POLICY_VIOLATION)
+		return { field: 'new', key: 'auth.resetPassword.newPasswordHint' };
 	return null;
 }
 
@@ -62,10 +82,14 @@ export function fieldValidationKeys(field: string, error: z.ZodError): Record<st
 	return { [field]: issueKey(field, error.issues[0]?.code ?? '') };
 }
 
-/** What `failForm` takes beyond the status: the field keys and the banner key. */
+/** What `failForm` takes beyond the status: the field keys, a field's API code, and the banner key. */
 export type PasswordFormFailure = {
 	status: number;
-	parts: { fieldKeys?: Record<string, string>; formErrorKey?: string };
+	parts: {
+		fieldKeys?: Record<string, string>;
+		fieldMessages?: Record<string, string>;
+		formErrorKey?: string;
+	};
 };
 
 /**
@@ -106,7 +130,7 @@ export async function changePasswordViaGo(
 					...(failed.has('current_password') && {
 						current: tooLong('current_password')
 							? 'auth.errors.passwordTooLong'
-							: 'account.security.changePassword.currentPassword'
+							: 'auth.errors.currentPasswordRequired'
 					}),
 					...(failed.has('new_password') && {
 						new: tooLong('new_password')
@@ -136,13 +160,17 @@ export async function changePasswordViaGo(
 		return { ok: true };
 	}
 
-	const mapped = passwordErrorKey(resp.status, (await readGoError(resp)).error);
-	if (mapped) {
-		return { ok: false, status: resp.status, parts: { fieldKeys: { [mapped.field]: mapped.key } } };
-	}
-	return {
-		ok: false,
-		status: goErrorStatus(resp),
-		parts: { formErrorKey: goFailureKey(resp.status) }
-	};
+	const failure = await readGoFailure(resp);
+	const { status, code } = failure;
+	// 422 password_policy_violation: Go lists the unmet rule codes under `new_password`. The first is
+	// the field's message (a rule code is a catalogue entry: `fieldMessageText`); the hint under the
+	// field states the whole policy. Only the code travels, never Go's sentence.
+	const rule = code === PASSWORD_POLICY_VIOLATION ? failure.fields.new_password : undefined;
+	if (rule !== undefined) return { ok: false, status, parts: { fieldMessages: { new: rule } } };
+
+	const mapped = passwordErrorKey(status, code, 'change');
+	if (mapped) return { ok: false, status, parts: { fieldKeys: { [mapped.field]: mapped.key } } };
+	// No field to blame: the line of the code when the table has one (503 service_busy: "The service
+	// is busy.", 403 impersonation_not_allowed), else of the status class (429, 5xx).
+	return { ok: false, status, parts: { formErrorKey: goFailureKey(status, code) } };
 }

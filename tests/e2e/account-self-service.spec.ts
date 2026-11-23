@@ -103,6 +103,86 @@ test.describe('Account security — change password', () => {
 		});
 	});
 
+	// Go: internal/identity/ports/http.go:675 -> writePasswordPolicyError (http.go:408): 422
+	// password_policy_violation with `errors.new_password: [rule codes]`, checked BEFORE the current password
+	// (docs/BFF_API_CHANGES.md rows 24, 25). The rule codes are settings.go:185-190.
+	test('422 password_policy_violation: the unmet rule under the new password, the whole policy in the hint', async ({
+		page,
+		context
+	}) => {
+		await signInForAccount(page);
+		await registerMock({
+			method: 'POST',
+			path: '/api/v1/auth/change-password',
+			status: 422,
+			body: {
+				type: 'https://leadkart.api/errors/password_policy_violation',
+				title: 'Unprocessable Entity',
+				status: 422,
+				detail: 'password does not satisfy the tenant password policy',
+				error: 'password_policy_violation',
+				message: 'password does not satisfy the tenant password policy',
+				errors: { new_password: ['requires_uppercase', 'requires_symbol'] }
+			}
+		});
+		await page.goto('/settings/account/security');
+		await page.getByLabel(/current password/i).fill('OldP@ssw0rd!');
+		const next = page.getByLabel(/new password/i).first();
+		await next.fill('alllowercase12345');
+		await page.getByLabel(/confirm/i).fill('alllowercase12345');
+		await page.getByRole('button', { name: /change password|update password/i }).click();
+
+		// the first rule Go names is the field's message (one message per field) ...
+		await expect(page.getByText('Add an uppercase letter.')).toBeVisible();
+		await expect(next).toHaveAttribute('aria-invalid', 'true');
+		// ... and the hint under the field states every rule of the policy, the second unmet one included
+		const hint = page.getByText(/At least \d+ characters/);
+		await expect(hint).toBeVisible();
+		await expect(hint).toContainText(/uppercase/);
+		await expect(hint).toContainText(/symbol/);
+		// neither the code nor Go's sentence reaches the page
+		await expect(page.getByText(/password_policy_violation|requires_uppercase/)).toHaveCount(0);
+		await expect(page.getByText(/tenant password policy/)).toHaveCount(0);
+		// nothing was changed: the person is still signed in, on the same page
+		await expect(page).toHaveURL(/\/settings\/account\/security$/);
+		expect((await context.cookies()).map((c) => c.name)).toContain('lk_refresh');
+	});
+
+	// Go: http.go:438 writePasswordWorkRefusal: 503 service_busy + Retry-After: 2 (rows 13, 24).
+	test('503 service_busy: a calm line, the form and the session are kept', async ({
+		page,
+		context
+	}) => {
+		await signInForAccount(page);
+		await registerMock({
+			method: 'POST',
+			path: '/api/v1/auth/change-password',
+			status: 503,
+			headers: { 'retry-after': '2' },
+			body: {
+				type: 'https://leadkart.api/errors/service_busy',
+				title: 'Service Unavailable',
+				status: 503,
+				error: 'service_busy'
+			}
+		});
+		await page.goto('/settings/account/security');
+		await page.getByLabel(/current password/i).fill('OldP@ssw0rd!');
+		await page
+			.getByLabel(/new password/i)
+			.first()
+			.fill('N3wP@ssw0rd!');
+		await page.getByLabel(/confirm/i).fill('N3wP@ssw0rd!');
+		await page.getByRole('button', { name: /change password|update password/i }).click();
+
+		await expect(page.getByRole('alert')).toHaveText('The service is busy. Try again in a moment.');
+		await expect(page).toHaveURL(/\/settings\/account\/security$/);
+		expect((await context.cookies()).map((c) => c.name)).toContain('lk_refresh');
+		expect(
+			(await listMockCalls()).filter((c) => c.path === '/api/v1/auth/change-password')
+		).toHaveLength(1);
+	});
+
 	test('wrong current password is not treated as expiry: 1 change call, 0 refresh calls', async ({
 		page
 	}) => {

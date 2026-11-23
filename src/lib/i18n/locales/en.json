@@ -52,7 +52,7 @@
 				"breached": "This password appears in known breach lists — choose a different one.",
 				"same": "New password must differ from the current one.",
 				"weak": "Password doesn't meet the strength requirements.",
-				"invalidToken": "This reset link is invalid or has expired. Request a new one.",
+				"invalidToken": "This link can no longer be used. Request a new one.",
 				"missingToken": "This page expects a reset token in the URL. Use the link from your email."
 			}
 		},
@@ -100,7 +100,7 @@
 			"emailTooLong": "Email is too long.",
 			"passwordRequired": "Password is required.",
 			"passwordTooLong": "Password is too long.",
-			"currentPasswordRequired": "Current password is required."
+			"currentPasswordRequired": "Enter your current password."
 		},
 		"mustChange": {
 			"title": "Set a new password",

@@ -137,12 +137,22 @@ test.describe('Reset password — confirm', () => {
 		});
 	});
 
-	test('400 reset_token_invalid: top banner', async ({ page }) => {
+	// Go: internal/identity/ports/http.go:896 answers 400 reset_token_invalid for an expired, unknown, used
+	// or suspended-person's token, and for a token spent by five refused passwords (the token is checked
+	// before the password; docs/BFF_API_CHANGES.md row 29: "ask for a new link").
+	test('400 reset_token_invalid (a spent link): one sentence and the way to a new link, no form left', async ({
+		page
+	}) => {
 		await registerMock({
 			method: 'POST',
 			path: '/api/v1/auth/reset-password',
 			status: 400,
-			body: { error: 'reset_token_invalid', message: '' }
+			body: {
+				type: 'https://leadkart.api/errors/reset_token_invalid',
+				title: 'Bad Request',
+				status: 400,
+				error: 'reset_token_invalid'
+			}
 		});
 		await page.goto('/reset-password?token=expired');
 		await page
@@ -152,8 +162,73 @@ test.describe('Reset password — confirm', () => {
 		await page.getByLabel(/confirm/i).fill('Sh1ny.NewOne.Strong!');
 		await page.getByRole('button', { name: /reset password/i }).click();
 
-		await expect(page.locator('[role="alert"]').first()).toBeVisible({ timeout: 5000 });
+		await expect(page.getByRole('alert')).toHaveText(
+			'This link can no longer be used. Request a new one.'
+		);
 		await expect(page).toHaveURL(/\/reset-password/);
+		// the link cannot be retried: the fields are gone and the one action left has the focus
+		await expect(page.getByLabel(/new password/i)).toHaveCount(0);
+		const requestNew = page.getByRole('link', { name: 'Request a new reset link' });
+		await expect(requestNew).toBeFocused();
+		await requestNew.click();
+		await expect(page).toHaveURL(/\/forgot-password$/);
+	});
+
+	// Row 29: a live token refused for its password is counted; after the 5th refusal the next call is
+	// reset_token_invalid. The page does not count: it follows what Go answers.
+	test('a link spent by refused passwords: the refusal keeps the form, the next answer ends it', async ({
+		page
+	}) => {
+		await registerMock({
+			method: 'POST',
+			path: '/api/v1/auth/reset-password',
+			status: 400,
+			body: {
+				type: 'https://leadkart.api/errors/reset_token_invalid',
+				title: 'Bad Request',
+				status: 400,
+				error: 'reset_token_invalid'
+			}
+		});
+		// http.go:891 -> writePasswordPolicyError (http.go:408), once
+		await registerMock({
+			method: 'POST',
+			path: '/api/v1/auth/reset-password',
+			status: 422,
+			times: 1,
+			body: {
+				type: 'https://leadkart.api/errors/password_policy_violation',
+				title: 'Unprocessable Entity',
+				status: 422,
+				detail: 'password does not satisfy the tenant password policy',
+				error: 'password_policy_violation',
+				message: 'password does not satisfy the tenant password policy',
+				errors: { new_password: ['requires_symbol'] }
+			}
+		});
+		await page.goto('/reset-password?token=t');
+		const fill = async () => {
+			await page
+				.getByLabel(/new password/i)
+				.first()
+				.fill('NoSymbolHere12345');
+			await page.getByLabel(/confirm/i).fill('NoSymbolHere12345');
+			await page.getByRole('button', { name: /reset password/i }).click();
+		};
+
+		await fill();
+		await expect(
+			page.getByText('The new password does not meet the password rules.')
+		).toBeVisible();
+		// Go's own sentence never reaches the page
+		await expect(page.getByText(/tenant password policy/)).toHaveCount(0);
+		await expect(page.getByLabel(/new password/i).first()).toBeVisible();
+
+		await fill();
+		await expect(page.getByRole('alert')).toHaveText(
+			'This link can no longer be used. Request a new one.'
+		);
+		await expect(page.getByRole('link', { name: 'Request a new reset link' })).toBeVisible();
 	});
 
 	test('422 password_breached: inline new-password field error', async ({ page }) => {
@@ -174,21 +249,7 @@ test.describe('Reset password — confirm', () => {
 		await expect(page.getByText(/breach lists/i)).toBeVisible({ timeout: 5000 });
 	});
 
-	test('422 password_same_as_current: inline new-password field error', async ({ page }) => {
-		await registerMock({
-			method: 'POST',
-			path: '/api/v1/auth/reset-password',
-			status: 422,
-			body: { error: 'password_same_as_current', message: 'New password must differ' }
-		});
-		await page.goto('/reset-password?token=t');
-		await page
-			.getByLabel(/new password/i)
-			.first()
-			.fill('Old.Password.Long!');
-		await page.getByLabel(/confirm/i).fill('Old.Password.Long!');
-		await page.getByRole('button', { name: /reset password/i }).click();
-
-		await expect(page.getByText(/must differ/i)).toBeVisible({ timeout: 5000 });
-	});
+	// No `password_same_as_current` case here: Go accepts a reset to the current password (204, the happy
+	// path above); that code is change-password only (docs/BFF_API_CHANGES.md row 29), and the reset screen
+	// has no line for it (tests/unit/server/password-actions.test.ts).
 });
