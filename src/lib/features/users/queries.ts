@@ -29,7 +29,9 @@ const usersKeys = {
 	list: (status?: UserStatusFilter) =>
 		status ? ([...usersKeys.all, 'list', status] as const) : ([...usersKeys.all, 'list'] as const),
 	detail: (id: string) => [...usersKeys.all, 'detail', id] as const,
-	membershipSearch: (q: string) => [...usersKeys.all, 'membership-search', q] as const
+	membershipSearch: (q: string) => [...usersKeys.all, 'membership-search', q] as const,
+	/** The prefix of every picker search: a status change makes them stale (an inactive member is not offered). */
+	membershipSearches: () => [...usersKeys.all, 'membership-search'] as const
 };
 
 /**
@@ -104,7 +106,11 @@ export function createUserMutation() {
 export function deactivateUserMutation() {
 	return createResourceMutation({
 		fn: ({ id, reason }: { id: string; reason: string }) => api.deactivateUser(id, { reason }),
-		invalidate: ({ id }) => [usersKeys.detail(id), usersKeys.list()],
+		invalidate: ({ id }) => [
+			usersKeys.detail(id),
+			usersKeys.list(),
+			usersKeys.membershipSearches()
+		],
 		successToast: 'Member deactivated',
 		inlineErrors: true
 	});
@@ -113,7 +119,7 @@ export function deactivateUserMutation() {
 export function reactivateUserMutation() {
 	return createResourceMutation({
 		fn: (id: string) => api.reactivateUser(id),
-		invalidate: (id) => [usersKeys.detail(id), usersKeys.list()],
+		invalidate: (id) => [usersKeys.detail(id), usersKeys.list(), usersKeys.membershipSearches()],
 		successToast: 'Member reactivated'
 	});
 }
@@ -126,7 +132,11 @@ export function bulkUserStatusMutation() {
 	return createResourceMutation({
 		fn: ({ action, ids }: { action: BulkStatusAction; ids: readonly string[] }) =>
 			bulkSetStatus(action, ids),
-		invalidate: ({ ids }) => [...ids.map(usersKeys.detail), usersKeys.list()],
+		invalidate: ({ ids }) => [
+			...ids.map(usersKeys.detail),
+			usersKeys.list(),
+			usersKeys.membershipSearches()
+		],
 		successToast: ({ action }, result) => bulkSummary(action, result),
 		// A partial failure is not a clean success.
 		successToastVariant: (_vars, result) => (result.failed > 0 ? 'warning' : 'success')

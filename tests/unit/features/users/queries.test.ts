@@ -70,7 +70,8 @@ describe('mutations invalidate the keys they change (real QueryClient)', () => {
 		await m.mutate({ id: 'm1', reason: 'x' });
 		expect(invalidated).toEqual([
 			['users', 'detail', 'm1'],
-			['users', 'list']
+			['users', 'list'],
+			['users', 'membership-search']
 		]);
 		gw.deactivateUser.mockRejectedValue(new Error('no'));
 		await m.mutate({ id: 'm1', reason: 'x' }).catch(() => {});
@@ -87,7 +88,8 @@ describe('mutations invalidate the keys they change (real QueryClient)', () => {
 		await m.mutate('m1');
 		expect(invalidated).toEqual([
 			['users', 'detail', 'm1'],
-			['users', 'list']
+			['users', 'list'],
+			['users', 'membership-search']
 		]);
 	});
 });
@@ -161,7 +163,8 @@ describe('bulk member status (I-2)', () => {
 			['users', 'detail', 'a'],
 			['users', 'detail', 'b'],
 			['users', 'detail', 'c'],
-			['users', 'list']
+			['users', 'list'],
+			['users', 'membership-search']
 		]);
 	});
 	const res = (status: number) => new Response(null, { status });
