@@ -355,6 +355,135 @@ describe('endSession: the one way a session that is over is ended in the browser
 	});
 });
 
+describe('a session that ended stays ended (a request that still holds the old refresh token)', () => {
+	/** A request holding `token`, which Go answers with `answer`; `fetchFn` counts the calls to Go. */
+	const rotated = () =>
+		vi.fn(() => Promise.resolve(ok({ access_token: 'new-a', refresh_token: 'ended-r2' })));
+	const gone = ['lk_access', 'lk_refresh', 'lk_csrf', 'lk_mcp', 'lk_op_tenant'];
+
+	it('cache replay: the 10 s result of a refresh Go rotated is not handed to a request after the end', async () => {
+		const first = statefulJar({ lk_refresh: 'ended-r1', lk_csrf: 'c' });
+		const fetchFn = rotated();
+		expect(await refreshSession(first.api, fetchFn)).toEqual({ ok: true, access: 'new-a' });
+
+		// the password change (204) ended the session; its request held the token it was sent with
+		endSession(statefulJar({ lk_refresh: 'ended-r1' }).api, 'password_changed');
+
+		const straggler = statefulJar({ lk_refresh: 'ended-r1', lk_csrf: 'c', lk_op_tenant: 's' });
+		expect(await refreshSession(straggler.api, fetchFn)).toEqual({ ok: false, reason: 'rejected' });
+		expect(fetchFn).toHaveBeenCalledTimes(1);
+		expect(straggler.sets).toEqual([]);
+		expect(straggler.deletes).toEqual(expect.arrayContaining(gone));
+		expect([...straggler.store.keys()]).toEqual([]);
+	});
+
+	it('cache replay when the request that ended the session already held the successor', async () => {
+		const first = statefulJar({ lk_refresh: 'ended-s1', lk_csrf: 'c' });
+		const fetchFn = vi.fn(() =>
+			Promise.resolve(ok({ access_token: 'new-a', refresh_token: 'ended-s2' }))
+		);
+		await refreshSession(first.api, fetchFn);
+		endSession(statefulJar({ lk_refresh: 'ended-s2' }).api, 'password_changed');
+
+		const straggler = statefulJar({ lk_refresh: 'ended-s1', lk_csrf: 'c' });
+		expect(await refreshSession(straggler.api, fetchFn)).toEqual({ ok: false, reason: 'rejected' });
+		expect(straggler.sets).toEqual([]);
+		expect([...straggler.store.keys()]).toEqual([]);
+	});
+
+	it('late answer: a refresh Go answered before the end but that lands after it writes nothing', async () => {
+		let answer!: (r: Response) => void;
+		const fetchFn = vi.fn(
+			() =>
+				new Promise<Response>((resolve) => {
+					answer = resolve;
+				})
+		);
+		const inFlight = statefulJar({ lk_refresh: 'ended-l1', lk_csrf: 'c', lk_op_tenant: 's' });
+		const done = refreshSession(inFlight.api, fetchFn);
+
+		endSession(statefulJar({ lk_refresh: 'ended-l1' }).api, 'password_changed');
+		answer(ok({ access_token: 'new-a', refresh_token: 'ended-l2' }));
+
+		expect(await done).toEqual({ ok: false, reason: 'rejected' });
+		expect(inFlight.sets).toEqual([]);
+		expect(inFlight.deletes).toEqual(expect.arrayContaining(gone));
+		expect([...inFlight.store.keys()]).toEqual([]);
+	});
+
+	it('a straggler Go rejects does not replace the notice the end set', async () => {
+		const ending = statefulJar({ lk_refresh: 'ended-n1', lk_csrf: 'c' });
+		endSession(ending.api, 'password_changed');
+
+		const straggler = statefulJar({ lk_refresh: 'ended-n1', lk_csrf: 'c' });
+		const fetchFn = vi.fn(() => Promise.resolve(new Response('{}', { status: 401 })));
+		expect(await refreshSession(straggler.api, fetchFn)).toEqual({ ok: false, reason: 'rejected' });
+		// no call is made for a token already ended, and nothing says session_expired
+		expect(fetchFn).not.toHaveBeenCalled();
+		expect(straggler.sets).toEqual([]);
+		expect([...ending.store.entries()]).toEqual([['lk_signin_notice', 'password_changed']]);
+	});
+
+	it('a straggler Go rejects after the call started still sets no notice', async () => {
+		let answer!: (r: Response) => void;
+		const fetchFn = vi.fn(
+			() =>
+				new Promise<Response>((resolve) => {
+					answer = resolve;
+				})
+		);
+		const straggler = statefulJar({ lk_refresh: 'ended-n2', lk_csrf: 'c' });
+		const done = refreshSession(straggler.api, fetchFn);
+		endSession(statefulJar({ lk_refresh: 'ended-n2' }).api, 'password_changed');
+		answer(new Response('{}', { status: 401 }));
+		expect(await done).toEqual({ ok: false, reason: 'rejected' });
+		expect(straggler.sets).toEqual([]);
+	});
+
+	it('an outage still keeps the cookies of a session that has not ended', async () => {
+		for (const status of [500, 503, 429]) {
+			const j = statefulJar({ lk_refresh: `ended-o${status}`, lk_csrf: 'c' });
+			const fetchFn = vi.fn(() => Promise.resolve(new Response('', { status })));
+			expect(await refreshSession(j.api, fetchFn)).toEqual({ ok: false, reason: 'unavailable' });
+			expect(j.deletes).toEqual([]);
+			expect(j.sets).toEqual([]);
+		}
+	});
+
+	it('a new sign-in after the end is not caught by it', async () => {
+		endSession(statefulJar({ lk_refresh: 'ended-old' }).api, 'password_changed');
+		const j = statefulJar({ lk_refresh: 'ended-new', lk_csrf: 'c' });
+		expect(await refreshSession(j.api, rotated())).toEqual({ ok: true, access: 'new-a' });
+	});
+
+	it('is remembered for 60 s, then forgotten', async () => {
+		vi.useFakeTimers();
+		try {
+			endSession(statefulJar({ lk_refresh: 'ended-t1' }).api, 'password_changed');
+			await vi.advanceTimersByTimeAsync(59_000);
+			const early = statefulJar({ lk_refresh: 'ended-t1' });
+			const fetchFn = vi.fn(() => Promise.resolve(new Response('{}', { status: 401 })));
+			await refreshSession(early.api, fetchFn);
+			expect(fetchFn).not.toHaveBeenCalled();
+			await vi.advanceTimersByTimeAsync(2_000);
+			await refreshSession(statefulJar({ lk_refresh: 'ended-t1' }).api, fetchFn);
+			expect(fetchFn).toHaveBeenCalledTimes(1);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('is bounded in memory: the oldest end is forgotten past the cap', async () => {
+		for (let i = 0; i < 1_100; i++)
+			endSession(statefulJar({ lk_refresh: `ended-b${i}` }).api, 'session_expired');
+		const fetchFn = vi.fn(() => Promise.resolve(new Response('{}', { status: 401 })));
+		await refreshSession(statefulJar({ lk_refresh: 'ended-b0' }).api, fetchFn);
+		expect(fetchFn).toHaveBeenCalledTimes(1);
+		await refreshSession(statefulJar({ lk_refresh: 'ended-b1099' }).api, fetchFn);
+		expect(fetchFn).toHaveBeenCalledTimes(1);
+	});
+});
+
 describe('establishSession', () => {
 	it('sets the mcp cookie when must_change_password is true and clears operator scope', () => {
 		const j = statefulJar({ lk_op_tenant: 'scope' });

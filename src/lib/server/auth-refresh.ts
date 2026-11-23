@@ -99,6 +99,35 @@ export function refreshTokens(
 	return pending;
 }
 
+/**
+ * Refresh tokens of sessions that just ended, by hash (never the token), for a minute. A request that
+ * still holds one must not bring the session back (from the 10 s result cache, or from a refresh
+ * Go answered after the end) nor replace the end's notice with its own. Per process, bounded: the
+ * oldest entry goes first once the cap is reached.
+ */
+const ENDED_MS = 60_000;
+const ENDED_MAX = 1_000;
+const ended = new Map<string, number>();
+
+const hashOf = (token: string): string => createHash('sha256').update(token).digest('hex');
+
+function rememberEnded(token: string): void {
+	const now = Date.now();
+	for (const [key, until] of ended) {
+		if (until > now) break; // insertion order is expiry order: the rest is alive
+		ended.delete(key);
+	}
+	const key = hashOf(token);
+	ended.delete(key);
+	while (ended.size >= ENDED_MAX) ended.delete(ended.keys().next().value as string);
+	ended.set(key, now + ENDED_MS);
+}
+
+function hasEnded(token: string): boolean {
+	const until = ended.get(hashOf(token));
+	return until !== undefined && until > Date.now();
+}
+
 /** Start a session from a login response. The one place login cookies are written. */
 export function establishSession(cookies: Cookies, tokens: TokenPair): void {
 	clearOperatorScope(cookies);
@@ -113,6 +142,8 @@ export function establishSession(cookies: Cookies, tokens: TokenPair): void {
  * shows once. The one place a session ends with a reason; a sign-out the person asked for sets none.
  */
 export function endSession(cookies: Cookies, notice: SigninNotice): void {
+	const current = cookies.get(REFRESH_COOKIE);
+	if (current) rememberEnded(current);
 	clearAuthCookies(cookies);
 	clearOperatorScope(cookies);
 	setSigninNotice(cookies, notice);
@@ -150,7 +181,19 @@ export async function refreshSession(
 	const refresh = cookies.get(REFRESH_COOKIE);
 	if (!refresh) return { ok: false, reason: 'none' };
 
+	// A session that ended stays ended: the cookies go, no notice is set (the end set its own), and
+	// nothing from Go is written, checked before the call and again once its answer is in.
+	const stayEnded = (): SessionRefresh => {
+		clearAuthCookies(cookies);
+		clearOperatorScope(cookies);
+		return { ok: false, reason: 'rejected' };
+	};
+	if (hasEnded(refresh)) return stayEnded();
+
 	const result = await refreshTokens(refresh, fetchFn);
+	if (hasEnded(refresh) || (result.ok && hasEnded(result.tokens.refresh_token))) {
+		return stayEnded();
+	}
 	if (result.ok) {
 		setAuthCookies(cookies, result.tokens.access_token, result.tokens.refresh_token, {
 			keepCsrf: true
