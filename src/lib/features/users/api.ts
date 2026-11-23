@@ -31,19 +31,62 @@ import type {
 	UserDto
 } from './types';
 
-/** GET /v1/users — active members only, one cursor page (users_http.go:61). */
-export async function listUsersPage(p: CursorParams, signal?: AbortSignal): Promise<Page<UserDto>> {
-	return toPage(
-		await api.get('/v1/users', listUsersResponseSchema, { query: cursorQuery(p), signal }),
-		'users'
-	);
+/** Which members `GET /v1/users` lists: Go's `?status=` (active is its default). */
+export type UserStatusFilter = 'active' | 'inactive' | 'all';
+export const USER_STATUS_FILTERS: readonly UserStatusFilter[] = ['active', 'inactive', 'all'];
+/** The whole tenant's member counts by status, sent with the first page whatever `status` is. */
+export interface UserStatusCounts {
+	active: number;
+	inactive: number;
+}
+export interface UsersRead extends AllPages<UserDto> {
+	/** From the first page; absent when Go did not send it. */
+	counts?: UserStatusCounts;
 }
 
-/** Every active member, following next_cursor (the directory has no server-side search). `truncated` = the page cap stopped the read. */
-export function listAllUsers(signal?: AbortSignal): Promise<AllPages<UserDto>> {
-	return fetchAllPages((cursor) => listUsersPage({ cursor, page_size: MAX_PAGE_SIZE }, signal), {
+/** GET /v1/users — one cursor page of the members with `status` (default active). The first page carries `status_counts`. */
+async function readUsersPage(
+	p: CursorParams,
+	status: UserStatusFilter,
+	signal?: AbortSignal
+): Promise<{ page: Page<UserDto>; counts?: UserStatusCounts }> {
+	const envelope = await api.get('/v1/users', listUsersResponseSchema, {
+		query: { ...cursorQuery(p), status: status === 'active' ? undefined : status },
 		signal
 	});
+	const counts = envelope.status_counts;
+	return {
+		page: toPage(envelope, 'users'),
+		counts: counts ? { active: counts.active, inactive: counts.inactive } : undefined
+	};
+}
+
+export async function listUsersPage(
+	p: CursorParams,
+	signal?: AbortSignal,
+	status: UserStatusFilter = 'active'
+): Promise<Page<UserDto>> {
+	return (await readUsersPage(p, status, signal)).page;
+}
+
+/**
+ * Every member with `status`, following next_cursor (the directory has no server-side search), and the
+ * first page's counts for the status chips. `truncated` = the page cap stopped the read.
+ */
+export async function listAllUsers(
+	status: UserStatusFilter = 'active',
+	signal?: AbortSignal
+): Promise<UsersRead> {
+	let counts: UserStatusCounts | undefined;
+	const all = await fetchAllPages(
+		async (cursor) => {
+			const read = await readUsersPage({ cursor, page_size: MAX_PAGE_SIZE }, status, signal);
+			if (cursor === undefined) counts = read.counts;
+			return read.page;
+		},
+		{ signal }
+	);
+	return { ...all, counts };
 }
 
 export function getUser(membershipId: string, signal?: AbortSignal): Promise<UserDto> {

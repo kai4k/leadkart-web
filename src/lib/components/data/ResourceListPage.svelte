@@ -41,6 +41,8 @@
 		title: string;
 		subtitle?: string;
 		primaryAction?: ResourceListAction;
+		/** Header content before the buttons: a link to a sibling page (a navigation is a link, not a button). */
+		headerActions?: Snippet;
 		secondaryActions?: ResourceListAction[];
 		savedViews?: SavedViews<TFilters>;
 		filters?: {
@@ -72,6 +74,7 @@
 		title,
 		subtitle,
 		primaryAction,
+		headerActions,
 		secondaryActions,
 		savedViews,
 		filters,
@@ -87,6 +90,7 @@
 </script>
 
 {#snippet actionsSlot()}
+	{@render headerActions?.()}
 	{#if secondaryActions}
 		{#each secondaryActions as a (a.label)}
 			<Button variant="tonal" disabled={a.disabled} onclick={a.onClick}>

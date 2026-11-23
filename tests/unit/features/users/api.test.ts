@@ -40,6 +40,30 @@ describe('users gateway', () => {
 		expect(fetchMock.mock.calls[1]![0]).toBe('/api/v1/users?cursor=n1&page_size=200');
 	});
 
+	it('listAllUsers asks Go for the status the page shows, and returns the status counts of the first page', async () => {
+		const fetchMock = vi
+			.fn()
+			.mockImplementation(() =>
+				Promise.resolve(
+					json({ users: [], has_more: false, status_counts: { active: 4, inactive: 2 } })
+				)
+			);
+		vi.stubGlobal('fetch', fetchMock);
+		const inactive = await listAllUsers('inactive');
+		expect(fetchMock.mock.calls[0]![0]).toBe('/api/v1/users?page_size=200&status=inactive');
+		expect(inactive.counts).toEqual({ active: 4, inactive: 2 });
+		await listAllUsers('all');
+		expect(fetchMock.mock.calls[1]![0]).toBe('/api/v1/users?page_size=200&status=all');
+	});
+
+	it('the default read sends no status (Go answers active members) and counts are optional', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(json({ users: [], has_more: false }));
+		vi.stubGlobal('fetch', fetchMock);
+		const all = await listAllUsers();
+		expect(fetchMock.mock.calls[0]![0]).toBe('/api/v1/users?page_size=200');
+		expect(all.counts).toBeUndefined();
+	});
+
 	it('deactivateUser and reactivateUser resolve on 204', async () => {
 		vi.stubGlobal(
 			'fetch',

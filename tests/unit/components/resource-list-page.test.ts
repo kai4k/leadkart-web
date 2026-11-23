@@ -62,6 +62,22 @@ describe('ResourceListPage', () => {
 		expect(target.querySelector('[data-testid="chips"]')).not.toBeNull();
 	});
 
+	it('a link in `headerActions` sits in the header before the buttons (a navigation is a link, not a button)', () => {
+		const link = createRawSnippet(() => ({
+			render: () => '<a data-testid="to-hierarchy" href="/h">Hierarchy</a>'
+		}));
+		render({
+			headerActions: link,
+			primaryAction: { label: 'Add member', onClick: vi.fn() }
+		});
+		const a = target.querySelector('[data-testid="to-hierarchy"]')!;
+		const add = [...target.querySelectorAll('button')].find((b) =>
+			b.textContent?.includes('Add member')
+		)!;
+		expect(a.compareDocumentPosition(add) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(target.querySelector('[data-page-heading]')!.contains(a)).toBe(true);
+	});
+
 	it('the primary action is a button in the header', () => {
 		const onClick = vi.fn();
 		render({ primaryAction: { label: 'Register tenant', onClick } });

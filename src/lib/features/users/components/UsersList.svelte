@@ -1,25 +1,23 @@
 <script lang="ts">
-	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
-	import PageHeader from '$layouts/PageHeader.svelte';
 	import { _ } from 'svelte-i18n';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { SvelteURL } from 'svelte/reactivity';
 	import type { ResolvedPathname } from '$app/types';
-	import { Badge, Button, buttonVariants, DataTable, EmptyState, type DataTableColumn } from '$ui';
-	import Pagination from '#lib/components/data/Pagination.svelte';
+	import { Badge, Button, buttonVariants, EmptyState } from '$ui';
 	import { Plus, Shield, UserMinus, UserPlus, Users as UsersIcon, Users, Lock, Icon } from '$icons';
 	import {
 		usersListQuery,
+		usersStatusCountsQuery,
 		reactivateUserMutation,
 		bulkUserStatusMutation
 	} from '$features/users/queries';
+	import type { UserStatusFilter } from '$features/users/api';
 	import { rolesListQuery } from '$features/roles';
 	import { userRoleBadges, canDeactivate } from '$features/users/view-models';
 	import { displayName, userStatus } from '$features/auth';
 	import type { UserDto } from '$features/users/types';
-	import { getListErrorMessage } from '$api/error-messages';
 	import {
 		createBulkSelection,
 		createDialogState,
@@ -27,13 +25,15 @@
 		type ListSearch
 	} from '#lib/hooks/index.ts';
 	import {
-		BulkActionBar,
 		IdentityCell,
+		ResourceListPage,
 		RowActionsMenu,
-		SearchInput,
+		StatusChips,
 		type BulkAction,
+		type DataTableColumn,
 		type RowAction
 	} from '#lib/components/data/index.ts';
+	import { DataTable } from '#lib/components/data/data-table/index.ts';
 	import UsersTruncatedAlert from './UsersTruncatedAlert.svelte';
 	import type { PolicyRules } from '#lib/features/auth/password-policy.ts';
 	import CreateUserDrawer from './CreateUserDrawer.svelte';
@@ -49,9 +49,13 @@
 	 * the proxy auto-injects X-Tenant-Id for every API call. When absent,
 	 * the caller's JWT tenant scope applies (tenant-admin /settings/users).
 	 * The frontend never sees, sends, or knows the tenant identifier.
+	 *
+	 * Nobody is ever deleted: a member is turned inactive and back. The list shows Active members by
+	 * default, Inactive or All by the chips (Go's `?status=`, kept in the URL as `?status=inactive|all`).
+	 *
+	 * `passwordPolicy`: the policy of the company being managed when it is not the caller's own (an operator inside a tenant scope).
+	 * `search`: the text typed in the box. It lives in the page (a member's name or email stays out of the URL bar; Back restores it).
 	 */
-	/** The policy of the company being managed when it is not the caller's own (an operator inside a tenant scope). */
-	/** `search`: the text typed in the box. It lives in the page (a member's name or email stays out of the URL bar; Back restores it). */
 	let {
 		passwordPolicy,
 		search: searchState
@@ -69,10 +73,13 @@
 	/** Go reads 100 bytes of a search; the box stops there. */
 	const SEARCH_MAX = 100;
 	const search = $derived(searchState.value.trim().slice(0, SEARCH_MAX));
-	// only a filter this list offers: an unknown `?status=` or an old `?status=inactive` link reads as "all",
-	// never as an empty page that says nobody is on the team
-	const statusFilter = $derived(
-		page.url.searchParams.get('status') === 'active' ? 'active' : 'all'
+	// Active unless the URL says otherwise: an unknown `?status=` reads as Active, never as an empty page.
+	const statusFilter = $derived<UserStatusFilter>(
+		page.url.searchParams.get('status') === 'inactive'
+			? 'inactive'
+			: page.url.searchParams.get('status') === 'all'
+				? 'all'
+				: 'active'
 	);
 
 	function setSearch(value: string) {
@@ -85,25 +92,31 @@
 		});
 	}
 
-	function setStatusFilter(value: string) {
+	/** The chip that is on is Active or Inactive; none on is All. */
+	function setStatusFilter(value: string | null) {
 		const url = new SvelteURL(page.url.href);
-		if (value && value !== 'all') url.searchParams.set('status', value);
+		if (value === null) url.searchParams.set('status', 'all');
+		else if (value === 'inactive') url.searchParams.set('status', 'inactive');
 		else url.searchParams.delete('status');
 		url.searchParams.delete('page');
 		void goto(`${url.pathname}${url.search}` as ResolvedPathname, { replace: true });
 	}
 
-	const listQuery = usersListQuery();
+	const listQuery = usersListQuery(
+		() => true,
+		() => statusFilter
+	);
+	const countsQuery = usersStatusCountsQuery(() => statusFilter);
+	// the manager picker offers ACTIVE members whatever the list shows (the same cache entry while Active is shown)
+	const rosterQuery = usersListQuery();
 	const rolesQuery = rolesListQuery();
 	const reactivate = reactivateUserMutation();
 	const bulkStatus = bulkUserStatusMutation();
 
-	// DataTable normalises rows to `{ id }` at runtime via rowKey, so the
-	// selection store keys on membership_id strings even though UserDto
-	// doesn't carry an `id` field. The store contract requires SelectableItem
-	// here for type-safety; the runtime store only ever sees the rowKey value.
-	// cleared when the search, the status filter or the PAGE changes: a bulk action must not reach members that
-	// are not on screen (tick Ravi on page 1, press Next: Ravi is no longer shown)
+	// DataTable keys rows by getRowId, so the selection store keys on membership_id strings even though
+	// UserDto carries no `id` field; the store's `{ id }` item type is only a type-level requirement.
+	// Cleared when the search, the status filter or the PAGE changes: a bulk action must not reach members
+	// that are not on screen (tick Ravi on page 1, press Next: Ravi is no longer shown).
 	const selection = createBulkSelection<{ id: string }>(
 		() => `${search}|${statusFilter}|${pagination.currentPage}`
 	);
@@ -129,9 +142,9 @@
 		variant: 'danger',
 		confirm: {
 			title: 'Deactivate selected members?',
-			// Go lists active members only: a deactivated member leaves this list (no promise of a way back from here).
+			// Nobody is deleted: the member stays under Inactive and can be turned back on.
 			description:
-				'Selected members lose access immediately. Deactivated members are not shown in this list.',
+				'Selected members lose access immediately. They stay under Inactive and can be reactivated.',
 			confirmLabel: 'Deactivate'
 		},
 		onClick: () => runBulk('deactivate')
@@ -142,32 +155,26 @@
 		icon: UserPlus as never,
 		onClick: () => runBulk('reactivate')
 	};
-	// Only the bulk actions whose Go route permission is held.
+	// Only the bulk actions whose Go route permission is held, and only those that can apply to what is listed.
 	const bulkActions: BulkAction[] = $derived([
-		...(may.deactivate ? [deactivateBulk] : []),
-		...(may.reactivate ? [reactivateBulk] : [])
+		...(may.deactivate && statusFilter !== 'inactive' ? [deactivateBulk] : []),
+		...(may.reactivate && statusFilter !== 'active' ? [reactivateBulk] : [])
 	]);
 
 	const userList = $derived(listQuery.data ?? []);
 	const roleList = $derived(rolesQuery.data?.roles ?? []);
+	const roster = $derived(rosterQuery.data ?? []);
+	const counts = $derived(countsQuery.data);
 
-	// No "Inactive" chip: Go's `GET /v1/users` returns active members only (`memberships.sql`), so the chip could only
-	// ever read 0. It comes back with Go's `?status=inactive`.
 	const statusOptions = $derived([
-		{ value: 'all', label: 'All', count: userList.length },
-		{
-			value: 'active',
-			label: 'Active',
-			count: userList.filter((u) => u.status === 'active').length
-		}
-	] as const);
+		{ value: 'active', label: 'Active', count: counts?.active },
+		{ value: 'inactive', label: 'Inactive', count: counts?.inactive }
+	]);
 
 	const filtered = $derived.by(() => {
-		const q = search.trim().toLowerCase();
-		const byStatus =
-			statusFilter === 'all' ? userList : userList.filter((u) => u.status === statusFilter);
-		if (!q) return byStatus;
-		return byStatus.filter(
+		const q = search.toLowerCase();
+		if (!q) return userList;
+		return userList.filter(
 			(u) =>
 				u.email.toLowerCase().includes(q) ||
 				u.first_name.toLowerCase().includes(q) ||
@@ -179,29 +186,13 @@
 
 	const pagination = createListPagination(() => filtered);
 
-	const tableState = $derived(
-		listQuery.isPending
-			? 'loading'
-			: listQuery.isError
-				? 'error'
-				: pagination.paged.length === 0
-					? 'empty'
-					: 'ready'
-	);
-
-	const listErrorCopy = $derived(getListErrorMessage(listQuery.error, 'team members'));
-
 	const columns: DataTableColumn<UserDto>[] = [
-		{
-			id: 'select',
-			header: '',
-			selectLabel: (u) => `Select ${displayName(u)}`
-		},
 		{
 			id: 'member',
 			header: 'Member',
 			accessor: (u) => displayName(u),
-			cell: memberCell
+			cell: memberCell,
+			primary: true
 		},
 		{
 			id: 'work',
@@ -321,95 +312,83 @@
 	{/if}
 {/snippet}
 
-<div class="stack stack-relaxed">
-	<PageHeader
-		title={$_('pages.team.title')}
-		description={$_('pages.team.count', { values: { count: userList.length } })}
+{#snippet headerActions()}
+	<a href={resolve('/(app)/settings/users/hierarchy')} class={buttonVariants({ variant: 'tonal' })}
+		><Icon icon={Users} size="sm" /> Hierarchy</a
 	>
-		{#snippet actions()}
-			<div class="cluster">
-				<div class="w-64">
-					<SearchInput
-						value={search}
-						onSearch={setSearch}
-						label="Search team members"
-						placeholder="Search by name, email, role…"
-						maxlength={SEARCH_MAX}
-					/>
-				</div>
+{/snippet}
 
-				<a
-					href={resolve('/(app)/settings/users/hierarchy')}
-					class={buttonVariants({ variant: 'tonal' })}><Icon icon={Users} size="sm" /> Hierarchy</a
-				>
-
-				{#if may.create}
-					<Button onclick={() => createDialog.show()}
-						><Icon icon={Plus} size="sm" /> Add member</Button
-					>
-				{/if}
-			</div>
-		{/snippet}
-	</PageHeader>
-
-	<UsersTruncatedAlert count={userList.length} />
-
-	<nav class="cluster cluster-tight" aria-label="Filter members by status">
-		{#each statusOptions as opt (opt.value)}
-			{@const active = statusFilter === opt.value}
-			<button
-				type="button"
-				onclick={() => setStatusFilter(opt.value)}
-				aria-pressed={active}
-				class="label inline-flex items-center gap-2 rounded-full px-3 py-1 transition-colors {active
-					? 'bg-primary text-primary-foreground'
-					: 'bg-muted text-muted-foreground hover:text-foreground'}"
-			>
-				{opt.label}
-				<span class="caption tabular-nums">{opt.count}</span>
-			</button>
-		{/each}
-	</nav>
-
-	<DataTable.Root
-		{columns}
-		rows={pagination.paged}
-		rowKey={(u) => u.membership_id}
-		state={tableState}
-		error={listErrorCopy}
-		{selection}
-		onRowClick={(u) => {
-			if (confirmLeave()) goto(resolve('/(app)/settings/users/[id]', { id: u.membership_id }));
-		}}
-		{rowActions}
-	>
-		{#snippet emptyState()}
-			<EmptyState
-				icon={UsersIcon}
-				title={search ? 'No matches' : 'No team members yet'}
-				description={search
-					? 'Try a different search term.'
-					: 'Invite your first member to start collaborating.'}
-			>
-				{#snippet action()}
-					{#if !search && may.create}
-						<Button onclick={() => createDialog.show()}
-							><Icon icon={UserPlus} size="sm" /> Add member</Button
-						>
-					{/if}
-				{/snippet}
-			</EmptyState>
-		{/snippet}
-	</DataTable.Root>
-
-	<Pagination
-		page={pagination.currentPage}
-		pageCount={pagination.pageCount}
-		onChange={pagination.setPage}
+{#snippet chips()}
+	<StatusChips
+		label="Filter members by status"
+		options={statusOptions}
+		value={statusFilter === 'all' ? null : statusFilter}
+		onChange={setStatusFilter}
 	/>
+{/snippet}
 
-	<BulkActionBar {selection} actions={bulkActions} />
-</div>
+{#snippet empty()}
+	<EmptyState
+		icon={UsersIcon}
+		title={search
+			? 'No matches'
+			: statusFilter === 'inactive'
+				? 'No inactive members'
+				: 'No team members yet'}
+		description={search
+			? 'Try a different search term.'
+			: statusFilter === 'inactive'
+				? 'Members you deactivate are listed here and can be reactivated.'
+				: 'Invite your first member to start collaborating.'}
+	>
+		{#snippet action()}
+			{#if !search && statusFilter !== 'inactive' && may.create}
+				<Button onclick={() => createDialog.show()}
+					><Icon icon={UserPlus} size="sm" /> Add member</Button
+				>
+			{/if}
+		{/snippet}
+	</EmptyState>
+{/snippet}
+
+<ResourceListPage
+	title={$_('pages.team.title')}
+	subtitle={$_('pages.team.count', { values: { count: userList.length } })}
+	primaryAction={may.create
+		? { label: 'Add member', icon: Plus as never, onClick: () => createDialog.show() }
+		: undefined}
+	{headerActions}
+	search={{
+		value: search,
+		onSearch: setSearch,
+		label: 'Search team members',
+		placeholder: 'Search by name, email, role…',
+		maxlength: SEARCH_MAX
+	}}
+	{chips}
+	bulk={{ selection, actions: bulkActions }}
+>
+	<UsersTruncatedAlert count={userList.length} status={statusFilter} />
+
+	<DataTable
+		{columns}
+		data={pagination.paged}
+		getRowId={(u) => u.membership_id}
+		rowHref={(u) => resolve('/(app)/settings/users/[id]', { id: u.membership_id })}
+		noun="team members"
+		caption="Team members"
+		query={listQuery}
+		selection={{ mode: 'multi', state: selection, rowLabel: (u) => `Select ${displayName(u)}` }}
+		{rowActions}
+		{empty}
+		pagination={{
+			mode: 'offset',
+			page: pagination.currentPage,
+			pageCount: pagination.pageCount,
+			onPageChange: pagination.setPage
+		}}
+	/>
+</ResourceListPage>
 
 <CreateUserDrawer
 	bind:open={createDialog.open}
@@ -429,7 +408,7 @@
 	onOpenChange={rolesDialog.onOpenChange}
 />
 <ManagerSelectorDrawer
-	{userList}
+	userList={roster}
 	{roleList}
 	bind:open={managerDialog.open}
 	user={managerDialog.target}

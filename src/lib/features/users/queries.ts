@@ -14,6 +14,7 @@ import { createQuery } from '@tanstack/svelte-query';
 import { createResourceMutation } from '#lib/api/mutations.ts';
 import { queryRoots } from '#lib/api/query-keys.ts';
 import * as api from './api';
+import type { UserStatusFilter } from './api';
 import { bulkSetStatus } from './service';
 import { bulkSummary } from './view-models';
 import type {
@@ -24,7 +25,9 @@ import type {
 
 const usersKeys = {
 	all: queryRoots.users,
-	list: () => [...usersKeys.all, 'list'] as const,
+	/** `list()` is the prefix of every status read, so one invalidation reaches Active, Inactive and All. */
+	list: (status?: UserStatusFilter) =>
+		status ? ([...usersKeys.all, 'list', status] as const) : ([...usersKeys.all, 'list'] as const),
 	detail: (id: string) => [...usersKeys.all, 'detail', id] as const,
 	membershipSearch: (q: string) => [...usersKeys.all, 'membership-search', q] as const
 };
@@ -49,19 +52,31 @@ export function membershipSearchQuery(getQuery: () => string) {
 	});
 }
 
-const usersListOptions = () => ({
-	queryKey: usersKeys.list(),
-	queryFn: ({ signal }: { signal: AbortSignal }) => api.listAllUsers(signal)
+const usersListOptions = (status: UserStatusFilter) => ({
+	queryKey: usersKeys.list(status),
+	queryFn: ({ signal }: { signal: AbortSignal }) => api.listAllUsers(status, signal)
 });
 
-/** Every active member (all pages) — `data: UserDto[]`. */
-export function usersListQuery(enabled: () => boolean = () => true) {
-	return createQuery(() => ({ ...usersListOptions(), enabled: enabled(), select: (r) => r.items }));
+/** Every member with `status` (default active: the roster other screens read) — `data: UserDto[]`. */
+export function usersListQuery(
+	enabled: () => boolean = () => true,
+	getStatus: () => UserStatusFilter = () => 'active'
+) {
+	return createQuery(() => ({
+		...usersListOptions(getStatus()),
+		enabled: enabled(),
+		select: (r) => r.items
+	}));
+}
+
+/** The tenant's active / inactive member counts (the first page of the same read); `undefined` until it lands. */
+export function usersStatusCountsQuery(getStatus: () => UserStatusFilter = () => 'active') {
+	return createQuery(() => ({ ...usersListOptions(getStatus()), select: (r) => r.counts }));
 }
 
 /** True when the page cap stopped the read, so `usersListQuery` data is incomplete (same cache entry). */
-export function usersListTruncatedQuery() {
-	return createQuery(() => ({ ...usersListOptions(), select: (r) => r.truncated }));
+export function usersListTruncatedQuery(getStatus: () => UserStatusFilter = () => 'active') {
+	return createQuery(() => ({ ...usersListOptions(getStatus()), select: (r) => r.truncated }));
 }
 
 /** Single-membership detail — GET /v1/users/{membershipId}. */
