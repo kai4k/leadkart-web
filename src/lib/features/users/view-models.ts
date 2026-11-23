@@ -55,6 +55,28 @@ export function eligibleManagers(
 	});
 }
 
+/**
+ * What a bulk status action sends: the selected ids that are still LOADED and whose status the action changes
+ * (Deactivate: active ones; Reactivate: inactive ones). `unloaded` are selected ids no longer in the list
+ * (changed from a row menu, or filtered away): the selection forgets them, nothing is sent for them.
+ */
+export function bulkTargets(
+	action: BulkStatusAction,
+	selected: ReadonlyArray<string>,
+	loaded: ReadonlyArray<Pick<UserDto, 'membership_id' | 'status'>>
+): { ids: string[]; unloaded: string[] } {
+	const byId = new Map(loaded.map((u) => [u.membership_id, u]));
+	const changes = action === 'deactivate' ? 'active' : 'inactive';
+	const ids: string[] = [];
+	const unloaded: string[] = [];
+	for (const id of selected) {
+		const u = byId.get(id);
+		if (!u) unloaded.push(id);
+		else if (u.status === changes) ids.push(id);
+	}
+	return { ids, unloaded };
+}
+
 export function canDeactivate(user: UserDto): boolean {
 	return user.status === 'active';
 }

@@ -157,3 +157,21 @@ describe('bulkSummary', () => {
 		expect(bulkSummary('deactivate', { succeeded: 0, failed: 0, failedIds: [] })).toBe('');
 	});
 });
+
+describe('bulkTargets: a bulk action reaches only what is loaded and would change', () => {
+	const u = (id: string, status: 'active' | 'inactive') => ({ membership_id: id, status }) as never;
+	const roster = [u('a', 'active'), u('b', 'inactive'), u('c', 'active')];
+
+	it('deactivate sends the active ones; reactivate the inactive ones', async () => {
+		const { bulkTargets } = await import('#lib/features/users/view-models.ts');
+		expect(bulkTargets('deactivate', ['a', 'b', 'c'], roster).ids).toEqual(['a', 'c']);
+		expect(bulkTargets('reactivate', ['a', 'b', 'c'], roster).ids).toEqual(['b']);
+	});
+
+	it('an id that is no longer loaded is dropped, and reported so the selection can forget it', async () => {
+		const { bulkTargets } = await import('#lib/features/users/view-models.ts');
+		const r = bulkTargets('deactivate', ['a', 'gone'], roster);
+		expect(r.ids).toEqual(['a']);
+		expect(r.unloaded).toEqual(['gone']);
+	});
+});

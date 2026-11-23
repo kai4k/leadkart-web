@@ -15,7 +15,7 @@
 	} from '$features/users/queries';
 	import type { UserStatusFilter } from '$features/users/api';
 	import { rolesListQuery } from '$features/roles';
-	import { userRoleBadges, canDeactivate } from '$features/users/view-models';
+	import { userRoleBadges, canDeactivate, bulkTargets } from '$features/users/view-models';
 	import { displayName, userStatus } from '$features/auth';
 	import type { UserDto } from '$features/users/types';
 	import {
@@ -125,7 +125,10 @@
 	// failed rows stay selected so the action can be retried. When every id failed the whole
 	// selection stays (the global handler reports the error).
 	async function runBulk(action: 'deactivate' | 'reactivate') {
-		const ids = Array.from(selection.selected);
+		// only what is still listed and would change: a member already moved from a row menu, or already in that
+		// state, is neither sent nor counted
+		const { ids, unloaded } = bulkTargets(action, Array.from(selection.selected), userList);
+		for (const id of unloaded) selection.selected.delete(id);
 		if (ids.length === 0) return;
 		try {
 			const { failedIds } = await bulkStatus.mutateAsync({ action, ids });

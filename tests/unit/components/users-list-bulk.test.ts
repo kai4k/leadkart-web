@@ -216,6 +216,9 @@ describe('UsersList status chips (nobody is deleted: Active, Inactive, All)', ()
 
 describe('UsersList bulk status change', () => {
 	it('settles when the 2nd call rejects: one warning toast, the failed row stays selected', async () => {
+		// three INACTIVE members: Reactivate changes all three
+		h.users = [1, 2, 3].map((n) => ({ ...user(n), status: 'inactive' as const }));
+		open('?status=all');
 		gw.reactivateUser
 			.mockResolvedValueOnce(undefined)
 			.mockRejectedValueOnce(new Error('nope'))
@@ -266,6 +269,25 @@ describe('UsersList bulk status change', () => {
 		expect(toastMock.success).not.toHaveBeenCalled();
 		expect(gw.deactivateUser).toHaveBeenCalledTimes(3);
 		expect(checkboxes().every(isChecked)).toBe(true);
+	});
+});
+
+describe('UsersList bulk: only members the action changes are sent', () => {
+	it('on All, Deactivate over an active and an inactive member sends the active one, and the toast counts one', async () => {
+		h.users = [user(1), { ...user(2), status: 'inactive' as const }, user(3)];
+		open('?status=all');
+		for (const b of checkboxes()) b.click();
+		flushSync();
+		gw.deactivateUser.mockResolvedValue(undefined);
+		buttonNamed('Deactivate')?.click();
+		await vi.waitFor(() => expect(buttonNamed('Deactivate')).toBeDefined());
+		[...document.querySelectorAll('button')]
+			.filter((b) => b.textContent?.trim() === 'Deactivate')
+			.at(-1)
+			?.click();
+		await vi.waitFor(() => expect(toastMock.success).toHaveBeenCalledTimes(1));
+		expect(gw.deactivateUser.mock.calls.map((c) => c[0])).toEqual(['m1', 'm3']);
+		expect(toastMock.success.mock.calls[0]?.[0]).toBe('2 deactivated');
 	});
 });
 
