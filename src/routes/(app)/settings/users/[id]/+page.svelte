@@ -27,7 +27,12 @@
 	const tab = $derived(urlTab.value);
 
 	const userQuery = userDetailQuery(() => membershipId);
-	const usersListQ = usersListQuery();
+	// everyone, inactive included: nobody is deleted, so an inactive manager keeps a name and an inactive report stays
+	// listed with its status. The manager PICKER still offers only active members (`eligibleManagers`).
+	const usersListQ = usersListQuery(
+		() => true,
+		() => 'all'
+	);
 	const rolesQuery = rolesListQuery();
 
 	const user = $derived(userQuery.data ?? null);
