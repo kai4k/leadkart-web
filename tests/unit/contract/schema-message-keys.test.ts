@@ -128,7 +128,8 @@ const DYNAMIC_OK: Record<string, string[]> = {
 	// `message: code`: Go's own password rule code (min_length, requires_digit...), turned into a sentence by the mapper; the sweep test runs it
 	'lib/features/operator/tenants/schemas.ts': ['code'],
 	// currentPasswordField(requiredMessage = 'auth.errors.passwordRequired'): its two callers pass a key or the default key
-	'lib/api/request-schema.ts': ['requiredMessage']
+	// humanTextField({ requiredMessage, tooShortMessage, tooLongMessage }): each defaults to a key and is passed a key by its callers
+	'lib/api/request-schema.ts': ['requiredMessage', 'tooShortMessage', 'tooLongMessage']
 };
 
 const files = walk(SRC).filter((f) => {

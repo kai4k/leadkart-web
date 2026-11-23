@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { z } from 'zod';
 	import { Alert } from '$ui';
+	import { auditReasonField } from '#lib/api/request-schema.ts';
 	import { FormDialog, NumberInput, TextareaField } from '#lib/components/form/index.ts';
 	import { _ } from 'svelte-i18n';
 	import {
@@ -16,9 +17,9 @@
 	type Props = { open: boolean; tenant: TenantDto | null; onOpenChange: (open: boolean) => void };
 	let { open = $bindable(false), tenant, onOpenChange }: Props = $props();
 
-	/** Form-local schema — reason min 10 chars, duration 1-240 min. */
+	/** Form-local schema: the shared audit reason (10 to 1024 after trimming), duration 1-240 min. */
 	const impersonateFormSchema = z.object({
-		reason: z.string().min(10, 'form.errors.reasonTooShort').max(500),
+		reason: auditReasonField,
 		duration_minutes: z.number().int().min(1).max(240)
 	});
 
@@ -80,7 +81,7 @@
 			name="reason"
 			singleLine
 			rows={3}
-			maxlength={500}
+			maxlength={1024}
 			required
 			bind:value={form.values.reason}
 			error={form.errors.reason}

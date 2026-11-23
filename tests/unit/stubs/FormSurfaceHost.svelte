@@ -9,8 +9,10 @@
 		onSubmit,
 		onOpenChange,
 		submitVariant,
-		guardLeave
+		guardLeave,
+		validateOn
 	}: {
+		validateOn?: 'submit' | 'blur';
 		surface?: 'sheet' | 'dialog';
 		open?: boolean;
 		seed?: string;
@@ -31,6 +33,7 @@
 	{schema}
 	{submitVariant}
 	{guardLeave}
+	{validateOn}
 	initial={() => ({ name: seed })}
 	title="Edit person"
 	description="Change the name."

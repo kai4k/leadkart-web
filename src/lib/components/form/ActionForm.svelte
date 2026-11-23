@@ -120,10 +120,18 @@
 		void result;
 		clientErrors = {};
 	});
+	// fields whose SERVER message was dropped because the text was edited into something that passes; a new result brings them back
+	let dismissed = $state<Record<string, true>>({});
+	$effect(() => {
+		void result;
+		dismissed = {};
+	});
 	const fieldError = (name: string) =>
 		clientErrors[name] !== undefined
 			? fieldMessageText(clientErrors[name], $_)
-			: fieldText(failure, name, $_);
+			: dismissed[name]
+				? undefined
+				: fieldText(failure, name, $_);
 	/** What the failed submit typed (dotted names reach nested values: `address.street`). */
 	const value = (name: string): unknown =>
 		name
@@ -229,9 +237,16 @@
 	function onInput(e: Event) {
 		touch();
 		const name = (e.target as HTMLInputElement | null)?.name;
-		if (name && name in clientErrors) {
+		if (!name) return;
+		if (name in clientErrors) {
 			const { [name]: _cleared, ...rest } = clientErrors;
 			clientErrors = rest;
+		}
+		// The server's message about this field goes once the text passes what this side can check. A form with no
+		// `validate` cannot tell, so any edit counts as the person acting on it. A new answer brings it back if it still holds.
+		if (!dismissed[name] && fieldText(failure, name, $_) !== undefined) {
+			if (!validate || validate(formValues())[name] === undefined)
+				dismissed = { ...dismissed, [name]: true };
 		}
 	}
 
@@ -245,6 +260,13 @@
 	});
 
 	const submit = withFocusOnFailure(({ cancel }) => {
+		// A number field holding text it could not read, or a number out of range: `novalidate` switches the browser's own
+		// refusal off, and its model still holds the OLD value, which must not be sent under a visible error.
+		if (formEl?.querySelector('[data-unreadable="true"]')) {
+			cancel();
+			void focusFirstInvalid(formEl);
+			return;
+		}
 		applyTidy();
 		if (validate) {
 			const found = validate(formValues());

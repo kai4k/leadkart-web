@@ -16,7 +16,14 @@ import {
 	MarkTenantForDeletionRequest,
 	RegisterTenantResponse
 } from '#lib/api/generated/index.ts';
-import { formEmailField, newPasswordField, reasonField } from '#lib/api/request-schema.ts';
+import {
+	companyNameField,
+	formEmailField,
+	newPasswordField,
+	personNameField,
+	reasonField,
+	slugField
+} from '#lib/api/request-schema.ts';
 import { DEFAULT_PASSWORD_RULES, unmetPasswordRules } from '#lib/features/auth/password-policy.ts';
 import { tenantSchema } from '#lib/features/tenant/schemas.ts';
 
@@ -27,14 +34,10 @@ export { tenantSchema as tenantDtoSchema } from '#lib/features/tenant/schemas.ts
  * Added here: the shared e-mail rule, no leading/trailing dash in a slug, names must not be empty, the shared password rule plus the default policy's classes.
  */
 export const registerTenantRequestSchema = RegisterTenantRequest.extend({
-	// The contract's bounds (2-100); only the messages are ours.
-	slug: z
-		.string()
-		.min(2, 'form.errors.slugLength')
-		.max(100, 'form.errors.slugLength')
-		.regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, 'form.errors.slugCharacters'),
-	legal_name: z.string().min(1, 'form.required').min(2, 'form.tooShort').max(200, 'form.tooLong'),
-	display_name: z.string().min(1, 'form.required').min(2, 'form.tooShort').max(200, 'form.tooLong'),
+	// Go's own slug rule (common/slug: 3-63, no double dash), which is narrower than the contract's 2-100.
+	slug: slugField,
+	legal_name: companyNameField,
+	display_name: companyNameField,
 	admin_email: formEmailField,
 	// Go always checks the DEFAULT policy at registration (register_tenant.go), so this form, and only this one,
 	// holds the first admin's password to the default's classes too. Each unmet class is its own issue (the rule code
@@ -43,8 +46,8 @@ export const registerTenantRequestSchema = RegisterTenantRequest.extend({
 		for (const code of unmetPasswordRules(password, DEFAULT_PASSWORD_RULES))
 			if (code !== 'min_length') ctx.addIssue({ code: 'custom', message: code });
 	}),
-	admin_first_name: z.string().min(1, 'form.required').max(120, 'form.tooLong'),
-	admin_last_name: z.string().min(1, 'form.required').max(120, 'form.tooLong')
+	admin_first_name: personNameField,
+	admin_last_name: personNameField
 }).strict();
 
 export const registerTenantResponseSchema = RegisterTenantResponse;

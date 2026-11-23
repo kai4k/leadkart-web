@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { AdminAddressDto, PasswordPolicyDto, TenantDto } from '#lib/api/generated/index.ts';
+import { requiredText } from '#lib/api/request-schema.ts';
 
 /**
  * Tenant feature Zod schemas — used for both API response validation
@@ -33,8 +34,8 @@ export type TenantStatus = z.output<typeof tenantStatusSchema>;
 export const tenantSchema = TenantDto;
 
 export const updateTenantProfileSchema = z.object({
-	legal_name: z.string().min(1, 'form.errors.legalNameRequired'),
-	display_name: z.string().min(1, 'form.errors.displayNameRequired')
+	legal_name: requiredText(200, 'form.errors.legalNameRequired'),
+	display_name: requiredText(200, 'form.errors.displayNameRequired')
 });
 
 export const updateTenantStatutorySchema = z.object({

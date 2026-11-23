@@ -188,8 +188,17 @@ describe('ApiError.fromResponse — Go and BFF envelopes', () => {
 		}) as ValidationError;
 		expect(err.hasFieldErrors).toBe(false);
 		expect(err.detail).toBe('mail: no angle-addr');
-		expect(err.message).toBe('The request was not accepted. Check the values and try again.');
+		// a code the catalogue knows reads as its own sentence, never Go's text
+		expect(err.message).toBe('That email address is not valid. Check it and try again.');
 		expect(err.code).toBe('invalid_email');
+	});
+	it('a 400 with a code the catalogue lacks reads the generic line', () => {
+		const err = ApiError.fromResponse(res(400), {
+			error: 'invalid_made_up',
+			message: 'mail: no angle-addr'
+		}) as ValidationError;
+		expect(err.detail).toBe('mail: no angle-addr');
+		expect(err.message).toBe('The request was not accepted. Check the values and try again.');
 	});
 	it('maps the BFF envelope { error, message }', () => {
 		const err = ApiError.fromResponse(res(409), {

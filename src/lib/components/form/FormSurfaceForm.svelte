@@ -22,9 +22,24 @@
 		resetKey: number;
 		fields: Snippet<[Form<S>]>;
 	} = $props();
+
+	// `validateOn: 'blur'`: a field is re-checked when it is left (after the first submit attempt), and its message
+	// goes the moment the text passes. One listener for every field, keyed by the control's `name`.
+	const fieldName = (e: Event): string | null => {
+		const el = e.target;
+		return el instanceof HTMLElement ? el.getAttribute('name') : null;
+	};
+	function onfocusout(e: FocusEvent) {
+		const name = fieldName(e);
+		if (name) form.validateField(name);
+	}
+	function oninput(e: Event) {
+		const name = fieldName(e);
+		if (name) form.clearIfValid(name);
+	}
 </script>
 
-<form id={formId} class="stack stack-relaxed" {onsubmit} novalidate>
+<form id={formId} class="stack stack-relaxed" {onsubmit} {onfocusout} {oninput} novalidate>
 	<FormOutcome error={form.bannerError} />
 	{#key resetKey}
 		{@render fields(form)}

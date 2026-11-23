@@ -70,11 +70,11 @@ describe('createImpersonationSessionRequestSchema — reason', () => {
 		).toBe(false);
 	});
 
-	it('rejects reason longer than 500 characters', () => {
+	it('rejects reason longer than 1024 bytes (the shared audit reason; Go has no lower cap)', () => {
 		expect(
 			createImpersonationSessionRequestSchema.safeParse({
 				...VALID_REQUEST,
-				reason: 'x'.repeat(501)
+				reason: 'x'.repeat(1025)
 			}).success
 		).toBe(false);
 	});

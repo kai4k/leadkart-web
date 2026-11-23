@@ -68,15 +68,15 @@ describe('the zod defaults that name a length or a floor', () => {
 	});
 });
 
-describe('M-7: a one-character company name is too short, not missing', () => {
-	it('reads a length message for 1 character and "required" only for none', async () => {
+describe('M-7: a one-character company name is valid (Go accepts it); only none is "required"', () => {
+	it('reads "required" for none and no message for 1 character', async () => {
 		const { registerTenantRequestSchema } =
 			await import('#lib/features/operator/tenants/schemas.ts');
 		const first = (legal_name: string) =>
 			registerTenantRequestSchema
 				.safeParse({ legal_name })
 				.error?.issues.find((i) => i.path.includes('legal_name'))?.message;
-		expect(text(first('a')!)).toBe(en.form.tooShort);
+		expect(first('a')).toBeUndefined();
 		expect(text(first('')!)).toBe(en.form.required);
 	});
 });

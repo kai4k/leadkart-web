@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { passwordPolicyHint } from '#lib/features/auth/password-policy.ts';
 	import { oneShot } from '#lib/utils/one-shot.ts';
+	import { SLUG_MAX } from '#lib/api/request-schema.ts';
 	import { _ } from 'svelte-i18n';
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	import { Alert, Button, Card, CopyButton } from '$ui';
@@ -68,7 +69,7 @@
 			format="code"
 			bind:value={form.values.slug}
 			required
-			maxlength={60}
+			maxlength={SLUG_MAX}
 			placeholder="acme-pharma"
 			error={form.errors.slug}
 		/>
@@ -94,7 +95,7 @@
 			name="admin_first_name"
 			bind:value={form.values.admin_first_name}
 			required
-			maxlength={120}
+			maxlength={100}
 			error={form.errors.admin_first_name}
 		/>
 		<TextField
@@ -102,7 +103,7 @@
 			name="admin_last_name"
 			bind:value={form.values.admin_last_name}
 			required
-			maxlength={120}
+			maxlength={100}
 			error={form.errors.admin_last_name}
 		/>
 		<TextField

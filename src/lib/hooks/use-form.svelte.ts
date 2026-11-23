@@ -20,12 +20,10 @@
  *   //              error={form.errors.field1}
  *   // On submit:   form.submit(e, async (values) => mutation.mutate(values))
  */
-import { get } from 'svelte/store';
-import { _ } from 'svelte-i18n';
 import { describeError, ValidationError, type DescribeErrorOptions } from '$api/errors';
-import { codeCopy } from '$api/code-copy';
 import { focusFirstInvalid } from '#lib/utils/focus-first-invalid.ts';
-import { fieldErrorCopy, fieldErrorsCopy } from '#lib/utils/field-error-copy.ts';
+import { fieldErrorCopy } from '#lib/utils/field-error-copy.ts';
+import { clientProblems, serverProblems } from '#lib/utils/unshown-banner.ts';
 import type { z } from 'zod';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- z.ZodObject's generic args are intentionally any-typed at the call-site of useForm
@@ -76,6 +74,8 @@ export interface Form<TSchema extends AnyObjectSchema> {
 	reset(next?: z.input<TSchema>): void;
 	clearErrors(): void;
 	validateField(field: string): void;
+	/** On input: drop the message of a field that now passes. Only with `validateOn: 'blur'`; never adds a message. */
+	clearIfValid(field: string): void;
 	submit(
 		e: SubmitEvent,
 		submitFn: (values: z.output<TSchema>, current: SubmitIsCurrent) => Promise<void>
@@ -123,19 +123,29 @@ export function useForm<TSchema extends AnyObjectSchema>(
 		bannerError = null;
 	}
 
+	/** The first message the schema has for one field right now, or undefined. */
+	function problemWith(field: string): string | undefined {
+		const result = schema.safeParse(values);
+		if (result.success) return undefined;
+		return (result.error.flatten().fieldErrors as Record<string, string[] | undefined>)[field]?.[0];
+	}
+
+	function dropError(field: string): void {
+		if (!(field in errors)) return;
+		const { [field]: _omitted, ...rest } = errors;
+		errors = rest;
+	}
+
 	function validateField(field: string): void {
 		if (!submitAttempted || opts.validateOn !== 'blur') return;
-		const result = schema.safeParse(values);
-		const fieldError = result.success
-			? undefined
-			: (result.error.flatten().fieldErrors as Record<string, string[] | undefined>)[field]?.[0];
+		const problem = problemWith(field);
+		if (problem) errors = { ...errors, [field]: fieldErrorCopy(problem) };
+		else dropError(field);
+	}
 
-		if (fieldError) {
-			errors = { ...errors, [field]: fieldErrorCopy(fieldError) };
-		} else if (field in errors) {
-			const { [field]: _omitted, ...rest } = errors;
-			errors = rest;
-		}
+	/** Re-check on input: a message that no longer applies goes at once, a new one waits for the field to be left. */
+	function clearIfValid(field: string): void {
+		if (opts.validateOn === 'blur' && field in errors && !problemWith(field)) dropError(field);
 	}
 
 	async function submit(
@@ -161,13 +171,7 @@ export function useForm<TSchema extends AnyObjectSchema>(
 
 		const result = schema.safeParse(values);
 		if (!result.success) {
-			const flat = result.error.flatten().fieldErrors as Record<string, string[] | undefined>;
-			const mapped: Record<string, string> = {};
-			for (const key of Object.keys(flat)) {
-				const msg = flat[key]?.[0];
-				if (msg) mapped[key] = fieldErrorCopy(msg);
-			}
-			errors = mapped;
+			({ errors, banner: bannerError } = clientProblems(result.error, formEl));
 			// A failed submit lands on the first invalid field (its error is read with it), instead of
 			// every field error being its own assertive announcement.
 			void focusFirstInvalid(formEl);
@@ -183,15 +187,7 @@ export function useForm<TSchema extends AnyObjectSchema>(
 			if (err instanceof ValidationError && err.hasFieldErrors) {
 				// the API names a refused field with a code (`too_long`, `invalid_characters`): the field shows its message;
 				// a field this form does not render has nowhere to show it, so the banner says something instead of nothing
-				errors = fieldErrorsCopy(err.fields) as FieldErrors;
-				const rendered = formEl
-					? [...formEl.querySelectorAll<HTMLElement>('[name]')].map((e) => e.getAttribute('name'))
-					: null;
-				if (rendered && Object.keys(err.fields).some((f) => !rendered.includes(f))) {
-					// not describeError: a ValidationError with fields reads "Check the highlighted fields.", true only for the rendered ones
-					bannerError = codeCopy(err.code) ?? get(_)('auth.errors.validation');
-					errors = Object.fromEntries(Object.entries(errors).filter(([f]) => rendered.includes(f)));
-				}
+				({ errors, banner: bannerError } = serverProblems(err.fields, err.code, formEl));
 				void focusFirstInvalid(formEl);
 			} else {
 				bannerError = describeError(err, {
@@ -244,6 +240,7 @@ export function useForm<TSchema extends AnyObjectSchema>(
 		reset,
 		clearErrors,
 		validateField,
+		clearIfValid,
 		submit
 	};
 }

@@ -70,7 +70,7 @@
 			name="first_name"
 			bind:value={form.values.first_name}
 			required
-			maxlength={120}
+			maxlength={100}
 			error={form.errors.first_name}
 		/>
 		<TextField
@@ -78,7 +78,7 @@
 			name="last_name"
 			bind:value={form.values.last_name}
 			required
-			maxlength={120}
+			maxlength={100}
 			error={form.errors.last_name}
 		/>
 		<PasswordField

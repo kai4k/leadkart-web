@@ -46,6 +46,8 @@ const CODES = [
 	'role_hierarchy_cycle',
 	'role_hierarchy_self_reference',
 	'role_hierarchy_edge_already_exists',
+	'invalid_email',
+	'invalid_slug',
 	'email_already_taken',
 	'email_has_active_membership',
 	'person_active_elsewhere',

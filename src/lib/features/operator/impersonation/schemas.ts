@@ -8,6 +8,7 @@
  *   listImpersonationSessionsResponseSchema — GET /sessions wrapper
  */
 import { z } from 'zod';
+import { auditReasonField } from '#lib/api/request-schema.ts';
 import {
 	CreateImpersonationSessionResponse,
 	ImpersonationSessionDto,
@@ -17,7 +18,7 @@ import {
 export const createImpersonationSessionRequestSchema = z
 	.object({
 		target_tenant_id: z.string().min(1),
-		reason: z.string().min(10).max(500),
+		reason: auditReasonField,
 		duration_minutes: z.number().int().min(1).max(240).optional()
 	})
 	.strict();

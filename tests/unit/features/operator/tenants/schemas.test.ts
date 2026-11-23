@@ -73,13 +73,14 @@ describe('registerTenantRequestSchema — slug', () => {
 		).toBe(false);
 	});
 
-	it('follows the contract bounds: 2 to 100 characters', () => {
+	it("follows Go's slug rule (common/slug): 3 to 63 characters, narrower than the contract's 2 to 100", () => {
 		const parse = (slug: string) =>
 			registerTenantRequestSchema.safeParse({ ...VALID_REGISTER, slug }).success;
 		expect(parse('a')).toBe(false);
-		expect(parse('ab')).toBe(true);
-		expect(parse('a'.repeat(100))).toBe(true);
-		expect(parse('a'.repeat(101))).toBe(false);
+		expect(parse('ab')).toBe(false);
+		expect(parse('abc')).toBe(true);
+		expect(parse('a'.repeat(63))).toBe(true);
+		expect(parse('a'.repeat(64))).toBe(false);
 	});
 });
 

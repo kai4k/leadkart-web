@@ -2,6 +2,7 @@
  * Zod schemas for the tenant role-management feature.
  */
 import { z } from 'zod';
+import { humanTextField } from '#lib/api/request-schema.ts';
 import {
 	CreateRoleRequest,
 	CreateRoleResponse,
@@ -36,10 +37,13 @@ const levelField = z
 	.max(ROLE_LEVEL_MAX, 'form.errors.levelOutOfRange');
 
 /** The same bounds as the contract's name; only the messages are ours. */
-const nameField = z
-	.string()
-	.min(ROLE_NAME_MIN, 'form.errors.roleNameTooShort')
-	.max(ROLE_NAME_MAX, 'form.errors.roleNameTooLong');
+const nameField = humanTextField({
+	min: ROLE_NAME_MIN,
+	maxBytes: ROLE_NAME_MAX,
+	requiredMessage: 'form.errors.roleNameTooShort',
+	tooShortMessage: 'form.errors.roleNameTooShort',
+	tooLongMessage: 'form.errors.roleNameTooLong'
+});
 
 export const createRoleRequestSchema = CreateRoleRequest.extend({
 	name: nameField,
