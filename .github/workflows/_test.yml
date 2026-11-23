@@ -46,6 +46,8 @@ jobs:
         with:
           name: vitest-blob-${{ matrix.shard }}
           path: .vitest-reports/
+          # upload-artifact skips dot-directories unless told otherwise.
+          include-hidden-files: true
           retention-days: 1
           if-no-files-found: error
 
