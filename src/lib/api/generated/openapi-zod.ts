@@ -29,6 +29,7 @@ export const ErrorResponse = z
 		error: z.string(),
 		message: z.string().optional(),
 		reason: z.string().optional(),
+		current_version: z.number().int().optional(),
 		errors: z.record(z.string(), z.array(z.string())).optional()
 	})
 	.passthrough();
@@ -171,9 +172,9 @@ export const RegisterTenantRequest = z
 	.object({
 		slug: z
 			.string()
-			.min(2)
-			.max(100)
-			.regex(/^[a-z0-9-]+$/),
+			.min(3)
+			.max(63)
+			.regex(/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/),
 		legal_name: z.string().max(200),
 		display_name: z.string().max(200),
 		admin_email: z.string().email(),
@@ -221,6 +222,12 @@ export const UpdateTenantDisplayPreferencesRequest = z
 	.passthrough();
 export const SuspendTenantRequest = z.object({ reason: z.string().min(1) }).passthrough();
 export const MarkTenantForDeletionRequest = z.object({ reason: z.string().min(1) }).passthrough();
+export const GrantedOverrideDto = z
+	.object({ name: z.string(), expires_at: z.string().datetime({ offset: true }).optional() })
+	.passthrough();
+export const UserPermissionOverridesDto = z
+	.object({ granted: z.array(GrantedOverrideDto), revoked: z.array(z.string()) })
+	.passthrough();
 export const UserDto = z
 	.object({
 		membership_id: z.string().uuid(),
@@ -236,11 +243,21 @@ export const UserDto = z
 		joined_at: z.string().datetime({ offset: true }).optional(),
 		left_at: z.string().datetime({ offset: true }).optional(),
 		reports_to: z.string().uuid().optional(),
-		role_ids: z.array(z.string().uuid())
+		role_ids: z.array(z.string().uuid()),
+		permission_overrides: UserPermissionOverridesDto.optional(),
+		overrides_version: z.string().optional()
 	})
 	.passthrough();
 export const ListUsersResponse = z
-	.object({ users: z.array(UserDto), has_more: z.boolean(), next_cursor: z.string().optional() })
+	.object({
+		users: z.array(UserDto),
+		has_more: z.boolean(),
+		next_cursor: z.string().optional(),
+		status_counts: z
+			.object({ active: z.number().int(), inactive: z.number().int() })
+			.passthrough()
+			.optional()
+	})
 	.passthrough();
 export const CreateUserRequest = z
 	.object({
@@ -257,13 +274,29 @@ export const CreateUserResponse = z
 		person_existed: z.boolean()
 	})
 	.passthrough();
+export const MemberHitDto = z
+	.object({
+		membership_id: z.string().uuid(),
+		display_name: z.string(),
+		designation: z.string().optional()
+	})
+	.passthrough();
+export const SearchMembersResponse = z.object({ members: z.array(MemberHitDto) }).passthrough();
 export const UpdateUserProfileRequest = z
-	.object({ designation: z.string(), department: z.string(), status_message: z.string() })
+	.object({
+		designation: z.string().max(120),
+		department: z.string().max(120),
+		status_message: z.string().max(280)
+	})
 	.passthrough();
 export const DeactivateUserRequest = z.object({ reason: z.string().min(1) }).passthrough();
 export const AssignUserRoleRequest = z.object({ role_id: z.string().uuid() }).passthrough();
 export const ReplaceUserPermissionOverridesRequest = z
-	.object({ granted: z.array(z.string()), revoked: z.array(z.string()) })
+	.object({
+		granted: z.array(z.string()),
+		revoked: z.array(z.string()),
+		overrides_version: z.string().min(1)
+	})
 	.passthrough();
 export const AssignUserManagerRequest = z.object({ manager_id: z.string().uuid() }).passthrough();
 export const AnonymiseRequest = z.object({ reason: z.string().min(1) }).passthrough();
@@ -563,9 +596,16 @@ export const CreateProductRequest = z
 		name: z.string().min(1).max(200),
 		dosage_form: z.string().min(1).max(50),
 		pack_size: z.string().min(1).max(100),
-		hsn_code: z.string().min(4).max(10),
-		gst_rate_bps: z.number().int().gte(0).lte(10000),
-		manufacturer: z.string().max(200).optional()
+		hsn_code: z
+			.string()
+			.min(4)
+			.max(8)
+			.regex(/^([0-9]{4}|[0-9]{6}|[0-9]{8})$/),
+		gst_rate_bps: z.number().int().gte(0).lte(10000).optional(),
+		manufacturer: z.string().max(200).optional(),
+		product_category: z.string().max(64).optional(),
+		reorder_level: z.number().int().gte(0).lte(2147483647).optional().default(0),
+		expiry_alert_threshold_days: z.number().int().gte(0).lte(36500).optional().default(90)
 	})
 	.passthrough();
 export const CreateProductResponse = z.object({ product_id: z.string().uuid() }).passthrough();
@@ -582,7 +622,14 @@ export const ProductDto = z
 		manufacturer: z.string().max(200).optional(),
 		is_active: z.boolean(),
 		created_at: z.string().datetime({ offset: true }),
-		updated_at: z.string().datetime({ offset: true })
+		updated_at: z.string().datetime({ offset: true }),
+		product_category: z.string().min(1).max(64),
+		reorder_level: z.number().int().gte(0).lte(2147483647),
+		expiry_alert_threshold_days: z.number().int().gte(0).lte(36500),
+		stock_on_hand: z.number().int().gte(0),
+		stock_reserved: z.number().int().gte(0),
+		stock_available: z.number().int().gte(0),
+		earliest_expiry: z.string().datetime({ offset: true }).optional()
 	})
 	.passthrough();
 export const ListProductsResponse = z
@@ -593,9 +640,21 @@ export const UpdateProductRequest = z
 		name: z.string().min(1).max(200),
 		gst_rate_bps: z.number().int().gte(0).lte(10000),
 		is_active: z.boolean(),
-		manufacturer: z.string().max(200)
+		manufacturer: z.string().max(200),
+		product_category: z.string().max(64),
+		reorder_level: z.number().int().gte(0).lte(2147483647),
+		expiry_alert_threshold_days: z.number().int().gte(0).lte(36500)
 	})
 	.partial()
+	.passthrough();
+export const ProductCategoryDto = z
+	.object({
+		category: z.string().min(1).max(64),
+		default_gst_rate_bps: z.number().int().gte(0).lte(10000)
+	})
+	.passthrough();
+export const ListProductCategoriesResponse = z
+	.object({ items: z.array(ProductCategoryDto) })
 	.passthrough();
 export const AddBatchRequest = z
 	.object({
@@ -605,7 +664,8 @@ export const AddBatchRequest = z
 		manufacturer_name: z.string().min(1).max(200),
 		manufacturing_licence_number: z.string().min(1).max(100),
 		mrp_paise: z.number().int().gte(0),
-		purchase_price_paise: z.number().int().gte(0)
+		purchase_price_paise: z.number().int().gte(0),
+		initial_quantity: z.number().int().gte(0).optional()
 	})
 	.passthrough();
 export const AddBatchResponse = z.object({ batch_id: z.string().uuid() }).passthrough();
@@ -622,6 +682,7 @@ export const BatchDto = z
 		mrp_paise: z.number().int().gte(0),
 		purchase_price_paise: z.number().int().gte(0),
 		quantity_on_hand: z.number().int().gte(0),
+		quantity_reserved: z.number().int().gte(0),
 		version: z.number().int(),
 		created_at: z.string().datetime({ offset: true }),
 		updated_at: z.string().datetime({ offset: true })
@@ -633,7 +694,7 @@ export const ListBatchesResponse = z
 export const FefoBatchesResponse = z.object({ items: z.array(BatchDto) }).passthrough();
 export const LogMovementRequest = z
 	.object({
-		type: z.enum(['inbound', 'outbound', 'adjustment', 'reservation', 'release']),
+		type: z.enum(['inbound', 'outbound', 'adjustment']),
 		quantity: z.number().int().gte(1),
 		reason: z.string().min(1).max(500),
 		source_reference: z.string().max(200).optional()
@@ -797,7 +858,7 @@ export const ReassignWorkItemRequest = z
 export const CreateConsignmentNoteRequest = z
 	.object({
 		order_id: z.string().uuid(),
-		carrier_name: z.string().min(1),
+		carrier_name: z.string().min(1).max(200),
 		box_count: z.number().int().gte(1),
 		weight_grams: z.number().int().gte(1),
 		expected_delivery_at: z.string().datetime({ offset: true }).optional()
@@ -1032,6 +1093,154 @@ export const ListNotificationsResponse = z
 	.passthrough();
 export const UnreadCountResponse = z.object({ unread_count: z.number().int() }).passthrough();
 export const MarkAllReadResponse = z.object({ marked_read: z.number().int() }).passthrough();
+export const CompanyGstRateDto = z
+	.object({
+		id: z.string().uuid(),
+		rate_bps: z.number().int().gte(0).lte(10000),
+		label: z.string().max(40),
+		confirmed_by: z.string().max(120),
+		confirmed_on: z.string(),
+		active: z.boolean()
+	})
+	.passthrough();
+export const CompanyCommercePolicy = z
+	.object({
+		expiry: z
+			.object({
+				stop_months_before: z.number().int().gte(0).lte(24),
+				warning_days: z.array(z.number().int().gte(1).lte(730)).max(4)
+			})
+			.passthrough(),
+		fulfilment: z
+			.object({
+				shortage_allowed: z
+					.array(z.enum(['hold', 'refuse', 'partial_backorder', 'partial_reduce']))
+					.min(1),
+				shortage_default: z.enum(['hold', 'refuse', 'partial_backorder', 'partial_reduce']),
+				hold_keeps_available: z.boolean(),
+				invoice_timing: z.enum(['at_pack', 'at_dispatch'])
+			})
+			.passthrough(),
+		pricing: z
+			.object({
+				rate_override: z.boolean(),
+				discount_enabled: z.boolean(),
+				discount_max_bps: z.number().int().gte(0).lte(10000),
+				scheme_enabled: z.boolean(),
+				scheme_valuation: z.enum(['free_quantity', 'discount_equivalent'])
+			})
+			.passthrough(),
+		invoice: z.object({ round_off: z.enum(['none', 'nearest_rupee']) }).passthrough(),
+		tax: z
+			.object({
+				gst_rates: z.array(CompanyGstRateDto),
+				credit_note_split: z.enum(['pro_rata', 'manual_by_rate']),
+				annual_return_filed: z.record(z.string(), z.string())
+			})
+			.passthrough(),
+		doc: z
+			.object({
+				invoice_prefix: z.string().regex(/^[A-Z0-9]{1,4}$/),
+				credit_note_prefix: z.string().regex(/^[A-Z0-9]{1,4}$/)
+			})
+			.passthrough(),
+		einvoice: z.object({ mode: z.enum(['off', 'manual_irn']) }).passthrough(),
+		eway: z.object({ enforcement: z.enum(['warn', 'block']) }).passthrough(),
+		payment: z
+			.object({
+				advance_mode: z.enum(['none', 'any_amount', 'percent', 'fixed']),
+				advance_value: z.number().int().gte(0),
+				part_payments: z.boolean(),
+				overpayment: z.enum(['refuse', 'customer_credit', 'refund_due']),
+				dispatch_gate: z.enum(['none', 'advance_met', 'full_payment']),
+				completion_rule: z.enum(['full_payment', 'on_delivery'])
+			})
+			.passthrough(),
+		credit: z
+			.object({
+				enabled: z.boolean(),
+				enforcement: z.enum(['warn', 'block']),
+				default_limit_paise: z.number().int().gte(0),
+				default_terms_days: z.number().int().gte(0).lte(365),
+				block_on_overdue: z.boolean(),
+				overdue_grace_days: z.number().int().gte(0).lte(365)
+			})
+			.passthrough(),
+		drug_schedule: z.object({ mode: z.enum(['off', 'optional', 'required']) }).passthrough()
+	})
+	.passthrough();
+export const CompanySettingOption = z
+	.object({
+		key: z.string(),
+		group: z.string(),
+		kind: z.enum(['int', 'bool', 'enum', 'enum_set', 'int_list', 'code', 'date_map']),
+		options: z.array(z.string()).optional(),
+		min: z.number().int().optional(),
+		max: z.number().int().optional(),
+		max_items: z.number().int().optional(),
+		default: z.unknown(),
+		permission: z.enum(['manage', 'tax.manage'])
+	})
+	.passthrough();
+export const CompanySettingsDto = z
+	.object({
+		tenant_id: z.string().uuid(),
+		version: z.number().int(),
+		policy: CompanyCommercePolicy,
+		options: z.array(CompanySettingOption),
+		updated_at: z.string().datetime({ offset: true }).optional(),
+		updated_by_membership_id: z.string().uuid().optional()
+	})
+	.passthrough();
+export const PatchCompanySettingsRequest = z
+	.object({
+		expected_version: z.number().int().gte(0),
+		reason: z.string().max(500).optional(),
+		changes: z.record(z.string(), z.object({}).partial().passthrough())
+	})
+	.passthrough();
+export const CompanySettingsHistoryEntry = z
+	.object({
+		version: z.number().int(),
+		policy: CompanyCommercePolicy,
+		changed_keys: z.array(z.string()),
+		reason: z.string(),
+		actor_membership_id: z.string().uuid().optional(),
+		impersonator_operator_id: z.string().optional(),
+		changed_at: z.string().datetime({ offset: true })
+	})
+	.passthrough();
+export const ListCompanySettingsHistoryResponse = z
+	.object({
+		items: z.array(CompanySettingsHistoryEntry),
+		has_more: z.boolean(),
+		next_cursor: z.string().optional()
+	})
+	.passthrough();
+export const ListCompanyGstRatesResponse = z
+	.object({ policy_version: z.number().int(), items: z.array(CompanyGstRateDto) })
+	.passthrough();
+export const CreateCompanyGstRateRequest = z
+	.object({
+		rate_bps: z.number().int().gte(0).lte(10000),
+		label: z.string().max(40),
+		confirmed_by: z.string().max(120),
+		confirmed_on: z.string(),
+		reason: z.string().max(500)
+	})
+	.passthrough();
+export const CompanyGstRateChangedDto = CompanyGstRateDto.and(
+	z.object({ policy_version: z.number().int() }).passthrough()
+);
+export const PatchCompanyGstRateRequest = z
+	.object({
+		label: z.string().max(40).optional(),
+		confirmed_by: z.string().max(120).optional(),
+		confirmed_on: z.string().optional(),
+		active: z.boolean().optional(),
+		reason: z.string().max(500)
+	})
+	.passthrough();
 
 export const schemas = {
 	LoginRequest,
@@ -1068,10 +1277,14 @@ export const schemas = {
 	UpdateTenantDisplayPreferencesRequest,
 	SuspendTenantRequest,
 	MarkTenantForDeletionRequest,
+	GrantedOverrideDto,
+	UserPermissionOverridesDto,
 	UserDto,
 	ListUsersResponse,
 	CreateUserRequest,
 	CreateUserResponse,
+	MemberHitDto,
+	SearchMembersResponse,
 	UpdateUserProfileRequest,
 	DeactivateUserRequest,
 	AssignUserRoleRequest,
@@ -1126,6 +1339,8 @@ export const schemas = {
 	ProductDto,
 	ListProductsResponse,
 	UpdateProductRequest,
+	ProductCategoryDto,
+	ListProductCategoriesResponse,
 	AddBatchRequest,
 	AddBatchResponse,
 	BatchDto,
@@ -1183,7 +1398,18 @@ export const schemas = {
 	NotificationDto,
 	ListNotificationsResponse,
 	UnreadCountResponse,
-	MarkAllReadResponse
+	MarkAllReadResponse,
+	CompanyGstRateDto,
+	CompanyCommercePolicy,
+	CompanySettingOption,
+	CompanySettingsDto,
+	PatchCompanySettingsRequest,
+	CompanySettingsHistoryEntry,
+	ListCompanySettingsHistoryResponse,
+	ListCompanyGstRatesResponse,
+	CreateCompanyGstRateRequest,
+	CompanyGstRateChangedDto,
+	PatchCompanyGstRateRequest
 };
 
 /** One operation in api/openapi.yaml. `path` uses `:param` segments; `response` is the main 2xx schema (z.void() for 204). */
@@ -1590,6 +1816,7 @@ Per Auth0 / Okta / Microsoft Entra ID canon: ALWAYS returns 204
 regardless of whether the target email is already taken — defeats
 account enumeration. The unique-index at apply time enforces the
 actual constraint via POST /api/v1/auth/confirm-email-change.
+A malformed new email is 400 &#x60;invalid_email&#x60; with &#x60;errors{new_email: [&quot;invalid_email&quot;]}&#x60;.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -1769,6 +1996,8 @@ minute, burst 5, whichever address the requests come from).
 		method: 'delete',
 		path: '/api/v1/auth/sessions',
 		alias: 'deleteApiv1authsessions',
+		description: `The body is optional; an empty body (or &#x60;except_current: false&#x60;) revokes every session of the caller, this one included. With &#x60;except_current: true&#x60; the session the access token was minted for (its &#x60;family_id&#x60; claim, set at login and kept by every refresh) is kept and only the others are revoked; &#x60;revoked_count&#x60; counts the sessions this call ended, never the kept one. A token that does not name its session (minted before the claim existed) cannot say which one to keep: 409 &#x60;current_session_unknown&#x60;, nothing is revoked, refresh the token and retry. A body that is present but not valid JSON, names a key the request does not have (&#x60;exceptCurrent&#x60; for &#x60;except_current&#x60;), has a value of the wrong type or holds a second JSON value is 400 &#x60;invalid_body&#x60; and nothing is revoked (it is never read as &quot;revoke everything&quot;). Only the access tokens already minted for the other sessions stay valid until they expire (up to 10 minutes).
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -1780,11 +2009,21 @@ minute, burst 5, whichever address the requests come from).
 		response: z.object({ revoked_count: z.number().int() }).passthrough(),
 		errors: [
 			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 403,
 				description: `&#x60;error: impersonation_not_allowed&#x60; (the token is an impersonation token, and this
 account route is never reachable with one) or &#x60;error: password_change_required&#x60;
 (the token carries &#x60;must_change_password&#x60;). Neither carries &#x60;WWW-Authenticate&#x60;.
 `,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `&#x60;current_session_unknown&#x60;: &#x60;except_current&#x60; was asked but the access token carries no session id; nothing was revoked. Refresh the token and retry.`,
 				schema: ErrorResponse
 			},
 			{
@@ -1835,6 +2074,451 @@ account route is never reachable with one) or &#x60;error: password_change_requi
 indistinguishable on purpose (no session-id enumeration); a session of the caller
 that is already revoked is 204, not 404.
 `,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
+	},
+	{
+		method: 'get',
+		path: '/api/v1/company/commerce-settings',
+		alias: 'getApiv1companycommerceSettings',
+		description: `Requires &#x60;company_settings.read&#x60;. The company&#x27;s versioned commerce policy:
+every business rule a company may choose (expiry, shortage handling, pricing,
+tax and documents, payments and credit, drug schedule), the &#x60;version&#x60; the next
+save must send as &#x60;expected_version&#x60;, and the option metadata of every
+patchable setting (&#x60;options&#x60;: its kind, allowed values or bounds, default, and
+the permission that changes it). A company with no stored policy reads the
+defaults at &#x60;version: 0&#x60;. The GST rate list starts EMPTY (there is no default
+rate); it changes through &#x60;/company/gst-rates&#x60;.
+`,
+		requestFormat: 'json',
+		parameters: [
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
+			}
+		],
+		response: CompanySettingsDto,
+		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
+	},
+	{
+		method: 'patch',
+		path: '/api/v1/company/commerce-settings',
+		alias: 'patchApiv1companycommerceSettings',
+		description: `Requires &#x60;company_settings.manage&#x60; for the non-tax settings and
+&#x60;company_settings.tax.manage&#x60; for the tax, document and compliance settings
+(&#x60;options[].permission&#x60; names which); both are held only at the
+Administrator tier or above. Supplied-key partial update: only the settings
+in &#x60;changes&#x60; are applied, and a value equal to the current one changes
+nothing (the version does not move). &#x60;expected_version&#x60; is the version the
+form was loaded at; a stale one is &#x60;409 settings_version_conflict&#x60; (with
+&#x60;current_version&#x60;) and nothing changes. A change to a tax, document or
+compliance setting also needs &#x60;reason&#x60;. Every accepted change moves the policy
+to a new version, records who changed what and why in the history, and
+reaches Orders and Inventory by event. Returns &#x60;200&#x60; with the updated policy.
+A refusal names the setting: &#x60;422 validation_failed&#x60; with
+&#x60;errors{&quot;&lt;group&gt;.&lt;setting&gt;&quot;: [&lt;code&gt;]}&#x60; (codes: &#x60;out_of_range&#x60;, &#x60;invalid_type&#x60;,
+&#x60;not_an_option&#x60;, &#x60;required&#x60;, &#x60;duplicate&#x60;, &#x60;too_many&#x60;, &#x60;not_in_allowed&#x60;,
+&#x60;value_required&#x60;, &#x60;value_not_allowed&#x60;, &#x60;invalid_format&#x60;, &#x60;unknown_setting&#x60;,
+&#x60;managed_elsewhere&#x60;) or on &#x60;reason&#x60;, &#x60;expected_version&#x60;, &#x60;changes&#x60;; nothing is
+changed. Option sets and bounds: &#x60;GET&#x60; &#x60;options&#x60;.
+`,
+		requestFormat: 'json',
+		parameters: [
+			{
+				name: 'body',
+				type: 'Body',
+				schema: PatchCompanySettingsRequest
+			},
+			{
+				name: 'X-Command-Id',
+				type: 'Header',
+				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
+			}
+		],
+		response: CompanySettingsDto,
+		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `&#x60;settings_version_conflict&#x60;: the settings changed since the form was loaded; reload (&#x60;current_version&#x60;) and apply the change again`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
+	},
+	{
+		method: 'get',
+		path: '/api/v1/company/commerce-settings/history',
+		alias: 'getApiv1companycommerceSettingshistory',
+		description: `Requires &#x60;company_settings.read&#x60;. Append-only, newest version first: the whole
+policy at each version, the keys that changed, the acting membership, the
+impersonating operator if any, the reason and the time. Keyset-paginated
+(&#x60;cursor&#x60;, &#x60;page_size&#x60;).
+`,
+		requestFormat: 'json',
+		parameters: [
+			{
+				name: 'cursor',
+				type: 'Query',
+				schema: z.string().optional()
+			},
+			{
+				name: 'page_size',
+				type: 'Query',
+				schema: z.number().int().gte(1).lte(200).optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
+			}
+		],
+		response: ListCompanySettingsHistoryResponse,
+		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
+	},
+	{
+		method: 'get',
+		path: '/api/v1/company/gst-rates',
+		alias: 'getApiv1companygstRates',
+		description: `Requires &#x60;company_settings.read&#x60; OR &#x60;inventory.catalog.read&#x60; OR
+&#x60;inventory.catalog.manage&#x60; (the picker a product form reads). The company&#x27;s
+own list, in rate order; empty until the company adds a rate. &#x60;active&#x3D;true&#x60;
+drops deactivated rates. &#x60;policy_version&#x60; is the policy version the list was
+read at.
+`,
+		requestFormat: 'json',
+		parameters: [
+			{
+				name: 'active',
+				type: 'Query',
+				schema: z.boolean().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
+			}
+		],
+		response: ListCompanyGstRatesResponse,
+		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
+	},
+	{
+		method: 'post',
+		path: '/api/v1/company/gst-rates',
+		alias: 'postApiv1companygstRates',
+		description: `Requires &#x60;company_settings.tax.manage&#x60; (Administrator tier or above). The
+company confirms each rate by name (&#x60;confirmed_by&#x60;, &#x60;confirmed_on&#x60;);
+LeadKart does not check a rate against the law. &#x60;reason&#x60; is required. The same
+&#x60;rate_bps&#x60; under the same &#x60;label&#x60; (any case) is &#x60;422&#x60; with
+&#x60;errors.label: [duplicate]&#x60;. Adding a rate moves the policy to a new version.
+Returns &#x60;201&#x60; with the rate and the new &#x60;policy_version&#x60;.
+`,
+		requestFormat: 'json',
+		parameters: [
+			{
+				name: 'body',
+				type: 'Body',
+				schema: CreateCompanyGstRateRequest
+			},
+			{
+				name: 'X-Command-Id',
+				type: 'Header',
+				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
+			}
+		],
+		response: CompanyGstRateChangedDto,
+		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
+	},
+	{
+		method: 'patch',
+		path: '/api/v1/company/gst-rates/:rateId',
+		alias: 'patchApiv1companygstRatesRateId',
+		description: `Requires &#x60;company_settings.tax.manage&#x60; (Administrator tier or above). A rate is
+deactivated (&#x60;active: false&#x60;), never deleted, because products and documents
+refer to it; the rate itself (&#x60;rate_bps&#x60;) never changes: add a new rate
+instead. Supplied-key partial update; &#x60;reason&#x60; is required. An edit that
+changes nothing leaves the policy version where it is. Returns &#x60;200&#x60; with the
+rate and the &#x60;policy_version&#x60;.
+`,
+		requestFormat: 'json',
+		parameters: [
+			{
+				name: 'body',
+				type: 'Body',
+				schema: PatchCompanyGstRateRequest
+			},
+			{
+				name: 'X-Command-Id',
+				type: 'Header',
+				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'rateId',
+				type: 'Path',
+				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
+			}
+		],
+		response: CompanyGstRateChangedDto,
+		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
 				schema: ErrorResponse
 			},
 			{
@@ -2126,6 +2810,11 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 				schema: ErrorResponse
 			},
 			{
+				status: 422,
+				description: `&#x60;reason_too_long&#x60; — over 1000 bytes; &#x60;reason_invalid_characters&#x60; — the reason holds the NUL character (U+0000)`,
+				schema: ErrorResponse
+			},
+			{
 				status: 429,
 				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
 EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
@@ -2205,6 +2894,11 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 409,
 				description: `Lead is in a terminal stage`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `&#x60;notes_too_long&#x60; — over 4000 bytes; &#x60;notes_invalid_characters&#x60; — the notes hold the NUL character (U+0000)`,
 				schema: ErrorResponse
 			},
 			{
@@ -2373,7 +3067,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 422,
-				description: `Reason missing`,
+				description: `&#x60;reason_required&#x60; — reason missing; &#x60;reason_too_long&#x60; — over 1000 bytes (it used to be reported as &#x60;invalid_stage&#x60;); &#x60;reason_invalid_characters&#x60; — the reason holds the NUL character (U+0000)`,
 				schema: ErrorResponse
 			},
 			{
@@ -2467,7 +3161,7 @@ exempt: the path is authoritative there, with or without the header.
 			},
 			{
 				status: 422,
-				description: `Invalid due_at / assignee`,
+				description: `&#x60;invalid_due_at&#x60; — due_at missing or invalid; &#x60;notes_too_long&#x60; — notes over 2000 characters (it used to be reported as &#x60;invalid_due_at&#x60;); &#x60;notes_invalid_characters&#x60; — the notes hold the NUL character (U+0000)`,
 				schema: ErrorResponse
 			},
 			{
@@ -2555,7 +3249,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				description: `&#x60;reason_invalid_characters&#x60; — the reason holds the NUL character (U+0000); otherwise &#x60;invalid_stage&#x60;`,
 				schema: ErrorResponse
 			},
 			{
@@ -2833,7 +3527,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 422,
-				description: `Reason missing`,
+				description: `&#x60;reason_required&#x60; — reason missing; &#x60;reason_too_long&#x60; — over 1000 characters (it used to be reported as &#x60;reason_required&#x60;); &#x60;reason_invalid_characters&#x60; — the reason holds the NUL character (U+0000)`,
 				schema: ErrorResponse
 			},
 			{
@@ -2998,7 +3692,7 @@ exempt: the path is authoritative there, with or without the header.
 			},
 			{
 				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				description: `&#x60;carrier_name_required&#x60;, &#x60;carrier_name_too_long&#x60; (over 200 characters), &#x60;box_count_invalid&#x60;, &#x60;weight_grams_invalid&#x60;, &#x60;expected_delivery_not_in_future&#x60;; otherwise &#x60;invalid_body&#x60;; &#x60;carrier_name_invalid_characters&#x60; — a control (NUL, CR, LF, TAB), direction-override or invisible character in the carrier name`,
 				schema: ErrorResponse
 			},
 			{
@@ -3302,7 +3996,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				description: `&#x60;docket_number_too_long&#x60; — over 100 characters; otherwise &#x60;invalid_body&#x60;; &#x60;docket_number_invalid_characters&#x60; — the docket number holds the NUL character (U+0000)`,
 				schema: ErrorResponse
 			},
 			{
@@ -3387,7 +4081,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				description: `&#x60;reason_too_long&#x60; — over 1000 characters; otherwise &#x60;invalid_body&#x60;; &#x60;reason_invalid_characters&#x60; — the reason holds the NUL character (U+0000)`,
 				schema: ErrorResponse
 			},
 			{
@@ -3573,6 +4267,11 @@ magnitude in slice 1; future &#x60;direction&#x60; field for up/down.
 Rejections (409): insufficient_stock (Outbound &gt; on-hand),
 batch_expired (Inbound on expired batch), conflict (concurrent
 modification after retry cap).
+
+Only &#x60;inbound&#x60;, &#x60;outbound&#x60; and &#x60;adjustment&#x60; are accepted here.
+&#x60;reservation&#x60; and &#x60;release&#x60; belong to the order saga; asking for
+them (or any other type) is &#x60;422 invalid_movement_type&#x60;, nothing
+written.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -3633,7 +4332,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				description: `&#x60;invalid_movement_type&#x60; — type is not inbound, outbound or adjustment (&#x60;reservation&#x60; and &#x60;release&#x60; are not public); otherwise validation (&#x60;validation_failed&#x60;)`,
 				schema: ErrorResponse
 			},
 			{
@@ -3730,12 +4429,83 @@ minute, burst 5, whichever address the requests come from).
 		]
 	},
 	{
+		method: 'get',
+		path: '/api/v1/inventory/product-categories',
+		alias: 'getApiv1inventoryproductCategories',
+		description: `Requires &#x60;inventory.catalog.read&#x60; OR &#x60;inventory.catalog.manage&#x60;.
+The option list of the product form: every product category of the
+platform reference table with the GST rate a new product in it takes
+when &#x60;POST /inventory/products&#x60; sends no &#x60;gst_rate_bps&#x60;. The same
+list for every company, in category-name order, not paginated.
+Read-only: no rate or category is changed by this API.
+`,
+		requestFormat: 'json',
+		parameters: [
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
+			}
+		],
+		response: ListProductCategoriesResponse,
+		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 401,
+				description: `Missing or invalid bearer token`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
+	},
+	{
 		method: 'post',
 		path: '/api/v1/inventory/products',
 		alias: 'postApiv1inventoryproducts',
 		description: `Requires &#x60;inventory.catalog.manage&#x60;. SKU is canonicalised
 upper-case + trimmed before per-tenant uniqueness check. 409 on
-SKU collision. 422 on field-validation failure.
+SKU collision. 422 on field-validation failure. A refusal of
+&#x60;product_category&#x60;, &#x60;reorder_level&#x60; or &#x60;expiry_alert_threshold_days&#x60;
+names the field: &#x60;422 validation_failed&#x60; with
+&#x60;errors{&lt;field&gt;: [&lt;rule&gt;]}&#x60; (rules on &#x60;CreateProductRequest&#x60;); the
+other fields still answer &#x60;validation_failed&#x60; with a message only.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -3813,8 +4583,14 @@ minute, burst 5, whichever address the requests come from).
 		path: '/api/v1/inventory/products',
 		alias: 'getApiv1inventoryproducts',
 		description: `Requires &#x60;inventory.catalog.read&#x60; OR &#x60;inventory.catalog.manage&#x60;.
-Returns the live (non-deleted) products for the caller&#x27;s tenant
-ordered (created_at, id) DESC. Filters narrow the result set.
+Returns the live (non-deleted) products for the caller&#x27;s tenant.
+The order is fixed: newest first, (created_at, id) DESC, keyset
+paginated with &#x60;cursor&#x60; and &#x60;page_size&#x60;; there is no &#x60;sort&#x60;
+parameter. Every item carries its stock totals and earliest expiry
+(see &#x60;ProductDto&#x60;), read in the same statement as the page. Filters
+narrow the result set and combine with AND. &quot;Today&quot; is the current
+UTC date; a batch is expired when its expiry date is today or
+earlier.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -3849,6 +4625,21 @@ ordered (created_at, id) DESC. Filters narrow the result set.
 				schema: z.string().optional()
 			},
 			{
+				name: 'category',
+				type: 'Query',
+				schema: z.string().max(64).optional()
+			},
+			{
+				name: 'low_stock',
+				type: 'Query',
+				schema: z.enum(['true', 'false']).optional()
+			},
+			{
+				name: 'expiring_within_days',
+				type: 'Query',
+				schema: z.number().int().gte(0).lte(36500).optional()
+			},
+			{
 				name: 'X-Tenant-Id',
 				type: 'Header',
 				schema: z.string().uuid().optional()
@@ -3858,7 +4649,7 @@ ordered (created_at, id) DESC. Filters narrow the result set.
 		errors: [
 			{
 				status: 400,
-				description: `Malformed request (invalid body, bad param shape)`,
+				description: `&#x60;invalid_query&#x60; — a malformed cursor, or a &#x60;search&#x60;, &#x60;dosage_form&#x60; or &#x60;manufacturer&#x60; filter holding the NUL character (&#x60;%00&#x60;; it used to be a 500); or a &#x60;category&#x60;, &#x60;low_stock&#x60; or &#x60;expiring_within_days&#x60; value the server cannot read, named in &#x60;errors{&lt;param&gt;: [&lt;rule&gt;]}&#x60; (rules on each parameter)`,
 				schema: ErrorResponse
 			},
 			{
@@ -3978,7 +4769,11 @@ only fields present in the JSON body are applied (omitted fields
 retain their prior value). JSON &#x60;null&#x60; is NOT distinguishable from
 omission on the wire, so clearing a field is not supported; this
 deliberately differs from RFC 7396 merge-patch semantics. 422 on
-invariant failure (out-of-range GST bps, oversized name, etc).
+invariant failure (out-of-range GST bps, oversized name, etc). A
+refusal of &#x60;product_category&#x60;, &#x60;reorder_level&#x60; or
+&#x60;expiry_alert_threshold_days&#x60; names the field: &#x60;422 validation_failed&#x60;
+with &#x60;errors{&lt;field&gt;: [&lt;rule&gt;]}&#x60; (rules on &#x60;UpdateProductRequest&#x60;),
+and nothing is changed.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -4139,6 +4934,16 @@ minute, burst 5, whichever address the requests come from).
 		description: `Requires &#x60;inventory.stock.manage&#x60;. The parent product MUST exist
 in the caller&#x27;s tenant scope (cross-tenant or missing → 404).
 batch_number is unique per product on live rows.
+
+Opening stock: with &#x60;initial_quantity&#x60; above 0 the batch is created
+already holding that many units, and one &#x60;inbound&#x60; movement (reason
+&quot;Opening stock&quot;) is written to its ledger, both in ONE transaction:
+either the batch exists with its stock, or nothing was written.
+Without the field (or with 0) the batch starts empty, as before, and
+stock is added later with &#x60;POST /inventory/batches/{batchId}/movements&#x60;.
+Stock cannot be received into a batch that is already expired (the
+rule of every &#x60;inbound&#x60; movement): &#x60;409 batch_expired&#x60;, and the batch
+is NOT created.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -4194,12 +4999,12 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 409,
-				description: `batch_number already exists for this product`,
+				description: `&#x60;already_exists&#x60; — batch_number already exists for this product; &#x60;batch_expired&#x60; — &#x60;initial_quantity&#x60; above 0 for a batch whose expiry date has passed (nothing is written)`,
 				schema: ErrorResponse
 			},
 			{
 				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				description: `&#x60;validation_failed&#x60; — a field is invalid. A negative &#x60;initial_quantity&#x60; names the field: &#x60;errors.initial_quantity: [too_small]&#x60;; the other fields answer with a message only. Nothing is written.`,
 				schema: ErrorResponse
 			},
 			{
@@ -4818,7 +5623,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				description: `&#x60;reason_too_long&#x60; — over 1000 characters; otherwise validation (&#x60;validation_failed&#x60;); &#x60;reason_invalid_characters&#x60; — the reason holds the NUL character (U+0000)`,
 				schema: ErrorResponse
 			},
 			{
@@ -5020,6 +5825,12 @@ minute, burst 5, whichever address the requests come from).
 		description: `Post-delivery return (BRD §A-014). Mints a credit_note (partial amount
 allowed) against the order&#x27;s invoice with a gapless number. Requires
 &#x60;orders.orders.manage&#x60;. 404 if the order has no invoice.
+
+The notes on one invoice (credit notes and the cancellation note
+together) may never add up to more than the invoice&#x27;s grand total:
+a note that would pass it is &#x60;422 credit_note_exceeds_invoice&#x60; and
+nothing is written. The check counts the notes already issued and runs
+under a lock, so two concurrent notes cannot both fit.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -5083,7 +5894,7 @@ exempt: the path is authoritative there, with or without the header.
 			},
 			{
 				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				description: `&#x60;credit_note_exceeds_invoice&#x60; — the notes on the invoice, this one included, would pass its grand total; &#x60;reason_too_long&#x60; — over 1000 characters; &#x60;credit_note_invalid&#x60; — a field is invalid; &#x60;reason_invalid_characters&#x60; — the reason holds the NUL character (U+0000)`,
 				schema: ErrorResponse
 			},
 			{
@@ -5318,7 +6129,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				description: `Refused before the order changes state, with the rules the consignment note enforces: &#x60;carrier_name_required&#x60;, &#x60;carrier_name_too_long&#x60; (over 200 characters), &#x60;box_count_invalid&#x60; (not above 0), &#x60;weight_grams_invalid&#x60; (not above 0), &#x60;expected_delivery_not_in_future&#x60;. Otherwise validation (&#x60;validation_failed&#x60;).; &#x60;carrier_name_invalid_characters&#x60; — a control (NUL, CR, LF, TAB), direction-override or invisible character in the carrier name (a NUL used to pass and then fail the consignment note on every attempt)`,
 				schema: ErrorResponse
 			},
 			{
@@ -5414,6 +6225,15 @@ minute, burst 5, whichever address the requests come from).
 		method: 'post',
 		path: '/api/v1/orders/orders/:orderId/payments',
 		alias: 'postApiv1ordersordersOrderIdpayments',
+		description: `Kinds &#x60;full&#x60; and &#x60;refund&#x60; only. &#x60;kind: token&#x60; is refused with
+&#x60;422 token_payment_route_required&#x60;: a token receipt must advance the
+order, so it goes through &#x60;POST /orders/orders/{orderId}/token-payment&#x60;.
+The order must exist in the caller&#x27;s company: an unknown id, or another
+company&#x27;s order, is &#x60;404 order_not_found&#x60; and nothing is written (it
+used to answer 201 and store a payment that belonged to no order).
+Other payment rules (part payments, an amount over the balance, a state
+check) are not enforced yet: they wait for an owner decision.
+`,
 		requestFormat: 'json',
 		parameters: [
 			{
@@ -5462,7 +6282,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 404,
-				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				description: `&#x60;order_not_found&#x60; — no such order in the caller&#x27;s company (an unknown id or another company&#x27;s order); nothing is written`,
 				schema: ErrorResponse
 			},
 			{
@@ -5472,7 +6292,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				description: `&#x60;token_payment_route_required&#x60; — kind is &#x60;token&#x60;: use POST /orders/orders/{orderId}/token-payment; &#x60;external_reference_too_long&#x60; (over 100 characters), &#x60;notes_too_long&#x60; (over 2000); otherwise validation (&#x60;validation_failed&#x60;); &#x60;external_reference_invalid_characters&#x60; / &#x60;notes_invalid_characters&#x60; — the value holds the NUL character (U+0000)`,
 				schema: ErrorResponse
 			},
 			{
@@ -5552,12 +6372,12 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 409,
-				description: `Invalid transition or duplicate payment reference`,
+				description: `&#x60;token_payment_already_recorded&#x60; — the order is already &#x60;token_paid&#x60;, so its token payment was recorded; nothing is written. &#x60;invalid_state_transition&#x60; — the order is in any other state (a later one, or cancelled). &#x60;payment_duplicate_reference&#x60; — the external reference was already recorded.`,
 				schema: ErrorResponse
 			},
 			{
 				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				description: `&#x60;external_reference_too_long&#x60; (over 100 characters), &#x60;notes_too_long&#x60; (over 2000); otherwise validation (&#x60;validation_failed&#x60;). Nothing is written. Also &#x60;external_reference_invalid_characters&#x60; / &#x60;notes_invalid_characters&#x60; — the value holds the NUL character (U+0000)`,
 				schema: ErrorResponse
 			},
 			{
@@ -5645,7 +6465,7 @@ exempt: the path is authoritative there, with or without the header.
 			},
 			{
 				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				description: `&#x60;note_invalid_characters&#x60;, &#x60;sku_invalid_characters&#x60;, &#x60;description_invalid_characters&#x60; — the note, or an item&#x27;s SKU or description, holds the NUL character (U+0000; it used to be a 500); otherwise validation (&#x60;validation_failed&#x60;). Nothing is written.`,
 				schema: ErrorResponse
 			},
 			{
@@ -5885,7 +6705,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				description: `&#x60;reason_invalid_characters&#x60; — the reason holds the NUL character (U+0000; it used to be a 500); otherwise validation (&#x60;validation_failed&#x60;)`,
 				schema: ErrorResponse
 			},
 			{
@@ -5973,7 +6793,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				description: `&#x60;note_invalid_characters&#x60;, &#x60;sku_invalid_characters&#x60;, &#x60;description_invalid_characters&#x60; — the note, or an item&#x27;s SKU or description, holds the NUL character (U+0000; it used to be a 500); otherwise validation (&#x60;validation_failed&#x60;). Nothing is written.`,
 				schema: ErrorResponse
 			},
 			{
@@ -6200,7 +7020,9 @@ minute, burst 5, whichever address the requests come from).
 		method: 'post',
 		path: '/api/v1/permission-requests/:requestId/approve',
 		alias: 'postApiv1permissionRequestsRequestIdapprove',
-		description: `Transitions Pending → Approved AND confers exactly the STORED request&#x27;s permission on the
+		description: `The body is optional (&#x60;decision_reason&#x60; only). A body that is present is read strictly: a misspelt key, a value of the wrong type or invalid JSON is 400 &#x60;invalid_body&#x60; and nothing is approved.
+
+Transitions Pending → Approved AND confers exactly the STORED request&#x27;s permission on the
 requester for the stored duration (single transaction under the tenant authority lock).
 Decided by the authority policy (ADR 0069), never by the body: the requester&#x27;s manager who
 holds &#x60;identity.roles.approve&#x60; AND the permission; or anyone of Administrator rank or above who
@@ -9550,7 +10372,8 @@ not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
 &#x60;display_name&#x60;, &#x60;admin_first_name&#x60;, &#x60;admin_last_name&#x60;; the code is &#x60;required&#x60;
 (blank), &#x60;too_long&#x60; (company names over 200 bytes, admin names over 100) or
 &#x60;invalid_characters&#x60;. A malformed &#x60;slug&#x60; or &#x60;admin_email&#x60; is a 400
-(&#x60;invalid_slug&#x60; / &#x60;invalid_email&#x60;), not a 422. Never a 500.
+(&#x60;invalid_slug&#x60; / &#x60;invalid_email&#x60;) carrying &#x60;errors{slug: [&quot;invalid_slug&quot;]}&#x60; /
+&#x60;errors{admin_email: [&quot;invalid_email&quot;]}&#x60;, not a 422. Never a 500.
 `,
 				schema: ErrorResponse
 			},
@@ -10297,6 +11120,10 @@ onboarded their compliance IDs.
 A malformed GST, PAN or drug-licence number is 422 &#x60;validation_failed&#x60; with an
 &#x60;errors&#x60; entry under &#x60;gst_number&#x60; (&#x60;[&quot;invalid_gstin&quot;]&#x60;), &#x60;pan_number&#x60; (&#x60;[&quot;invalid_pan&quot;]&#x60;) or
 &#x60;drug_licence_number&#x60; (&#x60;[&quot;invalid_drug_licence&quot;]&#x60;). Each value is a stable code, never a sentence.
+When both a GSTIN and a PAN are sent, the PAN must be the one embedded in the GSTIN
+(characters 3 to 12); otherwise the answer is 422 &#x60;tenant_invalid&#x60; with
+&#x60;errors{pan_number: [&quot;gstin_pan_mismatch&quot;]}&#x60;, nothing is written and the message echoes
+neither number. A GSTIN alone or a PAN alone is never a mismatch.
 Requires &#x60;identity.tenants.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
 `,
 		requestFormat: 'json',
@@ -10464,6 +11291,8 @@ minute, burst 5, whichever address the requests come from).
 		path: '/api/v1/users',
 		alias: 'getApiv1users',
 		description: `Requires &#x60;identity.users.view&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+
+&#x60;?status&#x3D;active|inactive|all&#x60; (default &#x60;active&#x60;, so existing callers are unchanged) picks the listing; anything else is 400 &#x60;invalid_status_filter&#x60;. A deactivated member is listed with &#x60;?status&#x3D;inactive&#x60; and can be reactivated from there. The FIRST page (no &#x60;cursor&#x60;) also carries &#x60;status_counts&#x60; (&#x60;active&#x60; and &#x60;inactive&#x60;, the whole tenant whatever &#x60;status&#x60; is) for the status chips; later pages omit it.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -10481,6 +11310,11 @@ minute, burst 5, whichever address the requests come from).
 				name: 'X-Tenant-Id',
 				type: 'Header',
 				schema: z.string().uuid().optional()
+			},
+			{
+				name: 'status',
+				type: 'Query',
+				schema: z.enum(['active', 'inactive', 'all']).optional().default('active')
 			}
 		],
 		response: ListUsersResponse,
@@ -10564,7 +11398,7 @@ Text a person types that other people read is refused when it holds control char
 		errors: [
 			{
 				status: 400,
-				description: `&#x60;invalid_body&#x60; — the body is not valid JSON; &#x60;invalid_email&#x60; — the email is not a valid address`,
+				description: `&#x60;invalid_body&#x60; — the body is not valid JSON; &#x60;invalid_email&#x60; — the email is not a valid address (with &#x60;errors{email: [&quot;invalid_email&quot;]}&#x60;)`,
 				schema: ErrorResponse
 			},
 			{
@@ -10615,6 +11449,10 @@ account, unknown email, locked account) answers this the same way.
 		path: '/api/v1/users/:userId',
 		alias: 'getApiv1usersUserId',
 		description: `Requires &#x60;identity.users.view&#x60; or self (path id equals the caller&#x27;s membership) (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+
+&#x60;permission_overrides&#x60; (live grants with their expiry, and revoked names) is returned ONLY to a caller who holds &#x60;identity.users.update_permissions&#x60; AND may act on this member (strictly outranks them; owners on owners; super users and exempt platform operators); for every other caller the field is absent (never an error). It is what &#x60;PATCH .../permission-overrides&#x60; replaces, so a form seeds from it and re-sends what it does not mean to remove.
+
+&#x60;overrides_version&#x60; is returned with &#x60;permission_overrides&#x60; (and is absent whenever that field is): an opaque token for exactly the live overrides in this response. It changes whenever the live set does, including at the instant a time-bound grant expires. &#x60;PATCH .../permission-overrides&#x60; requires it.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -11023,7 +11861,11 @@ minute, burst 5, whichever address the requests come from).
 		method: 'patch',
 		path: '/api/v1/users/:userId/permission-overrides',
 		alias: 'patchApiv1usersUserIdpermissionOverrides',
-		description: `Both arrays are required; empty arrays clear the corresponding overlay. Permission names
+		description: `Both arrays are required; empty arrays clear the corresponding overlay. This REPLACES the whole set: read the current one first from &#x60;GET /users/{userId}&#x60; (&#x60;permission_overrides&#x60;) and re-send what must stay. A name that is already a live grant and is re-sent keeps its existing expiry (a time-bound grant from an approved permission request stays time-bound and cannot be extended by re-sending it); every other granted name is permanent.
+
+**Precondition.** &#x60;overrides_version&#x60; is required: send the value &#x60;GET /users/{userId}&#x60; returned with the overrides the form was opened on. The save is applied only while the member&#x27;s live overrides still have that version, decided inside the transaction that holds the tenant&#x27;s authority lock. When they do not (a time-bound grant has expired since, a permission request was approved, another admin saved, or this same form was already saved once) the answer is &#x60;409 overrides_changed&#x60; and NOTHING is written: read the user again and repeat the change on what is there now. Without it a re-sent name whose time-bound grant had expired would become a permanent grant, and a grant approved after the form opened would be erased. A caller who may not act on the member is refused by rank (&#x60;403&#x60;) whatever version is sent. A missing, &#x60;null&#x60; or blank &#x60;overrides_version&#x60; is &#x60;400 invalid_body&#x60; with &#x60;errors.overrides_version: [&quot;required&quot;]&#x60;. A retry of the SAME request with the same &#x60;X-Command-Id&#x60; is answered from the stored reply, not re-decided.
+
+Permission names
 MUST match the closed &#x60;permission.IdentityPermissions&#x60; catalogue;
 unknown names surface as 422 (&#x60;permission_unknown&#x60;). A name listed twice in one array is stored once; a name present in BOTH arrays is a 422 &#x60;validation_failed&#x60; with &#x60;errors{revoked: [&quot;also_granted&quot;]}&#x60; (compare your own two arrays to find the names).
 Requires &#x60;identity.users.update_permissions&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Self-target forbidden (&#x60;self_modification_forbidden&#x60;). The caller must strictly outrank the target member (&#x60;insufficient_rank&#x60;; owners may act on owners; super users and exempt platform operators are exempt), decided inside the transaction that holds the tenant&#x27;s authority lock (ADR 0069). Conferring a permission the caller does not hold is rejected with &#x60;grant_exceeds_authority&#x60;.
@@ -11086,7 +11928,7 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 			},
 			{
 				status: 409,
-				description: `&#x60;owner_protected&#x60; — tenant.admin cannot be revoked from an owner; &#x60;member_roles_inconsistent&#x60; — the member&#x27;s assigned roles cannot be loaded as this tenant&#x27;s roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant)`,
+				description: `&#x60;overrides_changed&#x60; — the member&#x27;s live overrides are no longer the ones &#x60;overrides_version&#x60; names (a time-bound grant expired, a request was approved, or someone else saved after the form was opened); nothing was changed, read the user again; &#x60;owner_protected&#x60; — tenant.admin cannot be revoked from an owner; &#x60;member_roles_inconsistent&#x60; — the member&#x27;s assigned roles cannot be loaded as this tenant&#x27;s roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant)`,
 				schema: ErrorResponse
 			},
 			{
@@ -11432,6 +12274,69 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
+	},
+	{
+		method: 'get',
+		path: '/api/v1/users/search',
+		alias: 'getApiv1userssearch',
+		description: `The picker behind lead reassignment. Requires &#x60;crm.leads.assign&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068), and searches the caller&#x27;s effective tenant only.
+
+Returns ACTIVE members whose display name (first name, a space, last name) contains &#x60;q&#x60;, case-insensitively, best first (by name), at most &#x60;limit&#x60;. A hit carries &#x60;membership_id&#x60;, &#x60;display_name&#x60; and &#x60;designation&#x60; only: no email, no phone, no person id. A deactivated, anonymised or globally suspended person is never offered. &#x60;q&#x60; is trimmed and measured in characters: under 2 is 400 &#x60;search_query_too_short&#x60;, over 100 is 400 &#x60;search_query_too_long&#x60;. An empty match is 200 with &#x60;members: []&#x60;, which a client shows as &quot;no match&quot; and keeps apart from a failed call.
+`,
+		requestFormat: 'json',
+		parameters: [
+			{
+				name: 'q',
+				type: 'Query',
+				schema: z.string().min(2).max(100)
+			},
+			{
+				name: 'limit',
+				type: 'Query',
+				schema: z.number().int().gte(1).lte(20).optional().default(10)
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
+			}
+		],
+		response: SearchMembersResponse,
+		errors: [
+			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
+`,
 				schema: ErrorResponse
 			},
 			{

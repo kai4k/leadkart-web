@@ -29,7 +29,10 @@
 		if (!user) return;
 		both = [];
 		try {
-			await mutation.mutateAsync({ id: user.membership_id, body: values });
+			await mutation.mutateAsync({
+				id: user.membership_id,
+				body: { ...values, overrides_version: user.overrides_version ?? '' }
+			});
 		} catch (err) {
 			if (err instanceof ValidationError && err.fields.revoked === 'also_granted')
 				both = values.granted.filter((name) => values.revoked.includes(name));

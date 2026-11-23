@@ -402,6 +402,7 @@ export interface paths {
 		 *     regardless of whether the target email is already taken — defeats
 		 *     account enumeration. The unique-index at apply time enforces the
 		 *     actual constraint via POST /api/v1/auth/confirm-email-change.
+		 *     A malformed new email is 400 `invalid_email` with `errors{new_email: ["invalid_email"]}`.
 		 */
 		post: {
 			parameters: {
@@ -619,7 +620,10 @@ export interface paths {
 		};
 		put?: never;
 		post?: never;
-		/** Revoke all sessions (optionally excluding current) */
+		/**
+		 * Revoke all sessions (optionally excluding current)
+		 * @description The body is optional; an empty body (or `except_current: false`) revokes every session of the caller, this one included. With `except_current: true` the session the access token was minted for (its `family_id` claim, set at login and kept by every refresh) is kept and only the others are revoked; `revoked_count` counts the sessions this call ended, never the kept one. A token that does not name its session (minted before the claim existed) cannot say which one to keep: 409 `current_session_unknown`, nothing is revoked, refresh the token and retry. A body that is present but not valid JSON, names a key the request does not have (`exceptCurrent` for `except_current`), has a value of the wrong type or holds a second JSON value is 400 `invalid_body` and nothing is revoked (it is never read as "revoke everything"). Only the access tokens already minted for the other sessions stay valid until they expire (up to 10 minutes).
+		 */
 		delete: {
 			parameters: {
 				query?: never;
@@ -642,7 +646,17 @@ export interface paths {
 						'application/json': components['schemas']['RevokeAllSessionsResponse'];
 					};
 				};
+				400: components['responses']['BadRequest'];
 				403: components['responses']['SessionRefused'];
+				/** @description `current_session_unknown`: `except_current` was asked but the access token carries no session id; nothing was revoked. Refresh the token and retry. */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				429: components['responses']['TooManyRequests'];
 			};
 		};
@@ -827,7 +841,8 @@ export interface paths {
 				 *     `display_name`, `admin_first_name`, `admin_last_name`; the code is `required`
 				 *     (blank), `too_long` (company names over 200 bytes, admin names over 100) or
 				 *     `invalid_characters`. A malformed `slug` or `admin_email` is a 400
-				 *     (`invalid_slug` / `invalid_email`), not a 422. Never a 500.
+				 *     (`invalid_slug` / `invalid_email`) carrying `errors{slug: ["invalid_slug"]}` /
+				 *     `errors{admin_email: ["invalid_email"]}`, not a 422. Never a 500.
 				 */
 				422: {
 					headers: {
@@ -1089,6 +1104,10 @@ export interface paths {
 		 *     A malformed GST, PAN or drug-licence number is 422 `validation_failed` with an
 		 *     `errors` entry under `gst_number` (`["invalid_gstin"]`), `pan_number` (`["invalid_pan"]`) or
 		 *     `drug_licence_number` (`["invalid_drug_licence"]`). Each value is a stable code, never a sentence.
+		 *     When both a GSTIN and a PAN are sent, the PAN must be the one embedded in the GSTIN
+		 *     (characters 3 to 12); otherwise the answer is 422 `tenant_invalid` with
+		 *     `errors{pan_number: ["gstin_pan_mismatch"]}`, nothing is written and the message echoes
+		 *     neither number. A GSTIN alone or a PAN alone is never a mismatch.
 		 *     Requires `identity.tenants.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
 		 */
 		patch: {
@@ -2238,8 +2257,10 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * List active members of the caller's tenant (cursor-paginated)
+		 * List members of the caller's tenant, active by default (cursor-paginated)
 		 * @description Requires `identity.users.view` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 *
+		 *     `?status=active|inactive|all` (default `active`, so existing callers are unchanged) picks the listing; anything else is 400 `invalid_status_filter`. A deactivated member is listed with `?status=inactive` and can be reactivated from there. The FIRST page (no `cursor`) also carries `status_counts` (`active` and `inactive`, the whole tenant whatever `status` is) for the status chips; later pages omit it.
 		 */
 		get: {
 			parameters: {
@@ -2247,6 +2268,7 @@ export interface paths {
 					/** @description Opaque base64-encoded keyset cursor. Omit for first page. */
 					cursor?: components['parameters']['Cursor'];
 					page_size?: components['parameters']['PageSize'];
+					status?: 'active' | 'inactive' | 'all';
 				};
 				header?: {
 					/**
@@ -2428,7 +2450,7 @@ export interface paths {
 						'application/json': components['schemas']['CreateUserResponse'];
 					};
 				};
-				/** @description `invalid_body` — the body is not valid JSON; `invalid_email` — the email is not a valid address */
+				/** @description `invalid_body` — the body is not valid JSON; `invalid_email` — the email is not a valid address (with `errors{email: ["invalid_email"]}`) */
 				400: {
 					headers: {
 						[name: string]: unknown;
@@ -2474,6 +2496,104 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/users/search': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Member picker (search active members by name)
+		 * @description The picker behind lead reassignment. Requires `crm.leads.assign` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068), and searches the caller's effective tenant only.
+		 *
+		 *     Returns ACTIVE members whose display name (first name, a space, last name) contains `q`, case-insensitively, best first (by name), at most `limit`. A hit carries `membership_id`, `display_name` and `designation` only: no email, no phone, no person id. A deactivated, anonymised or globally suspended person is never offered. `q` is trimmed and measured in characters: under 2 is 400 `search_query_too_short`, over 100 is 400 `search_query_too_long`. An empty match is 200 with `members: []`, which a client shows as "no match" and keeps apart from a failed call.
+		 */
+		get: {
+			parameters: {
+				query: {
+					q: string;
+					limit?: number;
+				};
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Matching members */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['SearchMembersResponse'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				403: components['responses']['TenantScopeForbidden'];
+				429: components['responses']['TooManyRequests'];
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/users/{userId}': {
 		parameters: {
 			query?: never;
@@ -2484,6 +2604,10 @@ export interface paths {
 		/**
 		 * Get one user (membership) by ID
 		 * @description Requires `identity.users.view` or self (path id equals the caller's membership) (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 *
+		 *     `permission_overrides` (live grants with their expiry, and revoked names) is returned ONLY to a caller who holds `identity.users.update_permissions` AND may act on this member (strictly outranks them; owners on owners; super users and exempt platform operators); for every other caller the field is absent (never an error). It is what `PATCH .../permission-overrides` replaces, so a form seeds from it and re-sends what it does not mean to remove.
+		 *
+		 *     `overrides_version` is returned with `permission_overrides` (and is absent whenever that field is): an opaque token for exactly the live overrides in this response. It changes whenever the live set does, including at the instant a time-bound grant expires. `PATCH .../permission-overrides` requires it.
 		 */
 		get: {
 			parameters: {
@@ -3198,7 +3322,11 @@ export interface paths {
 		head?: never;
 		/**
 		 * Replace user's granted + revoked permission overlays atomically
-		 * @description Both arrays are required; empty arrays clear the corresponding overlay. Permission names
+		 * @description Both arrays are required; empty arrays clear the corresponding overlay. This REPLACES the whole set: read the current one first from `GET /users/{userId}` (`permission_overrides`) and re-send what must stay. A name that is already a live grant and is re-sent keeps its existing expiry (a time-bound grant from an approved permission request stays time-bound and cannot be extended by re-sending it); every other granted name is permanent.
+		 *
+		 *     **Precondition.** `overrides_version` is required: send the value `GET /users/{userId}` returned with the overrides the form was opened on. The save is applied only while the member's live overrides still have that version, decided inside the transaction that holds the tenant's authority lock. When they do not (a time-bound grant has expired since, a permission request was approved, another admin saved, or this same form was already saved once) the answer is `409 overrides_changed` and NOTHING is written: read the user again and repeat the change on what is there now. Without it a re-sent name whose time-bound grant had expired would become a permanent grant, and a grant approved after the form opened would be erased. A caller who may not act on the member is refused by rank (`403`) whatever version is sent. A missing, `null` or blank `overrides_version` is `400 invalid_body` with `errors.overrides_version: ["required"]`. A retry of the SAME request with the same `X-Command-Id` is answered from the stored reply, not re-decided.
+		 *
+		 *     Permission names
 		 *     MUST match the closed `permission.IdentityPermissions` catalogue;
 		 *     unknown names surface as 422 (`permission_unknown`). A name listed twice in one array is stored once; a name present in BOTH arrays is a 422 `validation_failed` with `errors{revoked: ["also_granted"]}` (compare your own two arrays to find the names).
 		 *     Requires `identity.users.update_permissions` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Self-target forbidden (`self_modification_forbidden`). The caller must strictly outrank the target member (`insufficient_rank`; owners may act on owners; super users and exempt platform operators are exempt), decided inside the transaction that holds the tenant's authority lock (ADR 0069). Conferring a permission the caller does not hold is rejected with `grant_exceeds_authority`.
@@ -3294,7 +3422,7 @@ export interface paths {
 				400: components['responses']['BadRequest'];
 				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
-				/** @description `owner_protected` — tenant.admin cannot be revoked from an owner; `member_roles_inconsistent` — the member's assigned roles cannot be loaded as this tenant's roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant) */
+				/** @description `overrides_changed` — the member's live overrides are no longer the ones `overrides_version` names (a time-bound grant expired, a request was approved, or someone else saved after the form was opened); nothing was changed, read the user again; `owner_protected` — tenant.admin cannot be revoked from an owner; `member_roles_inconsistent` — the member's assigned roles cannot be loaded as this tenant's roles, so its rank cannot be decided; nothing was changed (an assignment row written outside the commands, e.g. an operator repair or a restored backup, pointing at a role of another tenant) */
 				409: {
 					headers: {
 						[name: string]: unknown;
@@ -5986,7 +6114,9 @@ export interface paths {
 		put?: never;
 		/**
 		 * Approve a pending request (decided by the authority policy)
-		 * @description Transitions Pending → Approved AND confers exactly the STORED request's permission on the
+		 * @description The body is optional (`decision_reason` only). A body that is present is read strictly: a misspelt key, a value of the wrong type or invalid JSON is 400 `invalid_body` and nothing is approved.
+		 *
+		 *     Transitions Pending → Approved AND confers exactly the STORED request's permission on the
 		 *     requester for the stored duration (single transaction under the tenant authority lock).
 		 *     Decided by the authority policy (ADR 0069), never by the body: the requester's manager who
 		 *     holds `identity.roles.approve` AND the permission; or anyone of Administrator rank or above who
@@ -7007,8 +7137,14 @@ export interface paths {
 		/**
 		 * List Products (cursor-paginated)
 		 * @description Requires `inventory.catalog.read` OR `inventory.catalog.manage`.
-		 *     Returns the live (non-deleted) products for the caller's tenant
-		 *     ordered (created_at, id) DESC. Filters narrow the result set.
+		 *     Returns the live (non-deleted) products for the caller's tenant.
+		 *     The order is fixed: newest first, (created_at, id) DESC, keyset
+		 *     paginated with `cursor` and `page_size`; there is no `sort`
+		 *     parameter. Every item carries its stock totals and earliest expiry
+		 *     (see `ProductDto`), read in the same statement as the page. Filters
+		 *     narrow the result set and combine with AND. "Today" is the current
+		 *     UTC date; a batch is expired when its expiry date is today or
+		 *     earlier.
 		 */
 		get: {
 			parameters: {
@@ -7016,12 +7152,20 @@ export interface paths {
 					/** @description Opaque base64-encoded keyset cursor. Omit for first page. */
 					cursor?: components['parameters']['Cursor'];
 					page_size?: components['parameters']['PageSize'];
-					/** @description When 'true', restricts to is_active products. */
+					/** @description When 'true', restricts to is_active products. Any other value is no filter (there is no "inactive only" filter). */
 					active?: 'true' | 'false';
+					/** @description Exact match on `dosage_form`, case-insensitive, trimmed. */
 					dosage_form?: string;
+					/** @description Exact match on `manufacturer`, case-insensitive, trimmed. */
 					manufacturer?: string;
-					/** @description pg_trgm fuzzy match on (sku || name) per ADR 0040. */
+					/** @description Case-insensitive substring of "sku name", trimmed. */
 					search?: string;
+					/** @description Exact match on `product_category`, case-insensitive, trimmed. One category. 400 `invalid_query`, `errors.category`: `too_long` (over 64 characters), `invalid_characters` (holds the NUL character). */
+					category?: string;
+					/** @description `true`: only products with `reorder_level` above 0 whose `stock_on_hand` is below it (the rule of the daily reorder alert; a product with `reorder_level` 0 is never low on stock). `false` or absent: no filter. Any other value: 400 `invalid_query`, `errors.low_stock: [invalid_type]`. */
+					low_stock?: 'true' | 'false';
+					/** @description Only products whose `earliest_expiry` is on or before today plus this many days (so: an unexpired batch that holds stock expires within the window; the bound is inclusive; 0 matches nothing, because a batch expiring today is already expired). 400 `invalid_query`, `errors.expiring_within_days`: `invalid_type` (not an integer), `too_small` (below 0), `too_large` (above 36500). */
+					expiring_within_days?: number;
 				};
 				header?: {
 					/**
@@ -7089,7 +7233,15 @@ export interface paths {
 						'application/json': components['schemas']['ListProductsResponse'];
 					};
 				};
-				400: components['responses']['BadRequest'];
+				/** @description `invalid_query` — a malformed cursor, or a `search`, `dosage_form` or `manufacturer` filter holding the NUL character (`%00`; it used to be a 500); or a `category`, `low_stock` or `expiring_within_days` value the server cannot read, named in `errors{<param>: [<rule>]}` (rules on each parameter) */
+				400: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['TenantScopeForbidden'];
 				404: components['responses']['NotFound'];
@@ -7101,7 +7253,11 @@ export interface paths {
 		 * Create a Product
 		 * @description Requires `inventory.catalog.manage`. SKU is canonicalised
 		 *     upper-case + trimmed before per-tenant uniqueness check. 409 on
-		 *     SKU collision. 422 on field-validation failure.
+		 *     SKU collision. 422 on field-validation failure. A refusal of
+		 *     `product_category`, `reorder_level` or `expiry_alert_threshold_days`
+		 *     names the field: `422 validation_failed` with
+		 *     `errors{<field>: [<rule>]}` (rules on `CreateProductRequest`); the
+		 *     other fields still answer `validation_failed` with a message only.
 		 */
 		post: {
 			parameters: {
@@ -7405,7 +7561,11 @@ export interface paths {
 		 *     retain their prior value). JSON `null` is NOT distinguishable from
 		 *     omission on the wire, so clearing a field is not supported; this
 		 *     deliberately differs from RFC 7396 merge-patch semantics. 422 on
-		 *     invariant failure (out-of-range GST bps, oversized name, etc).
+		 *     invariant failure (out-of-range GST bps, oversized name, etc). A
+		 *     refusal of `product_category`, `reorder_level` or
+		 *     `expiry_alert_threshold_days` names the field: `422 validation_failed`
+		 *     with `errors{<field>: [<rule>]}` (rules on `UpdateProductRequest`),
+		 *     and nothing is changed.
 		 */
 		patch: {
 			parameters: {
@@ -7513,6 +7673,105 @@ export interface paths {
 		};
 		trace?: never;
 	};
+	'/api/v1/inventory/product-categories': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List the product categories and their default GST rates
+		 * @description Requires `inventory.catalog.read` OR `inventory.catalog.manage`.
+		 *     The option list of the product form: every product category of the
+		 *     platform reference table with the GST rate a new product in it takes
+		 *     when `POST /inventory/products` sends no `gst_rate_bps`. The same
+		 *     list for every company, in category-name order, not paginated.
+		 *     Read-only: no rate or category is changed by this API.
+		 */
+		get: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Categories */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ListProductCategoriesResponse'];
+					};
+				};
+				400: components['responses']['TenantScopeInvalid'];
+				401: components['responses']['Unauthorized'];
+				403: components['responses']['TenantScopeForbidden'];
+				429: components['responses']['TooManyRequests'];
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/inventory/products/{productId}/batches': {
 		parameters: {
 			query?: never;
@@ -7614,6 +7873,16 @@ export interface paths {
 		 * @description Requires `inventory.stock.manage`. The parent product MUST exist
 		 *     in the caller's tenant scope (cross-tenant or missing → 404).
 		 *     batch_number is unique per product on live rows.
+		 *
+		 *     Opening stock: with `initial_quantity` above 0 the batch is created
+		 *     already holding that many units, and one `inbound` movement (reason
+		 *     "Opening stock") is written to its ledger, both in ONE transaction:
+		 *     either the batch exists with its stock, or nothing was written.
+		 *     Without the field (or with 0) the batch starts empty, as before, and
+		 *     stock is added later with `POST /inventory/batches/{batchId}/movements`.
+		 *     Stock cannot be received into a batch that is already expired (the
+		 *     rule of every `inbound` movement): `409 batch_expired`, and the batch
+		 *     is NOT created.
 		 */
 		post: {
 			parameters: {
@@ -7708,7 +7977,7 @@ export interface paths {
 				400: components['responses']['TenantScopeInvalid'];
 				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
-				/** @description batch_number already exists for this product */
+				/** @description `already_exists` — batch_number already exists for this product; `batch_expired` — `initial_quantity` above 0 for a batch whose expiry date has passed (nothing is written) */
 				409: {
 					headers: {
 						[name: string]: unknown;
@@ -7717,7 +7986,15 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
-				422: components['responses']['Unprocessable'];
+				/** @description `validation_failed` — a field is invalid. A negative `initial_quantity` names the field: `errors.initial_quantity: [too_small]`; the other fields answer with a message only. Nothing is written. */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				429: components['responses']['TooManyRequests'];
 			};
 		};
@@ -8034,6 +8311,11 @@ export interface paths {
 		 *     Rejections (409): insufficient_stock (Outbound > on-hand),
 		 *     batch_expired (Inbound on expired batch), conflict (concurrent
 		 *     modification after retry cap).
+		 *
+		 *     Only `inbound`, `outbound` and `adjustment` are accepted here.
+		 *     `reservation` and `release` belong to the order saga; asking for
+		 *     them (or any other type) is `422 invalid_movement_type`, nothing
+		 *     written.
 		 */
 		post: {
 			parameters: {
@@ -8137,7 +8419,15 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
-				422: components['responses']['Unprocessable'];
+				/** @description `invalid_movement_type` — type is not inbound, outbound or adjustment (`reservation` and `release` are not public); otherwise validation (`validation_failed`) */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				429: components['responses']['TooManyRequests'];
 			};
 		};
@@ -8488,6 +8778,15 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				/** @description `reason_too_long` — over 1000 bytes; `reason_invalid_characters` — the reason holds the NUL character (U+0000) */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				429: components['responses']['TooManyRequests'];
 			};
 		};
@@ -8617,7 +8916,15 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
-				422: components['responses']['Unprocessable'];
+				/** @description `reason_invalid_characters` — the reason holds the NUL character (U+0000); otherwise `invalid_stage` */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				429: components['responses']['TooManyRequests'];
 			};
 		};
@@ -8870,6 +9177,15 @@ export interface paths {
 				404: components['responses']['NotFound'];
 				/** @description Lead is in a terminal stage */
 				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				/** @description `notes_too_long` — over 4000 bytes; `notes_invalid_characters` — the notes hold the NUL character (U+0000) */
+				422: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -10119,7 +10435,15 @@ export interface paths {
 				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				409: components['responses']['TenantNotActive'];
-				422: components['responses']['Unprocessable'];
+				/** @description `carrier_name_required`, `carrier_name_too_long` (over 200 characters), `box_count_invalid`, `weight_grams_invalid`, `expected_delivery_not_in_future`; otherwise `invalid_body`; `carrier_name_invalid_characters` — a control (NUL, CR, LF, TAB), direction-override or invisible character in the carrier name */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -10336,7 +10660,15 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
-				422: components['responses']['Unprocessable'];
+				/** @description `docket_number_too_long` — over 100 characters; otherwise `invalid_body`; `docket_number_invalid_characters` — the docket number holds the NUL character (U+0000) */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -10694,7 +11026,15 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
-				422: components['responses']['Unprocessable'];
+				/** @description `reason_too_long` — over 1000 characters; otherwise `invalid_body`; `reason_invalid_characters` — the reason holds the NUL character (U+0000) */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -10813,7 +11153,15 @@ export interface paths {
 				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				409: components['responses']['TenantNotActive'];
-				422: components['responses']['Unprocessable'];
+				/** @description `note_invalid_characters`, `sku_invalid_characters`, `description_invalid_characters` — the note, or an item's SKU or description, holds the NUL character (U+0000; it used to be a 500); otherwise validation (`validation_failed`). Nothing is written. */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -11034,7 +11382,15 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
-				422: components['responses']['Unprocessable'];
+				/** @description `note_invalid_characters`, `sku_invalid_characters`, `description_invalid_characters` — the note, or an item's SKU or description, holds the NUL character (U+0000; it used to be a 500); otherwise validation (`validation_failed`). Nothing is written. */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -11276,7 +11632,15 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
-				422: components['responses']['Unprocessable'];
+				/** @description `reason_invalid_characters` — the reason holds the NUL character (U+0000; it used to be a 500); otherwise validation (`validation_failed`) */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -11484,7 +11848,7 @@ export interface paths {
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
-				/** @description Invalid transition or duplicate payment reference */
+				/** @description `token_payment_already_recorded` — the order is already `token_paid`, so its token payment was recorded; nothing is written. `invalid_state_transition` — the order is in any other state (a later one, or cancelled). `payment_duplicate_reference` — the external reference was already recorded. */
 				409: {
 					headers: {
 						[name: string]: unknown;
@@ -11493,7 +11857,15 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
-				422: components['responses']['Unprocessable'];
+				/** @description `external_reference_too_long` (over 100 characters), `notes_too_long` (over 2000); otherwise validation (`validation_failed`). Nothing is written. Also `external_reference_invalid_characters` / `notes_invalid_characters` — the value holds the NUL character (U+0000) */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -11733,7 +12105,15 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
-				422: components['responses']['Unprocessable'];
+				/** @description Refused before the order changes state, with the rules the consignment note enforces: `carrier_name_required`, `carrier_name_too_long` (over 200 characters), `box_count_invalid` (not above 0), `weight_grams_invalid` (not above 0), `expected_delivery_not_in_future`. Otherwise validation (`validation_failed`).; `carrier_name_invalid_characters` — a control (NUL, CR, LF, TAB), direction-override or invisible character in the carrier name (a NUL used to pass and then fail the consignment note on every attempt) */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -12053,7 +12433,15 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
-				422: components['responses']['Unprocessable'];
+				/** @description `reason_too_long` — over 1000 characters; otherwise validation (`validation_failed`); `reason_invalid_characters` — the reason holds the NUL character (U+0000) */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -12270,7 +12658,17 @@ export interface paths {
 			};
 		};
 		put?: never;
-		/** Record a payment receipt (balance / full / refund) */
+		/**
+		 * Record a payment receipt (balance / full / refund)
+		 * @description Kinds `full` and `refund` only. `kind: token` is refused with
+		 *     `422 token_payment_route_required`: a token receipt must advance the
+		 *     order, so it goes through `POST /orders/orders/{orderId}/token-payment`.
+		 *     The order must exist in the caller's company: an unknown id, or another
+		 *     company's order, is `404 order_not_found` and nothing is written (it
+		 *     used to answer 201 and store a payment that belonged to no order).
+		 *     Other payment rules (part payments, an amount over the balance, a state
+		 *     check) are not enforced yet: they wait for an owner decision.
+		 */
 		post: {
 			parameters: {
 				query?: never;
@@ -12364,7 +12762,15 @@ export interface paths {
 				400: components['responses']['BadRequest'];
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['TenantScopeReadOnly'];
-				404: components['responses']['NotFound'];
+				/** @description `order_not_found` — no such order in the caller's company (an unknown id or another company's order); nothing is written */
+				404: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				/** @description Duplicate external reference */
 				409: {
 					headers: {
@@ -12374,7 +12780,15 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
-				422: components['responses']['Unprocessable'];
+				/** @description `token_payment_route_required` — kind is `token`: use POST /orders/orders/{orderId}/token-payment; `external_reference_too_long` (over 100 characters), `notes_too_long` (over 2000); otherwise validation (`validation_failed`); `external_reference_invalid_characters` / `notes_invalid_characters` — the value holds the NUL character (U+0000) */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -12399,6 +12813,12 @@ export interface paths {
 		 * @description Post-delivery return (BRD §A-014). Mints a credit_note (partial amount
 		 *     allowed) against the order's invoice with a gapless number. Requires
 		 *     `orders.orders.manage`. 404 if the order has no invoice.
+		 *
+		 *     The notes on one invoice (credit notes and the cancellation note
+		 *     together) may never add up to more than the invoice's grand total:
+		 *     a note that would pass it is `422 credit_note_exceeds_invoice` and
+		 *     nothing is written. The check counts the notes already issued and runs
+		 *     under a lock, so two concurrent notes cannot both fit.
 		 */
 		post: {
 			parameters: {
@@ -12495,7 +12915,15 @@ export interface paths {
 				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				409: components['responses']['TenantNotActive'];
-				422: components['responses']['Unprocessable'];
+				/** @description `credit_note_exceeds_invoice` — the notes on the invoice, this one included, would pass its grand total; `reason_too_long` — over 1000 characters; `credit_note_invalid` — a field is invalid; `reason_invalid_characters` — the reason holds the NUL character (U+0000) */
+				422: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				429: components['responses']['TooManyRequests'];
 				500: components['responses']['InternalServerError'];
 			};
@@ -12625,7 +13053,7 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
-				/** @description Reason missing */
+				/** @description `reason_required` — reason missing; `reason_too_long` — over 1000 bytes (it used to be reported as `invalid_stage`); `reason_invalid_characters` — the reason holds the NUL character (U+0000) */
 				422: {
 					headers: {
 						[name: string]: unknown;
@@ -12759,7 +13187,7 @@ export interface paths {
 				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
 				409: components['responses']['TenantNotActive'];
-				/** @description Invalid due_at / assignee */
+				/** @description `invalid_due_at` — due_at missing or invalid; `notes_too_long` — notes over 2000 characters (it used to be reported as `invalid_due_at`); `notes_invalid_characters` — the notes hold the NUL character (U+0000) */
 				422: {
 					headers: {
 						[name: string]: unknown;
@@ -13130,7 +13558,7 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
-				/** @description Reason missing */
+				/** @description `reason_required` — reason missing; `reason_too_long` — over 1000 characters (it used to be reported as `reason_required`); `reason_invalid_characters` — the reason holds the NUL character (U+0000) */
 				422: {
 					headers: {
 						[name: string]: unknown;
@@ -13437,6 +13865,649 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/company/commerce-settings': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Read the company commerce policy
+		 * @description Requires `company_settings.read`. The company's versioned commerce policy:
+		 *     every business rule a company may choose (expiry, shortage handling, pricing,
+		 *     tax and documents, payments and credit, drug schedule), the `version` the next
+		 *     save must send as `expected_version`, and the option metadata of every
+		 *     patchable setting (`options`: its kind, allowed values or bounds, default, and
+		 *     the permission that changes it). A company with no stored policy reads the
+		 *     defaults at `version: 0`. The GST rate list starts EMPTY (there is no default
+		 *     rate); it changes through `/company/gst-rates`.
+		 */
+		get: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description The policy */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['CompanySettingsDto'];
+					};
+				};
+				400: components['responses']['TenantScopeInvalid'];
+				403: components['responses']['TenantScopeForbidden'];
+				429: components['responses']['TooManyRequests'];
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		/**
+		 * Change company commerce settings
+		 * @description Requires `company_settings.manage` for the non-tax settings and
+		 *     `company_settings.tax.manage` for the tax, document and compliance settings
+		 *     (`options[].permission` names which); both are held only at the
+		 *     Administrator tier or above. Supplied-key partial update: only the settings
+		 *     in `changes` are applied, and a value equal to the current one changes
+		 *     nothing (the version does not move). `expected_version` is the version the
+		 *     form was loaded at; a stale one is `409 settings_version_conflict` (with
+		 *     `current_version`) and nothing changes. A change to a tax, document or
+		 *     compliance setting also needs `reason`. Every accepted change moves the policy
+		 *     to a new version, records who changed what and why in the history, and
+		 *     reaches Orders and Inventory by event. Returns `200` with the updated policy.
+		 *     A refusal names the setting: `422 validation_failed` with
+		 *     `errors{"<group>.<setting>": [<code>]}` (codes: `out_of_range`, `invalid_type`,
+		 *     `not_an_option`, `required`, `duplicate`, `too_many`, `not_in_allowed`,
+		 *     `value_required`, `value_not_allowed`, `invalid_format`, `unknown_setting`,
+		 *     `managed_elsewhere`) or on `reason`, `expected_version`, `changes`; nothing is
+		 *     changed. Option sets and bounds: `GET` `options`.
+		 */
+		patch: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
+				path?: never;
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['PatchCompanySettingsRequest'];
+				};
+			};
+			responses: {
+				/** @description The policy after the change (or unchanged, when the request matched it) */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['CompanySettingsDto'];
+					};
+				};
+				400: components['responses']['TenantScopeInvalid'];
+				403: components['responses']['TenantScopeReadOnly'];
+				/** @description `settings_version_conflict`: the settings changed since the form was loaded; reload (`current_version`) and apply the change again */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
+			};
+		};
+		trace?: never;
+	};
+	'/api/v1/company/commerce-settings/history': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List the versions of the company commerce policy
+		 * @description Requires `company_settings.read`. Append-only, newest version first: the whole
+		 *     policy at each version, the keys that changed, the acting membership, the
+		 *     impersonating operator if any, the reason and the time. Keyset-paginated
+		 *     (`cursor`, `page_size`).
+		 */
+		get: {
+			parameters: {
+				query?: {
+					cursor?: string;
+					page_size?: number;
+				};
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description One page of the history */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ListCompanySettingsHistoryResponse'];
+					};
+				};
+				400: components['responses']['TenantScopeInvalid'];
+				403: components['responses']['TenantScopeForbidden'];
+				429: components['responses']['TooManyRequests'];
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/company/gst-rates': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List the company GST rates
+		 * @description Requires `company_settings.read` OR `inventory.catalog.read` OR
+		 *     `inventory.catalog.manage` (the picker a product form reads). The company's
+		 *     own list, in rate order; empty until the company adds a rate. `active=true`
+		 *     drops deactivated rates. `policy_version` is the policy version the list was
+		 *     read at.
+		 */
+		get: {
+			parameters: {
+				query?: {
+					active?: boolean;
+				};
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description The rate list */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ListCompanyGstRatesResponse'];
+					};
+				};
+				400: components['responses']['TenantScopeInvalid'];
+				403: components['responses']['TenantScopeForbidden'];
+				429: components['responses']['TooManyRequests'];
+			};
+		};
+		put?: never;
+		/**
+		 * Add a GST rate to the company list
+		 * @description Requires `company_settings.tax.manage` (Administrator tier or above). The
+		 *     company confirms each rate by name (`confirmed_by`, `confirmed_on`);
+		 *     LeadKart does not check a rate against the law. `reason` is required. The same
+		 *     `rate_bps` under the same `label` (any case) is `422` with
+		 *     `errors.label: [duplicate]`. Adding a rate moves the policy to a new version.
+		 *     Returns `201` with the rate and the new `policy_version`.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
+				path?: never;
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['CreateCompanyGstRateRequest'];
+				};
+			};
+			responses: {
+				/** @description The rate added */
+				201: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['CompanyGstRateChangedDto'];
+					};
+				};
+				400: components['responses']['TenantScopeInvalid'];
+				403: components['responses']['TenantScopeReadOnly'];
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/company/gst-rates/{rateId}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		/**
+		 * Edit or deactivate a GST rate
+		 * @description Requires `company_settings.tax.manage` (Administrator tier or above). A rate is
+		 *     deactivated (`active: false`), never deleted, because products and documents
+		 *     refer to it; the rate itself (`rate_bps`) never changes: add a new rate
+		 *     instead. Supplied-key partial update; `reason` is required. An edit that
+		 *     changes nothing leaves the policy version where it is. Returns `200` with the
+		 *     rate and the `policy_version`.
+		 */
+		patch: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
+					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
+				path: {
+					rateId: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['PatchCompanyGstRateRequest'];
+				};
+			};
+			responses: {
+				/** @description The rate after the edit */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['CompanyGstRateChangedDto'];
+					};
+				};
+				400: components['responses']['TenantScopeInvalid'];
+				403: components['responses']['TenantScopeReadOnly'];
+				404: components['responses']['NotFound'];
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
+			};
+		};
+		trace?: never;
+	};
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -13472,10 +14543,211 @@ export interface components {
 			 *     pending or marked for deletion). Absent everywhere else.
 			 */
 			reason?: string;
+			/**
+			 * Format: int64
+			 * @description Present only on `409 settings_version_conflict`: the stored policy version to reload.
+			 */
+			current_version?: number;
 			/** @description Field-level errors (RFC 9457 §3.1 extension). Key = JSON field name; value = list of error strings. */
 			errors?: {
 				[key: string]: string[];
 			};
+		};
+		/**
+		 * @description A company's commerce policy, grouped as the PATCH `changes` are. Integer
+		 *     money is paise; `*_bps` are basis points (500 is 5%). Dates are `YYYY-MM-DD`.
+		 */
+		CompanyCommercePolicy: {
+			expiry: {
+				/** @description Months before the printed expiry month a batch stops being sellable. 0 is the legal limit, 1 stops at the start of the printed month. Default 1. */
+				stop_months_before: number;
+				/** @description Days before the last sellable day at which expiry alerts fire; stored descending. Default [180, 90, 30]. */
+				warning_days: number[];
+			};
+			fulfilment: {
+				shortage_allowed: ('hold' | 'refuse' | 'partial_backorder' | 'partial_reduce')[];
+				/**
+				 * @description One of shortage_allowed.
+				 * @enum {string}
+				 */
+				shortage_default: 'hold' | 'refuse' | 'partial_backorder' | 'partial_reduce';
+				hold_keeps_available: boolean;
+				/** @enum {string} */
+				invoice_timing: 'at_pack' | 'at_dispatch';
+			};
+			pricing: {
+				rate_override: boolean;
+				discount_enabled: boolean;
+				discount_max_bps: number;
+				scheme_enabled: boolean;
+				/** @enum {string} */
+				scheme_valuation: 'free_quantity' | 'discount_equivalent';
+			};
+			invoice: {
+				/** @enum {string} */
+				round_off: 'none' | 'nearest_rupee';
+			};
+			tax: {
+				/** @description The company own list. Empty by default; changes through /company/gst-rates, never through the settings PATCH. */
+				gst_rates: components['schemas']['CompanyGstRateDto'][];
+				/** @enum {string} */
+				credit_note_split: 'pro_rata' | 'manual_by_rate';
+				/** @description Financial year (`2025-26`) to the filing date. */
+				annual_return_filed: {
+					[key: string]: string;
+				};
+			};
+			doc: {
+				invoice_prefix: string;
+				credit_note_prefix: string;
+			};
+			einvoice: {
+				/** @enum {string} */
+				mode: 'off' | 'manual_irn';
+			};
+			eway: {
+				/** @enum {string} */
+				enforcement: 'warn' | 'block';
+			};
+			payment: {
+				/** @enum {string} */
+				advance_mode: 'none' | 'any_amount' | 'percent' | 'fixed';
+				/** @description Basis points for `percent` (1..10000), paise for `fixed`, 0 otherwise. */
+				advance_value: number;
+				part_payments: boolean;
+				/** @enum {string} */
+				overpayment: 'refuse' | 'customer_credit' | 'refund_due';
+				/** @enum {string} */
+				dispatch_gate: 'none' | 'advance_met' | 'full_payment';
+				/** @enum {string} */
+				completion_rule: 'full_payment' | 'on_delivery';
+			};
+			credit: {
+				enabled: boolean;
+				/** @enum {string} */
+				enforcement: 'warn' | 'block';
+				default_limit_paise: number;
+				default_terms_days: number;
+				block_on_overdue: boolean;
+				overdue_grace_days: number;
+			};
+			drug_schedule: {
+				/**
+				 * @description Whether the product form records a drug schedule. Default optional.
+				 * @enum {string}
+				 */
+				mode: 'off' | 'optional' | 'required';
+			};
+		};
+		/** @description One patchable setting and how to render its control. */
+		CompanySettingOption: {
+			/** @description `<group>.<setting>` */
+			key: string;
+			group: string;
+			/** @enum {string} */
+			kind: 'int' | 'bool' | 'enum' | 'enum_set' | 'int_list' | 'code' | 'date_map';
+			options?: string[];
+			/** Format: int64 */
+			min?: number;
+			/** Format: int64 */
+			max?: number;
+			max_items?: number;
+			/** @description The default value (any JSON type, by kind). */
+			default: unknown;
+			/**
+			 * @description The `company_settings.<permission>` that changes it.
+			 * @enum {string}
+			 */
+			permission: 'manage' | 'tax.manage';
+		};
+		CompanySettingsDto: {
+			/** Format: uuid */
+			tenant_id: string;
+			/**
+			 * Format: int64
+			 * @description 0 when nothing is stored (the defaults). Send it back as `expected_version`.
+			 */
+			version: number;
+			policy: components['schemas']['CompanyCommercePolicy'];
+			options: components['schemas']['CompanySettingOption'][];
+			/** Format: date-time */
+			updated_at?: string;
+			/** Format: uuid */
+			updated_by_membership_id?: string;
+		};
+		PatchCompanySettingsRequest: {
+			/** Format: int64 */
+			expected_version: number;
+			/** @description Required when a tax, document or compliance setting changes. */
+			reason?: string;
+			/** @description Group, then setting name: `{"expiry": {"stop_months_before": 2}}`. */
+			changes: {
+				[key: string]: {
+					[key: string]: unknown;
+				};
+			};
+		};
+		CompanySettingsHistoryEntry: {
+			/** Format: int64 */
+			version: number;
+			policy: components['schemas']['CompanyCommercePolicy'];
+			changed_keys: string[];
+			reason: string;
+			/** Format: uuid */
+			actor_membership_id?: string;
+			impersonator_operator_id?: string;
+			/** Format: date-time */
+			changed_at: string;
+		};
+		ListCompanySettingsHistoryResponse: {
+			items: components['schemas']['CompanySettingsHistoryEntry'][];
+			has_more: boolean;
+			next_cursor?: string;
+		};
+		CompanyGstRateDto: {
+			/** Format: uuid */
+			id: string;
+			rate_bps: number;
+			label: string;
+			/** @description The person who confirmed the rate for the company. */
+			confirmed_by: string;
+			/** Format: date */
+			confirmed_on: string;
+			active: boolean;
+		};
+		CompanyGstRateChangedDto: components['schemas']['CompanyGstRateDto'] & {
+			/**
+			 * Format: int64
+			 * @description The policy version the change moved to.
+			 */
+			policy_version: number;
+		};
+		ListCompanyGstRatesResponse: {
+			/** Format: int64 */
+			policy_version: number;
+			items: components['schemas']['CompanyGstRateDto'][];
+		};
+		/**
+		 * @description Refusals: `errors.rate_bps` (`required`, `out_of_range`), `errors.label` /
+		 *     `errors.confirmed_by` (`required`, `too_long`, `invalid_characters`; `label` also
+		 *     `duplicate`), `errors.confirmed_on` (`invalid_format`, `in_future`),
+		 *     `errors.reason` (`required`, `too_long`, `invalid_characters`).
+		 */
+		CreateCompanyGstRateRequest: {
+			rate_bps: number;
+			label: string;
+			confirmed_by: string;
+			/** Format: date */
+			confirmed_on: string;
+			reason: string;
+		};
+		PatchCompanyGstRateRequest: {
+			label?: string;
+			confirmed_by?: string;
+			/** Format: date */
+			confirmed_on?: string;
+			active?: boolean;
+			reason: string;
 		};
 		LoginRequest: {
 			/** Format: email */
@@ -13616,6 +14888,7 @@ export interface components {
 			sessions: components['schemas']['SessionDto'][];
 		};
 		RevokeAllSessionsRequest: {
+			/** @description Keep the session this access token belongs to (its `family_id` claim) and revoke the others. */
 			except_current?: boolean;
 			reason?: string;
 		};
@@ -13623,14 +14896,19 @@ export interface components {
 			revoked_count: number;
 		};
 		RegisterTenantRequest: {
+			/** @description Trimmed, then 3 to 63 characters of lowercase letters, digits and hyphens, starting and ending with a letter or digit, with no double hyphen (`--`). Anything else is 400 `invalid_slug` with `errors{slug: ["invalid_slug"]}`. */
 			slug: string;
+			/** @description Trimmed first, then measured (1 to 200 bytes of UTF-8, not characters) and stored trimmed. */
 			legal_name: string;
+			/** @description Trimmed first, then measured (1 to 200 bytes of UTF-8, not characters) and stored trimmed. */
 			display_name: string;
 			/** Format: email */
 			admin_email: string;
 			/** Format: password */
 			admin_password: string;
+			/** @description Trimmed first, then measured (1 to 100 bytes of UTF-8, not characters) and stored trimmed. */
 			admin_first_name: string;
+			/** @description Trimmed first, then measured (1 to 100 bytes of UTF-8, not characters) and stored trimmed. */
 			admin_last_name: string;
 		};
 		RegisterTenantResponse: {
@@ -13710,12 +14988,15 @@ export interface components {
 		};
 		/** @description Full replace. Every field is required; a body that omits one is 400 `invalid_body` (the `errors` map names it) and nothing is changed. */
 		UpdateTenantProfileRequest: {
+			/** @description Trimmed first, then measured (1 to 200 bytes of UTF-8, not characters) and stored trimmed. A value re-sent unchanged is accepted even if it was stored with padding before names were trimmed. */
 			legal_name: string;
+			/** @description Trimmed first, then measured (1 to 200 bytes of UTF-8, not characters) and stored trimmed. */
 			display_name: string;
 		};
 		/** @description Full replace. Every field is required (an empty string clears that declaration); a body that omits one is 400 `invalid_body` and nothing is changed. */
 		UpdateTenantStatutoryRequest: {
 			gst_number: string;
+			/** @description When `gst_number` is also sent, must equal the PAN embedded in it (characters 3 to 12), else 422 `tenant_invalid` with `errors{pan_number: ["gstin_pan_mismatch"]}`. */
 			pan_number: string;
 			drug_licence_number: string;
 		};
@@ -13772,18 +15053,51 @@ export interface components {
 			/** Format: uuid */
 			reports_to?: string;
 			role_ids: string[];
+			permission_overrides?: components['schemas']['UserPermissionOverridesDto'];
+			/** @description Opaque token for the live overrides in `permission_overrides`; present exactly when that field is. Send it back as `overrides_version` in `PATCH .../permission-overrides`. Do not parse or build it. */
+			overrides_version?: string;
+		};
+		/** @description A member's live permission overrides. Present on `GET /users/{userId}` only, and only for a caller who may change them. `granted` lists the grants not yet expired; `revoked` the names taken away. Re-sending a time-bound grant by name in `PATCH .../permission-overrides` keeps its expiry; the request has no way to extend it. The `overrides_version` beside this field on the user names exactly this state; a save must send it back. */
+		UserPermissionOverridesDto: {
+			granted: components['schemas']['GrantedOverrideDto'][];
+			revoked: string[];
+		};
+		GrantedOverrideDto: {
+			name: string;
+			/**
+			 * Format: date-time
+			 * @description Absent for a permanent grant.
+			 */
+			expires_at?: string;
+		};
+		SearchMembersResponse: {
+			members: components['schemas']['MemberHitDto'][];
+		};
+		/** @description One picker row. No email, no phone, no person id. */
+		MemberHitDto: {
+			/** Format: uuid */
+			membership_id: string;
+			display_name: string;
+			designation?: string;
 		};
 		ListUsersResponse: {
 			users: components['schemas']['UserDto'][];
 			has_more: boolean;
 			next_cursor?: string;
+			/** @description First page only (no cursor). The whole tenant's members per status, whatever `status` filter is in use. */
+			status_counts?: {
+				active: number;
+				inactive: number;
+			};
 		};
 		CreateUserRequest: {
 			/** Format: email */
 			email: string;
 			/** Format: password */
 			password: string;
+			/** @description Trimmed first, then measured (1 to 100 bytes of UTF-8, not characters) and stored trimmed. */
 			first_name: string;
+			/** @description Trimmed first, then measured (1 to 100 bytes of UTF-8, not characters) and stored trimmed. */
 			last_name: string;
 		};
 		CreateUserResponse: {
@@ -13795,8 +15109,11 @@ export interface components {
 		};
 		/** @description Full replace. Every field is required (an empty string clears it); a body that omits one is 400 `invalid_body` and nothing is changed. */
 		UpdateUserProfileRequest: {
+			/** @description Trimmed, then at most 120 bytes of UTF-8 (not characters); longer is 422 `user_invalid` with `errors{designation: ["too_long"]}`. A stored value over the cap, re-sent unchanged, is accepted. */
 			designation: string;
+			/** @description Same rule as `designation`: 120 bytes after trimming. */
 			department: string;
+			/** @description Trimmed, then at most 280 bytes of UTF-8; longer is 422 `user_invalid` with `errors{status_message: ["too_long"]}`. */
 			status_message: string;
 		};
 		DeactivateUserRequest: {
@@ -13810,10 +15127,12 @@ export interface components {
 			/** Format: uuid */
 			manager_id: string;
 		};
-		/** @description Atomic replace of both overlays. Both arrays are required (an empty array clears that overlay, `null` is not accepted); a body that omits one is 400 `invalid_body` and nothing is changed. */
+		/** @description Atomic replace of both overlays. Every field is required (an empty array clears that overlay, `null` is not accepted); a body that omits one is 400 `invalid_body` and nothing is changed. */
 		ReplaceUserPermissionOverridesRequest: {
 			granted: string[];
 			revoked: string[];
+			/** @description The `overrides_version` that `GET /users/{userId}` returned with the overrides this save was made from. The save answers 409 `overrides_changed` when the member's live overrides no longer have it. */
+			overrides_version: string;
 		};
 		RoleDto: {
 			/** Format: uuid */
@@ -13937,7 +15256,9 @@ export interface components {
 			reason: string;
 		};
 		UpdatePersonProfileRequest: {
+			/** @description Trimmed first, then measured (1 to 100 bytes of UTF-8, not characters) and stored trimmed. A value re-sent unchanged is accepted. */
 			first_name?: string;
+			/** @description Trimmed first, then measured (1 to 100 bytes of UTF-8, not characters) and stored trimmed. */
 			last_name?: string;
 		};
 		PlatformStatsResponse: {
@@ -13959,6 +15280,7 @@ export interface components {
 		CreateImpersonationSessionRequest: {
 			/** Format: uuid */
 			target_tenant_id: string;
+			/** @description The audit reason. Trimmed first, THEN measured (10 characters or more) and stored trimmed: ten spaces are refused (422 `impersonation_invalid`). */
 			reason: string;
 			/** @default 30 */
 			duration_minutes: number;
@@ -14048,6 +15370,7 @@ export interface components {
 			permission: string;
 			/** @description JIT window length in days. Omit to use default (7). */
 			duration_days?: number;
+			/** @description Trimmed first, THEN measured (10 to 1024 characters) and stored trimmed. */
 			reason: string;
 		};
 		CreatePermissionRequestResponse: {
@@ -14417,15 +15740,55 @@ export interface components {
 			created_at: string;
 			/** Format: date-time */
 			updated_at: string;
+			/** @description Never empty: a product stored without a category reads `General`. Free text; the values the form offers come from `GET /inventory/product-categories`. */
+			product_category: string;
+			/** @description Units. 0: the low-stock alert is off for this product. */
+			reorder_level: number;
+			/** @description Days before expiry at which a batch is reported as expiring soon. 0: the expiry alert is off for this product. */
+			expiry_alert_threshold_days: number;
+			/**
+			 * Format: int64
+			 * @description Units on hand, added up over the product's live batches that are NOT expired (expiry date after today, UTC). Units in an expired batch are not counted: they cannot be sold.
+			 */
+			stock_on_hand: number;
+			/**
+			 * Format: int64
+			 * @description Of `stock_on_hand`, the units held for confirmed orders (same batches).
+			 */
+			stock_reserved: number;
+			/**
+			 * Format: int64
+			 * @description `stock_on_hand` minus `stock_reserved`: what can still be sold.
+			 */
+			stock_available: number;
+			/**
+			 * Format: date-time
+			 * @description The soonest expiry date among the unexpired batches that hold stock (midnight UTC, the shape of `BatchDto.expiry_date`). Absent when the product has no unexpired stock.
+			 */
+			earliest_expiry?: string;
 		};
 		CreateProductRequest: {
 			sku: string;
 			name: string;
 			dosage_form: string;
 			pack_size: string;
+			/** @description ASCII digits only, exactly 4, 6 or 8 of them; a leading zero is allowed (0402 is a real code). Send it trimmed (the server also trims surrounding whitespace before it checks). Anything else is 422 validation_failed. The READ shape (`ProductDto.hsn_code`) still allows 4..10 digits for rows stored before this rule. */
 			hsn_code: string;
-			gst_rate_bps: number;
+			/** @description Optional. Absent: the category default is used (as before). An explicit 0 is stored as 0 (a nil-rated product); it is NOT replaced by the default. */
+			gst_rate_bps?: number;
 			manufacturer?: string;
+			/** @description Optional. Absent or blank: `General`. Trimmed; at most 64 characters. It selects the default GST rate when `gst_rate_bps` is absent (a category that is not in `GET /inventory/product-categories` has no default, so the rate is then 0: send a category from that list, or send the rate). 422 `validation_failed`, `errors.product_category`: `too_long` (over 64 characters), `invalid_characters` (holds the NUL character). */
+			product_category?: string;
+			/**
+			 * @description Optional. Units below which the product is low on stock; 0 (the default) switches the low-stock alert off. 422 `validation_failed`, `errors.reorder_level`: `too_small` (below 0), `too_large` (above 2147483647).
+			 * @default 0
+			 */
+			reorder_level: number;
+			/**
+			 * @description Optional. Absent: 90. An explicit 0 switches the expiry alert off and is stored as 0. 422 `validation_failed`, `errors.expiry_alert_threshold_days`: `too_small` (below 0), `too_large` (above 36500).
+			 * @default 90
+			 */
+			expiry_alert_threshold_days: number;
 		};
 		CreateProductResponse: {
 			/** Format: uuid */
@@ -14437,6 +15800,20 @@ export interface components {
 			gst_rate_bps?: number;
 			is_active?: boolean;
 			manufacturer?: string;
+			/** @description A blank value stores `General`. Changing the category never changes `gst_rate_bps`. 422 `validation_failed`, `errors.product_category`: `too_long` (over 64 characters), `invalid_characters` (holds the NUL character). */
+			product_category?: string;
+			/** @description 0 switches the low-stock alert off. 422 `validation_failed`, `errors.reorder_level`: `too_small`, `too_large`. */
+			reorder_level?: number;
+			/** @description 0 switches the expiry alert off. 422 `validation_failed`, `errors.expiry_alert_threshold_days`: `too_small`, `too_large`. */
+			expiry_alert_threshold_days?: number;
+		};
+		ProductCategoryDto: {
+			category: string;
+			/** @description GST rate in basis points (1200 = 12%) a new product in this category takes when the create request sends no `gst_rate_bps`. */
+			default_gst_rate_bps: number;
+		};
+		ListProductCategoriesResponse: {
+			items: components['schemas']['ProductCategoryDto'][];
 		};
 		ListProductsResponse: {
 			items: components['schemas']['ProductDto'][];
@@ -14468,6 +15845,11 @@ export interface components {
 			quantity_on_hand: number;
 			/**
 			 * Format: int64
+			 * @description Of `quantity_on_hand`, the units held for confirmed orders. Only `quantity_on_hand - quantity_reserved` can be sold, moved out (`outbound`) or adjusted away; asking for more is 409 `insufficient_stock`.
+			 */
+			quantity_reserved: number;
+			/**
+			 * Format: int64
 			 * @description Optimistic-concurrency token (Vernon IDDD ch.10)
 			 */
 			version: number;
@@ -14488,6 +15870,11 @@ export interface components {
 			mrp_paise: number;
 			/** Format: int64 */
 			purchase_price_paise: number;
+			/**
+			 * Format: int64
+			 * @description Optional. Opening stock in units, received with the batch: written as one `inbound` movement in the same transaction as the batch. Absent or 0: an empty batch (the earlier behaviour). 422 `validation_failed`, `errors.initial_quantity: [too_small]` when negative; 409 `batch_expired` when above 0 and the batch is already expired.
+			 */
+			initial_quantity?: number;
 		};
 		AddBatchResponse: {
 			/** Format: uuid */
@@ -14528,8 +15915,11 @@ export interface components {
 			occurred_at: string;
 		};
 		LogMovementRequest: {
-			/** @enum {string} */
-			type: 'inbound' | 'outbound' | 'adjustment' | 'reservation' | 'release';
+			/**
+			 * @description Request-only enum: the three types a caller may log. `reservation` and `release` belong to the order saga; they appear in the movement ledger READ shape (`MovementDto.type`) but are refused here with 422 invalid_movement_type, like any other value.
+			 * @enum {string}
+			 */
+			type: 'inbound' | 'outbound' | 'adjustment';
 			/**
 			 * Format: int64
 			 * @description Positive magnitude; direction implicit in type.

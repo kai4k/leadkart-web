@@ -54,7 +54,11 @@ describe('deactivateUserRequestSchema', () => {
 describe('replacePermissionOverridesRequestSchema', () => {
 	it('parses empty arrays', () => {
 		expect(
-			replacePermissionOverridesRequestSchema.parse({ granted: [], revoked: [] })
+			replacePermissionOverridesRequestSchema.parse({
+				overrides_version: 'v1',
+				granted: [],
+				revoked: []
+			})
 		).toBeTruthy();
 	});
 });

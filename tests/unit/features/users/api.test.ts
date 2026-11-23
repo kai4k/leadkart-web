@@ -78,7 +78,15 @@ describe('full-replace bodies (Go answers 400 invalid_body when a field is missi
 
 	it('PATCH /users/{id}/permission-overrides always carries granted AND revoked, empty arrays included', async () => {
 		const body = sent();
-		await replacePermissionOverrides('m1', { granted: [], revoked: ['crm.leads.delete'] });
-		expect(body()).toEqual({ granted: [], revoked: ['crm.leads.delete'] });
+		await replacePermissionOverrides('m1', {
+			overrides_version: 'v1',
+			granted: [],
+			revoked: ['crm.leads.delete']
+		});
+		expect(body()).toEqual({
+			overrides_version: 'v1',
+			granted: [],
+			revoked: ['crm.leads.delete']
+		});
 	});
 });
