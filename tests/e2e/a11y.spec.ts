@@ -38,7 +38,10 @@ async function expectNoSeriousOrCriticalViolations(page: Page, scope?: string): 
 }
 
 test.describe('A11y — WCAG 2.2 AA via axe-core', () => {
-	test.beforeEach(async () => {
+	test.beforeEach(async ({ page }) => {
+		// axe reads colours as painted: during the sign-in card's fade-in, text is part-transparent
+		// and measures below AA although its resting colour passes. Same setting as tests/a11y.
+		await page.emulateMedia({ reducedMotion: 'reduce' });
 		await resetMock();
 	});
 
