@@ -20,6 +20,11 @@ const CODE_KEYS: Record<string, string> = {
 	required: 'form.required',
 	too_long: 'form.tooLong',
 	invalid_characters: 'form.invalidCharacters',
+	// a refused number or length on a filter or an audit reason (`errors{<param>: [too_small]}`), and the two format codes
+	too_small: 'form.tooSmall',
+	too_large: 'form.tooLarge',
+	invalid_email: 'form.errors.emailInvalid',
+	invalid_slug: 'form.errors.slugLength',
 	// value-object refusals (identity/ports/errcodes.go FieldCode*): one code each, the copy states the format
 	invalid_gstin: 'form.errors.gstinInvalid',
 	invalid_pan: 'form.errors.panInvalid',

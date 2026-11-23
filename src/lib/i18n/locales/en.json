@@ -436,6 +436,7 @@
 			"phoneInvalid": "Enter the number with + and country code, for example +919876543210.",
 			"cityPincodeMismatch": "This pincode does not serve this city. Check the city and the pincode.",
 			"addressInvalid": "Check the street, city, state and pincode.",
+			"emailInvalid": "Enter a valid email address.",
 			"alsoGranted": "A permission cannot be both granted and revoked.",
 			"greaterThanZero": "Enter a number greater than 0.",
 			"ownerRequired": "Pick the new owner.",

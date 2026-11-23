@@ -37,6 +37,10 @@ describe('Go field codes', () => {
 		['invalid_city', en.form.errors.cityPincodeMismatch],
 		['invalid_address', en.form.errors.addressInvalid],
 		['also_granted', 'A permission cannot be both granted and revoked.'],
+		['invalid_email', 'Enter a valid email address.'],
+		['invalid_slug', en.form.errors.slugLength],
+		['too_small', en.form.tooSmall],
+		['too_large', en.form.tooLarge],
 		['invalid_characters', 'Remove line breaks, tabs and invisible characters.']
 	])('%s', (code, sentence) => {
 		expect(text(code)).toBe(sentence);
