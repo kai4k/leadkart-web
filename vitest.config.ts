@@ -32,6 +32,11 @@ export default defineConfig({
 		}
 	},
 	test: {
+		// Vitest's 5 s default is for I/O-light tests. The BFF source walkers build a TypeScript program per case
+		// and the component tests mount Svelte under jsdom; on a 2-vCPU runner with coverage on, a case measured
+		// over 5 s (app-server-files layout-reset self-tests failed with it at --maxWorkers=2). 20 s is a ceiling
+		// for a slow machine, not a budget: a hung test still fails.
+		testTimeout: 20_000,
 		// Two projects, so each test runs in the environment its code runs in:
 		//   server: tests/unit/server/** (BFF modules), tests/unit/contract/** and tests/unit/scripts/**
 		//           (read files / run build scripts, no DOM)
@@ -60,7 +65,25 @@ export default defineConfig({
 					environment: 'jsdom',
 					setupFiles: ['./tests/unit/setup.ts'],
 					include: ['tests/unit/**/*.test.ts', 'src/**/*.test.ts'],
-					exclude: ['tests/unit/server/**', 'tests/unit/contract/**', 'tests/unit/scripts/**']
+					exclude: [
+						'tests/unit/server/**',
+						'tests/unit/contract/**',
+						'tests/unit/scripts/**',
+						'tests/unit/service-worker/precache.test.ts'
+					]
+				}
+			},
+			// Reads build/ (the built service worker + CSS), so it needs `npm run build` first and fails under CI
+			// without one. Not in the unit run (`npm test`, `npm run test:coverage` pick the projects above); the build
+			// job runs it right after building: `npx vitest run tests/unit/service-worker`.
+			{
+				extends: true,
+				resolve: { conditions: ['browser', ...defaultClientConditions] },
+				test: {
+					name: 'built',
+					environment: 'jsdom',
+					setupFiles: ['./tests/unit/setup.ts'],
+					include: ['tests/unit/service-worker/precache.test.ts']
 				}
 			}
 		],
