@@ -13,7 +13,7 @@ vi.mock('$app/state', () => ({
 }));
 
 import { createListPagination } from '#lib/hooks/use-list-pagination.svelte.ts';
-import { createBulkSelection } from '#lib/hooks/use-bulk-selection.svelte.ts';
+import { createBulkSelection, filtersScopeKey } from '#lib/hooks/use-bulk-selection.svelte.ts';
 import { useUrlTab } from '#lib/hooks/use-url-tab.svelte.ts';
 import { limitSearchBytes } from '#lib/features/operator/people/api.ts';
 import { inRoot } from './root.svelte.ts';
@@ -123,5 +123,42 @@ describe('limitSearchBytes: Go reads 100 bytes of a search', () => {
 		const cut = limitSearchBytes('अ'.repeat(50));
 		expect([...cut]).toHaveLength(33);
 		expect(new TextEncoder().encode(cut).length).toBeLessThanOrEqual(100);
+	});
+});
+
+describe('createListPagination.setPage: what is written to the URL', () => {
+	const page = () => createListPagination(() => ITEMS, { pageSize: 10 });
+
+	it('page 1 is the URL without a page: ?page=1 is never written', () => {
+		at('?page=2&q=asha');
+		goto.mockClear();
+		page().setPage(1);
+		expect(goto).toHaveBeenCalledWith('/settings/users?q=asha', { replace: true });
+	});
+
+	it('a later page is written, beside what is already there', () => {
+		at('?q=asha');
+		goto.mockClear();
+		page().setPage(3);
+		expect(goto).toHaveBeenCalledWith('/settings/users?q=asha&page=3', { replace: true });
+	});
+});
+
+describe('filtersScopeKey: which filter changes clear a selection', () => {
+	it('a new sort order is the same rows: the key does not change', () => {
+		expect(filtersScopeKey({ q: 'asha', status: ['paid'], sort: 'placed_at:desc' })).toBe(
+			filtersScopeKey({ q: 'asha', status: ['paid'], sort: 'total:asc' })
+		);
+		expect(filtersScopeKey({ q: 'asha', sort: 'a' })).toBe(filtersScopeKey({ q: 'asha' }));
+	});
+
+	it('a search or a filter change is another key', () => {
+		const base = filtersScopeKey({ q: 'asha', status: ['paid'] });
+		expect(filtersScopeKey({ q: 'ash', status: ['paid'] })).not.toBe(base);
+		expect(filtersScopeKey({ q: 'asha', status: ['paid', 'draft'] })).not.toBe(base);
+	});
+
+	it('the order of the keys does not matter', () => {
+		expect(filtersScopeKey({ a: '1', b: '2' })).toBe(filtersScopeKey({ b: '2', a: '1' }));
 	});
 });

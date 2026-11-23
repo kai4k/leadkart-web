@@ -46,6 +46,7 @@ export {
 
 export {
 	createBulkSelection,
+	filtersScopeKey,
 	type BulkSelection,
 	type SelectableItem
 } from './use-bulk-selection.svelte';

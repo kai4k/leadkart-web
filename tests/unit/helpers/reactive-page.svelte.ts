@@ -14,3 +14,17 @@ export function createReactivePage<T>(initial: T): ReactivePage<T> {
 		}
 	};
 }
+
+/** A `$app/state` page whose `url` is reactive: a list that reads its page or search from the URL follows `goto`. */
+export function createReactiveUrlPage(initial: URL): { url: URL } {
+	// replaced whole by the test, never mutated
+	let url = $state.raw(initial);
+	return {
+		get url() {
+			return url;
+		},
+		set url(next: URL) {
+			url = next;
+		}
+	};
+}

@@ -51,6 +51,20 @@ vi.mock('$features/auth', async () => {
 		session: { canAny: (...perms: string[]) => perms.some((p) => held.includes(p)) }
 	};
 });
+// A reactive page URL: the list reads its page, search and status from it, and goto() moves it.
+const nav = vi.hoisted(() => ({ page: undefined as unknown as { url: URL } }));
+vi.mock('$app/state', async () => {
+	const { createReactiveUrlPage } = await import('../helpers/reactive-page.svelte.ts');
+	nav.page = createReactiveUrlPage(new URL('http://localhost/settings/users'));
+	return { page: nav.page };
+});
+vi.mock('$app/navigation', async (importOriginal) => ({
+	...(await importOriginal<Record<string, unknown>>()),
+	goto: vi.fn((to: string) => {
+		nav.page.url = new URL(to, 'http://localhost');
+		return Promise.resolve();
+	})
+}));
 const gw = vi.hoisted(() => ({ deactivateUser: vi.fn(), reactivateUser: vi.fn() }));
 vi.mock('#lib/features/users/api.ts', () => gw);
 vi.mock('#lib/features/users/api', () => gw);
@@ -81,6 +95,7 @@ beforeEach(() => {
 	// The real client: its MutationCache owns the one global error toast.
 	h.qc = createQueryClient();
 	vi.spyOn(h.qc, 'invalidateQueries').mockResolvedValue(undefined);
+	nav.page.url = new URL('http://localhost/settings/users');
 	h.users = [user(1), user(2), user(3)];
 	target = document.body.appendChild(document.createElement('div'));
 	component = mount(UsersList, { target });
@@ -164,5 +179,33 @@ describe('UsersList bulk status change', () => {
 		expect(toastMock.success).not.toHaveBeenCalled();
 		expect(gw.deactivateUser).toHaveBeenCalledTimes(3);
 		expect(checkboxes().every(isChecked)).toBe(true);
+	});
+});
+
+describe('UsersList selection and paging', () => {
+	it('a member ticked on page 1 is not selected on page 2: a bulk action reaches only the rows shown', async () => {
+		if (component) unmount(component);
+		h.users = Array.from({ length: 12 }, (_, i) => user(i + 1));
+		component = mount(UsersList, { target });
+		flushSync();
+		checkboxes()[0]!.click();
+		flushSync();
+		expect(document.body.textContent).toContain('1 selected');
+
+		document.querySelector<HTMLElement>('button[aria-label="Next page"]')!.click();
+		flushSync();
+		expect(nav.page.url.searchParams.get('page')).toBe('2');
+		await vi.waitFor(() => expect(document.body.textContent).not.toContain('1 selected'));
+		expect(checkboxes().some(isChecked)).toBe(false);
+		// and nothing is sent for a row that is not on screen
+		expect(buttonNamed('Deactivate')).toBeUndefined();
+	});
+
+	it('the selection survives while the page stays the same', () => {
+		checkboxes()[0]!.click();
+		flushSync();
+		expect(document.body.textContent).toContain('1 selected');
+		flushSync();
+		expect(checkboxes().map(isChecked)).toEqual([true, false, false]);
 	});
 });

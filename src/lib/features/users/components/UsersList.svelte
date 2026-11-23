@@ -98,8 +98,11 @@
 	// selection store keys on membership_id strings even though UserDto
 	// doesn't carry an `id` field. The store contract requires SelectableItem
 	// here for type-safety; the runtime store only ever sees the rowKey value.
-	// cleared when the search or the status filter changes: a bulk action must not reach members that are no longer shown
-	const selection = createBulkSelection<{ id: string }>(() => `${search}|${statusFilter}`);
+	// cleared when the search, the status filter or the PAGE changes: a bulk action must not reach members that
+	// are not on screen (tick Ravi on page 1, press Next: Ravi is no longer shown)
+	const selection = createBulkSelection<{ id: string }>(
+		() => `${search}|${statusFilter}|${pagination.currentPage}`
+	);
 
 	// One mutation settles every id and toasts one summary. Succeeded rows leave the selection;
 	// failed rows stay selected so the action can be retried. When every id failed the whole

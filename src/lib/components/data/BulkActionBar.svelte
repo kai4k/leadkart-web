@@ -82,6 +82,13 @@
 		}
 	});
 
+	// A confirm is about the rows that are selected. When the selection is emptied under it (the search
+	// changed, the page changed) there is nothing left to confirm: the dialog closes instead of staying
+	// open with a Confirm button that would send nothing.
+	$effect(() => {
+		if (selection.count === 0 && runningId === null) pendingConfirm = null;
+	});
+
 	async function runAction(action: BulkAction) {
 		if (action.confirm) {
 			pendingConfirm = action;

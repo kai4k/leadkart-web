@@ -15,6 +15,7 @@
 		createKeyboardListNav,
 		createSavedViews,
 		createUrlFilters,
+		filtersScopeKey,
 		type SavedView
 	} from '#lib/hooks/index.ts';
 	import {
@@ -130,8 +131,9 @@
 	});
 
 	// ── Bulk selection ────────────────────────────────────────────────
-	// cleared when the search or filters change: a bulk action must not reach rows that are no longer shown
-	const selection = createBulkSelection<ProductDto>(() => JSON.stringify(filters.filters));
+	// cleared when the search or filters change: a bulk action must not reach rows that are no longer shown.
+	// Sorting keeps it: the same rows in another order.
+	const selection = createBulkSelection<ProductDto>(() => filtersScopeKey(filters.filters));
 
 	const bulkMut = bulkProductActionMutation();
 

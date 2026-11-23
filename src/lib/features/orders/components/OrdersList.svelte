@@ -11,7 +11,12 @@
 	import { DataTable, EmptyState, type DataTableColumn } from '$ui';
 	import { Plus, ShoppingCart, Trash2, X } from '$icons';
 	import type { Component } from 'svelte';
-	import { createBulkSelection, createSavedViews, createUrlFilters } from '#lib/hooks/index.ts';
+	import {
+		createBulkSelection,
+		createSavedViews,
+		createUrlFilters,
+		filtersScopeKey
+	} from '#lib/hooks/index.ts';
 	import { ordersInfiniteQuery, bulkOrderActionMutation } from '$features/orders/queries';
 	import {
 		formatMoney,
@@ -66,8 +71,9 @@
 		urlFilters
 	);
 
-	// cleared when the search or filters change: a bulk action must not reach rows that are no longer shown
-	const selection = createBulkSelection<OrderDto>(() => JSON.stringify(urlFilters.filters));
+	// cleared when the search or filters change: a bulk action must not reach rows that are no longer shown.
+	// Sorting keeps it: the same rows in another order.
+	const selection = createBulkSelection<OrderDto>(() => filtersScopeKey(urlFilters.filters));
 
 	// ── Query ────────────────────────────────────────────────────────
 	const listQuery = ordersInfiniteQuery(() => {

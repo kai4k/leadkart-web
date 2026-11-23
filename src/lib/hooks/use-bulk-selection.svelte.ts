@@ -25,10 +25,27 @@ export interface BulkSelection<TItem extends SelectableItem> {
 }
 
 /**
- * @param getScopeKey the search and filters the list shows, as a string. When it changes the selection
- *   is cleared: a bulk action must not run on rows the person can no longer see (tick Ravi, search
- *   "asha", Deactivate would hit Ravi). Pass it from a component; without it the selection is only
- *   cleared by the caller.
+ * The scope key of a list driven by URL filters: every filter that decides WHICH rows are shown.
+ * `sort` is left out by default: a new order shows the same rows, so the selection stays.
+ */
+export function filtersScopeKey(
+	filters: Record<string, unknown>,
+	ignore: string[] = ['sort']
+): string {
+	return JSON.stringify(
+		Object.keys(filters)
+			.filter((key) => !ignore.includes(key))
+			.sort()
+			.map((key) => [key, filters[key]])
+	);
+}
+
+/**
+ * @param getScopeKey what decides which rows the list shows, as a string: the search, the filters, and
+ *   the PAGE NUMBER of an offset-paged list (a row on another page is not on screen). When it changes
+ *   the selection is cleared: a bulk action must not run on rows the person can no longer see (tick
+ *   Ravi, search "asha" or press Next, Deactivate would hit Ravi). The sort order is not part of it.
+ *   Pass it from a component; without it the selection is only cleared by the caller.
  */
 export function createBulkSelection<TItem extends SelectableItem>(
 	getScopeKey?: () => string

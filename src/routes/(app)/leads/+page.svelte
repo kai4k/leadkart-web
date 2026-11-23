@@ -24,6 +24,7 @@
 		createBulkSelection,
 		createKeyboardListNav,
 		createSavedViews,
+		filtersScopeKey,
 		type SavedView
 	} from '#lib/hooks/index.ts';
 	import { LEAD_FILTER_FIELDS, type LeadUrlFilters } from '$features/leads/filter-config';
@@ -127,8 +128,9 @@
 
 	// ── List + selection + keyboard nav ──────────────────────────────
 	const list = leadsInfiniteQuery(() => buildListParams());
-	// cleared when the search or filters change: a bulk action must not reach rows that are no longer shown
-	const selection = createBulkSelection<CrmLeadDto>(() => JSON.stringify(filters.filters));
+	// cleared when the search or filters change: a bulk action must not reach rows that are no longer shown.
+	// Sorting keeps it: the same rows in another order.
+	const selection = createBulkSelection<CrmLeadDto>(() => filtersScopeKey(filters.filters));
 	let editingLead: CrmLeadDto | null = $state(null);
 	let editOpen = $state(false);
 	let bulkUploadOpen = $state(false);
