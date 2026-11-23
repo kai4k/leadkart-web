@@ -148,6 +148,17 @@
 		selection ? selection.count > 0 && !allVisibleSelected : false
 	);
 
+	// Once the query settles, a selected row that is not among the loaded rows is not selected any
+	// more (a sort or filter moved it off screen): a bulk action would reach a row nobody can see.
+	// Waiting out `loading` / `error` keeps the selection across a refetch that has no rows yet; the
+	// same rows in another order keep theirs. (The rebuilt `data/data-table` does the same.)
+	$effect(() => {
+		if (!selection || state === 'loading' || state === 'error') return;
+		const present = new Set(rows.map((r) => rowKey(r)));
+		const stale = [...selection.selected].filter((id: string) => !present.has(id));
+		if (stale.length > 0) selection.deselectAllVisible(stale.map((id: string) => ({ id })));
+	});
+
 	function toggleAllVisible() {
 		if (!selection) return;
 		if (selection.areAllVisibleSelected(selectableRows))
