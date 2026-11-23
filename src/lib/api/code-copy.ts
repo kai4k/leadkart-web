@@ -71,6 +71,8 @@ const CODES = [
 	'password_change_required',
 	'service_busy',
 	'session_not_found',
+	'current_session_unknown',
+	'overrides_changed',
 	'search_category_forbidden',
 	'invalid_search_include'
 ] as const;

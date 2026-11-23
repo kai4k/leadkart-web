@@ -1,6 +1,6 @@
 /**
  * The identity screens say only what is true today:
- *   - "Sign out everywhere" (Go revokes every session, this device included, until it honours `except_current`);
+ *   - "Sign out other devices" (Go keeps the session of the access token, `except_current`); a table of devices;
  *   - changing email to the address the account already has is a field error, before anything is sent;
  *   - the permission-overrides action is not offered while a save would erase the member's existing overrides.
  */
@@ -78,18 +78,28 @@ afterEach(() => {
 });
 
 describe('SessionsList', () => {
-	it('the button says "Sign out everywhere" and says it includes this device', () => {
+	it('the button says "Sign out other devices" and promises this device stays signed in', () => {
 		component = mount(SessionsList, { target });
 		flushSync();
 		const button = [...target.querySelectorAll('button')].find((b) =>
-			b.textContent?.includes('Sign out everywhere')
+			b.textContent?.includes('Sign out other devices')
 		)!;
 		expect(button).toBeDefined();
-		expect(target.textContent).not.toContain('Sign out other devices');
+		expect(target.textContent).not.toContain('Sign out everywhere');
 		const note = document.getElementById(button.getAttribute('aria-describedby')!)!;
-		expect(note.textContent).toContain('this device included');
+		expect(note.textContent).toContain('This device stays signed in');
+		expect(note.textContent).not.toContain('this device included');
 		button.click();
 		expect(h.revokeOthers).toHaveBeenCalledTimes(1);
+	});
+
+	it('the sessions are a table named "Active sessions", one row per device, each with its own named Revoke', () => {
+		component = mount(SessionsList, { target });
+		flushSync();
+		expect(target.querySelector('table caption')?.textContent).toContain('Active sessions');
+		expect(target.querySelectorAll('tbody tr')).toHaveLength(2);
+		expect(target.querySelector('button[aria-label="Revoke session Chrome"]')).not.toBeNull();
+		expect(target.querySelector('button[aria-label="Revoke session Phone"]')).not.toBeNull();
 	});
 });
 

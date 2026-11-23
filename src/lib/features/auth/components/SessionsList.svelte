@@ -1,25 +1,21 @@
 <script lang="ts">
-	import { Badge, Button, Card } from '$ui';
+	import { Button, EmptyState } from '$ui';
 	import { Trash2, LogOut, Icon } from '$icons';
+	import type { DataTableColumn } from '#lib/components/data/index.ts';
+	import { DataTable } from '#lib/components/data/data-table/index.ts';
 	import {
 		mySessionsQuery,
 		revokeSessionMutation,
 		revokeOtherSessionsMutation
 	} from '$features/auth/queries';
-	import { isCurrentSession } from '$features/auth/view-models';
+	import type { SessionDto } from '$features/auth/types';
 	import { relativeTime } from '#lib/utils/format.ts';
 
 	/**
-	 * SessionsList — one Card row per session family.
-	 * Current session is badged + cannot be revoked from this list.
-	 * TanStack Query drives fetch + optimistic updates; the page wraps this in QueryState, which owns
-	 * the loading and error states.
+	 * SessionsList — the person's signed-in devices as a table, one row per session family.
+	 * "Sign out other devices" asks Go for `except_current`: the session of this access token stays.
+	 * The list cannot say which row is this device (Go's list carries no marker), so no row is badged.
 	 */
-
-	// BFF model: refresh token is httpOnly — the browser can no longer decode
-	// the `fam` claim from it. currentFamilyId degrades to null; "This device"
-	// badge is suppressed until the backend adds family_id to capabilities.
-	const currentFamilyId: string | null = null;
 	const sessionsQuery = mySessionsQuery();
 	const revokeMutation = revokeSessionMutation();
 	const revokeOthersMutation = revokeOtherSessionsMutation();
@@ -28,7 +24,7 @@
 
 	let revokingFamilyId = $state<string | null>(null);
 
-	async function onRevoke(familyId: string) {
+	function onRevoke(familyId: string) {
 		revokingFamilyId = familyId;
 		revokeMutation.mutate(familyId, {
 			onSettled: () => {
@@ -37,10 +33,42 @@
 		});
 	}
 
-	async function onRevokeOthers() {
-		revokeOthersMutation.mutate({ keepFamilyId: currentFamilyId });
-	}
+	const deviceName = (s: SessionDto) => s.device_label || 'Unknown device';
+
+	const columns: DataTableColumn<SessionDto>[] = [
+		{ id: 'device', header: 'Device', accessor: deviceName, class: 'font-medium' },
+		{
+			id: 'last',
+			header: 'Last active',
+			accessor: (s) => relativeTime(s.last_used_at),
+			class: 'text-muted-foreground'
+		},
+		{
+			id: 'started',
+			header: 'Started',
+			accessor: (s) => relativeTime(s.created_at),
+			hideBelow: 'md',
+			class: 'text-muted-foreground'
+		}
+	];
 </script>
+
+{#snippet rowActions(sess: SessionDto)}
+	<Button
+		variant="ghost"
+		size="sm"
+		aria-label="Revoke session {deviceName(sess)}"
+		loading={revokingFamilyId === sess.family_id}
+		disabled={revokingFamilyId !== null}
+		onclick={() => onRevoke(sess.family_id)}
+	>
+		<Icon icon={Trash2} size="sm" /> Revoke
+	</Button>
+{/snippet}
+
+{#snippet empty()}
+	<EmptyState title="No active sessions" description="No device is signed in to this account." />
+{/snippet}
 
 <div class="stack stack-relaxed">
 	<header class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -49,69 +77,30 @@
 			<p class="caption text-muted-foreground">
 				Each row is a device or browser signed in to your account.
 			</p>
-			<!-- Go revokes EVERY session today (`except_current` has no effect yet, identity/ports/http.go): the button
-			     says what happens, this device included. "Sign out other devices" returns when Go honours the flag. -->
-			<p id="sign-out-everywhere-note" class="caption text-muted-foreground">
-				Sign out everywhere ends every session, this device included: you will be asked to sign in
-				again here too.
+			<p id="sign-out-others-note" class="caption text-muted-foreground">
+				This device stays signed in. Every other device is signed out; its access ends within 10
+				minutes at the latest.
 			</p>
 		</div>
 		<Button
 			variant="ghost"
-			onclick={onRevokeOthers}
+			onclick={() => revokeOthersMutation.mutate({ keepFamilyId: null })}
 			loading={revokeOthersMutation.isPending}
 			disabled={revokeOthersMutation.isPending || sessionList.length === 0}
-			aria-describedby="sign-out-everywhere-note"
+			aria-describedby="sign-out-others-note"
 		>
-			<Icon icon={LogOut} size="sm" /> Sign out everywhere
+			<Icon icon={LogOut} size="sm" /> Sign out other devices
 		</Button>
 	</header>
 
-	{#if sessionList.length === 0 && !sessionsQuery.isPending}
-		<Card.Root>
-			<Card.Content class="text-center">
-				<p class="body-base text-muted-foreground">No active sessions.</p>
-			</Card.Content>
-		</Card.Root>
-	{:else}
-		<ul class="stack stack-tight" aria-label="Active sessions">
-			{#each sessionList as sess (sess.family_id)}
-				{@const current = isCurrentSession(sess, currentFamilyId)}
-				<li>
-					<Card.Root>
-						<Card.Content
-							class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4"
-						>
-							<div class="stack stack-tight min-w-0">
-								<div class="cluster flex-wrap">
-									<p class="body-base text-foreground truncate font-medium">
-										{sess.device_label || 'Unknown device'}
-									</p>
-									{#if current}
-										<Badge variant="success" size="sm">This device</Badge>
-									{/if}
-								</div>
-								<p class="caption text-muted-foreground">
-									Last active {relativeTime(sess.last_used_at)} · Started
-									{relativeTime(sess.created_at)}
-								</p>
-							</div>
-							{#if !current}
-								<Button
-									variant="ghost"
-									size="sm"
-									aria-label="Revoke session"
-									loading={revokingFamilyId === sess.family_id}
-									disabled={revokingFamilyId !== null}
-									onclick={() => onRevoke(sess.family_id)}
-								>
-									<Icon icon={Trash2} size="sm" /> Revoke
-								</Button>
-							{/if}
-						</Card.Content>
-					</Card.Root>
-				</li>
-			{/each}
-		</ul>
-	{/if}
+	<DataTable
+		{columns}
+		data={sessionList}
+		getRowId={(s) => s.family_id}
+		noun="sessions"
+		caption="Active sessions"
+		query={sessionsQuery}
+		{rowActions}
+		{empty}
+	/>
 </div>

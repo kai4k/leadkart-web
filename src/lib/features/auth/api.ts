@@ -107,9 +107,9 @@ export async function revokeSession(familyId: string): Promise<void> {
 }
 
 /**
- * Asks Go to revoke all OTHER sessions (`except_current`). Go does not honour the flag yet
- * (identity/ports/http.go: it cannot tell which family is the current one), so EVERY session is
- * revoked, the caller's included: the UI says "Sign out everywhere" until it does.
+ * Revokes every session except the one this access token belongs to (`except_current`, which Go honours:
+ * 409 `current_session_unknown` when the token names no session, nothing revoked). `revoked_count` counts
+ * the sessions it ended, never the kept one.
  */
 export async function revokeOtherSessions(reason?: string): Promise<{ revoked_count: number }> {
 	const body: { except_current: true; reason?: string } = { except_current: true };

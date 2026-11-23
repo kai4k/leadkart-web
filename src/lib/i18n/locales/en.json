@@ -366,6 +366,8 @@
 			"admin_tier_required": "Only the Company Owner and Administrators can add users.",
 			"service_busy": "The service is busy. Try again in a moment.",
 			"session_not_found": "This session was already removed.",
+			"current_session_unknown": "We could not tell which session is this device. Reload the page and try again.",
+			"overrides_changed": "These permissions changed while you were editing (a time-limited grant ended, a request was approved or someone else saved). Reload to see the current set, then make your change again.",
 			"tenant_has_dependents": "This tenant still has members or data, so it can't be deleted yet.",
 			"forbidden": "You don't have permission to do this.",
 			"insufficient_rank": "You can only do this for people and roles below your own level.",
