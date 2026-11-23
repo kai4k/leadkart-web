@@ -22,10 +22,7 @@
 	],
 	"legacyDataTable": [
 		"src/lib/features/inventory/components/ProductsList.svelte",
-		"src/lib/features/orders/components/OrdersList.svelte",
-		"src/lib/features/permission-requests/components/PermissionRequestsList.svelte",
-		"src/lib/features/roles/components/RolesList.svelte",
-		"src/lib/features/users/components/UsersList.svelte"
+		"src/lib/features/orders/components/OrdersList.svelte"
 	],
 	"counts": {
 		"rawElements": {
@@ -51,10 +48,7 @@
 		},
 		"legacyDataTable": {
 			"src/lib/features/inventory/components/ProductsList.svelte": 2,
-			"src/lib/features/orders/components/OrdersList.svelte": 2,
-			"src/lib/features/permission-requests/components/PermissionRequestsList.svelte": 2,
-			"src/lib/features/roles/components/RolesList.svelte": 2,
-			"src/lib/features/users/components/UsersList.svelte": 2
+			"src/lib/features/orders/components/OrdersList.svelte": 2
 		}
 	},
 	"notes": {
@@ -74,9 +68,6 @@
 		"src/lib/features/orders/components/OrderItemsTable.svelte": "// removed by the leads/orders/inventory rebuild (plan section 9)",
 		"src/lib/features/orders/components/OrdersList.svelte": "// removed by the leads/orders/inventory rebuild (plan section 9)",
 		"src/lib/features/orders/components/PaymentsList.svelte": "// removed by the leads/orders/inventory rebuild (plan section 9)",
-		"src/lib/features/orders/components/ReviseQuotationDrawer.svelte": "// removed by the leads/orders/inventory rebuild (plan section 9)",
-		"src/lib/features/permission-requests/components/PermissionRequestsList.svelte": "// removed by Task 27",
-		"src/lib/features/roles/components/RolesList.svelte": "// removed by Task 27",
-		"src/lib/features/users/components/UsersList.svelte": "// removed by Task 27"
+		"src/lib/features/orders/components/ReviseQuotationDrawer.svelte": "// removed by the leads/orders/inventory rebuild (plan section 9)"
 	}
 }

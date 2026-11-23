@@ -1,10 +1,14 @@
 <script lang="ts">
 	import PageHeader from '$layouts/PageHeader.svelte';
 	import { _ } from 'svelte-i18n';
-	import { Badge, buttonVariants, DataTable, EmptyState, type DataTableColumn } from '$ui';
-	import Pagination from '#lib/components/data/Pagination.svelte';
+	import { Badge, buttonVariants, EmptyState } from '$ui';
 	import { Plus, Shield, Trash2, Edit, Icon } from '$icons';
-	import { RowActionsMenu, type RowAction } from '#lib/components/data/index.ts';
+	import {
+		RowActionsMenu,
+		type DataTableColumn,
+		type RowAction
+	} from '#lib/components/data/index.ts';
+	import { DataTable } from '#lib/components/data/data-table/index.ts';
 	import { rolesListQuery } from '$features/roles/queries';
 	import type { RoleDto } from '$features/roles/types';
 	import {
@@ -13,7 +17,6 @@
 		isProtectedRole,
 		roleMemberCount
 	} from '$features/roles/view-models';
-	import { getListErrorMessage } from '$api/error-messages';
 	import { createDialogState, createListPagination } from '#lib/hooks/index.ts';
 	import { resolve } from '$app/paths';
 	import DeleteRoleDialog from './DeleteRoleDialog.svelte';
@@ -31,20 +34,8 @@
 	const roleList = $derived(rolesQuery.data?.roles ?? []);
 	const pagination = createListPagination(() => roleList);
 
-	const tableState = $derived(
-		rolesQuery.isPending
-			? 'loading'
-			: rolesQuery.isError
-				? 'error'
-				: pagination.paged.length === 0
-					? 'empty'
-					: 'ready'
-	);
-
-	const listErrorCopy = $derived(getListErrorMessage(rolesQuery.error, 'roles'));
-
 	const columns: DataTableColumn<RoleDto>[] = $derived([
-		{ id: 'name', header: 'Role', accessor: 'name', cell: nameCell },
+		{ id: 'name', header: 'Role', accessor: (r: RoleDto) => r.name, primary: true },
 		{
 			id: 'type',
 			header: 'Type',
@@ -71,7 +62,7 @@
 		{
 			id: 'level',
 			header: 'Hierarchy',
-			accessor: 'hierarchy_level' as const,
+			accessor: (r: RoleDto) => r.hierarchy_level,
 			hideBelow: 'lg' as const
 		}
 	]);
@@ -102,16 +93,25 @@
 	}
 </script>
 
-{#snippet nameCell(role: RoleDto)}
-	<a
-		href={resolve('/(app)/settings/roles/[id]', { id: role.id })}
-		class="text-foreground hover:text-primary-text font-medium hover:underline">{role.name}</a
-	>
-{/snippet}
-
 {#snippet typeCell(role: RoleDto)}
 	{@const badge = roleKind(roleKindKey(role))}
 	<Badge variant={badge.variant} size="sm">{badge.label}</Badge>
+{/snippet}
+
+{#snippet empty()}
+	<EmptyState
+		icon={Shield}
+		title="No roles yet"
+		description="Roles bundle permissions for easy assignment to team members."
+	>
+		{#snippet action()}
+			{#if may.create}
+				<a href={resolve('/(app)/settings/roles/new')} class={buttonVariants()}
+					><Icon icon={Plus} size="sm" /> Create role</a
+				>
+			{/if}
+		{/snippet}
+	</EmptyState>
 {/snippet}
 
 {#snippet rowActions(role: RoleDto)}
@@ -132,35 +132,22 @@
 		{/snippet}
 	</PageHeader>
 
-	<DataTable.Root
+	<DataTable
 		{columns}
-		rows={pagination.paged}
-		rowKey={(r) => r.id}
-		state={tableState}
-		error={listErrorCopy}
+		data={pagination.paged}
+		getRowId={(r) => r.id}
+		rowHref={(r) => resolve('/(app)/settings/roles/[id]', { id: r.id })}
+		noun="roles"
+		caption="Roles"
+		query={rolesQuery}
 		{rowActions}
-	>
-		{#snippet emptyState()}
-			<EmptyState
-				icon={Shield}
-				title="No roles yet"
-				description="Roles bundle permissions for easy assignment to team members."
-			>
-				{#snippet action()}
-					{#if may.create}
-						<a href={resolve('/(app)/settings/roles/new')} class={buttonVariants()}
-							><Icon icon={Plus} size="sm" /> Create role</a
-						>
-					{/if}
-				{/snippet}
-			</EmptyState>
-		{/snippet}
-	</DataTable.Root>
-
-	<Pagination
-		page={pagination.currentPage}
-		pageCount={pagination.pageCount}
-		onChange={pagination.setPage}
+		{empty}
+		pagination={{
+			mode: 'offset',
+			page: pagination.currentPage,
+			pageCount: pagination.pageCount,
+			onPageChange: pagination.setPage
+		}}
 	/>
 </div>
 
