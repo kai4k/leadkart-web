@@ -363,7 +363,7 @@
 			"tenant_scope_conflict": "This action targets a different tenant than the one you are acting in. Exit the tenant context and try again.",
 			"tenant_not_active": "This tenant is not active. Changes are disabled.",
 			"tenant_suspended": "Your company's account is suspended. Contact support.",
-			"admin_tier_required": "Only the Company Owner and Administrators can add users.",
+			"admin_tier_required": "Only the Company Owner and Administrators can do this.",
 			"service_busy": "The service is busy. Try again in a moment.",
 			"session_not_found": "This session was already removed.",
 			"current_session_unknown": "We could not tell which session is this device. Sign in again, then try once more.",
@@ -616,7 +616,7 @@
 		"roles": {
 			"title": "Roles",
 			"count": "{count, plural, one {# role} other {# roles}}",
-			"adminTierOnly": "Only the Administrator tier and above can add users.",
+			"adminTierOnly": "Only the Administrator tier and above can hold this permission.",
 			"platformReserved": "Reserved for the platform team.",
 			"notHeld": "You can only change a permission you hold yourself."
 		},

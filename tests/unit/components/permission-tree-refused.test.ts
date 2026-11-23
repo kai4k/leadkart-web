@@ -25,7 +25,7 @@ afterEach(() => {
 });
 
 const NAME = 'identity.users.create';
-const REASON = 'Only the Administrator tier and above can add users.';
+const REASON = 'Only the Administrator tier and above can hold this permission.';
 
 function render(refused: Record<string, string> | undefined, selected: string[] = []) {
 	const onChange = vi.fn();

@@ -210,6 +210,23 @@ export const PERMISSION_CATALOGUE: ReadonlyArray<PermissionCatalogueEntry> = [
 	{ name: 'orders.payments.record', description: 'Record a payment receipt', group: 'orders' },
 	{ name: 'orders.invoices.read', description: 'View invoices and credit notes', group: 'orders' },
 
+	// --- Company settings (ADR 0070: the company commerce policy) ---
+	{
+		name: 'company_settings.read',
+		description: 'View the commerce policy, its history and the GST rate list',
+		group: 'company_settings'
+	},
+	{
+		name: 'company_settings.manage',
+		description: 'Change the commerce settings that are not tax',
+		group: 'company_settings'
+	},
+	{
+		name: 'company_settings.tax.manage',
+		description: 'Change the tax, document and compliance settings and the GST rate list',
+		group: 'company_settings'
+	},
+
 	// --- Notifications ---
 	{
 		name: 'notifications.inbox.read',
@@ -248,6 +265,17 @@ export const PLATFORM_RESERVED: ReadonlySet<string> = new Set([
 	'identity.tenants.activate',
 	'identity.tenants.delete',
 	'identity.users.anonymise'
+]);
+
+/**
+ * Go's `authority.AdminTierOnlyPermissions` (admin_tier.go): held and conferred only at the Administrator tier or
+ * above, so a role below it is not offered them. `identity.users.create` plus the two company-settings writes
+ * (`company_settings.read` is not in the set). Held against Go in `permissions.test.ts`.
+ */
+export const ADMIN_TIER_ONLY: ReadonlySet<string> = new Set([
+	'identity.users.create',
+	'company_settings.manage',
+	'company_settings.tax.manage'
 ]);
 
 /** The names a member may ask for in a permission request: the catalogue minus the platform-reserved ones. */

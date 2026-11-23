@@ -19,11 +19,12 @@
 		isProtectedRole,
 		createRolePermissions,
 		unchangeablePermissions,
+		ADMIN_TIER_ONLY,
 		PLATFORM_RESERVED
 	} from '$features/roles';
 	import { describeError } from '$api/errors';
 	import { session } from '$features/auth';
-	import { isBelowAdminTier, P } from '#lib/features/auth/permissions.ts';
+	import { isBelowAdminTier } from '#lib/features/auth/permissions.ts';
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 
 	let { data } = $props();
@@ -121,9 +122,9 @@
 			reserved: $_('pages.roles.platformReserved'),
 			notHeld: $_('pages.roles.notHeld')
 		}),
-		// A role below the Administrator tier cannot contain `identity.users.create` (Go: admin_tier_required): not offered.
+		// A role below the Administrator tier cannot contain an admin-tier-only name (Go: admin_tier_required): not offered.
 		...(role !== null && isBelowAdminTier(role.hierarchy_level)
-			? { [P.identityUsersCreate]: $_('pages.roles.adminTierOnly') }
+			? Object.fromEntries([...ADMIN_TIER_ONLY].map((n) => [n, $_('pages.roles.adminTierOnly')]))
 			: {})
 	});
 	const permsDirty = $derived.by(() => {

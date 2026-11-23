@@ -64,8 +64,9 @@
 <div class="stack stack-relaxed">
 	{#each groups as [group, entries] (group)}
 		{@const state = groupShown(entries)}
+		{@const label = group.replaceAll('_', ' ')}
 		<fieldset class="stack stack-tight m-0 border-0 p-0">
-			<legend class="sr-only">{group}</legend>
+			<legend class="sr-only">{label}</legend>
 			<div class="cluster cluster-spread">
 				<label class="cluster cluster-tight cursor-pointer">
 					<Checkbox
@@ -73,9 +74,9 @@
 						indeterminate={state === 'some'}
 						disabled={disabled || allowed(entries).length === 0}
 						onCheckedChange={() => toggleGroup(entries)}
-						aria-label="Toggle all {group} permissions"
+						aria-label="Toggle all {label} permissions"
 					/>
-					<span class="h6 capitalize" aria-hidden="true">{group}</span>
+					<span class="h6 capitalize" aria-hidden="true">{label}</span>
 				</label>
 				<span class="caption text-muted-foreground">
 					{entries.filter((e) => selected.includes(e.name)).length} / {entries.length}
