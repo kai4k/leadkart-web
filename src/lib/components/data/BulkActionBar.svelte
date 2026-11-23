@@ -1,6 +1,6 @@
 <!-- src/lib/components/data/BulkActionBar.svelte -->
 <script lang="ts" module>
-	import type { Component } from 'svelte';
+	import { tick, type Component } from 'svelte';
 
 	export interface BulkActionSubItem {
 		id: string;
@@ -86,8 +86,29 @@
 	// changed, the page changed) there is nothing left to confirm: the dialog closes instead of staying
 	// open with a Confirm button that would send nothing.
 	$effect(() => {
-		if (selection.count === 0 && runningId === null) pendingConfirm = null;
+		if (selection.count === 0 && runningId === null && pendingConfirm !== null) {
+			pendingConfirm = null;
+			void focusTable();
+		}
 	});
+
+	/**
+	 * The bar and the button that opened the dialog leave with the selection, so the dialog has nowhere
+	 * to give focus back to and it would fall to <body>. It goes to the list's table region instead.
+	 */
+	async function focusTable() {
+		await tick();
+		// let the dialog finish its own focus handling first
+		await new Promise<void>((done) => requestAnimationFrame(() => done()));
+		const active = document.activeElement;
+		if (active && active !== document.body) return;
+		const region = document.querySelector<HTMLElement>(
+			'[data-slot="data-table-scroll"], [data-roving-root]'
+		);
+		if (!region) return;
+		if (!region.hasAttribute('tabindex')) region.tabIndex = -1;
+		region.focus();
+	}
 
 	async function runAction(action: BulkAction) {
 		if (action.confirm) {

@@ -50,6 +50,22 @@ describe('BulkActionBar: the confirm dialog belongs to the selection', () => {
 		expect(onClick).not.toHaveBeenCalled();
 	});
 
+	it('when it closes itself, focus goes to the table region, never the page body', async () => {
+		const region = document.body.appendChild(document.createElement('div'));
+		region.setAttribute('data-slot', 'data-table-scroll');
+		region.tabIndex = 0;
+		const { selection } = render();
+		const trigger = button('Deactivate')!;
+		trigger.focus();
+		trigger.click();
+		flushSync();
+		await vi.waitFor(() => expect(dialog()).not.toBeNull());
+		selection.clear();
+		flushSync();
+		await vi.waitFor(() => expect(dialog()).toBeNull());
+		await vi.waitFor(() => expect(document.activeElement).toBe(region));
+	});
+
 	it('does not come back on its own when rows are selected again', async () => {
 		const { selection } = render();
 		button('Deactivate')!.click();
