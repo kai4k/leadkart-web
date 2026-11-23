@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { Avatar, Badge } from '$ui';
-	import { displayName, initials, userStatus } from '$features/auth';
+	import { Badge } from '$ui';
+	import { IdentityCell } from '#lib/components/data/index.ts';
+	import { displayName, userStatus } from '$features/auth';
 	import { resolve } from '$app/paths';
 	import type { OrgNode } from '../view-models-hierarchy';
 	import OrgTreeNode from './OrgTreeNode.svelte';
@@ -24,12 +25,12 @@
 		class="border-border bg-card hover:border-primary-indicator focus-visible:ring-ring flex items-center gap-3 rounded-md border px-3 py-2 transition-colors focus-visible:ring-2 focus-visible:outline-none"
 		aria-label={`${displayName(node.user)}${node.cycleBroken ? ' (cycle detected — review reporting line)' : ''}`}
 	>
-		<Avatar initials={initials(displayName(node.user))} size="sm" />
-		<div class="stack stack-tight min-w-0 flex-1">
-			<span class="body-sm text-foreground truncate font-medium">{displayName(node.user)}</span>
-			<span class="caption text-muted-foreground truncate">
-				{node.user.designation || node.user.email}
-			</span>
+		<div class="min-w-0 flex-1">
+			<IdentityCell
+				name={displayName(node.user)}
+				subtitle={node.user.designation || node.user.email}
+				size="sm"
+			/>
 		</div>
 		<div class="cluster cluster-tight">
 			{#if node.cycleBroken}

@@ -5,20 +5,10 @@
 	import { goto } from '$app/navigation';
 	import type { ResolvedPathname } from '$app/types';
 	import { SvelteURL } from 'svelte/reactivity';
-	import {
-		Alert,
-		Badge,
-		Button,
-		DataTable,
-		Dropdown,
-		EmptyState,
-		Spinner,
-		type DataTableColumn
-	} from '$ui';
+	import { Alert, Badge, Button, DataTable, EmptyState, Spinner, type DataTableColumn } from '$ui';
 	import {
 		Building2,
 		Eye,
-		MoreVertical,
 		Pause,
 		Play,
 		Plus,
@@ -147,6 +137,8 @@
 
 	const listErrorCopy = $derived(getListErrorMessage(query.error, 'tenants'));
 
+	import { RowActionsMenu, type RowAction } from '#lib/components/data/index.ts';
+
 	const columns: DataTableColumn<TenantDto>[] = [
 		{ id: 'name', header: 'Tenant', accessor: (t) => t.display_name, cell: nameCell },
 		{
@@ -159,6 +151,41 @@
 		{ id: 'status', header: 'Status', accessor: (t) => t.status, cell: statusCell },
 		{ id: 'legal', header: 'Legal name', accessor: 'legal_name', hideBelow: 'lg' }
 	];
+
+	/** The tenant's lifecycle menu: icons on every item, the destructive one last. */
+	function lifecycleActions(tenant: TenantDto): RowAction[] {
+		const list: RowAction[] = [];
+		if (maySuspend && canSuspend(tenant))
+			list.push({
+				id: 'suspend',
+				label: 'Suspend',
+				icon: Pause,
+				onSelect: () => suspendDialog.show(tenant)
+			});
+		if (mayActivate && canActivate(tenant))
+			list.push({
+				id: 'activate',
+				label: 'Activate',
+				icon: Play,
+				onSelect: () => activateMutation.mutate(tenant.id)
+			});
+		if (mayDelete && canRestore(tenant))
+			list.push({
+				id: 'restore',
+				label: 'Restore',
+				icon: RotateCcw,
+				onSelect: () => restoreMutation.mutate(tenant.id)
+			});
+		if (mayDelete && canMarkForDeletion(tenant))
+			list.push({
+				id: 'mark',
+				label: 'Mark for deletion',
+				icon: Trash2,
+				variant: 'destructive',
+				onSelect: () => markDialog.show(tenant)
+			});
+		return list;
+	}
 
 	function openImpersonate(tenant: TenantDto) {
 		impersonateDialog.show(tenant);
@@ -228,47 +255,10 @@
 				</Button>
 			{/if}
 			{#if canManage}
-				<Dropdown.Root>
-					<Dropdown.Trigger
-						variant="ghost"
-						size="sm"
-						aria-label="Lifecycle actions for {tenant.display_name}"
-					>
-						<Icon icon={MoreVertical} size="sm" />
-					</Dropdown.Trigger>
-					<Dropdown.Menu>
-						{#if maySuspend && canSuspend(tenant)}
-							<Dropdown.Item
-								onclick={() => {
-									suspendDialog.show(tenant);
-								}}
-							>
-								<Icon icon={Pause} size="sm" /> Suspend
-							</Dropdown.Item>
-						{/if}
-						{#if mayActivate && canActivate(tenant)}
-							<Dropdown.Item onclick={() => activateMutation.mutate(tenant.id)}>
-								<Icon icon={Play} size="sm" /> Activate
-							</Dropdown.Item>
-						{/if}
-						{#if mayDelete && canRestore(tenant)}
-							<Dropdown.Item onclick={() => restoreMutation.mutate(tenant.id)}>
-								<Icon icon={RotateCcw} size="sm" /> Restore
-							</Dropdown.Item>
-						{/if}
-						{#if mayDelete && canMarkForDeletion(tenant)}
-							<Dropdown.Separator />
-							<Dropdown.Item
-								variant="danger"
-								onclick={() => {
-									markDialog.show(tenant);
-								}}
-							>
-								<Icon icon={Trash2} size="sm" /> Mark for deletion
-							</Dropdown.Item>
-						{/if}
-					</Dropdown.Menu>
-				</Dropdown.Root>
+				{@const actions = lifecycleActions(tenant)}
+				{#if actions.length > 0}
+					<RowActionsMenu label={tenant.display_name} {actions} />
+				{/if}
 			{/if}
 		</div>
 	{/if}

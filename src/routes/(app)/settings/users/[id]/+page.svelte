@@ -7,12 +7,13 @@
 	import { goto } from '$app/navigation';
 	import { SvelteURL } from 'svelte/reactivity';
 	import type { ResolvedPathname } from '$app/types';
-	import { Avatar, Badge, Dropdown, Skeleton } from '$ui';
+	import { Badge, Skeleton } from '$ui';
+	import { IdentityCell, RowActionsMenu, type RowAction } from '#lib/components/data/index.ts';
 	import { QueryState } from '#lib/components/feedback/index.ts';
-	import { Icon, Lock, MoreVertical, Shield, UserMinus, UserPlus, Users } from '$icons';
+	import { Lock, Shield, UserMinus, UserPlus, Users } from '$icons';
 	import { userDetailQuery, usersListQuery, reactivateUserMutation } from '$features/users/queries';
 	import { rolesListQuery } from '$features/roles';
-	import { displayName, initials, userStatus } from '$features/auth/view-models';
+	import { displayName, userStatus } from '$features/auth/view-models';
 	import {
 		DeactivateUserDialog,
 		RoleAssignmentDrawer,
@@ -46,6 +47,48 @@
 
 	const reactivate = reactivateUserMutation();
 	const may = createMemberPermissions();
+
+	/** The member's menu: icons on every item, the destructive one last. */
+	function memberActions(member: NonNullable<typeof user>): RowAction[] {
+		const list: RowAction[] = [];
+		if (may.manageRoles)
+			list.push({
+				id: 'roles',
+				label: 'Manage roles',
+				icon: Shield,
+				onSelect: () => rolesDialog.show()
+			});
+		if (may.update)
+			list.push({
+				id: 'manager',
+				label: 'Set manager',
+				icon: Users,
+				onSelect: () => managerDialog.show()
+			});
+		if (may.overrides)
+			list.push({
+				id: 'permissions',
+				label: 'Permission overrides',
+				icon: Lock,
+				onSelect: () => permsDialog.show()
+			});
+		if (may.deactivate && member.status === 'active')
+			list.push({
+				id: 'deactivate',
+				label: 'Deactivate',
+				icon: UserMinus,
+				variant: 'destructive',
+				onSelect: () => deactivateDialog.show()
+			});
+		else if (may.reactivate && member.status === 'inactive')
+			list.push({
+				id: 'reactivate',
+				label: 'Reactivate',
+				icon: UserPlus,
+				onSelect: () => reactivate.mutate(member.membership_id)
+			});
+		return list;
+	}
 
 	function setTab(name: string) {
 		const url = new SvelteURL(page.url.href);
@@ -81,9 +124,8 @@
 		{#snippet children(user)}
 			<header class="cluster cluster-spread items-start">
 				<div class="cluster cluster-tight items-start">
-					<Avatar initials={initials(displayName(user))} size="lg" />
 					<div class="stack stack-tight">
-						<p class="body-sm text-muted-foreground">{user.email}</p>
+						<IdentityCell name={displayName(user)} subtitle={user.email} />
 						{#if user.designation || user.department}
 							<p class="caption text-subtle-foreground">
 								{user.designation || '—'} · {user.department || '—'}
@@ -92,43 +134,8 @@
 					</div>
 				</div>
 
-				{#if may.manageRoles || may.update || may.overrides || (may.deactivate && user.status === 'active') || (may.reactivate && user.status === 'inactive')}
-					<Dropdown.Root>
-						<Dropdown.Trigger variant="tonal" size="sm">
-							<Icon icon={MoreVertical} size="sm" /> Actions
-						</Dropdown.Trigger>
-						<Dropdown.Menu>
-							{#if may.manageRoles}
-								<Dropdown.Item onclick={() => rolesDialog.show()}
-									><Icon icon={Shield} size="sm" /> Manage roles</Dropdown.Item
-								>
-							{/if}
-							{#if may.update}
-								<Dropdown.Item onclick={() => managerDialog.show()}
-									><Icon icon={Users} size="sm" /> Set manager</Dropdown.Item
-								>
-							{/if}
-							{#if may.overrides}
-								<Dropdown.Item onclick={() => permsDialog.show()}>
-									<Icon icon={Lock} size="sm" />
-									Permission overrides
-								</Dropdown.Item>
-							{/if}
-
-							{#if (may.manageRoles || may.update || may.overrides) && ((may.deactivate && user.status === 'active') || (may.reactivate && user.status === 'inactive'))}
-								<Dropdown.Separator />
-							{/if}
-							{#if may.deactivate && user.status === 'active'}
-								<Dropdown.Item variant="danger" onclick={() => deactivateDialog.show()}
-									><Icon icon={UserMinus} size="sm" /> Deactivate</Dropdown.Item
-								>
-							{:else if may.reactivate && user.status === 'inactive'}
-								<Dropdown.Item onclick={() => reactivate.mutate(user.membership_id)}>
-									<Icon icon={UserPlus} size="sm" /> Reactivate
-								</Dropdown.Item>
-							{/if}
-						</Dropdown.Menu>
-					</Dropdown.Root>
+				{#if memberActions(user).length > 0}
+					<RowActionsMenu label={displayName(user)} actions={memberActions(user)} />
 				{/if}
 			</header>
 

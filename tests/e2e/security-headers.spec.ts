@@ -257,7 +257,7 @@ test.describe('security headers + CSP', () => {
 		// Dropdown menu: roles row actions.
 		await page.goto('/settings/roles');
 		await page
-			.locator('tr:has-text("Sales Lead") button[aria-label="Row actions"]')
+			.locator('tr:has-text("Sales Lead") button[aria-label="Actions for Sales Lead"]')
 			.first()
 			.click();
 		await expect(page.getByText('Delete', { exact: true })).toBeVisible();

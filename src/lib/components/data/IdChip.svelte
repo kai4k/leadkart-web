@@ -10,13 +10,15 @@
 		value: string;
 		/** What the value is, as it reads in "Copy {label}". */
 		label: string;
+		/** Cut to the first eight characters (default). Off for a value that is read whole, like a slug. */
+		short?: boolean;
 	};
-	let { value, label }: Props = $props();
+	let { value, label, short = true }: Props = $props();
 
-	const short = $derived(value.length > 8 ? value.slice(0, 8) : value);
+	const shown = $derived(short && value.length > 8 ? value.slice(0, 8) : value);
 </script>
 
 <span class="inline-flex items-center gap-1">
-	<code class="font-mono text-xs" title={value}>{short}</code>
+	<code class="font-mono text-xs" title={value}>{shown}</code>
 	<CopyButton {value} label={$_('dataTable.copyId', { values: { label } })} />
 </span>

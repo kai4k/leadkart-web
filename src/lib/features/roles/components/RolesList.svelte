@@ -1,16 +1,10 @@
 <script lang="ts">
 	import PageHeader from '$layouts/PageHeader.svelte';
 	import { _ } from 'svelte-i18n';
-	import {
-		Badge,
-		buttonVariants,
-		DataTable,
-		Dropdown,
-		EmptyState,
-		type DataTableColumn
-	} from '$ui';
+	import { Badge, buttonVariants, DataTable, EmptyState, type DataTableColumn } from '$ui';
 	import Pagination from '#lib/components/data/Pagination.svelte';
-	import { Plus, Shield, MoreVertical, Trash2, Edit, Icon } from '$icons';
+	import { Plus, Shield, Trash2, Edit, Icon } from '$icons';
+	import { RowActionsMenu, type RowAction } from '#lib/components/data/index.ts';
 	import { rolesListQuery } from '$features/roles/queries';
 	import type { RoleDto } from '$features/roles/types';
 	import {
@@ -85,6 +79,27 @@
 	function onDelete(role: RoleDto) {
 		deleteDialog.show(role);
 	}
+
+	/** Edit (or View) is a link, so it is the menu item itself and not a link inside one. */
+	function roleActions(role: RoleDto): RowAction[] {
+		const list: RowAction[] = [
+			{
+				id: 'edit',
+				label: may.update ? 'Edit' : 'View',
+				icon: Edit,
+				href: resolve('/(app)/settings/roles/[id]', { id: role.id })
+			}
+		];
+		if (may.delete && !isProtectedRole(role))
+			list.push({
+				id: 'delete',
+				label: 'Delete',
+				icon: Trash2,
+				variant: 'destructive',
+				onSelect: () => onDelete(role)
+			});
+		return list;
+	}
 </script>
 
 {#snippet nameCell(role: RoleDto)}
@@ -100,26 +115,7 @@
 {/snippet}
 
 {#snippet rowActions(role: RoleDto)}
-	<Dropdown.Root>
-		<Dropdown.Trigger variant="ghost" size="sm" aria-label="Row actions">
-			<Icon icon={MoreVertical} size="sm" />
-		</Dropdown.Trigger>
-		<Dropdown.Menu>
-			<Dropdown.Item>
-				<a
-					href={resolve('/(app)/settings/roles/[id]', { id: role.id })}
-					class="cluster cluster-tight"
-					><Icon icon={Edit} size="sm" /> {may.update ? 'Edit' : 'View'}</a
-				>
-			</Dropdown.Item>
-			{#if may.delete && !isProtectedRole(role)}
-				<Dropdown.Separator />
-				<Dropdown.Item variant="danger" onSelect={() => onDelete(role)}>
-					<Icon icon={Trash2} size="sm" /> Delete
-				</Dropdown.Item>
-			{/if}
-		</Dropdown.Menu>
-	</Dropdown.Root>
+	<RowActionsMenu label={role.name} actions={roleActions(role)} />
 {/snippet}
 
 <div class="stack stack-relaxed">

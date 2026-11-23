@@ -7,28 +7,9 @@
 	import { resolve } from '$app/paths';
 	import { SvelteURL } from 'svelte/reactivity';
 	import type { ResolvedPathname } from '$app/types';
-	import {
-		Avatar,
-		Badge,
-		Button,
-		buttonVariants,
-		DataTable,
-		Dropdown,
-		EmptyState,
-		type DataTableColumn
-	} from '$ui';
+	import { Badge, Button, buttonVariants, DataTable, EmptyState, type DataTableColumn } from '$ui';
 	import Pagination from '#lib/components/data/Pagination.svelte';
-	import {
-		MoreVertical,
-		Plus,
-		Shield,
-		UserMinus,
-		UserPlus,
-		Users as UsersIcon,
-		Users,
-		Lock,
-		Icon
-	} from '$icons';
+	import { Plus, Shield, UserMinus, UserPlus, Users as UsersIcon, Users, Lock, Icon } from '$icons';
 	import {
 		usersListQuery,
 		reactivateUserMutation,
@@ -36,7 +17,7 @@
 	} from '$features/users/queries';
 	import { rolesListQuery } from '$features/roles';
 	import { userRoleBadges, canDeactivate } from '$features/users/view-models';
-	import { displayName, initials, userStatus } from '$features/auth';
+	import { displayName, userStatus } from '$features/auth';
 	import type { UserDto } from '$features/users/types';
 	import { getListErrorMessage } from '$api/error-messages';
 	import {
@@ -44,7 +25,13 @@
 		createDialogState,
 		createListPagination
 	} from '#lib/hooks/index.ts';
-	import { BulkActionBar, type BulkAction } from '#lib/components/data/index.ts';
+	import {
+		BulkActionBar,
+		IdentityCell,
+		RowActionsMenu,
+		type BulkAction,
+		type RowAction
+	} from '#lib/components/data/index.ts';
 	import UsersTruncatedAlert from './UsersTruncatedAlert.svelte';
 	import type { PolicyRules } from '#lib/features/auth/password-policy.ts';
 	import CreateUserDrawer from './CreateUserDrawer.svelte';
@@ -247,16 +234,52 @@
 				break;
 		}
 	}
+
+	/** The row's menu: icons on every item (all or none), the destructive one last. */
+	function memberActions(user: UserDto): RowAction[] {
+		const list: RowAction[] = [];
+		if (may.manageRoles)
+			list.push({
+				id: 'roles',
+				label: 'Manage roles',
+				icon: Shield,
+				onSelect: () => onAction('roles', user)
+			});
+		if (may.update)
+			list.push({
+				id: 'manager',
+				label: 'Set manager',
+				icon: Users,
+				onSelect: () => onAction('manager', user)
+			});
+		if (may.overrides)
+			list.push({
+				id: 'permissions',
+				label: 'Permission overrides',
+				icon: Lock,
+				onSelect: () => onAction('permissions', user)
+			});
+		if (may.deactivate && canDeactivate(user))
+			list.push({
+				id: 'deactivate',
+				label: 'Deactivate',
+				icon: UserMinus,
+				variant: 'destructive',
+				onSelect: () => onAction('deactivate', user)
+			});
+		else if (may.reactivate && user.status === 'inactive')
+			list.push({
+				id: 'reactivate',
+				label: 'Reactivate',
+				icon: UserPlus,
+				onSelect: () => onAction('reactivate', user)
+			});
+		return list;
+	}
 </script>
 
 {#snippet memberCell(user: UserDto)}
-	<div class="cluster cluster-tight">
-		<Avatar initials={initials(displayName(user))} size="md" />
-		<div class="stack stack-tight min-w-0">
-			<span class="body-base text-foreground truncate font-medium">{displayName(user)}</span>
-			<span class="caption text-muted-foreground truncate">{user.email}</span>
-		</div>
-	</div>
+	<IdentityCell name={displayName(user)} subtitle={user.email} />
 {/snippet}
 
 {#snippet workCell(user: UserDto)}
@@ -280,41 +303,9 @@
 {/snippet}
 
 {#snippet rowActions(user: UserDto)}
-	{#if may.manageRoles || may.update || may.overrides || may.deactivate || may.reactivate}
-		<Dropdown.Root>
-			<Dropdown.Trigger variant="ghost" size="sm" aria-label="Row actions">
-				<Icon icon={MoreVertical} size="sm" />
-			</Dropdown.Trigger>
-			<Dropdown.Menu>
-				{#if may.manageRoles}
-					<Dropdown.Item onclick={() => onAction('roles', user)}>
-						<Icon icon={Shield} size="sm" /> Manage roles
-					</Dropdown.Item>
-				{/if}
-				{#if may.update}
-					<Dropdown.Item onclick={() => onAction('manager', user)}>
-						<Icon icon={Users} size="sm" /> Set manager
-					</Dropdown.Item>
-				{/if}
-				{#if may.overrides}
-					<Dropdown.Item onclick={() => onAction('permissions', user)}>
-						<Icon icon={Lock} size="sm" /> Permission overrides
-					</Dropdown.Item>
-				{/if}
-				{#if (may.manageRoles || may.update || may.overrides) && ((may.deactivate && canDeactivate(user)) || (may.reactivate && user.status === 'inactive'))}
-					<Dropdown.Separator />
-				{/if}
-				{#if may.deactivate && canDeactivate(user)}
-					<Dropdown.Item variant="danger" onclick={() => onAction('deactivate', user)}>
-						<Icon icon={UserMinus} size="sm" /> Deactivate
-					</Dropdown.Item>
-				{:else if may.reactivate && user.status === 'inactive'}
-					<Dropdown.Item onclick={() => onAction('reactivate', user)}>
-						<Icon icon={UserPlus} size="sm" /> Reactivate
-					</Dropdown.Item>
-				{/if}
-			</Dropdown.Menu>
-		</Dropdown.Root>
+	{@const actions = memberActions(user)}
+	{#if actions.length > 0}
+		<RowActionsMenu label={displayName(user)} {actions} />
 	{/if}
 {/snippet}
 

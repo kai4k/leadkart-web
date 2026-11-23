@@ -2,7 +2,8 @@
 	import { plainTitle } from '#lib/utils/page-title.ts';
 	import { _ } from 'svelte-i18n';
 	import PageHeader from '$layouts/PageHeader.svelte';
-	import { Alert, Badge, Button, Card, CopyButton, Skeleton } from '$ui';
+	import { Alert, Badge, Button, Card, Skeleton } from '$ui';
+	import { IdChip } from '#lib/components/data/index.ts';
 	import { QueryState } from '#lib/components/feedback/index.ts';
 	import { Select } from '#lib/components/form/index.ts';
 	import {
@@ -184,10 +185,7 @@
 			<header class="cluster cluster-spread">
 				<div class="stack stack-tight">
 					<p class="caption text-muted-foreground">Hierarchy level {role.hierarchy_level}</p>
-					<div class="cluster cluster-tight">
-						<code class="caption text-subtle-foreground">{role.id}</code>
-						<CopyButton value={role.id} label="Copy role ID" />
-					</div>
+					<IdChip value={role.id} label="role ID" />
 				</div>
 			</header>
 

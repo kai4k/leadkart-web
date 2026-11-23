@@ -157,14 +157,14 @@ test.describe('Roles list — negative', () => {
 		// card). Scope to the desktop <tr> by row text. The trigger inside
 		// that scope is unique per row.
 		const customRowTrigger = page
-			.locator('tr:has-text("Sales Lead") button[aria-label="Row actions"]')
+			.locator('tr:has-text("Sales Lead") button[aria-label="Actions for Sales Lead"]')
 			.first();
 		await customRowTrigger.click();
 		await expect(page.getByText('Delete', { exact: true })).toBeVisible({ timeout: 3000 });
 		await page.keyboard.press('Escape');
 
 		const superAdminRowTrigger = page
-			.locator('tr:has-text("SuperAdmin") button[aria-label="Row actions"]')
+			.locator('tr:has-text("SuperAdmin") button[aria-label="Actions for SuperAdmin"]')
 			.first();
 		await superAdminRowTrigger.click();
 		await expect(page.getByText('Edit', { exact: true })).toBeVisible({ timeout: 3000 });

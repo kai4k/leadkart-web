@@ -98,7 +98,10 @@ test.describe('Tenant user management — positive', () => {
 		]);
 		await page.goto('/settings/users');
 		await expect(page.getByText('Alice Anderson')).toBeVisible();
-		await page.getByRole('button', { name: 'Row actions' }).first().click();
+		await page
+			.getByRole('button', { name: /^Actions for/ })
+			.first()
+			.click();
 		await page.getByRole('menuitem', { name: /deactivate/i }).click();
 		await page.getByLabel(/reason/i).fill('Left the company');
 		// a confirmation is an alert dialog now (role alertdialog)

@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { createDialogState } from '#lib/hooks/index.ts';
 	import { plainTitle } from '#lib/utils/page-title.ts';
-	import { Badge, Button, Card, CopyButton, DescriptionList } from '$ui';
+	import { Badge, Button, Card, DescriptionList } from '$ui';
+	import { IdChip } from '#lib/components/data/index.ts';
 	import { Eye, Icon } from '$icons';
 	import { ImpersonateModal } from '$features/operator/impersonation';
 	import { tenantStatus } from '$features/tenant';
@@ -20,10 +21,7 @@
 <svelte:head><title>Profile · {plainTitle(tenant.display_name)} · LeadKart</title></svelte:head>
 
 {#snippet slug()}
-	<span class="cluster cluster-tight">
-		<code class="caption text-subtle-foreground">{tenant.slug}</code>
-		<CopyButton value={tenant.slug} label="Copy slug" />
-	</span>
+	<IdChip value={tenant.slug} label="slug" short={false} />
 {/snippet}
 
 <div class="stack stack-relaxed">

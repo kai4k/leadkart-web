@@ -80,6 +80,11 @@ describe('IdChip', () => {
 		);
 	});
 
+	it('short={false} shows the whole value, for a slug read as written', () => {
+		render(IdChip, { value: 'acme-pharma-india', label: 'slug', short: false });
+		expect(target.querySelector('code')?.textContent).toBe('acme-pharma-india');
+	});
+
 	it('a value already short is not cut', () => {
 		render(IdChip, { value: 'abc', label: 'code' });
 		expect(target.querySelector('code')?.textContent).toBe('abc');

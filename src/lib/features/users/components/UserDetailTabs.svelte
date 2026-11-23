@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { Avatar, Badge, Button, Card, DescriptionList, EmptyState, Tabs } from '$ui';
+	import { Badge, Button, Card, DescriptionList, EmptyState, Tabs } from '$ui';
 	import { Edit, Icon, Lock, Shield, UserPlus, Users } from '$icons';
 	import type { UserDto } from '$features/users/types';
 	import type { RoleDto } from '$features/roles/types';
 	import { managerLabel, userRoleBadges } from '../view-models';
-	import { displayName, initials, userStatus } from '$features/auth';
+	import { displayName, userStatus } from '$features/auth';
+	import { IdentityCell } from '#lib/components/data/index.ts';
 	import { removeManagerMutation } from '../queries';
 	import { personActivityQuery, ActivityTimeline } from '$features/audit';
 	import { describeError } from '$api/errors';
@@ -231,12 +232,8 @@
 									href={resolve('/(app)/settings/users/[id]', { id: report.membership_id })}
 									class="hover:bg-muted -mx-2 flex items-center gap-3 rounded-md px-2 py-2 transition-colors"
 								>
-									<Avatar initials={initials(displayName(report))} size="sm" />
-									<div class="stack stack-tight min-w-0 flex-1">
-										<span class="body-sm text-foreground truncate font-medium">
-											{displayName(report)}
-										</span>
-										<span class="caption text-muted-foreground truncate">{report.email}</span>
+									<div class="min-w-0 flex-1">
+										<IdentityCell name={displayName(report)} subtitle={report.email} size="sm" />
 									</div>
 									<Badge variant={rs.variant} size="sm">{rs.label}</Badge>
 								</a>
