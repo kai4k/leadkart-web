@@ -214,17 +214,17 @@ export const PERMISSION_CATALOGUE: ReadonlyArray<PermissionCatalogueEntry> = [
 	{
 		name: 'company_settings.read',
 		description: 'View the commerce policy, its history and the GST rate list',
-		group: 'company_settings'
+		group: 'company settings'
 	},
 	{
 		name: 'company_settings.manage',
 		description: 'Change the commerce settings that are not tax',
-		group: 'company_settings'
+		group: 'company settings'
 	},
 	{
 		name: 'company_settings.tax.manage',
 		description: 'Change the tax, document and compliance settings and the GST rate list',
-		group: 'company_settings'
+		group: 'company settings'
 	},
 
 	// --- Notifications ---
