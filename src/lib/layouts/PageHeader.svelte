@@ -1,7 +1,7 @@
 <script lang="ts">
 	/**
-	 * PageHeader (Domiex page heading): the page's ONLY `<h1>`, with the breadcrumb trail on the end
-	 * side, an optional description, `meta` beside the title (status badges) and `actions` (buttons).
+	 * PageHeader (Domiex page heading): the page's ONLY `<h1>`, with the breadcrumb trail above it,
+	 * an optional description, `meta` beside the title (status badges) and `actions` (buttons).
 	 * Every page renders one, inside `PageContainer`; the topbar has no heading and no trail.
 	 *
 	 * The default trail is the route: each path segment that is a nav entry is a link (labelled in the
@@ -68,24 +68,8 @@
 <!-- eslint-disable svelte/no-navigation-without-resolve -- hrefs are nav-config paths or resolved by the caller -->
 <div class="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2" data-page-heading>
 	<div class="min-w-0">
-		{#if leading}<div class="mb-1">{@render leading()}</div>{/if}
-		<div class="flex flex-wrap items-center gap-2">
-			<svelte:element
-				this={nested ? 'h2' : 'h1'}
-				class="text-foreground min-w-0 text-lg font-semibold break-words"
-				data-testid={titleTestId}
-			>
-				{#if isolated}<bdi>{title}</bdi>{:else}{title}{/if}
-			</svelte:element>
-			{@render meta?.()}
-		</div>
-		{#if description}
-			<p class="text-muted-foreground mt-1 text-sm">{description}</p>
-		{/if}
-	</div>
-	<div class="flex flex-wrap items-center gap-x-4 gap-y-2">
 		{#if trail.length > 0}
-			<nav aria-label={$_('common.breadcrumb')}>
+			<nav class="mb-2" aria-label={$_('common.breadcrumb')}>
 				<ol class="m-0 flex list-none flex-wrap items-center gap-1.5 p-0 text-sm">
 					{#each trail as crumb, i (`${i}-${crumb.label}`)}
 						{@const last = i === trail.length - 1}
@@ -114,6 +98,22 @@
 				</ol>
 			</nav>
 		{/if}
+		{#if leading}<div class="mb-1">{@render leading()}</div>{/if}
+		<div class="flex flex-wrap items-center gap-2">
+			<svelte:element
+				this={nested ? 'h2' : 'h1'}
+				class="text-foreground min-w-0 text-lg font-semibold break-words"
+				data-testid={titleTestId}
+			>
+				{#if isolated}<bdi>{title}</bdi>{:else}{title}{/if}
+			</svelte:element>
+			{@render meta?.()}
+		</div>
+		{#if description}
+			<p class="text-muted-foreground mt-1 text-sm">{description}</p>
+		{/if}
+	</div>
+	<div class="flex flex-wrap items-center gap-x-4 gap-y-2">
 		{@render actions?.()}
 	</div>
 </div>

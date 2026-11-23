@@ -116,6 +116,18 @@ describe('PageHeader', () => {
 	});
 });
 
+describe('PageHeader breadcrumb sits above the title', () => {
+	it('the trail comes before the h1 in the heading block, and the actions stay on the end side', () => {
+		render({ title: 'Team', actions: snippet('<button id="act">Add</button>') });
+		const nav = document.querySelector('nav[aria-label="Breadcrumb"]')!;
+		const h1 = document.querySelector('h1')!;
+		expect(nav.compareDocumentPosition(h1) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		const block = document.querySelector('[data-page-heading] > div')!;
+		expect(block.contains(nav)).toBe(true);
+		expect(block.contains(document.querySelector('#act'))).toBe(false);
+	});
+});
+
 describe('PageHeader below a layout that already shows one', () => {
 	it('is a section title (h2) with no second trail: the page keeps exactly one h1', async () => {
 		const { default: Host } = await import('../stubs/NestedHeaderHost.svelte');
