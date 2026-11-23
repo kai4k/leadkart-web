@@ -61,3 +61,25 @@ describe('app.html link preview', () => {
 		expect(readFileSync('.env.example', 'utf8')).toMatch(/PUBLIC_SITE_URL=/);
 	});
 });
+
+/**
+ * input-audit-shared I16: Android Chrome does not resize the layout for the on-screen keyboard by default, so the
+ * footer at the bottom of a full-height sheet (Save) can sit under it. `interactive-widget=resizes-content` makes the
+ * layout viewport shrink with the keyboard. The rest of the viewport value is unchanged.
+ */
+describe('app.html viewport', () => {
+	const html = readFileSync('src/app.html', 'utf8');
+	it('resizes the content for the on-screen keyboard, and is otherwise as before', () => {
+		// one viewport tag (the formatter may break it over lines): its content, exactly
+		const contents = [...html.matchAll(/<meta\s+name="viewport"\s+content="([^"]*)"\s*\/>/g)].map(
+			(m) => m[1]
+		);
+		expect(contents).toEqual([
+			'width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content'
+		]);
+		expect(html.match(/name="viewport"/g)).toHaveLength(1);
+	});
+	it('never stops the person from zooming', () => {
+		expect(html).not.toMatch(/user-scalable\s*=\s*no|maximum-scale/);
+	});
+});
