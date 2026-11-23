@@ -1,6 +1,10 @@
 <script lang="ts">
-	import { Button, Card, EmptyState, Skeleton } from '$ui';
+	import { _ } from 'svelte-i18n';
+	import { Button, EmptyState, Skeleton, Timeline, type TimelineItemAccent } from '$ui';
+	import { QueryState } from '#lib/components/feedback/index.ts';
 	import { Activity, User, Building2, Shield, AlertCircle } from '$icons';
+	import { ApiError } from '$api/errors';
+	import { relativeTime } from '#lib/utils/format.ts';
 	import { SvelteSet } from 'svelte/reactivity';
 	import type { ActivityDto, ActivityListResponse } from '../schemas';
 
@@ -11,10 +15,11 @@
 	 *   - data: the current ActivityListResponse from TanStack Query
 	 *   - isPending: loading state (first fetch)
 	 *   - isError: error state
-	 *   - errorMessage: display message for error state
+	 *   - errorMessage: the line shown when the load failed
 	 *   - onLoadMore: called when user clicks "Load more"; receives next_cursor
 	 *   - isLoadingMore: true while the next page is fetching
 	 *
+	 * Loading, failure and empty come from `QueryState`; the events are `ui/timeline` items.
 	 * Design canon: Linear audit-log / GitHub timeline — icon + actor verb + target,
 	 * timestamp, expandable payload, trace ID chip.
 	 */
@@ -58,20 +63,14 @@
 		return EVENT_ICONS[eventType] ?? Activity;
 	}
 
-	function relativeTime(iso: string): string {
-		const ms = Date.now() - new Date(iso).getTime();
-		const s = Math.floor(ms / 1000);
-		if (s < 60) return `${s}s ago`;
-		const m = Math.floor(s / 60);
-		if (m < 60) return `${m}m ago`;
-		const h = Math.floor(m / 60);
-		if (h < 24) return `${h}h ago`;
-		return new Date(iso).toLocaleDateString();
+	/** Suspensions and deletions are drawn as warnings; everything else is neutral. */
+	function accentFor(eventType: string): TimelineItemAccent {
+		return EVENT_ICONS[eventType] === AlertCircle ? 'warning' : 'neutral';
 	}
 
 	/** Actor verb+target summary per event. */
 	function summarise(ev: ActivityDto): string {
-		const actor = ev.actor_display_name ?? 'System';
+		const actor = ev.actor_display_name ?? $_('audit.timeline.system');
 		const type = ev.event_type.replace(/_/g, ' ');
 		const target = ev.target_id ? ` · ${ev.target_type ?? ''} ${ev.target_id.slice(0, 8)}…` : '';
 		return `${actor} · ${type}${target}`;
@@ -87,104 +86,80 @@
 
 	const items = $derived(data?.items ?? []);
 	const nextCursor = $derived(data?.next_cursor ?? null);
+
+	// The page hands in the pieces of its query; QueryState reads the same shape. A failure is
+	// the caller's line, shown as-is (an `ApiError` with no status carries its own message).
+	const query = $derived({
+		isPending,
+		isError,
+		error: isError ? Object.assign(new ApiError(), { message: errorMessage }) : null,
+		data: data ?? undefined
+	});
 </script>
 
-{#if isPending}
-	<ol class="stack stack-tight" aria-busy="true" aria-label="Loading activity">
-		{#each [0, 1, 2, 3, 4] as i (i)}
-			<li>
-				<Card.Root>
-					<Card.Content class="grid grid-cols-[auto_1fr] gap-3">
-						<Skeleton shape="circle" class="mt-0.5 h-8 w-8" />
-						<div class="stack stack-tight min-w-0">
-							<Skeleton class="h-4 w-3/4" />
-							<Skeleton class="h-3 w-1/4" />
-						</div>
-					</Card.Content>
-				</Card.Root>
-			</li>
-		{/each}
-	</ol>
-{:else if isError}
-	<div class="stack stack-tight">
-		<p class="body-sm text-destructive">{errorMessage}</p>
-	</div>
-{:else if items.length === 0}
-	<EmptyState icon={Activity} title="No activity" description="Nothing recorded yet." />
-{:else}
-	<ol class="stack stack-tight" aria-label="Activity timeline">
+<QueryState {query} noun={$_('audit.timeline.noun')} isEmpty={(d) => d.items.length === 0}>
+	{#snippet empty()}
+		<EmptyState
+			icon={Activity}
+			title={$_('audit.timeline.emptyTitle')}
+			description={$_('audit.timeline.emptyDescription')}
+		/>
+	{/snippet}
+	{#snippet skeleton()}
+		<div class="stack stack-tight" aria-hidden="true">
+			{#each [0, 1, 2, 3, 4] as i (i)}
+				<div class="grid grid-cols-[auto_1fr] gap-3">
+					<Skeleton shape="circle" class="h-8 w-8" />
+					<div class="stack stack-tight min-w-0">
+						<Skeleton class="h-4 w-3/4" />
+						<Skeleton class="h-3 w-1/4" />
+					</div>
+				</div>
+			{/each}
+		</div>
+	{/snippet}
+	<Timeline.Root aria-label={$_('audit.timeline.label')}>
 		{#each items as ev (ev.id)}
-			{@const EventIcon = iconFor(ev.event_type)}
 			{@const isExpanded = expanded.has(ev.id)}
-			{@const hasPayload = Object.keys(ev.payload).length > 0}
-			<li>
-				<Card.Root>
-					<Card.Content class="grid grid-cols-[auto_1fr] gap-3">
-						<!-- Timeline dot + icon -->
-						<span
-							class="bg-muted mt-0.5 inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full"
-							aria-hidden="true"
-						>
-							<EventIcon size={14} class="text-muted-foreground" />
-						</span>
-
-						<div class="stack stack-tight min-w-0">
-							<!-- Summary row: stacked on mobile, spread on md+ -->
-							<div
-								class="flex flex-col gap-1 md:flex-row md:items-center md:justify-between md:gap-2"
-							>
-								<p class="body-sm text-foreground truncate font-medium">
-									{summarise(ev)}
-								</p>
-								<time
-									datetime={ev.occurred_at}
-									class="caption text-subtle-foreground flex-shrink-0"
-									title={new Date(ev.occurred_at).toLocaleString()}
-								>
-									{relativeTime(ev.occurred_at)}
-								</time>
-							</div>
-
-							<!-- Trace ID chip -->
-							{#if ev.trace_id}
-								<p class="caption text-subtle-foreground font-mono">
-									ref: {ev.trace_id}
-								</p>
-							{/if}
-
-							<!-- Expandable payload -->
-							{#if hasPayload}
-								<button
-									type="button"
-									class="caption text-primary-text focus-visible:ring-ring self-start hover:underline focus-visible:ring-2 focus-visible:outline-none"
-									onclick={() => toggle(ev.id)}
-									aria-expanded={isExpanded}
-								>
-									{isExpanded ? 'Hide' : 'Show'} details
-								</button>
-								{#if isExpanded}
-									<pre
-										class="body-xs bg-muted text-muted-foreground mt-1 overflow-x-auto rounded-md p-2">{JSON.stringify(
-											ev.payload,
-											null,
-											2
-										)}</pre>
-								{/if}
-							{/if}
-						</div>
-					</Card.Content>
-				</Card.Root>
-			</li>
+			<Timeline.Item
+				icon={iconFor(ev.event_type)}
+				iconAccent={accentFor(ev.event_type)}
+				title={summarise(ev)}
+				time={relativeTime(ev.occurred_at)}
+				datetime={ev.occurred_at}
+			>
+				{#if ev.trace_id}
+					<p class="caption text-subtle-foreground font-mono">ref: {ev.trace_id}</p>
+				{/if}
+				{#if Object.keys(ev.payload).length > 0}
+					<button
+						type="button"
+						class="caption text-primary-text focus-visible:ring-ring self-start hover:underline focus-visible:ring-2 focus-visible:outline-none"
+						onclick={() => toggle(ev.id)}
+						aria-expanded={isExpanded}
+					>
+						{isExpanded ? $_('audit.timeline.hideDetails') : $_('audit.timeline.showDetails')}
+					</button>
+					{#if isExpanded}
+						<pre
+							class="body-xs bg-muted text-muted-foreground mt-1 overflow-x-auto rounded-md p-2">{JSON.stringify(
+								ev.payload,
+								null,
+								2
+							)}</pre>
+					{/if}
+				{/if}
+			</Timeline.Item>
 		{/each}
-	</ol>
+	</Timeline.Root>
 
 	{#if nextCursor && onLoadMore}
 		{@const loadMore = onLoadMore}
 		{@const cursor = nextCursor}
 		<div class="flex justify-center pt-2">
 			<Button variant="ghost" onclick={() => loadMore(cursor)} loading={isLoadingMore}>
-				Load more
+				{$_('audit.timeline.loadMore')}
 			</Button>
 		</div>
 	{/if}
-{/if}
+</QueryState>

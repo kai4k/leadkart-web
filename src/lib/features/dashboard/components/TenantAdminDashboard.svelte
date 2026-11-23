@@ -5,14 +5,13 @@
 		AlertTriangle,
 		ClipboardList,
 		Coins,
-		Icon,
 		PackageCheck,
 		TrendingUp,
 		Truck,
 		UserPlus,
 		Users
 	} from '#lib/icons/index.ts';
-	import { Alert, Card } from '$ui';
+	import { Alert, Badge, StatCard, type StatCardAccent } from '$ui';
 	import { session } from '$features/auth';
 
 	/**
@@ -36,63 +35,63 @@
 
 	const email = $derived(session.principal?.email ?? '—');
 
-	type TileAccent = 'brand' | 'success' | 'warning' | 'danger';
-
-	const tiles: Array<{
-		label: string;
-		hint: string;
-		icon: typeof Coins;
-		accent: TileAccent;
-	}> = [
-		{
-			label: 'Lead credits',
-			hint: 'Available for marketplace purchases',
-			icon: Coins,
-			accent: 'brand'
-		},
-		{
-			label: 'Team active',
-			hint: 'Memberships with status=active',
-			icon: Users,
-			accent: 'success'
-		},
-		{ label: 'Leads this week', hint: 'Worked across the team', icon: UserPlus, accent: 'brand' },
-		{
-			label: 'Conversion this month',
-			hint: 'New → Converted',
-			icon: TrendingUp,
-			accent: 'success'
-		},
-		{ label: 'Open orders', hint: 'Quotation + Confirmed', icon: PackageCheck, accent: 'brand' },
-		{
-			label: 'Pending dispatches',
-			hint: 'Packed but not consigned',
-			icon: Truck,
-			accent: 'warning'
-		},
-		{
-			label: 'Inventory alerts',
-			hint: 'Low stock + expiring batches',
-			icon: AlertTriangle,
-			accent: 'warning'
-		},
-		{
-			label: 'Overdue tasks',
-			hint: 'Across the team',
-			icon: ClipboardList,
-			accent: 'danger'
-		}
-	];
+	const tiles: Array<{ label: string; hint: string; icon: typeof Coins; accent: StatCardAccent }> =
+		[
+			{
+				label: 'dashboard.tile.leadCredits.label',
+				hint: 'dashboard.tile.leadCredits.hint',
+				icon: Coins,
+				accent: 'primary'
+			},
+			{
+				label: 'dashboard.tile.teamActive.label',
+				hint: 'dashboard.tile.teamActive.hint',
+				icon: Users,
+				accent: 'success'
+			},
+			{
+				label: 'dashboard.tile.leadsThisWeek.label',
+				hint: 'dashboard.tile.leadsThisWeek.hint',
+				icon: UserPlus,
+				accent: 'primary'
+			},
+			{
+				label: 'dashboard.tile.conversionThisMonth.label',
+				hint: 'dashboard.tile.conversionThisMonth.hint',
+				icon: TrendingUp,
+				accent: 'success'
+			},
+			{
+				label: 'dashboard.tile.openOrders.label',
+				hint: 'dashboard.tile.openOrders.hint',
+				icon: PackageCheck,
+				accent: 'primary'
+			},
+			{
+				label: 'dashboard.tile.pendingDispatches.label',
+				hint: 'dashboard.tile.pendingDispatches.hint',
+				icon: Truck,
+				accent: 'warning'
+			},
+			{
+				label: 'dashboard.tile.inventoryAlerts.label',
+				hint: 'dashboard.tile.inventoryAlerts.hint',
+				icon: AlertTriangle,
+				accent: 'warning'
+			},
+			{
+				label: 'dashboard.tile.overdueTasks.label',
+				hint: 'dashboard.tile.overdueTasks.hint',
+				icon: ClipboardList,
+				accent: 'danger'
+			}
+		];
 </script>
 
 <div class="stack stack-relaxed">
 	<PageHeader title={$_('dashboard.title.tenantAdmin')}>
 		{#snippet meta()}
-			<span
-				class="label-small bg-primary-soft text-primary-text inline-flex items-center rounded-full px-2 py-0.5"
-			>
-				Admin
-			</span>
+			<Badge variant="brand">{$_('dashboard.badge.admin')}</Badge>
 		{/snippet}
 	</PageHeader>
 	<p class="body-sm text-muted-foreground">
@@ -102,20 +101,13 @@
 
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 		{#each tiles as tile (tile.label)}
-			<Card.Root class="hover:bg-muted">
-				<Card.Header>
-					<div class="cluster" style="--cluster-gap: var(--spacing-3);">
-						<span class={`lk-dash-tile-icon lk-dash-tile-icon--${tile.accent}`} aria-hidden="true">
-							<Icon icon={tile.icon} size="sm" />
-						</span>
-						<Card.Description>{tile.label}</Card.Description>
-					</div>
-				</Card.Header>
-				<Card.Content>
-					<p class="display-2 text-subtle-foreground tabular-nums">—</p>
-					<p class="caption text-subtle-foreground mt-1">{tile.hint}</p>
-				</Card.Content>
-			</Card.Root>
+			<StatCard
+				label={$_(tile.label)}
+				hint={$_(tile.hint)}
+				value="—"
+				icon={tile.icon}
+				accent={tile.accent}
+			/>
 		{/each}
 	</div>
 
@@ -125,31 +117,3 @@
 		credits balance.
 	</Alert>
 </div>
-
-<style>
-	.lk-dash-tile-icon {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		inline-size: 2rem;
-		block-size: 2rem;
-		border-radius: 0.5rem;
-		flex-shrink: 0;
-	}
-	.lk-dash-tile-icon--brand {
-		background: var(--primary-soft);
-		color: var(--primary-indicator);
-	}
-	.lk-dash-tile-icon--success {
-		background: var(--success-soft);
-		color: var(--success);
-	}
-	.lk-dash-tile-icon--warning {
-		background: var(--warning-soft);
-		color: var(--warning);
-	}
-	.lk-dash-tile-icon--danger {
-		background: var(--destructive-soft);
-		color: var(--destructive);
-	}
-</style>

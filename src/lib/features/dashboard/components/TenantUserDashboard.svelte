@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
 	import PageHeader from '$layouts/PageHeader.svelte';
-	import { AlarmClock, ClipboardList, Icon, PhoneCall, UserPlus } from '#lib/icons/index.ts';
-	import { Alert, Card } from '$ui';
+	import { AlarmClock, ClipboardList, PhoneCall, UserPlus } from '#lib/icons/index.ts';
+	import { Alert, StatCard, type StatCardAccent } from '$ui';
 	import { session } from '$features/auth';
 
 	/**
@@ -21,37 +21,35 @@
 
 	const email = $derived(session.principal?.email ?? '—');
 
-	type TileAccent = 'brand' | 'success' | 'warning' | 'danger';
-
 	const tiles: Array<{
 		label: string;
 		hint: string;
 		icon: typeof UserPlus;
-		accent: TileAccent;
+		accent: StatCardAccent;
 	}> = [
 		{
-			label: 'My active leads',
-			hint: 'Assigned to me, not Lost/Dead',
+			label: 'dashboard.tile.myActiveLeads.label',
+			hint: 'dashboard.tile.myActiveLeads.hint',
 			icon: UserPlus,
-			accent: 'brand'
+			accent: 'primary'
 		},
 		{
-			label: 'Callbacks today',
-			hint: 'Scheduled within today’s window',
+			label: 'dashboard.tile.callbacksToday.label',
+			hint: 'dashboard.tile.callbacksToday.hint',
 			icon: PhoneCall,
 			accent: 'success'
 		},
 		{
-			label: 'Overdue reminders',
-			hint: 'Past their scheduled window',
+			label: 'dashboard.tile.overdueReminders.label',
+			hint: 'dashboard.tile.overdueReminders.hint',
 			icon: AlarmClock,
 			accent: 'warning'
 		},
 		{
-			label: 'My open tasks',
-			hint: 'WorkItems assigned to me',
+			label: 'dashboard.tile.myOpenTasks.label',
+			hint: 'dashboard.tile.myOpenTasks.hint',
 			icon: ClipboardList,
-			accent: 'brand'
+			accent: 'primary'
 		}
 	];
 </script>
@@ -64,20 +62,13 @@
 
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 		{#each tiles as tile (tile.label)}
-			<Card.Root class="hover:bg-muted">
-				<Card.Header>
-					<div class="cluster" style="--cluster-gap: var(--spacing-3);">
-						<span class={`lk-dash-tile-icon lk-dash-tile-icon--${tile.accent}`} aria-hidden="true">
-							<Icon icon={tile.icon} size="sm" />
-						</span>
-						<Card.Description>{tile.label}</Card.Description>
-					</div>
-				</Card.Header>
-				<Card.Content>
-					<p class="display-2 text-subtle-foreground tabular-nums">—</p>
-					<p class="caption text-subtle-foreground mt-1">{tile.hint}</p>
-				</Card.Content>
-			</Card.Root>
+			<StatCard
+				label={$_(tile.label)}
+				hint={$_(tile.hint)}
+				value="—"
+				icon={tile.icon}
+				accent={tile.accent}
+			/>
 		{/each}
 	</div>
 
@@ -86,31 +77,3 @@
 		overdue reminders highlighted, your active leads ranked by temperature + last-touched.
 	</Alert>
 </div>
-
-<style>
-	.lk-dash-tile-icon {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		inline-size: 2rem;
-		block-size: 2rem;
-		border-radius: 0.5rem;
-		flex-shrink: 0;
-	}
-	.lk-dash-tile-icon--brand {
-		background: var(--primary-soft);
-		color: var(--primary-indicator);
-	}
-	.lk-dash-tile-icon--success {
-		background: var(--success-soft);
-		color: var(--success);
-	}
-	.lk-dash-tile-icon--warning {
-		background: var(--warning-soft);
-		color: var(--warning);
-	}
-	.lk-dash-tile-icon--danger {
-		background: var(--destructive-soft);
-		color: var(--destructive);
-	}
-</style>

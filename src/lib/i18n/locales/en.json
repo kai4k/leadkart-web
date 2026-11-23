@@ -545,6 +545,60 @@
 			"operator": "Operator Dashboard",
 			"tenantAdmin": "Tenant Dashboard",
 			"tenantUser": "My Dashboard"
+		},
+		"badge": {
+			"superAdmin": "SuperAdmin",
+			"platformStaff": "Platform Staff",
+			"admin": "Admin"
+		},
+		"tile": {
+			"tenantsTotal": { "label": "Tenants total", "hint": "All-time signups" },
+			"tenantsActive": { "label": "Tenants active", "hint": "status = active" },
+			"tenantsSuspended": { "label": "Tenants suspended", "hint": "Requires operator action" },
+			"personsTotal": { "label": "Persons total", "hint": "Across all tenants" },
+			"membershipsActive": { "label": "Active memberships", "hint": "Non-deactivated" },
+			"verificationQueue": {
+				"label": "Lead verification queue",
+				"hint": "Unverified contacts pending review"
+			},
+			"marketplaceInventory": {
+				"label": "Marketplace inventory",
+				"hint": "Verified leads available for purchase"
+			},
+			"impersonationSessions": {
+				"label": "Active impersonation sessions",
+				"hint": "Operators currently impersonating"
+			},
+			"leadCredits": { "label": "Lead credits", "hint": "Available for marketplace purchases" },
+			"teamActive": { "label": "Team active", "hint": "Memberships with status=active" },
+			"leadsThisWeek": { "label": "Leads this week", "hint": "Worked across the team" },
+			"conversionThisMonth": { "label": "Conversion this month", "hint": "New → Converted" },
+			"openOrders": { "label": "Open orders", "hint": "Quotation + Confirmed" },
+			"pendingDispatches": { "label": "Pending dispatches", "hint": "Packed but not consigned" },
+			"inventoryAlerts": { "label": "Inventory alerts", "hint": "Low stock + expiring batches" },
+			"overdueTasks": { "label": "Overdue tasks", "hint": "Across the team" },
+			"myActiveLeads": { "label": "My active leads", "hint": "Assigned to me, not Lost/Dead" },
+			"callbacksToday": { "label": "Callbacks today", "hint": "Scheduled within today’s window" },
+			"overdueReminders": { "label": "Overdue reminders", "hint": "Past their scheduled window" },
+			"myOpenTasks": { "label": "My open tasks", "hint": "WorkItems assigned to me" }
+		}
+	},
+	"statCard": {
+		"noData": "No data yet",
+		"up": "Up",
+		"down": "Down",
+		"flat": "No change"
+	},
+	"audit": {
+		"timeline": {
+			"noun": "activity",
+			"emptyTitle": "No activity",
+			"emptyDescription": "Nothing recorded yet.",
+			"system": "System",
+			"showDetails": "Show details",
+			"hideDetails": "Hide details",
+			"loadMore": "Load more",
+			"label": "Activity timeline"
 		}
 	},
 	"pages": {

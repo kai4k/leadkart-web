@@ -6,13 +6,12 @@
 		Ban,
 		Building2,
 		ClipboardCheck,
-		Icon,
 		ShoppingBag,
 		UserCheck,
 		UserCog,
 		Users
 	} from '#lib/icons/index.ts';
-	import { Alert, Card, Spinner } from '$ui';
+	import { Alert, Badge, StatCard, type StatCardAccent } from '$ui';
 	import { P, session } from '$features/auth';
 	import { describeError } from '$api/errors';
 	import { platformStatsQuery } from '$features/operator';
@@ -36,8 +35,6 @@
 	const isSuper = $derived(session.capabilities?.is_super_user === true);
 	const canViewStats = $derived(session.can(P.platformTenantsView));
 
-	type TileAccent = 'brand' | 'success' | 'warning' | 'danger';
-
 	const statsQuery = platformStatsQuery(() => canViewStats);
 	const stats = $derived(statsQuery.data ?? null);
 	const statsLoading = $derived(statsQuery.isPending);
@@ -56,47 +53,47 @@
 		}
 	});
 
-	// Tiles backed by real stats — show actual number or '—' while loading.
+	// Tiles backed by real stats: the number, or the em dash until the stats arrive.
 	type StatTile = {
 		label: string;
 		hint: string;
 		icon: typeof Building2;
-		accent: TileAccent;
+		accent: StatCardAccent;
 		value: () => string | number;
 	};
 
 	const statTiles: StatTile[] = [
 		{
-			label: 'Tenants total',
-			hint: 'All-time signups',
+			label: 'dashboard.tile.tenantsTotal.label',
+			hint: 'dashboard.tile.tenantsTotal.hint',
 			icon: Building2,
-			accent: 'brand',
+			accent: 'primary',
 			value: () => (stats ? stats.tenants_total : '—')
 		},
 		{
-			label: 'Tenants active',
-			hint: 'status = active',
+			label: 'dashboard.tile.tenantsActive.label',
+			hint: 'dashboard.tile.tenantsActive.hint',
 			icon: Activity,
 			accent: 'success',
 			value: () => (stats ? stats.tenants_active : '—')
 		},
 		{
-			label: 'Tenants suspended',
-			hint: 'Requires operator action',
+			label: 'dashboard.tile.tenantsSuspended.label',
+			hint: 'dashboard.tile.tenantsSuspended.hint',
 			icon: Ban,
 			accent: 'warning',
 			value: () => (stats ? stats.tenants_suspended : '—')
 		},
 		{
-			label: 'Persons total',
-			hint: 'Across all tenants',
+			label: 'dashboard.tile.personsTotal.label',
+			hint: 'dashboard.tile.personsTotal.hint',
 			icon: Users,
-			accent: 'brand',
+			accent: 'primary',
 			value: () => (stats ? stats.persons_total : '—')
 		},
 		{
-			label: 'Active memberships',
-			hint: 'Non-deactivated',
+			label: 'dashboard.tile.membershipsActive.label',
+			hint: 'dashboard.tile.membershipsActive.hint',
 			icon: UserCheck,
 			accent: 'success',
 			value: () => (stats ? stats.memberships_active : '—')
@@ -108,23 +105,23 @@
 		label: string;
 		hint: string;
 		icon: typeof Building2;
-		accent: TileAccent;
+		accent: StatCardAccent;
 	}> = [
 		{
-			label: 'Lead verification queue',
-			hint: 'Unverified contacts pending review',
+			label: 'dashboard.tile.verificationQueue.label',
+			hint: 'dashboard.tile.verificationQueue.hint',
 			icon: ClipboardCheck,
 			accent: 'warning'
 		},
 		{
-			label: 'Marketplace inventory',
-			hint: 'Verified leads available for purchase',
+			label: 'dashboard.tile.marketplaceInventory.label',
+			hint: 'dashboard.tile.marketplaceInventory.hint',
 			icon: ShoppingBag,
-			accent: 'brand'
+			accent: 'primary'
 		},
 		{
-			label: 'Active impersonation sessions',
-			hint: 'Operators currently impersonating',
+			label: 'dashboard.tile.impersonationSessions.label',
+			hint: 'dashboard.tile.impersonationSessions.hint',
 			icon: UserCog,
 			accent: 'danger'
 		}
@@ -135,17 +132,9 @@
 	<PageHeader title={$_('dashboard.title.operator')}>
 		{#snippet meta()}
 			{#if isSuper}
-				<span
-					class="label-small bg-destructive-soft text-destructive inline-flex items-center rounded-full px-2 py-0.5"
-				>
-					SuperAdmin
-				</span>
+				<Badge variant="danger">{$_('dashboard.badge.superAdmin')}</Badge>
 			{:else}
-				<span
-					class="label-small bg-primary-soft text-primary-text inline-flex items-center rounded-full px-2 py-0.5"
-				>
-					Platform Staff
-				</span>
+				<Badge variant="brand">{$_('dashboard.badge.platformStaff')}</Badge>
 			{/if}
 		{/snippet}
 	</PageHeader>
@@ -172,69 +161,24 @@
 
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 		{#each canViewStats ? statTiles : [] as tile (tile.label)}
-			<Card.Root class="hover:bg-muted">
-				<Card.Header>
-					<div class="cluster" style="--cluster-gap: var(--spacing-3);">
-						<span class={`lk-dash-tile-icon lk-dash-tile-icon--${tile.accent}`} aria-hidden="true">
-							<Icon icon={tile.icon} size="sm" />
-						</span>
-						<Card.Description>{tile.label}</Card.Description>
-					</div>
-				</Card.Header>
-				<Card.Content>
-					{#if statsLoading}
-						<Spinner size={16} />
-					{:else}
-						<p class="display-2 text-foreground tabular-nums">{tile.value()}</p>
-					{/if}
-					<p class="caption text-subtle-foreground mt-1">{tile.hint}</p>
-				</Card.Content>
-			</Card.Root>
+			<StatCard
+				label={$_(tile.label)}
+				hint={$_(tile.hint)}
+				value={tile.value()}
+				icon={tile.icon}
+				accent={tile.accent}
+				loading={statsLoading}
+			/>
 		{/each}
 
 		{#each placeholderTiles as tile (tile.label)}
-			<Card.Root class="hover:bg-muted">
-				<Card.Header>
-					<div class="cluster" style="--cluster-gap: var(--spacing-3);">
-						<span class={`lk-dash-tile-icon lk-dash-tile-icon--${tile.accent}`} aria-hidden="true">
-							<Icon icon={tile.icon} size="sm" />
-						</span>
-						<Card.Description>{tile.label}</Card.Description>
-					</div>
-				</Card.Header>
-				<Card.Content>
-					<p class="display-2 text-subtle-foreground tabular-nums">—</p>
-					<p class="caption text-subtle-foreground mt-1">{tile.hint}</p>
-				</Card.Content>
-			</Card.Root>
+			<StatCard
+				label={$_(tile.label)}
+				hint={$_(tile.hint)}
+				value="—"
+				icon={tile.icon}
+				accent={tile.accent}
+			/>
 		{/each}
 	</div>
 </div>
-
-<style>
-	.lk-dash-tile-icon {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		inline-size: 2rem;
-		block-size: 2rem;
-		border-radius: 0.5rem;
-		flex-shrink: 0;
-	}
-	.lk-dash-tile-icon--brand {
-		background: var(--primary-soft);
-		color: var(--primary-indicator);
-	}
-	.lk-dash-tile-icon--success {
-		background: var(--success-soft);
-		color: var(--success);
-	}
-	.lk-dash-tile-icon--warning {
-		background: var(--warning-soft);
-		color: var(--warning);
-	}
-	.lk-dash-tile-icon--danger {
-		background: var(--destructive-soft);
-		color: var(--destructive);
-	}
-</style>
