@@ -21,6 +21,7 @@ test-results
 playwright-report
 playwright/.cache
 coverage
+.vitest-reports
 
 # Linter caches — local + CI both write to these. Persisted in CI via
 # the actions/cache step in .github/workflows/ci.yml so subsequent runs

@@ -1,31 +1,73 @@
 name: _test
 # Reusable workflow — Vitest unit tests with coverage. Called by ci.yml.
 #
-# Vitest forks across CPU cores by default (8+ locally, 2 on GitHub free
-# tier). 513 tests × 26 files run in ~5s on cold runner. Coverage adds
-# ~5s of v8 instrumentation. Total: ~10-15s job time.
+# Measured 2026-11-24: 294 files / 5,046 tests. With coverage the suite takes
+# 3.3 min on a 24-core workstation and ~10 min with --maxWorkers=2 (the 2 vCPUs
+# of a standard runner) — the old single 5-minute job could not finish. So the
+# suite is split in 4 shards (`vitest --shard`), each writing a blob report that
+# carries its coverage; a merge job joins the blobs and applies the coverage
+# thresholds from vitest.config.ts to the WHOLE suite (a shard alone sees a
+# fraction of the code, so its own thresholds are switched off).
 #
-# We don't shard via --shard=N/M because the suite is small enough that
-# shard setup overhead would exceed the savings. Vitest's worker-pool
-# parallelism is sufficient.
+# Only the `server` and `client` projects run here. The `built` project reads
+# build/ and runs in the build job right after `npm run build`.
+#
+# Go-comparison tests (permissions.test.ts, go-personas-pinned.test.ts) look for
+# a leadkart-go checkout (LEADKART_GO_DIR, default ../leadkart-go). CI has none,
+# so those comparisons skip here and run only on a developer machine.
 
 on:
   workflow_call:
 
 jobs:
   test:
-    name: Unit tests
+    name: Unit tests (shard ${{ matrix.shard }}/${{ matrix.total }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+        total: [4]
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
-      - name: Vitest with coverage
-        run: npm run test:coverage
+      - name: Vitest shard ${{ matrix.shard }}/${{ matrix.total }} (coverage goes into the blob)
+        run: >-
+          npx vitest run --project server --project client
+          --shard=${{ matrix.shard }}/${{ matrix.total }}
+          --reporter=blob --reporter=default
+          --coverage --coverage.reporter=json
+          --coverage.thresholds.statements=0 --coverage.thresholds.branches=0
+          --coverage.thresholds.functions=0 --coverage.thresholds.lines=0
+      - name: Upload blob report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: vitest-blob-${{ matrix.shard }}
+          path: .vitest-reports/
+          retention-days: 1
+          if-no-files-found: error
+
+  coverage:
+    name: Unit tests (merged, coverage thresholds)
+    needs: test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+      - name: Download blob reports
+        uses: actions/download-artifact@v7
+        with:
+          pattern: vitest-blob-*
+          path: .vitest-reports/
+          merge-multiple: true
+      - name: Merge reports + enforce coverage thresholds
+        run: npx vitest run --merge-reports --coverage
       - name: Upload coverage (push-to-main only)
         # Coverage on PR is rarely actioned; the merged-into-main report
-        # is what teams reference for trend lines. Skipping PR uploads
-        # saves ~20s per PR + storage.
+        # is what teams reference for trend lines.
         if: github.event_name == 'push'
         uses: actions/upload-artifact@v7
         with:
