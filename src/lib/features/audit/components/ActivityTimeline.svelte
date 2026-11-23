@@ -55,10 +55,12 @@
 		return EVENT_ICONS[eventType] === AlertCircle ? 'warning' : 'neutral';
 	}
 
-	/** What happened: the action, marked as the system's when no person ran it. */
+	/**
+	 * What happened. No actor is named: Go does not record one for every event yet, and "System" for a
+	 * suspension a person performed would be a false statement.
+	 */
 	function summarise(ev: ActivityDto): string {
-		const type = ev.event_type.replace(/_/g, ' ');
-		return ev.actor_id ? type : `${$_('audit.timeline.system')} · ${type}`;
+		return ev.event_type.replace(/_/g, ' ');
 	}
 
 	/** Expandable payload state per event ID. */
@@ -105,11 +107,9 @@
 				datetime={ev.occurred_at}
 			>
 				{#if !ev.succeeded}
-					<!-- recorded, and it did not happen: an audit reader must not take a refused command for a change -->
+					<!-- recorded, and it did not happen: an audit reader must not take a refused command for a change. Go's own error text is not shown: it can name a table or a constraint. -->
 					<p class="caption cluster cluster-tight">
 						<Badge variant="danger" size="sm">{$_('audit.timeline.failed')}</Badge>
-						{#if ev.failure_reason}<span class="text-muted-foreground">{ev.failure_reason}</span
-							>{/if}
 					</p>
 				{/if}
 				{#if ev.trace_id}
@@ -136,6 +136,12 @@
 			</Timeline.Item>
 		{/each}
 	</Timeline.Root>
+
+	{#if nextCursor && !onLoadMore}
+		<p class="caption text-muted-foreground pt-2 text-center">
+			{$_('audit.timeline.latestOnly', { values: { count: items.length } })}
+		</p>
+	{/if}
 
 	{#if nextCursor && onLoadMore}
 		{@const loadMore = onLoadMore}

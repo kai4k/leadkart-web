@@ -103,22 +103,27 @@ describe('ActivityTimeline: loading, failure and empty come from the query', () 
 });
 
 describe('ActivityTimeline: the events', () => {
-	it('an event reads as what happened; one nobody ran is the system’s', () => {
+	it('an event reads as what happened; one with no recorded actor shows no actor at all', () => {
 		render(loaded([event(), event({ id: 'e-2', event_type: 'outbox.dispatch', actor_id: null })]));
 		expect(text()).toContain('identity.user.role assigned');
-		expect(text()).toContain('System · outbox.dispatch');
-		expect(text()).not.toContain('System · identity.user');
+		expect(text()).toContain('outbox.dispatch');
+		expect(text()).not.toContain('System');
 	});
 
-	it('a command that did not go through says so, with Go’s reason', () => {
+	it('a command that did not go through says so, and never shows Go’s raw reason', () => {
 		render(
 			loaded([
 				event(),
-				event({ id: 'e-2', succeeded: false, failure_reason: 'tenant_already_suspended' })
+				event({
+					id: 'e-2',
+					succeeded: false,
+					failure_reason: 'pq: duplicate key value violates constraint "tenants_slug_key"'
+				})
 			])
 		);
 		expect(text().match(/Did not go through/g)).toHaveLength(1);
-		expect(text()).toContain('tenant_already_suspended');
+		expect(text()).not.toContain('pq:');
+		expect(text()).not.toContain('tenants_slug_key');
 	});
 
 	it('the reference and the payload are shown when there are any', () => {
@@ -147,5 +152,20 @@ describe('ActivityTimeline: more pages', () => {
 		target.remove();
 		render(loaded([event()], 'cursor-2'));
 		expect(button('Load more')).toBeUndefined();
+	});
+
+	it('a full page with nobody to load more says it is the latest events only', () => {
+		render(loaded([event(), event({ id: 'e-2' })], 'cursor-2'));
+		expect(text()).toContain('Showing the latest 2 events.');
+	});
+
+	it('no such line when Load more is offered, or when this is everything', () => {
+		render(loaded([event()], 'cursor-2'), { onLoadMore: vi.fn() });
+		expect(text()).not.toContain('Showing the latest');
+		unmount(component!);
+		component = undefined;
+		target.remove();
+		render(loaded([event()], null));
+		expect(text()).not.toContain('Showing the latest');
 	});
 });

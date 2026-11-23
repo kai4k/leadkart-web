@@ -594,10 +594,10 @@
 			"noun": "activity",
 			"emptyTitle": "No activity",
 			"emptyDescription": "Nothing recorded yet.",
-			"system": "System",
 			"showDetails": "Show details",
 			"hideDetails": "Hide details",
 			"loadMore": "Load more",
+			"latestOnly": "Showing the latest {count, plural, one {# event} other {# events}}.",
 			"label": "Activity timeline",
 			"failed": "Did not go through"
 		}
