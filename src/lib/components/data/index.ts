@@ -29,3 +29,18 @@ export type { PaginationChange } from './Pagination.svelte';
 export { default as InfiniteListFooter } from './InfiniteListFooter.svelte';
 export { default as ResourceListPage } from './ResourceListPage.svelte';
 export type { ResourceListAction } from './ResourceListPage.svelte';
+// `DataTable` itself is NOT re-exported here: a barrel import is not tree-shaken away, so it would put TanStack
+// Table into every page that imports anything from this barrel. Import it from `data/data-table/index.ts`.
+export type {
+	DataTableColumn,
+	DataTableProps,
+	DataTableSorting,
+	DataTablePagination,
+	Density as DataTableDensity,
+	SortState as DataTableSortState
+} from './data-table/index.ts';
+export { default as IdentityCell } from './IdentityCell.svelte';
+export { default as IdChip } from './IdChip.svelte';
+export { default as BackLink } from './BackLink.svelte';
+export { default as RowActionsMenu } from './RowActionsMenu.svelte';
+export type { RowAction } from './RowActionsMenu.svelte';

@@ -106,6 +106,7 @@
 		"@sveltejs/adapter-node": "^6.0.4",
 		"@sveltejs/kit": "^3.3.0",
 		"@tanstack/svelte-query": "^6.1.29",
+		"@tanstack/svelte-table": "^9.3.2",
 		"bits-ui": "^2.21.0",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",

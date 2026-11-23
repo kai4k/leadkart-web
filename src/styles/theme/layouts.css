@@ -29,6 +29,9 @@
 	--shell-footer-height: 3.5rem;
 	--shell-hnav-height: calc(var(--shell-topbar-height) * 0.9);
 
+	/* the tallest a DataTable grows before it scrolls inside itself (its header stays pinned) */
+	--data-table-max-height: 70vh;
+
 	/* panes */
 	--shell-gap: 0rem;
 	--shell-radius: 0rem;

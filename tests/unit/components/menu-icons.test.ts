@@ -6,7 +6,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const MENUS = ['src/lib/layouts/UserMenu.svelte'];
+const MENUS = ['src/lib/layouts/UserMenu.svelte', 'src/lib/components/data/RowActionsMenu.svelte'];
 
 /** The items of each group of one menu source: split at separators and group boundaries. */
 function groups(src: string): string[][] {
