@@ -19,7 +19,7 @@ on:
 jobs:
   e2e:
     name: E2E (shard ${{ matrix.shard }}/${{ matrix.total }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 12
     strategy:
       fail-fast: false

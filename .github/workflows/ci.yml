@@ -54,7 +54,7 @@ jobs:
   # ─── Install deps once; downstream jobs restore from cache ───
   install:
     name: Install deps
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     steps:
@@ -132,7 +132,7 @@ jobs:
     name: CI pass
     if: always()
     needs: [install, lint, typecheck, test, build, e2e, visual, a11y]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
       - name: Verify all required jobs passed
