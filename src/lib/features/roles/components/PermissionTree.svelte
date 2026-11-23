@@ -32,7 +32,7 @@
 	const allowed = (entries: PermissionCatalogueEntry[]) =>
 		entries.filter((e) => !(e.name in refused));
 
-	// Over the ALLOWED names only: a group holding a refused name reaches "all" once every name the caller may change is
+	// The CLICK works over the ALLOWED names only: a group holding a refused name reaches "all" once every name the caller may change is
 	// selected, so its checkbox can clear them again (it used to be stuck on "some" for ever).
 	function groupChecked(entries: PermissionCatalogueEntry[]): 'none' | 'some' | 'all' {
 		const open = allowed(entries);
@@ -40,6 +40,13 @@
 		if (inGroup === 0) return 'none';
 		if (inGroup === open.length) return 'all';
 		return 'some';
+	}
+
+	/** What the group checkbox SHOWS: every name of the group, refused ones included. */
+	function groupShown(entries: PermissionCatalogueEntry[]): 'none' | 'some' | 'all' {
+		const inGroup = entries.filter((e) => selected.includes(e.name)).length;
+		if (inGroup === 0) return 'none';
+		return inGroup === entries.length ? 'all' : 'some';
 	}
 
 	function toggleGroup(entries: PermissionCatalogueEntry[]) {
@@ -56,7 +63,7 @@
 
 <div class="stack stack-relaxed">
 	{#each groups as [group, entries] (group)}
-		{@const state = groupChecked(entries)}
+		{@const state = groupShown(entries)}
 		<fieldset class="stack stack-tight m-0 border-0 p-0">
 			<legend class="sr-only">{group}</legend>
 			<div class="cluster cluster-spread">

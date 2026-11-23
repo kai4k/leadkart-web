@@ -69,8 +69,9 @@ describe('a refused permission', () => {
 		const group = document.querySelector<HTMLButtonElement>(
 			'button[role="checkbox"][aria-label="Toggle all identity permissions"]'
 		)!;
-		// it used to be stuck on "some" for ever, so a click could only add
-		expect(group.getAttribute('aria-checked')).toBe('true');
+		// it reads over EVERY name (the refused one is off, so "mixed"); the click still acts on the allowed ones, so
+		// it clears them (it used to be stuck on "some" for ever, so a click could only add)
+		expect(group.getAttribute('aria-checked')).toBe('mixed');
 		group.click();
 		flushSync();
 		expect(onChange.mock.calls[0]![0]).toEqual([]);
@@ -119,5 +120,31 @@ describe('the Administrator tier (spec: Capabilities.tier, admin = rank 1-10, ow
 		[99, true]
 	])('rank %i below the tier: %s', (rank, below) => {
 		expect(isBelowAdminTier(rank)).toBe(below);
+	});
+});
+
+describe('the group checkbox shows the whole group, the click acts on what is allowed', () => {
+	const names = PERMISSION_CATALOGUE.filter((e) => e.group === 'identity').map((e) => e.name);
+	const group = () =>
+		document.querySelector<HTMLButtonElement>(
+			'button[role="checkbox"][aria-label="Toggle all identity permissions"]'
+		)!;
+
+	it('only a refused name selected: the group is mixed, not empty', () => {
+		render({ [NAME]: REASON }, [NAME]);
+		expect(group().getAttribute('aria-checked')).toBe('mixed');
+	});
+
+	it('every name selected, the refused one included: the group is checked', () => {
+		render({ [NAME]: REASON }, names);
+		expect(group().getAttribute('aria-checked')).toBe('true');
+	});
+
+	it('nothing selected: the group is unchecked, and its click selects the allowed names only', () => {
+		const onChange = render({ [NAME]: REASON }, []);
+		expect(group().getAttribute('aria-checked')).toBe('false');
+		group().click();
+		flushSync();
+		expect(new Set(onChange.mock.calls[0]![0])).toEqual(new Set(names.filter((n) => n !== NAME)));
 	});
 });
