@@ -51,6 +51,40 @@ describe('safeRedirectPath', () => {
 		}
 	);
 
+	// input-audit-shared M5: same origin, so not an open redirect, but after sign-in the person would
+	// land on raw JSON (`/api/...`) or an endpoint that is not a page (`/auth/...`).
+	it.each([
+		['the proxy', '/api/v1/users'],
+		['the proxy root', '/api'],
+		['the proxy root with a slash', '/api/'],
+		['the proxy with a query', '/api?x=1'],
+		['the operator-scope endpoint', '/api/operator/scope'],
+		['sign-out', '/auth/logout'],
+		['the email-change endpoint', '/auth/confirm-email-change?token=t'],
+		['the auth prefix alone', '/auth'],
+		['another letter case', '/API/v1/users'],
+		['another letter case (auth)', '/Auth/logout'],
+		['a percent-encoded letter (the router decodes it)', '/%61pi/v1/users'],
+		['a percent-encoded letter (auth)', '/a%75th/logout'],
+		['a dot segment that normalises to it', '/leads/../api/v1/users'],
+		['a dot segment that normalises to it (auth)', '/x/../auth/logout'],
+		['an encoding that cannot be decoded', '/%E0%A4%A/x']
+	])('refuses %s: %s', (_label, value) => {
+		expect(safeRedirectPath(value, origin)).toBe('/dashboard');
+	});
+
+	it.each([
+		'/apiary',
+		'/api-keys',
+		'/authors',
+		'/authentication?x=1',
+		'/settings/api',
+		'/leads/auth',
+		'/leads?next=/api/v1/users'
+	])('keeps a page whose path only resembles them: %s', (value) => {
+		expect(safeRedirectPath(value, origin)).toBe(value);
+	});
+
 	it('uses the caller-supplied fallback', () => {
 		expect(safeRedirectPath('//evil.com', origin, '/signin')).toBe('/signin');
 	});
