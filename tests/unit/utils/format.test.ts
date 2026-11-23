@@ -1,4 +1,11 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// IST has no DST, so wall-clock expectations are stable. format.ts builds its Intl formatters when it
+// is imported and they keep the zone of that moment, so the zone is set before the import, not in a hook.
+vi.hoisted(() => {
+	process.env.TZ = 'Asia/Kolkata';
+});
+
 import {
 	formatBps,
 	formatDate,
@@ -7,11 +14,6 @@ import {
 	parseApiDate,
 	relativeTime
 } from '#lib/utils/format.ts';
-
-// IST has no DST, so wall-clock expectations are stable. Must be set before any Date use.
-beforeAll(() => {
-	process.env.TZ = 'Asia/Kolkata';
-});
 
 describe('formatMoney (integer paise, en-IN grouping, always two decimals)', () => {
 	it.each([
