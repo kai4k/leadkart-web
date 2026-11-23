@@ -14,13 +14,16 @@
 	import { displayName } from '#lib/utils/person-name.ts';
 	import { PERSON_SEARCH_MIN, personsSearchQuery } from '../queries';
 	import { limitSearchBytes } from '../api';
+	import type { ListSearch } from '#lib/hooks/index.ts';
 
 	/**
 	 * The people of the platform, found by search. Go has no "list every person" route, so the page asks
 	 * nothing until there is a search of at least two characters (`GET /v1/search?include=persons`). The
-	 * text stays in this component: a person's email or name does not belong in the URL bar.
+	 * text stays in the page (`search`, restored by its `snapshot` on Back): a person's email or name does not
+	 * belong in the URL bar.
 	 */
-	let q = $state('');
+	let { search }: { search: ListSearch } = $props();
+	const q = $derived(search.value);
 	const enabled = $derived(q.length >= PERSON_SEARCH_MIN);
 
 	const query = personsSearchQuery(() => q);
@@ -83,7 +86,7 @@
 	subtitle={$_('pages.platformUsers.description')}
 	search={{
 		value: q,
-		onSearch: (next) => (q = limitSearchBytes(next)),
+		onSearch: (next) => (search.value = limitSearchBytes(next)),
 		label: 'Search people by email or name',
 		placeholder: 'Search by email or name',
 		maxlength: 100

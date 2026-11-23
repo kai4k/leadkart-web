@@ -565,3 +565,39 @@ describe('DataTable columns and markup', () => {
 });
 
 void linkCell;
+
+describe('DataTable rowHref: a cell with its own link nests anchors, and says so', () => {
+	const ownLink = createRawSnippet<[Item]>((row) => ({
+		render: () => `<a href="/elsewhere">${row().name}</a>`
+	}));
+
+	it('a cell link inside the rowHref link is reported where the row is built', () => {
+		const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+		render(
+			base({
+				data: items(2),
+				rowHref: (r: Item) => `/items/${r.id}`,
+				columns: [
+					{
+						id: 'name',
+						header: 'Name',
+						accessor: (r: Item) => r.name,
+						cell: ownLink,
+						primary: true
+					}
+				]
+			})
+		);
+		expect(error.mock.calls.some((c) => String(c[0]).includes('inside the rowHref link'))).toBe(
+			true
+		);
+		error.mockRestore();
+	});
+
+	it('a plain cell with rowHref is silent', () => {
+		const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+		render(base({ data: items(2), rowHref: (r: Item) => `/items/${r.id}` }));
+		expect(error).not.toHaveBeenCalled();
+		error.mockRestore();
+	});
+});

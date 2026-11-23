@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { createDialogState } from '#lib/hooks/index.ts';
+	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
 	import { SvelteMap } from 'svelte/reactivity';
 	import { Alert, Badge, Button, Card, CopyButton, Skeleton } from '$ui';
 	import { IdChip, IdentityCell, type DataTableColumn } from '#lib/components/data/index.ts';
@@ -64,6 +65,8 @@
 	 * sets the scope cookie), never into the URL bar.
 	 */
 	function openTenant(slug: string) {
+		// a scope change resets everything mounted: unsaved work is asked about first
+		if (!confirmLeave()) return;
 		// not-a-guard: opens a tenant from a membership row; capabilities only hide manage / anonymise actions
 		enterMutation.mutate({ slug });
 	}

@@ -72,3 +72,5 @@ export { useForm, type Form, type FormOpts, type FieldErrors } from './use-form.
 export { createDialogState, type DialogState } from './use-dialog-state.svelte';
 
 export { useLeaveGuard, releaseLeaveGuards } from './use-leave-guard.svelte';
+
+export { createListSearch, type ListSearch } from './use-list-search.svelte';

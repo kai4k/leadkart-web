@@ -15,12 +15,21 @@
 	import { tenantStatus } from '$features/tenant';
 	import { P, session } from '$features/auth';
 	import { enterScopeMutation } from '$features/operator/scope';
+	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
 	import CreateTenantDrawer from './CreateTenantDrawer.svelte';
 	import SuspendDialog from './SuspendDialog.svelte';
 	import MarkForDeletionDialog from './MarkForDeletionDialog.svelte';
 	import { ImpersonateModal, impersonation } from '../../impersonation';
 	import type { TenantDto } from '../types';
-	import { createDialogState, createListPagination, createUrlFilters } from '#lib/hooks/index.ts';
+	import {
+		createDialogState,
+		createListPagination,
+		createUrlFilters,
+		type ListSearch
+	} from '#lib/hooks/index.ts';
+
+	/** The search text lives in the page (a tenant's name or slug stays out of the URL bar); Back restores it. */
+	let { search: searchState }: { search: ListSearch } = $props();
 
 	const PAGE_SIZE = 10;
 	const STATUSES = ['active', 'suspended', 'pending', 'pending_deletion'] as const;
@@ -36,17 +45,15 @@
 	let openingScopeSlug = $state<string | null>(null);
 
 	const urlFilters = createUrlFilters<{
-		q: string | undefined;
 		status: string | undefined;
 		page: string | undefined;
 	}>({
-		q: { type: 'string', label: 'Search' },
 		status: { type: 'string', label: 'Status' },
 		page: { type: 'string', label: 'Page' }
 	});
 
-	/** What the URL says is searched: trimmed, and as long as Go reads. */
-	const search = $derived((urlFilters.filters.q ?? '').trim().slice(0, SEARCH_MAX));
+	/** What is searched: trimmed, and as long as the box reads. */
+	const search = $derived(searchState.value.trim().slice(0, SEARCH_MAX));
 	/** A status the list knows, else none: an unknown `?status=` is "all", not an empty page. */
 	const statusFilter = $derived<Status | null>(
 		STATUSES.find((s) => s === urlFilters.filters.status) ?? null
@@ -57,7 +64,8 @@
 		urlFilters.setMany({ status: value ?? undefined, page: undefined });
 	}
 	function setSearch(value: string) {
-		urlFilters.setMany({ q: value || undefined, page: undefined });
+		searchState.value = value;
+		urlFilters.setMany({ page: undefined });
 	}
 
 	const canCreate = $derived(session.can(P.platformTenantsCreate));
@@ -102,6 +110,12 @@
 			{ value: 'pending_deletion', label: 'Pending deletion', count: count('pending_deletion') }
 		];
 	});
+
+	const openingTenant = $derived(
+		openingScopeSlug === null
+			? null
+			: ((query.data?.tenants ?? []).find((t: TenantDto) => t.slug === openingScopeSlug) ?? null)
+	);
 
 	const pagination = createListPagination(() => filtered, { pageSize: PAGE_SIZE });
 
@@ -161,6 +175,8 @@
 	 */
 	function enterScope(tenant: TenantDto) {
 		if (openingScopeSlug !== null) return; // a row is already in flight
+		// a scope change resets everything mounted: unsaved work is asked about first (the palette does the same)
+		if (!confirmLeave()) return;
 		openingScopeSlug = tenant.slug;
 		enterMutation.mutate(
 			{ slug: tenant.slug },
@@ -182,7 +198,9 @@
 		<Button
 			variant="link"
 			class="h-auto p-0 font-medium"
-			disabled={openingScopeSlug !== null}
+			loading={openingScopeSlug === tenant.slug}
+			focusableWhileLoading
+			disabled={openingScopeSlug !== null && openingScopeSlug !== tenant.slug}
 			onclick={() => enterScope(tenant)}
 		>
 			{tenant.display_name}
@@ -200,7 +218,7 @@
 
 {#snippet rowActions(tenant: TenantDto)}
 	{#if openingScopeSlug === tenant.slug}
-		<div class="cluster cluster-tight" aria-label="Opening {tenant.display_name}">
+		<div class="cluster cluster-tight" aria-hidden="true">
 			<Spinner size={14} />
 			<span class="caption text-muted-foreground">Opening…</span>
 		</div>
@@ -255,6 +273,11 @@
 		onChange={setStatusFilter}
 	/>
 {/snippet}
+
+<!-- a standing live region (one inserted with its text is often not read): what is being opened -->
+<p class="sr-only" role="status">
+	{openingTenant ? `Opening ${openingTenant.display_name}…` : ''}
+</p>
 
 <ResourceListPage
 	title={$_('pages.tenants.title')}

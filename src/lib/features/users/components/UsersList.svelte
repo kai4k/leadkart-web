@@ -23,7 +23,8 @@
 	import {
 		createBulkSelection,
 		createDialogState,
-		createListPagination
+		createListPagination,
+		type ListSearch
 	} from '#lib/hooks/index.ts';
 	import {
 		BulkActionBar,
@@ -50,7 +51,11 @@
 	 * The frontend never sees, sends, or knows the tenant identifier.
 	 */
 	/** The policy of the company being managed when it is not the caller's own (an operator inside a tenant scope). */
-	let { passwordPolicy }: { passwordPolicy?: PolicyRules } = $props();
+	/** `search`: the text typed in the box. It lives in the page (a member's name or email stays out of the URL bar; Back restores it). */
+	let {
+		passwordPolicy,
+		search: searchState
+	}: { passwordPolicy?: PolicyRules; search: ListSearch } = $props();
 
 	const createDialog = createDialogState();
 	const deactivateDialog = createDialogState<UserDto>();
@@ -60,10 +65,10 @@
 	// Each action shows when Go's route permission for it is held (one rule, `ACTION`).
 	const may = createMemberPermissions();
 
-	// URL-driven filter state.
+	// Status and page are URL state; the search text is the page's own (see `search`).
 	/** Go reads 100 bytes of a search; the box stops there. */
 	const SEARCH_MAX = 100;
-	const search = $derived((page.url.searchParams.get('q') ?? '').trim().slice(0, SEARCH_MAX));
+	const search = $derived(searchState.value.trim().slice(0, SEARCH_MAX));
 	// only a filter this list offers: an unknown `?status=` or an old `?status=inactive` link reads as "all",
 	// never as an empty page that says nobody is on the team
 	const statusFilter = $derived(
@@ -71,9 +76,8 @@
 	);
 
 	function setSearch(value: string) {
+		searchState.value = value;
 		const url = new SvelteURL(page.url.href);
-		if (value) url.searchParams.set('q', value);
-		else url.searchParams.delete('q');
 		url.searchParams.delete('page');
 		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
 			replace: true,

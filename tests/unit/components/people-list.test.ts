@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
+import { createListSearch } from '#lib/hooks/use-list-search.svelte.ts';
 
 type Hit = {
 	id: string;
@@ -58,7 +59,7 @@ function search(q: string, result: Result) {
 	h.state.result = result;
 	h.state.refetch = vi.fn();
 	target = document.body.appendChild(document.createElement('div'));
-	component = mount(PeopleList, { target });
+	component = mount(PeopleList, { target, props: { search: createListSearch() } });
 	flushSync();
 	const box = target.querySelector<HTMLInputElement>('input[type="search"]')!;
 	box.value = q;
@@ -72,10 +73,24 @@ const button = (name: string) =>
 		(b) => b.textContent?.trim() === name
 	);
 
+describe('PeopleList: Back', () => {
+	it('a restored snapshot puts the text back in the box', () => {
+		const search = createListSearch();
+		h.state.result = { persons: [], has_partial: false };
+		h.state.refetch = vi.fn();
+		target = document.body.appendChild(document.createElement('div'));
+		component = mount(PeopleList, { target, props: { search } });
+		flushSync();
+		search.snapshot.restore('pat');
+		flushSync();
+		expect(target.querySelector<HTMLInputElement>('input[type="search"]')!.value).toBe('pat');
+	});
+});
+
 describe('PeopleList: what an empty answer means', () => {
 	it('nothing typed: asks for a search, claims nothing', () => {
 		target = document.body.appendChild(document.createElement('div'));
-		component = mount(PeopleList, { target });
+		component = mount(PeopleList, { target, props: { search: createListSearch() } });
 		flushSync();
 		expect(text()).toContain('Search for a person');
 	});

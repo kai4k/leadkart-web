@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
+import { createListSearch } from '#lib/hooks/use-list-search.svelte.ts';
 import type { QueryClient } from '@tanstack/svelte-query';
 
 const h = vi.hoisted(() => ({ qc: undefined as unknown as QueryClient, users: [] as unknown[] }));
@@ -98,7 +99,7 @@ beforeEach(() => {
 	nav.page.url = new URL('http://localhost/settings/users');
 	h.users = [user(1), user(2), user(3)];
 	target = document.body.appendChild(document.createElement('div'));
-	component = mount(UsersList, { target });
+	component = mount(UsersList, { target, props: { search: createListSearch() } });
 	flushSync();
 });
 afterEach(() => {
@@ -186,7 +187,7 @@ describe('UsersList selection and paging', () => {
 	it('a member ticked on page 1 is not selected on page 2: a bulk action reaches only the rows shown', async () => {
 		if (component) unmount(component);
 		h.users = Array.from({ length: 12 }, (_, i) => user(i + 1));
-		component = mount(UsersList, { target });
+		component = mount(UsersList, { target, props: { search: createListSearch() } });
 		flushSync();
 		checkboxes()[0]!.click();
 		flushSync();
