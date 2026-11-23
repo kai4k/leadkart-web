@@ -1,12 +1,9 @@
 <script lang="ts">
-	import { createDialogState } from '#lib/hooks/index.ts';
+	import { createDialogState, useUrlTab } from '#lib/hooks/index.ts';
 	import { plainTitle } from '#lib/utils/page-title.ts';
 	import { _ } from 'svelte-i18n';
 	import PageHeader from '$layouts/PageHeader.svelte';
 	import { page } from '$app/state';
-	import { goto } from '$app/navigation';
-	import { SvelteURL } from 'svelte/reactivity';
-	import type { ResolvedPathname } from '$app/types';
 	import { Badge, Skeleton } from '$ui';
 	import { IdentityCell, RowActionsMenu, type RowAction } from '#lib/components/data/index.ts';
 	import { QueryState } from '#lib/components/feedback/index.ts';
@@ -24,7 +21,9 @@
 	} from '$features/users';
 
 	const membershipId = $derived(page.params.id ?? '');
-	const tab = $derived(page.url.searchParams.get('tab') ?? 'overview');
+	// An unknown `?tab=` is the first tab, not a blank panel.
+	const urlTab = useUrlTab('overview', ['overview', 'permissions', 'reports', 'activity']);
+	const tab = $derived(urlTab.value);
 
 	const userQuery = userDetailQuery(() => membershipId);
 	const usersListQ = usersListQuery();
@@ -89,16 +88,6 @@
 			});
 		return list;
 	}
-
-	function setTab(name: string) {
-		const url = new SvelteURL(page.url.href);
-		if (name === 'overview') url.searchParams.delete('tab');
-		else url.searchParams.set('tab', name);
-		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
-			replace: true,
-			reset: false
-		});
-	}
 </script>
 
 <svelte:head>
@@ -144,7 +133,7 @@
 				roster={userList}
 				roles={roleList}
 				{tab}
-				onTabChange={setTab}
+				onTabChange={urlTab.set}
 				onManageRoles={() => rolesDialog.show()}
 				onManageManager={() => managerDialog.show()}
 				onManagePerms={() => permsDialog.show()}

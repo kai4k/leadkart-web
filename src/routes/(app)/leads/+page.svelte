@@ -123,7 +123,8 @@
 
 	// ── List + selection + keyboard nav ──────────────────────────────
 	const list = leadsInfiniteQuery(() => buildListParams());
-	const selection = createBulkSelection<CrmLeadDto>();
+	// cleared when the search or filters change: a bulk action must not reach rows that are no longer shown
+	const selection = createBulkSelection<CrmLeadDto>(() => JSON.stringify(filters.filters));
 	let editingLead: CrmLeadDto | null = $state(null);
 	let editOpen = $state(false);
 	let bulkUploadOpen = $state(false);

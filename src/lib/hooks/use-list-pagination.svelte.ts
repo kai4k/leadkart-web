@@ -38,6 +38,9 @@ import { page } from '$app/state';
 import type { ResolvedPathname } from '$app/types';
 import { SvelteURL } from 'svelte/reactivity';
 
+/** A page number in a URL: 1 to 999,999,999, no sign, no exponent, no leading zero. */
+const PAGE_NUMBER = /^[1-9]\d{0,8}$/;
+
 export type ListPaginationOptions = {
 	/** Items per page. Default 10 (Stripe/Linear/GitHub canon for list views). */
 	pageSize?: number;
@@ -72,9 +75,11 @@ export function createListPagination<TItem>(
 		pageSize,
 		paramKey,
 		get currentPage() {
+			// Digits only (`1e3`, `0x10`, `-1`, `999999999999` are not page numbers), and never past the last
+			// page: a stale bookmark or a list that shrank lands on the last page, not on an empty one.
 			const raw = page.url.searchParams.get(paramKey);
-			const n = Number(raw ?? '1');
-			return Number.isFinite(n) && n > 0 ? Math.floor(n) : 1;
+			const n = raw !== null && PAGE_NUMBER.test(raw) ? Number(raw) : 1;
+			return Math.min(n, this.pageCount);
 		},
 		get pageCount() {
 			return Math.max(1, Math.ceil(getItems().length / pageSize));

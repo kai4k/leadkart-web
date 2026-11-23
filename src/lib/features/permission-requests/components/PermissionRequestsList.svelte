@@ -28,8 +28,9 @@
 	 * requests. Tabs across `requester` (my requests) and `approver`
 	 * (queue waiting on my decision).
 	 */
+	// Only the two inboxes Go knows: a typo in the URL is the default inbox, not a 400.
 	const role = $derived<ListRole>(
-		(page.url.searchParams.get('role') as ListRole | null) ?? 'requester'
+		page.url.searchParams.get('role') === 'approver' ? 'approver' : 'requester'
 	);
 
 	const list = permissionRequestsInfiniteQuery(() => role);

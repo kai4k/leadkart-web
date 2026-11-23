@@ -314,7 +314,7 @@ describe('the rebuild-pending allowlist only shrinks', () => {
 	 * together cannot pass any more, because the number below is in the test. When a task migrates a file,
 	 * lower these two (entries, then occurrences); never raise them.
 	 */
-	const PINNED = { entries: 24, total: 35 };
+	const PINNED = { entries: 23, total: 34 };
 
 	it('the ceiling is exact: lower it when a task migrates a file (ratchet down)', () => {
 		const entries = names.reduce((a, n) => a + list[n].length, 0);

@@ -24,8 +24,25 @@ export interface BulkSelection<TItem extends SelectableItem> {
 	areAllVisibleSelected(items: TItem[]): boolean;
 }
 
-export function createBulkSelection<TItem extends SelectableItem>(): BulkSelection<TItem> {
+/**
+ * @param getScopeKey the search and filters the list shows, as a string. When it changes the selection
+ *   is cleared: a bulk action must not run on rows the person can no longer see (tick Ravi, search
+ *   "asha", Deactivate would hit Ravi). Pass it from a component; without it the selection is only
+ *   cleared by the caller.
+ */
+export function createBulkSelection<TItem extends SelectableItem>(
+	getScopeKey?: () => string
+): BulkSelection<TItem> {
 	const selected = new SvelteSet<string>();
+
+	if (getScopeKey) {
+		let seen: string | undefined;
+		$effect(() => {
+			const key = getScopeKey();
+			if (seen !== undefined && key !== seen) selected.clear();
+			seen = key;
+		});
+	}
 
 	return {
 		selected,

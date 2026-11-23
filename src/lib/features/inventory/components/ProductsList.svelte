@@ -130,7 +130,8 @@
 	});
 
 	// ── Bulk selection ────────────────────────────────────────────────
-	const selection = createBulkSelection<ProductDto>();
+	// cleared when the search or filters change: a bulk action must not reach rows that are no longer shown
+	const selection = createBulkSelection<ProductDto>(() => JSON.stringify(filters.filters));
 
 	const bulkMut = bulkProductActionMutation();
 

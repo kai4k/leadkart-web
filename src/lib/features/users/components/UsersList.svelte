@@ -29,6 +29,7 @@
 		BulkActionBar,
 		IdentityCell,
 		RowActionsMenu,
+		SearchInput,
 		type BulkAction,
 		type RowAction
 	} from '#lib/components/data/index.ts';
@@ -60,8 +61,11 @@
 	const may = createMemberPermissions();
 
 	// URL-driven filter state.
-	const search = $derived(page.url.searchParams.get('q') ?? '');
-	// only a filter this list offers: `?status=inactive` (an old link) reads as "all", never as an empty list
+	/** Go reads 100 bytes of a search; the box stops there. */
+	const SEARCH_MAX = 100;
+	const search = $derived((page.url.searchParams.get('q') ?? '').trim().slice(0, SEARCH_MAX));
+	// only a filter this list offers: an unknown `?status=` or an old `?status=inactive` link reads as "all",
+	// never as an empty page that says nobody is on the team
 	const statusFilter = $derived(
 		page.url.searchParams.get('status') === 'active' ? 'active' : 'all'
 	);
@@ -94,7 +98,8 @@
 	// selection store keys on membership_id strings even though UserDto
 	// doesn't carry an `id` field. The store contract requires SelectableItem
 	// here for type-safety; the runtime store only ever sees the rowKey value.
-	const selection = createBulkSelection<{ id: string }>();
+	// cleared when the search or the status filter changes: a bulk action must not reach members that are no longer shown
+	const selection = createBulkSelection<{ id: string }>(() => `${search}|${statusFilter}`);
 
 	// One mutation settles every id and toasts one summary. Succeeded rows leave the selection;
 	// failed rows stay selected so the action can be retried. When every id failed the whole
@@ -316,13 +321,15 @@
 	>
 		{#snippet actions()}
 			<div class="cluster">
-				<input
-					type="search"
-					placeholder="Search by name, email, role…"
-					value={search}
-					oninput={(e) => setSearch((e.currentTarget as HTMLInputElement).value)}
-					class="bg-card border border-border rounded-md w-64 rounded-md px-3 py-2 text-sm"
-				/>
+				<div class="w-64">
+					<SearchInput
+						value={search}
+						onSearch={setSearch}
+						label="Search team members"
+						placeholder="Search by name, email, role…"
+						maxlength={SEARCH_MAX}
+					/>
+				</div>
 
 				<a
 					href={resolve('/(app)/settings/users/hierarchy')}

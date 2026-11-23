@@ -61,7 +61,8 @@
 		urlFilters
 	);
 
-	const selection = createBulkSelection<OrderDto>();
+	// cleared when the search or filters change: a bulk action must not reach rows that are no longer shown
+	const selection = createBulkSelection<OrderDto>(() => JSON.stringify(urlFilters.filters));
 
 	// ── Query ────────────────────────────────────────────────────────
 	const listQuery = ordersInfiniteQuery(() => {
