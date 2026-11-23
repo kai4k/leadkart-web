@@ -33,9 +33,11 @@ async function browse(page: Page): Promise<void> {
 		await navigator.serviceWorker.ready;
 	});
 	await page.reload();
+	// Armed BEFORE goto: goto waits for hydration, and the list answers during that wait.
+	const leads = page.waitForResponse((r) => r.url().includes('/api/v1/crm/leads') && r.ok());
 	await page.goto('/leads');
 	await expect(page.locator('#main-content')).toBeVisible();
-	await page.waitForResponse((r) => r.url().includes('/api/v1/crm/leads') && r.ok());
+	await leads;
 }
 
 test.describe('what the service worker stores', () => {
