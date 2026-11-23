@@ -35,7 +35,7 @@
 	} from '#lib/components/data/index.ts';
 	import { DataTable } from '#lib/components/data/data-table/index.ts';
 	import UsersTruncatedAlert from './UsersTruncatedAlert.svelte';
-	import type { PolicyRules } from '#lib/features/auth/password-policy.ts';
+	import type { PolicyRules } from '#lib/utils/password-policy.ts';
 	import CreateUserDrawer from './CreateUserDrawer.svelte';
 	import DeactivateUserDialog from './DeactivateUserDialog.svelte';
 	import RoleAssignmentDrawer from './RoleAssignmentDrawer.svelte';

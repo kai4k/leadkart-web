@@ -6,12 +6,13 @@
  * The client validates only what is true for EVERY policy (the length floor and the 1024-byte ceiling, from the
  * generated request schemas): Go checks the tenant's classes, so a web form is never stricter than the server.
  */
-import type { Capabilities } from './api';
-
-export type PolicyRules = Pick<
-	Capabilities['password_policy'],
-	'min_length' | 'requires_uppercase' | 'requires_lowercase' | 'requires_digit' | 'requires_symbol'
->;
+export type PolicyRules = {
+	min_length: number;
+	requires_uppercase: boolean;
+	requires_lowercase: boolean;
+	requires_digit: boolean;
+	requires_symbol: boolean;
+};
 
 /** Go's `DefaultPasswordPolicy()`: 8 characters, all four classes. */
 export const DEFAULT_PASSWORD_RULES: PolicyRules = {

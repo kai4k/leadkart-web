@@ -1,6 +1,6 @@
 <!-- src/lib/features/users/components/CreateUserDrawer.svelte -->
 <script lang="ts">
-	import { passwordPolicyHint, type PolicyRules } from '#lib/features/auth/password-policy.ts';
+	import { passwordPolicyHint, type PolicyRules } from '#lib/utils/password-policy.ts';
 	import { session } from '$features/auth';
 	import { oneShot } from '#lib/utils/one-shot.ts';
 	import { _ } from 'svelte-i18n';

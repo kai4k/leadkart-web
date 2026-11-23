@@ -3,7 +3,7 @@
 	import { AuthCard } from '$ui';
 	import { ActionForm, PasswordField } from '#lib/components/form/index.ts';
 	import { session } from '$features/auth';
-	import { passwordPolicyHint } from '#lib/features/auth/password-policy.ts';
+	import { passwordPolicyHint } from '#lib/utils/password-policy.ts';
 	import { announceSessionChange } from '#lib/features/auth/session-change.ts';
 	import type { ActionData } from './$types';
 

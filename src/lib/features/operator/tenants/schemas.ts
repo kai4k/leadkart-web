@@ -24,7 +24,7 @@ import {
 	reasonField,
 	slugField
 } from '#lib/api/request-schema.ts';
-import { DEFAULT_PASSWORD_RULES, unmetPasswordRules } from '#lib/features/auth/password-policy.ts';
+import { DEFAULT_PASSWORD_RULES, unmetPasswordRules } from '#lib/utils/password-policy.ts';
 import { tenantSchema } from '#lib/features/tenant/schemas.ts';
 
 export { tenantSchema as tenantDtoSchema } from '#lib/features/tenant/schemas.ts';

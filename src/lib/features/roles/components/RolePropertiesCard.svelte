@@ -3,7 +3,7 @@
 	import { NumberInput, TextField } from '#lib/components/form/index.ts';
 	import { ValidationError } from '$api/errors';
 	import { focusFirstInvalid } from '#lib/utils/focus-first-invalid.ts';
-	import { clientProblems, serverProblems } from '#lib/utils/unshown-banner.ts';
+	import { clientProblems, serverProblems } from '#lib/hooks/unshown-banner.ts';
 	import type { updateRoleMutation } from '../queries.ts';
 	import {
 		editRoleFormSchema,

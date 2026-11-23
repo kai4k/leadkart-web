@@ -2,7 +2,7 @@
 	import { plainTitle } from '#lib/utils/page-title.ts';
 	import { UsersList } from '$features/users';
 	import { createListSearch } from '#lib/hooks/index.ts';
-	import { rulesOfTenantPolicy } from '#lib/features/auth/password-policy.ts';
+	import { rulesOfTenantPolicy } from '#lib/utils/password-policy.ts';
 	import type { LayoutData } from '../$types';
 
 	let { data }: { data: LayoutData } = $props();

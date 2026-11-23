@@ -23,7 +23,7 @@
 import { describeError, ValidationError, type DescribeErrorOptions } from '$api/errors';
 import { focusFirstInvalid } from '#lib/utils/focus-first-invalid.ts';
 import { fieldErrorCopy } from '#lib/utils/field-error-copy.ts';
-import { clientProblems, serverProblems } from '#lib/utils/unshown-banner.ts';
+import { clientProblems, serverProblems } from '#lib/hooks/unshown-banner.ts';
 import type { z } from 'zod';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- z.ZodObject's generic args are intentionally any-typed at the call-site of useForm

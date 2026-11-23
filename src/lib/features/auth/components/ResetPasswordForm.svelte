@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { passwordPolicyHint } from '#lib/features/auth/password-policy.ts';
+	import { passwordPolicyHint } from '#lib/utils/password-policy.ts';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';

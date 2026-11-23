@@ -7,7 +7,7 @@ import { flushSync, mount, tick, unmount } from 'svelte';
 import { reactiveProps } from '../helpers/reactive-props.svelte.ts';
 import { get } from 'svelte/store';
 import { _ } from 'svelte-i18n';
-import { passwordPolicyHint } from '#lib/features/auth/password-policy.ts';
+import { passwordPolicyHint } from '#lib/utils/password-policy.ts';
 
 type After = (o: {
 	result: { type: string; data?: unknown };

@@ -6,7 +6,7 @@ import {
 	passwordPolicyHint,
 	rulesOfTenantPolicy,
 	unmetPasswordRules
-} from '#lib/features/auth/password-policy.ts';
+} from '#lib/utils/password-policy.ts';
 
 const say = (p: Parameters<typeof passwordPolicyHint>[0]) =>
 	passwordPolicyHint(p, (k, o) => get(_)(k, o));

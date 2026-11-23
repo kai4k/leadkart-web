@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { passwordPolicyHint } from '#lib/features/auth/password-policy.ts';
+	import { passwordPolicyHint } from '#lib/utils/password-policy.ts';
 	import { oneShot } from '#lib/utils/one-shot.ts';
 	import { SLUG_MAX } from '#lib/api/request-schema.ts';
 	import { _ } from 'svelte-i18n';
