@@ -6,9 +6,8 @@
 	 * Typeahead Combobox backed by `GET /v1/users/search?q=` —
 	 * the operator types two characters and picks a teammate from the
 	 * dropdown. The membership UUID is the value that's POSTed; the
-	 * label combines firstname + lastname and the description carries
-	 * the email so two teammates with the same surname are still
-	 * distinguishable at a glance.
+	 * label is the display name and the description the designation
+	 * (Go's picker sends no email). Go matches the NAME only.
 	 *
 	 * Backend endpoint is documented in the CRM contracts spec; the BFF
 	 * proxy forwards the request untouched, and the test suite mocks
@@ -19,7 +18,7 @@
 	import { reassignLeadSchema } from '../schemas';
 	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 	import { reassignLeadMutation } from '../queries';
-	import { membershipSearchQuery } from '$features/users';
+	import { membershipSearchQuery, memberSearchReady } from '$features/users';
 
 	type Props = {
 		leadId: string;
@@ -76,7 +75,7 @@
 				<Combobox
 					label="New owner"
 					name="to_membership_id"
-					placeholder="Type a name or email…"
+					placeholder="Type a name…"
 					options={memberOptions}
 					value={form.values.to_membership_id}
 					onValueChange={(v) => {
@@ -85,12 +84,12 @@
 					}}
 					onInput={(q) => (memberQuery = q)}
 					loading={search.isFetching}
-					emptyState={memberQuery.length < 2
-						? 'Type at least two characters'
-						: 'No memberships match'}
+					emptyState={memberSearchReady(memberQuery)
+						? 'No team member matches'
+						: 'Type at least two characters'}
 					required
 					error={form.errors.to_membership_id}
-					hint="Search by first name, last name, or email."
+					hint="Search by name."
 				/>
 
 				<label class="stack stack-tight">
@@ -104,6 +103,10 @@
 						placeholder="Why the lead is being moved"
 					></textarea>
 				</label>
+
+				{#if search.isError}
+					<Alert variant="destructive">The search could not be completed. Try again.</Alert>
+				{/if}
 
 				{#if form.bannerError}<Alert variant="destructive">{form.bannerError}</Alert>{/if}
 			</form>

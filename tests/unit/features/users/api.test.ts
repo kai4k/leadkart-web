@@ -129,3 +129,16 @@ describe('full-replace bodies (Go answers 400 invalid_body when a field is missi
 		});
 	});
 });
+
+describe('memberSearchReady (Go counts characters, 2 to 100)', () => {
+	it('counts characters, not UTF-16 units: one emoji is one character', async () => {
+		const { memberSearchReady } = await import('#lib/features/users/api.ts');
+		expect(memberSearchReady('a')).toBe(false);
+		expect(memberSearchReady('\u{1F600}')).toBe(false);
+		expect(memberSearchReady('as')).toBe(true);
+		expect(memberSearchReady(' a ')).toBe(false);
+		expect(memberSearchReady('x'.repeat(100))).toBe(true);
+		expect(memberSearchReady('x'.repeat(101))).toBe(false);
+		expect(memberSearchReady('\u{1F600}'.repeat(100))).toBe(true);
+	});
+});

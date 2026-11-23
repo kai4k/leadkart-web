@@ -141,6 +141,11 @@ export async function removeManager(membershipId: string): Promise<void> {
  */
 export const MEMBER_SEARCH_MIN = 2;
 export const MEMBER_SEARCH_MAX = 100;
+/** Go measures the text in characters, trimmed: one emoji is one. */
+export function memberSearchReady(q: string): boolean {
+	const n = [...q.trim()].length;
+	return n >= MEMBER_SEARCH_MIN && n <= MEMBER_SEARCH_MAX;
+}
 export function searchMembers(q: string, signal?: AbortSignal): Promise<SearchMembersResponseDto> {
 	return api.get('/v1/users/search', searchMembersResponseSchema, {
 		query: { q: q.trim(), limit: 20 },

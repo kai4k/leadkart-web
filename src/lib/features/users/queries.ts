@@ -14,7 +14,7 @@ import { createQuery } from '@tanstack/svelte-query';
 import { createResourceMutation } from '#lib/api/mutations.ts';
 import { queryRoots } from '#lib/api/query-keys.ts';
 import * as api from './api';
-import { MEMBER_SEARCH_MIN, type UserStatusFilter } from './api';
+import type { UserStatusFilter } from './api';
 import { bulkSetStatus } from './service';
 import { bulkSummary } from './view-models';
 import type {
@@ -34,7 +34,7 @@ const usersKeys = {
 
 /**
  * Typeahead search for memberships in the current tenant. Used by the
- * lead reassignment Combobox. Gated by `q.length >= 2` so the picker
+ * lead reassignment Combobox. Gated by `memberSearchReady` (2 to 100 characters, as Go counts them) so the picker
  * doesn't blast the API on every keystroke. TanStack's stale-time
  * cache + `placeholderData: keepPreviousData` deliver the implicit
  * debounce — re-issuing the same key while typing returns instantly
@@ -46,7 +46,7 @@ export function membershipSearchQuery(getQuery: () => string) {
 		return {
 			queryKey: usersKeys.membershipSearch(q),
 			queryFn: ({ signal }) => api.searchMembers(q, signal),
-			enabled: q.length >= MEMBER_SEARCH_MIN,
+			enabled: api.memberSearchReady(q),
 			staleTime: 30_000
 		};
 	});
