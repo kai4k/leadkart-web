@@ -22,7 +22,7 @@ vi.mock('@tanstack/svelte-query', async (importOriginal) =>
 			) => {
 				const o = opts();
 				const root = o.queryKey[0];
-				if (root === 'users') h.asked.push(String(o.queryKey[2]));
+				if (root === 'users' && o.queryKey[1] === 'list') h.asked.push(String(o.queryKey[2]));
 				const raw =
 					root === 'users'
 						? { items: h.users, truncated: false, counts: h.counts }

@@ -9,13 +9,31 @@ import type { QueryClient } from '@tanstack/svelte-query';
 
 const h = vi.hoisted(() => ({
 	qc: undefined as unknown as QueryClient,
-	held: [] as string[]
+	held: [] as string[],
+	// what `GET /v1/users/{id}` answers for the overrides panel (undefined = still loading)
+	detail: undefined as unknown,
+	detailError: false,
+	refetch: undefined as unknown as () => unknown
 }));
 vi.mock('@tanstack/svelte-query', async (importOriginal) =>
 	(await import('../helpers/real-mutations.svelte.ts')).withRealMutations(
 		await importOriginal(),
 		() => h.qc,
-		{},
+		{
+			createQuery: () => ({
+				get data() {
+					return h.detail;
+				},
+				get isPending() {
+					return h.detail === undefined && !h.detailError;
+				},
+				get isError() {
+					return h.detailError;
+				},
+				error: null,
+				refetch: () => h.refetch()
+			})
+		},
 		{ swallowRejections: true }
 	)
 );
@@ -95,6 +113,9 @@ const onOpenChange = vi.fn();
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	h.refetch = vi.fn();
+	h.detail = undefined;
+	h.detailError = false;
 	h.qc = createQueryClient();
 	vi.spyOn(h.qc, 'invalidateQueries').mockResolvedValue(undefined);
 	h.held = [...ACTION.roleAssign, ...ACTION.roleRevoke];
@@ -242,7 +263,19 @@ describe('ManagerSelectorDrawer', () => {
 });
 
 describe('PermissionOverridesPanel', () => {
-	function open() {
+	const withOverrides = () =>
+		person(1, {
+			permission_overrides: {
+				granted: [
+					{ name: 'crm.leads.read' },
+					{ name: 'crm.leads.export', expires_at: '2026-12-01T00:00:00Z' }
+				],
+				revoked: ['crm.leads.delete']
+			},
+			overrides_version: 'v7'
+		});
+	function open(detail: unknown = withOverrides()) {
+		h.detail = detail ?? undefined;
 		const props = reactiveProps<ComponentProps<typeof PermissionOverridesPanel>>({
 			open: true,
 			user: person(1) as never,
@@ -267,37 +300,78 @@ describe('PermissionOverridesPanel', () => {
 		document.querySelector<HTMLFormElement>('#permission-overrides-form')!.requestSubmit();
 		flushSync();
 	};
+	const body = (extra: Record<string, unknown>) => ({
+		overrides_version: 'v7',
+		granted: ['crm.leads.read', 'crm.leads.export'],
+		revoked: ['crm.leads.delete'],
+		...extra
+	});
 
-	it('has the two tag fields, the title and the submit label', () => {
+	it('has the two tag fields, the title and the submit label, seeded with what the member has now', () => {
 		open();
 		expect(document.body.textContent).toContain('Permission overrides for User1 Test');
 		expect(document.body.textContent).toContain('Extra grants');
 		expect(document.body.textContent).toContain('Revocations');
 		expect(press('Apply overrides')).toBeTruthy();
 		expect(tags().length).toBeGreaterThanOrEqual(2);
+		for (const name of ['crm.leads.read', 'crm.leads.export', 'crm.leads.delete'])
+			expect(document.body.textContent).toContain(name);
 	});
 
-	it('sends the exact set of grants and revokes for this membership', async () => {
+	it('says which grant ends, so re-sending it is not mistaken for making it permanent', () => {
+		open();
+		expect(document.body.textContent).toMatch(/crm\.leads\.export.*ends.*2026/s);
+	});
+
+	it('sends the whole set the form shows plus the version it read, and nothing it did not show', async () => {
 		gw.replacePermissionOverrides.mockResolvedValue(undefined);
 		open();
 		const [grants, revokes] = tags();
 		addTag(grants!, 'crm.leads.reassign');
-		addTag(revokes!, 'crm.leads.delete');
+		addTag(revokes!, 'crm.leads.manage');
 		save();
 		await vi.waitFor(() => expect(gw.replacePermissionOverrides).toHaveBeenCalledTimes(1));
-		expect(gw.replacePermissionOverrides).toHaveBeenCalledWith('m1', {
-			granted: ['crm.leads.reassign'],
-			revoked: ['crm.leads.delete']
-		});
+		expect(gw.replacePermissionOverrides).toHaveBeenCalledWith(
+			'm1',
+			body({
+				granted: ['crm.leads.read', 'crm.leads.export', 'crm.leads.reassign'],
+				revoked: ['crm.leads.delete', 'crm.leads.manage']
+			})
+		);
 	});
 
-	it('empty lists are a valid submit: they clear the overlay', async () => {
+	it('a member with no overrides: empty lists are a valid submit and still carry the version', async () => {
 		gw.replacePermissionOverrides.mockResolvedValue(undefined);
-		open();
+		open(
+			person(1, { permission_overrides: { granted: [], revoked: [] }, overrides_version: 'v1' })
+		);
 		save();
 		await vi.waitFor(() =>
-			expect(gw.replacePermissionOverrides).toHaveBeenCalledWith('m1', { granted: [], revoked: [] })
+			expect(gw.replacePermissionOverrides).toHaveBeenCalledWith('m1', {
+				overrides_version: 'v1',
+				granted: [],
+				revoked: []
+			})
 		);
+	});
+
+	it('waits for the read: no form while the member loads', () => {
+		open(null);
+		expect(document.querySelector('#permission-overrides-form')).toBeNull();
+		expect(document.body.textContent).toContain('Loading');
+	});
+
+	it('when Go sends no overrides (the caller may not act on this member) there is nothing to edit', () => {
+		open(person(1));
+		expect(document.querySelector('#permission-overrides-form')).toBeNull();
+		expect(document.body.textContent).toContain('cannot be shown');
+	});
+
+	it('a failed read says so and offers no form', () => {
+		h.detailError = true;
+		open(null);
+		expect(document.querySelector('#permission-overrides-form')).toBeNull();
+		expect(document.body.textContent).toContain('could not be loaded');
 	});
 
 	it.each([
@@ -306,13 +380,26 @@ describe('PermissionOverridesPanel', () => {
 			'404',
 			() => new NotFoundError('/v1/users/m1/permission-overrides'),
 			'This user was deleted or moved.'
-		],
-		['409', () => new ConflictError(), 'These overrides conflict with the current role set.']
+		]
 	])('a %s answer is the sheet`s own banner line', async (_s, make, line) => {
 		gw.replacePermissionOverrides.mockRejectedValue(make());
 		open();
 		save();
 		await vi.waitFor(() => expect(banner()).toBe(line));
+	});
+
+	it('409 overrides_changed is a calm "changed, reload" line, the set is re-read, and the next save cannot overwrite it', async () => {
+		gw.replacePermissionOverrides.mockRejectedValue(new ConflictError());
+		open();
+		save();
+		await vi.waitFor(() => expect(banner()).toContain('changed while you were editing'));
+		expect(h.refetch).toHaveBeenCalled();
+		// the version it saves with is still the one the form was opened on
+		save();
+		await vi.waitFor(() => expect(gw.replacePermissionOverrides).toHaveBeenCalledTimes(2));
+		expect(gw.replacePermissionOverrides.mock.calls[1]![1]).toMatchObject({
+			overrides_version: 'v7'
+		});
 	});
 
 	it('a refusal that names no field becomes one line on the grants field', async () => {
@@ -331,7 +418,6 @@ describe('PermissionOverridesPanel', () => {
 		open();
 		const [grants, revokes] = tags();
 		addTag(grants!, 'crm.leads.reassign');
-		addTag(grants!, 'crm.leads.read');
 		addTag(revokes!, 'crm.leads.reassign');
 		save();
 		await vi.waitFor(() =>

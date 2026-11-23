@@ -2,7 +2,7 @@
  * The identity screens say only what is true today:
  *   - "Sign out other devices" (Go keeps the session of the access token, `except_current`); a table of devices;
  *   - changing email to the address the account already has is a field error, before anything is sent;
- *   - the permission-overrides action is not offered while a save would erase the member's existing overrides.
+ *   - the permission-overrides action follows the route permission (the panel reads the member's set first).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
@@ -135,10 +135,10 @@ describe('ChangeEmailForm', () => {
 });
 
 describe('member permissions', () => {
-	it('permission overrides are not offered, even to a caller who holds the route permission', () => {
+	it('permission overrides are offered to a caller who holds the route permission, and only then', () => {
 		h.held = [...ACTION.userOverrides, ...ACTION.roleAssign];
-		const may = createMemberPermissions();
-		expect(may.manageRoles).toBe(true);
-		expect(may.overrides).toBe(false);
+		expect(createMemberPermissions().overrides).toBe(true);
+		h.held = [...ACTION.roleAssign];
+		expect(createMemberPermissions().overrides).toBe(false);
 	});
 });
