@@ -10,7 +10,12 @@ import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import SOURCE from '#lib/api/generated/SOURCE.json';
 import { ACTION, P } from '#lib/features/auth/permissions.ts';
-import { PERMISSION_CATALOGUE } from '#lib/features/roles/permissions-catalogue.ts';
+import {
+	PERMISSION_CATALOGUE,
+	PLATFORM_RESERVED,
+	requestablePermissions,
+	unchangeablePermissions
+} from '#lib/features/roles/permissions-catalogue.ts';
 
 const GO_FILE = 'internal/identity/domain/permission/permission.go';
 const goDir = resolve(process.env.LEADKART_GO_DIR ?? '../leadkart-go');
@@ -66,6 +71,65 @@ describe('catalogue list', () => {
 	it.skipIf(go === null)('equals Go catalogue at the pinned commit', () => {
 		expect(go!.length).toBeGreaterThan(40); // the parse found the literal
 		expect([...names].sort()).toEqual([...go!].sort());
+	});
+});
+
+describe("PLATFORM_RESERVED (Go's platformReserved)", () => {
+	it('holds only catalogue names, tenant.admin among them', () => {
+		for (const name of PLATFORM_RESERVED) expect(names, name).toContain(name);
+		expect(PLATFORM_RESERVED.has('tenant.admin')).toBe(true);
+	});
+
+	it.skipIf(!existsSync(join(goDir, '.git')))(
+		'has as many names as Go lists at the pinned commit',
+		() => {
+			const r = spawnSync(
+				'git',
+				[
+					'-C',
+					goDir,
+					'show',
+					`${SOURCE.commit}:internal/identity/domain/permission/implication.go`
+				],
+				{ encoding: 'utf8', shell: false }
+			);
+			expect(r.status).toBe(0);
+			const from = r.stdout.indexOf('names := []string{');
+			const block = r.stdout.slice(from, r.stdout.indexOf('}', from));
+			// one `p.Group.Name` per reserved permission
+			const listed = block.split('p.').length - 1;
+			expect(listed).toBeGreaterThan(10);
+			expect(PLATFORM_RESERVED.size).toBe(listed);
+		}
+	);
+
+	it('a permission request can be for anything else, and for nothing reserved', () => {
+		const offered = requestablePermissions().map((e) => e.name);
+		expect(offered).toContain('crm.leads.assign');
+		expect(offered).toContain('identity.users.create');
+		for (const name of PLATFORM_RESERVED) expect(offered).not.toContain(name);
+		expect(offered.length).toBe(names.length - PLATFORM_RESERVED.size);
+		// the examples the forms used to show are not permissions at all
+		expect(names).not.toContain('crm.leads.reassign');
+		expect(names).not.toContain('crm.leads.delete');
+	});
+});
+
+describe('unchangeablePermissions (Go refuses a changed name the caller does not hold)', () => {
+	const reasons = { reserved: 'reserved', notHeld: 'not held' };
+
+	it('a name the caller holds is never refused; an unheld one says why', () => {
+		const held = new Set(['crm.leads.read', 'tenant.admin']);
+		const refused = unchangeablePermissions((n) => held.has(n), reasons);
+		expect(refused['crm.leads.read']).toBeUndefined();
+		expect(refused['tenant.admin']).toBeUndefined();
+		expect(refused['crm.leads.assign']).toBe('not held');
+		expect(refused['platform.tenants.manage']).toBe('reserved');
+		expect(refused['identity.users.anonymise']).toBe('reserved');
+	});
+
+	it('a caller who holds everything (a super user) is refused nothing', () => {
+		expect(unchangeablePermissions(() => true, reasons)).toEqual({});
 	});
 });
 

@@ -224,6 +224,55 @@ export const PERMISSION_CATALOGUE: ReadonlyArray<PermissionCatalogueEntry> = [
 ];
 
 /**
+ * Go's `platformReserved` (internal/identity/domain/permission/implication.go): names `tenant.admin` never implies.
+ * Nobody but a super user may put one on a role or grant one (`authority.mayChangePermissions`:
+ * "platform-reserved"), and none can be asked for in a permission request (`permission.IsRequestable`).
+ * `tenant.admin` is in the list: only an owner confers it. Held against Go's file in
+ * `tests/unit/features/auth/permissions.test.ts`.
+ */
+export const PLATFORM_RESERVED: ReadonlySet<string> = new Set([
+	'tenant.admin',
+	'platform.tenants.view',
+	'platform.tenants.create',
+	'platform.tenants.manage',
+	'platform.users.view',
+	'platform.users.create',
+	'platform.users.manage',
+	'platform.roles.view',
+	'platform.roles.manage',
+	'platform.impersonation.manage',
+	'platform.tenants.ownership',
+	'platform.unverified_contacts.manage',
+	'platform.lead_credits.topup',
+	'identity.tenants.suspend',
+	'identity.tenants.activate',
+	'identity.tenants.delete',
+	'identity.users.anonymise'
+]);
+
+/** The names a member may ask for in a permission request: the catalogue minus the platform-reserved ones. */
+export const requestablePermissions = (): PermissionCatalogueEntry[] =>
+	PERMISSION_CATALOGUE.filter((entry) => !PLATFORM_RESERVED.has(entry.name));
+
+/**
+ * The names of a role's permission tree the caller may not change, by name -> why. Go decides per CHANGED name
+ * (`authority.mayChangePermissions`): a platform-reserved one is refused to everyone but a super user, and any other
+ * must be held by the caller; one refused name fails the whole save without saying which. `holds` is the session's own
+ * rule (`session.can`), which already holds everything for a super user, so a name it holds is never refused here.
+ */
+export function unchangeablePermissions(
+	holds: (name: string) => boolean,
+	reasons: { reserved: string; notHeld: string }
+): Record<string, string> {
+	const refused: Record<string, string> = {};
+	for (const { name } of PERMISSION_CATALOGUE) {
+		if (holds(name)) continue;
+		refused[name] = PLATFORM_RESERVED.has(name) ? reasons.reserved : reasons.notHeld;
+	}
+	return refused;
+}
+
+/**
  * Group catalogue entries by their top-level `group` field for tree rendering.
  */
 export function groupedCatalogue(): Map<string, PermissionCatalogueEntry[]> {

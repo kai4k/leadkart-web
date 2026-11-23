@@ -7,6 +7,7 @@
  * (CLAUDE.md rule 6). State transitions are surfaced as one named
  * function per backend endpoint so callers compose intent, not URLs.
  */
+import { seg } from '#lib/utils/path-segment.ts';
 import { apiLegacy, parseResponse } from '#lib/api/client.ts';
 import {
 	bulkOrderActionResultSchema,
@@ -82,28 +83,28 @@ export async function listOrders(params?: ListOrdersParams): Promise<ListOrdersR
 // ── Detail + sub-resources ───────────────────────────────────────────
 
 export async function getOrder(id: string): Promise<OrderDto> {
-	const raw = await apiLegacy.get<unknown>(`/v1/orders/${id}`);
+	const raw = await apiLegacy.get<unknown>(`/v1/orders/${seg(id)}`);
 	return parseResponse(orderDtoSchema, raw);
 }
 
 export async function getOrderRevisions(id: string): Promise<ListRevisionsResponse> {
-	const raw = await apiLegacy.get<unknown>(`/v1/orders/${id}/revisions`);
+	const raw = await apiLegacy.get<unknown>(`/v1/orders/${seg(id)}/revisions`);
 	return parseResponse(listRevisionsResponseSchema, raw);
 }
 
 export async function getOrderPayments(id: string): Promise<ListPaymentsResponse> {
-	const raw = await apiLegacy.get<unknown>(`/v1/orders/${id}/payments`);
+	const raw = await apiLegacy.get<unknown>(`/v1/orders/${seg(id)}/payments`);
 	return parseResponse(listPaymentsResponseSchema, raw);
 }
 
 export async function getOrderInvoice(id: string): Promise<InvoiceDto | null> {
-	const raw = await apiLegacy.get<unknown>(`/v1/orders/${id}/invoice`);
+	const raw = await apiLegacy.get<unknown>(`/v1/orders/${seg(id)}/invoice`);
 	if (raw == null) return null;
 	return parseResponse(invoiceDtoSchema, raw);
 }
 
 export async function getOrderCreditNotes(id: string): Promise<ListCreditNotesResponse> {
-	const raw = await apiLegacy.get<unknown>(`/v1/orders/${id}/credit-notes`);
+	const raw = await apiLegacy.get<unknown>(`/v1/orders/${seg(id)}/credit-notes`);
 	return parseResponse(listCreditNotesResponseSchema, raw);
 }
 
@@ -115,19 +116,19 @@ export async function createQuotation(req: CreateQuotationRequest): Promise<Orde
 }
 
 export async function updateOrder(id: string, req: UpdateOrderRequest): Promise<OrderDto> {
-	const raw = await apiLegacy.patch<unknown>(`/v1/orders/${id}`, req);
+	const raw = await apiLegacy.patch<unknown>(`/v1/orders/${seg(id)}`, req);
 	return parseResponse(orderDtoSchema, raw);
 }
 
 export async function deleteOrder(id: string): Promise<OrderDto> {
-	const raw = await apiLegacy.delete<unknown>(`/v1/orders/${id}`);
+	const raw = await apiLegacy.delete<unknown>(`/v1/orders/${seg(id)}`);
 	return parseResponse(orderDtoSchema, raw);
 }
 
 // ── State transitions (one POST per transition) ──────────────────────
 
 export async function reviseQuotation(id: string, req: ReviseQuotationRequest): Promise<OrderDto> {
-	const raw = await apiLegacy.post<unknown>(`/v1/orders/${id}/revise`, req);
+	const raw = await apiLegacy.post<unknown>(`/v1/orders/${seg(id)}/revise`, req);
 	return parseResponse(orderDtoSchema, raw);
 }
 
@@ -135,48 +136,48 @@ export async function approveQuotation(
 	id: string,
 	req: ApproveQuotationRequest = {}
 ): Promise<OrderDto> {
-	const raw = await apiLegacy.post<unknown>(`/v1/orders/${id}/approve-quotation`, req);
+	const raw = await apiLegacy.post<unknown>(`/v1/orders/${seg(id)}/approve-quotation`, req);
 	return parseResponse(orderDtoSchema, raw);
 }
 
 export async function recordPayment(id: string, req: RecordPaymentRequest): Promise<PaymentDto> {
-	const raw = await apiLegacy.post<unknown>(`/v1/orders/${id}/payments`, req);
+	const raw = await apiLegacy.post<unknown>(`/v1/orders/${seg(id)}/payments`, req);
 	return parseResponse(paymentDtoSchema, raw);
 }
 
 export async function confirmOrder(id: string): Promise<OrderDto> {
-	const raw = await apiLegacy.post<unknown>(`/v1/orders/${id}/confirm`, {});
+	const raw = await apiLegacy.post<unknown>(`/v1/orders/${seg(id)}/confirm`, {});
 	return parseResponse(orderDtoSchema, raw);
 }
 
 export async function markPacked(id: string, req: MarkPackedRequest): Promise<OrderDto> {
-	const raw = await apiLegacy.post<unknown>(`/v1/orders/${id}/mark-packed`, req);
+	const raw = await apiLegacy.post<unknown>(`/v1/orders/${seg(id)}/mark-packed`, req);
 	return parseResponse(orderDtoSchema, raw);
 }
 
 export async function generateInvoice(id: string): Promise<OrderDto> {
-	const raw = await apiLegacy.post<unknown>(`/v1/orders/${id}/generate-invoice`, {});
+	const raw = await apiLegacy.post<unknown>(`/v1/orders/${seg(id)}/generate-invoice`, {});
 	return parseResponse(orderDtoSchema, raw);
 }
 
 export async function dispatchOrder(id: string, req: DispatchRequest = {}): Promise<OrderDto> {
-	const raw = await apiLegacy.post<unknown>(`/v1/orders/${id}/dispatch`, req);
+	const raw = await apiLegacy.post<unknown>(`/v1/orders/${seg(id)}/dispatch`, req);
 	return parseResponse(orderDtoSchema, raw);
 }
 
 export async function markDelivered(id: string, req: MarkDeliveredRequest = {}): Promise<OrderDto> {
-	const raw = await apiLegacy.post<unknown>(`/v1/orders/${id}/mark-delivered`, req);
+	const raw = await apiLegacy.post<unknown>(`/v1/orders/${seg(id)}/mark-delivered`, req);
 	return parseResponse(orderDtoSchema, raw);
 }
 
 export async function completeOrder(id: string): Promise<OrderDto> {
-	const raw = await apiLegacy.post<unknown>(`/v1/orders/${id}/complete`, {});
+	const raw = await apiLegacy.post<unknown>(`/v1/orders/${seg(id)}/complete`, {});
 	return parseResponse(orderDtoSchema, raw);
 }
 
 export async function cancelOrder(id: string, req: CancelOrderRequest): Promise<OrderDto> {
 	cancelOrderRequestSchema.parse(req);
-	const raw = await apiLegacy.post<unknown>(`/v1/orders/${id}/cancel`, req);
+	const raw = await apiLegacy.post<unknown>(`/v1/orders/${seg(id)}/cancel`, req);
 	return parseResponse(orderDtoSchema, raw);
 }
 
@@ -190,6 +191,8 @@ export async function bulkOrderAction(req: BulkOrderActionRequest): Promise<Bulk
 // ── Credit notes detail (per ID, used to refresh single CN cards) ────
 
 export async function getCreditNote(id: string, creditNoteId: string): Promise<CreditNoteDto> {
-	const raw = await apiLegacy.get<unknown>(`/v1/orders/${id}/credit-notes/${creditNoteId}`);
+	const raw = await apiLegacy.get<unknown>(
+		`/v1/orders/${seg(id)}/credit-notes/${seg(creditNoteId)}`
+	);
 	return parseResponse(creditNoteDtoSchema, raw);
 }

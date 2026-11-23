@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	createRoleRequestSchema,
+	editRoleFormSchema,
 	listRolesResponseSchema,
 	ROLE_LEVEL_MAX,
 	ROLE_LEVEL_MIN,
@@ -23,6 +24,30 @@ describe('roleDtoSchema', () => {
 			created_at: '2026-01-01T00:00:00Z'
 		};
 		expect(roleDtoSchema.parse(raw).name).toBe('SalesExecutive');
+	});
+});
+
+describe('editRoleFormSchema: the role detail form always sends both fields', () => {
+	const first = (value: object) => editRoleFormSchema.safeParse(value).error?.issues[0]?.message;
+
+	it('a blank name is refused (the update contract reads it as "no rename")', () => {
+		expect(updateRoleRequestSchema.safeParse({ hierarchy_level: 5 }).success).toBe(true);
+		expect(first({ name: '', hierarchy_level: 5 })).toBe('form.errors.roleNameTooShort');
+		expect(first({ name: '   ', hierarchy_level: 5 })).toBe('form.errors.roleNameTooShort');
+	});
+
+	it('a blank, fractional or out-of-range level is refused', () => {
+		expect(first({ name: 'Lead', hierarchy_level: null })).toBe('form.errors.levelInvalid');
+		expect(first({ name: 'Lead', hierarchy_level: 1.5 })).toBe('form.errors.levelInvalid');
+		expect(first({ name: 'Lead', hierarchy_level: 0 })).toBe('form.errors.levelOutOfRange');
+		expect(first({ name: 'Lead', hierarchy_level: 150 })).toBe('form.errors.levelOutOfRange');
+	});
+
+	it('what passes is trimmed', () => {
+		expect(editRoleFormSchema.parse({ name: ' Lead ', hierarchy_level: 20 })).toEqual({
+			name: 'Lead',
+			hierarchy_level: 20
+		});
 	});
 });
 

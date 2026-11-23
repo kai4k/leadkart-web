@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
-	import { FormSheet, NumberInput, TextareaField, TextField } from '#lib/components/form/index.ts';
+	import { FormSheet, NumberInput, TextareaField } from '#lib/components/form/index.ts';
+	import { PermissionPicker } from '$features/roles';
 	import { createPermissionRequestMutation } from '$features/permission-requests/queries';
 	import {
 		createPermissionRequestSchema,
@@ -28,10 +29,11 @@
 	validateOn="blur"
 >
 	{#snippet fields(form)}
-		<TextField
+		<!-- picked, never typed: a name Go does not know is its 422 `permission_unknown` -->
+		<PermissionPicker
 			label="Permission"
 			name="permission"
-			placeholder="e.g. crm.leads.reassign"
+			requestableOnly
 			bind:value={form.values.permission}
 			required
 			error={form.errors.permission}
@@ -41,7 +43,7 @@
 			name="duration_days"
 			min={1}
 			max={PERMISSION_REQUEST_MAX_DAYS}
-			hint="Leave blank for the tenant default."
+			hint="Leave blank for 7 days."
 			bind:value={
 				() => form.values.duration_days ?? null, (v) => (form.values.duration_days = v ?? undefined)
 			}

@@ -10,4 +10,4 @@
 	<title>{$_('auth.changeEmail.confirm.title')} · LeadKart</title>
 </svelte:head>
 
-<ConfirmEmailChangeView phase={data.phase} />
+<ConfirmEmailChangeView token={data.token} />

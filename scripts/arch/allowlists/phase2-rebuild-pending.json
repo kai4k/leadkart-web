@@ -15,8 +15,7 @@
 		"src/lib/features/orders/components/OrderItemsTable.svelte",
 		"src/lib/features/orders/components/PaymentsList.svelte",
 		"src/lib/features/roles/components/PermissionTree.svelte",
-		"src/lib/features/users/components/UsersList.svelte",
-		"src/routes/(app)/settings/roles/[id]/+page.svelte"
+		"src/lib/features/users/components/UsersList.svelte"
 	],
 	"drawer": [
 		"src/lib/components/data/BulkUploadDrawer.svelte",
@@ -52,8 +51,7 @@
 			"src/lib/features/orders/components/OrderItemsTable.svelte": 1,
 			"src/lib/features/orders/components/PaymentsList.svelte": 1,
 			"src/lib/features/roles/components/PermissionTree.svelte": 2,
-			"src/lib/features/users/components/UsersList.svelte": 1,
-			"src/routes/(app)/settings/roles/[id]/+page.svelte": 1
+			"src/lib/features/users/components/UsersList.svelte": 1
 		},
 		"drawer": {
 			"src/lib/components/data/BulkUploadDrawer.svelte": 1,
@@ -97,7 +95,6 @@
 		"src/lib/features/permission-requests/components/PermissionRequestsList.svelte": "// removed by Task 27",
 		"src/lib/features/roles/components/PermissionTree.svelte": "// removed by Task 27",
 		"src/lib/features/roles/components/RolesList.svelte": "// removed by Task 27",
-		"src/lib/features/users/components/UsersList.svelte": "// removed by Task 27",
-		"src/routes/(app)/settings/roles/[id]/+page.svelte": "// removed by Task 27"
+		"src/lib/features/users/components/UsersList.svelte": "// removed by Task 27"
 	}
 }

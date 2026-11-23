@@ -57,6 +57,15 @@ export const updateRoleRequestSchema = UpdateRoleRequest.extend({
 	hierarchy_level: levelField.nullable().optional()
 }).strict();
 
+/**
+ * The role detail form. It always sends both fields, so both are required HERE: to Go a blank name or an absent
+ * level means "no change" (it answers 204 and the page would say "Saved" over a field that did not save).
+ */
+export const editRoleFormSchema = updateRoleRequestSchema.extend({
+	name: nameField,
+	hierarchy_level: levelField
+});
+
 export const replaceRolePermissionsRequestSchema = ReplaceRolePermissionsRequest.strict();
 
 export const rolePermissionRequestSchema = RolePermissionRequest.strict();

@@ -59,11 +59,14 @@
 			"submit": "Send confirmation link",
 			"successCopy": "Check your new inbox for a confirmation link. The change isn't applied until you click it.",
 			"errors": {
-				"invalid": "Invalid email format."
+				"invalid": "Invalid email format.",
+				"sameAsCurrent": "That is already your email address. Enter a different one."
 			},
 			"confirm": {
 				"title": "Confirm your new email",
 				"subtitle": "We're verifying the token in your link…",
+				"prompt": "Confirm that you want to use this email address to sign in from now on.",
+				"submit": "Confirm new email",
 				"success": "Email updated. Use the new one to sign in.",
 				"missingToken": "This page expects a confirmation token in the URL. Use the link from your email.",
 				"invalidToken": "This confirmation link is invalid or has expired.",
@@ -356,6 +359,7 @@
 			"role_system_default": "Built-in roles can't be changed or deleted.",
 			"role_parent_not_eligible": "The parent role must be more senior.",
 			"role_level_breaks_reporting": "That level would break a reporting line — a manager must stay above the people who report to them.",
+			"permission_unknown": "That permission does not exist. Pick one from the list.",
 			"permission_not_requestable": "This permission can't be requested.",
 			"permission_request_requester_inactive": "The person who asked is no longer active, so this request can not be approved.",
 			"incorrect_current_password": "Your current password is incorrect.",
@@ -525,7 +529,9 @@
 		"roles": {
 			"title": "Roles",
 			"count": "{count, plural, one {# role} other {# roles}}",
-			"adminTierOnly": "Only the Administrator tier and above can add users."
+			"adminTierOnly": "Only the Administrator tier and above can add users.",
+			"platformReserved": "Reserved for the platform team.",
+			"notHeld": "You can only change a permission you hold yourself."
 		},
 		"permissionRequests": {
 			"title": "Permission requests",

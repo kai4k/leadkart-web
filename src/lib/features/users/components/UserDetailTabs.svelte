@@ -107,7 +107,11 @@
 									<Button
 										variant="ghost"
 										size="sm"
-										onclick={() => removeManager.mutate(user.membership_id)}
+										loading={removeManager.isPending}
+										disabled={removeManager.isPending}
+										onclick={() => {
+											if (!removeManager.isPending) removeManager.mutate(user.membership_id);
+										}}
 									>
 										Remove
 									</Button>
@@ -173,30 +177,32 @@
 				</Card.Content>
 			</Card.Root>
 
-			<Card.Root padding="md" elevation="sm">
-				<Card.Header>
-					<div class="cluster cluster-spread">
-						<div class="stack stack-tight">
-							<Card.Title>Permission overrides</Card.Title>
-							<Card.Description>
-								Per-user grants and revocations layered on top of role defaults.
-							</Card.Description>
-						</div>
-						{#if may.overrides}
+			<!-- Not offered while `may.overrides` is off (member-permissions.svelte.ts says what it waits for): a card
+			     that points at a side panel nobody can open would not be true. -->
+			{#if may.overrides}
+				<Card.Root padding="md" elevation="sm">
+					<Card.Header>
+						<div class="cluster cluster-spread">
+							<div class="stack stack-tight">
+								<Card.Title>Permission overrides</Card.Title>
+								<Card.Description>
+									Per-user grants and revocations layered on top of role defaults.
+								</Card.Description>
+							</div>
 							<Button size="sm" variant="tonal" onclick={onManagePerms}>
 								<Icon icon={Lock} size="sm" /> Edit overrides
 							</Button>
-						{/if}
-					</div>
-				</Card.Header>
-				<Card.Content>
-					<p class="body-sm text-muted-foreground">
-						Edit overrides via the side panel. Granted permissions extend role defaults; revoked
-						permissions remove them even when a role would grant access. Per BRD §6.1:
-						<code class="caption text-foreground">effective = role + grants − revocations</code>.
-					</p>
-				</Card.Content>
-			</Card.Root>
+						</div>
+					</Card.Header>
+					<Card.Content>
+						<p class="body-sm text-muted-foreground">
+							Edit overrides via the side panel. Granted permissions extend role defaults; revoked
+							permissions remove them even when a role would grant access. Per BRD §6.1:
+							<code class="caption text-foreground">effective = role + grants − revocations</code>.
+						</p>
+					</Card.Content>
+				</Card.Root>
+			{/if}
 		</div>
 	</Tabs.Content>
 

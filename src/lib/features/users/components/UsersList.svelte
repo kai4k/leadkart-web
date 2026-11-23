@@ -74,7 +74,10 @@
 
 	// URL-driven filter state.
 	const search = $derived(page.url.searchParams.get('q') ?? '');
-	const statusFilter = $derived(page.url.searchParams.get('status') ?? 'all');
+	// only a filter this list offers: `?status=inactive` (an old link) reads as "all", never as an empty list
+	const statusFilter = $derived(
+		page.url.searchParams.get('status') === 'active' ? 'active' : 'all'
+	);
 
 	function setSearch(value: string) {
 		const url = new SvelteURL(page.url.href);
@@ -127,8 +130,9 @@
 		variant: 'danger',
 		confirm: {
 			title: 'Deactivate selected members?',
+			// Go lists active members only: a deactivated member leaves this list (no promise of a way back from here).
 			description:
-				'Selected members lose access immediately. You can reactivate them later from this list.',
+				'Selected members lose access immediately. Deactivated members are not shown in this list.',
 			confirmLabel: 'Deactivate'
 		},
 		onClick: () => runBulk('deactivate')
@@ -148,19 +152,15 @@
 	const userList = $derived(listQuery.data ?? []);
 	const roleList = $derived(rolesQuery.data?.roles ?? []);
 
-	const statusCounts = $derived.by(() => {
-		const counts = { all: userList.length, active: 0, inactive: 0 };
-		for (const u of userList) {
-			if (u.status === 'active') counts.active++;
-			else if (u.status === 'inactive') counts.inactive++;
-		}
-		return counts;
-	});
-
+	// No "Inactive" chip: Go's `GET /v1/users` returns active members only (`memberships.sql`), so the chip could only
+	// ever read 0. It comes back with Go's `?status=inactive`.
 	const statusOptions = $derived([
-		{ value: 'all', label: 'All', count: statusCounts.all },
-		{ value: 'active', label: 'Active', count: statusCounts.active },
-		{ value: 'inactive', label: 'Inactive', count: statusCounts.inactive }
+		{ value: 'all', label: 'All', count: userList.length },
+		{
+			value: 'active',
+			label: 'Active',
+			count: userList.filter((u) => u.status === 'active').length
+		}
 	] as const);
 
 	const filtered = $derived.by(() => {
@@ -425,6 +425,7 @@
 />
 <ManagerSelectorDrawer
 	{userList}
+	{roleList}
 	bind:open={managerDialog.open}
 	user={managerDialog.target}
 	onOpenChange={managerDialog.onOpenChange}

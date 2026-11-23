@@ -1,3 +1,4 @@
+import { seg } from '#lib/utils/path-segment.ts';
 import { api } from '#lib/api/client.ts';
 import { listRolesResponseSchema, roleDtoSchema, createRoleResponseSchema } from './schemas';
 import type {
@@ -15,7 +16,7 @@ export function listRoles(signal?: AbortSignal): Promise<ListRolesResponse> {
 }
 
 export function getRole(roleId: string, signal?: AbortSignal): Promise<RoleDto> {
-	return api.get(`/v1/roles/${roleId}`, roleDtoSchema, { signal });
+	return api.get(`/v1/roles/${seg(roleId)}`, roleDtoSchema, { signal });
 }
 
 export function createRole(req: CreateRoleRequest): Promise<CreateRoleResponse> {
@@ -24,32 +25,32 @@ export function createRole(req: CreateRoleRequest): Promise<CreateRoleResponse> 
 
 /** PATCH /v1/roles/{id} answers 204 (roles_http.go:182). */
 export async function updateRole(roleId: string, req: UpdateRoleRequest): Promise<void> {
-	await api.patch(`/v1/roles/${roleId}`, req);
+	await api.patch(`/v1/roles/${seg(roleId)}`, req);
 }
 
 export async function replaceRolePermissions(
 	roleId: string,
 	req: ReplaceRolePermissionsRequest
 ): Promise<void> {
-	await api.put(`/v1/roles/${roleId}/permissions`, req);
+	await api.put(`/v1/roles/${seg(roleId)}/permissions`, req);
 }
 
 export async function grantRolePermission(
 	roleId: string,
 	req: RolePermissionRequest
 ): Promise<void> {
-	await api.post(`/v1/roles/${roleId}/permissions/grant`, req);
+	await api.post(`/v1/roles/${seg(roleId)}/permissions/grant`, req);
 }
 
 export async function revokeRolePermission(
 	roleId: string,
 	req: RolePermissionRequest
 ): Promise<void> {
-	await api.post(`/v1/roles/${roleId}/permissions/revoke`, req);
+	await api.post(`/v1/roles/${seg(roleId)}/permissions/revoke`, req);
 }
 
 export async function deleteRole(roleId: string): Promise<void> {
-	await api.delete(`/v1/roles/${roleId}`);
+	await api.delete(`/v1/roles/${seg(roleId)}`);
 }
 
 /**
@@ -65,5 +66,5 @@ export async function setRoleParent(
 	roleId: string,
 	body: { parent_role_id: string | null }
 ): Promise<void> {
-	await api.patch(`/v1/roles/${roleId}/parent`, body);
+	await api.patch(`/v1/roles/${seg(roleId)}/parent`, body);
 }

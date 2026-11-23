@@ -113,17 +113,26 @@ const press = (label: string) =>
 	[...document.querySelectorAll('button')].find((b) => b.textContent?.trim() === label)!;
 
 describe('ManagerSelectorDrawer', () => {
+	// Go's maySetManager: an ACTIVE member STRICTLY more senior (a lower level) than the subordinate.
+	const levels = [
+		{ id: 'r-user', hierarchy_level: 50 },
+		{ id: 'r-lead', hierarchy_level: 25 },
+		{ id: 'r-manager', hierarchy_level: 15 }
+	];
 	const users = [
-		person(1, { reports_to: 'm2' }),
-		person(2),
-		person(3),
-		person(4, { status: 'inactive' })
+		person(1, { reports_to: 'm2', role_ids: ['r-user'] }),
+		person(2, { role_ids: ['r-manager'] }),
+		person(3, { role_ids: ['r-lead'] }),
+		person(4, { status: 'inactive', role_ids: ['r-manager'] }),
+		person(5, { role_ids: ['r-user'] }), // a peer: Go refuses a lateral link
+		person(6) // no role: the least senior rank
 	];
 	function open(user = users[0]!) {
 		const props = reactiveProps<ComponentProps<typeof ManagerSelectorDrawer>>({
 			open: true,
 			user,
 			userList: users as never,
+			roleList: levels as never,
 			onOpenChange
 		});
 		component = mount(ManagerSelectorDrawer, { target, props });
@@ -140,12 +149,38 @@ describe('ManagerSelectorDrawer', () => {
 		flushSync();
 	};
 
-	it('offers "no manager" and every ACTIVE member except the user, and starts on the current manager', () => {
+	it('offers "no manager" and only the ACTIVE members more senior than the user, and starts on the current manager', () => {
 		open();
+		// not m4 (inactive), not m5 (a peer), not m6 (no role), not the user
 		expect([...select().options].map((o) => o.value)).toEqual(['', 'm2', 'm3']);
 		expect(select().options[0]!.textContent).toBe('— No manager —');
 		expect(select().value).toBe('m2');
 		expect(document.body.textContent).toContain('Manager for User1 Test');
+	});
+
+	it('a team lead is offered the manager only: nobody at their own level or below', () => {
+		open(users[2]);
+		expect([...select().options].map((o) => o.value)).toEqual(['', 'm2']);
+	});
+
+	it('a manager who left stays visible, and saving without a change sends nothing', async () => {
+		open(person(7, { reports_to: 'gone', role_ids: ['r-user'] }) as never);
+		expect(select().value).toBe('gone');
+		expect(select().selectedOptions[0]!.textContent).toBe(
+			'Current manager (no longer an active member)'
+		);
+		save();
+		await tick();
+		expect(gw.assignManager).not.toHaveBeenCalled();
+		expect(gw.removeManager).not.toHaveBeenCalled();
+	});
+
+	it('a current manager Go would no longer accept is named, not dropped', () => {
+		open(person(8, { reports_to: 'm5', role_ids: ['r-user'] }) as never);
+		expect(select().value).toBe('m5');
+		expect(select().selectedOptions[0]!.textContent).toBe(
+			'User5 Test (current, can no longer be assigned)'
+		);
 	});
 
 	it('a blur says nothing: the form has no validator', () => {

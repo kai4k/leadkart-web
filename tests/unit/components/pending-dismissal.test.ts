@@ -115,8 +115,7 @@ describe('a pending save cannot be dismissed into silence', () => {
 		);
 	});
 
-	it('the reason label does not promise an audit the backend does not do yet', () => {
-		expect(document.body.textContent).toContain('Reason (required)');
-		expect(document.body.textContent).not.toContain('audited');
+	it('the reason label says it is audited: Go records the reason with the anonymisation', () => {
+		expect(document.body.textContent).toContain('Reason (required, audited)');
 	});
 });

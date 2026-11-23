@@ -43,7 +43,7 @@
 	}
 
 	async function onAssign(roleId: string) {
-		if (!user) return;
+		if (!user || busy) return;
 		bannerError = null;
 		assignMutation.mutate(
 			{ id: user.membership_id, roleId },
@@ -52,13 +52,24 @@
 	}
 
 	async function onRevoke(roleId: string) {
-		if (!user) return;
+		if (!user || busy) return;
 		bannerError = null;
 		revokeMutation.mutate(
 			{ id: user.membership_id, roleId },
 			{ onError: (err) => handleError(err, 'revoke') }
 		);
 	}
+
+	// One change at a time: a second click while the first is on its way would send a second request.
+	const busy = $derived(assignMutation.isPending || revokeMutation.isPending);
+	/** The role whose button is working (the others are only disabled). */
+	const busyRoleId = $derived(
+		assignMutation.isPending
+			? assignMutation.variables?.roleId
+			: revokeMutation.isPending
+				? revokeMutation.variables?.roleId
+				: undefined
+	);
 
 	const assignedRoles = $derived(user ? roleList.filter((r) => user.role_ids.includes(r.id)) : []);
 	const availableRoles = $derived(
@@ -67,7 +78,7 @@
 </script>
 
 <!-- Assignments are immediate (no form to submit): the sheet is the primitive, not a FormSheet. -->
-<Sheet.Root bind:open busy={assignMutation.isPending || revokeMutation.isPending} {onOpenChange}>
+<Sheet.Root bind:open {busy} {onOpenChange}>
 	<Sheet.Content size="md">
 		<Sheet.Header class="border-b border-border pe-14">
 			<Sheet.Title>Roles for {user ? displayName(user) : 'user'}</Sheet.Title>
@@ -92,7 +103,13 @@
 								{#if !may.revokeRoles}
 									<!-- Go's identity.roles.revoke / platform.roles.manage is not held: nothing to offer. -->
 								{:else if canRevokeRole(role)}
-									<Button variant="ghost" size="sm" onclick={() => onRevoke(role.id)}>
+									<Button
+										variant="ghost"
+										size="sm"
+										loading={busyRoleId === role.id}
+										disabled={busy}
+										onclick={() => onRevoke(role.id)}
+									>
 										<Icon icon={X} size="sm" /> Revoke
 									</Button>
 								{:else}
@@ -113,7 +130,13 @@
 							<li class="cluster cluster-spread border-border rounded-md border px-3 py-2">
 								<span class="label">{role.name}</span>
 								{#if may.assignRoles}
-									<Button variant="ghost" size="sm" onclick={() => onAssign(role.id)}>
+									<Button
+										variant="ghost"
+										size="sm"
+										loading={busyRoleId === role.id}
+										disabled={busy}
+										onclick={() => onAssign(role.id)}
+									>
 										<Icon icon={Plus} size="sm" /> Assign
 									</Button>
 								{/if}

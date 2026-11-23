@@ -10,6 +10,7 @@
  * scope cookie. Multipart uploads bypass the JSON helper because the
  * body must be `FormData`; the proxy still forwards both untouched.
  */
+import { seg } from '#lib/utils/path-segment.ts';
 import { api, apiLegacy, parseResponse } from '#lib/api/client.ts';
 import { CSV_TYPE, downloadBlob } from '#lib/utils/download.ts';
 import {
@@ -76,36 +77,36 @@ export async function listLeads(params: ListLeadsParams = {}): Promise<ListLeads
 }
 
 export async function getLead(id: string): Promise<CrmLeadDto> {
-	const raw = await apiLegacy.get<unknown>(`/v1/crm/leads/${id}`);
+	const raw = await apiLegacy.get<unknown>(`/v1/crm/leads/${seg(id)}`);
 	return parseResponse(crmLeadDtoSchema, raw);
 }
 
 export async function updateLead(id: string, req: UpdateLeadRequest): Promise<CrmLeadDto> {
-	const raw = await apiLegacy.patch<unknown>(`/v1/crm/leads/${id}`, req);
+	const raw = await apiLegacy.patch<unknown>(`/v1/crm/leads/${seg(id)}`, req);
 	return parseResponse(crmLeadDtoSchema, raw);
 }
 
 export async function reassignLead(id: string, req: ReassignLeadRequest): Promise<CrmLeadDto> {
-	const raw = await apiLegacy.post<unknown>(`/v1/crm/leads/${id}/reassign`, req);
+	const raw = await apiLegacy.post<unknown>(`/v1/crm/leads/${seg(id)}/reassign`, req);
 	return parseResponse(crmLeadDtoSchema, raw);
 }
 
 // ── CallLogs ────────────────────────────────────────────────────────
 
 export async function listCallLogs(leadId: string): Promise<ListCallLogsResponse> {
-	const raw = await apiLegacy.get<unknown>(`/v1/crm/leads/${leadId}/calls`);
+	const raw = await apiLegacy.get<unknown>(`/v1/crm/leads/${seg(leadId)}/calls`);
 	return parseResponse(listCallLogsResponseSchema, raw);
 }
 
 export async function logCall(leadId: string, req: LogCallRequest): Promise<CallLogDto> {
-	const raw = await apiLegacy.post<unknown>(`/v1/crm/leads/${leadId}/calls`, req);
+	const raw = await apiLegacy.post<unknown>(`/v1/crm/leads/${seg(leadId)}/calls`, req);
 	return parseResponse(callLogDtoSchema, raw);
 }
 
 // ── Reminders ───────────────────────────────────────────────────────
 
 export async function listLeadReminders(leadId: string): Promise<ListRemindersResponse> {
-	const raw = await apiLegacy.get<unknown>(`/v1/crm/leads/${leadId}/reminders`);
+	const raw = await apiLegacy.get<unknown>(`/v1/crm/leads/${seg(leadId)}/reminders`);
 	return parseResponse(listRemindersResponseSchema, raw);
 }
 
@@ -114,7 +115,10 @@ export async function updateReminder(
 	action: ReminderAction,
 	body: { snooze_until?: string } = {}
 ): Promise<ReminderDto> {
-	const raw = await apiLegacy.patch<unknown>(`/v1/crm/leads/reminders/${id}`, { action, ...body });
+	const raw = await apiLegacy.patch<unknown>(`/v1/crm/leads/reminders/${seg(id)}`, {
+		action,
+		...body
+	});
 	return parseResponse(reminderDtoSchema, raw);
 }
 
@@ -141,7 +145,7 @@ export async function listReminders(
 export async function listAssignmentHistory(
 	leadId: string
 ): Promise<ListAssignmentHistoryResponse> {
-	const raw = await apiLegacy.get<unknown>(`/v1/crm/leads/${leadId}/history`);
+	const raw = await apiLegacy.get<unknown>(`/v1/crm/leads/${seg(leadId)}/history`);
 	return parseResponse(listAssignmentHistoryResponseSchema, raw);
 }
 

@@ -58,18 +58,19 @@
 	}}
 >
 	{#snippet fields(form)}
-		<!-- V1: no endpoint returns a user's existing overrides, so they are managed blind: grant-only-on-save. -->
+		<!-- NOT REACHABLE today: `createMemberPermissions().overrides` is off until Go returns a member's existing
+		     overrides (a save replaces the whole set, so an empty panel erases them). Kept for the round that seeds it. -->
 		<TagInput
 			label="Extra grants"
 			name="granted"
-			placeholder="e.g. crm.leads.reassign"
+			placeholder="e.g. crm.leads.assign"
 			bind:value={form.values.granted}
 			error={form.errors.granted}
 		/>
 		<TagInput
 			label="Revocations"
 			name="revoked"
-			placeholder="e.g. crm.leads.delete"
+			placeholder="e.g. crm.leads.manage"
 			bind:value={form.values.revoked}
 			hint={both.length > 0
 				? $_('pages.users.overrides.alsoGrantedNames', { values: { names: both.join(', ') } })

@@ -15,6 +15,7 @@ vi.mock('$ui', async (importOriginal) => {
 });
 import PermissionTree from '#lib/features/roles/components/PermissionTree.svelte';
 import { isBelowAdminTier } from '#lib/features/auth/permissions.ts';
+import { PERMISSION_CATALOGUE } from '#lib/features/roles/permissions-catalogue.ts';
 
 let component: ReturnType<typeof mount> | undefined;
 afterEach(() => {
@@ -58,6 +59,46 @@ describe('a refused permission', () => {
 		expect(onChange).toHaveBeenCalledTimes(1);
 		expect(onChange.mock.calls[0]![0]).not.toContain(NAME);
 		expect(onChange.mock.calls[0]![0].length).toBeGreaterThan(0);
+	});
+
+	it('its group reads "all" once every ALLOWED name is selected, and the toggle then clears them', () => {
+		const names = PERMISSION_CATALOGUE.filter((e) => e.group === 'identity').map((e) => e.name);
+		const allowed = names.filter((n) => n !== NAME);
+		const onChange = render({ [NAME]: REASON }, allowed);
+		const group = document.querySelector<HTMLInputElement>(
+			'input[aria-label="Toggle all identity permissions"]'
+		)!;
+		// it used to be stuck on "some" for ever, so a click could only add
+		expect(group.checked).toBe(true);
+		expect(group.indeterminate).toBe(false);
+		group.click();
+		flushSync();
+		expect(onChange.mock.calls[0]![0]).toEqual([]);
+	});
+
+	it('a refused name that is already selected keeps its state when the group is cleared', () => {
+		const names = PERMISSION_CATALOGUE.filter((e) => e.group === 'identity').map((e) => e.name);
+		const onChange = render({ [NAME]: REASON }, names);
+		document
+			.querySelector<HTMLInputElement>('input[aria-label="Toggle all identity permissions"]')!
+			.click();
+		flushSync();
+		expect(onChange.mock.calls[0]![0]).toEqual([NAME]);
+	});
+
+	it('a group with no name the caller may change cannot be toggled', () => {
+		const refused = Object.fromEntries(
+			PERMISSION_CATALOGUE.filter((e) => e.group === 'platform').map((e) => [e.name, REASON])
+		);
+		const onChange = render(refused);
+		const group = document.querySelector<HTMLInputElement>(
+			'input[aria-label="Toggle all platform permissions"]'
+		)!;
+		expect(group.disabled).toBe(true);
+		expect(group.checked).toBe(false);
+		group.click();
+		flushSync();
+		expect(onChange).not.toHaveBeenCalled();
 	});
 
 	it('is offered normally when nothing is refused', () => {

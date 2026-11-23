@@ -49,14 +49,21 @@
 			<p class="caption text-muted-foreground">
 				Each row is a device or browser signed in to your account.
 			</p>
+			<!-- Go revokes EVERY session today (`except_current` has no effect yet, identity/ports/http.go): the button
+			     says what happens, this device included. "Sign out other devices" returns when Go honours the flag. -->
+			<p id="sign-out-everywhere-note" class="caption text-muted-foreground">
+				Sign out everywhere ends every session, this device included: you will be asked to sign in
+				again here too.
+			</p>
 		</div>
 		<Button
 			variant="ghost"
 			onclick={onRevokeOthers}
 			loading={revokeOthersMutation.isPending}
-			disabled={revokeOthersMutation.isPending || sessionList.length <= 1}
+			disabled={revokeOthersMutation.isPending || sessionList.length === 0}
+			aria-describedby="sign-out-everywhere-note"
 		>
-			<Icon icon={LogOut} size="sm" /> Sign out other devices
+			<Icon icon={LogOut} size="sm" /> Sign out everywhere
 		</Button>
 	</header>
 

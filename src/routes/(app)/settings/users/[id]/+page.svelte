@@ -159,6 +159,7 @@
 />
 <ManagerSelectorDrawer
 	{userList}
+	{roleList}
 	bind:open={managerDialog.open}
 	{user}
 	onOpenChange={managerDialog.onOpenChange}

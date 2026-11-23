@@ -2,6 +2,7 @@
  * Gateway for audit activity endpoints per ADR 0038 N2.
  * Each resource that exposes activity uses the same cursor-paginated shape.
  */
+import { seg } from '#lib/utils/path-segment.ts';
 import { apiLegacy, parseResponse } from '#lib/api/client.ts';
 import { activityListResponseSchema, type ActivityListResponse } from './schemas';
 
@@ -28,7 +29,9 @@ export async function listTenantActivity(
 	tenantId: string,
 	params?: ActivityParams
 ): Promise<ActivityListResponse> {
-	const raw = await apiLegacy.get<unknown>(buildQuery(`/v1/tenants/${tenantId}/activity`, params));
+	const raw = await apiLegacy.get<unknown>(
+		buildQuery(`/v1/tenants/${seg(tenantId)}/activity`, params)
+	);
 	return parseResponse(activityListResponseSchema, raw);
 }
 
@@ -38,7 +41,7 @@ export async function listPersonActivity(
 	params?: ActivityParams
 ): Promise<ActivityListResponse> {
 	const raw = await apiLegacy.get<unknown>(
-		buildQuery(`/v1/platform/persons/${personId}/activity`, params)
+		buildQuery(`/v1/platform/persons/${seg(personId)}/activity`, params)
 	);
 	return parseResponse(activityListResponseSchema, raw);
 }

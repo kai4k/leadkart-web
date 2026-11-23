@@ -17,6 +17,7 @@
  * Surface covers authenticated-user flows: logout, profile read and session list/revoke.
  * Password change and profile update are form actions (src/routes/(app)/settings/account/*).
  */
+import { seg } from '#lib/utils/path-segment.ts';
 import { api } from '#lib/api/client.ts';
 import { getCsrfToken } from '#lib/api/csrf.ts';
 import {
@@ -88,7 +89,7 @@ export async function confirmEmailChange(
  * `membershipId` matches the JWT's `membership_id` claim.
  */
 export function getMyProfile(membershipId: string, signal?: AbortSignal): Promise<UserDto> {
-	return api.get(`/v1/users/${membershipId}`, userDtoSchema, { signal });
+	return api.get(`/v1/users/${seg(membershipId)}`, userDtoSchema, { signal });
 }
 
 /**
@@ -102,12 +103,13 @@ export async function listSessions(signal?: AbortSignal): Promise<SessionDto[]> 
  * Revoke a single session family by ID. 204 on success.
  */
 export async function revokeSession(familyId: string): Promise<void> {
-	await api.delete(`/v1/auth/sessions/${familyId}`);
+	await api.delete(`/v1/auth/sessions/${seg(familyId)}`);
 }
 
 /**
- * Revoke all OTHER sessions (keeps the caller's current session
- * alive — Auth0 / Okta canon for "sign me out of other devices").
+ * Asks Go to revoke all OTHER sessions (`except_current`). Go does not honour the flag yet
+ * (identity/ports/http.go: it cannot tell which family is the current one), so EVERY session is
+ * revoked, the caller's included: the UI says "Sign out everywhere" until it does.
  */
 export async function revokeOtherSessions(reason?: string): Promise<{ revoked_count: number }> {
 	const body: { except_current: true; reason?: string } = { except_current: true };

@@ -415,7 +415,11 @@ export function isTransientError(err: unknown): boolean {
 	);
 }
 
-export function describeError(err: unknown, opts: DescribeErrorOptions = {}): string {
+export function describeError(err: unknown, options?: DescribeErrorOptions): string {
+	// A caller that passes its own lines is a form or a dialog with fields on screen. A caller that passes nothing (the
+	// global mutation toast, a bulk summary) has no form: "Check the highlighted fields." would point at nothing there.
+	const formOnScreen = options !== undefined;
+	const opts = options ?? {};
 	if (!(err instanceof ApiError)) return opts.fallback ?? 'Something went wrong';
 	const own = err.status === undefined ? undefined : opts.status?.[err.status as OwnLineStatus];
 	const known = codeCopy(err.code);
@@ -429,7 +433,7 @@ export function describeError(err: unknown, opts: DescribeErrorOptions = {}): st
 		return err.message;
 	}
 	if (err instanceof ValidationError) {
-		return err.hasFieldErrors ? err.message : (own ?? VALIDATION_FALLBACK_COPY);
+		return err.hasFieldErrors && formOnScreen ? err.message : (own ?? VALIDATION_FALLBACK_COPY);
 	}
 	if (own === undefined) {
 		return err.message;

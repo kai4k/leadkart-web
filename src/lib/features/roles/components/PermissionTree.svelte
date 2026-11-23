@@ -27,10 +27,17 @@
 		onChange([...set]);
 	}
 
+	/** The names of a group this caller may change: a refused one keeps the state it has, checked or not. */
+	const allowed = (entries: PermissionCatalogueEntry[]) =>
+		entries.filter((e) => !(e.name in refused));
+
+	// Over the ALLOWED names only: a group holding a refused name reaches "all" once every name the caller may change is
+	// selected, so its checkbox can clear them again (it used to be stuck on "some" for ever).
 	function groupChecked(entries: PermissionCatalogueEntry[]): 'none' | 'some' | 'all' {
-		const inGroup = entries.filter((e) => selected.includes(e.name)).length;
+		const open = allowed(entries);
+		const inGroup = open.filter((e) => selected.includes(e.name)).length;
 		if (inGroup === 0) return 'none';
-		if (inGroup === entries.length) return 'all';
+		if (inGroup === open.length) return 'all';
 		return 'some';
 	}
 
@@ -38,10 +45,9 @@
 		if (disabled) return;
 		const state = groupChecked(entries);
 		const set = new SvelteSet(selected);
-		if (state === 'all') {
-			for (const e of entries) set.delete(e.name);
-		} else {
-			for (const e of entries) if (!(e.name in refused)) set.add(e.name);
+		for (const e of allowed(entries)) {
+			if (state === 'all') set.delete(e.name);
+			else set.add(e.name);
 		}
 		onChange([...set]);
 	}
@@ -55,9 +61,9 @@
 				<label class="cluster cluster-tight cursor-pointer">
 					<input
 						type="checkbox"
-						checked={state === 'all'}
+						checked={state === 'all' && allowed(entries).length > 0}
 						indeterminate={state === 'some'}
-						{disabled}
+						disabled={disabled || allowed(entries).length === 0}
 						onchange={() => toggleGroup(entries)}
 						aria-label="Toggle all {group} permissions"
 					/>

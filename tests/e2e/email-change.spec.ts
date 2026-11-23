@@ -1,5 +1,5 @@
 import { expect, test } from './helpers/test';
-import { resetMock, registerMock } from './helpers/mock';
+import { listMockCalls, resetMock, registerMock } from './helpers/mock';
 import { signInAsTier } from './helpers/sign-in';
 
 /**
@@ -62,14 +62,22 @@ test.describe('Email change — confirm (public)', () => {
 		await resetMock();
 	});
 
-	test('happy path: ?token=… → 204 → success surface', async ({ page }) => {
+	test('happy path: ?token=… → one click → 204 → success surface', async ({ page }) => {
 		await registerMock({
 			method: 'POST',
 			path: '/api/v1/auth/confirm-email-change',
 			status: 204
 		});
 		await page.goto('/confirm-email-change?token=signed.email.token');
+		const confirm = page.getByRole('button', { name: /confirm new email/i });
+		await expect(confirm).toBeVisible({ timeout: 5000 });
+		// Opening the link spends nothing: a mail scanner that loads the page (and runs its scripts) leaves the token alone.
+		const posted = async () =>
+			(await listMockCalls()).filter((c) => c.path === '/api/v1/auth/confirm-email-change').length;
+		expect(await posted()).toBe(0);
+		await confirm.click();
 		await expect(page.getByText(/email updated/i)).toBeVisible({ timeout: 5000 });
+		expect(await posted()).toBe(1);
 	});
 
 	test('missing token: surfaces the "use the link from your email" warning', async ({ page }) => {
@@ -87,6 +95,7 @@ test.describe('Email change — confirm (public)', () => {
 			body: { error: 'email_change_token_invalid', message: '' }
 		});
 		await page.goto('/confirm-email-change?token=expired');
-		await expect(page.locator('[role="alert"]').first()).toBeVisible({ timeout: 5000 });
+		await page.getByRole('button', { name: /confirm new email/i }).click();
+		await expect(page.getByText(/invalid or has expired/i)).toBeVisible({ timeout: 5000 });
 	});
 });

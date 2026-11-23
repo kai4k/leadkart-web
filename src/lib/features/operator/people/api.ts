@@ -1,3 +1,4 @@
+import { seg } from '#lib/utils/path-segment.ts';
 import { apiLegacy, parseResponse } from '#lib/api/client.ts';
 import {
 	personDtoSchema,
@@ -47,7 +48,7 @@ export async function listPersons(params?: PersonListParams): Promise<PersonList
 
 /** Read a Person by ID — operator-scoped (platform.users.view). */
 export async function getPerson(personId: string): Promise<PersonDto> {
-	const raw = await apiLegacy.get<unknown>(`/v1/platform/persons/${personId}`);
+	const raw = await apiLegacy.get<unknown>(`/v1/platform/persons/${seg(personId)}`);
 	return parseResponse(personDtoSchema, raw);
 }
 
@@ -56,20 +57,20 @@ export async function getPerson(personId: string): Promise<PersonDto> {
 export async function listPersonMemberships(
 	personId: string
 ): Promise<ListPersonMembershipsResponse> {
-	const raw = await apiLegacy.get<unknown>(`/v1/platform/persons/${personId}/memberships`);
+	const raw = await apiLegacy.get<unknown>(`/v1/platform/persons/${seg(personId)}/memberships`);
 	return parseResponse(listPersonMembershipsResponseSchema, raw);
 }
 
 /** Globally suspend a Person across ALL tenants — operator-scoped
  *  (platform.users.manage). A required reason is stored for audit. */
 export async function globalSuspend(personId: string, req: GlobalSuspendRequest): Promise<void> {
-	await apiLegacy.post<void>(`/v1/platform/persons/${personId}/global-suspend`, req);
+	await apiLegacy.post<void>(`/v1/platform/persons/${seg(personId)}/global-suspend`, req);
 }
 
 /** Lift an existing global suspension — operator-scoped
  *  (platform.users.manage). Returns 204 No Content. */
 export async function liftGlobalSuspension(personId: string): Promise<void> {
-	await apiLegacy.post<void>(`/v1/platform/persons/${personId}/lift-global-suspension`, {});
+	await apiLegacy.post<void>(`/v1/platform/persons/${seg(personId)}/lift-global-suspension`, {});
 }
 
 /** Irreversibly anonymise a Person (DPDP) — operator-scoped
@@ -79,5 +80,5 @@ export async function anonymisePerson(
 	personId: string,
 	req: AnonymisePersonRequest
 ): Promise<void> {
-	await apiLegacy.post<void>(`/v1/platform/persons/${personId}/anonymise`, req);
+	await apiLegacy.post<void>(`/v1/platform/persons/${seg(personId)}/anonymise`, req);
 }

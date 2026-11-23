@@ -102,6 +102,16 @@ const buttonNamed = (name: string) =>
 const isChecked = (el: HTMLElement) =>
 	el.getAttribute('aria-checked') === 'true' || (el as HTMLInputElement).checked === true;
 
+describe('UsersList status chips', () => {
+	it('offers no "Inactive" chip (Go lists active members only) and promises no way back from this list', () => {
+		const chips = [
+			...document.querySelectorAll('nav[aria-label="Filter members by status"] button')
+		].map((b) => b.textContent?.replace(/s+/g, ' ').trim());
+		expect(chips).toEqual(['All 3', 'Active 3']);
+		expect(document.body.textContent).not.toContain('reactivate them later');
+	});
+});
+
 describe('UsersList bulk status change', () => {
 	it('settles when the 2nd call rejects: one warning toast, the failed row stays selected', async () => {
 		gw.reactivateUser

@@ -603,6 +603,14 @@ describe('describeError', () => {
 			);
 			expect((err as ValidationError).fields).toEqual({ email: 'Email is taken' });
 		});
+		it('with field errors and NO form on screen (the global toast, a bulk summary) says the generic refusal', () => {
+			// lift suspension, cancel a request, reactivate, bulk status: a mutation no form observes
+			const err = ApiError.fromResponse(res(422), { errors: { reason: ['required'] } });
+			expect(describeError(err)).toBe(generic);
+			expect(describeError(err)).not.toBe('Check the highlighted fields.');
+			// a caller with its own lines is a form: the fields are on screen
+			expect(describeError(err, {})).toBe('Check the highlighted fields.');
+		});
 	});
 	it("the caller's 409 line wins over Go's text; with no caller line the generic line shows", () => {
 		expect(describeError(ApiError.fromResponse(res(409), null), opts)).toBe('Already done.');

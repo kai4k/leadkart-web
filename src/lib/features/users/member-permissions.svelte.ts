@@ -27,8 +27,17 @@ export function createMemberPermissions() {
 		get revokeRoles() {
 			return may(ACTION.roleRevoke);
 		},
+		/**
+		 * HIDDEN for now, whatever the caller holds (`ACTION.userOverrides` is the rule it returns to).
+		 * Go's `PATCH /v1/users/{id}/permission-overrides` REPLACES the whole set (`user_authz.go`,
+		 * `membership.ReplacePermissionOverrides`) and no read returns the current one, so the panel
+		 * opens empty and a save erases every existing grant (the time-bound ones from approved
+		 * permission requests too) and every revocation. It waits for the Go change that returns a
+		 * member's overrides on the user read; the next web round seeds `PermissionOverridesPanel`
+		 * from it and puts `may(ACTION.userOverrides)` back here.
+		 */
 		get overrides() {
-			return may(ACTION.userOverrides);
+			return false;
 		},
 		get deactivate() {
 			return may(ACTION.userDeactivate);

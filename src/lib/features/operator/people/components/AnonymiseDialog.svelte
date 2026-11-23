@@ -19,15 +19,14 @@
 	}
 </script>
 
-<!-- Go's anonymise handler ignores the request body today, so the reason is NOT audited yet.
-     Restore "(required, audited)" when the backend change that records it lands. -->
+<!-- Go records the reason with the anonymisation (identity/ports/platform_http.go: AnonymisePersonCommand.Reason). -->
 <ReasonConfirmDialog
 	bind:open
 	{onOpenChange}
 	title="Anonymise {person?.email ?? 'person'}"
 	description="DPDP irreversible: replaces all PII with placeholders, deactivates every Membership. The Person row is preserved for audit but no original data is recoverable."
 	confirmLabel="Anonymise permanently"
-	reasonLabel="Reason (required)"
+	reasonLabel="Reason (required, audited)"
 	confirmText={person?.email ?? ''}
 	messages={{
 		failed: $_('reasonConfirm.anonymise.failed'),

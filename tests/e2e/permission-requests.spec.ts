@@ -144,7 +144,7 @@ test.describe('Permission requests — requester flow', () => {
 			.first()
 			.click();
 
-		await page.locator('input[name="permission"]').fill('identity.users.create');
+		await page.locator('select[name="permission"]').selectOption('identity.users.create');
 		await page
 			.locator('#create-permission-request-form textarea')
 			.fill('Onboarding a new dispatch team next week');
@@ -170,7 +170,7 @@ test.describe('Permission requests — requester flow', () => {
 			.first()
 			.click();
 
-		await page.locator('input[name="permission"]').fill('identity.users.create');
+		await page.locator('select[name="permission"]').selectOption('identity.users.create');
 		await page.locator('#create-permission-request-form textarea').fill('too short');
 		await page.locator('button[type="submit"][form="create-permission-request-form"]').click();
 

@@ -98,7 +98,8 @@ export function revokeOtherSessionsMutation() {
 		invalidate: () => [sessionsKey],
 		successToast: (_vars, { revoked_count }) =>
 			revoked_count > 0
-				? `Signed out ${revoked_count} other device${revoked_count === 1 ? '' : 's'}`
-				: 'No other sessions to revoke'
+				? // Go counts every session it revoked, this device's too: none of them is "other"
+					`Signed out of ${revoked_count} device${revoked_count === 1 ? '' : 's'}, this one included`
+				: 'No sessions to sign out'
 	});
 }

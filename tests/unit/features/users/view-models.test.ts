@@ -4,7 +4,8 @@ import {
 	managerLabel,
 	canDeactivate,
 	canRevokeRole,
-	bulkSummary
+	bulkSummary,
+	eligibleManagers
 } from '#lib/features/users/view-models.ts';
 import type { UserDto, RoleDto } from '#lib/features/users/types.ts';
 
@@ -51,6 +52,62 @@ describe('managerLabel', () => {
 		const mgr: UserDto = { ...u, membership_id: 'm2', first_name: 'Bob', last_name: 'M' };
 		const subordinate: UserDto = { ...u, reports_to: 'm2' };
 		expect(managerLabel(subordinate, [mgr])).toBe('Bob M');
+	});
+});
+
+describe("eligibleManagers (Go's maySetManager: active, strictly more senior)", () => {
+	const level = (id: string, hierarchy_level: number): RoleDto => ({
+		...role,
+		id,
+		hierarchy_level
+	});
+	const roles = [level('owner', 0), level('admin', 5), level('lead', 25), level('user', 50)];
+	const member = (id: string, role_ids: string[], over: Partial<UserDto> = {}): UserDto => ({
+		...u,
+		membership_id: id,
+		role_ids,
+		...over
+	});
+	const roster = [
+		member('admin', ['admin']),
+		member('lead', ['lead']),
+		member('user', ['user']),
+		member('peer', ['user']),
+		member('gone', ['admin'], { status: 'inactive' }),
+		member('none', []),
+		member('boss', ['owner'])
+	];
+	const ids = (who: UserDto) => eligibleManagers(who, roster, roles).map((m) => m.membership_id);
+
+	it('offers only active members with a lower level number, never the member', () => {
+		expect(ids(roster[2]!)).toEqual(['admin', 'lead', 'boss']);
+		expect(ids(roster[1]!)).toEqual(['admin', 'boss']);
+	});
+
+	it('the most senior of several roles is the rank', () => {
+		expect(ids(member('x', ['user', 'lead']))).toEqual(['admin', 'boss']);
+	});
+
+	it('a member with no role is the least senior: everyone with a role qualifies, another role-less member does not', () => {
+		expect(ids(roster[5]!)).toEqual(['admin', 'lead', 'user', 'peer', 'boss']);
+	});
+
+	it('an unknown rank (a role missing from the list) excludes nobody: Go decides', () => {
+		expect(ids(member('x', ['not-loaded']))).toEqual([
+			'admin',
+			'lead',
+			'user',
+			'peer',
+			'none',
+			'boss'
+		]);
+		expect(eligibleManagers(roster[2]!, roster, []).map((m) => m.membership_id)).toEqual([
+			'admin',
+			'lead',
+			'peer',
+			'none',
+			'boss'
+		]);
 	});
 });
 

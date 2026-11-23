@@ -2,7 +2,6 @@
 	import { onDestroy, onMount, untrack } from 'svelte';
 	import { _ } from 'svelte-i18n';
 	import type { ActionResult } from '$app/forms';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { announceContextChange } from '#lib/api/operator-scope.ts';
 	import { AuthCard } from '#lib/components/ui/index.ts';
@@ -104,7 +103,7 @@
 				format="email"
 				autocomplete="username"
 				required
-				value={String(value('email') ?? page.url.searchParams.get('email') ?? '')}
+				value={String(value('email') ?? '')}
 				error={fieldError('email')}
 			/>
 			<PasswordField

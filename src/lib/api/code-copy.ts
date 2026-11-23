@@ -54,6 +54,7 @@ const CODES = [
 	'concurrency_conflict',
 	'platform_tenant_undeletable',
 	// Permission requests
+	'permission_unknown',
 	'permission_not_requestable',
 	'permission_request_requester_inactive',
 	'permission_request_pending_exists',

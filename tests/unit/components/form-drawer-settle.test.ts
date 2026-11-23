@@ -53,10 +53,10 @@ const type = (el: HTMLInputElement | HTMLTextAreaElement, value: string) => {
 	flushSync();
 };
 const submit = () => {
-	type(
-		document.querySelector<HTMLInputElement>('input[name="permission"]')!,
-		'identity.users.view'
-	);
+	const permission = document.querySelector<HTMLSelectElement>('select[name="permission"]')!;
+	permission.value = 'identity.users.view';
+	permission.dispatchEvent(new Event('change', { bubbles: true }));
+	flushSync();
 	type(document.querySelector('textarea')!, 'I need this to do the monthly audit');
 	document.querySelector<HTMLFormElement>('#create-permission-request-form')!.requestSubmit();
 	flushSync();

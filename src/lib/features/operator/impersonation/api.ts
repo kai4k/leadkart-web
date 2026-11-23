@@ -9,6 +9,7 @@
  * Reads and the create call Zod-parse the response at the boundary so upstream
  * callers receive typed DTOs, never raw unknowns; end is 204.
  */
+import { seg } from '#lib/utils/path-segment.ts';
 import { api } from '#lib/api/client.ts';
 import {
 	createImpersonationSessionResponseSchema,
@@ -33,7 +34,7 @@ export function startImpersonation(
 
 /** DELETE /v1/platform/impersonation/sessions/{sessionId} — close the session. */
 export async function endImpersonation(sessionId: string): Promise<void> {
-	await api.delete(`/v1/platform/impersonation/sessions/${sessionId}`);
+	await api.delete(`/v1/platform/impersonation/sessions/${seg(sessionId)}`);
 }
 
 /** GET /v1/platform/impersonation/sessions — list active sessions for the caller. */

@@ -3,26 +3,39 @@
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	import { FormSheet, Select } from '#lib/components/form/index.ts';
 	import { assignManagerMutation, removeManagerMutation } from '$features/users/queries';
-	import type { UserDto } from '$features/users/types';
+	import type { RoleDto, UserDto } from '$features/users/types';
+	import { eligibleManagers } from '$features/users/view-models';
 	import { displayName } from '$features/auth';
 	import { ValidationError } from '$api/errors';
 
 	type Props = {
 		userList: UserDto[];
+		/** The tenant's roles: a member's seniority is the most senior level among theirs. */
+		roleList: ReadonlyArray<RoleDto>;
 		open: boolean;
 		user: UserDto | null;
 		onOpenChange: (open: boolean) => void;
 	};
 
-	let { userList, open = $bindable(false), user, onOpenChange }: Props = $props();
+	let { userList, roleList, open = $bindable(false), user, onOpenChange }: Props = $props();
 
 	const schema = z.object({ manager: z.string() });
 
-	const eligibleManagers = $derived(
-		user
-			? userList.filter((u) => u.membership_id !== user.membership_id && u.status === 'active')
-			: []
-	);
+	// Only the members Go would accept (active, strictly more senior).
+	const candidates = $derived(user ? eligibleManagers(user, userList, roleList) : []);
+	// The manager on record stays in the list when Go would no longer accept them (they left, or are no longer more
+	// senior): the field shows who it is instead of going blank, and leaving it as it is changes nothing.
+	const current = $derived.by(() => {
+		const id = user?.reports_to;
+		if (!id || candidates.some((m) => m.membership_id === id)) return null;
+		const known = userList.find((m) => m.membership_id === id);
+		return {
+			value: id,
+			label: known
+				? `${displayName(known)} (current, can no longer be assigned)`
+				: 'Current manager (no longer an active member)'
+		};
+	});
 
 	const assignMutation = assignManagerMutation();
 	const removeMutation = removeManagerMutation({ inlineErrors: true });
@@ -31,6 +44,8 @@
 
 	async function onSubmit(values: z.output<typeof schema>) {
 		if (!user) return;
+		// unchanged: nothing to send (re-sending a departed manager's id is a refusal from Go)
+		if (values.manager === (user.reports_to ?? '')) return;
 		try {
 			if (values.manager) {
 				await assignMutation.mutateAsync({ id: user.membership_id, managerId: values.manager });
@@ -72,7 +87,8 @@
 			error={form.errors.manager}
 			options={[
 				{ value: '', label: '— No manager —' },
-				...eligibleManagers.map((m) => ({ value: m.membership_id, label: displayName(m) }))
+				...(current ? [current] : []),
+				...candidates.map((m) => ({ value: m.membership_id, label: displayName(m) }))
 			]}
 		/>
 	{/snippet}

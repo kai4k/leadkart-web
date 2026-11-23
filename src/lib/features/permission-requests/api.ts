@@ -2,6 +2,7 @@
  * Gateway for permission-elevation requests (ADR 0055). Go answers
  * approve / deny / cancel with 204 and create with 201 + ids.
  */
+import { seg } from '#lib/utils/path-segment.ts';
 import { api } from '#lib/api/client.ts';
 import {
 	cursorQuery,
@@ -69,7 +70,7 @@ export function getPermissionRequest(
 	id: string,
 	signal?: AbortSignal
 ): Promise<PermissionRequestDto> {
-	return api.get(`/v1/permission-requests/${id}`, permissionRequestDtoSchema, { signal });
+	return api.get(`/v1/permission-requests/${seg(id)}`, permissionRequestDtoSchema, { signal });
 }
 
 export function createPermissionRequest(
@@ -82,16 +83,16 @@ export async function approvePermissionRequest(
 	id: string,
 	body: { decision_reason?: string } = {}
 ): Promise<void> {
-	await api.post(`/v1/permission-requests/${id}/approve`, body);
+	await api.post(`/v1/permission-requests/${seg(id)}/approve`, body);
 }
 
 export async function denyPermissionRequest(
 	id: string,
 	body: { decision_reason: string }
 ): Promise<void> {
-	await api.post(`/v1/permission-requests/${id}/deny`, body);
+	await api.post(`/v1/permission-requests/${seg(id)}/deny`, body);
 }
 
 export async function cancelPermissionRequest(id: string): Promise<void> {
-	await api.post(`/v1/permission-requests/${id}/cancel`, {});
+	await api.post(`/v1/permission-requests/${seg(id)}/cancel`, {});
 }

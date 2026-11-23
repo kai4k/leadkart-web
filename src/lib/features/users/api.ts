@@ -3,6 +3,7 @@
  * JWT tenant_id — no tenant_id parameter on any call. Go answers every
  * mutation here with 204 (or 201 + ids for create), so mutations return void.
  */
+import { seg } from '#lib/utils/path-segment.ts';
 import { api, apiLegacy, parseResponse } from '#lib/api/client.ts';
 import {
 	cursorQuery,
@@ -46,7 +47,7 @@ export function listAllUsers(signal?: AbortSignal): Promise<AllPages<UserDto>> {
 }
 
 export function getUser(membershipId: string, signal?: AbortSignal): Promise<UserDto> {
-	return api.get(`/v1/users/${membershipId}`, userDtoSchema, { signal });
+	return api.get(`/v1/users/${seg(membershipId)}`, userDtoSchema, { signal });
 }
 
 export function createUser(req: CreateUserRequest): Promise<CreateUserResponse> {
@@ -57,37 +58,37 @@ export async function deactivateUser(
 	membershipId: string,
 	body: DeactivateUserRequest
 ): Promise<void> {
-	await api.post(`/v1/users/${membershipId}/deactivate`, body);
+	await api.post(`/v1/users/${seg(membershipId)}/deactivate`, body);
 }
 
 export async function reactivateUser(membershipId: string): Promise<void> {
-	await api.post(`/v1/users/${membershipId}/reactivate`);
+	await api.post(`/v1/users/${seg(membershipId)}/reactivate`);
 }
 
 export async function assignRole(membershipId: string, body: AssignUserRoleRequest): Promise<void> {
-	await api.post(`/v1/users/${membershipId}/roles`, body);
+	await api.post(`/v1/users/${seg(membershipId)}/roles`, body);
 }
 
 export async function revokeRole(membershipId: string, roleId: string): Promise<void> {
-	await api.delete(`/v1/users/${membershipId}/roles/${roleId}`);
+	await api.delete(`/v1/users/${seg(membershipId)}/roles/${seg(roleId)}`);
 }
 
 export async function replacePermissionOverrides(
 	membershipId: string,
 	body: ReplacePermissionOverridesRequest
 ): Promise<void> {
-	await api.patch(`/v1/users/${membershipId}/permission-overrides`, body);
+	await api.patch(`/v1/users/${seg(membershipId)}/permission-overrides`, body);
 }
 
 export async function assignManager(
 	membershipId: string,
 	body: AssignManagerRequest
 ): Promise<void> {
-	await api.put(`/v1/users/${membershipId}/manager`, body);
+	await api.put(`/v1/users/${seg(membershipId)}/manager`, body);
 }
 
 export async function removeManager(membershipId: string): Promise<void> {
-	await api.delete(`/v1/users/${membershipId}/manager`);
+	await api.delete(`/v1/users/${seg(membershipId)}/manager`);
 }
 
 /**

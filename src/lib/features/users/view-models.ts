@@ -21,6 +21,40 @@ export function managerLabel(user: UserDto, roster: ReadonlyArray<UserDto>): str
 	return mgr ? displayName(mgr) : user.reports_to;
 }
 
+/**
+ * A member's seniority as Go ranks it (`authority.RankOf`): the LOWEST level among their roles, lower = more senior.
+ * `null` = not known here (a role missing from the list, or a level-0 role, which Go counts as the owner's only on
+ * the Company Owner system role): an unknown rank never excludes anyone. No role at all is the least senior rank.
+ */
+function memberRank(user: UserDto, roles: ReadonlyArray<RoleDto>): number | null {
+	let best = Number.POSITIVE_INFINITY;
+	for (const id of user.role_ids) {
+		const role = roles.find((r) => r.id === id);
+		if (!role || role.hierarchy_level <= 0) return null;
+		best = Math.min(best, role.hierarchy_level);
+	}
+	return best;
+}
+
+/**
+ * Who may be picked as `user`'s manager: Go's `maySetManager` takes an ACTIVE member of the same tenant who is
+ * STRICTLY more senior (no lateral or upward link). Offering anyone else is offering a refusal
+ * (`manager_not_eligible`). When either rank is unknown the member stays in the list and Go decides.
+ */
+export function eligibleManagers(
+	user: UserDto,
+	roster: ReadonlyArray<UserDto>,
+	roles: ReadonlyArray<RoleDto>
+): UserDto[] {
+	const own = memberRank(user, roles);
+	return roster.filter((candidate) => {
+		if (candidate.membership_id === user.membership_id || candidate.status !== 'active')
+			return false;
+		const rank = memberRank(candidate, roles);
+		return own === null || rank === null || rank < own;
+	});
+}
+
 export function canDeactivate(user: UserDto): boolean {
 	return user.status === 'active';
 }

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Command } from '$ui';
+	import { Button, Command } from '$ui';
 	import { resolve } from '$app/paths';
 	import { Building2, User, Icon } from '$icons';
 	import { omniSearchQuery } from '$features/search/queries';
@@ -90,6 +90,18 @@
 				<p class="caption text-muted-foreground p-4">Type at least 2 characters.</p>
 			{:else if query.isPending}
 				<p class="caption text-muted-foreground p-4">Searching…</p>
+			{:else if query.isError}
+				<!-- a search that did not run found nothing out: saying "No matches" would be an answer nobody gave -->
+				<div class="stack stack-tight p-4" role="alert">
+					<p class="caption text-foreground">
+						The search could not be completed, so tenants and people are not shown.
+					</p>
+					<div>
+						<Button variant="outline" size="sm" onclick={() => void query.refetch()}>
+							Try again
+						</Button>
+					</div>
+				</div>
 			{:else if !hasHits}
 				<Command.Empty>No matches.</Command.Empty>
 			{:else}

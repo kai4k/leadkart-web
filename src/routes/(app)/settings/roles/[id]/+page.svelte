@@ -4,7 +4,7 @@
 	import PageHeader from '$layouts/PageHeader.svelte';
 	import { Alert, Badge, Button, Card, CopyButton, Skeleton } from '$ui';
 	import { QueryState } from '#lib/components/feedback/index.ts';
-	import { Select, TextField } from '#lib/components/form/index.ts';
+	import { Select } from '#lib/components/form/index.ts';
 	import {
 		roleDetailQuery,
 		rolesListQuery,
@@ -12,23 +12,21 @@
 		replaceRolePermissionsMutation,
 		setRoleParentMutation,
 		PermissionTree,
+		RolePropertiesCard,
 		roleKind,
 		roleKindKey,
 		isProtectedRole,
 		createRolePermissions,
-		ROLE_LEVEL_MAX,
-		ROLE_LEVEL_MIN,
-		ROLE_NAME_MAX,
-		ROLE_NAME_MIN
+		unchangeablePermissions,
+		PLATFORM_RESERVED
 	} from '$features/roles';
 	import { describeError } from '$api/errors';
+	import { session } from '$features/auth';
 	import { isBelowAdminTier, P } from '#lib/features/auth/permissions.ts';
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 
 	let { data } = $props();
 
-	let name = $state('');
-	let hierarchyLevel = $state(0);
 	let selectedPerms = $state<string[]>([]);
 	let error = $state<string | null>(null);
 	let saved = $state(false);
@@ -107,22 +105,26 @@
 	}
 
 	$effect(() => {
-		if (role) {
-			name = role.name;
-			hierarchyLevel = role.hierarchy_level;
-			selectedPerms = [...role.permissions];
-		}
+		if (role) selectedPerms = [...role.permissions];
 	});
 
-	const metaDirty = $derived(
-		role !== null && (name !== role.name || hierarchyLevel !== role.hierarchy_level)
-	);
-	// A role below the Administrator tier cannot contain `identity.users.create` (Go: admin_tier_required): not offered.
-	const refusedPermissions = $derived<Record<string, string>>(
-		role !== null && isBelowAdminTier(role.hierarchy_level)
+	// What Go would refuse per changed name (`authority.mayChangePermissions`), so one such name does not fail the whole
+	// save without saying which: a platform-reserved name, and a name the caller does not hold. Inside another tenant
+	// an operator acts with what `tenant.admin` implies there (every name that is not platform-reserved), whatever its
+	// own list holds. A name the caller's own list holds is never refused here; Go still has the last word.
+	const holds = (permission: string): boolean =>
+		(session.capabilities?.effective_permissions.includes(permission) ?? false) ||
+		(session.inTenantContext && !PLATFORM_RESERVED.has(permission));
+	const refusedPermissions = $derived<Record<string, string>>({
+		...unchangeablePermissions(holds, {
+			reserved: $_('pages.roles.platformReserved'),
+			notHeld: $_('pages.roles.notHeld')
+		}),
+		// A role below the Administrator tier cannot contain `identity.users.create` (Go: admin_tier_required): not offered.
+		...(role !== null && isBelowAdminTier(role.hierarchy_level)
 			? { [P.identityUsersCreate]: $_('pages.roles.adminTierOnly') }
-			: {}
-	);
+			: {})
+	});
 	const permsDirty = $derived.by(() => {
 		const r = role;
 		if (r === null) return false;
@@ -130,17 +132,11 @@
 		return selectedPerms.some((p) => !r.permissions.includes(p));
 	});
 
-	function saveMeta() {
-		if (!role || !canUpdate) return;
+	// The Properties card reports to the page's one banner.
+	const propertiesBanner = bannerFor('Failed to save.');
+	function startSave() {
 		error = null;
 		saved = false;
-		updateMutation.mutate(
-			{
-				id: role.id,
-				req: { name: name.trim(), hierarchy_level: hierarchyLevel }
-			},
-			bannerFor('Failed to save.')
-		);
 	}
 
 	function savePerms() {
@@ -206,39 +202,16 @@
 				{#if saved}<Alert variant="success" role="none">Saved.</Alert>{/if}
 			</div>
 
-			<Card.Root>
-				<Card.Header>
-					<Card.Title>Properties</Card.Title>
-				</Card.Header>
-				<Card.Content class="stack stack-relaxed">
-					<TextField
-						label="Name"
-						name="name"
-						bind:value={name}
-						minlength={ROLE_NAME_MIN}
-						maxlength={ROLE_NAME_MAX}
-						disabled={!canUpdate}
-					/>
-					<label class="stack stack-tight">
-						<span class="label">Hierarchy level</span>
-						<input
-							type="number"
-							bind:value={hierarchyLevel}
-							min={ROLE_LEVEL_MIN}
-							max={ROLE_LEVEL_MAX}
-							disabled={!canUpdate}
-							class="bg-card border border-border rounded-md rounded-md px-3 py-2 text-sm"
-						/>
-					</label>
-				</Card.Content>
-				<Card.Footer>
-					<Button
-						disabled={!canUpdate || !metaDirty || isMutating}
-						loading={isMutating}
-						onclick={saveMeta}>Save properties</Button
-					>
-				</Card.Footer>
-			</Card.Root>
+			<RolePropertiesCard
+				{role}
+				{canUpdate}
+				busy={isMutating}
+				mutation={updateMutation}
+				onStart={startSave}
+				onSaved={propertiesBanner.onSuccess}
+				onFailed={propertiesBanner.onError}
+				onBanner={(line) => (error = line)}
+			/>
 
 			<Card.Root>
 				<Card.Header>

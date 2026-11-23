@@ -1,3 +1,4 @@
+import { seg } from '#lib/utils/path-segment.ts';
 import { api } from '#lib/api/client.ts';
 import { registerTenantResponseSchema, listAllTenantsResponseSchema } from './schemas';
 import type {
@@ -17,22 +18,22 @@ export function registerTenant(req: RegisterTenantRequest): Promise<RegisterTena
 
 /** Lifecycle mutations answer 204 (tenant_http.go writeTenantMutationResult): no DTO. */
 export async function suspendTenant(tenantId: string, req: SuspendTenantRequest): Promise<void> {
-	await api.post(`/v1/tenants/${tenantId}/suspend`, req);
+	await api.post(`/v1/tenants/${seg(tenantId)}/suspend`, req);
 }
 
 export async function activateTenant(tenantId: string): Promise<void> {
-	await api.post(`/v1/tenants/${tenantId}/activate`, {});
+	await api.post(`/v1/tenants/${seg(tenantId)}/activate`, {});
 }
 
 export async function markForDeletion(
 	tenantId: string,
 	req: MarkForDeletionRequest
 ): Promise<void> {
-	await api.post(`/v1/tenants/${tenantId}/mark-for-deletion`, req);
+	await api.post(`/v1/tenants/${seg(tenantId)}/mark-for-deletion`, req);
 }
 
 export async function restoreTenant(tenantId: string): Promise<void> {
-	await api.post(`/v1/tenants/${tenantId}/restore`, {});
+	await api.post(`/v1/tenants/${seg(tenantId)}/restore`, {});
 }
 
 /** List all tenants — operator-scoped (platform.tenants.view).

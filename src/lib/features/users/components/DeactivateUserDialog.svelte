@@ -29,7 +29,7 @@
 	bind:open
 	{onOpenChange}
 	title="Deactivate {user ? displayName(user) : 'user'}"
-	description="Deactivated users can't sign in until reactivated. All open sessions are revoked. This is reversible."
+	description="Deactivated members can't sign in until reactivated. All open sessions are revoked. Deactivated members are not shown in the team list."
 	confirmLabel="Deactivate"
 	reasonLabel="Reason (required, audited)"
 	messages={{
