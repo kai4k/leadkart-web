@@ -1,22 +1,15 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
 	import PageHeader from '$layouts/PageHeader.svelte';
-	import {
-		Alert,
-		Badge,
-		Button,
-		Card,
-		CopyButton,
-		DescriptionList,
-		type DescriptionItem
-	} from '$ui';
+	import { Alert, Badge, Button, Card, DescriptionList, type DescriptionItem } from '$ui';
 	import { QueryState } from '#lib/components/feedback/index.ts';
+	import { BackLink, IdChip } from '#lib/components/data/index.ts';
 	import { TextareaField } from '$form';
 	import { ValidationError, describeError } from '$api/errors';
 	import { codeCopy } from '$api/code-copy';
 	import { fieldErrorCopy } from '#lib/utils/field-error-copy.ts';
 	import { formatDateTime } from '#lib/utils/format.ts';
-	import { ChevronLeft, CheckCircle2, XCircle, Icon } from '$icons';
+	import { CheckCircle2, XCircle, Icon } from '$icons';
 	import {
 		permissionRequestDetailQuery,
 		permissionRequestQueueItemQuery,
@@ -125,15 +118,11 @@
 </script>
 
 <div class="stack stack-relaxed">
-	<a
-		href={resolve('permission-requests')}
-		class="cluster cluster-tight text-muted-foreground hover:text-foreground caption inline-flex"
-	>
-		<Icon icon={ChevronLeft} size="xs" /> Back to requests
-	</a>
-
 	<!-- outside the query branch: the loading and error states have their h1 too -->
 	<PageHeader title={$_('pages.permissionRequest.title')}>
+		{#snippet leading()}
+			<BackLink href={resolve('permission-requests')} label="Back to requests" />
+		{/snippet}
 		{#snippet meta()}
 			{#if query.data}
 				{@const badge = permissionRequestState(query.data.state)}
@@ -149,10 +138,7 @@
 	>
 		{#snippet children(req)}
 			<header class="stack stack-tight">
-				<div class="cluster cluster-tight">
-					<code class="caption text-subtle-foreground">{req.id}</code>
-					<CopyButton value={req.id} label="Copy request ID" />
-				</div>
+				<IdChip value={req.id} label="request ID" />
 			</header>
 
 			<Card.Root>

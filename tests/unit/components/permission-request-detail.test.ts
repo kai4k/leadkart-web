@@ -78,3 +78,17 @@ describe('a refused decision says where, on the textarea that was submitted', ()
 		);
 	});
 });
+
+describe('the detail page uses the shared back link and id chip', () => {
+	it('"Back to requests" is the BackLink, above the title; the id is an IdChip with a named copy button', () => {
+		render();
+		const back = [...target.querySelectorAll('a')].find((a) =>
+			a.textContent?.includes('Back to requests')
+		)!;
+		expect(back.className).toContain('text-primary-text');
+		const h1 = target.querySelector('h1')!;
+		expect(back.compareDocumentPosition(h1) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(target.querySelector('button[aria-label="Copy request ID"]')).not.toBeNull();
+		expect(target.querySelector('code[title="r1"]')).not.toBeNull();
+	});
+});
