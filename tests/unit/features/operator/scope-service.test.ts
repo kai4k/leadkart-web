@@ -9,7 +9,7 @@
  * a submit would write there. It is a hard reset (cache cleared, page reloaded). ONE function
  * (`scopeChangedElsewhere`) decides own versus foreign.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const nav = vi.hoisted(() => ({ goto: vi.fn(), invalidate: vi.fn() }));
 vi.mock('$app/navigation', () => nav);
@@ -73,6 +73,14 @@ async function tab(): Promise<{
 		service: await import('#lib/features/operator/scope/service.ts')
 	};
 }
+
+// The first import of the two modules transforms them cold, which under load can take longer than a
+// test's 5 s. A test that times out keeps running and writes to `calls` and the mocks of the tests
+// after it, so the cold import is paid here, once, with room. Later `tab()` calls find it warm.
+beforeAll(async () => {
+	await import('#lib/api/operator-scope.ts');
+	await import('#lib/features/operator/scope/service.ts');
+}, 60_000);
 
 beforeEach(() => {
 	vi.clearAllMocks();
