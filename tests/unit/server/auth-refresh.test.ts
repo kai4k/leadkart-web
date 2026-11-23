@@ -245,7 +245,7 @@ describe('refreshSession', () => {
 				{
 					name: 'lk_signin_notice',
 					value: notice,
-					opts: { path: '/signin', maxAge: 120, sameSite: 'lax', secure: false, httpOnly: false }
+					opts: { path: '/signin', maxAge: 120, sameSite: 'lax', secure: false, httpOnly: true }
 				}
 			]);
 			expect([...j.store.entries()]).toEqual([['lk_signin_notice', notice]]);

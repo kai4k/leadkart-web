@@ -217,9 +217,8 @@ test.describe('Reset password — confirm', () => {
 		};
 
 		await fill();
-		await expect(
-			page.getByText('The new password does not meet the password rules.')
-		).toBeVisible();
+		// the screen names the rule Go lists (the same line change-password shows)
+		await expect(page.getByText('Add a symbol (a space is not a symbol).')).toBeVisible();
 		// Go's own sentence never reaches the page
 		await expect(page.getByText(/tenant password policy/)).toHaveCount(0);
 		await expect(page.getByLabel(/new password/i).first()).toBeVisible();

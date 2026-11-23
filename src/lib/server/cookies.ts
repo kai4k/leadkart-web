@@ -117,16 +117,16 @@ const SIGNIN_NOTICE_MAX_AGE = 120;
  * a sign-out the person asked for.
  *
  * The value is a name from the fixed list or the cookie is not set at all: no token, no id and no
- * text from the API can ride on it. Scoped to the sign-in page and gone after two minutes. It is not
- * httpOnly (the owner-approved attribute list); nothing depends on that, the reader is
- * `takeSigninNotice` below.
+ * text from the API can ride on it. Scoped to the sign-in page and gone after two minutes. httpOnly:
+ * the server is its only reader (`takeSigninNotice` below, in the sign-in load); no script on a page
+ * has a use for it.
  */
 export function setSigninNotice(cookies: Cookies, notice: unknown): void {
 	const value = signinNoticeOf(notice);
 	if (value === null) return;
 	cookies.set(SIGNIN_NOTICE_COOKIE, value, {
 		path: SIGNIN_NOTICE_PATH,
-		httpOnly: false,
+		httpOnly: true,
 		secure: isProd(),
 		sameSite: 'lax',
 		maxAge: SIGNIN_NOTICE_MAX_AGE

@@ -108,12 +108,45 @@ describe('reset-password action: Go codes -> messages', () => {
 		expect(r.data.fieldKeys).toEqual({ new_password: key });
 	});
 
-	it('422 password_policy_violation -> the new-password field says the rules are not met', async () => {
+	// http.go:408 writePasswordPolicyError: the reset screen names the unmet rule like change-password does
+	it.each(RULES)(
+		'422 password_policy_violation [%s] -> "%s" under the new password',
+		async (rule, sentence) => {
+			const r = await run(422, 'password_policy_violation', { new_password: [rule] });
+			expect(r.status).toBe(422);
+			expect(r.data.fieldMessages).toEqual({ new_password: rule });
+			expect(r.data.fieldKeys).toEqual({});
+			expect(r.data.formErrorKey).toBeNull();
+			expect(shown(r, 'new_password')).toBe(sentence);
+		}
+	);
+
+	it('several unmet rules: the first one Go names is the message', async () => {
 		const r = await run(422, 'password_policy_violation', {
 			new_password: ['min_length', 'requires_symbol']
 		});
+		expect(r.data.fieldMessages).toEqual({ new_password: 'min_length' });
+		expect(shown(r, 'new_password')).toBe('The password is too short.');
+	});
+
+	it('a policy violation that names no rule still says the rules are not met', async () => {
+		const r = await run(422, 'password_policy_violation');
 		expect(r.status).toBe(422);
+		expect(r.data.fieldMessages).toEqual({});
 		expect(shown(r, 'new_password')).toBe('The new password does not meet the password rules.');
+	});
+
+	// http.go:438 writePasswordWorkRefusal: the typed password is kept and the line is calm
+	it('503 service_busy -> a calm banner, no field blamed', async () => {
+		const r = await run(503, 'service_busy');
+		expect(r.status).toBe(503);
+		expect(r.data.formErrorKey).toBe('errors.code.service_busy');
+		expect(r.data.fieldKeys).toEqual({});
+	});
+
+	it('429 -> the rate-limit line', async () => {
+		const r = await run(429, 'rate_limited');
+		expect(r.data.formErrorKey).toBe('auth.errors.rateLimited');
 	});
 
 	// Row 29: "Resetting to the current password is now accepted (`password_same_as_current` is

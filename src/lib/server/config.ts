@@ -45,6 +45,16 @@ const DEV_SCOPE_SECRET = 'dev-only-scope-cookie-secret-not-for-production';
 /** Prefix of the published e2e secret (`preview:e2e`, playwright.config.ts). */
 const E2E_SECRET_PREFIX = 'e2e-only';
 
+/** An origin whose host is this machine, by exact hostname (never by prefix or suffix). */
+function isLocalOrigin(origin: string | undefined): boolean {
+	if (!origin) return false;
+	try {
+		return ['localhost', '127.0.0.1', '[::1]'].includes(new URL(origin).hostname);
+	} catch {
+		return false;
+	}
+}
+
 /** Empty env values (`KEY=` in a copied .env file) mean "unset". */
 const emptyToUndefined = (v: unknown) => (v === '' ? undefined : v);
 
@@ -140,6 +150,17 @@ export function createConfigSchema({ allowDevSecret }: { allowDevSecret: boolean
 						`UPSTREAM_TIMEOUT_MS (${v.UPSTREAM_TIMEOUT_MS}) x ${BFF_MAX_UPSTREAM_HOPS} upstream hops = ` +
 						`${BFF_MAX_UPSTREAM_HOPS * v.UPSTREAM_TIMEOUT_MS} ms must stay below the client read timeout ` +
 						`(${DEFAULT_READ_TIMEOUT_MS} ms); lower UPSTREAM_TIMEOUT_MS`
+				});
+			}
+			// NODE_ENV=test drops Secure and __Host- from the session cookies, accepts the published e2e
+			// secret and serves the developer pages. It exists for a build run on this machine, so it
+			// needs a localhost ORIGIN: a deployment cannot boot with the production checks off.
+			if (v.NODE_ENV === 'test' && !isLocalOrigin(v.ORIGIN)) {
+				ctx.addIssue({
+					code: 'custom',
+					path: ['NODE_ENV'],
+					message:
+						'NODE_ENV=test is for a server on this machine: ORIGIN must be set to a localhost origin (e.g. http://localhost:4173)'
 				});
 			}
 			if (v.NODE_ENV !== 'production') return;

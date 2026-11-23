@@ -6,7 +6,8 @@
 export const GO_API_URL: string | undefined = 'http://localhost:9999';
 export const NODE_ENV: string | undefined = 'test';
 export const SCOPE_COOKIE_SECRET: string | undefined = 'vitest-scope-cookie-secret-0123456789';
-export const ORIGIN: string | undefined = undefined;
+// NODE_ENV=test is refused without a localhost ORIGIN (config.ts).
+export const ORIGIN: string | undefined = 'http://localhost:4173';
 export const UPSTREAM_TIMEOUT_MS: string | undefined = undefined;
 export const PROTOCOL_HEADER: string | undefined = undefined;
 export const HOST_HEADER: string | undefined = undefined;

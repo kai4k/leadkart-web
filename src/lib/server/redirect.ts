@@ -9,7 +9,8 @@
  * `/\evil.com` and `/<TAB>/evil.com` both navigate to `//evil.com`. Those
  * characters are rejected outright before parsing.
  *
- * A target must also be a page: `/api/...` and `/auth/...` are refused (see `isPage`).
+ * A target must also be a page: `/api/...`, `/auth/...`, the `/_app/...` assets, the `/<page>/__data.json`
+ * data of a page and `/service-worker.js` are refused (see `isPage`).
  */
 // eslint-disable-next-line no-control-regex -- control characters are exactly what this guard rejects
 const UNSAFE_CHARS = /[\\\u0000-\u001f\u007f]/;
@@ -38,13 +39,18 @@ export function safeRedirectPath(
 	return path;
 }
 
-/** The first path segments that are endpoints, not pages: the BFF proxy and the auth endpoints. */
-const NOT_PAGES: ReadonlySet<string> = new Set(['api', 'auth']);
+/** The first path segments that are endpoints, not pages: the BFF proxy, the auth endpoints and the app's own files. */
+const NOT_PAGES: ReadonlySet<string> = new Set(['api', 'auth', '_app']);
+
+/** The one file that is a script, and the suffix that turns any page into its data (`<page>/__data.json`). */
+const SERVICE_WORKER_PATH = '/service-worker.js';
+const DATA_SUFFIX = '/__data.json';
 
 /**
- * Whether a (normalised) pathname can be a page. `/api/...` answers JSON and `/auth/...` is
- * sign-out and the email-change endpoint: same origin, so not a redirect hole, but nowhere to send
- * a person after sign-in. The segment is compared the way the router reads it (percent-decoded once,
+ * Whether a (normalised) pathname can be a page. `/api/...` answers JSON, `/auth/...` is sign-out
+ * and the email-change endpoint, `/_app/...` and `/service-worker.js` are files and `<page>/__data.json`
+ * is a page's data (the person's own, CSRF value included): same origin, so not a redirect hole, but
+ * nowhere to send a person after sign-in. The segment is compared the way the router reads it (percent-decoded once,
  * for this comparison only: what is returned is never decoded) and without regard to letter case; a
  * pathname that cannot be decoded is not a page either.
  */
@@ -55,5 +61,7 @@ function isPage(pathname: string): boolean {
 	} catch {
 		return false;
 	}
-	return !NOT_PAGES.has((decoded.split('/')[1] ?? '').toLowerCase());
+	const lower = decoded.toLowerCase();
+	if (lower === SERVICE_WORKER_PATH || lower.endsWith(DATA_SUFFIX)) return false;
+	return !NOT_PAGES.has(lower.split('/')[1] ?? '');
 }

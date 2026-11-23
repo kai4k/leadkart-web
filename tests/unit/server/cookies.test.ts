@@ -86,7 +86,7 @@ describe('auth cookies', () => {
 
 describe('the sign-in notice cookie', () => {
 	it.each(SIGNIN_NOTICES)(
-		'%s: the name only, on /signin, for two minutes, not httpOnly',
+		'%s: the name only, on /signin, for two minutes, httpOnly (only the server reads it)',
 		(notice) => {
 			const c = fakeCookies();
 			setSigninNotice(c.jar, notice);
@@ -94,7 +94,7 @@ describe('the sign-in notice cookie', () => {
 				{
 					name: 'lk_signin_notice',
 					value: notice,
-					opts: { path: '/signin', maxAge: 120, sameSite: 'lax', secure: false, httpOnly: false }
+					opts: { path: '/signin', maxAge: 120, sameSite: 'lax', secure: false, httpOnly: true }
 				}
 			]);
 		}

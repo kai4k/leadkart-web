@@ -22,6 +22,14 @@ const EXPIRED_HEADERS = { 'www-authenticate': 'Bearer' };
 // A real Go route that takes a POST (the proxy path under test is generic).
 const ROLE_ID = '00000000-0000-4000-8000-0000000000d1';
 const EXPIRED_BODY = { error: 'unauthenticated' };
+/** Go's real refusal of a refresh token (internal/identity/ports/http.go handleRefresh): 401 `refresh_rejected`, with a `reason` for three arms only. */
+const refreshRejectedBody = (reason?: string) => ({
+	type: 'https://leadkart.api/errors/refresh_rejected',
+	title: 'Unauthorized',
+	status: 401,
+	error: 'refresh_rejected',
+	...(reason === undefined ? {} : { reason })
+});
 
 const REFRESHED_ACCESS = fakeAccessToken({ jti: 'refreshed-jti' });
 const REFRESHED_REFRESH = fakeRefreshToken('refreshed-family');
@@ -152,7 +160,7 @@ test.describe('session refresh', () => {
 			method: 'POST',
 			path: '/api/v1/auth/refresh',
 			status: 401,
-			body: { error: 'invalid_refresh_token' }
+			body: refreshRejectedBody()
 		});
 		await dropAccessCookie(context);
 
@@ -303,7 +311,7 @@ test.describe('session refresh', () => {
 			method: 'POST',
 			path: '/api/v1/auth/refresh',
 			status: 401,
-			body: { error: 'invalid_refresh_token' }
+			body: refreshRejectedBody('session_expired')
 		});
 		await registerMock({
 			method: 'GET',
@@ -438,7 +446,7 @@ test.describe('session refresh', () => {
 			method: 'POST',
 			path: '/api/v1/auth/refresh',
 			status: 401,
-			body: { error: 'invalid_refresh_token' }
+			body: refreshRejectedBody()
 		});
 		await registerMock({
 			method: 'GET',
@@ -480,13 +488,7 @@ test.describe('a rejected refresh tells the sign-in page why', () => {
 			method: 'POST',
 			path: '/api/v1/auth/refresh',
 			status: 401,
-			body: {
-				type: 'https://leadkart.api/errors/refresh_rejected',
-				title: 'Unauthorized',
-				status: 401,
-				error: 'refresh_rejected',
-				...(reason === undefined ? {} : { reason })
-			}
+			body: refreshRejectedBody(reason)
 		});
 	const hydrated = (page: Page) =>
 		expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
@@ -522,7 +524,7 @@ test.describe('a rejected refresh tells the sign-in page why', () => {
 		});
 	}
 
-	test('the notice cookie: the name only, on /signin, two minutes, SameSite=Lax, not httpOnly', async ({
+	test('the notice cookie: the name only, on /signin, two minutes, SameSite=Lax, httpOnly (the server is the only reader)', async ({
 		page,
 		context
 	}) => {
@@ -539,7 +541,7 @@ test.describe('a rejected refresh tells the sign-in page why', () => {
 		expect(notice).toMatchObject({
 			value: 'tenant_suspended',
 			path: '/signin',
-			httpOnly: false,
+			httpOnly: true,
 			sameSite: 'Lax'
 		});
 		expect(notice!.expires - Date.now() / 1000).toBeGreaterThan(100);

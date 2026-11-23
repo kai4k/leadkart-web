@@ -28,7 +28,8 @@ describe('timeout budget', () => {
 		const out = configSchema.safeParse({
 			GO_API_URL: 'http://localhost:8080',
 			SCOPE_COOKIE_SECRET: 'x'.repeat(32),
-			NODE_ENV: 'test'
+			NODE_ENV: 'test',
+			ORIGIN: 'http://localhost:4173'
 		});
 		const upstream = out.success ? out.data.UPSTREAM_TIMEOUT_MS : NaN;
 		expect(upstream).toBe(DEFAULT_UPSTREAM_TIMEOUT_MS);

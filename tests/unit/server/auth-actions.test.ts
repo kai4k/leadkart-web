@@ -385,7 +385,7 @@ describe.each([
 			[
 				'lk_signin_notice',
 				'password_changed',
-				{ path: '/signin', maxAge: 120, sameSite: 'lax', secure: false, httpOnly: false }
+				{ path: '/signin', maxAge: 120, sameSite: 'lax', secure: false, httpOnly: true }
 			]
 		]);
 		for (const name of Object.keys(SESSION)) expect(cookies.get(name), name).toBeUndefined();

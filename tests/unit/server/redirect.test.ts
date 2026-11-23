@@ -68,7 +68,22 @@ describe('safeRedirectPath', () => {
 		['a percent-encoded letter (auth)', '/a%75th/logout'],
 		['a dot segment that normalises to it', '/leads/../api/v1/users'],
 		['a dot segment that normalises to it (auth)', '/x/../auth/logout'],
-		['an encoding that cannot be decoded', '/%E0%A4%A/x']
+		['an encoding that cannot be decoded', '/%E0%A4%A/x'],
+		// the framework's own files and the data of a page: JSON or script, never somewhere to land
+		['the app assets', '/_app/version.json'],
+		['the app assets root', '/_app'],
+		['an app asset with a query', '/_app/immutable/entry/start.js?x=1'],
+		['another letter case (_app)', '/_APP/version.json'],
+		['a percent-encoded letter (_app)', '/%5fapp/version.json'],
+		['the data of a page', '/dashboard/__data.json'],
+		['the data of the root page', '/__data.json'],
+		['the data of a deep page', '/leads/1/edit/__data.json?x-sveltekit-invalidated=01'],
+		['the data of a page, another letter case', '/signin/__DATA.json'],
+		['the data of a page, percent-encoded', '/dashboard/%5f%5fdata.json'],
+		['the data of a page by dot segment', '/leads/../dashboard/__data.json'],
+		['the service worker', '/service-worker.js'],
+		['the service worker, another letter case', '/Service-Worker.js'],
+		['the service worker with a query', '/service-worker.js?x=1']
 	])('refuses %s: %s', (_label, value) => {
 		expect(safeRedirectPath(value, origin)).toBe('/dashboard');
 	});
@@ -80,7 +95,14 @@ describe('safeRedirectPath', () => {
 		'/authentication?x=1',
 		'/settings/api',
 		'/leads/auth',
-		'/leads?next=/api/v1/users'
+		'/leads?next=/api/v1/users',
+		'/_apple',
+		'/app/_app',
+		'/leads/service-worker.js',
+		'/service-worker.json',
+		'/leads/__data.json.html',
+		'/leads/my__data.json',
+		'/leads?next=/__data.json'
 	])('keeps a page whose path only resembles them: %s', (value) => {
 		expect(safeRedirectPath(value, origin)).toBe(value);
 	});

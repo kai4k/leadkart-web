@@ -135,13 +135,15 @@ const UNGUARDED_CALLEES: Record<string, Record<string, string>> = {
 	'(auth)/reset-password/+page.server.ts': {
 		'src/lib/server/proxy.ts#goAuthFetch':
 			'The reset call with the emailed token: the only call this page makes to Go.',
-		'src/lib/server/go.ts#readGoError': 'Reads the error body of a refused reset.',
+		'src/lib/server/go.ts#readGoFailure':
+			'Reads the status, code and per-field rule codes of a refused reset.',
 		'src/lib/server/auth-errors.ts#RESET_TOKEN_INVALID': 'The code for a dead token.',
 		'src/lib/server/auth-errors.ts#passwordErrorKey': 'Maps a password refusal to a form key.',
 		'src/lib/server/form-action.ts#callGoForAction': 'Runs the Go call with outage handling.',
 		'src/lib/server/form-action.ts#failForm': 'Form failure helper.',
-		'src/lib/server/form-action.ts#failFromStatus': 'Form failure helper.',
-		'src/lib/server/form-action.ts#failOutage': 'Form failure helper.'
+		'src/lib/server/form-action.ts#failOutage': 'Form failure helper.',
+		'src/lib/server/form-action.ts#goFailureKey':
+			'The banner key of a refusal no field owns (a calm line for 503 service_busy).'
 	},
 	// No server function at all: the gate reads Kit's `dev` and NODE_ENV, nothing else.
 	'(dev)/+layout.server.ts': {},
@@ -258,7 +260,7 @@ const UNGUARDED_REVIEWED: Record<string, string> = {
 	'(app)/+layout.server.ts': 'c348bde0597e9584bdde65b1',
 	'(auth)/signin/+page.server.ts': 'b7da86af71a08251a5a38ca1',
 	'(auth)/forgot-password/+page.server.ts': '234d7157d19409c9ddf6ad3b',
-	'(auth)/reset-password/+page.server.ts': '3e7321dc0a8fc0387c411bbd',
+	'(auth)/reset-password/+page.server.ts': '7dc42171f7e675b737865207',
 	'(dev)/+layout.server.ts': '27bb3985dd4fd968ce81e3f9',
 	'auth/logout/+server.ts': 'bcd677fad56c1d16ab658be0',
 	'auth/confirm-email-change/+server.ts': '05096bba008b2810c60afd42',

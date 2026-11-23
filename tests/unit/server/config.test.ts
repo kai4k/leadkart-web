@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { configSchema, createConfigSchema } from '#lib/server/config.ts';
 
 const base = { GO_API_URL: 'http://localhost:8080' };
+// NODE_ENV=test is refused without a localhost ORIGIN.
+const local = { ORIGIN: 'http://localhost:4173' };
 const withSecret = { ...base, SCOPE_COOKIE_SECRET: 'x'.repeat(32) };
 // Production also needs a way to know its public origin.
 const prodOrigin = {
@@ -86,7 +88,7 @@ describe('configSchema', () => {
 	});
 
 	it('defaults the upstream timeout to 10 s', () => {
-		const out = configSchema.safeParse({ ...withSecret, NODE_ENV: 'test' });
+		const out = configSchema.safeParse({ ...withSecret, NODE_ENV: 'test', ...local });
 		expect(out.success && out.data.UPSTREAM_TIMEOUT_MS).toBe(10_000);
 	});
 
@@ -106,12 +108,14 @@ describe('configSchema', () => {
 		const out = configSchema.safeParse({
 			...withSecret,
 			NODE_ENV: 'test',
+			...local,
 			UPSTREAM_TIMEOUT_MS: '11666'
 		});
 		expect(out.success).toBe(true);
 		const edge = configSchema.safeParse({
 			...withSecret,
 			NODE_ENV: 'test',
+			...local,
 			UPSTREAM_TIMEOUT_MS: '11667'
 		});
 		expect(edge.success).toBe(false);
@@ -147,7 +151,9 @@ describe('configSchema: production origin', () => {
 	});
 
 	it('does not require an origin outside production', () => {
-		expect(configSchema.safeParse({ ...withSecret, NODE_ENV: 'test' }).success).toBe(true);
+		expect(configSchema.safeParse({ ...withSecret, NODE_ENV: 'test', ...local }).success).toBe(
+			true
+		);
 	});
 });
 
@@ -175,6 +181,7 @@ describe('configSchema: no test or dev secret in production', () => {
 		const out = configSchema.safeParse({
 			...base,
 			NODE_ENV: 'test',
+			...local,
 			SCOPE_COOKIE_SECRET: 'e2e-only-scope-cookie-secret-0123456789abcdef'
 		});
 		expect(out.success).toBe(true);
@@ -201,8 +208,8 @@ describe('configSchema: PUBLIC_SITE_URL (the link-preview origin written into sr
 
 	it('may be empty or unset outside production', () => {
 		for (const NODE_ENV of ['development', 'test']) {
-			expect(ok({ ...dev, NODE_ENV })).toBe(true);
-			expect(ok({ ...dev, NODE_ENV, PUBLIC_SITE_URL: '' })).toBe(true);
+			expect(ok({ ...dev, ...local, NODE_ENV })).toBe(true);
+			expect(ok({ ...dev, ...local, NODE_ENV, PUBLIC_SITE_URL: '' })).toBe(true);
 		}
 	});
 
@@ -232,11 +239,43 @@ describe('configSchema: PUBLIC_SITE_URL (the link-preview origin written into sr
 
 	it('allows http only when NODE_ENV is not production', () => {
 		expect(ok({ ...dev, PUBLIC_SITE_URL: 'http://localhost:4173' })).toBe(true);
-		expect(ok({ ...withSecret, NODE_ENV: 'test', PUBLIC_SITE_URL: 'http://localhost:4173' })).toBe(
-			true
-		);
+		expect(
+			ok({ ...withSecret, ...local, NODE_ENV: 'test', PUBLIC_SITE_URL: 'http://localhost:4173' })
+		).toBe(true);
 		const out = configSchema.safeParse({ ...prod, PUBLIC_SITE_URL: 'http://app.example.com' });
 		expect(out.success).toBe(false);
 		expect(issuesOf(out).join()).toMatch(/PUBLIC_SITE_URL must be https in production/);
+	});
+});
+
+describe('NODE_ENV=test needs a localhost ORIGIN (a deployment cannot boot with production checks off)', () => {
+	const test = { ...withSecret, NODE_ENV: 'test' };
+	const ok = (v: Record<string, unknown>) => configSchema.safeParse(v).success;
+
+	it.each([
+		'http://localhost:4173',
+		'https://localhost',
+		'http://127.0.0.1:4173',
+		'http://[::1]:4173'
+	])('accepts %s', (ORIGIN) => {
+		expect(ok({ ...test, ORIGIN })).toBe(true);
+	});
+
+	it.each([
+		['no ORIGIN', undefined],
+		['an empty ORIGIN', ''],
+		['an https public origin', 'https://app.example.com'],
+		['a name that only starts like localhost', 'http://localhost.example.com'],
+		['a name that only ends like localhost', 'http://evil-localhost'],
+		['a host with localhost as its userinfo', 'http://localhost@app.example.com']
+	])('refuses %s', (_name, ORIGIN) => {
+		const out = configSchema.safeParse({ ...test, ...(ORIGIN === undefined ? {} : { ORIGIN }) });
+		expect(out.success).toBe(false);
+		expect(issuesOf(out).join(' ')).toMatch(/NODE_ENV=test .*localhost/);
+	});
+
+	it('does not touch development or production', () => {
+		expect(ok({ ...withSecret, NODE_ENV: 'development' })).toBe(true);
+		expect(ok({ ...withSecret, ...prodOrigin, NODE_ENV: 'production' })).toBe(true);
 	});
 });

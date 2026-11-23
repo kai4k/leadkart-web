@@ -12,9 +12,12 @@
  */
 import { newPasswordField, tokenField } from '#lib/api/request-schema.ts';
 import { passwordErrorKey, RESET_TOKEN_INVALID } from '#lib/server/auth-errors.ts';
-import { callGoForAction, failForm, failFromStatus, failOutage } from '#lib/server/form-action.ts';
-import { goAuthFetch, readGoError } from '#lib/server/go.ts';
+import { callGoForAction, failForm, failOutage, goFailureKey } from '#lib/server/form-action.ts';
+import { goAuthFetch, readGoFailure } from '#lib/server/go.ts';
 import type { Actions } from './$types';
+
+/** 422: the password does not satisfy the tenant's policy (the same code `auth-errors.ts` names for change-password). */
+const PASSWORD_POLICY_VIOLATION = 'password_policy_violation';
 
 export const actions: Actions = {
 	default: async ({ request, url }) => {
@@ -51,14 +54,20 @@ export const actions: Actions = {
 			return { success: true };
 		}
 
-		const body = await readGoError(resp);
-		if (resp.status === 400 && body.error === RESET_TOKEN_INVALID) {
+		const failure = await readGoFailure(resp);
+		const { status, code } = failure;
+		if (resp.status === 400 && code === RESET_TOKEN_INVALID) {
 			return failForm(400, { formErrorKey: 'auth.resetPassword.errors.invalidToken' });
 		}
-		const mapped = passwordErrorKey(resp.status, body.error);
-		if (mapped) {
-			return failForm(resp.status, { fieldKeys: { new_password: mapped.key } });
-		}
-		return failFromStatus(resp);
+		// 422 password_policy_violation: Go lists the unmet rule codes under `new_password`; the first is
+		// the field's message (the same line change-password shows). Only the code travels, never Go's text.
+		const rule = code === PASSWORD_POLICY_VIOLATION ? failure.fields.new_password : undefined;
+		if (rule !== undefined) return failForm(status, { fieldMessages: { new_password: rule } });
+
+		const mapped = passwordErrorKey(status, code);
+		if (mapped) return failForm(status, { fieldKeys: { new_password: mapped.key } });
+		// No field to blame: the line of the code when the table has one (503 service_busy reads
+		// calmly), else of the status class.
+		return failForm(status, { formErrorKey: goFailureKey(status, code) });
 	}
 };
