@@ -3,6 +3,7 @@
 	import { _ } from 'svelte-i18n';
 	import type { UrlFilters } from '#lib/hooks/index.ts';
 	import { Icon, X } from '$icons';
+	import { Button } from '#lib/components/ui/button/index.ts';
 	import { cn } from '#lib/utils/cn.ts';
 
 	/**
@@ -45,13 +46,9 @@
 		{/each}
 
 		{#if urlFilters.activeChips.length >= 2}
-			<button
-				type="button"
-				class="label text-muted-foreground hover:text-foreground ms-1 hover:underline"
-				onclick={() => urlFilters.clearAll()}
-			>
-				Clear all
-			</button>
+			<Button variant="ghost" size="sm" onclick={() => urlFilters.clearAll()}>
+				{$_('dataList.clearAll')}
+			</Button>
 		{/if}
 	</div>
 {/if}

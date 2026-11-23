@@ -24,11 +24,12 @@
 	import Toolbar from './Toolbar.svelte';
 	import PageHeader from '$layouts/PageHeader.svelte';
 	import FilterChips from './FilterChips.svelte';
+	import SearchInput from './SearchInput.svelte';
 
 	/**
 	 * ResourceListPage — page-level template composing every primitive
-	 * in this folder: title row, toolbar, saved-view tabs, filter
-	 * drawer, filter chips, list body, sticky bulk-action bar.
+	 * in this folder: title row (PageHeader), toolbar with the search box, saved-view tabs, status
+	 * chips, filter bar, filter chips, list body, sticky bulk-action bar.
 	 *
 	 * Renders nothing the consumer can't also assemble by hand — the
 	 * point is to remove ~600 lines of boilerplate from each list
@@ -50,8 +51,16 @@
 			selection: BulkSelection<TItem>;
 			actions: BulkAction[];
 		};
-		/** Optional search-box snippet rendered into the toolbar centre. */
-		search?: Snippet;
+		/** The search box of the list (a `SearchInput`): what the page searches for, and what to do when it changes. */
+		search?: {
+			value: string;
+			onSearch: (query: string) => void;
+			label: string;
+			placeholder?: string;
+			maxlength?: number;
+		};
+		/** Status chips (a `StatusChips`) or any row of quick filters, under the toolbar. */
+		chips?: Snippet;
 		/** Body slot — the actual list / kanban / grid. */
 		children: Snippet;
 		/** Optional footer (e.g. pagination, total counts). */
@@ -67,7 +76,8 @@
 		savedViews,
 		filters,
 		bulk,
-		search: searchSlot,
+		search,
+		chips,
 		children,
 		footer,
 		class: className = ''
@@ -90,6 +100,18 @@
 			{#if primaryAction.icon}<Icon icon={primaryAction.icon} size="sm" />{/if}
 			{primaryAction.label}
 		</Button>
+	{/if}
+{/snippet}
+
+{#snippet searchSlot()}
+	{#if search}
+		<SearchInput
+			value={search.value}
+			onSearch={search.onSearch}
+			label={search.label}
+			placeholder={search.placeholder}
+			maxlength={search.maxlength}
+		/>
 	{/if}
 {/snippet}
 
@@ -133,8 +155,12 @@
 		{/snippet}
 	</PageHeader>
 
-	{#if searchSlot || savedViews}
-		<Toolbar search={searchSlot} tabs={savedViews ? tabsSlot : undefined} />
+	{#if search || savedViews}
+		<Toolbar search={search ? searchSlot : undefined} tabs={savedViews ? tabsSlot : undefined} />
+	{/if}
+
+	{#if chips}
+		{@render chips()}
 	{/if}
 
 	{#if filters}

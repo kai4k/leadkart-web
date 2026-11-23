@@ -8,13 +8,11 @@ import type { z } from 'zod';
 import type {
 	personDtoSchema,
 	listPersonMembershipsResponseSchema,
-	personListResponseSchema,
 	globalSuspendRequestSchema,
 	anonymisePersonRequestSchema
 } from './schemas';
 
 export type PersonDto = z.output<typeof personDtoSchema>;
 export type ListPersonMembershipsResponse = z.output<typeof listPersonMembershipsResponseSchema>;
-export type PersonListResponse = z.output<typeof personListResponseSchema>;
 export type GlobalSuspendRequest = z.output<typeof globalSuspendRequestSchema>;
 export type AnonymisePersonRequest = z.output<typeof anonymisePersonRequestSchema>;

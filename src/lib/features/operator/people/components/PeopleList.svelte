@@ -1,134 +1,84 @@
 <script lang="ts">
-	import PageHeader from '$layouts/PageHeader.svelte';
 	import { _ } from 'svelte-i18n';
-	import { page } from '$app/state';
-	import { goto } from '$app/navigation';
-	import type { ResolvedPathname } from '$app/types';
-	import { SvelteURL } from 'svelte/reactivity';
-	import { Avatar, Badge, DataTable, EmptyState, type DataTableColumn } from '$ui';
-	import { Users, Search, Icon } from '$icons';
-	import { personsListQuery } from '../queries';
-	import { formatDate } from '#lib/utils/format.ts';
-	import { personDisplayName, personLifecycle, personLifecycleKey } from '../view-models';
-	import type { PersonDto } from '../types';
-	import { describeError } from '$api/errors';
 	import { resolve } from '$app/paths';
-	import { initials } from '#lib/utils/person-name.ts';
+	import { EmptyState } from '$ui';
+	import { Search, Users } from '$icons';
+	import {
+		ResourceListPage,
+		IdentityCell,
+		type DataTableColumn
+	} from '#lib/components/data/index.ts';
+	import { DataTable } from '#lib/components/data/data-table/index.ts';
+	import type { SearchPersonHit } from '$features/search/schemas';
+	import { formatDate } from '#lib/utils/format.ts';
+	import { displayName } from '#lib/utils/person-name.ts';
+	import { PERSON_SEARCH_MIN, personsSearchQuery } from '../queries';
+	import { limitSearchBytes } from '../api';
 
-	const DEBOUNCE_MS = 300;
+	/**
+	 * The people of the platform, found by search. Go has no "list every person" route, so the page asks
+	 * nothing until there is a search of at least two characters (`GET /v1/search?include=persons`). The
+	 * text stays in this component: a person's email or name does not belong in the URL bar.
+	 */
+	let q = $state('');
+	const enabled = $derived(q.length >= PERSON_SEARCH_MIN);
 
-	// URL is the single source of truth for search state.
-	const urlSearch = $derived(page.url.searchParams.get('q') ?? '');
+	const query = personsSearchQuery(() => q);
+	const hits = $derived(enabled ? (query.data ?? []) : []);
 
-	let debounceHandle: ReturnType<typeof setTimeout> | undefined;
+	const nameOf = (p: SearchPersonHit) => displayName(p, { emailFallback: 'full' });
 
-	function onSearchInput(e: Event) {
-		const value = (e.currentTarget as HTMLInputElement).value;
-		clearTimeout(debounceHandle);
-		debounceHandle = setTimeout(() => {
-			const url = new SvelteURL(page.url.href);
-			if (value.trim()) url.searchParams.set('q', value.trim());
-			else url.searchParams.delete('q');
-			void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
-				replace: true,
-				reset: false
-			});
-		}, DEBOUNCE_MS);
-	}
-
-	const queryParams = $derived(urlSearch ? { q: urlSearch, limit: 20 } : { limit: 20 });
-	const query = $derived(personsListQuery(queryParams));
-
-	const persons = $derived(query.data?.persons ?? []);
-
-	const tableState = $derived(
-		query.isPending ? 'loading' : query.isError ? 'error' : persons.length === 0 ? 'empty' : 'ready'
-	);
-
-	const columns: DataTableColumn<PersonDto>[] = [
-		{
-			id: 'person',
-			header: 'Person',
-			accessor: (p) => personDisplayName(p),
-			cell: personCell
-		},
-		{
-			id: 'status',
-			header: 'Status',
-			accessor: (p) => (p.is_active ? 'active' : 'inactive'),
-			cell: statusCell
-		},
+	const columns: DataTableColumn<SearchPersonHit>[] = [
+		{ id: 'person', header: 'Person', accessor: nameOf, cell: personCell, primary: true },
 		{
 			id: 'created',
 			header: 'Joined',
-			accessor: 'created_at',
+			accessor: (p) => formatDate(p.created_at),
 			hideBelow: 'lg',
-			cell: dateCell
+			class: 'text-muted-foreground'
 		}
 	];
 </script>
 
-{#snippet personCell(p: PersonDto)}
-	{@const name = personDisplayName(p)}
-	<div class="cluster cluster-tight">
-		<Avatar initials={initials(name)} size="md" />
-		<div class="stack stack-tight min-w-0">
-			<a
-				href={resolve('/(app)/operator/persons/[id]', { id: p.id })}
-				class="text-foreground hover:text-primary-text truncate font-medium hover:underline"
-				>{name}</a
-			>
-			<span class="caption text-muted-foreground truncate">{p.email}</span>
-		</div>
-	</div>
+{#snippet personCell(p: SearchPersonHit)}
+	<IdentityCell name={nameOf(p)} subtitle={p.email} />
 {/snippet}
 
-{#snippet statusCell(p: PersonDto)}
-	{@const badge = personLifecycle(personLifecycleKey(p))}
-	<Badge variant={badge.variant} size="sm">{badge.label}</Badge>
+{#snippet empty()}
+	{#if !enabled}
+		<EmptyState
+			icon={Search}
+			title="Search for a person"
+			description="Type at least 2 characters of an email address or a name."
+		/>
+	{:else}
+		<EmptyState
+			icon={Users}
+			title="No one matches '{q}'"
+			description="Try a different email or name."
+		/>
+	{/if}
 {/snippet}
 
-{#snippet dateCell(p: PersonDto)}
-	<span class="caption text-muted-foreground">{formatDate(p.created_at)}</span>
-{/snippet}
-
-<div class="stack stack-relaxed">
-	<PageHeader
-		title={$_('pages.platformUsers.title')}
-		description={$_('pages.platformUsers.description')}
-	/>
-
-	<div class="flex flex-col gap-3 md:flex-row md:items-center">
-		<div class="relative flex-1">
-			<span class="pointer-events-none absolute inset-y-0 start-3 flex items-center">
-				<Icon icon={Search} size="sm" class="text-subtle-foreground" />
-			</span>
-			<input
-				type="search"
-				placeholder="Search by email or name"
-				value={urlSearch}
-				oninput={onSearchInput}
-				class="bg-card border border-border rounded-md w-full rounded-md py-2 ps-9 pe-3 text-sm"
-				aria-label="Search persons by email or name"
-			/>
-		</div>
-	</div>
-
-	<DataTable.Root
+<ResourceListPage
+	title={$_('pages.platformUsers.title')}
+	subtitle={$_('pages.platformUsers.description')}
+	search={{
+		value: q,
+		onSearch: (next) => (q = limitSearchBytes(next)),
+		label: 'Search people by email or name',
+		placeholder: 'Search by email or name',
+		maxlength: 100
+	}}
+>
+	<DataTable
 		{columns}
-		rows={persons}
-		rowKey={(p) => p.id}
-		state={tableState}
-		error={query.error ? describeError(query.error) : null}
-	>
-		{#snippet emptyState()}
-			<EmptyState
-				icon={Users}
-				title={urlSearch ? `No results for "${urlSearch}"` : 'No persons found'}
-				description={urlSearch
-					? 'Try a different email or name.'
-					: 'No persons in the platform yet.'}
-			/>
-		{/snippet}
-	</DataTable.Root>
-</div>
+		data={hits}
+		getRowId={(p) => p.id}
+		noun="people"
+		caption="People"
+		query={enabled ? query : undefined}
+		rowHref={(p) => resolve('/(app)/operator/persons/[id]', { id: p.id })}
+		{empty}
+	/>
+</ResourceListPage>

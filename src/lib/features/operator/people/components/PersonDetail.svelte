@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
 	import { createDialogState } from '#lib/hooks/index.ts';
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
 	import { SvelteMap } from 'svelte/reactivity';
-	import { Alert, Avatar, Badge, Button, Card, CopyButton, Skeleton } from '$ui';
+	import { Alert, Badge, Button, Card, CopyButton, Skeleton } from '$ui';
+	import { IdChip, IdentityCell, type DataTableColumn } from '#lib/components/data/index.ts';
+	import { DataTable } from '#lib/components/data/data-table/index.ts';
+	import { enterScopeMutation } from '$features/operator/scope';
 	import { QueryState } from '#lib/components/feedback/index.ts';
 	import { ArrowRight, Pause, Play, UserMinus, Icon } from '$icons';
 	import { tenantsListQuery } from '../../tenants';
@@ -21,13 +21,12 @@
 		canLiftSuspension,
 		canAnonymise
 	} from '../view-models';
-	import { P, session, userStatus } from '$features/auth';
+	import { P, session, userStatus, type UserDto } from '$features/auth';
 	import type { PersonDto } from '../types';
 	import GlobalSuspendDialog from './GlobalSuspendDialog.svelte';
 	import AnonymiseDialog from './AnonymiseDialog.svelte';
 	import { personActivityQuery, ActivityTimeline } from '$features/audit';
 	import { describeError } from '$api/errors';
-	import { initials } from '#lib/utils/person-name.ts';
 	import { formatDate } from '#lib/utils/format.ts';
 
 	type Props = { personId: string };
@@ -36,8 +35,9 @@
 	const suspendDialog = createDialogState<PersonDto>();
 	const anonymiseDialog = createDialogState<PersonDto>();
 
-	const query = $derived(personDetailQuery(personId));
-	const membershipsQuery = $derived(personMembershipsQuery(personId));
+	const query = personDetailQuery(() => personId);
+	// created once, asked only once the person exists (a 404 person has no memberships or activity to fetch)
+	const membershipsQuery = personMembershipsQuery(() => (query.data ? personId : ''));
 	const tenantsQuery = tenantsListQuery();
 	const liftMutation = liftGlobalSuspensionMutation();
 
@@ -56,16 +56,82 @@
 	const canManage = $derived(session.can(P.platformUsersManage));
 	const canAnonymiseOp = $derived(session.can(P.identityUsersAnonymise));
 
-	const activityQuery = $derived(personId ? personActivityQuery(personId) : null);
+	const activityQuery = personActivityQuery(() => (query.data ? personId : ''));
+	const enterMutation = enterScopeMutation();
 
 	function liftSuspension(id: string) {
 		liftMutation.mutate(id);
 	}
+	/**
+	 * Open a tenant the person belongs to. The tenant's slug goes to the scope POST (the BFF resolves it and
+	 * sets the scope cookie), never into the URL bar.
+	 */
 	function openTenant(slug: string) {
 		// not-a-guard: opens a tenant from a membership row; capabilities only hide manage / anonymise actions
-		if (confirmLeave()) goto(resolve(`/(app)/operator/tenants?q=${slug}`));
+		enterMutation.mutate({ slug });
 	}
+
+	const membershipColumns: DataTableColumn<UserDto>[] = [
+		{
+			id: 'tenant',
+			header: 'Tenant',
+			accessor: (m) => tenantsById.get(m.tenant_id)?.display_name ?? m.tenant_id,
+			cell: tenantCell,
+			primary: true
+		},
+		{ id: 'designation', header: 'Designation', accessor: (m) => m.designation },
+		{ id: 'department', header: 'Department', accessor: (m) => m.department, hideBelow: 'md' },
+		{
+			id: 'joined',
+			header: 'Joined',
+			accessor: (m) => formatDate(m.joined_at),
+			hideBelow: 'sm',
+			class: 'text-muted-foreground tabular-nums'
+		},
+		{
+			id: 'status',
+			header: 'Status',
+			accessor: (m) => userStatus(m.status).label,
+			cell: statusCell
+		}
+	];
 </script>
+
+{#snippet tenantCell(m: UserDto)}
+	{@const t = tenantsById.get(m.tenant_id)}
+	{#if t}
+		<div class="stack stack-tight">
+			<span class="text-foreground font-medium">{t.display_name}</span>
+			<code class="caption text-muted-foreground">{t.slug}</code>
+		</div>
+	{:else}
+		<code class="caption text-muted-foreground">{m.tenant_id}</code>
+	{/if}
+{/snippet}
+
+{#snippet statusCell(m: UserDto)}
+	{@const membership = userStatus(m.status)}
+	<Badge variant={membership.variant} size="sm">{membership.label}</Badge>
+{/snippet}
+
+{#snippet membershipActions(m: UserDto)}
+	{@const t = tenantsById.get(m.tenant_id)}
+	{#if t}
+		<Button
+			variant="ghost"
+			size="sm"
+			disabled={enterMutation.isPending}
+			onclick={() => openTenant(t.slug)}
+			aria-label={`Open tenant ${t.display_name}`}
+		>
+			<Icon icon={ArrowRight} size="sm" />
+		</Button>
+	{/if}
+{/snippet}
+
+{#snippet empty()}
+	<p class="body-base text-muted-foreground">No memberships found.</p>
+{/snippet}
 
 <QueryState {query} noun="person" notFound="No person with that ID, or you don't have access.">
 	{#snippet skeleton()}
@@ -98,24 +164,15 @@
 					<Card.Title>Identity</Card.Title>
 				</Card.Header>
 				<Card.Content>
-					<div class="flex flex-col gap-4 sm:flex-row sm:items-start">
-						<Avatar initials={initials(displayName)} size="lg" />
-						<div class="stack stack-tight min-w-0">
-							<div class="flex flex-wrap items-center gap-2">
-								<span class="h2">{displayName}</span>
-								<Badge variant={badge.variant} size="sm">{badge.label}</Badge>
-							</div>
-							<div class="cluster cluster-tight flex-wrap">
-								<p class="body-base text-muted-foreground break-all">{p.email}</p>
-								<CopyButton value={p.email} label="Copy email" />
-							</div>
-							<div class="cluster cluster-tight flex-wrap">
-								<p class="caption text-subtle-foreground">
-									ID <code class="break-all">{p.id}</code>
-								</p>
-								<CopyButton value={p.id} label="Copy person ID" />
-							</div>
+					<div class="stack stack-tight">
+						<div class="flex flex-wrap items-center gap-2">
+							<IdentityCell name={displayName} subtitle={p.email} />
+							<CopyButton value={p.email} label="Copy email" />
+							<Badge variant={badge.variant} size="sm">{badge.label}</Badge>
 						</div>
+						<p class="caption text-subtle-foreground">
+							ID <IdChip value={p.id} label="person ID" short={false} />
+						</p>
 					</div>
 
 					{#if p.is_globally_suspended && p.global_suspension_reason}
@@ -134,74 +191,16 @@
 					<Card.Description>Cross-tenant membership records for this person.</Card.Description>
 				</Card.Header>
 				<Card.Content>
-					<QueryState
-						query={membershipsQuery}
+					<DataTable
+						columns={membershipColumns}
+						data={memberships}
+						getRowId={(m) => m.membership_id}
 						noun="memberships"
-						isEmpty={(d) => d.memberships.length === 0}
-					>
-						{#snippet skeleton()}
-							{#each [0, 1, 2] as i (i)}
-								<Skeleton class="h-8 w-full rounded-md" />
-							{/each}
-						{/snippet}
-						{#snippet empty()}
-							<p class="body-base text-muted-foreground">No memberships found.</p>
-						{/snippet}
-						<div class="overflow-x-auto">
-							<table class="w-full text-sm">
-								<thead>
-									<tr class="border-border border-b">
-										<th class="caption text-muted-foreground py-2 pe-4 text-start">Tenant</th>
-										<th class="caption text-muted-foreground py-2 pe-4 text-start">Designation</th>
-										<th class="caption text-muted-foreground py-2 pe-4 text-start">Department</th>
-										<th class="caption text-muted-foreground py-2 pe-4 text-start">Joined</th>
-										<th class="caption text-muted-foreground py-2 pe-4 text-start">Status</th>
-										<th class="caption text-muted-foreground py-2 text-end"></th>
-									</tr>
-								</thead>
-								<tbody>
-									{#each memberships as m (m.membership_id)}
-										{@const t = tenantsById.get(m.tenant_id)}
-										{@const membership = userStatus(m.status)}
-										<tr class="border-border border-b align-middle last:border-0">
-											<td class="py-2 pe-4">
-												{#if t}
-													<div class="stack stack-tight">
-														<span class="text-foreground font-medium">{t.display_name}</span>
-														<code class="caption text-muted-foreground">{t.slug}</code>
-													</div>
-												{:else}
-													<code class="caption text-muted-foreground">{m.tenant_id}</code>
-												{/if}
-											</td>
-											<td class="text-foreground py-2 pe-4">{m.designation || '—'}</td>
-											<td class="text-foreground py-2 pe-4">{m.department || '—'}</td>
-											<td class="text-muted-foreground py-2 pe-4 tabular-nums">
-												{formatDate(m.joined_at)}
-											</td>
-											<td class="py-2 pe-4">
-												<Badge variant={membership.variant} size="sm">
-													{membership.label}
-												</Badge>
-											</td>
-											<td class="py-2 text-end">
-												{#if t}
-													<Button
-														variant="ghost"
-														size="sm"
-														onclick={() => openTenant(t.slug)}
-														aria-label={`Find tenant ${t.display_name}`}
-													>
-														<Icon icon={ArrowRight} size="sm" />
-													</Button>
-												{/if}
-											</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						</div>
-					</QueryState>
+						caption="Memberships"
+						query={membershipsQuery}
+						rowActions={membershipActions}
+						{empty}
+					/>
 				</Card.Content>
 			</Card.Root>
 

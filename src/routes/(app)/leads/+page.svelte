@@ -18,7 +18,6 @@
 	import { ResourceListPage, type BulkAction } from '#lib/components/data/index.ts';
 	import { Tabs } from '$ui';
 	import BulkUploadDrawerShared from '#lib/components/data/BulkUploadDrawer.svelte';
-	import { TextField } from '$form';
 	import { Upload } from '$icons';
 	import {
 		createUrlFilters,
@@ -231,19 +230,16 @@
 		onClick: () => (bulkUploadOpen = true)
 	}}
 	{savedViews}
+	search={{
+		value: (filters.filters.q ?? '').trim(),
+		onSearch: setQ,
+		label: 'Search leads',
+		placeholder: 'Search by name, mobile, GSTIN…',
+		maxlength: 100
+	}}
 	filters={{ config: LEAD_FILTER_FIELDS, instance: filters }}
 	bulk={{ selection, actions: bulkActions }}
 >
-	{#snippet search()}
-		<TextField
-			label="Search leads"
-			srLabel
-			placeholder="Search by name, mobile, GSTIN…"
-			value={filters.filters.q ?? ''}
-			oninput={(e) => setQ((e.currentTarget as HTMLInputElement).value)}
-		/>
-	{/snippet}
-
 	<div class="stack stack-relaxed">
 		<Tabs.Root value={viewMode} onValueChange={(v: string) => setViewMode(v as ViewMode)}>
 			<Tabs.List>

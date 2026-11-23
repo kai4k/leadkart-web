@@ -7,7 +7,7 @@
 	let { data } = $props();
 
 	const personId = $derived(data.personId);
-	const query = $derived(personDetailQuery(personId));
+	const query = personDetailQuery(() => data.personId);
 	const title = $derived(query.data?.email ?? 'Person');
 	const personName = $derived(query.data ? personDisplayName(query.data) : 'Person');
 

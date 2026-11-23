@@ -13,20 +13,20 @@ const activityKeys = {
 	me: (params?: ActivityParams) => ['activity', 'me', params ?? {}] as const
 };
 
-export function tenantActivityQuery(tenantId: string, params?: ActivityParams) {
+export function tenantActivityQuery(tenantId: () => string, params?: ActivityParams) {
 	return createQuery(() => ({
-		queryKey: activityKeys.tenant(tenantId, params),
-		queryFn: () => api.listTenantActivity(tenantId, params),
-		enabled: Boolean(tenantId),
+		queryKey: activityKeys.tenant(tenantId(), params),
+		queryFn: () => api.listTenantActivity(tenantId(), params),
+		enabled: Boolean(tenantId()),
 		staleTime: 60_000
 	}));
 }
 
-export function personActivityQuery(personId: string, params?: ActivityParams) {
+export function personActivityQuery(personId: () => string, params?: ActivityParams) {
 	return createQuery(() => ({
-		queryKey: activityKeys.person(personId, params),
-		queryFn: () => api.listPersonActivity(personId, params),
-		enabled: Boolean(personId),
+		queryKey: activityKeys.person(personId(), params),
+		queryFn: () => api.listPersonActivity(personId(), params),
+		enabled: Boolean(personId()),
 		staleTime: 60_000
 	}));
 }

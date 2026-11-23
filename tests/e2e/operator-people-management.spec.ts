@@ -6,7 +6,8 @@ import { resetMock, registerMocks, registerMock } from './helpers/mock';
  * Operator people management e2e — /operator/persons + /operator/persons/[id]
  *
  *   Positive:
- *     List renders persons from /v1/platform/persons
+ *     The list asks nothing until there is a search; a search of 2+ characters lists the hits of
+ *     GET /v1/search?include=persons (Go has no list-every-person route)
  *     Person detail loads + memberships render
  *
  *   Negative:
@@ -41,17 +42,39 @@ test.describe('People list — positive', () => {
 		await resetMock();
 	});
 
-	test('list renders persons', async ({ page }) => {
+	test('nothing is listed until there is a search; the search keeps its text out of the URL', async ({
+		page
+	}) => {
 		await signInAsOperator(page);
 		await registerMock({
 			method: 'GET',
-			path: '/api/v1/platform/persons',
+			path: '/api/v1/search',
 			status: 200,
-			body: { persons: [PERSON_AAA], next_cursor: null }
+			body: {
+				persons: [
+					{
+						id: PERSON_AAA.id,
+						email: PERSON_AAA.email,
+						first_name: PERSON_AAA.first_name,
+						last_name: PERSON_AAA.last_name,
+						created_at: PERSON_AAA.created_at
+					}
+				],
+				tenants: [],
+				has_partial: false
+			}
 		});
 		await page.goto('/operator/persons');
+		await page.waitForSelector('html[data-hydrated="true"]');
+		await expect(page.getByText('Search for a person')).toBeVisible();
+		await page.getByRole('searchbox', { name: /search people/i }).fill('ali');
 		await expect(page.getByText('Alice Anderson')).toBeVisible();
 		await expect(page.getByText('alice@acme.test')).toBeVisible();
+		await expect(page.getByRole('link', { name: /Alice Anderson/ })).toHaveAttribute(
+			'href',
+			`/operator/persons/${PERSON_AAA.id}`
+		);
+		expect(new URL(page.url()).search).toBe('');
 	});
 
 	test('person detail loads + memberships render', async ({ page }) => {
@@ -166,11 +189,13 @@ test.describe('People list — negative', () => {
 		await signInAsOperator(page);
 		await registerMock({
 			method: 'GET',
-			path: '/api/v1/platform/persons',
+			path: '/api/v1/search',
 			status: 500,
-			body: { error: 'internal_error', message: 'person list failed' }
+			body: { error: 'internal_error', message: 'search failed' }
 		});
 		await page.goto('/operator/persons');
+		await page.waitForSelector('html[data-hydrated="true"]');
+		await page.getByRole('searchbox', { name: /search people/i }).fill('ali');
 		await expect(page.locator('[role="alert"]').first()).toBeVisible({ timeout: 5000 });
 	});
 

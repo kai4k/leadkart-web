@@ -40,6 +40,7 @@
 
 <script lang="ts" generics="TItem extends import('#lib/hooks/index.ts').SelectableItem">
 	import type { BulkSelection } from '#lib/hooks/index.ts';
+	import { _ } from 'svelte-i18n';
 	import { Button, ConfirmDialog, Dropdown } from '$ui';
 	import { Icon, ChevronDown } from '$icons';
 	import { cn } from '#lib/utils/cn.ts';
@@ -170,13 +171,9 @@
 			{/each}
 		</div>
 
-		<button
-			type="button"
-			class="label text-muted-foreground hover:text-foreground hover:underline"
-			onclick={() => selection.clear()}
-		>
-			Clear selection
-		</button>
+		<Button variant="ghost" size="sm" onclick={() => selection.clear()}>
+			{$_('dataList.clearSelection')}
+		</Button>
 	</div>
 {/if}
 

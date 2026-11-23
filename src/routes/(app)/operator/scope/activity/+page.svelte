@@ -7,7 +7,7 @@
 
 	let { data }: { data: LayoutData } = $props();
 
-	const activityQuery = $derived(tenantActivityQuery(data.tenant.id));
+	const activityQuery = tenantActivityQuery(() => data.tenant.id);
 </script>
 
 <svelte:head

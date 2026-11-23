@@ -1,69 +1,63 @@
 <script lang="ts">
-	import PageHeader from '$layouts/PageHeader.svelte';
 	import { _ } from 'svelte-i18n';
-	import { page } from '$app/state';
-	import { goto } from '$app/navigation';
-	import type { ResolvedPathname } from '$app/types';
-	import { SvelteURL } from 'svelte/reactivity';
-	import { Alert, Badge, Button, DataTable, EmptyState, Spinner, type DataTableColumn } from '$ui';
+	import { Badge, Button, EmptyState, Spinner } from '$ui';
+	import { Building2, Eye, Pause, Play, Plus, RotateCcw, Shield, Trash2, Icon } from '$icons';
 	import {
-		Building2,
-		Eye,
-		Pause,
-		Play,
-		Plus,
-		RotateCcw,
-		Search,
-		Shield,
-		Trash2,
-		Icon
-	} from '$icons';
+		ResourceListPage,
+		RowActionsMenu,
+		StatusChips,
+		type DataTableColumn,
+		type RowAction
+	} from '#lib/components/data/index.ts';
+	import { DataTable } from '#lib/components/data/data-table/index.ts';
 	import { activateTenantMutation, restoreTenantMutation, tenantsListQuery } from '../queries';
 	import { canActivate, canMarkForDeletion, canRestore, canSuspend } from '../view-models';
 	import { tenantStatus } from '$features/tenant';
 	import { P, session } from '$features/auth';
-	import { NetworkError } from '$api/errors';
-	import { getListErrorMessage } from '$api/error-messages';
 	import { enterScopeMutation } from '$features/operator/scope';
 	import CreateTenantDrawer from './CreateTenantDrawer.svelte';
 	import SuspendDialog from './SuspendDialog.svelte';
 	import MarkForDeletionDialog from './MarkForDeletionDialog.svelte';
 	import { ImpersonateModal, impersonation } from '../../impersonation';
 	import type { TenantDto } from '../types';
-	import { createDialogState, createListPagination } from '#lib/hooks/index.ts';
+	import { createDialogState, createListPagination, createUrlFilters } from '#lib/hooks/index.ts';
 
 	const PAGE_SIZE = 10;
+	const STATUSES = ['active', 'suspended', 'pending', 'pending_deletion'] as const;
+	type Status = (typeof STATUSES)[number];
+	/** Go cuts a search at 100 bytes; the box stops a little before. */
+	const SEARCH_MAX = 100;
 
 	const createDialog = createDialogState();
 	const suspendDialog = createDialogState<TenantDto>();
 	const markDialog = createDialogState<TenantDto>();
 	const impersonateDialog = createDialogState<TenantDto>();
-	/** Slug of the tenant currently being opened — drives the inline
-	 *  row spinner and disables further row clicks while in flight. */
+	/** Slug of the tenant currently being opened: drives the inline row spinner and blocks a second open. */
 	let openingScopeSlug = $state<string | null>(null);
 
-	const search = $derived(page.url.searchParams.get('q') ?? '');
-	const statusFilter = $derived(page.url.searchParams.get('status') ?? 'all');
+	const urlFilters = createUrlFilters<{
+		q: string | undefined;
+		status: string | undefined;
+		page: string | undefined;
+	}>({
+		q: { type: 'string', label: 'Search' },
+		status: { type: 'string', label: 'Status' },
+		page: { type: 'string', label: 'Page' }
+	});
 
-	function setStatusFilter(value: string) {
-		const url = new SvelteURL(page.url.href);
-		if (value && value !== 'all') url.searchParams.set('status', value);
-		else url.searchParams.delete('status');
-		url.searchParams.delete('page');
-		// not-a-guard: syncs the URL filters
-		void goto(`${url.pathname}${url.search}` as ResolvedPathname, { replace: true });
+	/** What the URL says is searched: trimmed, and as long as Go reads. */
+	const search = $derived((urlFilters.filters.q ?? '').trim().slice(0, SEARCH_MAX));
+	/** A status the list knows, else none: an unknown `?status=` is "all", not an empty page. */
+	const statusFilter = $derived<Status | null>(
+		STATUSES.find((s) => s === urlFilters.filters.status) ?? null
+	);
+
+	// A changed search or status starts at page 1.
+	function setStatusFilter(value: string | null) {
+		urlFilters.setMany({ status: value ?? undefined, page: undefined });
 	}
-
 	function setSearch(value: string) {
-		const url = new SvelteURL(page.url.href);
-		if (value) url.searchParams.set('q', value);
-		else url.searchParams.delete('q');
-		url.searchParams.delete('page');
-		// not-a-guard: syncs the URL filters
-		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
-			replace: true,
-			reset: false
-		});
+		urlFilters.setMany({ q: value || undefined, page: undefined });
 	}
 
 	const canCreate = $derived(session.can(P.platformTenantsCreate));
@@ -81,7 +75,7 @@
 
 	const filtered = $derived.by(() => {
 		const all = query.data?.tenants ?? [];
-		const q = search.trim().toLowerCase();
+		const q = search.toLowerCase();
 		const matched = q
 			? all.filter(
 					(t: TenantDto) =>
@@ -90,66 +84,38 @@
 						t.legal_name.toLowerCase().includes(q)
 				)
 			: all;
-		const byStatus =
-			statusFilter === 'all'
-				? matched
-				: matched.filter((t: TenantDto) => t.status === statusFilter);
+		const byStatus = statusFilter
+			? matched.filter((t: TenantDto) => t.status === statusFilter)
+			: matched;
 		const platform = byStatus.find((t: TenantDto) => t.slug === 'platform');
 		const rest = byStatus.filter((t: TenantDto) => t.slug !== 'platform');
 		return platform ? [platform, ...rest] : rest;
 	});
 
-	const statusCounts = $derived.by(() => {
+	const statusOptions = $derived.by(() => {
 		const all = query.data?.tenants ?? [];
-		const counts = { all: all.length, active: 0, suspended: 0, pending_deletion: 0, pending: 0 };
-		for (const t of all) {
-			if (t.status === 'active') counts.active++;
-			else if (t.status === 'suspended') counts.suspended++;
-			else if (t.status === 'pending_deletion') counts.pending_deletion++;
-			else if (t.status === 'pending') counts.pending++;
-		}
-		return counts;
+		const count = (s: Status) => all.filter((t: TenantDto) => t.status === s).length;
+		return [
+			{ value: 'active', label: 'Active', count: count('active') },
+			{ value: 'suspended', label: 'Suspended', count: count('suspended') },
+			{ value: 'pending', label: 'Pending', count: count('pending') },
+			{ value: 'pending_deletion', label: 'Pending deletion', count: count('pending_deletion') }
+		];
 	});
 
-	const statusOptions = $derived([
-		{ value: 'all', label: 'All', count: statusCounts.all },
-		{ value: 'active', label: 'Active', count: statusCounts.active },
-		{ value: 'suspended', label: 'Suspended', count: statusCounts.suspended },
-		{ value: 'pending', label: 'Pending', count: statusCounts.pending },
-		{
-			value: 'pending_deletion',
-			label: 'Pending deletion',
-			count: statusCounts.pending_deletion
-		}
-	] as const);
-
 	const pagination = createListPagination(() => filtered, { pageSize: PAGE_SIZE });
-
-	const tableState = $derived(
-		query.isPending
-			? 'loading'
-			: query.isError
-				? 'error'
-				: pagination.paged.length === 0
-					? 'empty'
-					: 'ready'
-	);
-
-	const listErrorCopy = $derived(getListErrorMessage(query.error, 'tenants'));
-
-	import { RowActionsMenu, type RowAction } from '#lib/components/data/index.ts';
 
 	const columns: DataTableColumn<TenantDto>[] = [
 		{ id: 'name', header: 'Tenant', accessor: (t) => t.display_name, cell: nameCell },
 		{
 			id: 'slug',
 			header: 'Slug',
-			accessor: 'slug',
+			accessor: (t) => t.slug,
 			hideBelow: 'md',
 			class: 'text-muted-foreground font-mono text-xs'
 		},
 		{ id: 'status', header: 'Status', accessor: (t) => t.status, cell: statusCell },
-		{ id: 'legal', header: 'Legal name', accessor: 'legal_name', hideBelow: 'lg' }
+		{ id: 'legal', header: 'Legal name', accessor: (t) => t.legal_name, hideBelow: 'lg' }
 	];
 
 	/** The tenant's lifecycle menu: icons on every item, the destructive one last. */
@@ -187,20 +153,14 @@
 		return list;
 	}
 
-	function openImpersonate(tenant: TenantDto) {
-		impersonateDialog.show(tenant);
-	}
-
 	/**
-	 * Enter tenant context. POSTs the slug to the BFF, which resolves
-	 * it server-side, stores the tenant identifier in the lk_op_tenant
-	 * httpOnly cookie, and returns 204. Then we clear the TanStack cache
-	 * (previous scope's data is no longer authoritative) and navigate
-	 * to /operator/scope/profile — the URL never reveals which tenant
-	 * the operator is acting on.
+	 * Enter tenant context. POSTs the slug to the BFF, which resolves it server-side, stores the
+	 * tenant identifier in the lk_op_tenant httpOnly cookie, and answers 204. Then the cache is cleared
+	 * (the previous scope's data is no longer authoritative) and the page goes to
+	 * /operator/scope/profile: the URL never reveals which tenant the operator is acting on.
 	 */
 	function enterScope(tenant: TenantDto) {
-		if (openingScopeSlug !== null) return; // a row is already in-flight
+		if (openingScopeSlug !== null) return; // a row is already in flight
 		openingScopeSlug = tenant.slug;
 		enterMutation.mutate(
 			{ slug: tenant.slug },
@@ -218,7 +178,15 @@
 		{#if tenant.slug === 'platform'}
 			<Icon icon={Shield} size="sm" class="text-primary-text" />
 		{/if}
-		<span class="text-foreground font-medium">{tenant.display_name}</span>
+		<!-- The row is not clickable; its name is the control that opens the tenant. -->
+		<Button
+			variant="link"
+			class="h-auto p-0 font-medium"
+			disabled={openingScopeSlug !== null}
+			onclick={() => enterScope(tenant)}
+		>
+			{tenant.display_name}
+		</Button>
 		{#if tenant.slug === 'platform'}
 			<Badge variant="brand" size="sm">Platform</Badge>
 		{/if}
@@ -237,7 +205,7 @@
 			<span class="caption text-muted-foreground">Opening…</span>
 		</div>
 	{:else if tenant.slug !== 'platform'}
-		<div class="cluster cluster-tight">
+		<div class="cluster cluster-tight justify-end">
 			{#if canImpersonate}
 				<Button
 					variant="ghost"
@@ -245,10 +213,7 @@
 					disabled={openingScopeSlug !== null ||
 						impersonation.active !== null ||
 						impersonation.status === 'mutating'}
-					onclick={(e) => {
-						e.stopPropagation();
-						openImpersonate(tenant);
-					}}
+					onclick={() => impersonateDialog.show(tenant)}
 					aria-label="Impersonate {tenant.display_name}"
 				>
 					<Icon icon={Eye} size="sm" /> Impersonate
@@ -264,127 +229,65 @@
 	{/if}
 {/snippet}
 
-<div class="stack stack-relaxed">
-	<PageHeader title={$_('pages.tenants.title')} description={$_('pages.tenants.description')}>
-		{#snippet actions()}
-			{#if canCreate}
+{#snippet empty()}
+	<EmptyState
+		icon={Building2}
+		title={search || statusFilter ? 'No tenants match' : 'No tenants yet'}
+		description={search || statusFilter
+			? 'Try a different name, slug or status.'
+			: 'Register the first one using the button above.'}
+	>
+		{#snippet action()}
+			{#if !search && !statusFilter && canCreate}
 				<Button onclick={() => createDialog.show()}>
 					<Icon icon={Plus} size="sm" /> Register tenant
 				</Button>
 			{/if}
 		{/snippet}
-	</PageHeader>
+	</EmptyState>
+{/snippet}
 
-	<div class="stack stack-tight">
-		<div class="cluster">
-			<div class="relative flex-1">
-				<span class="pointer-events-none absolute inset-y-0 start-3 flex items-center">
-					<Icon icon={Search} size="sm" class="text-subtle-foreground" />
-				</span>
-				<input
-					type="search"
-					placeholder="Filter by name, slug, or legal name"
-					value={search}
-					oninput={(e) => setSearch((e.currentTarget as HTMLInputElement).value)}
-					class="bg-card border border-border rounded-md w-full rounded-md py-2 ps-9 pe-3 text-sm"
-					aria-label="Filter tenants"
-				/>
-			</div>
-		</div>
+{#snippet chips()}
+	<StatusChips
+		label="Filter tenants by lifecycle status"
+		options={statusOptions}
+		value={statusFilter}
+		onChange={setStatusFilter}
+	/>
+{/snippet}
 
-		<nav class="cluster cluster-tight" aria-label="Filter tenants by lifecycle status">
-			{#each statusOptions as opt (opt.value)}
-				{@const active = statusFilter === opt.value}
-				<button
-					type="button"
-					onclick={() => setStatusFilter(opt.value)}
-					aria-pressed={active}
-					class="label inline-flex items-center gap-2 rounded-full px-3 py-1 transition-colors {active
-						? 'bg-primary text-primary-foreground'
-						: 'bg-muted text-muted-foreground hover:text-foreground'}"
-				>
-					{opt.label}
-					<span class="caption tabular-nums">{opt.count}</span>
-				</button>
-			{/each}
-		</nav>
-	</div>
-
-	<DataTable.Root
+<ResourceListPage
+	title={$_('pages.tenants.title')}
+	subtitle={$_('pages.tenants.description')}
+	primaryAction={canCreate
+		? { label: 'Register tenant', icon: Plus as never, onClick: () => createDialog.show() }
+		: undefined}
+	search={{
+		value: search,
+		onSearch: setSearch,
+		label: 'Filter tenants',
+		placeholder: 'Filter by name, slug, or legal name',
+		maxlength: SEARCH_MAX
+	}}
+	{chips}
+>
+	<DataTable
 		{columns}
-		rows={pagination.paged}
-		rowKey={(t) => t.id}
-		state={tableState}
-		error={listErrorCopy}
-		onRowClick={enterScope}
+		data={pagination.paged}
+		getRowId={(t) => t.id}
+		noun="tenants"
+		caption="Tenants"
+		{query}
 		{rowActions}
-	>
-		{#snippet emptyState()}
-			{#if query.isError}
-				{@const err = query.error}
-				<Alert
-					variant={err instanceof NetworkError ? 'warning' : 'destructive'}
-					title="Failed to load tenants"
-				>
-					{listErrorCopy}
-					<Button variant="ghost" size="sm" onclick={() => query.refetch()} class="mt-2"
-						>Retry</Button
-					>
-				</Alert>
-			{:else}
-				<EmptyState
-					icon={Building2}
-					title={search ? `No matches for '${search}'` : 'No tenants yet'}
-					description={search
-						? 'Try a different name or slug.'
-						: 'Register the first one using the button above.'}
-				>
-					{#snippet action()}
-						{#if !search && canCreate}
-							<Button onclick={() => createDialog.show()}>
-								<Icon icon={Plus} size="sm" /> Register tenant
-							</Button>
-						{/if}
-					{/snippet}
-				</EmptyState>
-			{/if}
-		{/snippet}
-	</DataTable.Root>
-
-	{#if pagination.pageCount > 1}
-		<nav class="cluster cluster-spread" aria-label="Tenant list pagination">
-			<p class="caption text-muted-foreground">
-				{(pagination.currentPage - 1) * PAGE_SIZE + 1}–{Math.min(
-					pagination.currentPage * PAGE_SIZE,
-					filtered.length
-				)} of {filtered.length}
-			</p>
-			<div class="cluster cluster-tight">
-				<Button
-					variant="ghost"
-					size="sm"
-					disabled={pagination.currentPage <= 1}
-					onclick={() => pagination.setPage(pagination.currentPage - 1)}
-					aria-label="Previous page"
-				>
-					← Prev
-				</Button>
-				<span class="caption">
-					Page {pagination.currentPage} / {pagination.pageCount}
-				</span>
-				<Button
-					variant="ghost"
-					size="sm"
-					disabled={pagination.currentPage >= pagination.pageCount}
-					onclick={() => pagination.setPage(pagination.currentPage + 1)}
-					aria-label="Next page"
-				>
-					Next →
-				</Button>
-			</div>
-		</nav>
-	{/if}
-</div>
+		{empty}
+		pagination={{
+			mode: 'offset',
+			page: pagination.currentPage,
+			pageCount: pagination.pageCount,
+			onPageChange: pagination.setPage
+		}}
+	/>
+</ResourceListPage>
 
 <CreateTenantDrawer bind:open={createDialog.open} onOpenChange={createDialog.onOpenChange} />
 <SuspendDialog

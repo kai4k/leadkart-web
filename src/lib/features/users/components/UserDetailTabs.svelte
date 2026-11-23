@@ -49,7 +49,7 @@
 	const removeManager = removeManagerMutation();
 	const may = createMemberPermissions();
 
-	const activityQuery = $derived(personActivityQuery(user.person_id));
+	const activityQuery = personActivityQuery(() => user.person_id);
 </script>
 
 {#snippet statusBadge()}

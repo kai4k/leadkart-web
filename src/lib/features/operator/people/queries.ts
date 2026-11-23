@@ -1,47 +1,56 @@
 /**
  * TanStack Query hooks for the operator people surface.
  */
-import { createQuery } from '@tanstack/svelte-query';
+import { createQuery, keepPreviousData } from '@tanstack/svelte-query';
 import * as api from './api';
-import type { PersonListParams } from './api';
 import { createResourceMutation } from '#lib/api/mutations.ts';
 
 // ── Query key factory ──────────────────────────────────────────────
 
 const peopleKeys = {
 	all: ['persons'] as const,
-	list: (params?: PersonListParams) => [...peopleKeys.all, 'list', params ?? {}] as const,
+	search: (q: string) => [...peopleKeys.all, 'search', q] as const,
 	detail: (id: string) => [...peopleKeys.all, 'detail', id] as const,
 	memberships: (id: string) => [...peopleKeys.all, 'memberships', id] as const
 };
 
 // ── Query hooks ────────────────────────────────────────────────────
 
-/** Persons list with optional search — operator-scoped (platform.users.view). */
-export function personsListQuery(params?: PersonListParams) {
+/** What the search box may send: Go reads 2 to 100 characters of `q`. */
+export const PERSON_SEARCH_MIN = 2;
+
+/**
+ * Persons that match a search: email or name. Go has no "list every person" route, so nothing is
+ * asked until there is a query of at least 2 characters (`GET /v1/search?include=persons`).
+ */
+export function personsSearchQuery(getQuery: () => string) {
+	return createQuery(() => {
+		const q = getQuery();
+		return {
+			queryKey: peopleKeys.search(q),
+			queryFn: ({ signal }) => api.searchPersons(q, signal),
+			enabled: q.length >= PERSON_SEARCH_MIN,
+			placeholderData: keepPreviousData,
+			staleTime: 30_000
+		};
+	});
+}
+
+/** Single person by ID, created once: the id is read each time the query runs (platform.users.view). */
+export function personDetailQuery(personId: () => string) {
 	return createQuery(() => ({
-		queryKey: peopleKeys.list(params),
-		queryFn: () => api.listPersons(params),
-		enabled: true,
-		staleTime: 30_000
+		queryKey: peopleKeys.detail(personId()),
+		queryFn: () => api.getPerson(personId()),
+		enabled: Boolean(personId())
 	}));
 }
 
-/** Single person by ID — operator-scoped (platform.users.view). */
-export function personDetailQuery(personId: string) {
+/** Cross-tenant memberships for a person, created once — operator-scoped. */
+export function personMembershipsQuery(personId: () => string) {
 	return createQuery(() => ({
-		queryKey: peopleKeys.detail(personId),
-		queryFn: () => api.getPerson(personId),
-		enabled: Boolean(personId)
-	}));
-}
-
-/** Cross-tenant memberships for a person — operator-scoped. */
-export function personMembershipsQuery(personId: string) {
-	return createQuery(() => ({
-		queryKey: peopleKeys.memberships(personId),
-		queryFn: () => api.listPersonMemberships(personId),
-		enabled: Boolean(personId)
+		queryKey: peopleKeys.memberships(personId()),
+		queryFn: () => api.listPersonMemberships(personId()),
+		enabled: Boolean(personId())
 	}));
 }
 

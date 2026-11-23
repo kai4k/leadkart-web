@@ -212,6 +212,15 @@
 		"sortClear": "Clear sorting",
 		"copyId": "Copy {label}"
 	},
+	"dataList": {
+		"all": "All",
+		"showFilters": "Show filters",
+		"hideFilters": "Hide filters",
+		"resetFilters": "Reset filters",
+		"clearAll": "Clear all filters",
+		"clearSelection": "Clear selection",
+		"filterCount": "{count} selected"
+	},
 	"reload": {
 		"context": "You switched company or account in another tab, so this page was reloaded. Anything unsaved here was not saved.",
 		"session": "You signed in or out in another tab, so this page was reloaded. Anything unsaved here was not saved.",

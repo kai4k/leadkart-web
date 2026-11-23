@@ -15,6 +15,8 @@ export { default as Toolbar } from './Toolbar.svelte';
 export { default as FilterBar } from './FilterBar.svelte';
 export type { FilterBarField, FilterBarFieldType, FilterBarOption } from './FilterBar.svelte';
 export { default as FilterChips } from './FilterChips.svelte';
+export { default as SearchInput } from './SearchInput.svelte';
+export { default as StatusChips } from './StatusChips.svelte';
 export { default as BulkActionBar } from './BulkActionBar.svelte';
 export type { BulkAction, BulkActionSubItem } from './BulkActionBar.svelte';
 export { default as BulkUploadDrawer } from './BulkUploadDrawer.svelte';

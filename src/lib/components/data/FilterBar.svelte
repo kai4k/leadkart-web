@@ -21,24 +21,26 @@
 <script lang="ts" generics="TFilters extends import('#lib/hooks/index.ts').UrlFiltersBase">
 	import { _ } from 'svelte-i18n';
 	import type { UrlFilters } from '#lib/hooks/index.ts';
-	import { Select, TextField } from '$form';
-	import { Icon, ChevronDown, ChevronUp } from '$icons';
+	import { Select, TextField, DateRangePicker } from '#lib/components/form/index.ts';
+	import { Button } from '#lib/components/ui/button/index.ts';
+	import { Checkbox } from '#lib/components/ui/checkbox/index.ts';
+	import * as Command from '#lib/components/ui/command/index.ts';
+	import * as Popover from '#lib/components/ui/popover/index.ts';
+	import { Check, ChevronDown, ChevronUp, Icon } from '#lib/icons/index.ts';
+	import { Label } from '#lib/components/ui/label/index.ts';
 	import { cn } from '#lib/utils/cn.ts';
 
 	/**
-	 * FilterBar — collapsible grid of filter controls wired to a
-	 * `UrlFilters` instance. Each field's `onchange` calls
-	 * `urlFilters.setFilter(...)` so the URL is the single source of
-	 * truth.
+	 * FilterBar — collapsible grid of filter controls wired to a `UrlFilters` instance; the URL stays
+	 * the single source of truth, so every change is one `urlFilters` call.
 	 *
-	 * Multi-select renders as a grouped `<select multiple>` (native
-	 * keyboard + screen-reader behaviour) — when Batch A ships the
-	 * Combobox primitive this will swap to a popover multi-select
-	 * without changing the consumer API.
-	 *
-	 * Date-range is a placeholder pair of `<input type="date">` until
-	 * Batch A's DatePicker lands; the URL representation is two
-	 * separate keys: `{baseKey}_from` + `{baseKey}_to`.
+	 * - `select`: the labelled native `Select` field.
+	 * - `multi-select`: a popover with a filterable checklist (`Popover` + `Command`). The trigger is
+	 *   named after the field and says how many are chosen; an option is a `role="option"` row that
+	 *   toggles and keeps the list open, so several can be picked in a row.
+	 * - `date-range`: `DateRangePicker` (typed or picked); the URL keys are `{key}_from` and `{key}_to`,
+	 *   written together in ONE navigation.
+	 * - `text`: `TextField`. `boolean`: a checkbox.
 	 */
 
 	type Props = {
@@ -51,6 +53,9 @@
 
 	let { fields, urlFilters, open = $bindable(false), class: className = '' }: Props = $props();
 
+	type Key = keyof TFilters & string;
+	type Value = TFilters[Key];
+
 	function valueOf(key: string): string {
 		const v = urlFilters.filters[key as keyof TFilters];
 		return typeof v === 'string' ? v : '';
@@ -61,39 +66,84 @@
 		return Array.isArray(v) ? v : [];
 	}
 
-	function dateValueOf(key: string, suffix: 'from' | 'to'): string {
-		const v = urlFilters.filters[`${key}_${suffix}` as keyof TFilters];
-		return typeof v === 'string' ? v : '';
-	}
-
 	function setScalar(key: string, value: string) {
-		urlFilters.setFilter(
-			key as keyof TFilters & string,
-			value as TFilters[keyof TFilters & string]
-		);
+		urlFilters.setFilter(key as Key, value as Value);
 	}
 
-	function setMulti(key: string, values: string[]) {
-		urlFilters.setFilter(
-			key as keyof TFilters & string,
-			values as unknown as TFilters[keyof TFilters & string]
-		);
+	function toggleMulti(key: string, value: string) {
+		const current = multiValueOf(key);
+		const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+		urlFilters.setFilter(key as Key, next as unknown as Value);
 	}
 
-	function setBoolean(key: string, checked: boolean) {
-		urlFilters.setFilter(
-			key as keyof TFilters & string,
-			(checked ? 'true' : '') as TFilters[keyof TFilters & string]
-		);
+	function setRange(key: string, range: { start: string; end: string }) {
+		urlFilters.setMany({
+			[`${key}_from`]: range.start,
+			[`${key}_to`]: range.end
+		} as Partial<TFilters>);
 	}
 
-	function onMultiChange(key: string, event: Event) {
-		const sel = event.currentTarget as HTMLSelectElement;
-		const values: string[] = [];
-		for (const opt of sel.selectedOptions) values.push(opt.value);
-		setMulti(key, values);
+	function rangeOf(key: string): { start: string; end: string } {
+		return { start: valueOf(`${key}_from`), end: valueOf(`${key}_to`) };
 	}
 </script>
+
+{#snippet multiSelect(field: FilterBarField)}
+	{@const chosen = multiValueOf(field.key)}
+	<div class="stack stack-tight">
+		<span class="label text-foreground" id="filterbar-{field.key}-label">{field.label}</span>
+		<Popover.Root>
+			<Popover.Trigger
+				id="filterbar-{field.key}"
+				aria-labelledby="filterbar-{field.key}-label filterbar-{field.key}"
+				class="border-input bg-card text-foreground focus-visible:ring-ring inline-flex h-10 w-full items-center justify-between gap-2 rounded-md border px-3 text-start text-sm outline-none focus-visible:ring-3"
+			>
+				<span class="truncate">
+					{chosen.length > 0
+						? $_('dataList.filterCount', { values: { count: chosen.length } })
+						: $_('common.filter.any')}
+				</span>
+				<Icon icon={ChevronDown} size="sm" class="text-muted-foreground shrink-0" />
+			</Popover.Trigger>
+			<Popover.Content align="start" class="w-(--bits-popover-anchor-width) min-w-56 gap-0 p-0">
+				<Command.Root class="p-1">
+					<Command.Input
+						aria-label={$_('form.combobox.filter')}
+						placeholder={$_('form.combobox.search')}
+					/>
+					<Command.List aria-label={field.label}>
+						<Command.Empty>{$_('form.combobox.empty')}</Command.Empty>
+						{#each field.options ?? [] as opt (opt.value)}
+							{@const on = chosen.includes(opt.value)}
+							<Command.Item
+								value={opt.value}
+								keywords={[opt.label]}
+								data-checked={on}
+								onSelect={() => toggleMulti(field.key, opt.value)}
+							>
+								<span class="flex min-w-0 flex-1 items-center gap-2">
+									<span
+										class={cn(
+											'flex size-4 shrink-0 items-center justify-center rounded-[4px] border',
+											on
+												? 'bg-primary-indicator border-primary-indicator text-primary-indicator-foreground'
+												: 'border-input'
+										)}
+										aria-hidden="true"
+									>
+										{#if on}<Icon icon={Check} size="xs" />{/if}
+									</span>
+									<span>{opt.label}</span>
+									{#if on}<span class="sr-only">{$_('form.combobox.selected')}</span>{/if}
+								</span>
+							</Command.Item>
+						{/each}
+					</Command.List>
+				</Command.Root>
+			</Popover.Content>
+		</Popover.Root>
+	</div>
+{/snippet}
 
 {#if open}
 	<div class={cn('border-border bg-card stack stack-tight rounded-md border p-4', className)}>
@@ -108,20 +158,7 @@
 						onchange={(e) => setScalar(field.key, (e.currentTarget as HTMLSelectElement).value)}
 					/>
 				{:else if field.type === 'multi-select' && field.options}
-					<div class="stack stack-tight">
-						<label class="label text-foreground" for="filterbar-{field.key}">{field.label}</label>
-						<select
-							id="filterbar-{field.key}"
-							multiple
-							class="bg-card border border-border rounded-md body-sm text-foreground min-h-24 w-full rounded-md px-3 py-2"
-							value={multiValueOf(field.key)}
-							onchange={(e) => onMultiChange(field.key, e)}
-						>
-							{#each field.options as opt (opt.value)}
-								<option value={opt.value}>{opt.label}</option>
-							{/each}
-						</select>
-					</div>
+					{@render multiSelect(field)}
 				{:else if field.type === 'text'}
 					<TextField
 						label={field.label}
@@ -130,68 +167,42 @@
 						oninput={(e) => setScalar(field.key, (e.currentTarget as HTMLInputElement).value)}
 					/>
 				{:else if field.type === 'date-range'}
-					<div class="stack stack-tight">
-						<span class="label text-foreground">{field.label}</span>
-						<div class="cluster cluster-tight">
-							<input
-								type="date"
-								aria-label={$_('common.filter.from', { values: { label: field.label } })}
-								class="bg-card border border-border rounded-md body-sm text-foreground flex-1 rounded-md px-3 py-2"
-								value={dateValueOf(field.key, 'from')}
-								onchange={(e) =>
-									setScalar(`${field.key}_from`, (e.currentTarget as HTMLInputElement).value)}
-							/>
-							<span class="caption text-muted-foreground" aria-hidden="true">—</span>
-							<input
-								type="date"
-								aria-label={$_('common.filter.to', { values: { label: field.label } })}
-								class="bg-card border border-border rounded-md body-sm text-foreground flex-1 rounded-md px-3 py-2"
-								value={dateValueOf(field.key, 'to')}
-								onchange={(e) =>
-									setScalar(`${field.key}_to`, (e.currentTarget as HTMLInputElement).value)}
-							/>
-						</div>
-					</div>
+					<DateRangePicker
+						label={field.label}
+						valueString={rangeOf(field.key)}
+						onValueStringChange={(v) => setRange(field.key, v)}
+					/>
 				{:else if field.type === 'boolean'}
-					<label class="cluster cluster-tight body-sm text-foreground cursor-pointer">
-						<input
-							type="checkbox"
-							class="text-primary-text focus-visible:ring-ring h-4 w-4 rounded"
+					<div class="flex items-center gap-2">
+						<Checkbox
+							id="filterbar-{field.key}"
 							checked={valueOf(field.key) === 'true'}
-							onchange={(e) => setBoolean(field.key, (e.currentTarget as HTMLInputElement).checked)}
+							onCheckedChange={(checked) => setScalar(field.key, checked ? 'true' : '')}
 						/>
-						<span>{field.label}</span>
-					</label>
+						<Label for="filterbar-{field.key}">{field.label}</Label>
+					</div>
 				{/if}
 			{/each}
 		</div>
 
 		<div class="cluster cluster-spread pt-2">
-			<button
-				type="button"
-				class="label text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-				onclick={() => (open = false)}
-			>
-				<Icon icon={ChevronUp} size="xs" /> Hide filters
-			</button>
-			<button
-				type="button"
-				class="label text-muted-foreground hover:text-foreground"
-				onclick={() => urlFilters.clearAll()}
-			>
-				Reset filters
-			</button>
+			<Button variant="ghost" size="sm" onclick={() => (open = false)}>
+				<Icon icon={ChevronUp} size="xs" />
+				{$_('dataList.hideFilters')}
+			</Button>
+			<Button variant="ghost" size="sm" onclick={() => urlFilters.clearAll()}>
+				{$_('dataList.resetFilters')}
+			</Button>
 		</div>
 	</div>
 {:else}
-	<button
-		type="button"
-		class={cn(
-			'label text-muted-foreground hover:text-foreground inline-flex items-center gap-1 self-start',
-			className
-		)}
+	<Button
+		variant="ghost"
+		size="sm"
+		class={cn('self-start', className)}
 		onclick={() => (open = true)}
 	>
-		<Icon icon={ChevronDown} size="xs" /> Show filters
-	</button>
+		<Icon icon={ChevronDown} size="xs" />
+		{$_('dataList.showFilters')}
+	</Button>
 {/if}

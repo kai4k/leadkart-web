@@ -541,8 +541,8 @@ test.describe('Lifecycle: platform-tenant guard', () => {
 			}
 		]);
 		await page.goto('/operator/tenants');
-		// Click the row by its slug cell — unambiguous
-		await page.getByRole('cell', { name: 'platform', exact: true }).click();
+		// The row is not clickable: the tenant's name is the control that opens it
+		await page.getByRole('button', { name: PLATFORM.display_name }).click();
 		await page.waitForURL(/\/operator\/scope\/profile$/);
 		await page.getByRole('link', { name: 'Settings' }).click();
 		await page.waitForURL(/\/operator\/scope\/settings$/);

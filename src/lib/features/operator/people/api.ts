@@ -1,49 +1,35 @@
 import { seg } from '#lib/utils/path-segment.ts';
 import { apiLegacy, parseResponse } from '#lib/api/client.ts';
-import {
-	personDtoSchema,
-	listPersonMembershipsResponseSchema,
-	personListResponseSchema
-} from './schemas';
+import { omniSearch } from '$features/search/api';
+import type { SearchPersonHit } from '$features/search/schemas';
+import { personDtoSchema, listPersonMembershipsResponseSchema } from './schemas';
 import type {
 	PersonDto,
 	ListPersonMembershipsResponse,
-	PersonListResponse,
 	GlobalSuspendRequest,
 	AnonymisePersonRequest
 } from './types';
 
-export type PersonListParams = {
-	q?: string;
-	cursor?: string | null;
-	limit?: number;
-	filter?: {
-		is_active?: boolean;
-		is_globally_suspended?: boolean;
-		is_anonymised?: boolean;
-	};
-};
-
-function buildPersonListQuery(params?: PersonListParams): string {
-	const base = '/v1/platform/persons';
-	if (!params) return base;
-	const qs = new URLSearchParams();
-	if (params.q) qs.set('q', params.q);
-	if (params.cursor) qs.set('cursor', params.cursor);
-	if (params.limit != null) qs.set('limit', String(params.limit));
-	if (params.filter?.is_active != null) qs.set('filter.is_active', String(params.filter.is_active));
-	if (params.filter?.is_globally_suspended != null)
-		qs.set('filter.is_globally_suspended', String(params.filter.is_globally_suspended));
-	if (params.filter?.is_anonymised != null)
-		qs.set('filter.is_anonymised', String(params.filter.is_anonymised));
-	const q = qs.toString();
-	return q ? `${base}?${q}` : base;
+/** Go cuts the search text at 100 BYTES; cut here on a character boundary, never inside one. */
+export function limitSearchBytes(q: string, max = 100): string {
+	const enc = new TextEncoder();
+	let out = '';
+	let used = 0;
+	for (const ch of q) {
+		used += enc.encode(ch).length;
+		if (used > max) break;
+		out += ch;
+	}
+	return out;
 }
 
-/** List persons with optional email/name search — operator-scoped (platform.users.view). */
-export async function listPersons(params?: PersonListParams): Promise<PersonListResponse> {
-	const raw = await apiLegacy.get<unknown>(buildPersonListQuery(params));
-	return parseResponse(personListResponseSchema, raw);
+/** Persons whose email or name match `q` — `GET /v1/search?include=persons` (2-100 characters, up to 20 hits). */
+export async function searchPersons(q: string, signal?: AbortSignal): Promise<SearchPersonHit[]> {
+	const res = await omniSearch(
+		{ q: limitSearchBytes(q.trim()), include: 'persons', limit: 20 },
+		signal
+	);
+	return res.persons;
 }
 
 /** Read a Person by ID — operator-scoped (platform.users.view). */

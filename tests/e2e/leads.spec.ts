@@ -225,9 +225,9 @@ test.describe('CRM Leads — filters + saved views', () => {
 		// FilterBar starts collapsed — click "Show filters" first.
 		await page.getByRole('button', { name: /show filters/i }).click();
 
-		// The multi-select for "Stage" is a native <select multiple>.
-		const stageSelect = page.locator('#filterbar-stage');
-		await stageSelect.selectOption(['interested']);
+		// The "Stage" filter is a popover checklist: open it, tick the option.
+		await page.getByRole('button', { name: /^Stage/ }).click();
+		await page.getByRole('option', { name: 'Interested' }).click();
 		await page.waitForURL(/stage=interested/);
 	});
 
