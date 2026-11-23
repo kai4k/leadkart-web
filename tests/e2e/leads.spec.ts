@@ -503,18 +503,10 @@ test.describe('CRM Leads — detail page tabs', () => {
 			},
 			{
 				method: 'GET',
-				path: '/api/v1/identity/memberships',
+				path: '/api/v1/users/search',
 				status: 200,
 				body: {
-					memberships: [
-						{
-							id: NEW_OWNER,
-							person_id: '00000000-0000-4000-8000-0000000000dd',
-							first_name: 'Asha',
-							last_name: 'Verma',
-							email: 'asha@example.com'
-						}
-					]
+					members: [{ membership_id: NEW_OWNER, display_name: 'Asha Verma', designation: 'Sales' }]
 				}
 			},
 			{

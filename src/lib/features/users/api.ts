@@ -4,7 +4,7 @@
  * mutation here with 204 (or 201 + ids for create), so mutations return void.
  */
 import { seg } from '#lib/utils/path-segment.ts';
-import { api, apiLegacy, parseResponse } from '#lib/api/client.ts';
+import { api } from '#lib/api/client.ts';
 import {
 	cursorQuery,
 	fetchAllPages,
@@ -18,8 +18,8 @@ import {
 	listUsersResponseSchema,
 	createUserResponseSchema,
 	userDtoSchema,
-	searchMembershipsResponseSchema,
-	type SearchMembershipsResponse
+	searchMembersResponseSchema,
+	type SearchMembersResponseDto
 } from './schemas';
 import type {
 	CreateUserRequest,
@@ -135,15 +135,15 @@ export async function removeManager(membershipId: string): Promise<void> {
 }
 
 /**
- * Search memberships in the current tenant by free-text query. Backs
- * the lead-reassignment Combobox typeahead. The Go endpoint is planned
- * (see CRM contracts §reassignment); the BFF proxy already forwards
- * `/api/v1/identity/memberships?q=…` untouched. Returns up to ~20
- * matches keyed on first/last name + email substring.
+ * The member picker (`GET /v1/users/search`, needs crm.leads.assign): ACTIVE members of the effective company
+ * whose name contains `q` (2 to 100 characters), best first, at most 20. A hit is `membership_id`,
+ * `display_name` and `designation` only: no email, no person id. An empty match is 200 with `members: []`.
  */
-export async function searchMemberships(q: string): Promise<SearchMembershipsResponse> {
-	const qs = new URLSearchParams();
-	qs.set('q', q);
-	const raw = await apiLegacy.get<unknown>(`/v1/identity/memberships?${qs.toString()}`);
-	return parseResponse(searchMembershipsResponseSchema, raw);
+export const MEMBER_SEARCH_MIN = 2;
+export const MEMBER_SEARCH_MAX = 100;
+export function searchMembers(q: string, signal?: AbortSignal): Promise<SearchMembersResponseDto> {
+	return api.get('/v1/users/search', searchMembersResponseSchema, {
+		query: { q: q.trim(), limit: 20 },
+		signal
+	});
 }

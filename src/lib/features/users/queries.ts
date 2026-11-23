@@ -14,7 +14,7 @@ import { createQuery } from '@tanstack/svelte-query';
 import { createResourceMutation } from '#lib/api/mutations.ts';
 import { queryRoots } from '#lib/api/query-keys.ts';
 import * as api from './api';
-import type { UserStatusFilter } from './api';
+import { MEMBER_SEARCH_MIN, type UserStatusFilter } from './api';
 import { bulkSetStatus } from './service';
 import { bulkSummary } from './view-models';
 import type {
@@ -45,8 +45,8 @@ export function membershipSearchQuery(getQuery: () => string) {
 		const q = getQuery().trim();
 		return {
 			queryKey: usersKeys.membershipSearch(q),
-			queryFn: () => api.searchMemberships(q),
-			enabled: q.length >= 2,
+			queryFn: ({ signal }) => api.searchMembers(q, signal),
+			enabled: q.length >= MEMBER_SEARCH_MIN,
 			staleTime: 30_000
 		};
 	});

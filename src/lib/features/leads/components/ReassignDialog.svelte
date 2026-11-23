@@ -3,7 +3,7 @@
 	/**
 	 * ReassignDialog — confirm-style dialog for moving a lead's ownership.
 	 *
-	 * Typeahead Combobox backed by `GET /v1/identity/memberships?q=` —
+	 * Typeahead Combobox backed by `GET /v1/users/search?q=` —
 	 * the operator types two characters and picks a teammate from the
 	 * dropdown. The membership UUID is the value that's POSTed; the
 	 * label combines firstname + lastname and the description carries
@@ -42,10 +42,10 @@
 	const search = membershipSearchQuery(() => memberQuery);
 
 	const memberOptions = $derived<ComboboxOption[]>(
-		(search.data?.memberships ?? []).map((m) => ({
-			value: m.id,
-			label: `${m.first_name} ${m.last_name}`.trim() || m.email,
-			description: m.email
+		(search.data?.members ?? []).map((m) => ({
+			value: m.membership_id,
+			label: m.display_name,
+			description: m.designation
 		}))
 	);
 

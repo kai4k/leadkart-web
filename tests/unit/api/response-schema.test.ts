@@ -14,10 +14,7 @@ import {
 import { crmLeadDtoSchema } from '#lib/features/leads/schemas.ts';
 import { personDtoSchema } from '#lib/features/operator/people/schemas.ts';
 import { searchPersonHitSchema, searchResponseSchema } from '#lib/features/search/schemas.ts';
-import {
-	membershipSearchResultSchema,
-	listUsersResponseSchema
-} from '#lib/features/users/schemas.ts';
+import { listUsersResponseSchema } from '#lib/features/users/schemas.ts';
 
 const UUID = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 
@@ -149,16 +146,7 @@ describe.each(GO_ONLY_ADDRESSES)('response schemas accept %s', (email) => {
 			searchResponseSchema.safeParse({ persons: [hit], tenants: [], has_partial: false }).success
 		).toBe(true);
 	});
-	it('membership search result and the CRM lead', () => {
-		expect(
-			membershipSearchResultSchema.safeParse({
-				id: UUID(1),
-				person_id: UUID(2),
-				first_name: 'A',
-				last_name: 'B',
-				email
-			}).success
-		).toBe(true);
+	it('the CRM lead', () => {
 		const lead = crmLeadDtoSchema.safeParse({ email });
 		expect(lead.error?.issues.filter((i) => i.path[0] === 'email')).toEqual([]);
 	});

@@ -3,7 +3,8 @@ import {
 	deactivateUser,
 	listAllUsers,
 	reactivateUser,
-	replacePermissionOverrides
+	replacePermissionOverrides,
+	searchMembers
 } from '#lib/features/users/api.ts';
 
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -62,6 +63,20 @@ describe('users gateway', () => {
 		const all = await listAllUsers();
 		expect(fetchMock.mock.calls[0]![0]).toBe('/api/v1/users?page_size=200');
 		expect(all.counts).toBeUndefined();
+	});
+
+	it('searchMembers asks the picker route for 20, with the text trimmed, and reads display_name and designation', async () => {
+		const fetchMock = vi.fn().mockImplementation(() =>
+			Promise.resolve(
+				json({
+					members: [{ membership_id: uuid(1), display_name: 'Asha Verma', designation: 'Sales' }]
+				})
+			)
+		);
+		vi.stubGlobal('fetch', fetchMock);
+		const res = await searchMembers('  asha ');
+		expect(fetchMock.mock.calls[0]![0]).toBe('/api/v1/users/search?q=asha&limit=20');
+		expect(res.members[0]).toMatchObject({ display_name: 'Asha Verma', designation: 'Sales' });
 	});
 
 	it('deactivateUser and reactivateUser resolve on 204', async () => {

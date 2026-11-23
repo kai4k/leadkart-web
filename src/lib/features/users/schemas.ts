@@ -15,7 +15,8 @@ import {
 	CreateUserResponse,
 	DeactivateUserRequest,
 	ListUsersResponse,
-	ReplaceUserPermissionOverridesRequest
+	ReplaceUserPermissionOverridesRequest,
+	SearchMembersResponse
 } from '#lib/api/generated/index.ts';
 import {
 	formEmailField,
@@ -29,27 +30,9 @@ export { userDtoSchema };
 
 export const listUsersResponseSchema = ListUsersResponse.extend({ users: z.array(userDtoSchema) });
 
-/**
- * Membership search result — the lightweight shape returned by
- * `GET /v1/identity/memberships?q=…` (typeahead surfacing for
- * reassignment pickers). Backend endpoint is planned but not yet
- * shipped; the schema mirrors the documented contract so the frontend
- * is wire-compatible the moment the endpoint lands.
- */
-export const membershipSearchResultSchema = z.object({
-	id: z.string(),
-	person_id: z.string(),
-	first_name: z.string(),
-	last_name: z.string(),
-	email: z.string()
-});
-
-export const searchMembershipsResponseSchema = z.object({
-	memberships: z.array(membershipSearchResultSchema)
-});
-
-export type MembershipSearchResult = z.output<typeof membershipSearchResultSchema>;
-export type SearchMembershipsResponse = z.output<typeof searchMembershipsResponseSchema>;
+/** GET /v1/users/search — the member picker: `membership_id`, `display_name`, `designation` only. */
+export const searchMembersResponseSchema = SearchMembersResponse;
+export type SearchMembersResponseDto = z.output<typeof searchMembersResponseSchema>;
 
 export const createUserRequestSchema = CreateUserRequest.extend({
 	email: formEmailField,

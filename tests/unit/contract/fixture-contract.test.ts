@@ -60,7 +60,7 @@ describe('validateFixture', () => {
 	});
 
 	it('skips the unvalidated areas by default and validates them when strict', () => {
-		const f = fx({ method: 'GET', path: '/api/v1/identity/memberships', status: 200, body: {} });
+		const f = fx({ method: 'GET', path: '/api/v1/crm/not-a-go-route', status: 200, body: {} });
 		expect(validateFixture(f)).toBeNull();
 		expect(validateFixture(f, { strict: true })).toContain('not a route');
 		const orders = fx({ method: 'GET', path: '/api/v1/orders/orders', status: 200, body: {} });
@@ -291,7 +291,6 @@ describe('guard configuration', () => {
 // Pinned on purpose: adding an entry here must be a reviewed change.
 const EXPECTED_UNVALIDATED: string[] = [
 	String.raw`^\/api\/v1\/crm\/`,
-	String.raw`^\/api\/v1\/identity\/memberships$`,
 	String.raw`^\/api\/v1\/orders(\/|$)`,
 	String.raw`^\/api\/v1\/dispatch\/`,
 	String.raw`^\/api\/v1\/inventory\/`,

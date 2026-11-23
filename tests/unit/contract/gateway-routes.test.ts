@@ -15,10 +15,6 @@ import { findEndpoint, normalizePath } from '../../e2e/helpers/contract.ts';
  */
 const KNOWN_DEBT: ReadonlyArray<{ pattern: RegExp; task: string }> = [
 	{ pattern: /^\/api\/v1\/crm\//, task: 'Tasks 16-19 (leads)' },
-	{
-		pattern: /^\/api\/v1\/identity\/memberships$/,
-		task: 'Task 19 (membership search has no Go route)'
-	},
 	// Surfaced when a web `${id}` stopped matching Go's literal segments (round 6): Go's orders routes are
 	// /orders/orders/{orderId}[/...] and /orders/quotations/{quotationId}[/...], so none of these exist.
 	{ pattern: /^\/api\/v1\/orders\/\{\}\/revisions$/, task: 'Tasks 20-23 (orders: revisions)' },

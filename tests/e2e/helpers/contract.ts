@@ -86,7 +86,6 @@ const SPEC_STATUS_GAPS: ReadonlyArray<{
  */
 export const UNVALIDATED_PATHS: readonly RegExp[] = [
 	/^\/api\/v1\/crm\//, // leads: Tasks 16-19
-	/^\/api\/v1\/identity\/memberships$/, // membership search has no Go route: Task 19
 	/^\/api\/v1\/orders(\/|$)/, // orders: Tasks 20-23
 	/^\/api\/v1\/dispatch\//, // dispatch: Tasks 20-23
 	/^\/api\/v1\/inventory\//, // inventory: Tasks 24-26
