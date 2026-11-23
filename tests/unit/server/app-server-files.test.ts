@@ -65,6 +65,8 @@ const UNGUARDED: Record<string, string> = {
 	'(auth)/forgot-password/+page.server.ts':
 		'Password reset request: before a session; Go answers the same for any address.',
 	'(auth)/reset-password/+page.server.ts': 'Password reset with a token: before a session.',
+	'(dev)/+layout.server.ts':
+		'The developer pages (styleguide, table bench): no session and no data to guard; its one statement answers 404 unless vite dev or the e2e build (NODE_ENV=test), so a production server serves none of them.',
 	'auth/logout/+server.ts':
 		'Sign-out: allowed with or without a live session; it only ends it (CSRF-checked).',
 	'auth/confirm-email-change/+server.ts':
@@ -141,6 +143,8 @@ const UNGUARDED_CALLEES: Record<string, Record<string, string>> = {
 		'src/lib/server/form-action.ts#failFromStatus': 'Form failure helper.',
 		'src/lib/server/form-action.ts#failOutage': 'Form failure helper.'
 	},
+	// No server function at all: the gate reads Kit's `dev` and NODE_ENV, nothing else.
+	'(dev)/+layout.server.ts': {},
 	'auth/logout/+server.ts': {
 		'src/lib/server/proxy.ts#goAuthFetch':
 			'Revokes the refresh token at Go: the only call it makes.',
@@ -255,6 +259,7 @@ const UNGUARDED_REVIEWED: Record<string, string> = {
 	'(auth)/signin/+page.server.ts': 'b7da86af71a08251a5a38ca1',
 	'(auth)/forgot-password/+page.server.ts': '234d7157d19409c9ddf6ad3b',
 	'(auth)/reset-password/+page.server.ts': '3e7321dc0a8fc0387c411bbd',
+	'(dev)/+layout.server.ts': '27bb3985dd4fd968ce81e3f9',
 	'auth/logout/+server.ts': 'bcd677fad56c1d16ab658be0',
 	'auth/confirm-email-change/+server.ts': '05096bba008b2810c60afd42',
 	'api/[...path]/+server.ts': '30cf34a801cdfaf57e1d5564',

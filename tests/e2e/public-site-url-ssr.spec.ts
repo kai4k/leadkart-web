@@ -1,6 +1,11 @@
-import { spawn, type ChildProcess } from 'node:child_process';
-import { createServer, connect } from 'node:net';
 import { expect, test } from '@playwright/test';
+import {
+	portBound,
+	spawnBuiltServer,
+	stopBuiltServer as stop,
+	waitUntilUp as waitUp,
+	type BuiltServer as Run
+} from './helpers/built-server';
 
 /**
  * PUBLIC_SITE_URL is substituted unescaped into src/app.html, so a value that is not exactly an origin must STOP the
@@ -13,88 +18,15 @@ test.skip(
 	'no browser is used: one project is enough'
 );
 
-type Run = {
-	child: ChildProcess;
-	port: number;
-	output: () => string;
-	exited: Promise<number | null>;
-	hasExited: () => boolean;
-};
-
-function freePort(): Promise<number> {
-	return new Promise((resolve, reject) => {
-		const srv = createServer();
-		srv.once('error', reject);
-		srv.listen(0, '127.0.0.1', () => {
-			const { port } = srv.address() as { port: number };
-			srv.close(() => resolve(port));
-		});
-	});
-}
-
-function portBound(port: number): Promise<boolean> {
-	return new Promise((resolve) => {
-		const s = connect({ port, host: '127.0.0.1' });
-		s.once('connect', () => (s.destroy(), resolve(true)));
-		s.once('error', () => resolve(false));
-	});
-}
-
-async function spawnServer(value: string): Promise<Run> {
-	const port = await freePort();
-	const child = spawn(process.execPath, ['build/index.js'], {
-		env: {
-			...process.env,
-			GO_API_URL: 'http://localhost:9999',
-			NODE_ENV: 'test',
-			SCOPE_COOKIE_SECRET: 'e2e-only-scope-cookie-secret-0123456789abcdef',
-			ORIGIN: `http://localhost:${port}`,
-			PUBLIC_SITE_URL: value,
-			PORT: String(port)
-		},
-		stdio: ['ignore', 'pipe', 'pipe']
-	});
-	let out = '';
-	child.stdout?.on('data', (d) => (out += d));
-	child.stderr?.on('data', (d) => (out += d));
-	let done = false;
-	const exited = new Promise<number | null>((resolve) =>
-		child.once('close', (code) => {
-			done = true;
-			resolve(code);
-		})
-	);
-	return { child, port, output: () => out, exited, hasExited: () => done };
-}
-
-/** Waits until /signin answers; fails with the child's output if it dies first. */
-async function waitUp(run: Run): Promise<void> {
-	for (let i = 0; i < 100; i++) {
-		if (run.hasExited())
-			throw new Error(`server exited early (code ${await run.exited}):\n${run.output()}`);
-		try {
-			if ((await fetch(`http://localhost:${run.port}/signin`)).ok) return;
-		} catch {
-			/* not up yet */
-		}
-		await new Promise((r) => setTimeout(r, 200));
-	}
-	throw new Error(`server did not start:\n${run.output()}`);
-}
-
-async function stop(run: Run): Promise<void> {
-	if (!run.hasExited()) {
-		run.child.kill();
-		const timeout = new Promise((r) => setTimeout(r, 5000, 'timeout'));
-		if ((await Promise.race([run.exited, timeout])) === 'timeout') {
-			run.child.kill('SIGKILL');
-			await run.exited;
-		}
-	}
-	expect(await portBound(run.port), `port ${run.port} is free after the server stopped`).toBe(
-		false
-	);
-}
+/** The shared e2e environment with one PUBLIC_SITE_URL (helpers/built-server.ts starts and watches the copy). */
+const spawnServer = (value: string): Promise<Run> =>
+	spawnBuiltServer((port) => ({
+		GO_API_URL: 'http://localhost:9999',
+		NODE_ENV: 'test',
+		SCOPE_COOKIE_SECRET: 'e2e-only-scope-cookie-secret-0123456789abcdef',
+		ORIGIN: `http://localhost:${port}`,
+		PUBLIC_SITE_URL: value
+	}));
 
 const MALFORMED = [
 	'"><script>alert(1)</script>',
