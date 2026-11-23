@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { Button, EmptyState, Skeleton, Timeline, type TimelineItemAccent } from '$ui';
-	import { QueryState } from '#lib/components/feedback/index.ts';
+	import { Badge, Button, EmptyState, Skeleton, Timeline, type TimelineItemAccent } from '$ui';
+	import { QueryState, type QueryLike } from '#lib/components/feedback/index.ts';
 	import { Activity, User, Building2, Shield, AlertCircle } from '$icons';
-	import { ApiError } from '$api/errors';
 	import { relativeTime } from '#lib/utils/format.ts';
 	import { SvelteSet } from 'svelte/reactivity';
 	import type { ActivityDto, ActivityListResponse } from '../schemas';
@@ -12,35 +11,23 @@
 	 * ActivityTimeline — cursor-paginated vertical timeline of audit events.
 	 *
 	 * Props:
-	 *   - data: the current ActivityListResponse from TanStack Query
-	 *   - isPending: loading state (first fetch)
-	 *   - isError: error state
-	 *   - errorMessage: the line shown when the load failed
+	 *   - query: the activity query itself (the caller creates it). `QueryState` reads it whole, so a
+	 *     failure offers "Try again", a 403 or 404 is an answer (a warning, nothing to retry), and a
+	 *     failed background refetch that may pass keeps the loaded events on screen.
 	 *   - onLoadMore: called when user clicks "Load more"; receives next_cursor
 	 *   - isLoadingMore: true while the next page is fetching
 	 *
-	 * Loading, failure and empty come from `QueryState`; the events are `ui/timeline` items.
-	 * Design canon: Linear audit-log / GitHub timeline — icon + actor verb + target,
-	 * timestamp, expandable payload, trace ID chip.
+	 * The events are `ui/timeline` items. Design canon: Linear audit-log / GitHub timeline: icon,
+	 * what happened, when, expandable payload, reference.
 	 */
 
 	type Props = {
-		data?: ActivityListResponse | null;
-		isPending?: boolean;
-		isError?: boolean;
-		errorMessage?: string;
+		query: QueryLike<ActivityListResponse>;
 		onLoadMore?: (cursor: string) => void;
 		isLoadingMore?: boolean;
 	};
 
-	let {
-		data = null,
-		isPending = false,
-		isError = false,
-		errorMessage = 'Failed to load activity',
-		onLoadMore,
-		isLoadingMore = false
-	}: Props = $props();
+	let { query, onLoadMore, isLoadingMore = false }: Props = $props();
 
 	/** Per-event_type icon mapping — falls back to Activity. */
 	const EVENT_ICONS: Record<string, typeof Activity> = {
@@ -68,12 +55,10 @@
 		return EVENT_ICONS[eventType] === AlertCircle ? 'warning' : 'neutral';
 	}
 
-	/** Actor verb+target summary per event. */
+	/** What happened: the action, marked as the system's when no person ran it. */
 	function summarise(ev: ActivityDto): string {
-		const actor = ev.actor_display_name ?? $_('audit.timeline.system');
 		const type = ev.event_type.replace(/_/g, ' ');
-		const target = ev.target_id ? ` · ${ev.target_type ?? ''} ${ev.target_id.slice(0, 8)}…` : '';
-		return `${actor} · ${type}${target}`;
+		return ev.actor_id ? type : `${$_('audit.timeline.system')} · ${type}`;
 	}
 
 	/** Expandable payload state per event ID. */
@@ -84,17 +69,8 @@
 		else expanded.add(id);
 	}
 
-	const items = $derived(data?.items ?? []);
-	const nextCursor = $derived(data?.next_cursor ?? null);
-
-	// The page hands in the pieces of its query; QueryState reads the same shape. A failure is
-	// the caller's line, shown as-is (an `ApiError` with no status carries its own message).
-	const query = $derived({
-		isPending,
-		isError,
-		error: isError ? Object.assign(new ApiError(), { message: errorMessage }) : null,
-		data: data ?? undefined
-	});
+	const items = $derived(query.data?.items ?? []);
+	const nextCursor = $derived(query.data?.next_cursor ?? null);
 </script>
 
 <QueryState {query} noun={$_('audit.timeline.noun')} isEmpty={(d) => d.items.length === 0}>
@@ -128,6 +104,14 @@
 				time={relativeTime(ev.occurred_at)}
 				datetime={ev.occurred_at}
 			>
+				{#if !ev.succeeded}
+					<!-- recorded, and it did not happen: an audit reader must not take a refused command for a change -->
+					<p class="caption cluster cluster-tight">
+						<Badge variant="danger" size="sm">{$_('audit.timeline.failed')}</Badge>
+						{#if ev.failure_reason}<span class="text-muted-foreground">{ev.failure_reason}</span
+							>{/if}
+					</p>
+				{/if}
 				{#if ev.trace_id}
 					<p class="caption text-subtle-foreground font-mono">ref: {ev.trace_id}</p>
 				{/if}

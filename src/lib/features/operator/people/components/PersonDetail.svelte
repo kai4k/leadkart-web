@@ -25,8 +25,6 @@
 	import type { PersonDto } from '../types';
 	import GlobalSuspendDialog from './GlobalSuspendDialog.svelte';
 	import AnonymiseDialog from './AnonymiseDialog.svelte';
-	import { personActivityQuery, ActivityTimeline } from '$features/audit';
-	import { describeError } from '$api/errors';
 	import { formatDate } from '#lib/utils/format.ts';
 
 	type Props = { personId: string };
@@ -36,7 +34,7 @@
 	const anonymiseDialog = createDialogState<PersonDto>();
 
 	const query = personDetailQuery(() => personId);
-	// created once, asked only once the person exists (a 404 person has no memberships or activity to fetch)
+	// created once, asked only once the person exists (a 404 person has no memberships to fetch)
 	const membershipsQuery = personMembershipsQuery(() => (query.data ? personId : ''));
 	const tenantsQuery = tenantsListQuery();
 	const liftMutation = liftGlobalSuspensionMutation();
@@ -56,7 +54,6 @@
 	const canManage = $derived(session.can(P.platformUsersManage));
 	const canAnonymiseOp = $derived(session.can(P.identityUsersAnonymise));
 
-	const activityQuery = personActivityQuery(() => (query.data ? personId : ''));
 	const enterMutation = enterScopeMutation();
 
 	function liftSuspension(id: string) {
@@ -204,23 +201,7 @@
 				</Card.Content>
 			</Card.Root>
 
-			<!-- Activity timeline -->
-			<Card.Root>
-				<Card.Header>
-					<Card.Title>Activity</Card.Title>
-					<Card.Description>Audit log for this person.</Card.Description>
-				</Card.Header>
-				<Card.Content>
-					<ActivityTimeline
-						data={activityQuery?.data ?? null}
-						isPending={activityQuery?.isPending ?? true}
-						isError={activityQuery?.isError ?? false}
-						errorMessage={describeError(activityQuery?.error, {
-							fallback: 'Failed to load activity'
-						})}
-					/>
-				</Card.Content>
-			</Card.Root>
+			<!-- No activity card: Go has no per-person audit feed yet (only the caller's own and a tenant's). -->
 
 			<!-- Action panel -->
 			<Card.Root>

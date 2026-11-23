@@ -295,8 +295,5 @@ const EXPECTED_UNVALIDATED: string[] = [
 	String.raw`^\/api\/v1\/orders(\/|$)`,
 	String.raw`^\/api\/v1\/dispatch\/`,
 	String.raw`^\/api\/v1\/inventory\/`,
-	String.raw`^\/api\/v1\/auth\/me\/activity$`,
-	String.raw`^\/api\/v1\/tenants\/[^/]+\/activity$`,
-	String.raw`^\/api\/v1\/platform\/persons\/[^/]+\/activity$`,
 	String.raw`^\/api\/v1\/platform\/persons$`
 ];

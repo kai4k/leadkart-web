@@ -7,8 +7,6 @@
 	import { displayName, userStatus } from '$features/auth';
 	import { IdentityCell } from '#lib/components/data/index.ts';
 	import { removeManagerMutation } from '../queries';
-	import { personActivityQuery, ActivityTimeline } from '$features/audit';
-	import { describeError } from '$api/errors';
 	import { formatDate } from '#lib/utils/format.ts';
 	import { resolve } from '$app/paths';
 	import { createMemberPermissions } from '../member-permissions.svelte.ts';
@@ -48,8 +46,6 @@
 
 	const removeManager = removeManagerMutation();
 	const may = createMemberPermissions();
-
-	const activityQuery = personActivityQuery(() => user.person_id);
 </script>
 
 {#snippet statusBadge()}
@@ -61,7 +57,6 @@
 		<Tabs.Trigger value="overview">Overview</Tabs.Trigger>
 		<Tabs.Trigger value="permissions">Roles & permissions</Tabs.Trigger>
 		<Tabs.Trigger value="reports">Reports</Tabs.Trigger>
-		<Tabs.Trigger value="activity">Activity</Tabs.Trigger>
 	</Tabs.List>
 
 	<Tabs.Content value="overview">
@@ -245,23 +240,5 @@
 		</Card.Root>
 	</Tabs.Content>
 
-	<Tabs.Content value="activity">
-		<Card.Root padding="md" elevation="sm" class="mt-4">
-			<Card.Header>
-				<Card.Title>Activity log</Card.Title>
-				<Card.Description>
-					Audit events for this person across all tenants. Includes sign-ins, role changes, profile
-					updates, and lifecycle transitions.
-				</Card.Description>
-			</Card.Header>
-			<Card.Content>
-				<ActivityTimeline
-					data={activityQuery.data}
-					isPending={activityQuery.isPending}
-					isError={activityQuery.isError}
-					errorMessage={describeError(activityQuery.error, { fallback: 'Failed to load activity' })}
-				/>
-			</Card.Content>
-		</Card.Root>
-	</Tabs.Content>
+	<!-- No Activity tab: Go has no per-person audit feed yet (only the caller's own and a tenant's). -->
 </Tabs.Root>

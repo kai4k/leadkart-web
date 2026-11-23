@@ -265,7 +265,12 @@ test.describe('Operator scope flow', () => {
 		await registerMocks([
 			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [], has_more: false } },
 			{ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [] } },
-			{ method: 'GET', path: `/api/v1/tenants/${ACME.id}/activity`, status: 200, body: {} }
+			{
+				method: 'GET',
+				path: `/api/v1/tenants/${ACME.id}/audit/events`,
+				status: 200,
+				body: { events: [], has_more: false }
+			}
 		]);
 		await page.goto('/operator/tenants');
 		await page.getByText('Acme Pharma').first().click();
@@ -386,7 +391,12 @@ test.describe('Operator scope flow', () => {
 		await registerMocks([
 			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [], has_more: false } },
 			{ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [] } },
-			{ method: 'GET', path: `/api/v1/tenants/${ACME.id}/activity`, status: 200, body: {} }
+			{
+				method: 'GET',
+				path: `/api/v1/tenants/${ACME.id}/audit/events`,
+				status: 200,
+				body: { events: [], has_more: false }
+			}
 		]);
 		await page.goto('/operator/tenants');
 		await page.getByText('Acme Pharma').first().click();
@@ -410,7 +420,7 @@ test.describe('Operator scope flow', () => {
 		// SPA rule: a real client-side refetch inside the scope tree bounces to the list.
 		await page.getByRole('link', { name: 'Activity' }).click();
 		await page.waitForURL(/\/operator\/tenants$/);
-		const activityCalls = (await listMockCalls()).filter((c) => c.path.endsWith('/activity'));
+		const activityCalls = (await listMockCalls()).filter((c) => c.path.endsWith('/audit/events'));
 		expect(activityCalls).toHaveLength(0);
 	});
 

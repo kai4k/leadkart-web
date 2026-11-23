@@ -22,7 +22,8 @@
 
 	const membershipId = $derived(page.params.id ?? '');
 	// An unknown `?tab=` is the first tab, not a blank panel.
-	const urlTab = useUrlTab('overview', ['overview', 'permissions', 'reports', 'activity']);
+	// (an old `?tab=activity` link too: that tab is gone until Go has a per-person audit feed)
+	const urlTab = useUrlTab('overview', ['overview', 'permissions', 'reports']);
 	const tab = $derived(urlTab.value);
 
 	const userQuery = userDetailQuery(() => membershipId);

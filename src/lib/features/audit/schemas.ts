@@ -1,25 +1,33 @@
-import { z } from 'zod';
+import type { z } from 'zod';
+import { ListAuditEventsResponse } from '#lib/api/generated/index.ts';
 
 /**
- * ActivityDto — wire shape of a single audit log entry.
- * Mirrors the leadkart-go audit event structure per ADR 0038 N2.
+ * Go's audit page, from the generated contract (leadkart-go/api/openapi.yaml, `ListAuditEventsResponse`):
+ * `{ events, has_more, next_cursor? }`, one event = a command that ran (`action`, who, when, whether it
+ * succeeded, its payload).
  */
-export const activityDtoSchema = z.object({
-	id: z.string(),
-	event_type: z.string(),
-	actor_id: z.string().nullable(),
-	actor_display_name: z.string().nullable(),
-	target_id: z.string().nullable(),
-	target_type: z.string().nullable(),
-	payload: z.record(z.string(), z.unknown()).default({}),
-	occurred_at: z.string(),
-	trace_id: z.string().nullable()
-});
+export const auditEventsResponseSchema = ListAuditEventsResponse;
+export type AuditEventsResponse = z.output<typeof auditEventsResponseSchema>;
+export type AuditEvent = AuditEventsResponse['events'][number];
 
-export const activityListResponseSchema = z.object({
-	items: z.array(activityDtoSchema),
-	next_cursor: z.string().nullable()
-});
+/** One timeline entry: what the gateway makes of a Go audit event. */
+export type ActivityDto = {
+	id: string;
+	/** Go's `action`: the command that ran. */
+	event_type: string;
+	/** The person who ran it; `null` for the system. */
+	actor_id: string | null;
+	occurred_at: string;
+	/** False when the command was refused or failed: it is recorded, it did not happen. */
+	succeeded: boolean;
+	failure_reason: string | null;
+	/** Go's `correlation_id`, the reference support asks for. */
+	trace_id: string | null;
+	payload: Record<string, unknown>;
+};
 
-export type ActivityDto = z.output<typeof activityDtoSchema>;
-export type ActivityListResponse = z.output<typeof activityListResponseSchema>;
+export type ActivityListResponse = {
+	items: ActivityDto[];
+	/** The cursor of the next page; `null` on the last one. */
+	next_cursor: string | null;
+};

@@ -598,7 +598,8 @@
 			"showDetails": "Show details",
 			"hideDetails": "Hide details",
 			"loadMore": "Load more",
-			"label": "Activity timeline"
+			"label": "Activity timeline",
+			"failed": "Did not go through"
 		}
 	},
 	"pages": {
@@ -628,6 +629,10 @@
 			"description": "Operator-side tenant management."
 		},
 		"platformUsers": {
+			"searchSlow": {
+				"title": "The search took too long",
+				"description": "Some people may be missing from this list. Try again, or type more of the email address or the name."
+			},
 			"title": "Platform users",
 			"description": "Cross-tenant person identity management."
 		},

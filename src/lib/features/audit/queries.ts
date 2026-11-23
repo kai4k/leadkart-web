@@ -8,8 +8,6 @@ import type { ActivityParams } from './api';
 const activityKeys = {
 	tenant: (tenantId: string, params?: ActivityParams) =>
 		['activity', 'tenant', tenantId, params ?? {}] as const,
-	person: (personId: string, params?: ActivityParams) =>
-		['activity', 'person', personId, params ?? {}] as const,
 	me: (params?: ActivityParams) => ['activity', 'me', params ?? {}] as const
 };
 
@@ -18,15 +16,6 @@ export function tenantActivityQuery(tenantId: () => string, params?: ActivityPar
 		queryKey: activityKeys.tenant(tenantId(), params),
 		queryFn: () => api.listTenantActivity(tenantId(), params),
 		enabled: Boolean(tenantId()),
-		staleTime: 60_000
-	}));
-}
-
-export function personActivityQuery(personId: () => string, params?: ActivityParams) {
-	return createQuery(() => ({
-		queryKey: activityKeys.person(personId(), params),
-		queryFn: () => api.listPersonActivity(personId(), params),
-		enabled: Boolean(personId()),
 		staleTime: 60_000
 	}));
 }

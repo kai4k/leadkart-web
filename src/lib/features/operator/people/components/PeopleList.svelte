@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
 	import { resolve } from '$app/paths';
-	import { EmptyState } from '$ui';
+	import { Alert, Button, EmptyState } from '$ui';
 	import { Search, Users } from '$icons';
 	import {
 		ResourceListPage,
@@ -24,7 +24,9 @@
 	const enabled = $derived(q.length >= PERSON_SEARCH_MIN);
 
 	const query = personsSearchQuery(() => q);
-	const hits = $derived(enabled ? (query.data ?? []) : []);
+	const hits = $derived(enabled ? (query.data?.persons ?? []) : []);
+	// Go gave up on the search after its time limit: what is listed (often nothing) is not the whole answer.
+	const partial = $derived(enabled && query.data?.has_partial === true);
 
 	const nameOf = (p: SearchPersonHit) => displayName(p, { emailFallback: 'full' });
 
@@ -44,6 +46,19 @@
 	<IdentityCell name={nameOf(p)} subtitle={p.email} />
 {/snippet}
 
+{#snippet tookTooLong()}
+	<Alert variant="warning" title={$_('pages.platformUsers.searchSlow.title')}>
+		<div class="stack stack-tight">
+			<p>{$_('pages.platformUsers.searchSlow.description')}</p>
+			<div>
+				<Button variant="ghost" size="sm" onclick={() => query.refetch()}
+					>{$_('common.query.tryAgain')}</Button
+				>
+			</div>
+		</div>
+	</Alert>
+{/snippet}
+
 {#snippet empty()}
 	{#if !enabled}
 		<EmptyState
@@ -51,6 +66,9 @@
 			title="Search for a person"
 			description="Type at least 2 characters of an email address or a name."
 		/>
+	{:else if partial}
+		<!-- never "No one matches": the search did not finish, so nobody can say that -->
+		{@render tookTooLong()}
 	{:else}
 		<EmptyState
 			icon={Users}
@@ -71,6 +89,9 @@
 		maxlength: 100
 	}}
 >
+	{#if partial && hits.length > 0}
+		{@render tookTooLong()}
+	{/if}
 	<DataTable
 		{columns}
 		data={hits}

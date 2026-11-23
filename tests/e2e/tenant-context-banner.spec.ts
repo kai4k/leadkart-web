@@ -58,7 +58,12 @@ async function enterAcme(page: Page, extra: Record<string, string>, width: numbe
 		{ method: 'GET', path: '/api/v1/tenants', status: 200, body: { tenants: [ACME] } },
 		{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [], has_more: false } },
 		{ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [] } },
-		{ method: 'GET', path: `/api/v1/tenants/${ACME.id}/activity`, status: 200, body: {} }
+		{
+			method: 'GET',
+			path: `/api/v1/tenants/${ACME.id}/audit/events`,
+			status: 200,
+			body: { events: [], has_more: false }
+		}
 	]);
 	await page.goto('/operator/tenants');
 	await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();

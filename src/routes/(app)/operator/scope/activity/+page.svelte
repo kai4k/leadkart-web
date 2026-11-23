@@ -2,7 +2,6 @@
 	import { plainTitle } from '#lib/utils/page-title.ts';
 	import { tenantActivityQuery } from '#lib/features/audit/queries.ts';
 	import { ActivityTimeline } from '$features/audit';
-	import { describeError } from '$api/errors';
 	import type { LayoutData } from '../$types';
 
 	let { data }: { data: LayoutData } = $props();
@@ -14,9 +13,4 @@
 	><title>Activity · {plainTitle(data.tenant.display_name)} · LeadKart</title></svelte:head
 >
 
-<ActivityTimeline
-	data={activityQuery.data ?? null}
-	isPending={activityQuery.isPending}
-	isError={activityQuery.isError}
-	errorMessage={describeError(activityQuery.error, { fallback: 'Failed to load activity' })}
-/>
+<ActivityTimeline query={activityQuery} />

@@ -54,9 +54,7 @@ const KNOWN_DEBT: ReadonlyArray<{ pattern: RegExp; task: string }> = [
 	{ pattern: /^\/api\/v1\/orders\/\{\}\/complete$/, task: 'Tasks 20-23 (orders: complete)' },
 	{ pattern: /^\/api\/v1\/orders\/\{\}\/cancel$/, task: 'Tasks 20-23 (orders: cancel)' },
 	{ pattern: /^\/api\/v1\/orders\/bulk-action$/, task: 'Tasks 20-23 (orders: bulk action)' },
-	{ pattern: /^\/api\/v1\/inventory\//, task: 'Tasks 24-26 (inventory)' },
-	{ pattern: /^\/api\/v1\/tenants\/\{\}\/activity$/, task: 'Task 27 (activity)' },
-	{ pattern: /^\/api\/v1\/platform\/persons\/\{\}\/activity$/, task: 'Task 27 (activity)' }
+	{ pattern: /^\/api\/v1\/inventory\//, task: 'Tasks 24-26 (inventory)' }
 ];
 
 type Call = { file: string; line: number; method: string; path: string };

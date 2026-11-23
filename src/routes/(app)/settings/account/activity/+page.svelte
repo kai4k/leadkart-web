@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { myActivityQuery } from '#lib/features/audit/queries.ts';
 	import { ActivityTimeline } from '$features/audit';
-	import { describeError } from '$api/errors';
 </script>
 
 <svelte:head><title>My Activity · LeadKart</title></svelte:head>
@@ -14,12 +13,7 @@
 
 	{#snippet activitySection()}
 		{@const q = myActivityQuery()}
-		<ActivityTimeline
-			data={q.data ?? null}
-			isPending={q.isPending}
-			isError={q.isError}
-			errorMessage={describeError(q.error, { fallback: 'Failed to load activity' })}
-		/>
+		<ActivityTimeline query={q} />
 	{/snippet}
 
 	{@render activitySection()}

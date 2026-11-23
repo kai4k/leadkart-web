@@ -1,6 +1,12 @@
 import { expect, test, type Page } from './helpers/test';
 import { signInAsTier } from './helpers/sign-in';
-import { resetMock, registerMocks, registerMock } from './helpers/mock';
+import {
+	listMockCalls,
+	listUnregisteredCalls,
+	resetMock,
+	registerMocks,
+	registerMock
+} from './helpers/mock';
 
 /**
  * Operator people management e2e — /operator/persons + /operator/persons/[id]
@@ -98,18 +104,16 @@ test.describe('People list — positive', () => {
 				status: 200,
 				body: { memberships: [] }
 			},
-			{ method: 'GET', path: '/api/v1/platform/tenants', status: 200, body: { tenants: [] } },
-			// Activity feed: its area is still pre-Go (Task 27), so the fixture is unvalidated.
-			{
-				method: 'GET',
-				path: `/api/v1/platform/persons/${PERSON_AAA.id}/activity`,
-				status: 200,
-				body: {}
-			}
+			{ method: 'GET', path: '/api/v1/platform/tenants', status: 200, body: { tenants: [] } }
 		]);
 		await page.goto(`/operator/persons/${PERSON_AAA.id}`);
 		// Person header shows email and name
 		await expect(page.getByText('alice@acme.test').first()).toBeVisible({ timeout: 5000 });
+		// No activity card: Go has no per-person audit feed, so the page asks for none and shows no failure.
+		await expect(page.getByText('Lifecycle')).toBeVisible();
+		await expect(page.getByText(/couldn.t load activity/i)).toHaveCount(0);
+		expect((await listMockCalls()).filter((c) => c.path.endsWith('/activity'))).toHaveLength(0);
+		expect(await listUnregisteredCalls()).toEqual([]);
 	});
 });
 
@@ -137,13 +141,7 @@ test.describe('Anonymise dialog on a phone', () => {
 				status: 200,
 				body: { memberships: [] }
 			},
-			{ method: 'GET', path: '/api/v1/platform/tenants', status: 200, body: { tenants: [] } },
-			{
-				method: 'GET',
-				path: `/api/v1/platform/persons/${PERSON_AAA.id}/activity`,
-				status: 200,
-				body: {}
-			}
+			{ method: 'GET', path: '/api/v1/platform/tenants', status: 200, body: { tenants: [] } }
 		]);
 		await page.goto(`/operator/persons/${PERSON_AAA.id}`);
 		await page.getByRole('button', { name: 'Anonymise' }).first().click();

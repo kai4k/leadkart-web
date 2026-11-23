@@ -23,13 +23,19 @@ export function limitSearchBytes(q: string, max = 100): string {
 	return out;
 }
 
-/** Persons whose email or name match `q` — `GET /v1/search?include=persons` (2-100 characters, up to 20 hits). */
-export async function searchPersons(q: string, signal?: AbortSignal): Promise<SearchPersonHit[]> {
+/** What a person search found. `has_partial`: Go gave up on the query after its time limit, so people may be missing. */
+export type PersonSearchResult = { persons: SearchPersonHit[]; has_partial: boolean };
+
+/**
+ * Persons whose email or name match `q` — `GET /v1/search?include=persons` (2-100 characters, up to 20 hits).
+ * `has_partial` travels with the hits: an empty list from a search that timed out is NOT "no one matches".
+ */
+export async function searchPersons(q: string, signal?: AbortSignal): Promise<PersonSearchResult> {
 	const res = await omniSearch(
 		{ q: limitSearchBytes(q.trim()), include: 'persons', limit: 20 },
 		signal
 	);
-	return res.persons;
+	return { persons: res.persons, has_partial: res.has_partial };
 }
 
 /** Read a Person by ID — operator-scoped (platform.users.view). */

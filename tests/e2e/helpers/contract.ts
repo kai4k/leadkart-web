@@ -90,9 +90,6 @@ export const UNVALIDATED_PATHS: readonly RegExp[] = [
 	/^\/api\/v1\/orders(\/|$)/, // orders: Tasks 20-23
 	/^\/api\/v1\/dispatch\//, // dispatch: Tasks 20-23
 	/^\/api\/v1\/inventory\//, // inventory: Tasks 24-26
-	/^\/api\/v1\/auth\/me\/activity$/, // activity: Task 27
-	/^\/api\/v1\/tenants\/[^/]+\/activity$/, // activity: Task 27
-	/^\/api\/v1\/platform\/persons\/[^/]+\/activity$/, // activity: Task 27
 	/^\/api\/v1\/platform\/persons$/ // operator people email lookup: Task 28
 ];
 

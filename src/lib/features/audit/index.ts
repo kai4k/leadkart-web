@@ -1,9 +1,6 @@
 /**
- * Audit feature barrel — public surface for cross-tenant activity reads.
- *
- * Per CLAUDE.md rule 9: audit is one of the legitimately "platform-wide"
- * features; it reads /v1/platform/persons/{id}/activity from operator
- * scope (allowlisted in scripts/arch/check-no-platform-paths.mjs).
+ * Audit feature barrel: the caller's own activity and a tenant's activity, as Go serves them
+ * (`/v1/auth/me/activity`, `/v1/tenants/{tenantId}/audit/events`). Go has no per-person feed.
  */
 export * from './api';
 export * from './schemas';
