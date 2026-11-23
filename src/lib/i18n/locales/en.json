@@ -22,7 +22,11 @@
 			"email": "Email",
 			"password": "Password",
 			"submit": "Sign in",
-			"forgotPassword": "Forgot password?"
+			"forgotPassword": "Forgot password?",
+			"notice": {
+				"sessionExpired": "Your session ended. Sign in again.",
+				"passwordChanged": "Your password was changed. Sign in with your new password."
+			}
 		},
 		"forgotPassword": {
 			"title": "Forgot your password?",
@@ -79,6 +83,8 @@
 			"invalidCredentials": "Email or password is incorrect.",
 			"accountLocked": "Account locked after too many failed attempts. Try again in {seconds} seconds.",
 			"mustChangePassword": "Set a new password to continue.",
+			"tenantSuspended": "Your company's account is suspended. Contact your administrator or LeadKart support.",
+			"tenantNotActive": "Your company's account is not active. Contact your administrator or LeadKart support.",
 			"unexpected": "Something went wrong. Please try again.",
 			"rateLimited": "Too many attempts. Wait a moment and try again.",
 			"upstreamUnavailable": "The service is not reachable right now. Please try again in a moment.",

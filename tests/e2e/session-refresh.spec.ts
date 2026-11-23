@@ -1,4 +1,4 @@
-import { expect, test, type BrowserContext } from './helpers/test';
+import { expect, test, type BrowserContext, type Page } from './helpers/test';
 import {
 	fakeAccessToken,
 	fakeLoginResponse,
@@ -453,5 +453,137 @@ test.describe('session refresh', () => {
 		await page.goto('/settings/users');
 
 		await expect(page).toHaveURL(/\/signin\?next=%2Fsettings%2Fusers$/);
+	});
+});
+
+/**
+ * A rejected refresh tells the sign-in page why, once.
+ *
+ * Go: internal/identity/ports/http.go handleRefresh (lines 580-611 at 44ff2b16) answers
+ * 401 `refresh_rejected` and names `reason` for exactly three arms (errcodes.go RefreshReason*:
+ * `session_expired`, `tenant_suspended`, `tenant_not_active`); every other refusal has no `reason`
+ * (docs/BFF_API_CHANGES.md rows 28, 37, 38, 39).
+ */
+test.describe('a rejected refresh tells the sign-in page why', () => {
+	test.beforeEach(async () => {
+		await resetMock();
+	});
+
+	const SESSION_ENDED = 'Your session ended. Sign in again.';
+	const SUSPENDED =
+		"Your company's account is suspended. Contact your administrator or LeadKart support.";
+	const NOT_ACTIVE =
+		"Your company's account is not active. Contact your administrator or LeadKart support.";
+
+	const rejectRefresh = (reason?: string) =>
+		registerMock({
+			method: 'POST',
+			path: '/api/v1/auth/refresh',
+			status: 401,
+			body: {
+				type: 'https://leadkart.io/problems/refresh_rejected',
+				title: 'Unauthorized',
+				status: 401,
+				error: 'refresh_rejected',
+				...(reason === undefined ? {} : { reason })
+			}
+		});
+	const hydrated = (page: Page) =>
+		expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
+
+	for (const [label, reason, sentence] of [
+		['session_expired (idle or absolute end)', 'session_expired', SESSION_ENDED],
+		['tenant_suspended', 'tenant_suspended', SUSPENDED],
+		['tenant_not_active', 'tenant_not_active', NOT_ACTIVE],
+		['no reason (unknown, revoked, reused)', undefined, SESSION_ENDED],
+		['a reason Go does not have', 'made_up_reason', SESSION_ENDED]
+	] as const) {
+		test(`${label}: /signin says it once, a reload does not`, async ({ page, context }) => {
+			await signInAsTier(page, { tier: 'tenant-admin' });
+			await rejectRefresh(reason);
+			await dropAccessCookie(context);
+
+			await page.goto('/dashboard');
+
+			await expect(page).toHaveURL(/\/signin\?next=%2Fdashboard$/);
+			await expect(page.getByRole('status').filter({ hasText: sentence })).toBeVisible();
+			// the session is over in the browser, and the notice was taken
+			const names = (await context.cookies()).map((c) => c.name);
+			expect(names).not.toContain('lk_refresh');
+			expect(names).not.toContain('lk_access');
+			expect(names).not.toContain('lk_csrf');
+			await expect
+				.poll(async () => (await context.cookies()).map((c) => c.name))
+				.not.toContain('lk_signin_notice');
+
+			await page.reload();
+			await hydrated(page);
+			await expect(page.getByText(sentence)).toHaveCount(0);
+		});
+	}
+
+	test('the notice cookie: the name only, on /signin, two minutes, SameSite=Lax, not httpOnly', async ({
+		page,
+		context
+	}) => {
+		await signInAsTier(page, { tier: 'tenant-admin' });
+		await rejectRefresh('tenant_suspended');
+		await dropAccessCookie(context);
+
+		// Without following the redirect: the answer that ends the session carries the cookie.
+		const resp = await page.request.get('/dashboard', { maxRedirects: 0 });
+		expect(resp.headers().location).toBe('/signin?next=%2Fdashboard');
+		const notice = (await context.cookies('http://localhost:4173/signin')).find(
+			(c) => c.name === 'lk_signin_notice'
+		);
+		expect(notice).toMatchObject({
+			value: 'tenant_suspended',
+			path: '/signin',
+			httpOnly: false,
+			sameSite: 'Lax'
+		});
+		expect(notice!.expires - Date.now() / 1000).toBeGreaterThan(100);
+		expect(notice!.expires - Date.now() / 1000).toBeLessThanOrEqual(120);
+		// not sent anywhere but the sign-in page
+		expect(
+			(await context.cookies('http://localhost:4173/dashboard')).map((c) => c.name)
+		).not.toContain('lk_signin_notice');
+	});
+
+	test('rejected on a client query (the proxy): the SPA lands on /signin with the sentence', async ({
+		page
+	}) => {
+		await signInAsTier(page, {
+			tier: 'tenant-admin',
+			permissions: ['tenant.admin', 'identity.users.view', 'identity.users.manage']
+		});
+		await registerMock({ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [] } });
+		await rejectRefresh('tenant_not_active');
+		await registerMock({
+			method: 'GET',
+			path: '/api/v1/users',
+			status: 401,
+			headers: EXPIRED_HEADERS,
+			body: EXPIRED_BODY
+		});
+
+		await page.goto('/settings/users');
+
+		await expect(page).toHaveURL(/\/signin\?next=%2Fsettings%2Fusers$/);
+		await expect(page.getByRole('status').filter({ hasText: NOT_ACTIVE })).toBeVisible();
+	});
+
+	test('signing out sets no notice', async ({ page, context }) => {
+		await signInAsTier(page, { tier: 'tenant-admin' });
+		await registerMock({ method: 'POST', path: '/api/v1/auth/logout', status: 204 });
+
+		await page.getByRole('button', { name: 'User menu' }).click();
+		await page.getByRole('menuitem', { name: /sign out/i }).click();
+		await page.waitForURL(/\/signin/);
+		await hydrated(page);
+
+		expect((await context.cookies()).map((c) => c.name)).not.toContain('lk_signin_notice');
+		for (const sentence of [SESSION_ENDED, SUSPENDED, NOT_ACTIVE])
+			await expect(page.getByText(sentence)).toHaveCount(0);
 	});
 });

@@ -185,6 +185,56 @@ describe('the fields', () => {
 	});
 });
 
+describe('the sign-in notice (why the person is here again)', () => {
+	// what the page's server load took from the cookie (tests/unit/server/signin-notice-load.test.ts)
+	const remountWith = (notice?: unknown) => {
+		unmount(component!);
+		target.remove();
+		target = document.body.appendChild(document.createElement('div'));
+		props = reactiveProps<{ form?: Record<string, unknown>; notice?: unknown }>({ notice });
+		component = mount(SigninForm, { target, props: props as never });
+		flushSync();
+	};
+	// the region is always there (a live region inserted with its text is often not announced); what varies is its text
+	const status = () => target.querySelector('[role="status"]');
+	const said = () => status()?.textContent?.trim() ?? '';
+
+	it.each([
+		['session_expired', en.auth.signin.notice.sessionExpired],
+		['tenant_suspended', en.auth.errors.tenantSuspended],
+		['tenant_not_active', en.auth.errors.tenantNotActive],
+		['password_changed', en.auth.signin.notice.passwordChanged]
+	])('%s: the sentence is shown above the form, as a status', (name, sentence) => {
+		remountWith(name);
+		expect(said()).toBe(sentence);
+		const form = target.querySelector('form')!;
+		expect(status()!.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+	});
+
+	it.each(['idle_timeout', '<b>x</b>', '', null, undefined, 7])(
+		'a value that is not one of the four (%j) shows nothing',
+		(value) => {
+			remountWith(value);
+			expect(said()).toBe('');
+			expect(target.innerHTML).not.toContain('<b>x</b>');
+		}
+	);
+
+	it('the next answer of the form replaces the notice (one message at a time)', async () => {
+		remountWith('session_expired');
+		expect(said()).not.toBe('');
+		await submitResult('failure', {});
+		expect(said()).toBe('');
+	});
+
+	it('page data that no longer names the notice does not take the sentence away (it is said once, then stays)', () => {
+		remountWith('password_changed');
+		(props as { notice?: unknown }).notice = null;
+		flushSync();
+		expect(said()).toBe(en.auth.signin.notice.passwordChanged);
+	});
+});
+
 describe('the password policy text states the server policy, not 12', () => {
 	it('the default hint says 8 characters and the four classes; the server-keyed generic lines state no number', () => {
 		const hint = passwordPolicyHint(null, (k, o) => get(_)(k, o));

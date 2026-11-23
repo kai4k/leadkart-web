@@ -15,10 +15,19 @@
  * layout and /auth/logout all need to receive it. It used to be scoped to
  * /auth/refresh, a path with no route, so the browser never sent it.
  *
+ * lk_signin_notice is not a session cookie: a short-lived name telling the sign-in page why the
+ * session ended (see `setSigninNotice`).
+ *
  * Per ADR: docs/superpowers/specs/2026-05-20-bff-cookie-auth-adr.md
  */
 
 import type { Cookies } from '@sveltejs/kit';
+import {
+	SIGNIN_NOTICE_COOKIE,
+	SIGNIN_NOTICE_PATH,
+	signinNoticeOf,
+	type SigninNotice
+} from '../api/signin-notice.ts';
 import { isProd } from './config';
 
 export const ACCESS_COOKIE = (): string => (isProd() ? '__Host-lk_access' : 'lk_access');
@@ -97,6 +106,48 @@ export function clearAuthCookies(cookies: Cookies): void {
 	cookies.delete(REFRESH_COOKIE, { path: LEGACY_REFRESH_PATH });
 	cookies.delete(CSRF_COOKIE, { path: '/' });
 	cookies.delete(MCP_COOKIE, { path: '/' });
+}
+
+/** Long enough for the redirect to the sign-in page; a notice nobody read does not greet a later visit. */
+const SIGNIN_NOTICE_MAX_AGE = 120;
+
+/**
+ * Why the session ended, for the sign-in page to say once (`api/signin-notice.ts`). Set beside the
+ * clearing of the session cookies when a session is over (`endSession` in auth-refresh.ts), never by
+ * a sign-out the person asked for.
+ *
+ * The value is a name from the fixed list or the cookie is not set at all: no token, no id and no
+ * text from the API can ride on it. Scoped to the sign-in page and gone after two minutes. It is not
+ * httpOnly (the owner-approved attribute list); nothing depends on that, the reader is
+ * `takeSigninNotice` below.
+ */
+export function setSigninNotice(cookies: Cookies, notice: unknown): void {
+	const value = signinNoticeOf(notice);
+	if (value === null) return;
+	cookies.set(SIGNIN_NOTICE_COOKIE, value, {
+		path: SIGNIN_NOTICE_PATH,
+		httpOnly: false,
+		secure: isProd(),
+		sameSite: 'lax',
+		maxAge: SIGNIN_NOTICE_MAX_AGE
+	});
+}
+
+/** A sign-in that succeeded has nothing left to explain: drop a notice the page did not take. */
+export function clearSigninNotice(cookies: Cookies): void {
+	cookies.delete(SIGNIN_NOTICE_COOKIE, { path: SIGNIN_NOTICE_PATH });
+}
+
+/**
+ * The sign-in page's one read: the notice the cookie names (null for anything off the list), and
+ * the cookie is deleted whatever it held, so the sentence is said once. Without a cookie nothing is
+ * written.
+ */
+export function takeSigninNotice(cookies: Cookies): SigninNotice | null {
+	const raw = cookies.get(SIGNIN_NOTICE_COOKIE);
+	if (raw === undefined) return null;
+	clearSigninNotice(cookies);
+	return signinNoticeOf(raw);
 }
 
 /**

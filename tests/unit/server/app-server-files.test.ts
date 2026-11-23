@@ -108,6 +108,8 @@ const UNGUARDED_CALLEES: Record<string, Record<string, string>> = {
 		'src/lib/server/auth-refresh.ts#establishSession':
 			'Sets the session cookies from the login answer.',
 		'src/lib/server/auth-refresh.ts#tokenPairSchema': 'Validates the login answer.',
+		'src/lib/server/cookies.ts#takeSigninNotice':
+			'The load reads the one-word sign-in notice once and deletes it (a name from a fixed list; no Go call).',
 		'src/lib/server/auth-errors.ts#validationFieldKeys': 'Maps Go field errors to form keys.',
 		'src/lib/server/form-action.ts#callGoForAction': 'Runs the Go call with outage handling.',
 		'src/lib/server/form-action.ts#failForm': 'Form failure helper.',
@@ -246,7 +248,7 @@ const UNGUARDED_REVIEWED: Record<string, string> = {
 	'+layout.server.ts': 'a3aa6cf586cade7fa9c7c830',
 	'+page.server.ts': 'd584880de3ad98cfcd66b155',
 	'(app)/+layout.server.ts': 'c348bde0597e9584bdde65b1',
-	'(auth)/signin/+page.server.ts': '790ecc9ce9c495203e9e71ef',
+	'(auth)/signin/+page.server.ts': 'd4e41c30119f7c52241a7806',
 	'(auth)/forgot-password/+page.server.ts': '234d7157d19409c9ddf6ad3b',
 	'(auth)/reset-password/+page.server.ts': '3e7321dc0a8fc0387c411bbd',
 	'auth/logout/+server.ts': 'bcd677fad56c1d16ab658be0',

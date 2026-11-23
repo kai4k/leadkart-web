@@ -19,12 +19,20 @@
 import { redirect } from '@sveltejs/kit';
 import { parseRetryAfter } from '#lib/api/errors.ts';
 import { validationFieldKeys } from '#lib/server/auth-errors.ts';
+import { takeSigninNotice } from '#lib/server/cookies.ts';
 import { callGoForAction, failForm, failFromStatus, failOutage } from '#lib/server/form-action.ts';
 import { goAuthFetch } from '#lib/server/go.ts';
 import { establishSession, tokenPairSchema } from '#lib/server/auth-refresh.ts';
 import { safeRedirectPath } from '#lib/server/redirect.ts';
 import { loginRequestSchema } from '$features/auth/schemas';
-import type { Actions } from './$types';
+import type { Actions, PageServerLoad } from './$types';
+
+/**
+ * Why the person is here again (the session ended, the company cannot sign in, the password was
+ * changed): the one-word notice the BFF left when it ended the session. Taken once: the cookie is
+ * deleted with this answer, so a reload shows nothing. No call to Go.
+ */
+export const load: PageServerLoad = ({ cookies }) => ({ notice: takeSigninNotice(cookies) });
 
 export const actions: Actions = {
 	default: async ({ request, cookies, url }) => {

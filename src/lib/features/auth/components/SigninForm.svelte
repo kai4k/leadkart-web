@@ -4,7 +4,8 @@
 	import type { ActionResult } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import { announceContextChange } from '#lib/api/operator-scope.ts';
-	import { AuthCard } from '#lib/components/ui/index.ts';
+	import { SIGNIN_NOTICE_KEYS, signinNoticeOf } from '#lib/api/signin-notice.ts';
+	import { Alert, AuthCard } from '#lib/components/ui/index.ts';
 	import { ActionForm, PasswordField, TextField } from '#lib/components/form/index.ts';
 	import type { ActionData } from '../../../../routes/(auth)/signin/$types';
 
@@ -14,9 +15,17 @@
 	 * /must-change-password, a redirect to /dashboard (or `?next=`), or a 423 with `retryAfterSeconds`, which this
 	 * card counts down: the button stays off until the wait is over, and the banner shows the seconds left.
 	 * `?email=` prefills the field (an admin-initiated invite).
+	 *
+	 * `notice` is why the person is here again (the session ended, the company cannot sign in, the password was
+	 * changed): the page's server load took it from the one-word cookie the BFF left, once. Shown above the form
+	 * until the form has an answer of its own.
 	 */
-	type Props = { form?: ActionData };
-	let { form }: Props = $props();
+	type Props = { form?: ActionData; notice?: unknown };
+	let { form, notice }: Props = $props();
+
+	// Said once: what the load handed over when the card appeared stays until the form answers. A later load that
+	// names nothing (the cookie is gone by then) does not take the sentence away mid-read.
+	let said = $state(untrack(() => signinNoticeOf(notice)));
 
 	/** The seconds Go asked to wait, when it said a real number (never zero, negative or NaN). */
 	const waitOf = (seconds: unknown): number =>
@@ -65,6 +74,8 @@
 
 	/** After the page applied the result: a lockout starts (or restarts) the countdown, any other result ends it. */
 	function onResult(result: ActionResult) {
+		// the form's own answer is the message now
+		said = null;
 		// A sign-in changes the person the browser holds: the other tabs reload instead of collecting 409s.
 		if (result.type === 'redirect') announceContextChange('session');
 		begin(
@@ -86,6 +97,11 @@
 </script>
 
 <AuthCard title={$_('auth.signin.title')} subtitle={$_('auth.signin.subtitle')}>
+	<!-- The region is in the page before its text (one inserted together with its text is often not announced); it
+	     takes no room of its own, so an empty one leaves no gap in the card. -->
+	<div role="status" class="contents">
+		{#if said}<Alert variant="info" role="none">{$_(SIGNIN_NOTICE_KEYS[said])}</Alert>{/if}
+	</div>
 	<ActionForm
 		id="signin-form"
 		result={shown}

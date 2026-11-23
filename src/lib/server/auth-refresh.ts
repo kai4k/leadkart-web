@@ -16,12 +16,15 @@
 import { createHash } from 'node:crypto';
 import { error, type Cookies } from '@sveltejs/kit';
 import { z } from 'zod';
+import type { SigninNotice } from '../api/signin-notice.ts';
 import {
 	clearAuthCookies,
+	clearSigninNotice,
 	mustChangePassword,
 	REFRESH_COOKIE,
 	setAuthCookies,
-	setMustChangePassword
+	setMustChangePassword,
+	setSigninNotice
 } from './cookies.ts';
 import { goAuthFetch } from './proxy.ts';
 import { clearOperatorScope } from './scope.ts';
@@ -33,12 +36,30 @@ export const tokenPairSchema = z.object({
 });
 export type TokenPair = z.infer<typeof tokenPairSchema>;
 
+/**
+ * The three ends of a session Go names on a rejected refresh (`reason` of 401 `refresh_rejected`:
+ * leadkart-go internal/identity/ports/errcodes.go RefreshReason*, http.go handleRefresh). Every other
+ * refusal (unknown, revoked, reused token, deleted company) carries none and must stay
+ * indistinguishable, so anything that is not exactly one of these reads as `session_expired`.
+ */
+const REFRESH_REJECTIONS = ['session_expired', 'tenant_suspended', 'tenant_not_active'] as const;
+export type RefreshRejection = (typeof REFRESH_REJECTIONS)[number];
+
 export type RefreshResult =
 	| { ok: true; tokens: TokenPair }
-	| { ok: false; reason: 'rejected' | 'unavailable' };
+	| { ok: false; reason: 'rejected'; why: RefreshRejection }
+	| { ok: false; reason: 'unavailable' };
 
 const GRACE_MS = 10_000;
 const inflight = new Map<string, Promise<RefreshResult>>();
+
+/** Which of the three names the rejection carries. Only a name from the list leaves here, never Go's text. */
+async function rejectionOf(resp: Response): Promise<RefreshRejection> {
+	const body: unknown = await resp.json().catch(() => null);
+	const reason =
+		typeof body === 'object' && body !== null ? (body as { reason?: unknown }).reason : undefined;
+	return REFRESH_REJECTIONS.find((name) => name === reason) ?? 'session_expired';
+}
 
 async function callRefresh(refresh: string, fetchFn: typeof fetch): Promise<RefreshResult> {
 	let resp: Response;
@@ -48,7 +69,7 @@ async function callRefresh(refresh: string, fetchFn: typeof fetch): Promise<Refr
 		return { ok: false, reason: 'unavailable' };
 	}
 	if (resp.status === 400 || resp.status === 401 || resp.status === 403) {
-		return { ok: false, reason: 'rejected' };
+		return { ok: false, reason: 'rejected', why: await rejectionOf(resp) };
 	}
 	if (!resp.ok) return { ok: false, reason: 'unavailable' };
 
@@ -83,6 +104,18 @@ export function establishSession(cookies: Cookies, tokens: TokenPair): void {
 	clearOperatorScope(cookies);
 	setAuthCookies(cookies, tokens.access_token, tokens.refresh_token);
 	setMustChangePassword(cookies, tokens.must_change_password === true);
+	clearSigninNotice(cookies);
+}
+
+/**
+ * End a session that is OVER (Go refused the refresh token, or the person changed their password
+ * and Go revoked every session): what sign-out clears, plus the one-word notice the sign-in page
+ * shows once. The one place a session ends with a reason; a sign-out the person asked for sets none.
+ */
+export function endSession(cookies: Cookies, notice: SigninNotice): void {
+	clearAuthCookies(cookies);
+	clearOperatorScope(cookies);
+	setSigninNotice(cookies, notice);
 }
 
 /**
@@ -104,9 +137,11 @@ export type SessionRefresh =
 
 /**
  * Refresh using the request's cookies. A rejected refresh token ends the
- * session (all auth cookies and the operator scope are cleared); an
+ * session (all auth cookies and the operator scope are cleared, and the
+ * sign-in notice says which of Go's three reasons it was); an
  * unreachable Go API leaves the cookies alone so the next request can try
- * again. Callers use `reason` to tell "sign the user out" from "try again".
+ * again. Callers use `reason` to tell "sign the user out" from "try again";
+ * why Go refused reaches the browser only as the notice cookie.
  */
 export async function refreshSession(
 	cookies: Cookies,
@@ -120,15 +155,17 @@ export async function refreshSession(
 		setAuthCookies(cookies, result.tokens.access_token, result.tokens.refresh_token, {
 			keepCsrf: true
 		});
-		// lk_mcp is set once at login but the refresh cookie now rolls for 14 days on every refresh:
-		// renew it with the session or the forced-change gate lapses 14 days after login.
-		if (mustChangePassword(cookies)) setMustChangePassword(cookies, true);
+		// Go's refresh body says whether the password must change, like the login body: follow it, so
+		// the gate appears when an admin reset the password meanwhile and lifts when it no longer
+		// applies. A body without the field keeps what the session had. Setting it also renews the
+		// cookie: the refresh cookie rolls for 14 days on every refresh, and a gate set once at login
+		// would lapse 14 days later. Nothing is written for a session that has no gate and needs none.
+		const had = mustChangePassword(cookies);
+		const flagged = result.tokens.must_change_password ?? had;
+		if (flagged || had) setMustChangePassword(cookies, flagged);
 		return { ok: true, access: result.tokens.access_token };
 	}
-	if (result.reason === 'rejected') {
-		clearAuthCookies(cookies);
-		clearOperatorScope(cookies);
-	}
+	if (result.reason === 'rejected') endSession(cookies, result.why);
 	return { ok: false, reason: result.reason };
 }
 
