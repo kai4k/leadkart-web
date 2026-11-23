@@ -11,8 +11,8 @@ import { expect, test, type Page } from './helpers/test';
 
 const FAIL_ABOVE_MS = 500;
 
-async function open(page: Page) {
-	await page.goto('/data-table-bench');
+async function open(page: Page, query = '') {
+	await page.goto(`/data-table-bench${query}`);
 	await page.waitForSelector('html[data-hydrated="true"]');
 	await expect(page.getByRole('region', { name: 'Bench rows' })).toBeVisible();
 }
@@ -240,4 +240,121 @@ test('axe finds no serious or critical violation, at the top and scrolled', asyn
 		);
 		expect(blocking, JSON.stringify(blocking, null, 2)).toEqual([]);
 	}
+});
+
+const focusedRow = (page: Page) =>
+	page.evaluate(
+		() => document.activeElement?.closest<HTMLElement>('tr[data-row-id]')?.dataset.rowId ?? 'BODY'
+	);
+
+test('a focused row far from the viewport costs one more row, not every row in between', async ({
+	page
+}) => {
+	await open(page);
+	await page.locator('tbody tr[data-row-id="r-1"]').focus();
+	await scroller(page).evaluate((el) => el.scrollTo(0, 20000));
+	// the window has moved on: the row after the focused one is far from r-2
+	await expect.poll(async () => (await rowIds(page))[1]).not.toBe('r-2');
+	const ids = await rowIds(page);
+	expect(ids[0]).toBe('r-1');
+	expect(ids).not.toContain('r-2');
+	expect(ids.length).toBeLessThan(60);
+	expect(await focusedRow(page)).toBe('r-1');
+	// the height the rows stand for is unchanged: the last row is still where the scrollbar says
+	await scroller(page).evaluate((el) => el.scrollTo(0, el.scrollHeight));
+	await expect(page.locator('tbody tr[data-row-id="r-1000"]')).toBeVisible();
+	expect((await rowIds(page)).length).toBeLessThan(60);
+	expect(await focusedRow(page)).toBe('r-1');
+	await page.keyboard.press('ArrowDown');
+	await expect(page.locator(':focus')).toHaveAttribute('data-row-id', 'r-2');
+	await expect(page.locator('tbody tr[data-row-id="r-2"]')).toBeInViewport();
+});
+
+test('without nav: the row whose checkbox has focus stays mounted, and Tab leaves in a few presses', async ({
+	page
+}) => {
+	await open(page, '?nav=0');
+	const box = page.locator('tbody tr[data-row-id="r-5"] [role="checkbox"]');
+	await box.focus();
+	await scroller(page).evaluate((el) => el.scrollTo(0, 20000));
+	await expect.poll(async () => (await rowIds(page)).includes('r-6')).toBe(false);
+	expect((await rowIds(page))[0]).toBe('r-5');
+	await expect(box).toBeFocused();
+	expect((await rowIds(page)).length).toBeLessThan(60);
+	for (let i = 0; i < 6; i++) await page.keyboard.press('Tab');
+	expect(await page.evaluate(() => !!document.activeElement?.closest('tbody'))).toBe(false);
+});
+
+test('with locked widths a cell clips what does not fit instead of drawing over the next column', async ({
+	page
+}) => {
+	await page.setViewportSize({ width: 640, height: 800 });
+	await open(page);
+	await expect(page.locator('table')).toHaveClass(/table-fixed/);
+	await scroller(page).evaluate((el) => el.scrollTo(0, 6000));
+	const cells = await page.locator('tbody tr[data-row-id] td').evaluateAll((tds) =>
+		tds.map((td) => {
+			const style = getComputedStyle(td);
+			return `${style.overflowX} ${style.textOverflow}`;
+		})
+	);
+	expect(cells.length).toBeGreaterThan(0);
+	expect([...new Set(cells)]).toEqual(['clip ellipsis']);
+});
+
+for (const [query, focus, neighbour, label] of [
+	['?rows=50', 'r-20', 'r-21', 'not windowed'],
+	['?rows=50', 'r-50', 'r-49', 'not windowed, the last row'],
+	['', 'r-3', 'r-4', 'windowed']
+] as const) {
+	test(`a focused row that is removed hands focus to its neighbour (${label})`, async ({
+		page
+	}) => {
+		await open(page, query);
+		await page.locator(`tbody tr[data-row-id="${focus}"]`).focus();
+		await page.keyboard.press('e');
+		await expect(page.locator(`tbody tr[data-row-id="${focus}"]`)).toHaveCount(0);
+		await expect.poll(() => focusedRow(page)).toBe(neighbour);
+		// it stays there: focus is not dropped to <body> a moment later
+		await page.waitForTimeout(300);
+		expect(await focusedRow(page)).toBe(neighbour);
+	});
+}
+
+for (const [query, label] of [
+	['?rows=50', 'not windowed'],
+	['', 'windowed']
+] as const) {
+	test(`rows reordered under the focused row keep it focused and do not scroll (${label})`, async ({
+		page
+	}) => {
+		await open(page, query);
+		await page.locator('tbody tr[data-row-id="r-5"]').focus();
+		for (let i = 0; i < 4; i++) {
+			await page.keyboard.press('Enter');
+			await page.waitForTimeout(150);
+			expect(await focusedRow(page), `after reorder ${i + 1}`).toBe('r-5');
+			expect(await scroller(page).evaluate((el) => el.scrollTop)).toBe(0);
+		}
+		// the keyboard still acts on that row
+		await page.keyboard.press('ArrowDown');
+		await expect(page.locator(':focus')).toHaveAttribute('data-row-id', 'r-6');
+	});
+}
+
+test('x in single selection leaves one row selected', async ({ page }) => {
+	await open(page, '?select=single');
+	await page.locator('tbody tr[data-row-id="r-3"] [role="checkbox"]').click();
+	await expect(page.getByText('1 selected')).toBeVisible();
+	await page.locator('tbody tr[data-row-id="r-5"] [role="checkbox"]').focus();
+	await page.keyboard.press('x');
+	await expect(page.locator('tbody tr[data-row-id="r-5"] [role="checkbox"]')).toHaveAttribute(
+		'aria-checked',
+		'true'
+	);
+	await expect(page.locator('tbody tr[data-row-id="r-3"] [role="checkbox"]')).toHaveAttribute(
+		'aria-checked',
+		'false'
+	);
+	await expect(page.getByText('1 selected')).toBeVisible();
 });

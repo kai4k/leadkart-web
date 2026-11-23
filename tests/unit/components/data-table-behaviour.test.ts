@@ -86,6 +86,69 @@ describe('DataTable keyboard: a key belongs to the control it is typed in', () =
 		expect([...state.selected]).toEqual(['i-9']);
 	});
 
+	it('x in single mode leaves one row selected: it goes through the table, not the page handler', () => {
+		const state = createBulkSelection<{ id: string }>();
+		const onToggleSelect = vi.fn((row: Item) => state.toggle(row.id));
+		const nav = createKeyboardListNav<Item>({ onToggleSelect });
+		render(
+			base({
+				data: items(12),
+				nav,
+				selection: { mode: 'single', state, rowLabel: (r: Item) => `Select ${r.name}` }
+			})
+		);
+		state.toggle('i-3');
+		const row = rows()[4]!;
+		row.focus();
+		flushSync();
+		row.dispatchEvent(new KeyboardEvent('keydown', { key: 'x', bubbles: true }));
+		flushSync();
+		expect([...state.selected]).toEqual(['i-5']);
+		expect(onToggleSelect).not.toHaveBeenCalled();
+		// and on the row's own checkbox
+		const box = target.querySelector<HTMLElement>('[aria-label="Select Item 07"]')!;
+		box.focus();
+		box.dispatchEvent(new KeyboardEvent('keydown', { key: 'X', bubbles: true }));
+		flushSync();
+		expect([...state.selected]).toEqual(['i-7']);
+	});
+
+	it('x typed in a checkbox that a CELL renders belongs to that checkbox: the row is not selected', () => {
+		const state = createBulkSelection<{ id: string }>();
+		const nav = createKeyboardListNav<Item>({ onToggleSelect: (row) => state.toggle(row.id) });
+		const ownBox = createRawSnippet<[Item]>((row) => ({
+			render: () => `<span role="checkbox" aria-checked="false" tabindex="0">${row().name}</span>`
+		}));
+		render(
+			base({
+				data: items(5),
+				nav,
+				columns: [{ id: 'name', header: 'Name', accessor: (r: Item) => r.name, cell: ownBox }],
+				selection: { mode: 'multi', state, rowLabel: (r: Item) => `Select ${r.name}` }
+			})
+		);
+		const inner = target.querySelector<HTMLElement>('tr[data-row-id="i-2"] span[role="checkbox"]')!;
+		inner.focus();
+		inner.dispatchEvent(new KeyboardEvent('keydown', { key: 'x', bubbles: true }));
+		flushSync();
+		expect(state.count).toBe(0);
+	});
+
+	it('x with a modifier is left to the browser: no selection', () => {
+		const state = createBulkSelection<{ id: string }>();
+		render(
+			base({
+				data: items(5),
+				nav: createKeyboardListNav<Item>(),
+				selection: { mode: 'multi', state, rowLabel: (r: Item) => `Select ${r.name}` }
+			})
+		);
+		const row = rows()[1]!;
+		row.focus();
+		row.dispatchEvent(new KeyboardEvent('keydown', { key: 'x', ctrlKey: true, bubbles: true }));
+		expect(state.count).toBe(0);
+	});
+
 	it('Enter on a link in a row fires nothing: not onSelect of any row', () => {
 		const onSelect = vi.fn();
 		const nav = createKeyboardListNav<Item>({ onSelect });
@@ -249,8 +312,8 @@ describe('DataTable sorting', () => {
 				sorting: { mode: 'client' },
 				columnVisibility: true,
 				columns: [
-					{ id: 'k', header: 'Key', cell: nameCell, accessor: (r: Item) => r.name, sortable: true },
-					{ id: 'x', header: 'Extra', accessor: () => 'x' }
+					{ id: 'k', header: 'Key', accessor: (r: Item) => r.name, sortable: true },
+					{ id: 'x', header: 'Extra', cell: nameCell, accessor: () => 'x' }
 				]
 			})
 		);
@@ -269,6 +332,39 @@ describe('DataTable sorting', () => {
 		await tick();
 		flushSync();
 		expect(target.querySelector('thead th[aria-sort]')).toBeNull();
+		// the order is the data's again: a sort with no visible sign would be a list in a puzzling order
+		expect(names()).toEqual(['b', 'a']);
+	});
+});
+
+describe('DataTable selection while loading', () => {
+	it('a pending query does not drop the selection: the rows are not gone, they are loading', () => {
+		const state = createBulkSelection<{ id: string }>();
+		state.toggle('i-1');
+		render(
+			base({
+				data: [],
+				query: { isPending: true, isError: false, error: null },
+				selection: { mode: 'multi', state, rowLabel: (r: Item) => `Select ${r.name}` }
+			})
+		);
+		flushSync();
+		expect(state.isSelected('i-1')).toBe(true);
+	});
+
+	it('rows that are gone once the query has answered leave the selection', () => {
+		const state = createBulkSelection<{ id: string }>();
+		state.toggle('i-1');
+		state.toggle('i-9');
+		render(
+			base({
+				data: items(3),
+				query: { isPending: false, isError: false, error: null },
+				selection: { mode: 'multi', state, rowLabel: (r: Item) => `Select ${r.name}` }
+			})
+		);
+		flushSync();
+		expect([...state.selected]).toEqual(['i-1']);
 	});
 });
 

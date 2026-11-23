@@ -7,8 +7,8 @@
 	 * Pages write `DataTableColumn<T>` and never see TanStack. Sorting is `none`, `client` or `server`;
 	 * paging is `none`, `client`, `offset` (a page number the page owns) or `cursor` (an infinite list;
 	 * its sorting is `none` or `server`, never `client`). Above `virtualizeAbove` rows the body is
-	 * windowed (`row-window.svelte.ts`) and the column widths are locked, so they do not move as rows
-	 * come and go. Printing renders every row.
+	 * windowed (`row-window.svelte.ts`), the column widths are locked (a cell clips what does not fit),
+	 * and the table has row keys whether or not the page passed `nav`. Printing renders every row.
 	 */
 	import { _ } from 'svelte-i18n';
 	import { flushSync, tick, untrack } from 'svelte';
@@ -19,6 +19,7 @@
 	import Pagination from '../Pagination.svelte';
 	import InfiniteListFooter from '../InfiniteListFooter.svelte';
 	import { cn } from '#lib/utils/cn.ts';
+	import { createKeyboardListNav } from '#lib/hooks/index.ts';
 	import DataTableHeader from './DataTableHeader.svelte';
 	import DataTableBody from './DataTableBody.svelte';
 	import DataTableColumnsMenu from './DataTableColumnsMenu.svelte';
@@ -163,11 +164,6 @@
 		if (stale.length > 0) selection.state.deselectAllVisible(stale.map((id) => ({ id })));
 	});
 
-	// ---- keyboard nav sees every row, in the order shown ----
-	$effect(() => {
-		nav?.setItems(rows);
-	});
-
 	// ---- query: static data, an explicit query, or the cursor list's own ----
 	const queryLike = $derived.by<QueryLike<T[]>>(() => {
 		const q =
@@ -193,6 +189,15 @@
 		count: () => rows.length,
 		threshold: () => (printing ? Number.POSITIVE_INFINITY : virtualizeAbove),
 		estimate: () => (density === 'compact' ? 36 : 53)
+	});
+
+	// ---- keyboard nav sees every row, in the order shown ----
+	// A windowed table always has row keys: the focused row is tracked (so it stays mounted) and only the
+	// current row's controls are tab stops, and without arrow keys that would strand a keyboard user.
+	const ownNav = createKeyboardListNav<T>({ getId: (row) => getRowId(row) });
+	const bodyNav = $derived(nav ?? (win.active ? ownNav : undefined));
+	$effect(() => {
+		bodyNav?.setItems(rows);
 	});
 
 	let measuring = 0;
@@ -339,7 +344,11 @@
 			{@attach watchWidth}
 			class="border-border bg-card focus-visible:ring-ring max-h-(--data-table-max-height) overflow-auto rounded-xl border [overflow-anchor:none] outline-none focus-visible:ring-2 print:max-h-none print:overflow-visible [&_[data-slot=table-container]]:overflow-visible"
 		>
-			<Table.Root aria-rowcount={ariaRowCount} class={cn(widths && 'table-fixed')}>
+			<!-- Locked widths come from the first window: a longer value further down is clipped, never drawn over the next column. -->
+			<Table.Root
+				aria-rowcount={ariaRowCount}
+				class={cn(widths && 'table-fixed [&_tbody_td]:overflow-x-clip [&_tbody_td]:text-ellipsis')}
+			>
 				{#if caption}<Table.Caption class="sr-only">{caption}</Table.Caption>{/if}
 				<DataTableHeader
 					columns={visibleColumns}
@@ -361,7 +370,7 @@
 					{rowActions}
 					{density}
 					{win}
-					{nav}
+					nav={bodyNav}
 					{rowOffset}
 				/>
 				{#if footer}

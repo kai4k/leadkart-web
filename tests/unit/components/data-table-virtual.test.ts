@@ -152,6 +152,7 @@ describe('DataTable virtualisation', () => {
 		await render({ data: ROWS.slice(0, 100) });
 		expect(rendered()).toHaveLength(100);
 		expect(spacers()).toHaveLength(0);
+		expect(target.querySelector('table')!.className).not.toContain('overflow-x-clip');
 	});
 
 	it('a smaller virtualizeAbove virtualises a smaller table', async () => {
@@ -254,6 +255,9 @@ describe('DataTable virtualisation', () => {
 	it('widths are locked while windowed: the header cells carry measured widths in a fixed layout', async () => {
 		await render();
 		expect(target.querySelector('table')!.className).toContain('table-fixed');
+		// a value longer than its locked column is clipped, not drawn over the next column
+		expect(target.querySelector('table')!.className).toContain('[&_tbody_td]:overflow-x-clip');
+		expect(target.querySelector('table')!.className).toContain('[&_tbody_td]:text-ellipsis');
 		const th = target.querySelector<HTMLElement>('thead th[data-col-id="name"]')!;
 		// jsdom measures 0: the lock is only taken from a real width, so no width is written here
 		expect(th.getAttribute('data-col-id')).toBe('name');
@@ -356,6 +360,101 @@ describe('DataTable keyboard in a windowed table', { timeout: 30000 }, () => {
 		await scrollTo(ROW * 600);
 		expect(ids()).toContain('r-3');
 		expect(document.activeElement).toBe(target.querySelector('tr[data-row-id="r-3"]'));
+	});
+
+	it('keeps ONE extra row, the focused one, above the window: not the rows in between', async () => {
+		const nav = createKeyboardListNav<Row>();
+		await render({ nav });
+		rendered()[2]!.focus();
+		await settle();
+		await scrollTo(ROW * 600);
+		expect(ids()[0]).toBe('r-3');
+		expect(ids()).not.toContain('r-4');
+		expect(ids()).not.toContain('r-300');
+		// the window and one row more, however far the window is from the focused row
+		const windowRows = ids()
+			.slice(1)
+			.map((id) => Number(id!.slice(2)));
+		expect(windowRows.every((n, i) => i === 0 || n === windowRows[i - 1]! + 1)).toBe(true);
+		expect(windowRows[0]).toBeGreaterThan(500);
+		expect(rendered().length).toBeLessThan(40);
+		// a spacer on each side of the kept row, and the one after the window
+		expect(spacers()).toHaveLength(3);
+		const height = spacers().reduce((a, s) => a + parseFloat(s.style.height), 0);
+		expect(height + rendered().length * ROW).toBe(ROW * 1000);
+	});
+
+	it('keeps ONE extra row, the focused one, below the window', async () => {
+		const nav = createKeyboardListNav<Row>();
+		await render({ nav });
+		await scrollTo(ROW * 600);
+		const row = rendered()[4]!;
+		const id = row.dataset.rowId!;
+		row.focus();
+		await settle();
+		const atRest = rendered().length;
+		await scrollTo(0);
+		expect(ids()).toContain('r-1');
+		expect(ids().at(-1)).toBe(id);
+		expect(document.activeElement).toBe(target.querySelector(`tr[data-row-id="${id}"]`));
+		expect(ids()).not.toContain('r-300');
+		expect(rendered().length).toBeLessThanOrEqual(atRest + 1);
+		const height = spacers().reduce((a, s) => a + parseFloat(s.style.height), 0);
+		expect(height + rendered().length * ROW).toBe(ROW * 1000);
+	});
+
+	it('the kept row goes when focus leaves the table', async () => {
+		const nav = createKeyboardListNav<Row>();
+		await render({ nav });
+		rendered()[2]!.focus();
+		await settle();
+		await scrollTo(ROW * 600);
+		expect(ids()).toContain('r-3');
+		const outside = document.body.appendChild(document.createElement('button'));
+		outside.focus();
+		await settle();
+		expect(ids()).not.toContain('r-3');
+		expect(spacers()).toHaveLength(2);
+	});
+
+	it('without nav, a windowed table still keeps the row whose control has focus', async () => {
+		const state = createBulkSelection<{ id: string }>();
+		await render({
+			selection: { mode: 'multi', state, rowLabel: (r: Row) => `Select ${r.name}` }
+		});
+		const box = target.querySelector<HTMLElement>('[aria-label="Select Row 3"]')!;
+		box.focus();
+		await settle();
+		await scrollTo(ROW * 600);
+		expect(ids()).toContain('r-3');
+		expect(document.activeElement).toBe(box);
+		expect(rendered().length).toBeLessThan(100);
+	});
+
+	it('without nav, a windowed table has one tab stop per row and row keys', async () => {
+		const state = createBulkSelection<{ id: string }>();
+		await render({
+			selection: { mode: 'multi', state, rowLabel: (r: Row) => `Select ${r.name}` }
+		});
+		expect(rendered().filter((r) => r.getAttribute('tabindex') === '0')).toHaveLength(1);
+		const boxes = [...target.querySelectorAll<HTMLElement>('tbody [role="checkbox"]')];
+		expect(boxes.filter((b) => b.getAttribute('tabindex') !== '-1')).toHaveLength(1);
+		rendered()[0]!.focus();
+		document.activeElement!.dispatchEvent(
+			new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })
+		);
+		await settle();
+		expect((document.activeElement as HTMLElement).dataset.rowId).toBe('r-2');
+		// x selects with no page handler: the table's own toggle
+		document.activeElement!.dispatchEvent(
+			new KeyboardEvent('keydown', { key: 'x', bubbles: true })
+		);
+		expect([...state.selected]).toEqual(['r-2']);
+	});
+
+	it('without nav, a table that is not windowed leaves its rows out of the tab order', async () => {
+		await render({ data: ROWS.slice(0, 20) });
+		expect(rendered().some((r) => r.hasAttribute('tabindex'))).toBe(false);
 	});
 
 	it('keeps the focused row focused through a re-sort', async () => {

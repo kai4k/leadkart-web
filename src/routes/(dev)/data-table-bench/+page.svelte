@@ -4,7 +4,12 @@
 	 * keyboard navigation. It exists for the virtualisation e2e (`tests/e2e/data-table.spec.ts`) and for
 	 * the material scroll perf spec, which toggles `transparency` here to compare glass with solid.
 	 * Like the styleguide it lives in the `(dev)` route group and is linked from nowhere.
+	 *
+	 * For the e2e: `?rows=50` is a table that is not windowed, `?nav=0` passes no keyboard nav,
+	 * `?select=single` is single selection. With nav, `e` on a row removes it and Enter reverses the
+	 * list: rows change under the focused row, as they do when a list is refetched.
 	 */
+	import { page } from '$app/state';
 	import PageHeader from '#lib/layouts/PageHeader.svelte';
 	import { Button } from '#lib/components/ui/index.ts';
 	import { DataTable } from '#lib/components/data/data-table/index.ts';
@@ -26,7 +31,8 @@
 		note: string;
 	};
 
-	const COUNT = 1000;
+	const params = page.url.searchParams;
+	const COUNT = Math.min(5000, Math.max(1, Number(params.get('rows')) || 1000));
 	const ROLES = ['Admin', 'Manager', 'Sales', 'Support'];
 	const REGIONS = ['North', 'South', 'East', 'West'];
 	const STATUSES = ['Active', 'Invited', 'Suspended'];
@@ -47,7 +53,7 @@
 		list[Math.floor(rand() * list.length)] as V;
 
 	const rand = seeded(20261123);
-	const rows: Row[] = Array.from({ length: COUNT }, (_, i) => {
+	const seed: Row[] = Array.from({ length: COUNT }, (_, i) => {
 		const first = pick(rand, FIRST);
 		const last = pick(rand, LAST);
 		const day = 1 + Math.floor(rand() * 28);
@@ -82,7 +88,12 @@
 
 	let density = $state<'compact' | 'default'>('compact');
 	const selection = createBulkSelection<Row>();
-	const nav = createKeyboardListNav<Row>({ onToggleSelect: (row) => selection.toggle(row.id) });
+	let rows = $state.raw(seed);
+	const nav = createKeyboardListNav<Row>({
+		onToggleSelect: (row) => selection.toggle(row.id),
+		onEdit: (row) => (rows = rows.filter((r) => r.id !== row.id)),
+		onSelect: () => (rows = rows.toReversed())
+	});
 	const prefs = getPreferences();
 </script>
 
@@ -132,8 +143,12 @@
 		noun="rows"
 		caption="Bench rows"
 		sorting={{ mode: 'client' }}
-		selection={{ mode: 'multi', state: selection, rowLabel: (r) => `Select ${r.name}` }}
-		{nav}
+		selection={{
+			mode: params.get('select') === 'single' ? 'single' : 'multi',
+			state: selection,
+			rowLabel: (r) => `Select ${r.name}`
+		}}
+		nav={params.get('nav') === '0' ? undefined : nav}
 		{density}
 	/>
 </main>

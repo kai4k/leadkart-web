@@ -5,12 +5,14 @@
 	 * nests in anything else. Selection is read from and written to the shared `BulkSelection` by row
 	 * id, so a row that is sorted away, paged away or recycled out of the window keeps its state.
 	 *
-	 * Windowed (`win.active`): only `win.start..win.end` are rendered, between two spacer rows, plus
-	 * the row that holds focus (so recycling never drops it). Every rendered row is measured on its own.
+	 * Windowed (`win.active`): only `win.start..win.end` are rendered, plus ONE more row when the row
+	 * that holds focus is outside that range (so recycling never drops focus), with a spacer row wherever
+	 * rows are left out. Every rendered row is measured on its own.
 	 *
-	 * Keyboard (`nav`): row keys act only when the row itself is the target (a key typed in a row's
-	 * checkbox, link or menu belongs to that control), and the current row follows focus by row id. Only
-	 * the current row's controls are tab stops, so Tab leaves a long table in a few presses.
+	 * Keyboard (`nav`; a windowed table always has one, see DataTable): row keys act only when the row
+	 * itself is the target (a key typed in a row's checkbox, link or menu belongs to that control), and
+	 * the current row follows focus by row id. Only the current row's controls are tab stops, so Tab
+	 * leaves a long table in a few presses. `x` selects through the table's own toggle.
 	 */
 	import { tick } from 'svelte';
 	import * as Table from '#lib/components/ui/table/index.ts';
@@ -64,14 +66,47 @@
 	const indexById = $derived(new Map(rows.map((row, i) => [getRowId(row), i])));
 	const focusedIndex = $derived(focusedId === null ? -1 : (indexById.get(focusedId) ?? -1));
 
-	// The window, widened to keep the focused row mounted: a recycled row would drop focus to <body>.
-	const from = $derived(
-		win.active && focusInside && focusedIndex >= 0 ? Math.min(win.start, focusedIndex) : win.start
+	// The focused row stays mounted when the window has moved away from it (a recycled row would drop
+	// focus to <body>): that ONE row, never the rows between it and the window.
+	const kept = $derived(
+		win.active &&
+			focusInside &&
+			focusedIndex >= 0 &&
+			(focusedIndex < win.start || focusedIndex >= win.end)
+			? focusedIndex
+			: -1
 	);
-	const to = $derived(
-		win.active && focusInside && focusedIndex >= 0 ? Math.max(win.end, focusedIndex + 1) : win.end
-	);
-	const slice = $derived(rows.slice(from, to));
+
+	// Spacer keys cannot be row ids (no row id starts with NUL). The spacer between the kept row and the
+	// window has one key per side, so the keyed each never has to move the focused row past it.
+	const GAP = { head: '\0head', above: '\0above', below: '\0below', tail: '\0tail' } as const;
+	type Entry = { key: string; gap: number } | { key: string; index: number; row: T };
+	/** What the body renders, top to bottom: rows, and a spacer wherever rows are left out. */
+	const entries = $derived.by<Entry[]>(() => {
+		const out: Entry[] = [];
+		const push = (index: number) => {
+			const row = rows[index];
+			if (row !== undefined) out.push({ key: getRowId(row), index, row });
+		};
+		const gap = (key: string, height: number) => {
+			if (win.active && height > 0) out.push({ key, gap: height });
+		};
+		const above = kept >= 0 && kept < win.start;
+		gap(GAP.head, win.before(above ? kept : win.start));
+		if (above) {
+			push(kept);
+			gap(GAP.above, win.before(win.start) - win.before(kept + 1));
+		}
+		for (let i = win.start; i < win.end; i++) push(i);
+		let next = win.end;
+		if (kept >= win.end) {
+			gap(GAP.below, win.before(kept) - win.before(win.end));
+			push(kept);
+			next = kept + 1;
+		}
+		gap(GAP.tail, win.after(next));
+		return out;
+	});
 
 	// The current row follows the focused row when rows are sorted or removed around it.
 	$effect(() => {
@@ -93,16 +128,28 @@
 				: null
 	);
 
-	// After rows change (a sort moves the focused row, a delete removes it, recycling) focus can
-	// have fallen to <body>: put it back on the row, or on the neighbour of a row that is gone.
-	$effect(() => {
+	// Rows changing under the focused row. The DOM follows LATER in the same task: the table library
+	// applies new rows from an effect of its own, so this component's effects run before the rows move.
+	// Until the DOM has caught up, a focusout with no target is the browser reporting the focused row's
+	// move or removal, not the person leaving.
+	let rowsChanging = 0;
+	$effect.pre(() => {
 		void rows;
-		void from;
-		void to;
+		rowsChanging++;
+		void tick().then(() => rowsChanging--);
+	});
+
+	/**
+	 * Focus has fallen to <body> because the focused row was moved (a sort, a refetch) or removed: put
+	 * it back on the row, or on the neighbour of a row that is gone. Does nothing while focus is in the
+	 * table, so it is safe to call from every place that may see the change first.
+	 */
+	function restoreFocus(): void {
 		if (!nav || !focusInside || focusedId === null) return;
 		const active = document.activeElement;
 		if (active && active !== document.body && tbody?.contains(active)) return;
 		let id = focusedId;
+		let gone = false;
 		if (!indexById.has(id)) {
 			const neighbour = rows[Math.min(lastIndex, rows.length - 1)];
 			if (neighbour === undefined) {
@@ -112,21 +159,34 @@
 			}
 			id = getRowId(neighbour);
 			focusedId = id;
+			gone = true;
+		}
+		// The same row, still rendered: focus it where it is. The list does not scroll to where it went.
+		const el = refs.get(id);
+		if (el && !gone) {
+			el.focus({ preventScroll: true });
+			return;
 		}
 		const index = indexById.get(id) ?? 0;
 		void tick().then(() => {
-			win.reveal(index);
+			if (gone) win.reveal(index);
 			refs.get(id)?.focus({ preventScroll: true });
 		});
+	}
+	$effect(() => {
+		void rows;
+		void entries;
+		restoreFocus();
+		// The rows may move after this effect has run (see above), and not every browser reports that
+		// with a focusout: look again once the DOM has caught up.
+		void tick().then(restoreFocus);
 	});
 
 	// Only the current row's controls are tab stops.
 	const CONTROLS = 'a[href], button, input, select, textarea, [role="checkbox"], [role="menuitem"]';
 	$effect(() => {
 		if (!nav || !tbody) return;
-		void from;
-		void to;
-		void rows;
+		void entries;
 		const current = activeId;
 		for (const tr of tbody.querySelectorAll<HTMLElement>('tr[data-row-id]')) {
 			const isCurrent = tr.dataset.rowId === current;
@@ -167,12 +227,20 @@
 		nav.onFocusOut(event);
 		const next = event.relatedTarget;
 		if (next instanceof Node && tbody?.contains(next)) return;
+		// The focused row is being moved or removed by a rows change: not the person leaving. Focus goes
+		// back (to the row, or to its neighbour) once the DOM has caught up.
+		if (next === null && rowsChanging > 0) {
+			void tick().then(restoreFocus);
+			return;
+		}
 		const left = event.target;
-		// A focused row that is removed from the DOM reports a focusout with no target and focus on
-		// <body>: that is not the user leaving, and the row's neighbour is focused next (above).
 		queueMicrotask(() => {
+			// A focused row that left the DOM for another reason: not the person leaving either.
 			const gone = left instanceof Node && !left.isConnected;
-			if (next === null && gone) return;
+			if (next === null && gone) {
+				restoreFocus();
+				return;
+			}
 			if (!tbody?.contains(document.activeElement)) focusInside = false;
 		});
 	}
@@ -198,7 +266,8 @@
 		const id = activeId;
 		const current = id === null ? -1 : (indexById.get(id) ?? -1);
 		// The tab stop must be a row that exists: when the current row is not rendered, the first one stands in.
-		if (current < from || current >= to) return index === from ? 0 : -1;
+		const rendered = (current >= win.start && current < win.end) || (kept >= 0 && current === kept);
+		if (!rendered) return index === win.start ? 0 : -1;
 		return index === current ? 0 : -1;
 	}
 
@@ -221,14 +290,22 @@
 
 	async function onkeydown(event: KeyboardEvent): Promise<void> {
 		// Keys typed in a control inside the row (link, menu, checkbox) are that control's. The one
-		// exception is `x` on the row's own checkbox: it toggles that row (focus has made it the current row).
+		// exception is `x` on the row's OWN checkbox (not a checkbox a cell happens to render): it toggles that row.
 		if (!nav) return;
 		const onRow = event.target instanceof HTMLTableRowElement;
+		const isX = event.key === 'x' || event.key === 'X';
 		const onCheckbox =
-			event.target instanceof Element &&
-			event.target.matches('[role="checkbox"]') &&
-			(event.key === 'x' || event.key === 'X');
+			isX && event.target instanceof Element && event.target.matches('[data-row-select]');
 		if (!onRow && !onCheckbox) return;
+		// `x` selects through the table's own toggle, which is what keeps single mode to one row.
+		if (isX && selection) {
+			if (event.metaKey || event.ctrlKey || event.altKey) return;
+			const id = rowIdOf(event.target);
+			if (id === null) return;
+			event.preventDefault();
+			toggle(id);
+			return;
+		}
 		if (!win.active) {
 			nav.handleKey(event);
 			return;
@@ -257,11 +334,75 @@
 {/snippet}
 
 {#snippet spacer(height: number)}
-	{#if win.active && height > 0}
-		<tr aria-hidden="true" style="height: {height}px"
-			><td colspan={span} class="border-0 p-0"></td></tr
-		>
-	{/if}
+	<tr aria-hidden="true" style="height: {height}px"
+		><td colspan={span} class="border-0 p-0"></td></tr
+	>
+{/snippet}
+
+{#snippet tableRow(row: T, index: number)}
+	{@const id = getRowId(row)}
+	{@const selected = selection?.state.isSelected(id) ?? false}
+	<Table.Row
+		data-row-id={id}
+		data-state={selected ? 'selected' : undefined}
+		aria-rowindex={rowOffset + index + 2}
+		tabindex={nav ? tabindexFor(index) : undefined}
+		{@attach (el: HTMLElement) => {
+			refs.set(id, el);
+			nav?.registerRef(id, el);
+			const off = win.active ? win.observe(el, index) : undefined;
+			// A cell that renders its own link inside `rowHref`'s link nests anchors: say so where it is built.
+			if (import.meta.env.DEV && rowHref && el.querySelector('a a'))
+				console.error(
+					`DataTable: row "${id}" has a link inside the rowHref link. Give the cell no href.`
+				);
+			return () => {
+				off?.();
+				if (refs.get(id) === el) refs.delete(id);
+				nav?.registerRef(id, null);
+			};
+		}}
+	>
+		{#if selection}
+			<Table.Cell class={cn('w-10 px-3', density === 'compact' ? 'py-2' : 'py-3.5')}>
+				<Checkbox
+					class="size-6"
+					data-row-select
+					aria-label={selection.rowLabel(row)}
+					checked={selected}
+					onCheckedChange={() => toggle(id)}
+				/>
+			</Table.Cell>
+		{/if}
+		{#each columns as col (col.id)}
+			<Table.Cell
+				class={cn(
+					'px-3',
+					density === 'compact' ? 'py-2' : 'py-3.5',
+					col.align === 'end' && 'text-end',
+					hideBelowClass(col),
+					col.class
+				)}
+			>
+				{#if rowHref && col.id === primaryId}
+					<!-- eslint-disable svelte/no-navigation-without-resolve -- the caller passes a resolved path -->
+					<a
+						href={rowHref(row)}
+						class="text-primary-text focus-visible:ring-ring block w-fit max-w-full rounded font-medium outline-none hover:underline focus-visible:ring-2"
+						>{@render content(col, row)}</a
+					>
+					<!-- eslint-enable svelte/no-navigation-without-resolve -->
+				{:else}
+					{@render content(col, row)}
+				{/if}
+			</Table.Cell>
+		{/each}
+		{#if rowActions}
+			<Table.Cell class={cn('w-10 px-3 text-end', density === 'compact' ? 'py-2' : 'py-3.5')}>
+				{@render rowActions(row)}
+			</Table.Cell>
+		{/if}
+	</Table.Row>
 {/snippet}
 
 <Table.Body
@@ -271,66 +412,11 @@
 	onfocusin={nav ? onfocusin : undefined}
 	onfocusout={nav ? onfocusout : undefined}
 >
-	{@render spacer(win.before(from))}
-	{#each slice as row, i (getRowId(row))}
-		{@const id = getRowId(row)}
-		{@const index = from + i}
-		{@const selected = selection?.state.isSelected(id) ?? false}
-		<Table.Row
-			data-row-id={id}
-			data-state={selected ? 'selected' : undefined}
-			aria-rowindex={rowOffset + index + 2}
-			tabindex={nav ? tabindexFor(index) : undefined}
-			{@attach (el: HTMLElement) => {
-				refs.set(id, el);
-				nav?.registerRef(id, el);
-				const off = win.active ? win.observe(el, index) : undefined;
-				return () => {
-					off?.();
-					if (refs.get(id) === el) refs.delete(id);
-					nav?.registerRef(id, null);
-				};
-			}}
-		>
-			{#if selection}
-				<Table.Cell class={cn('w-10 px-3', density === 'compact' ? 'py-2' : 'py-3.5')}>
-					<Checkbox
-						class="size-6"
-						aria-label={selection.rowLabel(row)}
-						checked={selected}
-						onCheckedChange={() => toggle(id)}
-					/>
-				</Table.Cell>
-			{/if}
-			{#each columns as col (col.id)}
-				<Table.Cell
-					class={cn(
-						'px-3',
-						density === 'compact' ? 'py-2' : 'py-3.5',
-						col.align === 'end' && 'text-end',
-						hideBelowClass(col),
-						col.class
-					)}
-				>
-					{#if rowHref && col.id === primaryId}
-						<!-- eslint-disable svelte/no-navigation-without-resolve -- the caller passes a resolved path -->
-						<a
-							href={rowHref(row)}
-							class="text-primary-text focus-visible:ring-ring block w-fit max-w-full rounded font-medium outline-none hover:underline focus-visible:ring-2"
-							>{@render content(col, row)}</a
-						>
-						<!-- eslint-enable svelte/no-navigation-without-resolve -->
-					{:else}
-						{@render content(col, row)}
-					{/if}
-				</Table.Cell>
-			{/each}
-			{#if rowActions}
-				<Table.Cell class={cn('w-10 px-3 text-end', density === 'compact' ? 'py-2' : 'py-3.5')}>
-					{@render rowActions(row)}
-				</Table.Cell>
-			{/if}
-		</Table.Row>
+	{#each entries as entry (entry.key)}
+		{#if 'gap' in entry}
+			{@render spacer(entry.gap)}
+		{:else}
+			{@render tableRow(entry.row, entry.index)}
+		{/if}
 	{/each}
-	{@render spacer(win.after(to))}
 </Table.Body>
