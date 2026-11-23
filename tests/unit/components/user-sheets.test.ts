@@ -242,7 +242,7 @@ describe('ManagerSelectorDrawer', () => {
 
 	it.each([
 		['403', () => new AuthError(403), "You don't have permission to change this user's manager."],
-		['404', () => new NotFoundError('/v1/users/m1/manager'), 'This user was deleted or moved.'],
+		['404', () => new NotFoundError('/v1/users/m1/manager'), 'This member could not be found.'],
 		['409', () => new ConflictError(), 'This manager assignment conflicts with an existing one.']
 	])('a %s answer is the sheet`s own banner line', async (_s, make, line) => {
 		gw.assignManager.mockRejectedValue(make());
@@ -318,6 +318,14 @@ describe('PermissionOverridesPanel', () => {
 			expect(document.body.textContent).toContain(name);
 	});
 
+	it('the end-date hint follows the form: a grant taken out of the list no longer says it ends', () => {
+		open();
+		expect(document.body.textContent).toMatch(/crm\.leads\.export ends on/);
+		document.querySelector<HTMLElement>('button[aria-label="Remove crm.leads.export"]')!.click();
+		flushSync();
+		expect(document.body.textContent).not.toMatch(/crm\.leads\.export ends on/);
+	});
+
 	it('says which grant ends, so re-sending it is not mistaken for making it permanent', () => {
 		open();
 		expect(document.body.textContent).toMatch(/crm\.leads\.export.*ends.*2026/s);
@@ -379,7 +387,7 @@ describe('PermissionOverridesPanel', () => {
 		[
 			'404',
 			() => new NotFoundError('/v1/users/m1/permission-overrides'),
-			'This user was deleted or moved.'
+			'This member could not be found.'
 		]
 	])('a %s answer is the sheet`s own banner line', async (_s, make, line) => {
 		gw.replacePermissionOverrides.mockRejectedValue(make());

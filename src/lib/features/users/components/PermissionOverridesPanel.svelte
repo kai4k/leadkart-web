@@ -118,7 +118,7 @@
 	formId="permission-overrides-form"
 	errorLines={{
 		403: "You don't have permission to manage permission overrides.",
-		404: 'This user was deleted or moved.',
+		404: 'This member could not be found.',
 		// Go: overrides_changed (a time-limited grant ended, a request was approved, or someone else saved)
 		409: $_('errors.code.overrides_changed')
 	}}
@@ -129,8 +129,9 @@
 			name="granted"
 			placeholder="e.g. crm.leads.assign"
 			bind:value={form.values.granted}
-			hint={endingGrants.length > 0
+			hint={endingGrants.some((g) => form.values.granted.includes(g.name))
 				? endingGrants
+						.filter((g) => form.values.granted.includes(g.name))
 						.map((g) =>
 							$_('pages.users.overrides.endsOn', {
 								values: { name: g.name, date: formatDate(g.expires_at) }

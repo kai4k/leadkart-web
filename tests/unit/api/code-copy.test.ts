@@ -132,3 +132,12 @@ describe('the code table', () => {
 		expect(goFailureKey(429, 'insufficient_rank')).toBe('auth.errors.rateLimited');
 	});
 });
+
+describe('current_session_unknown', () => {
+	it('never promises that a reload fixes it (a reload resends the same token): it says to sign in again', () => {
+		const text = (en as { errors: { code: Record<string, string> } }).errors.code
+			.current_session_unknown;
+		expect(text).not.toMatch(/reload/i);
+		expect(text).toMatch(/sign in again/i);
+	});
+});

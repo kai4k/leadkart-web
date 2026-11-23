@@ -76,8 +76,8 @@
 							{tree.orphans.length} orphaned member{tree.orphans.length === 1 ? '' : 's'}
 						</p>
 						<p class="caption text-muted-foreground mb-3">
-							These members reference a manager that doesn't exist in the current tenant (usually a
-							deactivated or deleted member). Reassign their reporting line.
+							These members reference a manager that doesn't exist in the current tenant (usually an
+							inactive member). Reassign their reporting line.
 						</p>
 						<ul class="stack" aria-label="Orphaned members">
 							{#each tree.orphans as orphan (orphan.user.membership_id)}
