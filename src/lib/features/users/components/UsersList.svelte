@@ -99,7 +99,10 @@
 		else if (value === 'inactive') url.searchParams.set('status', 'inactive');
 		else url.searchParams.delete('status');
 		url.searchParams.delete('page');
-		void goto(`${url.pathname}${url.search}` as ResolvedPathname, { replace: true });
+		void goto(`${url.pathname}${url.search}` as ResolvedPathname, {
+			replace: true,
+			reset: false
+		});
 	}
 
 	const listQuery = usersListQuery(

@@ -182,6 +182,24 @@ describe('UsersList status chips (nobody is deleted: Active, Inactive, All)', ()
 		expect(nav.page.url.searchParams.get('status')).toBe('all');
 	});
 
+	it('choosing a chip keeps the scroll and the focus where they are (goto with reset: false)', async () => {
+		const { goto } = await import('$app/navigation');
+		open();
+		vi.mocked(goto).mockClear();
+		[
+			...document.querySelectorAll<HTMLElement>(
+				'[role="group"][aria-label="Filter members by status"] button'
+			)
+		]
+			.find((b) => b.textContent?.trim().startsWith('Inactive'))!
+			.click();
+		flushSync();
+		expect(goto).toHaveBeenCalledWith(
+			expect.stringContaining('status=inactive'),
+			expect.objectContaining({ reset: false })
+		);
+	});
+
 	it('only the bulk action that can apply is offered: Deactivate on Active, Reactivate on Inactive', () => {
 		open();
 		checkboxes()[0]!.click();
