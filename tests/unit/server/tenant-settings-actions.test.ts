@@ -239,6 +239,65 @@ describe('saveTenantSection answers', () => {
 	});
 });
 
+// input-audit-identity C5 / input-audit-shared I3: `Number()` read `1e1` as 10 and `0x10` as 16, and
+// anything unreadable as 0, so a value the screen calls invalid was saved as another number.
+describe('a number field is digits only, or nothing is saved', () => {
+	const POLICY = {
+		min_length: '12',
+		require_uppercase: 'on',
+		max_failed_attempts: '5',
+		lockout_minutes: '15'
+	};
+	beforeEach(() => {
+		loadCapabilities.mockResolvedValue(caps([P.identityTenantsUpdateSettings]));
+		goFetch.mockResolvedValue(new Response(null, { status: 204 }));
+	});
+
+	it.each(['1e1', '0x10', 'abc', '', ' 12', '12.0', '+12', '-12', '1,2', '१२'])(
+		'min_length %j is a validation failure on that field and Go is not called',
+		async (typed) => {
+			const r = (await run(security, { ...POLICY, min_length: typed })) as {
+				status: number;
+				data: { fieldMessages: Record<string, string> };
+			};
+			expect(r.status).toBe(422);
+			expect(Object.keys(r.data.fieldMessages)).toEqual(['password_policy.min_length']);
+			expect(goFetch).not.toHaveBeenCalled();
+		}
+	);
+
+	it.each([
+		['max_failed_attempts', '1e1'],
+		['max_failed_attempts', ''],
+		['lockout_minutes', '0x10'],
+		['lockout_minutes', 'abc']
+	])(
+		'the round-tripped %s %j is refused as well, never read as another number',
+		async (field, typed) => {
+			const r = (await run(security, { ...POLICY, [field]: typed })) as {
+				status: number;
+				data: { fieldMessages: Record<string, string> };
+			};
+			expect(r.status).toBe(422);
+			expect(Object.keys(r.data.fieldMessages)).toEqual([`password_policy.${field}`]);
+			expect(goFetch).not.toHaveBeenCalled();
+		}
+	);
+
+	it('digits are sent as the number they spell', async () => {
+		await run(security, POLICY);
+		expect(goFetch).toHaveBeenCalledTimes(1);
+		const sent = JSON.parse(String((goFetch.mock.calls[0][2] as { body: string }).body)) as {
+			password_policy: Record<string, unknown>;
+		};
+		expect(sent.password_policy).toMatchObject({
+			min_length: 12,
+			max_failed_attempts: 5,
+			lockout_minutes: 15
+		});
+	});
+});
+
 describe('the section permission table covers exactly the gateway sections', () => {
 	it('has the keys of TENANT_SECTIONS', async () => {
 		const { TENANT_SECTIONS } = await import('$features/tenant/server');

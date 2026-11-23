@@ -70,6 +70,54 @@ describe('create-role action authorisation', () => {
 	});
 });
 
+// input-audit-identity C5: `Number()` read `1e1` as 10 and `0x10` as 16; the level is digits only.
+describe('the hierarchy level is digits only, or no role is created', () => {
+	const post = (level: string) =>
+		(actions.default as (e: never) => Promise<unknown>)({
+			request: new Request('http://x/settings/roles/new', {
+				method: 'POST',
+				body: new URLSearchParams({
+					name: 'Auditor',
+					hierarchy_level: level,
+					scope_context: 'none'
+				})
+			}),
+			cookies: { get: () => 'tok' },
+			route: { id: '/(app)/settings/roles/new' }
+		} as never);
+	beforeEach(() =>
+		loadCapabilities.mockResolvedValue({
+			is_platform: false,
+			is_super_user: false,
+			permissions: [],
+			effective_permissions: ['identity.roles.create']
+		})
+	);
+
+	it.each(['1e1', '0x10', 'abc', '', ' 5', '5.0', '+5', '-5'])(
+		'%j is a validation failure on the level and Go is not called',
+		async (typed) => {
+			const r = (await post(typed)) as {
+				status: number;
+				data: { fieldMessages: Record<string, string> };
+			};
+			expect(r.status).toBe(422);
+			expect(r.data.fieldMessages).toEqual({ hierarchy_level: 'form.errors.levelInvalid' });
+			expect(goFetch).not.toHaveBeenCalled();
+		}
+	);
+
+	it('digits reach Go as the number they spell', async () => {
+		goFetch.mockResolvedValue({ ok: false, status: 500 });
+		await post('10').catch(() => undefined);
+		expect(goFetch).toHaveBeenCalledTimes(1);
+		expect(JSON.parse(String((goFetch.mock.calls[0][2] as { body: string }).body))).toEqual({
+			name: 'Auditor',
+			hierarchy_level: 10
+		});
+	});
+});
+
 describe('create-role action keeps the form on an outage', () => {
 	const allowed = () =>
 		loadCapabilities.mockResolvedValue({

@@ -14,6 +14,7 @@ import {
 	UPSTREAM_UNAVAILABLE_KEY,
 	zodFieldMessages
 } from '#lib/server/form-action.ts';
+import { formInt } from '#lib/server/form-int.ts';
 import { goFetch, readGoJson } from '#lib/server/go.ts';
 import { createRoleRequestSchema } from '$features/roles/schemas';
 import { ACTION } from '#lib/features/auth/permissions.ts';
@@ -24,10 +25,14 @@ interface CreateRoleResponse {
 	role_id: string;
 }
 
-/** The typed role fields: what a refused submit gives back to the form, and what is validated. */
+/**
+ * The typed role fields: what a refused submit gives back to the form, and what is validated. The
+ * level is digits only (`formInt`): `1e1`, `0x10` or an empty field is refused by the schema, never
+ * read as some other number.
+ */
 const rolePayload = (fd: FormData) => ({
 	name: (fd.get('name') ?? '').toString(),
-	hierarchy_level: Number(fd.get('hierarchy_level') ?? 0)
+	hierarchy_level: formInt(fd, 'hierarchy_level')
 });
 
 export const actions: Actions = {

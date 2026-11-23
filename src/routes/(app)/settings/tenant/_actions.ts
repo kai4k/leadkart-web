@@ -19,6 +19,7 @@ import {
 	failOutage,
 	zodFieldMessages
 } from '#lib/server/form-action.ts';
+import { formInt } from '#lib/server/form-int.ts';
 import {
 	ownTenantId,
 	patchTenant,
@@ -28,10 +29,6 @@ import {
 } from '$features/tenant/server';
 
 const text = (fd: FormData, key: string): string => (fd.get(key) ?? '').toString();
-const toInt = (fd: FormData, key: string): number => {
-	const n = Number(text(fd, key));
-	return Number.isFinite(n) ? n : 0;
-};
 const toBool = (fd: FormData, key: string): boolean => text(fd, key) === 'on';
 
 /** What each section's form submits, as the payload the gateway validates and sends. */
@@ -61,13 +58,14 @@ const SECTION_FORMS: { [S in TenantSection]: (fd: FormData) => TenantSectionBodi
 	}),
 	settings: (fd) => ({
 		password_policy: {
-			min_length: toInt(fd, 'min_length'),
+			// digits only (`formInt`): `1e1`, `0x10` or an empty field is refused by the schema, never read as a number
+			min_length: formInt(fd, 'min_length'),
 			require_uppercase: toBool(fd, 'require_uppercase'),
 			require_lowercase: toBool(fd, 'require_lowercase'),
 			require_digit: toBool(fd, 'require_digit'),
 			require_symbol: toBool(fd, 'require_symbol'),
-			max_failed_attempts: toInt(fd, 'max_failed_attempts'),
-			lockout_minutes: toInt(fd, 'lockout_minutes')
+			max_failed_attempts: formInt(fd, 'max_failed_attempts'),
+			lockout_minutes: formInt(fd, 'lockout_minutes')
 		}
 	})
 };
