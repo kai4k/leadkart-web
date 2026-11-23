@@ -1,5 +1,7 @@
 <!-- src/lib/components/data/FilterBar.svelte -->
 <script lang="ts" module>
+	import { isDateOnly } from '#lib/utils/date-only.ts';
+
 	export type FilterBarFieldType = 'select' | 'multi-select' | 'text' | 'date-range' | 'boolean';
 
 	export interface FilterBarOption {
@@ -15,6 +17,29 @@
 		options?: FilterBarOption[];
 		/** Optional placeholder for `text` fields. */
 		placeholder?: string;
+	}
+
+	/**
+	 * What the URL may hold for these fields: a listed option, a real calendar date, `true`. Pass it to
+	 * `createUrlFilters(schema, { accept: filterAccept(fields) })`: a hand-edited `?status=bogus` or
+	 * `?placed_from=notadate` is then read as absent, so it is never shown and never sent to the API.
+	 */
+	export function filterAccept(
+		fields: FilterBarField[]
+	): Record<string, (value: string) => boolean> {
+		const accept: Record<string, (value: string) => boolean> = {};
+		for (const field of fields) {
+			if (field.type === 'date-range') {
+				accept[`${field.key}_from`] = isDateOnly;
+				accept[`${field.key}_to`] = isDateOnly;
+			} else if ((field.type === 'select' || field.type === 'multi-select') && field.options) {
+				const values = new Set(field.options.map((o) => o.value));
+				accept[field.key] = (value) => values.has(value);
+			} else if (field.type === 'boolean') {
+				accept[field.key] = (value) => value === 'true';
+			}
+		}
+		return accept;
 	}
 </script>
 
@@ -37,9 +62,11 @@
 	 * - `select`: the labelled native `Select` field.
 	 * - `multi-select`: a popover with a filterable checklist (`Popover` + `Command`). The trigger is
 	 *   named after the field and says how many are chosen; an option is a `role="option"` row that
-	 *   toggles and keeps the list open, so several can be picked in a row.
+	 *   toggles and keeps the list open, so several can be picked in a row. `aria-selected` is the
+	 *   CHOSEN state (the highlighted option is the `aria-activedescendant` of the input); a value that
+	 *   is no option is not counted and is dropped on the next pick.
 	 * - `date-range`: `DateRangePicker` (typed or picked); the URL keys are `{key}_from` and `{key}_to`,
-	 *   written together in ONE navigation.
+	 *   written together in ONE navigation. A URL value that is no calendar date is not handed to the picker.
 	 * - `text`: `TextField`. `boolean`: a checkbox.
 	 */
 
@@ -61,19 +88,21 @@
 		return typeof v === 'string' ? v : '';
 	}
 
-	function multiValueOf(key: string): string[] {
-		const v = urlFilters.filters[key as keyof TFilters];
-		return Array.isArray(v) ? v : [];
+	/** The chosen values that are options of the field: an unknown value in the URL is not a choice. */
+	function multiValueOf(field: FilterBarField): string[] {
+		const v = urlFilters.filters[field.key as keyof TFilters];
+		const known = new Set((field.options ?? []).map((o) => o.value));
+		return Array.isArray(v) ? v.filter((value) => known.has(value)) : [];
 	}
 
 	function setScalar(key: string, value: string) {
 		urlFilters.setFilter(key as Key, value as Value);
 	}
 
-	function toggleMulti(key: string, value: string) {
-		const current = multiValueOf(key);
+	function toggleMulti(field: FilterBarField, value: string) {
+		const current = multiValueOf(field);
 		const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
-		urlFilters.setFilter(key as Key, next as unknown as Value);
+		urlFilters.setFilter(field.key as Key, next as unknown as Value);
 	}
 
 	function setRange(key: string, range: { start: string; end: string }) {
@@ -83,13 +112,18 @@
 		} as Partial<TFilters>);
 	}
 
+	// A URL value that is no calendar date (`notadate`, `2026-02-30`) is no date for the picker either.
+	const dateOf = (key: string): string => {
+		const v = valueOf(key);
+		return isDateOnly(v) ? v : '';
+	};
 	function rangeOf(key: string): { start: string; end: string } {
-		return { start: valueOf(`${key}_from`), end: valueOf(`${key}_to`) };
+		return { start: dateOf(`${key}_from`), end: dateOf(`${key}_to`) };
 	}
 </script>
 
 {#snippet multiSelect(field: FilterBarField)}
-	{@const chosen = multiValueOf(field.key)}
+	{@const chosen = multiValueOf(field)}
 	<div class="stack stack-tight">
 		<span class="label text-foreground" id="filterbar-{field.key}-label">{field.label}</span>
 		<Popover.Root>
@@ -111,31 +145,32 @@
 						aria-label={$_('form.combobox.filter')}
 						placeholder={$_('form.combobox.search')}
 					/>
-					<Command.List aria-label={field.label}>
+					<Command.List aria-label={field.label} aria-multiselectable="true">
 						<Command.Empty>{$_('form.combobox.empty')}</Command.Empty>
 						{#each field.options ?? [] as opt (opt.value)}
 							{@const on = chosen.includes(opt.value)}
 							<Command.Item
 								value={opt.value}
 								keywords={[opt.label]}
-								data-checked={on}
-								onSelect={() => toggleMulti(field.key, opt.value)}
+								onSelect={() => toggleMulti(field, opt.value)}
 							>
-								<span class="flex min-w-0 flex-1 items-center gap-2">
-									<span
-										class={cn(
-											'flex size-4 shrink-0 items-center justify-center rounded-[4px] border',
-											on
-												? 'bg-primary-indicator border-primary-indicator text-primary-indicator-foreground'
-												: 'border-input'
-										)}
-										aria-hidden="true"
-									>
-										{#if on}<Icon icon={Check} size="xs" />{/if}
-									</span>
-									<span>{opt.label}</span>
-									{#if on}<span class="sr-only">{$_('form.combobox.selected')}</span>{/if}
-								</span>
+								<!-- bits-ui writes aria-selected for the HIGHLIGHTED item; in a checklist it must say CHOSEN. -->
+								{#snippet child({ props })}
+									<div {...props} aria-selected={on}>
+										<span
+											class={cn(
+												'flex size-4 shrink-0 items-center justify-center rounded-[4px] border',
+												on
+													? 'bg-primary-indicator border-primary-indicator text-primary-indicator-foreground'
+													: 'border-input'
+											)}
+											aria-hidden="true"
+										>
+											{#if on}<Icon icon={Check} size="xs" />{/if}
+										</span>
+										<span>{opt.label}</span>
+									</div>
+								{/snippet}
 							</Command.Item>
 						{/each}
 					</Command.List>

@@ -29,6 +29,7 @@
 </script>
 
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { _ } from 'svelte-i18n';
 	import { Calendar as CalendarIcon, Icon } from '#lib/icons/index.ts';
 	import { Button } from '#lib/components/ui/button/index.ts';
@@ -164,12 +165,16 @@
 		end: toDateOnly(r?.end)
 	});
 
-	// the string side drives `value` when the caller changes it
+	// The string side drives `value` when the caller changes it. What is compared is what was PARSED: a
+	// string that is no date (`notadate`, `2026-02-30`, from a hand-edited URL) parses to nothing, and
+	// comparing the raw text would write `value` on every run until Svelte stops the loop with an error.
 	$effect(() => {
 		if (!valueString) return;
-		const now = strings(value);
-		if (valueString.start !== now.start || valueString.end !== now.end)
-			value = { start: fromDateOnly(valueString.start), end: fromDateOnly(valueString.end) };
+		const next = { start: fromDateOnly(valueString.start), end: fromDateOnly(valueString.end) };
+		untrack(() => {
+			const now = strings(value);
+			if (toDateOnly(next.start) !== now.start || toDateOnly(next.end) !== now.end) value = next;
+		});
 	});
 
 	function report(next: DateRange) {
@@ -185,10 +190,20 @@
 		report({ start: value?.start, end: value?.end });
 	}
 
+	// A range is picked in the calendar in two clicks. The caller hears about it ONCE, when it is whole
+	// (one URL navigation, not one per click), or when the calendar closes on a start alone.
+	let halfPicked = false;
 	function handleCalendarChange(next: DateRange) {
 		value = next;
+		halfPicked = Boolean(next.start && !next.end);
+		if (halfPicked) return;
 		report(next);
 		if (next.start && next.end) open = false;
+	}
+	function handleOpenChange(isOpen: boolean) {
+		if (isOpen || !halfPicked) return;
+		halfPicked = false;
+		report({ start: value?.start, end: value?.end });
 	}
 
 	const editableSegments = () => [
@@ -274,7 +289,7 @@
 			onkeydowncapture={handleKeyDownCapture}
 			class="flex-none"
 		/>
-		<Popover.Root bind:open>
+		<Popover.Root bind:open onOpenChange={handleOpenChange}>
 			<Popover.Trigger disabled={disabled || readonly}>
 				{#snippet child({ props })}
 					<Button

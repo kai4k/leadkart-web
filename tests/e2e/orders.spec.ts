@@ -167,6 +167,85 @@ test.describe('Orders — list + filter', () => {
 	});
 });
 
+// ── A hand-edited URL ────────────────────────────────────────────────
+
+test.describe('Orders — filters in a hand-edited URL', () => {
+	test.beforeEach(async () => {
+		await resetMock();
+	});
+
+	const ordersCalls = async () =>
+		(await listMockCalls()).filter((c) => c.method === 'GET' && c.path === '/api/v1/orders');
+
+	for (const bad of ['notadate', '2026-13-45', '2026-02-30', '20260101']) {
+		test(`?placed_from=${bad} is no date: the list and the filter bar render, and Go is not asked for it`, async ({
+			page
+		}) => {
+			await signInAsTier(page, { tier: 'tenant-admin', permissions: PERMS });
+			await registerMock({
+				method: 'GET',
+				path: '/api/v1/orders',
+				status: 200,
+				body: { items: [makeOrder({ id: ORDER_DRAFT, order_number: 'ORD-1' })], has_more: false }
+			});
+			await page.goto(`/orders?placed_from=${bad}&placed_to=2026-01-31`);
+			await expect(page.getByText('ORD-1')).toBeVisible();
+			await page.getByRole('button', { name: 'Show filters' }).click();
+			// the bar is there (not the 500 page), with the end date and an empty start
+			await expect(page.getByRole('group', { name: 'Placed, end date' })).toBeVisible();
+			await expect(page.getByRole('heading', { level: 1, name: /^orders$/i })).toBeVisible();
+			const calls = await ordersCalls();
+			expect(calls.length).toBeGreaterThan(0);
+			for (const call of calls) {
+				expect(call.query).not.toContain('placed_from');
+				expect(call.query).toContain('placed_to=2026-01-31');
+			}
+		});
+	}
+
+	test('?status=bogus is no status: nothing is counted as chosen and Go is not asked for it', async ({
+		page
+	}) => {
+		await signInAsTier(page, { tier: 'tenant-admin', permissions: PERMS });
+		await registerMock({
+			method: 'GET',
+			path: '/api/v1/orders',
+			status: 200,
+			body: { items: [makeOrder({ id: ORDER_DRAFT, order_number: 'ORD-1' })], has_more: false }
+		});
+		await page.goto('/orders?status=bogus');
+		await expect(page.getByText('ORD-1')).toBeVisible();
+		await page.getByRole('button', { name: 'Show filters' }).click();
+		await expect(page.locator('#filterbar-status')).toHaveText('Any');
+		for (const call of await ordersCalls()) expect(call.query).not.toContain('bogus');
+	});
+
+	test('a range picked in the calendar is one navigation with both dates', async ({ page }) => {
+		await signInAsTier(page, { tier: 'tenant-admin', permissions: PERMS });
+		await registerMock({
+			method: 'GET',
+			path: '/api/v1/orders',
+			status: 200,
+			body: { items: [makeOrder({ id: ORDER_DRAFT, order_number: 'ORD-1' })], has_more: false }
+		});
+		await page.goto('/orders');
+		await expect(page.getByText('ORD-1')).toBeVisible();
+		await page.getByRole('button', { name: 'Show filters' }).click();
+		const before = (await ordersCalls()).length;
+		await page.getByRole('button', { name: 'Open calendar, Placed' }).click();
+		const days = page.locator('[data-bits-day]:not([data-outside-month])');
+		await days.getByText('10', { exact: true }).click();
+		// the start alone has not been written to the URL
+		expect(new URL(page.url()).searchParams.has('placed_from')).toBe(false);
+		await days.getByText('14', { exact: true }).click();
+		await page.waitForURL(/placed_from=\d{4}-\d{2}-10.*placed_to=\d{4}-\d{2}-14/);
+		await expect(page.getByText('ORD-1')).toBeVisible();
+		// one new list request, and it carries both ends
+		const after = (await ordersCalls()).slice(before);
+		expect(after.map((c) => /placed_from=.*placed_to=/.test(c.query))).toEqual([true]);
+	});
+});
+
 // ── Detail page + lifecycle stepper ─────────────────────────────────
 
 test.describe('Orders — detail page', () => {

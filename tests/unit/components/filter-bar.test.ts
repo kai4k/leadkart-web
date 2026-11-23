@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, tick, unmount } from 'svelte';
-import FilterBar, { type FilterBarField } from '#lib/components/data/FilterBar.svelte';
+import FilterBar, {
+	filterAccept,
+	type FilterBarField
+} from '#lib/components/data/FilterBar.svelte';
 import { reactiveProps } from '../helpers/reactive-props.svelte.ts';
 
 type Filters = Record<string, string | string[] | undefined>;
@@ -175,6 +178,66 @@ describe('FilterBar', () => {
 		expect(segments().map((s) => s.value)).toEqual(['05', '03', '2026', '09', '04', '2026']);
 	});
 
+	it('a range change is ONE write of both keys, never two navigations', () => {
+		const { urlFilters, calls } = fakeFilters({
+			placed_from: '2026-03-05',
+			placed_to: '2026-04-09'
+		});
+		render(urlFilters);
+		// step the start day up by one: the range changes, and both keys travel together
+		const first = segments()[0]!;
+		first.focus();
+		first.dispatchEvent(
+			new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true })
+		);
+		flushSync();
+		expect(calls.setMany).toHaveBeenCalledTimes(1);
+		expect(calls.setMany).toHaveBeenCalledWith({
+			placed_from: '2026-03-06',
+			placed_to: '2026-04-09'
+		});
+		expect(calls.setFilter).not.toHaveBeenCalled();
+	});
+
+	it.each(['notadate', '2026-13-45', '2026-02-30', '20260101'])(
+		'a URL date that is no date (%s) is dropped: the bar renders and the picker side is empty',
+		(bad) => {
+			render(fakeFilters({ placed_from: bad, placed_to: '2026-04-09' }).urlFilters);
+			expect(segments().map((s) => s.value)).toEqual(['', '', '', '09', '04', '2026']);
+			expect(target.querySelector('#filterbar-stage')).not.toBeNull();
+		}
+	);
+
+	it('a value that is no option is not a choice: the trigger says "Any", and the next pick drops it', async () => {
+		const { urlFilters, calls } = fakeFilters({ stage: ['bogus'] });
+		render(urlFilters);
+		expect(target.querySelector<HTMLElement>('#filterbar-stage')!.textContent?.trim()).toBe('Any');
+		await openStage();
+		options()
+			.find((o) => o.textContent?.includes('Interested'))!
+			.click();
+		flushSync();
+		expect(calls.setFilter).toHaveBeenLastCalledWith('stage', ['interested']);
+	});
+
+	it('aria-selected says which options are CHOSEN, not which one is highlighted', async () => {
+		render(fakeFilters({ stage: ['interested'] }).urlFilters);
+		await openStage();
+		const list = document.body.querySelector('[role="listbox"]')!;
+		expect(list.getAttribute('aria-multiselectable')).toBe('true');
+		const opt = (name: string) => options().find((o) => o.textContent?.includes(name))!;
+		// "New" is highlighted (the first item) and NOT chosen; "Interested" is chosen and not highlighted
+		expect(opt('New').hasAttribute('data-selected')).toBe(true);
+		expect(opt('New').getAttribute('aria-selected')).toBe('false');
+		expect(opt('Interested').hasAttribute('data-selected')).toBe(false);
+		expect(opt('Interested').getAttribute('aria-selected')).toBe('true');
+		// no second, spoken "Selected" beside the state
+		expect(opt('Interested').textContent?.trim()).toBe('Interested');
+		opt('New').click();
+		flushSync();
+		expect(opt('New').getAttribute('aria-selected')).toBe('true');
+	});
+
 	it('Reset filters clears everything', () => {
 		const { urlFilters, calls } = fakeFilters({ kind: 'a' });
 		render(urlFilters);
@@ -188,5 +251,29 @@ describe('FilterBar', () => {
 		flushSync();
 		expect(target.querySelector('#filterbar-stage')).toBeNull();
 		expect(button('Show filters')).toBeDefined();
+	});
+});
+
+describe('filterAccept: what the URL may hold for a set of fields', () => {
+	const accept = filterAccept(FIELDS);
+
+	it('a select or multi-select accepts its options only', () => {
+		expect(accept.stage!('new')).toBe(true);
+		expect(accept.stage!('bogus')).toBe(false);
+		expect(accept.kind!('b')).toBe(true);
+		expect(accept.kind!('')).toBe(false);
+	});
+
+	it('a date range accepts real calendar dates on both keys', () => {
+		expect(accept.placed_from!('2026-01-31')).toBe(true);
+		expect(accept.placed_to!('2026-01-31')).toBe(true);
+		for (const bad of ['notadate', '2026-13-45', '2026-02-30', '20260101', ''])
+			expect(accept.placed_from!(bad), bad).toBe(false);
+	});
+
+	it('a boolean accepts "true"; a text field accepts anything (no rule)', () => {
+		expect(accept.mine!('true')).toBe(true);
+		expect(accept.mine!('yes')).toBe(false);
+		expect(accept.q).toBeUndefined();
 	});
 });

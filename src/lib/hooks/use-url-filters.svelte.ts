@@ -12,6 +12,10 @@
  *   - `type: 'string'` — single scalar param (`?status=active`)
  *   - `type: 'string[]'` — repeated/CSV param (`?tag=a&tag=b`)
  *
+ * `accept` (optional, per key) says which values the URL may hold. A value it refuses (a status
+ * that is no option, a date that is no date: a hand-edited or stale link) is read as absent, so it
+ * is never shown as a chip, never counted as chosen, and never sent to the API.
+ *
  * Active-chip projection is exposed for `<FilterChips>` consumption
  * (one chip per active filter; multi-value filters render one chip
  * per value so each can be removed independently).
@@ -47,6 +51,13 @@ export type UrlFiltersSchema<TFilters extends UrlFiltersBase> = {
 	[K in keyof TFilters]: UrlFilterFieldSchema<TFilters[K]>;
 };
 
+/** Per key: true for a value the URL may hold. Keys without an entry accept anything. */
+export type UrlFilterAccept = Record<string, (value: string) => boolean>;
+
+export interface UrlFiltersOptions {
+	accept?: UrlFilterAccept;
+}
+
 export interface UrlFilterChip {
 	/** Schema key the chip belongs to (e.g. `status`). */
 	key: string;
@@ -74,8 +85,11 @@ function isStringArray(v: UrlFilterValue): v is string[] {
 }
 
 export function createUrlFilters<TFilters extends UrlFiltersBase>(
-	schema: UrlFiltersSchema<TFilters>
+	schema: UrlFiltersSchema<TFilters>,
+	options: UrlFiltersOptions = {}
 ): UrlFilters<TFilters> {
+	const accepts = (key: string, value: string): boolean => options.accept?.[key]?.(value) ?? true;
+
 	function cloneParams(): SvelteURLSearchParams {
 		return new SvelteURLSearchParams(page.url.searchParams.toString());
 	}
@@ -109,10 +123,12 @@ export function createUrlFilters<TFilters extends UrlFiltersBase>(
 		for (const key in schema) {
 			const field = schema[key];
 			if (field.type === 'string[]') {
-				const all = params.getAll(key);
+				const all = params.getAll(key).filter((v) => accepts(key, v));
 				out[key] = all.length > 0 ? all : (field.defaultValue ?? []);
 			} else {
-				out[key] = params.get(key) ?? field.defaultValue ?? undefined;
+				const raw = params.get(key);
+				out[key] =
+					(raw !== null && accepts(key, raw) ? raw : null) ?? field.defaultValue ?? undefined;
 			}
 		}
 		return out as TFilters;

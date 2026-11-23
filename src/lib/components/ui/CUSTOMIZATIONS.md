@@ -292,7 +292,7 @@ Hand edit, recorded: `sidebar/sidebar.svelte`. The desktop `[data-slot=sidebar-i
 
 ## Corrections after G7-G9 (controller round)
 
-- `command/command-list.svelte` (hand edit, recorded; regenerate and re-apply): the bits `Command.Viewport` is the `role="listbox"` (named by `aria-label`, default `common.commandPalette.results`) inside the List element, which becomes a `role="presentation"` scroll box. bits points the input's `aria-controls` at the viewport id and sets none without one, so the palette's combobox used to name nothing (axe `aria-required-attr`). A caller's `id` goes on the listbox (Combobox's `aria-controls`).
+- `command/command-list.svelte` (hand edit, recorded; regenerate and re-apply): the bits `Command.Viewport` is the `role="listbox"` (named by `aria-label`, default `common.commandPalette.results`) inside the List element, which becomes a `role="presentation"` scroll box. bits points the input's `aria-controls` at the viewport id and sets none without one, so the palette's combobox used to name nothing (axe `aria-required-attr`). A caller's `id` goes on the listbox (Combobox's `aria-controls`). A caller's `aria-multiselectable` goes on the listbox too (FilterBar's multi-select checklist, where `aria-selected` is the chosen state).
 - `avatar/avatar.svelte`, `avatar/avatar-group.svelte`: sizes are `size-N` (`inline-size-N block-size-N` are not Tailwind utilities, so the avatar was content-sized and clipped its initials); the avatar is `shrink-0`.
 - `drawer/drawer-header.svelte` (legacy shim, goes with the Phase 2 form sheet): a direct-child `<button>` (the Close) is absolutely placed at the header's inline-end top corner, 24 x 24 at least, `focus-visible` ring; the header reserves `pe-14` for it.
 

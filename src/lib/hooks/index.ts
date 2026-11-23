@@ -15,6 +15,7 @@ export {
 	type UrlFiltersBase,
 	type UrlFilterFieldSchema,
 	type UrlFiltersSchema,
+	type UrlFilterAccept,
 	type UrlFilterChip
 } from './use-url-filters.svelte';
 

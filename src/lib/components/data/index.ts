@@ -12,7 +12,7 @@
  *   import { ResourceListPage, FilterBar } from '#lib/components/data/index.ts';
  */
 export { default as Toolbar } from './Toolbar.svelte';
-export { default as FilterBar } from './FilterBar.svelte';
+export { default as FilterBar, filterAccept } from './FilterBar.svelte';
 export type { FilterBarField, FilterBarFieldType, FilterBarOption } from './FilterBar.svelte';
 export { default as FilterChips } from './FilterChips.svelte';
 export { default as SearchInput } from './SearchInput.svelte';

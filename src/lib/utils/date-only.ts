@@ -12,6 +12,11 @@ export function toDateOnly(v: DateValue | undefined | null): string {
 	return v ? new CalendarDate(v.calendar, v.era, v.year, v.month, v.day).toString() : '';
 }
 
+/** True for a `YYYY-MM-DD` string that is a real calendar date (`2026-02-30`, `notadate` and `20260101` are not). */
+export function isDateOnly(s: string | undefined | null): boolean {
+	return fromDateOnly(s) !== undefined;
+}
+
 /** The calendar date of a `YYYY-MM-DD` string, or `undefined` for anything else (`2026-02-30`, `10/05/2026`, ''). */
 export function fromDateOnly(s: string | undefined | null): CalendarDate | undefined {
 	if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return undefined;

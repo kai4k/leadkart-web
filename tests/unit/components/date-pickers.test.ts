@@ -587,6 +587,76 @@ describe('DateRangePicker', () => {
 		expect(hidden('to')!.value).toBe('2026-05-18');
 	});
 
+	it('a range picked in the calendar is reported ONCE, when it is whole: not once per click', async () => {
+		const onValueChange = vi.fn();
+		const onValueStringChange = vi.fn();
+		render(DateRangePicker, {
+			valueString: { start: '', end: '' },
+			placeholder: START,
+			onValueChange,
+			onValueStringChange
+		});
+		await openCalendar();
+		day(12).click();
+		flushSync();
+		// the start alone is shown in the field, and nobody has been told yet
+		expect(segments(groups()[0]!).map((s) => (s as HTMLInputElement).value)).toEqual([
+			'12',
+			'05',
+			'2026'
+		]);
+		expect(onValueStringChange).not.toHaveBeenCalled();
+		expect(onValueChange).not.toHaveBeenCalled();
+		day(18).click();
+		flushSync();
+		await vi.waitFor(() => expect(days()).toHaveLength(0));
+		expect(onValueStringChange).toHaveBeenCalledTimes(1);
+		expect(onValueStringChange).toHaveBeenCalledWith({ start: '2026-05-12', end: '2026-05-18' });
+		expect(onValueChange).toHaveBeenCalledTimes(1);
+	});
+
+	it('a calendar closed on a start alone reports that start, once', async () => {
+		const onValueStringChange = vi.fn();
+		render(DateRangePicker, {
+			valueString: { start: '', end: '' },
+			placeholder: START,
+			onValueStringChange
+		});
+		await openCalendar();
+		day(12).click();
+		flushSync();
+		press(document.activeElement!, 'Escape');
+		await vi.waitFor(() => expect(days()).toHaveLength(0));
+		expect(onValueStringChange).toHaveBeenCalledTimes(1);
+		expect(onValueStringChange).toHaveBeenCalledWith({ start: '2026-05-12', end: '' });
+	});
+
+	it.each(['notadate', '2026-13-45', '2026-02-30', '20260101'])(
+		'a string that is no date (%s) is an empty side, not a crash',
+		(bad) => {
+			const errors: unknown[] = [];
+			const onError = (e: ErrorEvent) => errors.push(e.error ?? e.message);
+			window.addEventListener('error', onError);
+			try {
+				render(DateRangePicker, { valueString: { start: bad, end: '2026-05-18' } });
+				flushSync();
+			} finally {
+				window.removeEventListener('error', onError);
+			}
+			expect(errors).toEqual([]);
+			expect(segments(groups()[0]!).map((s) => (s as HTMLInputElement).value)).toEqual([
+				'',
+				'',
+				''
+			]);
+			expect(segments(groups()[1]!).map((s) => (s as HTMLInputElement).value)).toEqual([
+				'18',
+				'05',
+				'2026'
+			]);
+		}
+	);
+
 	it('Alt+ArrowDown opens the calendar; arrow keys move between days', async () => {
 		render(DateRangePicker, { placeholder: START });
 		press(segments()[0]!, 'ArrowDown', { altKey: true });

@@ -15,7 +15,7 @@
 	import { resolve } from '$app/paths';
 	import type { ResolvedPathname } from '$app/types';
 	import { SvelteURL } from 'svelte/reactivity';
-	import { ResourceListPage, type BulkAction } from '#lib/components/data/index.ts';
+	import { ResourceListPage, filterAccept, type BulkAction } from '#lib/components/data/index.ts';
 	import { Tabs } from '$ui';
 	import BulkUploadDrawerShared from '#lib/components/data/BulkUploadDrawer.svelte';
 	import { Upload } from '$icons';
@@ -43,22 +43,26 @@
 	} from '$features/leads/schemas';
 
 	// ── URL filters ──────────────────────────────────────────────────
-	const filters = createUrlFilters<LeadUrlFilters>({
-		q: { type: 'string', label: 'Search' },
-		stage: { type: 'string[]', label: 'Stage' },
-		temperature: { type: 'string[]', label: 'Temperature' },
-		owner_membership_id: { type: 'string', label: 'Owner' },
-		state: { type: 'string', label: 'State' },
-		pin_code: { type: 'string', label: 'PIN code' },
-		business_type: { type: 'string', label: 'Business type' },
-		medicine_system: { type: 'string', label: 'Medicine system' },
-		order_value_band: { type: 'string', label: 'Order value' },
-		buy_timeline: { type: 'string', label: 'Buy timeline' },
-		has_drug_licence: { type: 'string', label: 'Has drug licence' },
-		has_gst: { type: 'string', label: 'Has GST' },
-		view: { type: 'string', label: 'View' },
-		sort: { type: 'string', label: 'Sort' }
-	});
+	// a value that is no option of its field (a hand-edited link) is read as absent
+	const filters = createUrlFilters<LeadUrlFilters>(
+		{
+			q: { type: 'string', label: 'Search' },
+			stage: { type: 'string[]', label: 'Stage' },
+			temperature: { type: 'string[]', label: 'Temperature' },
+			owner_membership_id: { type: 'string', label: 'Owner' },
+			state: { type: 'string', label: 'State' },
+			pin_code: { type: 'string', label: 'PIN code' },
+			business_type: { type: 'string', label: 'Business type' },
+			medicine_system: { type: 'string', label: 'Medicine system' },
+			order_value_band: { type: 'string', label: 'Order value' },
+			buy_timeline: { type: 'string', label: 'Buy timeline' },
+			has_drug_licence: { type: 'string', label: 'Has drug licence' },
+			has_gst: { type: 'string', label: 'Has GST' },
+			view: { type: 'string', label: 'View' },
+			sort: { type: 'string', label: 'Sort' }
+		},
+		{ accept: filterAccept(LEAD_FILTER_FIELDS) }
+	);
 
 	// ── Saved views ──────────────────────────────────────────────────
 	const callerMembershipId = $derived(session.principal?.membershipId ?? '');

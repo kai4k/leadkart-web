@@ -4,6 +4,7 @@
 	import { resolve } from '$app/paths';
 	import {
 		ResourceListPage,
+		filterAccept,
 		type FilterBarField,
 		type BulkAction
 	} from '#lib/components/data/index.ts';
@@ -25,16 +26,20 @@
 	import { stoppedEarly } from '#lib/api/pagination.ts';
 
 	// ── URL state ────────────────────────────────────────────────────
-	const urlFilters = createUrlFilters<OrderListFilters>({
-		q: { type: 'string', label: 'Search' },
-		status: { type: 'string[]', label: 'Status' },
-		customer_lead_id: { type: 'string', label: 'Customer' },
-		placed_from: { type: 'string', label: 'Placed from' },
-		placed_to: { type: 'string', label: 'Placed to' },
-		total_min: { type: 'string', label: 'Min total' },
-		total_max: { type: 'string', label: 'Max total' },
-		sort: { type: 'string', label: 'Sort' }
-	});
+	// a status that is no status and a date that is no date (a hand-edited link) are read as absent
+	const urlFilters = createUrlFilters<OrderListFilters>(
+		{
+			q: { type: 'string', label: 'Search' },
+			status: { type: 'string[]', label: 'Status' },
+			customer_lead_id: { type: 'string', label: 'Customer' },
+			placed_from: { type: 'string', label: 'Placed from' },
+			placed_to: { type: 'string', label: 'Placed to' },
+			total_min: { type: 'string', label: 'Min total' },
+			total_max: { type: 'string', label: 'Max total' },
+			sort: { type: 'string', label: 'Sort' }
+		},
+		{ accept: filterAccept(orderFilterFields) }
+	);
 
 	const savedViews = createSavedViews<OrderListFilters>(
 		[

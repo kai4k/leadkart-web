@@ -6,12 +6,14 @@
 	/**
 	 * LeadKart edit: the listbox is the bits Viewport, not the outer List element. The input's `aria-controls` is bits'
 	 * viewport id (a combobox must name the popup it controls, and nothing sets it without a Viewport); the viewport is
-	 * therefore the `role="listbox"` the options sit in, and the List element is only the scroll box around it. A caller's `id` goes on the listbox (Combobox's `aria-controls`).
+	 * therefore the `role="listbox"` the options sit in, and the List element is only the scroll box around it. A caller's `id` goes on the listbox (Combobox's `aria-controls`),
+	 * and so does `aria-multiselectable` (a checklist: FilterBar's multi-select).
 	 */
 	let {
 		ref = $bindable(null),
 		class: className,
 		'aria-label': ariaLabel,
+		'aria-multiselectable': multiselectable,
 		id,
 		children,
 		...restProps
@@ -33,6 +35,7 @@
 				{id}
 				data-slot="command-listbox"
 				role="listbox"
+				aria-multiselectable={multiselectable}
 				aria-label={ariaLabel ?? $_('common.commandPalette.results')}
 			>
 				{@render children?.()}
