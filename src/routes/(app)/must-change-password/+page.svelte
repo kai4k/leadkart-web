@@ -4,13 +4,14 @@
 	import { ActionForm, PasswordField } from '#lib/components/form/index.ts';
 	import { session } from '$features/auth';
 	import { passwordPolicyHint } from '#lib/features/auth/password-policy.ts';
+	import { announceSessionChange } from '#lib/features/auth/session-change.ts';
 	import type { ActionData } from './$types';
 
 	/**
 	 * /must-change-password: forced password rotation per ADR 0053. Reached when login returned
 	 * `must_change_password=true`. The action at +page.server.ts rotates the password server-side; this page is a
-	 * renderer over the `form` prop, in the same card as the sign-in screens. A change of password ends in a
-	 * redirect, so nothing typed stays on screen.
+	 * renderer over the `form` prop, in the same card as the sign-in screens. A change of password ends the session
+	 * everywhere and ends in a redirect to sign-in (which says why), so nothing typed stays on screen.
 	 */
 	let { form }: { form: ActionData } = $props();
 	const hint = $derived(passwordPolicyHint(session.capabilities?.password_policy, $_));
@@ -26,8 +27,8 @@
 			id="must-change-password-form"
 			result={form}
 			wide
-			resetOnSuccess
 			submitLabel={$_('auth.mustChange.submit')}
+			onResult={announceSessionChange}
 		>
 			{#snippet children({ fieldError })}
 				<PasswordField

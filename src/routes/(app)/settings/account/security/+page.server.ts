@@ -3,12 +3,15 @@
  *
  * `?/changePassword` — POST /v1/auth/change-password (authenticated;
  *                       server verifies current_password per security.md).
+ *                       On success the session ends everywhere and the
+ *                       person signs in again (redirect to /signin).
  * `?/changeEmail`    — POST /v1/auth/request-email-change (sends a
  *                       confirmation link to the NEW address; the change
  *                       does NOT apply until the user clicks the link).
  *
  * Both call Go directly via goFetch (cookie → Bearer).
  */
+import { redirect } from '@sveltejs/kit';
 import { formEmailField } from '#lib/api/request-schema.ts';
 import { changePasswordViaGo, fieldValidationKeys } from '#lib/server/auth-errors.ts';
 import {
@@ -18,7 +21,6 @@ import {
 	failFromStatus,
 	failOutage
 } from '#lib/server/form-action.ts';
-import { setMustChangePassword } from '#lib/server/cookies.ts';
 import { goFetch, readGoError } from '#lib/server/go.ts';
 import type { Actions } from './$types';
 
@@ -43,8 +45,9 @@ export const actions: Actions = {
 		if (!result.ok) {
 			return failForm(result.status, result.parts, { which: 'changePassword' as const });
 		}
-		setMustChangePassword(cookies, false);
-		return { which: 'changePassword' as const, success: true };
+		// Go revoked every session of the person; the session here is over (cookies cleared, notice
+		// set by `changePasswordViaGo`): the person signs in again with the new password.
+		redirect(303, '/signin');
 	},
 
 	changeEmail: async (event) => {

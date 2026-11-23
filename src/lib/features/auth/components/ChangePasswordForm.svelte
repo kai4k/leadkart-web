@@ -3,11 +3,14 @@
 	import { ActionForm, PasswordField, type ActionFormResult } from '$form';
 	import { session } from '../stores/session.svelte';
 	import { passwordPolicyHint } from '#lib/features/auth/password-policy.ts';
+	import { announceSessionChange } from '#lib/features/auth/session-change.ts';
 
 	/**
 	 * ChangePasswordForm: authenticated password change via the form action `?/changePassword`. The server verifies
 	 * the current password (a stolen access token cannot permanently take over an account). The page's `form` also
-	 * carries the email form's result, told apart by `which`. Nothing typed stays on screen after a save.
+	 * carries the email form's result, told apart by `which`. A successful change ends the session everywhere: the
+	 * action answers with a redirect to sign-in, which says "Your password was changed." (there is no success line
+	 * here), and the other tabs are told to reload.
 	 */
 	type FormResult = ActionFormResult & { which?: 'changePassword' | 'changeEmail' };
 	type Props = { form?: FormResult };
@@ -22,9 +25,8 @@
 	id="change-password-form"
 	action="?/changePassword"
 	result={ours}
-	successMessage={$_('account.security.changePassword.success')}
 	submitLabel={$_('account.security.changePassword.submit')}
-	resetOnSuccess
+	onResult={announceSessionChange}
 >
 	{#snippet children({ fieldError })}
 		<PasswordField

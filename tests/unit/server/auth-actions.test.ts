@@ -5,6 +5,8 @@ import { actions as forgotActions } from '../../../src/routes/(auth)/forgot-pass
 import { actions as resetActions } from '../../../src/routes/(auth)/reset-password/+page.server.ts';
 import { actions as mustChangeActions } from '../../../src/routes/(app)/must-change-password/+page.server.ts';
 import { actions as securityActions } from '../../../src/routes/(app)/settings/account/security/+page.server.ts';
+import { clearAuthCookies } from '#lib/server/cookies.ts';
+import { clearOperatorScope } from '#lib/server/scope.ts';
 
 // These tests are about how Go's answers map to form copy. That the form comes from the page of the
 // SAME person and context is the subject of self-service-actions.test.ts, with the real scope code:
@@ -340,6 +342,103 @@ describe.each([
 			confirm: 'account.security.changePassword.errors.mismatch'
 		});
 		expect(f).not.toHaveBeenCalled();
+	});
+});
+
+/**
+ * Owner's ruling: after a password change the person signs in again. Go answers 204 and has revoked
+ * EVERY session of the person, the caller's own included (leadkart-go 44ff2b16
+ * internal/identity/app/command/change_password.go; docs/BFF_API_CHANGES.md row 24: "After 204 do NOT
+ * refresh: sign in again"). The cookies this browser holds are dead, so they are cleared the way
+ * sign-out clears them and the sign-in page is told why.
+ */
+describe.each([
+	[
+		'must-change-password',
+		mustChangeActions.default,
+		{ current_password: 'Old.Pass.123!', new_password: NEW_PW, confirm: NEW_PW }
+	],
+	[
+		'security changePassword',
+		securityActions.changePassword,
+		{ current_password: 'Old.Pass.123!', new_password: NEW_PW, confirm_password: NEW_PW }
+	]
+])('%s: after the 204 the person signs in again', (_name, action, fields) => {
+	const SESSION = { lk_access: 'tok', lk_refresh: 'r', lk_csrf: 'c', lk_mcp: '1' };
+	const submit = (cookies: ReturnType<typeof jar>, url = 'http://x/') =>
+		run(action, { request: form(fields), cookies, url: new URL(url) });
+	/** What sign-out clears (the logout endpoint's two calls), recorded on a jar of its own. */
+	const signOutDeletes = () => {
+		const j = jar(SESSION);
+		clearAuthCookies(j as never);
+		clearOperatorScope(j as never);
+		return j.delete.mock.calls;
+	};
+
+	it('the session cookies are cleared exactly as sign-out clears them, and the notice says password_changed', async () => {
+		const f = stubFetch(() => Promise.resolve(new Response(null, { status: 204 })));
+		const cookies = jar(SESSION);
+		const r = await redirected(submit(cookies));
+		expect(r).toMatchObject({ status: 303, location: '/signin' });
+		expect(cookies.delete.mock.calls).toEqual(signOutDeletes());
+		expect(cookies.set.mock.calls).toEqual([
+			[
+				'lk_signin_notice',
+				'password_changed',
+				{ path: '/signin', maxAge: 120, sameSite: 'lax', secure: false, httpOnly: false }
+			]
+		]);
+		for (const name of Object.keys(SESSION)) expect(cookies.get(name), name).toBeUndefined();
+		// one call to Go: the change itself. No refresh, no second attempt.
+		expect(f.mock.calls.map((c) => String(c[0]).split('/api')[1])).toEqual([
+			'/v1/auth/change-password'
+		]);
+	});
+
+	it.each([
+		[401, 'incorrect_current_password'],
+		[422, 'password_breached'],
+		[429, 'rate_limited'],
+		[503, 'service_busy'],
+		[500, 'internal_error']
+	])('a refused change (%i %s) ends nothing: no cookie is touched', async (status, code) => {
+		stubFetch(() => Promise.resolve(goError(status, code)));
+		const cookies = jar(SESSION);
+		const r = asFail(await submit(cookies));
+		expect(r.status).toBe(status);
+		expect(cookies.delete).not.toHaveBeenCalled();
+		expect(cookies.set).not.toHaveBeenCalled();
+	});
+
+	it('an outage ends nothing either', async () => {
+		stubFetch(() => Promise.reject(new TypeError('fetch failed')));
+		const cookies = jar(SESSION);
+		expect(asFail(await submit(cookies)).status).toBe(502);
+		expect(cookies.delete).not.toHaveBeenCalled();
+		expect(cookies.set).not.toHaveBeenCalled();
+	});
+});
+
+describe('must-change-password: where the person was going survives the sign-in', () => {
+	const change = (url: string) => {
+		stubFetch(() => Promise.resolve(new Response(null, { status: 204 })));
+		return redirected(
+			run(mustChangeActions.default, {
+				request: form({ current_password: 'Old.Pass.123!', new_password: NEW_PW, confirm: NEW_PW }),
+				cookies: jar({ lk_access: 'tok', lk_refresh: 'r', lk_csrf: 'c', lk_mcp: '1' }),
+				url: new URL(url)
+			})
+		);
+	};
+
+	it.each([
+		['http://x/must-change-password', '/signin'],
+		['http://x/must-change-password?next=%2Fdashboard', '/signin'],
+		['http://x/must-change-password?next=%2Fleads%2F42', '/signin?next=%2Fleads%2F42'],
+		['http://x/must-change-password?next=%2F%2Fevil.example', '/signin'],
+		['http://x/must-change-password?next=https%3A%2F%2Fevil.example%2F', '/signin']
+	])('%s -> %s', async (url, location) => {
+		expect((await change(url)).location).toBe(location);
 	});
 });
 

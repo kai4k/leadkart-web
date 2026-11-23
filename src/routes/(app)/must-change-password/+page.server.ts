@@ -5,13 +5,14 @@
  * httpOnly access cookie, and calls Go's
  * POST /api/v1/auth/change-password directly with Bearer auth.
  *
- * Reached when login returns `must_change_password=true`. Successful
- * rotation redirects to `?next=` or `/dashboard`.
+ * Reached when login returns `must_change_password=true`. Go revokes every
+ * session of the person on a successful change, so the session here is ended
+ * (`changePasswordViaGo`) and the person signs in again with the new password;
+ * `?next=` travels on to sign-in.
  */
 import { redirect } from '@sveltejs/kit';
 import { changePasswordViaGo } from '#lib/server/auth-errors.ts';
 import { authoriseSelfService, failForm } from '#lib/server/form-action.ts';
-import { setMustChangePassword } from '#lib/server/cookies.ts';
 import { safeRedirectPath } from '#lib/server/redirect.ts';
 import type { Actions } from './$types';
 
@@ -29,7 +30,11 @@ export const actions: Actions = {
 		});
 		if (!result.ok) return failForm(result.status, result.parts);
 
-		setMustChangePassword(cookies, false);
-		throw redirect(303, safeRedirectPath(url.searchParams.get('next'), url.origin));
+		// The session is over (cookies cleared, notice set): sign in again, then on to where they were going.
+		const next = safeRedirectPath(url.searchParams.get('next'), url.origin);
+		throw redirect(
+			303,
+			next === '/dashboard' ? '/signin' : `/signin?next=${encodeURIComponent(next)}`
+		);
 	}
 };

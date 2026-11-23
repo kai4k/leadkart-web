@@ -7,6 +7,7 @@
 import type { Cookies } from '@sveltejs/kit';
 import type { z } from 'zod';
 import { changePasswordSchema } from '#lib/features/auth/schemas.ts';
+import { endSession } from './auth-refresh.ts';
 import { goErrorStatus, goFetch, readGoError } from './go.ts';
 import { callGoForAction, goFailureKey } from './form-action.ts';
 
@@ -69,9 +70,13 @@ export type PasswordFormFailure = {
 
 /**
  * The one change-password action body (forced change and settings): check the confirmation,
- * validate, call Go, map its answer. Each action adds only its own field names and what happens
- * on success. A redirect from goFetch (session over) propagates; every other failure is a form
- * error so the typed password survives.
+ * validate, call Go, map its answer. Each action adds only its own field names and where the
+ * person goes on success. A redirect from goFetch (session over) propagates; every other failure
+ * is a form error so the typed password survives.
+ *
+ * `ok: true` means the password is changed AND the session in this browser has been ended (the
+ * owner's ruling: after a password change the person signs in again): the caller redirects to
+ * sign-in and does nothing else with the cookies.
  */
 export async function changePasswordViaGo(
 	cookies: Cookies,
@@ -123,7 +128,13 @@ export async function changePasswordViaGo(
 	);
 	if (!call.ok) return { ok: false, status: call.status, parts: { formErrorKey: call.key } };
 	const resp = call.resp;
-	if (resp.ok) return { ok: true };
+	if (resp.ok) {
+		// Go revoked EVERY session of this person with the change, this one included: the cookies the
+		// browser holds are dead. End the session here (what sign-out clears) and leave the sign-in
+		// page the reason; the action only has to send the person there. Never a refresh.
+		endSession(cookies, 'password_changed');
+		return { ok: true };
+	}
 
 	const mapped = passwordErrorKey(resp.status, (await readGoError(resp)).error);
 	if (mapped) {

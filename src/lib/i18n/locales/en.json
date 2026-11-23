@@ -104,7 +104,7 @@
 		},
 		"mustChange": {
 			"title": "Set a new password",
-			"subtitle": "Your account needs a fresh password before you can continue. Pick one you don't use elsewhere.",
+			"subtitle": "Your account needs a new password before you can continue. Pick one you don't use elsewhere. You will sign in again with it.",
 			"submit": "Set password & continue"
 		}
 	},
@@ -115,13 +115,12 @@
 			"subtitle": "Manage your sign-in credentials. Changes take effect immediately and may sign you out of other devices.",
 			"changePassword": {
 				"title": "Change password",
-				"description": "Pick a strong password you don't use elsewhere. We'll keep you signed in on this device.",
+				"description": "Pick a strong password you don't use elsewhere. After the change you are signed out on every device and sign in again with the new password.",
 				"currentPassword": "Current password",
 				"newPassword": "New password",
 				"newPasswordHint": "The new password does not meet the password rules.",
 				"confirmPassword": "Confirm new password",
 				"submit": "Update password",
-				"success": "Password updated.",
 				"errors": {
 					"incorrectCurrent": "That doesn't match your current password.",
 					"mismatch": "Passwords don't match.",

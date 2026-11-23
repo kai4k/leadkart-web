@@ -128,7 +128,14 @@ test.describe('Auth — must_change_password', () => {
 		expect(pageErrors).toEqual([]);
 	});
 
-	test('must-change-password page rotates → redirects to /dashboard', async ({ page }) => {
+	// Go: POST /auth/change-password answers 204 and revokes EVERY session of the person, the caller's own
+	// included (leadkart-go 44ff2b16 internal/identity/ports/http.go handleChangePassword;
+	// docs/BFF_API_CHANGES.md row 24: "After 204 do NOT refresh: sign in again"). Owner's ruling: after a
+	// password change the person signs in again.
+	test('the forced change ends the session: /signin says why, the old cookies are gone, the new password signs in', async ({
+		page,
+		context
+	}) => {
 		await registerMocks([
 			{
 				method: 'POST',
@@ -154,7 +161,84 @@ test.describe('Auth — must_change_password', () => {
 		await page.getByLabel(/confirm/i).fill('MyFreshOne.Strong!');
 		await page.getByRole('button', { name: /set password & continue/i }).click();
 
-		await page.waitForURL(/\/dashboard$/, { timeout: 5000 });
+		await page.waitForURL(/\/signin$/, { timeout: 5000 });
+		await expect(
+			page.getByRole('status').filter({
+				hasText: 'Your password was changed. Sign in with your new password.'
+			})
+		).toBeVisible();
+		// the dead session is gone from the browser, the forced-change gate with it; the notice was taken
+		const names = (await context.cookies()).map((c) => c.name);
+		for (const gone of ['lk_access', 'lk_refresh', 'lk_csrf', 'lk_mcp', 'lk_signin_notice'])
+			expect(names, gone).not.toContain(gone);
+		// one change call, and never a refresh with the dead token
+		const calls = await listMockCalls();
+		expect(calls.filter((c) => c.path === '/api/v1/auth/change-password')).toHaveLength(1);
+		expect(calls.filter((c) => c.path === '/api/v1/auth/refresh')).toHaveLength(0);
+
+		// said once: a reload has nothing left to say
+		await page.reload();
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
+		await expect(page.getByText('Your password was changed.')).toHaveCount(0);
+
+		// Go's next login for this person is unflagged (row 24: "the new token is unflagged")
+		await registerMocks([
+			{
+				method: 'POST',
+				path: '/api/v1/auth/login',
+				status: 200,
+				body: { ...baseLoginBody, must_change_password: false }
+			}
+		]);
+		await page.getByRole('textbox', { name: /email/i }).fill('test@example.com');
+		await page.getByRole('textbox', { name: /password/i }).fill('MyFreshOne.Strong!');
+		await page.getByRole('button', { name: /sign in/i }).click();
+		await page.waitForURL(/\/dashboard$/);
+		const logins = (await listMockCalls()).filter((c) => c.path === '/api/v1/auth/login');
+		expect(JSON.parse(logins.at(-1)!.body)).toMatchObject({ password: 'MyFreshOne.Strong!' });
+	});
+
+	test('where the person was going survives the forced change and the sign-in', async ({
+		page
+	}) => {
+		await registerMocks([
+			{
+				method: 'POST',
+				path: '/api/v1/auth/login',
+				status: 200,
+				body: { ...baseLoginBody, must_change_password: true }
+			},
+			{ method: 'POST', path: '/api/v1/auth/change-password', status: 204 },
+			...baseAuthMocks
+		]);
+
+		await page.goto('/signin?next=%2Fsettings%2Faccount%2Fprofile');
+		await page.getByRole('textbox', { name: /email/i }).fill('test@example.com');
+		await page.getByRole('textbox', { name: /password/i }).fill('TempPassFromAdmin!');
+		await page.getByRole('button', { name: /sign in/i }).click();
+		await page.waitForURL(/\/must-change-password\?next=%2Fsettings%2Faccount%2Fprofile$/);
+
+		await page.getByLabel(/current password/i).fill('TempPassFromAdmin!');
+		await page
+			.getByLabel(/new password/i)
+			.first()
+			.fill('MyFreshOne.Strong!');
+		await page.getByLabel(/confirm/i).fill('MyFreshOne.Strong!');
+		await page.getByRole('button', { name: /set password & continue/i }).click();
+
+		await page.waitForURL(/\/signin\?next=%2Fsettings%2Faccount%2Fprofile$/);
+		await registerMocks([
+			{
+				method: 'POST',
+				path: '/api/v1/auth/login',
+				status: 200,
+				body: { ...baseLoginBody, must_change_password: false }
+			}
+		]);
+		await page.getByRole('textbox', { name: /email/i }).fill('test@example.com');
+		await page.getByRole('textbox', { name: /password/i }).fill('MyFreshOne.Strong!');
+		await page.getByRole('button', { name: /sign in/i }).click();
+		await page.waitForURL(/\/settings\/account\/profile$/);
 	});
 });
 

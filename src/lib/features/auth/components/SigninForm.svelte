@@ -3,7 +3,7 @@
 	import { _ } from 'svelte-i18n';
 	import type { ActionResult } from '$app/forms';
 	import { resolve } from '$app/paths';
-	import { announceContextChange } from '#lib/api/operator-scope.ts';
+	import { announceSessionChange } from '#lib/features/auth/session-change.ts';
 	import { SIGNIN_NOTICE_KEYS, signinNoticeOf } from '#lib/api/signin-notice.ts';
 	import { Alert, AuthCard } from '#lib/components/ui/index.ts';
 	import { ActionForm, PasswordField, TextField } from '#lib/components/form/index.ts';
@@ -78,7 +78,7 @@
 		// the form's own answer is the message now
 		said = null;
 		// A sign-in changes the person the browser holds: the other tabs reload instead of collecting 409s.
-		if (result.type === 'redirect') announceContextChange('session');
+		announceSessionChange(result);
 		begin(
 			result.type === 'failure'
 				? waitOf((result.data as { retryAfterSeconds?: unknown })?.retryAfterSeconds)

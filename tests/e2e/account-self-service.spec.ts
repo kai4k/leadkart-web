@@ -31,7 +31,13 @@ test.describe('Account security — change password', () => {
 		await expect(page.getByRole('heading', { level: 2, name: 'Change password' })).toBeVisible();
 	});
 
-	test('successful change: 204 → success surface', async ({ page }) => {
+	// Go: 204 and every session of the person is revoked, this one included (leadkart-go 44ff2b16
+	// internal/identity/ports/http.go handleChangePassword; docs/BFF_API_CHANGES.md row 24). Owner's ruling:
+	// after a password change the person signs in again.
+	test('successful change: 204 → signed out, /signin says the password was changed, the new one signs in', async ({
+		page,
+		context
+	}) => {
 		await signInForAccount(page);
 		await registerMock({
 			method: 'POST',
@@ -39,6 +45,9 @@ test.describe('Account security — change password', () => {
 			status: 204
 		});
 		await page.goto('/settings/account/security');
+		await expect(
+			page.getByText(/signed out on every device and sign in again with the new password/)
+		).toBeVisible();
 		await page.getByLabel(/current password/i).fill('OldP@ssw0rd!');
 		await page
 			.getByLabel(/new password/i)
@@ -47,11 +56,28 @@ test.describe('Account security — change password', () => {
 		await page.getByLabel(/confirm/i).fill('N3wP@ssw0rd!');
 		await page.getByRole('button', { name: /change password|update password/i }).click();
 
-		// No danger alert; success indicator (toast or inline success) appears
-		await expect(page.getByRole('alert').filter({ hasText: /failed|error|invalid/i })).toHaveCount(
-			0,
-			{ timeout: 5000 }
-		);
+		await page.waitForURL(/\/signin$/, { timeout: 5000 });
+		await expect(
+			page.getByRole('status').filter({
+				hasText: 'Your password was changed. Sign in with your new password.'
+			})
+		).toBeVisible();
+		const names = (await context.cookies()).map((c) => c.name);
+		for (const gone of ['lk_access', 'lk_refresh', 'lk_csrf', 'lk_mcp', 'lk_signin_notice'])
+			expect(names, gone).not.toContain(gone);
+		const calls = await listMockCalls();
+		expect(calls.filter((c) => c.path === '/api/v1/auth/change-password')).toHaveLength(1);
+		expect(calls.filter((c) => c.path === '/api/v1/auth/refresh')).toHaveLength(0);
+
+		// the app is closed to this browser until the person signs in again
+		await page.goto('/dashboard');
+		await expect(page).toHaveURL(/\/signin\?next=%2Fdashboard$/);
+		await expect(page.getByText('Your password was changed.')).toHaveCount(0);
+
+		await page.getByRole('textbox', { name: /email/i }).fill('test@example.com');
+		await page.getByRole('textbox', { name: /password/i }).fill('N3wP@ssw0rd!');
+		await page.getByRole('button', { name: /sign in/i }).click();
+		await page.waitForURL(/\/dashboard$/);
 	});
 
 	test('401 wrong current password: error surface', async ({ page }) => {
