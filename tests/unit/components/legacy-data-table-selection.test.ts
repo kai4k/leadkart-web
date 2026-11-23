@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import { createBulkSelection, type BulkSelection } from '#lib/hooks/index.ts';
 import Host from './legacy-table-host.svelte';
-import { createLegacyTableControl, type HostRow } from './legacy-table-host.svelte.ts';
+import { createLegacyTableControl, type HostRow } from './legacy-table-control.svelte.ts';
 
 const A: HostRow = { id: 'a', name: 'A' };
 const B: HostRow = { id: 'b', name: 'B' };

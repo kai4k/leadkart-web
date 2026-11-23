@@ -37,7 +37,7 @@
 		"openapi:check": "node scripts/openapi-codegen.mjs --check",
 		"size": "size-limit",
 		"size:critical": "node scripts/check-bundle-size.mjs",
-		"prepare": "husky"
+		"prepare": "svelte-kit sync && husky"
 	},
 	"size-limit": [
 		{

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { DataTable } from '$ui';
 	import type { BulkSelection } from '#lib/hooks/index.ts';
-	import type { createLegacyTableControl, HostRow } from './legacy-table-host.svelte.ts';
+	import type { createLegacyTableControl, HostRow } from './legacy-table-control.svelte.ts';
 
 	let {
 		control,
