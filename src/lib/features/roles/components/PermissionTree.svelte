@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Tooltip } from '$ui';
+	import { Checkbox } from '#lib/components/ui/checkbox/index.ts';
 	import { Info, Icon } from '$icons';
 	import { SvelteSet } from 'svelte/reactivity';
 	import {
@@ -53,35 +54,34 @@
 	}
 </script>
 
-<div class="stack stack-relaxed" role="tree" aria-label="Permission catalogue">
+<div class="stack stack-relaxed">
 	{#each groups as [group, entries] (group)}
 		{@const state = groupChecked(entries)}
-		<section class="stack stack-tight">
-			<header class="cluster cluster-spread">
+		<fieldset class="stack stack-tight m-0 border-0 p-0">
+			<legend class="sr-only">{group}</legend>
+			<div class="cluster cluster-spread">
 				<label class="cluster cluster-tight cursor-pointer">
-					<input
-						type="checkbox"
+					<Checkbox
 						checked={state === 'all' && allowed(entries).length > 0}
 						indeterminate={state === 'some'}
 						disabled={disabled || allowed(entries).length === 0}
-						onchange={() => toggleGroup(entries)}
+						onCheckedChange={() => toggleGroup(entries)}
 						aria-label="Toggle all {group} permissions"
 					/>
-					<span class="h6 capitalize">{group}</span>
+					<span class="h6 capitalize" aria-hidden="true">{group}</span>
 				</label>
 				<span class="caption text-muted-foreground">
 					{entries.filter((e) => selected.includes(e.name)).length} / {entries.length}
 				</span>
-			</header>
-			<ul class="stack stack-tight ps-6" role="group">
+			</div>
+			<ul class="stack stack-tight m-0 list-none ps-6">
 				{#each entries as entry (entry.name)}
 					<li class="cluster cluster-tight">
 						<label class="cluster cluster-tight flex-1 cursor-pointer">
-							<input
-								type="checkbox"
+							<Checkbox
 								checked={selected.includes(entry.name)}
 								disabled={disabled || entry.name in refused}
-								onchange={() => toggle(entry.name)}
+								onCheckedChange={() => toggle(entry.name)}
 								aria-label={entry.name}
 								aria-describedby={entry.name in refused ? `refused-${entry.name}` : undefined}
 							/>
@@ -104,6 +104,6 @@
 					</li>
 				{/each}
 			</ul>
-		</section>
+		</fieldset>
 	{/each}
 </div>

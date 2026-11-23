@@ -10,8 +10,7 @@
 		"src/lib/features/leads/components/ReassignDialog.svelte",
 		"src/lib/features/orders/components/CreditNotesList.svelte",
 		"src/lib/features/orders/components/OrderItemsTable.svelte",
-		"src/lib/features/orders/components/PaymentsList.svelte",
-		"src/lib/features/roles/components/PermissionTree.svelte"
+		"src/lib/features/orders/components/PaymentsList.svelte"
 	],
 	"drawer": [
 		"src/lib/components/data/BulkUploadDrawer.svelte",
@@ -40,8 +39,7 @@
 			"src/lib/features/leads/components/ReassignDialog.svelte": 1,
 			"src/lib/features/orders/components/CreditNotesList.svelte": 1,
 			"src/lib/features/orders/components/OrderItemsTable.svelte": 1,
-			"src/lib/features/orders/components/PaymentsList.svelte": 1,
-			"src/lib/features/roles/components/PermissionTree.svelte": 2
+			"src/lib/features/orders/components/PaymentsList.svelte": 1
 		},
 		"drawer": {
 			"src/lib/components/data/BulkUploadDrawer.svelte": 1,
@@ -78,7 +76,6 @@
 		"src/lib/features/orders/components/PaymentsList.svelte": "// removed by the leads/orders/inventory rebuild (plan section 9)",
 		"src/lib/features/orders/components/ReviseQuotationDrawer.svelte": "// removed by the leads/orders/inventory rebuild (plan section 9)",
 		"src/lib/features/permission-requests/components/PermissionRequestsList.svelte": "// removed by Task 27",
-		"src/lib/features/roles/components/PermissionTree.svelte": "// removed by Task 27",
 		"src/lib/features/roles/components/RolesList.svelte": "// removed by Task 27",
 		"src/lib/features/users/components/UsersList.svelte": "// removed by Task 27"
 	}

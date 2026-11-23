@@ -36,7 +36,8 @@ function render(refused: Record<string, string> | undefined, selected: string[] 
 	flushSync();
 	return onChange;
 }
-const box = () => document.querySelector<HTMLInputElement>(`input[aria-label="${NAME}"]`)!;
+const box = () =>
+	document.querySelector<HTMLButtonElement>(`button[role="checkbox"][aria-label="${NAME}"]`)!;
 
 describe('a refused permission', () => {
 	it('is disabled, explains itself through aria-describedby, and cannot be toggled', () => {
@@ -51,8 +52,8 @@ describe('a refused permission', () => {
 
 	it('is skipped by its group toggle', () => {
 		const onChange = render({ [NAME]: REASON });
-		const group = document.querySelector<HTMLInputElement>(
-			'input[aria-label="Toggle all identity permissions"]'
+		const group = document.querySelector<HTMLButtonElement>(
+			'button[role="checkbox"][aria-label="Toggle all identity permissions"]'
 		)!;
 		group.click();
 		flushSync();
@@ -65,12 +66,11 @@ describe('a refused permission', () => {
 		const names = PERMISSION_CATALOGUE.filter((e) => e.group === 'identity').map((e) => e.name);
 		const allowed = names.filter((n) => n !== NAME);
 		const onChange = render({ [NAME]: REASON }, allowed);
-		const group = document.querySelector<HTMLInputElement>(
-			'input[aria-label="Toggle all identity permissions"]'
+		const group = document.querySelector<HTMLButtonElement>(
+			'button[role="checkbox"][aria-label="Toggle all identity permissions"]'
 		)!;
 		// it used to be stuck on "some" for ever, so a click could only add
-		expect(group.checked).toBe(true);
-		expect(group.indeterminate).toBe(false);
+		expect(group.getAttribute('aria-checked')).toBe('true');
 		group.click();
 		flushSync();
 		expect(onChange.mock.calls[0]![0]).toEqual([]);
@@ -80,7 +80,9 @@ describe('a refused permission', () => {
 		const names = PERMISSION_CATALOGUE.filter((e) => e.group === 'identity').map((e) => e.name);
 		const onChange = render({ [NAME]: REASON }, names);
 		document
-			.querySelector<HTMLInputElement>('input[aria-label="Toggle all identity permissions"]')!
+			.querySelector<HTMLButtonElement>(
+				'button[role="checkbox"][aria-label="Toggle all identity permissions"]'
+			)!
 			.click();
 		flushSync();
 		expect(onChange.mock.calls[0]![0]).toEqual([NAME]);
@@ -91,11 +93,11 @@ describe('a refused permission', () => {
 			PERMISSION_CATALOGUE.filter((e) => e.group === 'platform').map((e) => [e.name, REASON])
 		);
 		const onChange = render(refused);
-		const group = document.querySelector<HTMLInputElement>(
-			'input[aria-label="Toggle all platform permissions"]'
+		const group = document.querySelector<HTMLButtonElement>(
+			'button[role="checkbox"][aria-label="Toggle all platform permissions"]'
 		)!;
 		expect(group.disabled).toBe(true);
-		expect(group.checked).toBe(false);
+		expect(group.getAttribute('aria-checked')).toBe('false');
 		group.click();
 		flushSync();
 		expect(onChange).not.toHaveBeenCalled();
