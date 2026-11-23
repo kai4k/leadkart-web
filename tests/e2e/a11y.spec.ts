@@ -2,6 +2,7 @@ import { test, expect, type Page } from './helpers/test';
 import AxeBuilder from '@axe-core/playwright';
 import { signInAsTier } from './helpers/sign-in';
 import { resetMock } from './helpers/mock';
+import { settleForScan } from './helpers/settle';
 
 /**
  * Automated WCAG 2.2 AA gate via Deque axe-core.
@@ -16,6 +17,10 @@ import { resetMock } from './helpers/mock';
  */
 
 async function expectNoSeriousOrCriticalViolations(page: Page, scope?: string): Promise<void> {
+	// The page as a person reads it: hydrated, and no card still fading in (helpers/settle.ts). The sign-in
+	// page renders in the browser after its data arrived, so a scan right after `goto` caught the card
+	// mid-fade and measured its button half transparent.
+	await settleForScan(page);
 	let builder = new AxeBuilder({ page }).withTags([
 		'wcag2a',
 		'wcag2aa',
