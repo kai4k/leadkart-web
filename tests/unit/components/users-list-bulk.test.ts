@@ -7,6 +7,8 @@ const h = vi.hoisted(() => ({
 	qc: undefined as unknown as QueryClient,
 	users: [] as unknown[],
 	counts: { active: 3, inactive: 1 },
+	// the members Go answers for a status, when a test wants them to differ
+	byStatus: {} as Record<string, unknown[]>,
 	// the status the list asked Go for, by query key
 	asked: [] as string[]
 }));
@@ -25,7 +27,11 @@ vi.mock('@tanstack/svelte-query', async (importOriginal) =>
 				if (root === 'users' && o.queryKey[1] === 'list') h.asked.push(String(o.queryKey[2]));
 				const raw =
 					root === 'users'
-						? { items: h.users, truncated: false, counts: h.counts }
+						? {
+								items: h.byStatus[String(o.queryKey[2])] ?? h.users,
+								truncated: false,
+								counts: h.counts
+							}
 						: root === 'roles'
 							? { roles: [] }
 							: undefined;
@@ -73,6 +79,9 @@ vi.mock('$app/navigation', async (importOriginal) => ({
 		return Promise.resolve();
 	})
 }));
+vi.mock('#lib/features/users/components/ManagerSelectorDrawer.svelte', async () => ({
+	default: (await import('../stubs/CaptureUserList.svelte')).default
+}));
 const gw = vi.hoisted(() => ({ deactivateUser: vi.fn(), reactivateUser: vi.fn() }));
 vi.mock('#lib/features/users/api.ts', () => gw);
 vi.mock('#lib/features/users/api', () => gw);
@@ -104,6 +113,7 @@ beforeEach(() => {
 	h.qc = createQueryClient();
 	vi.spyOn(h.qc, 'invalidateQueries').mockResolvedValue(undefined);
 	h.asked = [];
+	h.byStatus = {};
 	h.counts = { active: 3, inactive: 1 };
 	h.users = [user(1), user(2), user(3)];
 	target = document.body.appendChild(document.createElement('div'));
@@ -287,6 +297,30 @@ describe('UsersList bulk status change', () => {
 		expect(toastMock.success).not.toHaveBeenCalled();
 		expect(gw.deactivateUser).toHaveBeenCalledTimes(3);
 		expect(checkboxes().every(isChecked)).toBe(true);
+	});
+});
+
+describe('UsersList: the status filter reaches neither the selection nor the manager roster', () => {
+	it('a selection does not survive a change of status', () => {
+		open();
+		checkboxes()[0]!.click();
+		flushSync();
+		expect(document.body.textContent).toContain('1 selected');
+		[
+			...document.querySelectorAll<HTMLElement>(
+				'[role="group"][aria-label="Filter members by status"] button'
+			)
+		]
+			.find((b) => b.textContent?.trim().startsWith('Inactive'))!
+			.click();
+		flushSync();
+		expect(document.body.textContent).not.toContain('1 selected');
+	});
+
+	it('the manager picker is handed the ACTIVE roster even while Inactive is shown', () => {
+		h.byStatus = { active: [user(1), user(2)], inactive: [{ ...user(3), status: 'inactive' }] };
+		open('?status=inactive');
+		expect((globalThis as { __roster?: string[] }).__roster).toEqual(['m1', 'm2']);
 	});
 });
 

@@ -57,6 +57,24 @@ describe('users gateway', () => {
 		expect(fetchMock.mock.calls[1]![0]).toBe('/api/v1/users?page_size=200&status=all');
 	});
 
+	it('the counts come from the first page: a later page that carries others does not replace them', async () => {
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValueOnce(
+				json({
+					users: [user(1)],
+					has_more: true,
+					next_cursor: 'n1',
+					status_counts: { active: 4, inactive: 2 }
+				})
+			)
+			.mockResolvedValueOnce(
+				json({ users: [user(2)], has_more: false, status_counts: { active: 99, inactive: 99 } })
+			);
+		vi.stubGlobal('fetch', fetchMock);
+		expect((await listAllUsers()).counts).toEqual({ active: 4, inactive: 2 });
+	});
+
 	it('the default read sends no status (Go answers active members) and counts are optional', async () => {
 		const fetchMock = vi.fn().mockResolvedValue(json({ users: [], has_more: false }));
 		vi.stubGlobal('fetch', fetchMock);

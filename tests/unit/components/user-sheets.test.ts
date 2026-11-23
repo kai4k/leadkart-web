@@ -375,6 +375,11 @@ describe('PermissionOverridesPanel', () => {
 		expect(document.body.textContent).toContain('cannot be shown');
 	});
 
+	it('Go sent overrides but no overrides_version: nothing to save against, so no form', () => {
+		open(person(1, { permission_overrides: { granted: [], revoked: [] } }));
+		expect(document.querySelector('#permission-overrides-form')).toBeNull();
+	});
+
 	it('a failed read says so and offers no form', () => {
 		h.detailError = true;
 		open(null);
@@ -399,6 +404,11 @@ describe('PermissionOverridesPanel', () => {
 	it('409 overrides_changed is a calm "changed, reload" line, the set is re-read, and the next save cannot overwrite it', async () => {
 		gw.replacePermissionOverrides.mockRejectedValue(new ConflictError());
 		open();
+		// the re-read lands with a NEWER version while the form is still open
+		h.refetch = vi.fn(() => {
+			h.detail = { ...(withOverrides() as object), overrides_version: 'v8' };
+			flushSync();
+		});
 		save();
 		await vi.waitFor(() => expect(banner()).toContain('changed while you were editing'));
 		expect(h.refetch).toHaveBeenCalled();

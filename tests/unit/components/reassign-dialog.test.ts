@@ -10,6 +10,7 @@ const h = vi.hoisted(() => ({
 	asked: [] as string[]
 }));
 vi.mock('$features/users', () => ({
+	memberSearchOptions: (m: unknown[]) => m,
 	memberSearchReady: (q: string) => [...q.trim()].length >= 2,
 	membershipSearchQuery: (getQuery: () => string) => ({
 		get isError() {

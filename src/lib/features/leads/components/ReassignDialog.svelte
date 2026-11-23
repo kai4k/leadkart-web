@@ -18,7 +18,7 @@
 	import { reassignLeadSchema } from '../schemas';
 	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 	import { reassignLeadMutation } from '../queries';
-	import { membershipSearchQuery, memberSearchReady } from '$features/users';
+	import { membershipSearchQuery, memberSearchReady, memberSearchOptions } from '$features/users';
 
 	type Props = {
 		leadId: string;
@@ -40,13 +40,7 @@
 	let memberQuery = $state('');
 	const search = membershipSearchQuery(() => memberQuery);
 
-	const memberOptions = $derived<ComboboxOption[]>(
-		(search.data?.members ?? []).map((m) => ({
-			value: m.membership_id,
-			label: m.display_name,
-			description: m.designation
-		}))
-	);
+	const memberOptions = $derived<ComboboxOption[]>(memberSearchOptions(search.data?.members ?? []));
 
 	async function onSubmit(e: SubmitEvent) {
 		await form.submit(e, async (values, current) => {

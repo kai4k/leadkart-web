@@ -55,6 +55,17 @@ export function eligibleManagers(
 	});
 }
 
+/** The picker's rows: the value POSTed is the membership id, never the name. */
+export function memberSearchOptions(
+	members: ReadonlyArray<{ membership_id: string; display_name: string; designation?: string }>
+): Array<{ value: string; label: string; description?: string }> {
+	return members.map((m) => ({
+		value: m.membership_id,
+		label: m.display_name,
+		description: m.designation
+	}));
+}
+
 /**
  * What a bulk status action sends: the selected ids that are still LOADED and whose status the action changes
  * (Deactivate: active ones; Reactivate: inactive ones). `unloaded` are selected ids no longer in the list
