@@ -481,7 +481,7 @@ test.describe('a rejected refresh tells the sign-in page why', () => {
 			path: '/api/v1/auth/refresh',
 			status: 401,
 			body: {
-				type: 'https://leadkart.io/problems/refresh_rejected',
+				type: 'https://leadkart.api/errors/refresh_rejected',
 				title: 'Unauthorized',
 				status: 401,
 				error: 'refresh_rejected',

@@ -1,5 +1,5 @@
-import { expect, test } from './helpers/test';
-import { resetMock, registerMocks } from './helpers/mock';
+import { expect, test, type Page } from './helpers/test';
+import { listMockCalls, resetMock, registerMocks } from './helpers/mock';
 import {
 	fakeAccessToken,
 	fakeRefreshToken,
@@ -182,5 +182,126 @@ test.describe('Auth — account lockout (423)', () => {
 		// Banner alert mentions the lockout + the seconds the user must wait
 		await expect(page.getByRole('alert')).toBeVisible({ timeout: 5000 });
 		await expect(page.getByRole('alert')).toContainText(/120/);
+	});
+});
+
+/**
+ * What Go's login handler answers besides 200 / 401 / 423 (leadkart-go 44ff2b16
+ * internal/identity/ports/http.go handleLogin):
+ *   403 tenant_suspended   http.go:524  (docs/BFF_API_CHANGES.md row 36: only after the password was verified)
+ *   403 tenant_not_active  http.go:528  (row 36)
+ *   429 rate_limited + Retry-After   http.go:446 (per-person budget) and
+ *                                    internal/common/httpmw/ratelimit.go:197 (per-route limiter; rows 12, 27)
+ *   503 service_busy + Retry-After: 2   http.go:438, argonBusyRetryAfter http.go:428 (row 13)
+ */
+test.describe('Auth: sign-in refusals that are not a wrong password', () => {
+	test.beforeEach(async () => {
+		await resetMock();
+	});
+
+	// http.go:1021 writeError: type (problemType, http.go:1088), title, status, error
+	const problem = (status: number, title: string, error: string) => ({
+		type: `https://leadkart.api/errors/${error}`,
+		title,
+		status,
+		error
+	});
+
+	async function submit(page: Page) {
+		await page.goto('/signin');
+		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
+		await page.getByRole('textbox', { name: /email/i }).fill('member@example.com');
+		await page.getByRole('textbox', { name: /password/i }).fill('Right.Password.1!');
+		await page.getByRole('button', { name: /sign in/i }).click();
+	}
+	const loginCalls = async () =>
+		(await listMockCalls()).filter((c) => c.method === 'POST' && c.path === '/api/v1/auth/login');
+
+	for (const [code, sentence] of [
+		[
+			'tenant_suspended',
+			"Your company's account is suspended. Contact your administrator or LeadKart support."
+		],
+		[
+			'tenant_not_active',
+			"Your company's account is not active. Contact your administrator or LeadKart support."
+		]
+	] as const) {
+		test(`403 ${code}: the company's own sentence, no countdown, no retry`, async ({
+			page,
+			context
+		}) => {
+			await registerMocks([
+				{
+					method: 'POST',
+					path: '/api/v1/auth/login',
+					status: 403,
+					body: problem(403, 'Forbidden', code)
+				}
+			]);
+
+			await submit(page);
+
+			await expect(page.getByRole('alert')).toHaveText(sentence);
+			// not the operator-scope sentence, not "wrong password"
+			await expect(page.getByText(/This tenant is not active/)).toHaveCount(0);
+			await expect(page.getByText(/Email or password is incorrect/)).toHaveCount(0);
+			await expect(page).toHaveURL(/\/signin$/);
+			// the person may try again at once; the page never does on its own
+			await expect(page.getByRole('button', { name: /sign in/i })).toBeEnabled();
+			await expect(page.getByRole('textbox', { name: /email/i })).toHaveValue('member@example.com');
+			await page.waitForTimeout(1500);
+			expect(await loginCalls()).toHaveLength(1);
+			const names = (await context.cookies()).map((c) => c.name);
+			expect(names).not.toContain('lk_access');
+			expect(names).not.toContain('lk_refresh');
+		});
+	}
+
+	test('429 with Retry-After: "Too many requests", the seconds count down, the button is off', async ({
+		page
+	}) => {
+		await registerMocks([
+			{
+				method: 'POST',
+				path: '/api/v1/auth/login',
+				status: 429,
+				headers: { 'retry-after': '3' },
+				// ratelimit.go:199 writes exactly this body
+				body: { error: 'rate_limited', message: 'too many requests' }
+			}
+		]);
+
+		await submit(page);
+
+		const banner = page.getByRole('alert');
+		await expect(banner).toContainText(/Too many requests\. Try again in [123] seconds?\./);
+		await expect(page.getByRole('button', { name: /sign in/i })).toBeDisabled();
+		await expect(banner).toHaveText('You can try again now.', { timeout: 8000 });
+		await expect(page.getByRole('button', { name: /sign in/i })).toBeEnabled();
+		expect(await loginCalls()).toHaveLength(1);
+	});
+
+	test('503 service_busy with Retry-After: 2: "The service is busy", counts down, nothing is retried', async ({
+		page
+	}) => {
+		await registerMocks([
+			{
+				method: 'POST',
+				path: '/api/v1/auth/login',
+				status: 503,
+				headers: { 'retry-after': '2' },
+				body: problem(503, 'Service Unavailable', 'service_busy')
+			}
+		]);
+
+		await submit(page);
+
+		const banner = page.getByRole('alert');
+		await expect(banner).toContainText(/The service is busy\. Try again in [12] seconds?\./);
+		await expect(page.getByRole('button', { name: /sign in/i })).toBeDisabled();
+		await expect(banner).toHaveText('You can try again now.', { timeout: 8000 });
+		await expect(page.getByRole('button', { name: /sign in/i })).toBeEnabled();
+		expect(await loginCalls()).toHaveLength(1);
 	});
 });

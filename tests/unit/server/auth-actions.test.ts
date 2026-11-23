@@ -102,6 +102,88 @@ describe('signin action', () => {
 		expect(r.data.formErrorKey).toBe('auth.errors.invalidCredentials');
 	});
 
+	/**
+	 * Every answer of Go's login handler (leadkart-go 44ff2b16 internal/identity/ports/http.go
+	 * handleLogin, lines 487-535; the 429 of the per-route limiter is internal/common/httpmw/ratelimit.go:197).
+	 * status, code, Retry-After -> status the form gets, banner key, seconds for the countdown.
+	 */
+	it.each([
+		// http.go:524 / :528 (BFF_API_CHANGES row 36): the company's members cannot sign in. Own sentences, no countdown.
+		[403, 'tenant_suspended', undefined, 403, 'auth.errors.tenantSuspended', undefined],
+		[403, 'tenant_not_active', undefined, 403, 'auth.errors.tenantNotActive', undefined],
+		// a Retry-After on a company refusal is not a wait: nothing is retried
+		[403, 'tenant_suspended', '30', 403, 'auth.errors.tenantSuspended', undefined],
+		// any other 403 stays the status-class line (never the operator-scope sentence)
+		[403, 'forbidden', undefined, 403, 'auth.errors.forbidden', undefined],
+		[403, undefined, undefined, 403, 'auth.errors.forbidden', undefined],
+		// http.go:446 and ratelimit.go:197 (rows 12, 27): 429 rate_limited + Retry-After
+		[429, 'rate_limited', '7', 429, 'auth.errors.rateLimitedWait', 7],
+		[429, 'rate_limited', undefined, 429, 'auth.errors.rateLimited', undefined],
+		[429, 'rate_limited', '0', 429, 'auth.errors.rateLimited', undefined],
+		[429, 'rate_limited', 'soon', 429, 'auth.errors.rateLimited', undefined],
+		// http.go:438 (row 13): 503 service_busy + Retry-After: 2
+		[503, 'service_busy', '2', 503, 'auth.errors.serviceBusyWait', 2],
+		[503, 'service_busy', undefined, 503, 'errors.code.service_busy', undefined],
+		// a 503 that is not Go's busy answer is not explained as one
+		[503, undefined, '2', 503, 'auth.errors.unexpected', undefined],
+		// unchanged: http.go:500 / :520 one sentence for every wrong-credentials case, :567 the lockout
+		[401, 'invalid_credentials', undefined, 401, 'auth.errors.invalidCredentials', undefined],
+		[401, 'invalid_credentials', '9', 401, 'auth.errors.invalidCredentials', undefined],
+		[423, 'account_locked', '90', 423, 'auth.errors.accountLocked', 90],
+		[423, 'account_locked', undefined, 423, 'auth.errors.accountLocked', undefined]
+	] as const)(
+		'Go %i %s (Retry-After %s) -> %i %s, wait %s',
+		async (status, code, retryAfter, formStatus, key, seconds) => {
+			const f = stubFetch(() =>
+				Promise.resolve(
+					json(
+						status,
+						code === undefined ? {} : { type: 'x', title: 't', status, error: code, message: '' },
+						retryAfter === undefined ? {} : { 'retry-after': retryAfter }
+					)
+				)
+			);
+			const cookies = jar();
+			const r = asFail(
+				await run(signinActions.default, {
+					request: form({ email: 'u@x.co', password: 'pw' }),
+					cookies,
+					url: new URL('http://x/signin')
+				})
+			);
+			expect([r.status, r.data.formErrorKey, r.data.retryAfterSeconds]).toEqual([
+				formStatus,
+				key,
+				seconds
+			]);
+			// one call: nothing is retried on its own, and no refusal writes a cookie
+			expect(f).toHaveBeenCalledTimes(1);
+			expect(cookies.set).not.toHaveBeenCalled();
+			// the email is kept, the password never is
+			expect(r.data.values).toEqual({ email: 'u@x.co' });
+		}
+	);
+
+	it('a company refusal never reads the operator-scope sentence', async () => {
+		for (const code of ['tenant_suspended', 'tenant_not_active']) {
+			stubFetch(() => Promise.resolve(goError(403, code)));
+			expect(String(asFail(await signin()).data.formErrorKey)).not.toMatch(/^errors\.code\./);
+		}
+	});
+
+	it('a successful sign-in clears a stale sign-in notice', async () => {
+		stubFetch(() => Promise.resolve(json(200, TOKENS)));
+		const cookies = jar({ lk_signin_notice: 'session_expired' });
+		await redirected(
+			run(signinActions.default, {
+				request: form({ email: 'u@x.co', password: 'pw' }),
+				cookies,
+				url: new URL('http://x/signin')
+			})
+		);
+		expect(cookies.get('lk_signin_notice')).toBeUndefined();
+	});
+
 	it.each([502, 504])('Go %i -> same status, generic copy', async (status) => {
 		stubFetch(() => Promise.resolve(new Response('', { status })));
 		const r = asFail(await signin());

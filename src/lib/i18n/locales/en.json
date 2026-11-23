@@ -81,12 +81,14 @@
 		},
 		"errors": {
 			"invalidCredentials": "Email or password is incorrect.",
-			"accountLocked": "Account locked after too many failed attempts. Try again in {seconds} seconds.",
+			"accountLocked": "Account locked after too many failed attempts. Try again in {seconds, plural, one {# second} other {# seconds}}.",
 			"mustChangePassword": "Set a new password to continue.",
 			"tenantSuspended": "Your company's account is suspended. Contact your administrator or LeadKart support.",
 			"tenantNotActive": "Your company's account is not active. Contact your administrator or LeadKart support.",
 			"unexpected": "Something went wrong. Please try again.",
 			"rateLimited": "Too many attempts. Wait a moment and try again.",
+			"rateLimitedWait": "Too many requests. Try again in {seconds, plural, one {# second} other {# seconds}}.",
+			"serviceBusyWait": "The service is busy. Try again in {seconds, plural, one {# second} other {# seconds}}.",
 			"upstreamUnavailable": "The service is not reachable right now. Please try again in a moment.",
 			"forbidden": "You don't have permission to do this.",
 			"tenantContext": "Not available while acting in a tenant. Exit the tenant context first.",
@@ -369,6 +371,7 @@
 			"permission_not_requestable": "This permission can't be requested.",
 			"permission_request_requester_inactive": "The person who asked is no longer active, so this request can not be approved.",
 			"incorrect_current_password": "Your current password is incorrect.",
+			"password_change_required": "Set a new password to continue.",
 			"search_category_forbidden": "You don't have access to that search category.",
 			"invalid_search_include": "The request was not accepted. Check the values and try again."
 		}

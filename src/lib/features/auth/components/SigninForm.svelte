@@ -13,8 +13,9 @@
 	 * SigninForm: the sign-in card. The action lives at (auth)/signin/+page.server.ts; the `form` prop is its last
 	 * result (validation errors, a refused login, the lockout). Three outcomes (ADR 0053): a redirect to
 	 * /must-change-password, a redirect to /dashboard (or `?next=`), or a 423 with `retryAfterSeconds`, which this
-	 * card counts down: the button stays off until the wait is over, and the banner shows the seconds left.
-	 * `?email=` prefills the field (an admin-initiated invite).
+	 * card counts down: the button stays off until the wait is over, and the banner shows the seconds left. Too many
+	 * requests (429) and a busy service (503) count down the same way in their own words; nothing is ever retried
+	 * on its own. `?email=` prefills the field (an admin-initiated invite).
 	 *
 	 * `notice` is why the person is here again (the session ended, the company cannot sign in, the password was
 	 * changed): the page's server load took it from the one-word cookie the BFF left, once. Shown above the form
@@ -85,14 +86,18 @@
 		);
 	}
 
-	// What the lockout line says: the seconds while they count, "try again now" after, and a plain line when Go sent none.
+	// The lines that count seconds (a lockout, too many requests, a busy service), each with the plain line it
+	// gives way to when Go sent no usable number.
+	const WAIT_LINES: ReadonlyMap<string, string> = new Map([
+		['auth.errors.accountLocked', 'auth.signin.lockedLater'],
+		['auth.errors.rateLimitedWait', 'auth.errors.rateLimited'],
+		['auth.errors.serviceBusyWait', 'errors.code.service_busy']
+	]);
+	// What a waiting line says: the seconds while they count, "try again now" after, and the plain line without a number.
 	const shown = $derived.by(() => {
-		if (!form || form.formErrorKey !== 'auth.errors.accountLocked') return form;
-		if (remaining > 0) return form;
-		return {
-			...form,
-			formErrorKey: elapsed ? 'auth.signin.canRetryNow' : 'auth.signin.lockedLater'
-		};
+		const plain = form?.formErrorKey ? WAIT_LINES.get(form.formErrorKey) : undefined;
+		if (!form || plain === undefined || remaining > 0) return form;
+		return { ...form, formErrorKey: elapsed ? 'auth.signin.canRetryNow' : plain };
 	});
 </script>
 

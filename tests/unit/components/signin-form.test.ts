@@ -170,6 +170,82 @@ describe('lockout countdown', () => {
 	});
 });
 
+describe('too many requests and a busy service count down like the lockout, in their own words', () => {
+	const remount = (form: Record<string, unknown>) => {
+		unmount(component!);
+		target.remove();
+		target = document.body.appendChild(document.createElement('div'));
+		component = mount(SigninForm, { target, props: { form } as never });
+		flushSync();
+	};
+	const failure = (formErrorKey: string, retryAfterSeconds?: number) => ({
+		values: { email: 'a@b.co' },
+		fieldKeys: {},
+		fieldMessages: {},
+		formErrorKey,
+		retryAfterSeconds
+	});
+
+	it('429 with seconds: "Too many requests. Try again in N seconds.", button off, then "You can try again now."', () => {
+		remount(failure('auth.errors.rateLimitedWait', 7));
+		expect(target.textContent).toContain('Too many requests. Try again in 7 seconds.');
+		expect(button().disabled).toBe(true);
+		vi.advanceTimersByTime(6000);
+		flushSync();
+		expect(target.textContent).toContain('Try again in 1 second.');
+		expect(button().disabled).toBe(true);
+		vi.advanceTimersByTime(1000);
+		flushSync();
+		expect(target.textContent).toContain(en.auth.signin.canRetryNow);
+		expect(button().disabled).toBe(false);
+	});
+
+	it('503 service_busy with seconds: "The service is busy. Try again in N seconds."', () => {
+		remount(failure('auth.errors.serviceBusyWait', 2));
+		expect(target.textContent).toContain('The service is busy. Try again in 2 seconds.');
+		expect(button().disabled).toBe(true);
+		vi.advanceTimersByTime(2000);
+		flushSync();
+		expect(target.textContent).toContain(en.auth.signin.canRetryNow);
+		expect(button().disabled).toBe(false);
+	});
+
+	it.each([
+		['auth.errors.rateLimitedWait', en.auth.errors.rateLimited],
+		['auth.errors.serviceBusyWait', en.errors.code.service_busy]
+	])('%s with no usable seconds says the plain line, never a placeholder or zero', (key, plain) => {
+		remount(failure(key, Number.NaN));
+		expect(target.textContent).toContain(plain);
+		expect(target.textContent).not.toContain('{seconds}');
+		expect(target.textContent).not.toContain('NaN');
+		expect(button().disabled).toBe(false);
+	});
+
+	it('nothing is submitted on its own when a wait ends (no automatic retry)', () => {
+		const submitSpy = vi.spyOn(HTMLFormElement.prototype, 'requestSubmit');
+		remount(failure('auth.errors.serviceBusyWait', 2));
+		vi.advanceTimersByTime(5000);
+		flushSync();
+		expect(submitSpy).not.toHaveBeenCalled();
+		submitSpy.mockRestore();
+	});
+
+	it.each([
+		['auth.errors.tenantSuspended', en.auth.errors.tenantSuspended],
+		['auth.errors.tenantNotActive', en.auth.errors.tenantNotActive]
+	])('%s: its own sentence as an alert, no countdown, the button stays on', (key, sentence) => {
+		remount(failure(key));
+		expect(target.querySelector('[role="alert"]')?.textContent).toContain(sentence);
+		expect(button().disabled).toBe(false);
+		expect(vi.getTimerCount()).toBe(0);
+	});
+
+	it('the lockout line says "1 second", not "1 seconds"', () => {
+		remount(failure('auth.errors.accountLocked', 1));
+		expect(target.textContent).toContain('Try again in 1 second.');
+	});
+});
+
 describe('the fields', () => {
 	it('email is username, password is current-password', () => {
 		expect(target.querySelector('input[name="email"]')!.getAttribute('autocomplete')).toBe(

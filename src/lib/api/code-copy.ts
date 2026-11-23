@@ -67,6 +67,8 @@ const CODES = [
 	'product_has_live_stock',
 	// Account and search
 	'incorrect_current_password',
+	// authn/session_policy.go: every route but change-password and capabilities while the flag is set
+	'password_change_required',
 	'service_busy',
 	'session_not_found',
 	'search_category_forbidden',

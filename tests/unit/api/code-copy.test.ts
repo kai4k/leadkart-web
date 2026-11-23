@@ -104,6 +104,19 @@ describe('the code table', () => {
 		expect(goCodeKey('some_new_code')).toBeUndefined();
 	});
 
+	// Go: internal/identity/ports/authn/session_policy.go:13, 403 on every route but change-password and
+	// capabilities while the flag is set (BFF_API_CHANGES row 23). It used to read "You don't have permission".
+	it('password_change_required says what to do, to the client and to a server action alike', () => {
+		expect(goFailureKey(403, 'password_change_required')).toBe(
+			'errors.code.password_change_required'
+		);
+		expect(dig(en, 'errors.code.password_change_required')).toBe('Set a new password to continue.');
+		const err = ApiError.fromResponse(new Response(null, { status: 403 }), {
+			error: 'password_change_required'
+		});
+		expect(describeError(err)).toBe('Set a new password to continue.');
+	});
+
 	it('the server helper and the client describer say the same thing for a code', () => {
 		for (const code of ['insufficient_rank', 'role_name_taken', 'grant_exceeds_authority']) {
 			const key = goFailureKey(403, code);

@@ -119,7 +119,7 @@ describe('refreshTokens status mapping and caching', () => {
 	const rejection = (reason?: unknown, status = 401) =>
 		new Response(
 			JSON.stringify({
-				type: 'https://leadkart.io/problems/refresh_rejected',
+				type: 'https://leadkart.api/errors/refresh_rejected',
 				title: 'Unauthorized',
 				status,
 				error: 'refresh_rejected',

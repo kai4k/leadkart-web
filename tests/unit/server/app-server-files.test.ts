@@ -105,6 +105,10 @@ const UNGUARDED_CALLEES: Record<string, Record<string, string>> = {
 	},
 	'(auth)/signin/+page.server.ts': {
 		'src/lib/server/proxy.ts#goAuthFetch': 'The login call: the only call this page makes to Go.',
+		'src/lib/server/go.ts#readGoError':
+			'Reads the code of a refused login (tenant_suspended, tenant_not_active, service_busy).',
+		'src/lib/server/form-action.ts#goFailureKey':
+			'The key of the busy line when Go sent no Retry-After.',
 		'src/lib/server/auth-refresh.ts#establishSession':
 			'Sets the session cookies from the login answer.',
 		'src/lib/server/auth-refresh.ts#tokenPairSchema': 'Validates the login answer.',
@@ -248,7 +252,7 @@ const UNGUARDED_REVIEWED: Record<string, string> = {
 	'+layout.server.ts': 'a3aa6cf586cade7fa9c7c830',
 	'+page.server.ts': 'd584880de3ad98cfcd66b155',
 	'(app)/+layout.server.ts': 'c348bde0597e9584bdde65b1',
-	'(auth)/signin/+page.server.ts': 'd4e41c30119f7c52241a7806',
+	'(auth)/signin/+page.server.ts': 'b7da86af71a08251a5a38ca1',
 	'(auth)/forgot-password/+page.server.ts': '234d7157d19409c9ddf6ad3b',
 	'(auth)/reset-password/+page.server.ts': '3e7321dc0a8fc0387c411bbd',
 	'auth/logout/+server.ts': 'bcd677fad56c1d16ab658be0',
