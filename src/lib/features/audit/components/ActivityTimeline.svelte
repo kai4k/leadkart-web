@@ -41,8 +41,6 @@
 		'tenant.created': Building2,
 		'tenant.activated': Building2,
 		'tenant.suspended': AlertCircle,
-		'tenant.restored': Building2,
-		'tenant.marked_for_deletion': AlertCircle,
 		'user.created': User,
 		'user.deactivated': User,
 		'user.reactivated': User,
@@ -56,7 +54,7 @@
 		return EVENT_ICONS[eventType] ?? Activity;
 	}
 
-	/** Suspensions and deletions are drawn as warnings; everything else is neutral. */
+	/** Suspensions are drawn as warnings; everything else is neutral. */
 	function accentFor(eventType: string): TimelineItemAccent {
 		return EVENT_ICONS[eventType] === AlertCircle ? 'warning' : 'neutral';
 	}
