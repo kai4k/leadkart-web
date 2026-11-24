@@ -42,8 +42,7 @@
 		'user.role_assigned': Shield,
 		'user.role_revoked': Shield,
 		'person.globally_suspended': AlertCircle,
-		'person.suspension_lifted': User,
-		'person.anonymised': User
+		'person.suspension_lifted': User
 	};
 
 	function iconFor(eventType: string): typeof Activity {

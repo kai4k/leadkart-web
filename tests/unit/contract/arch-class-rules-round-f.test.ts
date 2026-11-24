@@ -152,7 +152,7 @@ describe('m6: the file scope follows what a file renders', () => {
 		const read = (p: string) => readFileSync(p, 'utf8');
 		for (const rel of [
 			'src/lib/layouts/UserMenu.svelte',
-			'src/lib/features/operator/people/components/AnonymiseDialog.svelte',
+			'src/lib/features/operator/people/components/GlobalSuspendDialog.svelte',
 			'src/lib/components/form/Combobox.svelte'
 		]) {
 			const src = read(rel);

@@ -10,8 +10,7 @@ import {
 	personLifecycle,
 	personLifecycleKey,
 	canGloballySuspend,
-	canLiftSuspension,
-	canAnonymise
+	canLiftSuspension
 } from '#lib/features/operator/people/view-models.ts';
 import type { PersonDto } from '#lib/features/operator/people/types.ts';
 
@@ -79,7 +78,7 @@ describe('personLifecycle', () => {
 		expect(badge.label).toBe('Active');
 	});
 
-	it('inactive (not anonymised, not suspended) → warning + "Inactive"', () => {
+	it('inactive (not suspended) → warning + "Inactive"', () => {
 		const badge = lifecycleBadge(makePerson({ is_active: false }));
 		expect(badge.variant).toBe('warning');
 		expect(badge.label).toBe('Inactive');
@@ -90,19 +89,6 @@ describe('personLifecycle', () => {
 		expect(badge.variant).toBe('danger');
 		expect(badge.label).toBe('Globally suspended');
 	});
-
-	it('anonymised → neutral + "Anonymised" (highest priority)', () => {
-		const badge = lifecycleBadge(
-			makePerson({ is_anonymised: true, is_globally_suspended: true, is_active: false })
-		);
-		expect(badge.variant).toBe('neutral');
-		expect(badge.label).toBe('Anonymised');
-	});
-
-	it('anonymised takes priority over suspended', () => {
-		const badge = lifecycleBadge(makePerson({ is_anonymised: true, is_globally_suspended: true }));
-		expect(badge.label).toBe('Anonymised');
-	});
 });
 
 // ---------------------------------------------------------------------------
@@ -110,22 +96,12 @@ describe('personLifecycle', () => {
 // ---------------------------------------------------------------------------
 
 describe('canGloballySuspend', () => {
-	it('true for an active, non-anonymised person', () => {
+	it('true for an active person', () => {
 		expect(canGloballySuspend(makePerson())).toBe(true);
 	});
 
 	it('false when already globally suspended', () => {
 		expect(canGloballySuspend(makePerson({ is_globally_suspended: true }))).toBe(false);
-	});
-
-	it('false when anonymised', () => {
-		expect(canGloballySuspend(makePerson({ is_anonymised: true }))).toBe(false);
-	});
-
-	it('false when both anonymised and suspended', () => {
-		expect(
-			canGloballySuspend(makePerson({ is_anonymised: true, is_globally_suspended: true }))
-		).toBe(false);
 	});
 });
 
@@ -134,7 +110,7 @@ describe('canGloballySuspend', () => {
 // ---------------------------------------------------------------------------
 
 describe('canLiftSuspension', () => {
-	it('true when globally suspended and not anonymised', () => {
+	it('true when globally suspended', () => {
 		expect(canLiftSuspension(makePerson({ is_globally_suspended: true }))).toBe(true);
 	});
 
@@ -142,31 +118,7 @@ describe('canLiftSuspension', () => {
 		expect(canLiftSuspension(makePerson({ is_globally_suspended: false }))).toBe(false);
 	});
 
-	it('false when suspended but also anonymised', () => {
-		expect(
-			canLiftSuspension(makePerson({ is_globally_suspended: true, is_anonymised: true }))
-		).toBe(false);
-	});
-
 	it('false for a plain active person', () => {
 		expect(canLiftSuspension(makePerson())).toBe(false);
-	});
-});
-
-// ---------------------------------------------------------------------------
-// canAnonymise
-// ---------------------------------------------------------------------------
-
-describe('canAnonymise', () => {
-	it('true for an active person who has never been anonymised', () => {
-		expect(canAnonymise(makePerson())).toBe(true);
-	});
-
-	it('true even for a suspended person (anonymise is irreversible, not blocked by suspension)', () => {
-		expect(canAnonymise(makePerson({ is_globally_suspended: true }))).toBe(true);
-	});
-
-	it('false when already anonymised', () => {
-		expect(canAnonymise(makePerson({ is_anonymised: true }))).toBe(false);
 	});
 });

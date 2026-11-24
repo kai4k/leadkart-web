@@ -18,22 +18,22 @@ vi.mock('$ui', async (importOriginal) => ({
 	...(await importOriginal<Record<string, unknown>>()),
 	toast: toastMock
 }));
-const gw = vi.hoisted(() => ({ anonymisePerson: vi.fn() }));
+const gw = vi.hoisted(() => ({ globalSuspend: vi.fn() }));
 vi.mock('#lib/features/operator/people/api.ts', () => gw);
 vi.mock('#lib/features/operator/people/api', () => gw);
 
 import { reactiveProps } from '../helpers/reactive-props.svelte.ts';
 import { createQueryClient } from '#lib/api/query-client.ts';
 import { ServerError } from '#lib/api/errors.ts';
-import AnonymiseDialog from '#lib/features/operator/people/components/AnonymiseDialog.svelte';
+import GlobalSuspendDialog from '#lib/features/operator/people/components/GlobalSuspendDialog.svelte';
 
 const person = { id: 'p1', email: 'a@b.co' } as unknown as ComponentProps<
-	typeof AnonymiseDialog
+	typeof GlobalSuspendDialog
 >['person'];
 
 let target: HTMLElement;
 let component: ReturnType<typeof mount> | undefined;
-let props: ComponentProps<typeof AnonymiseDialog>;
+let props: ComponentProps<typeof GlobalSuspendDialog>;
 const onOpenChange = vi.fn();
 
 beforeEach(() => {
@@ -42,7 +42,7 @@ beforeEach(() => {
 	vi.spyOn(h.qc, 'invalidateQueries').mockResolvedValue(undefined);
 	target = document.body.appendChild(document.createElement('div'));
 	props = reactiveProps({ open: true, person, onOpenChange });
-	component = mount(AnonymiseDialog, { target, props });
+	component = mount(GlobalSuspendDialog, { target, props });
 	flushSync();
 });
 afterEach(() => {
@@ -54,16 +54,14 @@ afterEach(() => {
 
 const buttonNamed = (name: RegExp) =>
 	[...document.querySelectorAll('button')].find((b) => name.test(b.textContent?.trim() ?? ''));
-const field = (selector: string) => document.querySelector<HTMLInputElement>(selector)!;
 const type = (el: HTMLInputElement | HTMLTextAreaElement, value: string) => {
 	el.value = value;
 	el.dispatchEvent(new Event('input', { bubbles: true }));
 	flushSync();
 };
 const submit = () => {
-	type(field('input[name="confirm_text"]'), 'a@b.co');
 	type(document.querySelector('textarea')!, 'because');
-	buttonNamed(/Anonymise permanently/)!.click();
+	buttonNamed(/Suspend globally/)!.click();
 	flushSync();
 };
 const pressEscape = () => {
@@ -76,9 +74,9 @@ const dialogOpen = () => document.querySelector('[role="alertdialog"]') !== null
 describe('a pending save cannot be dismissed into silence', () => {
 	it('Escape and Cancel do nothing while the call is in flight, then work again', async () => {
 		let reject!: (e: unknown) => void;
-		gw.anonymisePerson.mockReturnValue(new Promise((_r, rej) => (reject = rej)));
+		gw.globalSuspend.mockReturnValue(new Promise((_r, rej) => (reject = rej)));
 		submit();
-		await vi.waitFor(() => expect(gw.anonymisePerson).toHaveBeenCalledTimes(1));
+		await vi.waitFor(() => expect(gw.globalSuspend).toHaveBeenCalledTimes(1));
 
 		pressEscape();
 		buttonNamed(/^Cancel$/)?.click();
@@ -93,7 +91,7 @@ describe('a pending save cannot be dismissed into silence', () => {
 	});
 
 	it('mounted and visible: the failure is a banner, not a toast', async () => {
-		gw.anonymisePerson.mockRejectedValue(new ServerError(500, null));
+		gw.globalSuspend.mockRejectedValue(new ServerError(500, null));
 		submit();
 		await vi.waitFor(() => expect(document.body.textContent).toContain('went wrong'));
 		expect(toastMock.error).not.toHaveBeenCalled();
@@ -101,9 +99,9 @@ describe('a pending save cannot be dismissed into silence', () => {
 
 	it('closed by the parent while pending, then fails: exactly one toast (no silent failure)', async () => {
 		let reject!: (e: unknown) => void;
-		gw.anonymisePerson.mockReturnValue(new Promise((_r, rej) => (reject = rej)));
+		gw.globalSuspend.mockReturnValue(new Promise((_r, rej) => (reject = rej)));
 		submit();
-		await vi.waitFor(() => expect(gw.anonymisePerson).toHaveBeenCalledTimes(1));
+		await vi.waitFor(() => expect(gw.globalSuspend).toHaveBeenCalledTimes(1));
 
 		props.open = false; // the component stays mounted, as in every parent
 		flushSync();
@@ -115,7 +113,7 @@ describe('a pending save cannot be dismissed into silence', () => {
 		);
 	});
 
-	it('the reason label says it is audited: Go records the reason with the anonymisation', () => {
+	it('the reason label says it is audited: Go records the reason with the suspension', () => {
 		expect(document.body.textContent).toContain('Reason (required, audited)');
 	});
 });

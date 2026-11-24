@@ -7,15 +7,13 @@ export { personDetailQuery } from './queries';
 export {
 	personDtoSchema,
 	listPersonMembershipsResponseSchema,
-	globalSuspendRequestSchema,
-	anonymisePersonRequestSchema
+	globalSuspendRequestSchema
 } from './schemas.ts';
 export {
 	personDisplayName,
 	personLifecycleKey,
 	personLifecycle,
 	canGloballySuspend,
-	canLiftSuspension,
-	canAnonymise
+	canLiftSuspension
 } from './view-models.ts';
 export type { PersonDto } from './types.ts';

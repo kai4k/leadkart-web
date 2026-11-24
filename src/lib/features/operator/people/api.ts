@@ -2,12 +2,7 @@ import { seg } from '#lib/utils/path-segment.ts';
 import { apiLegacy, parseResponse } from '#lib/api/client.ts';
 import { omniSearch, type SearchPersonHit } from '$features/search';
 import { personDtoSchema, listPersonMembershipsResponseSchema } from './schemas';
-import type {
-	PersonDto,
-	ListPersonMembershipsResponse,
-	GlobalSuspendRequest,
-	AnonymisePersonRequest
-} from './types';
+import type { PersonDto, ListPersonMembershipsResponse, GlobalSuspendRequest } from './types';
 
 /** Go cuts the search text at 100 BYTES; cut here on a character boundary, never inside one. */
 export function limitSearchBytes(q: string, max = 100): string {
@@ -62,14 +57,4 @@ export async function globalSuspend(personId: string, req: GlobalSuspendRequest)
  *  (platform.users.manage). Returns 204 No Content. */
 export async function liftGlobalSuspension(personId: string): Promise<void> {
 	await apiLegacy.post<void>(`/v1/platform/persons/${seg(personId)}/lift-global-suspension`, {});
-}
-
-/** Irreversibly anonymise a Person (DPDP) — operator-scoped
- *  (identity.users.anonymise). Replaces all PII with placeholders and
- *  deactivates every Membership. A required reason is audited. */
-export async function anonymisePerson(
-	personId: string,
-	req: AnonymisePersonRequest
-): Promise<void> {
-	await apiLegacy.post<void>(`/v1/platform/persons/${seg(personId)}/anonymise`, req);
 }

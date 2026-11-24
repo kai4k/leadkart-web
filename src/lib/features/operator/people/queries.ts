@@ -74,13 +74,3 @@ export function liftGlobalSuspensionMutation() {
 		successToast: 'Suspension lifted'
 	});
 }
-
-/** Irreversibly anonymise a Person (DPDP). inlineErrors: the dialog shows the failure. */
-export function anonymisePersonMutation() {
-	return createResourceMutation({
-		fn: ({ id, reason }: { id: string; reason: string }) => api.anonymisePerson(id, { reason }),
-		invalidate: ({ id }) => [peopleKeys.detail(id)],
-		successToast: 'Person anonymised',
-		inlineErrors: true
-	});
-}

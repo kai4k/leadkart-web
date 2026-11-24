@@ -442,7 +442,7 @@ export function describeError(err: unknown, options?: DescribeErrorOptions): str
 }
 
 /**
- * The failure of a "reason" dialog (suspend, anonymise, mark for deletion, ...): a field error on
+ * The failure of a "reason" dialog (suspend, deactivate, ...): a field error on
  * `reason` stays on the field; anything else is the one banner line from `describeError`.
  */
 export function describeReasonError(

@@ -44,7 +44,7 @@ export function humanTextField(rule: {
 export const requiredText = (maxBytes: number, requiredMessage?: string) =>
 	humanTextField({ maxBytes, requiredMessage });
 
-/** "Why are you doing this": required after trimming, capped at 500 bytes. Suspend, delete, anonymise, deactivate, write-off. */
+/** "Why are you doing this": required after trimming, capped at 500 bytes. Suspend, delete, deactivate, write-off. */
 export const reasonField = requiredText(500, 'form.errors.reasonRequired');
 
 /**

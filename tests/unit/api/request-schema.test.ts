@@ -2,10 +2,7 @@
 easonField behind every "reason for this action" request, whatever the feature. */
 import { describe, expect, it } from 'vitest';
 import { reasonField } from '#lib/api/request-schema.ts';
-import {
-	anonymisePersonRequestSchema,
-	globalSuspendRequestSchema
-} from '#lib/features/operator/people/schemas.ts';
+import { globalSuspendRequestSchema } from '#lib/features/operator/people/schemas.ts';
 import {
 	markForDeletionRequestSchema,
 	suspendTenantRequestSchema
@@ -27,7 +24,6 @@ describe.each([
 	['suspend tenant', suspendTenantRequestSchema],
 	['mark tenant for deletion', markForDeletionRequestSchema],
 	['global suspend person', globalSuspendRequestSchema],
-	['anonymise person', anonymisePersonRequestSchema],
 	['deactivate user', deactivateUserRequestSchema],
 	['write off batch', writeOffBatchRequestSchema]
 ])('%s request', (_name, schema) => {

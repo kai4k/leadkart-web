@@ -9,8 +9,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	personDtoSchema,
 	listPersonMembershipsResponseSchema,
-	globalSuspendRequestSchema,
-	anonymisePersonRequestSchema
+	globalSuspendRequestSchema
 } from '#lib/features/operator/people/schemas.ts';
 
 // ---------------------------------------------------------------------------
@@ -57,8 +56,7 @@ describe('personDtoSchema', () => {
 		const result = personDtoSchema.safeParse({
 			...VALID_PERSON,
 			global_suspension_reason: 'Spam activity',
-			globally_suspended_at: '2026-03-01T12:00:00Z',
-			anonymised_at: '2026-03-02T12:00:00Z'
+			globally_suspended_at: '2026-03-01T12:00:00Z'
 		});
 		expect(result.success).toBe(true);
 	});
@@ -67,7 +65,6 @@ describe('personDtoSchema', () => {
 		const result = personDtoSchema.parse(VALID_PERSON);
 		expect(result.global_suspension_reason).toBe('');
 		expect(result.globally_suspended_at).toBeUndefined();
-		expect(result.anonymised_at).toBeUndefined();
 	});
 
 	it('keeps the generated date check on dates that are present', () => {
@@ -128,32 +125,6 @@ describe('globalSuspendRequestSchema', () => {
 	it('rejects extra fields (strict mode)', () => {
 		expect(
 			globalSuspendRequestSchema.safeParse({ reason: 'Valid reason', extra: true }).success
-		).toBe(false);
-	});
-});
-
-// ---------------------------------------------------------------------------
-// anonymisePersonRequestSchema
-// ---------------------------------------------------------------------------
-
-describe('anonymisePersonRequestSchema', () => {
-	it('accepts a valid reason', () => {
-		expect(
-			anonymisePersonRequestSchema.safeParse({ reason: 'DPDP deletion request' }).success
-		).toBe(true);
-	});
-
-	it('rejects an empty reason (min 1)', () => {
-		expect(anonymisePersonRequestSchema.safeParse({ reason: '' }).success).toBe(false);
-	});
-
-	it('rejects a reason longer than 500 characters', () => {
-		expect(anonymisePersonRequestSchema.safeParse({ reason: 'x'.repeat(501) }).success).toBe(false);
-	});
-
-	it('rejects extra fields (strict mode)', () => {
-		expect(
-			anonymisePersonRequestSchema.safeParse({ reason: 'DPDP request', confirmed: true }).success
 		).toBe(false);
 	});
 });

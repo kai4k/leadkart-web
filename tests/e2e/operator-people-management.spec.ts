@@ -39,7 +39,7 @@ const PERSON_AAA = {
 async function signInAsOperator(page: Page) {
 	await signInAsTier(page, {
 		tier: 'platform-super',
-		permissions: ['platform.users.view', 'platform.users.manage', 'identity.users.anonymise']
+		permissions: ['platform.users.view', 'platform.users.manage']
 	});
 }
 
@@ -117,12 +117,12 @@ test.describe('People list — positive', () => {
 	});
 });
 
-test.describe('Anonymise dialog on a phone', () => {
+test.describe('Global suspend dialog on a phone', () => {
 	test.beforeEach(async () => {
 		await resetMock();
 	});
 
-	// the REAL Anonymise dialog (person detail), not a styleguide stand-in
+	// the REAL global-suspend dialog (person detail), not a styleguide stand-in
 	test('at 360x640 its footer buttons are inside the viewport and the body scrolls', async ({
 		page
 	}) => {
@@ -144,10 +144,10 @@ test.describe('Anonymise dialog on a phone', () => {
 			{ method: 'GET', path: '/api/v1/platform/tenants', status: 200, body: { tenants: [] } }
 		]);
 		await page.goto(`/operator/persons/${PERSON_AAA.id}`);
-		await page.getByRole('button', { name: 'Anonymise' }).first().click();
+		await page.getByRole('button', { name: 'Globally suspend' }).first().click();
 		const dialog = page.locator('[data-slot="alert-dialog-content"]');
 		await expect(dialog).toBeVisible();
-		await expect(dialog.getByText('Anonymise alice@acme.test')).toBeVisible();
+		await expect(dialog.getByText('Globally suspend alice@acme.test')).toBeVisible();
 		await page.waitForTimeout(300);
 		const box = (await dialog.boundingBox())!;
 		expect(box.y).toBeGreaterThanOrEqual(0);

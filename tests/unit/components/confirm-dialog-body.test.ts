@@ -48,7 +48,7 @@ describe('ConfirmDialog body', () => {
 		const body = await render(false);
 		expect(body.getAttribute('tabindex')).toBe('0');
 		expect(body.getAttribute('role')).toBe('region');
-		expect(body.getAttribute('aria-label')).toBe('Anonymise this person');
+		expect(body.getAttribute('aria-label')).toBe('Suspend this person');
 	});
 
 	it('text only and not overflowing: no extra tab stop', async () => {

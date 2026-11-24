@@ -7,7 +7,7 @@
 	import { DataTable } from '#lib/components/data/data-table/index.ts';
 	import { enterScopeMutation } from '$features/operator/scope';
 	import { QueryState } from '#lib/components/feedback/index.ts';
-	import { ArrowRight, Pause, Play, UserMinus, Icon } from '$icons';
+	import { ArrowRight, Pause, Play, Icon } from '$icons';
 	import { tenantsListQuery } from '../../tenants';
 	import {
 		personDetailQuery,
@@ -19,20 +19,17 @@
 		personLifecycle,
 		personLifecycleKey,
 		canGloballySuspend,
-		canLiftSuspension,
-		canAnonymise
+		canLiftSuspension
 	} from '../view-models';
 	import { P, session, userStatus, type UserDto } from '$features/auth';
 	import type { PersonDto } from '../types';
 	import GlobalSuspendDialog from './GlobalSuspendDialog.svelte';
-	import AnonymiseDialog from './AnonymiseDialog.svelte';
 	import { formatDate } from '#lib/utils/format.ts';
 
 	type Props = { personId: string };
 	let { personId }: Props = $props();
 
 	const suspendDialog = createDialogState<PersonDto>();
-	const anonymiseDialog = createDialogState<PersonDto>();
 
 	const query = personDetailQuery(() => personId);
 	// created once, asked only once the person exists (a 404 person has no memberships to fetch)
@@ -53,7 +50,6 @@
 	const isPending = $derived(liftMutation.isPending);
 
 	const canManage = $derived(session.can(P.platformUsersManage));
-	const canAnonymiseOp = $derived(session.can(P.identityUsersAnonymise));
 
 	const enterMutation = enterScopeMutation();
 
@@ -67,7 +63,7 @@
 	function openTenant(slug: string) {
 		// a scope change resets everything mounted: unsaved work is asked about first
 		if (!confirmLeave()) return;
-		// not-a-guard: opens a tenant from a membership row; capabilities only hide manage / anonymise actions
+		// not-a-guard: opens a tenant from a membership row; capabilities only hide manage actions
 		enterMutation.mutate({ slug });
 	}
 
@@ -233,17 +229,6 @@
 							<Icon icon={Play} size="sm" /> Lift suspension
 						</Button>
 					{/if}
-					{#if canAnonymiseOp && canAnonymise(p)}
-						<Button
-							variant="destructive"
-							onclick={() => {
-								anonymiseDialog.show(p);
-							}}
-							disabled={isPending}
-						>
-							<Icon icon={UserMinus} size="sm" /> Anonymise
-						</Button>
-					{/if}
 				</Card.Content>
 			</Card.Root>
 		</div>
@@ -254,9 +239,4 @@
 	bind:open={suspendDialog.open}
 	person={suspendDialog.target}
 	onOpenChange={suspendDialog.onOpenChange}
-/>
-<AnonymiseDialog
-	bind:open={anonymiseDialog.open}
-	person={anonymiseDialog.target}
-	onOpenChange={anonymiseDialog.onOpenChange}
 />

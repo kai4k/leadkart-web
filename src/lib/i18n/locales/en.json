@@ -780,12 +780,6 @@
 		}
 	},
 	"reasonConfirm": {
-		"anonymise": {
-			"failed": "Could not anonymise this person. Please try again.",
-			"forbidden": "You don't have permission to anonymise people.",
-			"notFound": "This person was deleted or moved.",
-			"conflict": "This person is already anonymised."
-		},
 		"globalSuspend": {
 			"failed": "Could not suspend this person. Please try again.",
 			"forbidden": "You don't have permission to suspend people globally.",

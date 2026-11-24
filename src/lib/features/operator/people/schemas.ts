@@ -30,6 +30,3 @@ export const listPersonMembershipsResponseSchema = ListPersonMembershipsResponse
 export const globalSuspendRequestSchema = GlobalSuspendPersonRequest.extend({
 	reason: reasonField
 }).strict();
-
-/** Anonymise has no generated request body schema: the same { reason } as a global suspension. */
-export const anonymisePersonRequestSchema = z.object({ reason: reasonField }).strict();

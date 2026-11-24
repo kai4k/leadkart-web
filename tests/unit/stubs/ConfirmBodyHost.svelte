@@ -5,12 +5,7 @@
 	let open = $state(true);
 </script>
 
-<ConfirmDialog
-	bind:open
-	title="Anonymise this person"
-	confirmLabel="Anonymise"
-	onConfirm={() => {}}
->
+<ConfirmDialog bind:open title="Suspend this person" confirmLabel="Suspend" onConfirm={() => {}}>
 	{#snippet body()}
 		{#if withField}
 			<label>Reason <input name="reason" /></label>
